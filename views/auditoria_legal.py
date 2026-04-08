@@ -1,6 +1,8 @@
 import pandas as pd
 import streamlit as st
 
+from core.utils import mostrar_dataframe_con_scroll, seleccionar_limite_registros
+
 
 def render_auditoria_legal(mi_empresa, user):
     st.markdown(
@@ -35,11 +37,13 @@ def render_auditoria_legal(mi_empresa, user):
         if paciente_sel != "Todos":
             df = df[df["paciente"] == paciente_sel]
 
-    st.dataframe(
-        df.iloc[::-1],
-        use_container_width=True,
-        hide_index=True,
+    limite = seleccionar_limite_registros(
+        "Eventos a mostrar",
+        len(df),
+        key=f"auditoria_legal_{mi_empresa}_{user.get('nombre', '')}",
+        default=50,
     )
+    mostrar_dataframe_con_scroll(df.tail(limite).iloc[::-1], height=460)
 
     csv_data = df.iloc[::-1].to_csv(index=False, encoding="utf-8-sig")
     st.download_button(

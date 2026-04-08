@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import timedelta
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def render_dashboard(mi_empresa, rol):
@@ -81,20 +81,21 @@ def render_dashboard(mi_empresa, rol):
             st.caption("Distribucion por profesional")
             st.bar_chart(resumen.head(min(8, len(resumen))).set_index("Profesional")["Visitas"], use_container_width=True)
 
-    max_top = min(20, max(len(resumen), 1))
-    if max_top <= 5:
-        top_n = max_top
-        st.caption(f"Mostrando {top_n} profesionales.")
-    else:
-        top_n = st.slider("Profesionales a mostrar", min_value=5, max_value=max_top, value=min(10, len(resumen)))
-    st.dataframe(resumen.head(top_n), use_container_width=True, hide_index=True)
+    top_n = seleccionar_limite_registros(
+        "Profesionales a mostrar",
+        len(resumen),
+        key=f"dashboard_top_{mi_empresa}_{rol}",
+        default=10,
+        opciones=(5, 8, 10, 15, 20),
+    )
+    mostrar_dataframe_con_scroll(resumen.head(top_n), height=320)
 
     if st.checkbox("Mostrar detalle de fichadas recientes", value=False):
-        max_detalle = min(300, max(len(df_visitas), 1))
-        if max_detalle <= 20:
-            limite = max_detalle
-            st.caption(f"Mostrando {limite} fichadas recientes.")
-        else:
-            limite = st.slider("Cantidad de fichadas recientes", min_value=20, max_value=max_detalle, value=min(80, len(df_visitas)))
-        with st.container(height=460):
-            st.dataframe(df_visitas.tail(limite).iloc[::-1], use_container_width=True, hide_index=True)
+        limite = seleccionar_limite_registros(
+            "Cantidad de fichadas recientes",
+            len(df_visitas),
+            key=f"dashboard_detalle_{mi_empresa}_{rol}",
+            default=80,
+            opciones=(20, 40, 80, 120, 200, 300),
+        )
+        mostrar_dataframe_con_scroll(df_visitas.tail(limite).iloc[::-1], height=460)

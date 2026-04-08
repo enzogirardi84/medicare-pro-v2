@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def _parse_fecha_hora(fecha_str):
@@ -128,8 +128,7 @@ def render_pediatria(paciente_sel, user):
             st.caption(f"Mostrando {limite} control(es) pediatricos.")
         else:
             limite = st.slider("Controles pediatricos a mostrar", min_value=10, max_value=max_controles, value=min(50, len(ped)), step=10)
-        with st.container(height=360):
-            df_ped = pd.DataFrame(ped[-limite:]).drop(columns=["paciente"], errors='ignore')
-            df_ped["fecha_dt"] = df_ped["fecha"].apply(_parse_fecha_hora)
-            df_ped = df_ped.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
-            st.dataframe(df_ped, use_container_width=True, hide_index=True)
+        df_ped = pd.DataFrame(ped[-limite:]).drop(columns=["paciente"], errors='ignore')
+        df_ped["fecha_dt"] = df_ped["fecha"].apply(_parse_fecha_hora)
+        df_ped = df_ped.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
+        mostrar_dataframe_con_scroll(df_ped, height=360)

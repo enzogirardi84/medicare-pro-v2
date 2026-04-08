@@ -1,65 +1,92 @@
-import streamlit as st
-import pandas as pd
 from datetime import datetime
-from core.utils import ahora
+
+import pandas as pd
+import streamlit as st
+
 from core.database import guardar_datos
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+
 
 def render_asistencia(mi_empresa, user):
-    st.subheader("⏱️ Panel de Control de Asistencias en Vivo")
-    st.info("Monitoreo en tiempo real de los profesionales que se encuentran actualmente trabajando dentro del domicilio de un paciente.")
-    
+    st.subheader("Panel de Control de Asistencias en Vivo")
+    st.info(
+        "Monitorea en tiempo real a los profesionales que se encuentran trabajando en domicilio "
+        "sin cargar historiales enormes de una sola vez."
+    )
+
     hoy_str = ahora().strftime("%d/%m/%Y")
-    chks_hoy = [c for c in st.session_state.get("checkin_db", []) if c.get("fecha_hora", "").startswith(hoy_str) and c.get("empresa") == mi_empresa]
-    
+    chks_hoy = [
+        c
+        for c in st.session_state.get("checkin_db", [])
+        if c.get("fecha_hora", "").startswith(hoy_str) and c.get("empresa") == mi_empresa
+    ]
+
     estado_profesionales = {}
-    for c in chks_hoy:
-        prof = c["profesional"]
-        pac = c["paciente"]
+    for chk in chks_hoy:
+        profesional = chk["profesional"]
+        paciente = chk["paciente"]
         try:
-            dt = datetime.strptime(c["fecha_hora"], "%d/%m/%Y %H:%M:%S")
-        except:
-            dt = datetime.strptime(c["fecha_hora"], "%d/%m/%Y %H:%M")
-            
-        if "LLEGADA" in c["tipo"]:
-            estado_profesionales[prof] = {"estado": "En Guardia", "llegada": dt, "paciente": pac}
-        elif "SALIDA" in c["tipo"]:
-            estado_profesionales[prof] = {"estado": "Fuera", "llegada": None, "paciente": None}
-            
+            dt = datetime.strptime(chk["fecha_hora"], "%d/%m/%Y %H:%M:%S")
+        except Exception:
+            dt = datetime.strptime(chk["fecha_hora"], "%d/%m/%Y %H:%M")
+
+        if "LLEGADA" in chk["tipo"]:
+            estado_profesionales[profesional] = {"estado": "En Guardia", "llegada": dt, "paciente": paciente}
+        elif "SALIDA" in chk["tipo"]:
+            estado_profesionales[profesional] = {"estado": "Fuera", "llegada": None, "paciente": None}
+
     activos = {k: v for k, v in estado_profesionales.items() if v["estado"] == "En Guardia"}
-    
+
     if activos:
-        st.markdown("#### 🟢 Profesionales Actualmente en Domicilio")
-        for prof, data in activos.items():
-            with st.container(border=True):
-                col_info, col_btn = st.columns([3, 1])
-                dt_llegada = data["llegada"]
-                
-                duracion = ahora().replace(tzinfo=None) - dt_llegada
-                horas, rem = divmod(duracion.seconds, 3600)
-                minutos, _ = divmod(rem, 60)
-                
-                col_info.markdown(f"👤 **{prof}** está en el domicilio de **{data['paciente']}**")
-                col_info.caption(f"Ingresó a las: {dt_llegada.strftime('%H:%M')} ➔ **Tiempo transcurrido: {horas}h {minutos}m**")
-                
-                if col_btn.button("🔴 Forzar Salida", key=f"force_out_{prof}", use_container_width=True):
-                    st.session_state["checkin_db"].append({
-                        "paciente": data["paciente"], 
-                        "profesional": prof, 
-                        "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"), 
-                        "tipo": f"SALIDA (Forzada por Admin: {user['nombre']})", 
-                        "empresa": mi_empresa
-                    })
-                    guardar_datos()
-                    st.success(f"Salida forzada registrada correctamente para {prof}.")
-                    st.rerun()
+        st.markdown("#### Profesionales actualmente en domicilio")
+        with st.container(height=360):
+            for profesional, data in activos.items():
+                with st.container(border=True):
+                    col_info, col_btn = st.columns([3, 1])
+                    dt_llegada = data["llegada"]
+                    duracion = ahora().replace(tzinfo=None) - dt_llegada
+                    horas, rem = divmod(duracion.seconds, 3600)
+                    minutos, _ = divmod(rem, 60)
+
+                    col_info.markdown(f"**{profesional}** esta en el domicilio de **{data['paciente']}**")
+                    col_info.caption(
+                        f"Ingreso a las {dt_llegada.strftime('%H:%M')} | Tiempo transcurrido: {horas}h {minutos}m"
+                    )
+
+                    if col_btn.button("Forzar salida", key=f"force_out_{profesional}", use_container_width=True):
+                        st.session_state["checkin_db"].append(
+                            {
+                                "paciente": data["paciente"],
+                                "profesional": profesional,
+                                "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                                "tipo": f"SALIDA (Forzada por Admin: {user['nombre']})",
+                                "empresa": mi_empresa,
+                            }
+                        )
+                        guardar_datos()
+                        st.success(f"Salida forzada registrada correctamente para {profesional}.")
+                        st.rerun()
     else:
-        st.success("En este momento no hay profesionales con guardias abiertas en los domicilios.")
-        
+        st.success("En este momento no hay profesionales con guardias abiertas en domicilios.")
+
     st.divider()
-    st.markdown("#### 📋 Auditoría de todos los movimientos de hoy")
+    st.markdown("#### Auditoria de movimientos del dia")
     if chks_hoy:
-        df_chks = pd.DataFrame(chks_hoy).drop(columns=["empresa"], errors='ignore')
-        df_chks = df_chks.rename(columns={"paciente": "Paciente", "profesional": "Profesional", "fecha_hora": "Fecha y Hora", "tipo": "Acción"})
-        st.dataframe(df_chks.iloc[::-1], use_container_width=True, hide_index=True)
+        df_chks = pd.DataFrame(chks_hoy).drop(columns=["empresa"], errors="ignore")
+        df_chks = df_chks.rename(
+            columns={
+                "paciente": "Paciente",
+                "profesional": "Profesional",
+                "fecha_hora": "Fecha y Hora",
+                "tipo": "Accion",
+            }
+        )
+        limite = seleccionar_limite_registros(
+            "Movimientos a mostrar",
+            len(df_chks),
+            key=f"limite_asistencia_{mi_empresa}",
+            default=30,
+        )
+        mostrar_dataframe_con_scroll(df_chks.tail(limite).iloc[::-1], height=420)
     else:
-        st.write("Sin movimientos en el día de la fecha.")
+        st.write("Sin movimientos en la fecha actual.")

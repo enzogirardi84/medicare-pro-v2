@@ -84,6 +84,35 @@ def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
         return image_bytes, None
 
 
+def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20, 30, 50, 100, 200, 500)):
+    if total <= 0:
+        return 0
+    if total <= min(opciones):
+        st.caption(f"Mostrando {total} registro(s).")
+        return total
+
+    opciones_validas = sorted({valor for valor in opciones if valor < total})
+    if total not in opciones_validas:
+        opciones_validas.append(total)
+
+    valor_default = min(total, default)
+    if valor_default not in opciones_validas:
+        opciones_validas.append(valor_default)
+        opciones_validas = sorted(set(opciones_validas))
+
+    return st.selectbox(label, opciones_validas, index=opciones_validas.index(valor_default), key=key)
+
+
+def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
+    with st.container(height=height, border=border):
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=hide_index,
+            height=height - 24,
+        )
+
+
 def obtener_direccion_real(lat, lon):
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=18&addressdetails=1"

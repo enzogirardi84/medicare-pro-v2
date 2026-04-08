@@ -3,7 +3,7 @@ import base64
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, optimizar_imagen_bytes
+from core.utils import ahora, optimizar_imagen_bytes, seleccionar_limite_registros
 
 
 def render_estudios(paciente_sel, user):
@@ -74,7 +74,7 @@ def render_estudios(paciente_sel, user):
 
     st.markdown("**Selecciona el estudio que quieres eliminar:**")
     opciones = []
-    for est in reversed(estudios_pac):
+    for est in reversed(estudios_pac[-200:]):
         label = f"{est['fecha']} - {est['tipo']}"
         if est.get("detalle"):
             label += f" | {est['detalle'][:50]}..."
@@ -92,9 +92,15 @@ def render_estudios(paciente_sel, user):
             st.rerun()
 
     st.divider()
-    limite_est = st.selectbox("Mostrar ultimos", [10, 20, 50, "Todos"], key="lim_estudios_tab")
-    estudios_mostrar = estudios_pac if limite_est == "Todos" else estudios_pac[-int(limite_est):]
+    limite_est = seleccionar_limite_registros(
+        "Mostrar ultimos estudios",
+        len(estudios_pac),
+        key="lim_estudios_tab",
+        default=20,
+    )
+    estudios_mostrar = estudios_pac[-limite_est:]
     cargar_multimedia = st.checkbox("Cargar imagenes y PDF adjuntos", value=False, key="cargar_estudios_adjuntos")
+    st.caption(f"Mostrando {len(estudios_mostrar)} de {len(estudios_pac)} estudios cargados.")
 
     with st.container(height=520):
         for idx, est in enumerate(reversed(estudios_mostrar)):

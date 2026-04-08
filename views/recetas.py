@@ -8,7 +8,7 @@ from PIL import Image
 
 from core.clinical_exports import build_prescription_pdf_bytes
 from core.database import guardar_datos
-from core.utils import ahora, cargar_json_asset, registrar_auditoria_legal
+from core.utils import ahora, cargar_json_asset, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -175,7 +175,7 @@ def render_recetas(paciente_sel, mi_empresa, user):
                 realizada = any(a.get("med") == nombre and a.get("hora", "").startswith(h[:2]) for a in admin_hoy)
                 fila[h] = "OK" if realizada else "-"
             table_data.append(fila)
-        st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
+        mostrar_dataframe_con_scroll(pd.DataFrame(table_data), height=360)
         st.caption("OK = administrado | - = pendiente")
 
         with st.form("form_registro_dosis", clear_on_submit=True):
@@ -291,9 +291,15 @@ def render_recetas(paciente_sel, mi_empresa, user):
     st.divider()
     if recs_todas:
         st.markdown("#### Historial completo de prescripciones")
+        limite_hist = seleccionar_limite_registros(
+            "Prescripciones a mostrar",
+            len(recs_todas),
+            key=f"limite_recetas_hist_{paciente_sel}",
+            default=30,
+        )
 
         with st.container(height=450):
-            for idx, r in enumerate(reversed(recs_todas[-30:])):
+            for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
                 with st.container(border=True):
                     c_info, c_btn = st.columns([3, 1])
                     estado_actual = r.get("estado_receta", "Activa")

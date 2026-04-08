@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, registrar_auditoria_legal
+from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 
 def _glasgow(ocular, verbal, motora):
@@ -105,8 +105,13 @@ def render_escalas_clinicas(paciente_sel, user):
         st.info("Todavia no hay escalas registradas para este paciente.")
         return
 
-    st.dataframe(
-        pd.DataFrame(registros[-200:]).drop(columns=["paciente"], errors="ignore").iloc[::-1],
-        use_container_width=True,
-        hide_index=True,
+    limite = seleccionar_limite_registros(
+        "Escalas a mostrar",
+        len(registros),
+        key=f"limite_escalas_{paciente_sel}",
+        default=30,
+    )
+    mostrar_dataframe_con_scroll(
+        pd.DataFrame(registros[-limite:]).drop(columns=["paciente"], errors="ignore").iloc[::-1],
+        height=420,
     )

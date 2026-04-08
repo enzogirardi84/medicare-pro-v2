@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -114,8 +114,10 @@ def render_rrhh(mi_empresa, rol, user):
             st.caption(f"Mostrando {limite} filas historicas.")
         else:
             limite = st.slider("Filas historicas", min_value=20, max_value=max_historico, value=min(120, len(df_mostrar)), step=20)
-        with st.container(height=480):
-            st.dataframe(df_mostrar.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"], errors='ignore').head(limite), use_container_width=True, hide_index=True)
+        mostrar_dataframe_con_scroll(
+            df_mostrar.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"], errors='ignore').head(limite),
+            height=480,
+        )
 
         csv_data = df_mostrar.drop(columns=["fecha_dt"], errors='ignore').to_csv(index=False, encoding="utf-8-sig")
         st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{mi_empresa}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", use_container_width=True)
@@ -153,7 +155,14 @@ def render_rrhh(mi_empresa, rol, user):
                 "Horas Totales": round(horas_totales, 1),
             })
         resumen_prof = pd.DataFrame(resumen_rows).sort_values(by=["Horas Totales", "Visitas"], ascending=False)
-        st.dataframe(resumen_prof, use_container_width=True, hide_index=True)
+        limite_resumen = seleccionar_limite_registros(
+            "Profesionales en resumen",
+            len(resumen_prof),
+            key=f"rrhh_resumen_{mi_empresa}",
+            default=20,
+            opciones=(10, 20, 30, 50, 100),
+        )
+        mostrar_dataframe_con_scroll(resumen_prof.head(limite_resumen), height=400)
         st.success(f"Total horas en el periodo: {resumen_prof['Horas Totales'].sum():.1f} hs")
         return
 
@@ -165,8 +174,7 @@ def render_rrhh(mi_empresa, rol, user):
         st.caption(f"Mostrando {limite} filas de gestion.")
     else:
         limite = st.slider("Filas de gestion", min_value=20, max_value=max_gestion, value=min(100, len(df_gestion)), step=20)
-    with st.container(height=420):
-        st.dataframe(df_gestion.head(limite), use_container_width=True, hide_index=True)
+    mostrar_dataframe_con_scroll(df_gestion.head(limite), height=420)
     opciones_borrar = [
         (f"{c.get('fecha_hora', '-')} | {c.get('profesional', 'S/D')} | {c.get('tipo', '-')} | Paciente: {c.get('paciente', 'S/D')}", idx)
         for idx, c in enumerate(st.session_state.get("checkin_db", []))

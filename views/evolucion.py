@@ -5,7 +5,7 @@ import streamlit as st
 from PIL import Image
 
 from core.database import guardar_datos
-from core.utils import ahora, optimizar_imagen_bytes
+from core.utils import ahora, optimizar_imagen_bytes, seleccionar_limite_registros
 
 CANVAS_DISPONIBLE = False
 try:
@@ -98,16 +98,24 @@ def render_evolucion(paciente_sel, user):
     if evs_paciente:
         st.divider()
         st.markdown("#### Historial de Evoluciones Clinicas")
+        limite_evol = seleccionar_limite_registros(
+            "Evoluciones a mostrar",
+            len(evs_paciente),
+            key=f"limite_evol_{paciente_sel}",
+            default=20,
+        )
         if st.button("Borrar ultima evolucion", use_container_width=True):
             if st.checkbox("Confirmar borrado", key="conf_del_evol"):
                 st.session_state["evoluciones_db"].remove(evs_paciente[-1])
                 guardar_datos()
                 st.rerun()
 
-        for ev in reversed(evs_paciente):
-            with st.container(border=True):
-                st.markdown(f"**{ev['fecha']}** | **{ev['firma']}**")
-                st.write(ev["nota"])
-                st.caption("-" * 40)
+        st.caption(f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones registradas.")
+        with st.container(height=560):
+            for ev in reversed(evs_paciente[-limite_evol:]):
+                with st.container(border=True):
+                    st.markdown(f"**{ev['fecha']}** | **{ev['firma']}**")
+                    st.write(ev["nota"])
+                    st.caption("-" * 40)
     else:
         st.info("Aun no hay evoluciones registradas para este paciente.")

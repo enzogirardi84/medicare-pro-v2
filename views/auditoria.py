@@ -4,7 +4,7 @@ import io
 import pandas as pd
 import streamlit as st
 
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll
 
 FPDF_DISPONIBLE = False
 try:
@@ -64,7 +64,10 @@ def render_auditoria(mi_empresa, user):
             st.caption(f"Mostrando {limite} registros.")
         else:
             limite = st.slider("Filas a mostrar", min_value=50, max_value=max_filas, value=min(200, max_filas), step=50)
-        st.dataframe(df_filtrado.tail(limite).drop(columns=["fecha_dt"], errors="ignore").iloc[::-1], use_container_width=True, hide_index=True)
+        mostrar_dataframe_con_scroll(
+            df_filtrado.tail(limite).drop(columns=["fecha_dt"], errors="ignore").iloc[::-1],
+            height=460,
+        )
 
         out_logs = io.BytesIO()
         df_descarga = df_filtrado.drop(columns=["fecha_dt"], errors="ignore").copy()
@@ -111,7 +114,7 @@ def render_auditoria(mi_empresa, user):
             st.caption(f"Mostrando {limite} registros de asistencia.")
         else:
             limite = st.slider("Filas de asistencia", min_value=20, max_value=max_filas, value=min(120, max_filas), step=20)
-        st.dataframe(pd.DataFrame(chks_prof[-limite:]).iloc[::-1], use_container_width=True, hide_index=True)
+        mostrar_dataframe_con_scroll(pd.DataFrame(chks_prof[-limite:]).iloc[::-1], height=420)
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF de asistencia", value=False):
             def t(txt):

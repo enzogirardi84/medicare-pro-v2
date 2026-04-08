@@ -9,6 +9,7 @@ from core.clinical_exports import (
     build_patient_excel_bytes,
     collect_patient_sections,
 )
+from core.utils import mostrar_dataframe_con_scroll
 
 
 def _limitar_registros(opcion_limite):
@@ -129,7 +130,7 @@ def render_historial(paciente_sel):
             for col in ["ingresos", "egresos", "balance"]:
                 if col in df.columns:
                     df[col] = df[col].astype(str) + " ml"
-        st.dataframe(df.iloc[::-1], use_container_width=True, hide_index=True)
+        mostrar_dataframe_con_scroll(df.iloc[::-1], height=520)
         return
 
     if seccion_actual == "Consentimientos":
