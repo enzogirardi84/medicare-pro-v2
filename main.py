@@ -77,6 +77,33 @@ VIEW_LABELS = {
 }
 
 
+VIEW_LABELS = {
+    "Visitas y Agenda": "\U0001F4CD Visitas y Agenda",
+    "Dashboard": "\U0001F4CA Dashboard",
+    "Admision": "\U0001FA7E Admision",
+    "Clinica": "\U0001FA7A Clinica",
+    "Pediatria": "\U0001F476 Pediatria",
+    "Evolucion": "\u270D\ufe0f Evolucion",
+    "Estudios": "\U0001F9EA Estudios",
+    "Materiales": "\U0001F4E6 Materiales",
+    "Recetas": "\U0001F48A Recetas",
+    "Balance": "\U0001F4A7 Balance",
+    "Inventario": "\U0001F3E5 Inventario",
+    "Caja": "\U0001F4B5 Caja",
+    "Emergencias y Ambulancia": "\U0001F691 Emergencias y Ambulancia",
+    "Enfermeria": "\U0001FA79 Enfermeria",
+    "Escalas Clinicas": "\U0001F4CF Escalas Clinicas",
+    "Historial": "\U0001F5C2\ufe0f Historial",
+    "PDF": "\U0001F4C4 PDF",
+    "Telemedicina": "\U0001F3A5 Telemedicina",
+    "Cierre Diario": "\U0001F9EE Cierre Diario",
+    "Mi Equipo": "\U0001F465 Mi Equipo",
+    "Asistencia en Vivo": "\U0001F6F0\ufe0f Asistencia en Vivo",
+    "RRHH y Fichajes": "\u23F1\ufe0f RRHH y Fichajes",
+    "Auditoria": "\U0001F50E Auditoria",
+    "Auditoria Legal": "\u2696\ufe0f Auditoria Legal",
+}
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     module_name, function_name = VIEW_CONFIG[tab_name]
     render_fn = getattr(import_module(module_name), function_name)
@@ -154,14 +181,20 @@ def render_module_nav(menu, vista_actual):
     for modulo in menu:
         active_class = " active" if modulo == vista_actual else ""
         href = f"?modulo={quote(modulo)}"
-        label = escape(modulo)
+        label = escape(VIEW_LABELS.get(modulo, modulo))
         items.append(f"<a class='mc-module-pill{active_class}' href='{href}'>{label}</a>")
 
     st.markdown(
         f"""
-        <div class="mc-module-strip" aria-label="Navegacion principal de modulos">
-            {''.join(items)}
-        </div>
+        <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
+            <div class="mc-module-shell-head">
+                <span class="mc-module-shell-kicker">Navegacion</span>
+                <h3 class="mc-module-shell-title">Modulos del sistema</h3>
+            </div>
+            <div class="mc-module-strip">
+                {''.join(items)}
+            </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )

@@ -379,13 +379,45 @@ hr {
     color: #f8fbff;
 }
 
+.mc-module-shell {
+    background: linear-gradient(180deg, rgba(14, 23, 42, 0.72) 0%, rgba(10, 18, 34, 0.88) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.14);
+    border-radius: 24px;
+    padding: 1rem 1rem 0.6rem;
+    margin: 0 0 1rem 0;
+    box-shadow: 0 18px 42px rgba(2, 6, 23, 0.22);
+}
+
+.mc-module-shell-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    margin-bottom: 0.75rem;
+    padding: 0 0.15rem;
+}
+
+.mc-module-shell-kicker {
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #7dd3fc;
+}
+
+.mc-module-shell-title {
+    margin: 0 !important;
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    color: #f8fbff !important;
+}
+
 .mc-module-strip {
     display: flex;
     gap: 0.75rem;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 0.1rem 0.1rem 0.85rem;
-    margin: 0 0 0.9rem 0;
+    padding: 0.1rem 0.1rem 0.95rem;
+    margin: 0;
     scroll-snap-type: x proximity;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
@@ -401,10 +433,10 @@ hr {
     text-decoration: none;
     color: #e8f1ff;
     font-weight: 800;
-    font-size: 0.98rem;
+    font-size: 0.95rem;
     line-height: 1.15;
-    padding: 0.9rem 1.1rem;
-    border-radius: 16px;
+    padding: 0.92rem 1.18rem;
+    border-radius: 18px;
     border: 1px solid rgba(148, 163, 184, 0.18);
     background: linear-gradient(180deg, rgba(25, 38, 63, 0.94) 0%, rgba(17, 27, 47, 0.98) 100%);
     box-shadow: 0 12px 28px rgba(2, 6, 23, 0.18);
@@ -540,11 +572,7 @@ hr {
         position: sticky;
         top: 0.1rem;
         z-index: 20;
-        background: linear-gradient(180deg, rgba(8, 17, 31, 0.96) 0%, rgba(8, 17, 31, 0.88) 100%);
-        padding: 0.1rem 0.1rem 0.75rem;
-        margin-bottom: 0.7rem;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        padding: 0.1rem 0.05rem 0.8rem;
     }
 
     .mc-module-pill {
@@ -552,6 +580,30 @@ hr {
         padding: 0.72rem 0.95rem;
         border-radius: 15px;
         box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18);
+    }
+
+    .mc-module-shell {
+        position: sticky;
+        top: 0.1rem;
+        z-index: 20;
+        padding: 0.75rem 0.75rem 0.35rem;
+        margin-bottom: 0.8rem;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .mc-module-shell-head {
+        margin-bottom: 0.55rem;
+        padding: 0 0.1rem;
+    }
+
+    .mc-module-shell-kicker {
+        font-size: 0.68rem;
+    }
+
+    .mc-module-shell-title {
+        font-size: 0.94rem !important;
     }
 
     [data-testid="stExpander"] {
