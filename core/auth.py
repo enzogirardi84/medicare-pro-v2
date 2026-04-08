@@ -3,6 +3,8 @@ import streamlit as st
 from core.database import cargar_datos, guardar_datos
 from core.utils import DEFAULT_ADMIN_USER, ahora, asegurar_usuarios_base
 
+SESSION_TIMEOUT_MINUTES = 90
+
 
 def render_login():
     if "logeado" not in st.session_state:
@@ -131,11 +133,11 @@ def check_inactividad():
             st.session_state["ultima_actividad"] = ahora()
         else:
             minutos_inactivos = (ahora() - st.session_state["ultima_actividad"]).total_seconds() / 60.0
-            if minutos_inactivos > 5.0:
+            if minutos_inactivos > SESSION_TIMEOUT_MINUTES:
                 st.session_state["logeado"] = False
                 st.session_state.pop("ultima_actividad", None)
                 st.session_state.pop("u_actual", None)
-                st.warning("Tu sesion se cerro automaticamente por inactividad (5 minutos).")
+                st.warning(f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos).")
                 st.rerun()
             else:
                 st.session_state["ultima_actividad"] = ahora()

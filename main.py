@@ -36,7 +36,6 @@ VIEW_CONFIG = {
     "Inventario": ("views.inventario", "render_inventario"),
     "Caja": ("views.caja", "render_caja"),
     "Emergencias y Ambulancia": ("views.emergencias", "render_emergencias"),
-    "Enfermeria": ("views.enfermeria", "render_enfermeria"),
     "Escalas Clinicas": ("views.escalas_clinicas", "render_escalas_clinicas"),
     "Historial": ("views.historial", "render_historial"),
     "PDF": ("views.pdf_view", "render_pdf"),
@@ -63,7 +62,6 @@ VIEW_LABELS = {
     "Inventario": "🏥 Inventario",
     "Caja": "💵 Caja",
     "Emergencias y Ambulancia": "🚑 Emergencias y Ambulancia",
-    "Enfermeria": "🩹 Enfermeria",
     "Escalas Clinicas": "📏 Escalas Clinicas",
     "Historial": "🗂️ Historial",
     "PDF": "📄 PDF",
@@ -158,8 +156,6 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     elif tab_name == "Caja":
         render_fn(paciente_sel, mi_empresa, user, rol)
     elif tab_name == "Emergencias y Ambulancia":
-        render_fn(paciente_sel, mi_empresa, user)
-    elif tab_name == "Enfermeria":
         render_fn(paciente_sel, mi_empresa, user)
     elif tab_name == "Escalas Clinicas":
         render_fn(paciente_sel, user)
@@ -458,7 +454,6 @@ with st.sidebar:
         "Inventario",
         "Caja",
         "Emergencias y Ambulancia",
-        "Enfermeria",
         "Escalas Clinicas",
         "Historial",
         "PDF",
