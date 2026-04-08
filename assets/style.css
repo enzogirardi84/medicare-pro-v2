@@ -419,6 +419,18 @@ hr {
         padding-top: 0.8rem !important;
     }
 
+    h1 {
+        font-size: clamp(1.6rem, 7vw, 2.1rem) !important;
+    }
+
+    h2 {
+        font-size: clamp(1.35rem, 6vw, 1.8rem) !important;
+    }
+
+    h3 {
+        font-size: clamp(1.1rem, 5vw, 1.4rem) !important;
+    }
+
     [data-testid="stSidebar"] {
         min-width: 268px !important;
     }
@@ -433,15 +445,100 @@ hr {
 
     [data-testid="stRadio"] label {
         min-height: auto !important;
-        width: 100% !important;
+        width: auto !important;
+        min-width: max-content !important;
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        padding: 0.72rem 0.95rem !important;
+        border-radius: 15px !important;
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18) !important;
+    }
+
+    [data-testid="stRadio"] [role="radiogroup"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 0.65rem !important;
+        padding: 0.1rem 0.1rem 0.65rem 0.1rem !important;
+        margin-bottom: 0.2rem !important;
+        scrollbar-width: thin !important;
+        -webkit-overflow-scrolling: touch !important;
+        scroll-snap-type: x proximity;
+    }
+
+    [data-testid="stRadio"] [role="radiogroup"] > label {
+        scroll-snap-align: start;
+    }
+
+    [data-testid="stRadio"] label p {
+        font-size: 0.94rem !important;
+        line-height: 1.2 !important;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.7rem !important;
+        flex-wrap: wrap !important;
     }
 
     [data-testid="stMetric"] {
-        min-height: 120px !important;
+        min-height: 96px !important;
+        padding: 14px !important;
     }
 
     .mc-grid-3 {
         grid-template-columns: 1fr;
+    }
+
+    .mc-hero {
+        padding: 16px 16px 14px;
+        border-radius: 20px;
+        margin-bottom: 0.9rem;
+    }
+
+    .mc-hero-title {
+        font-size: 1.28rem;
+        line-height: 1.18;
+    }
+
+    .mc-hero-text {
+        font-size: 0.94rem;
+        line-height: 1.5;
+    }
+
+    .mc-chip-row {
+        gap: 0.45rem;
+        margin-top: 0.75rem;
+    }
+
+    .mc-chip {
+        font-size: 0.82rem;
+        padding: 0.38rem 0.62rem;
+    }
+
+    .mc-callout {
+        padding: 0.8rem 0.9rem;
+        border-radius: 14px;
+        margin: 0.55rem 0 0.85rem;
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+
+    .stButton > button,
+    .stDownloadButton > button {
+        min-height: 42px !important;
+        font-size: 0.94rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+    }
+
+    [data-baseweb="input"] > div,
+    [data-baseweb="select"] > div,
+    [data-baseweb="textarea"] > div,
+    textarea,
+    input[type="number"],
+    input[type="text"] {
+        min-height: 2.75rem !important;
     }
 
     iframe {
