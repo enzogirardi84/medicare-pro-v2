@@ -4,6 +4,7 @@ import sys
 from html import escape
 from importlib import import_module
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 import streamlit as st
 
@@ -128,6 +129,42 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
         render_fn(mi_empresa, user)
     elif tab_name == "Auditoria Legal":
         render_fn(mi_empresa, user)
+
+
+def resolve_current_view(menu):
+    modulo_param = st.query_params.get("modulo")
+    if isinstance(modulo_param, list):
+        modulo_param = modulo_param[0] if modulo_param else None
+    if modulo_param:
+        modulo_param = unquote(str(modulo_param))
+        if modulo_param in menu:
+            st.session_state["modulo_actual"] = modulo_param
+            return modulo_param
+
+    vista_actual = st.session_state.get("modulo_actual", menu[0])
+    if vista_actual not in menu:
+        vista_actual = menu[0]
+    st.session_state["modulo_actual"] = vista_actual
+    st.query_params["modulo"] = vista_actual
+    return vista_actual
+
+
+def render_module_nav(menu, vista_actual):
+    items = []
+    for modulo in menu:
+        active_class = " active" if modulo == vista_actual else ""
+        href = f"?modulo={quote(modulo)}"
+        label = escape(modulo)
+        items.append(f"<a class='mc-module-pill{active_class}' href='{href}'>{label}</a>")
+
+    st.markdown(
+        f"""
+        <div class="mc-module-strip" aria-label="Navegacion principal de modulos">
+            {''.join(items)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 if "entered_app" not in st.session_state:
@@ -389,14 +426,8 @@ with st.sidebar:
         limpiar_sesion_app()
         st.rerun()
 
-vista_actual = st.radio(
-    "Modulo",
-    menu,
-    key="modulo_actual",
-    horizontal=True,
-    label_visibility="collapsed",
-    format_func=lambda x: VIEW_LABELS.get(x, x),
-)
+vista_actual = resolve_current_view(menu)
+render_module_nav(menu, vista_actual)
 
 if paciente_sel:
     det_actual = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})

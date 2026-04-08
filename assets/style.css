@@ -379,6 +379,51 @@ hr {
     color: #f8fbff;
 }
 
+.mc-module-strip {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.1rem 0.1rem 0.85rem;
+    margin: 0 0 0.9rem 0;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mc-module-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
+    text-decoration: none;
+    color: #e8f1ff;
+    font-weight: 800;
+    font-size: 0.98rem;
+    line-height: 1.15;
+    padding: 0.9rem 1.1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: linear-gradient(180deg, rgba(25, 38, 63, 0.94) 0%, rgba(17, 27, 47, 0.98) 100%);
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.18);
+    scroll-snap-align: start;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mc-module-pill:hover {
+    transform: translateY(-1px);
+    border-color: rgba(96, 165, 250, 0.42);
+    box-shadow: 0 14px 32px rgba(2, 6, 23, 0.24);
+}
+
+.mc-module-pill.active {
+    border-color: rgba(56, 189, 248, 0.54);
+    background: linear-gradient(135deg, rgba(18, 94, 159, 0.34) 0%, rgba(79, 70, 229, 0.26) 100%);
+    box-shadow: 0 14px 32px rgba(56, 189, 248, 0.14);
+}
+
 [data-testid="stSidebar"] .stButton > button {
     border-radius: 16px !important;
 }
@@ -443,60 +488,6 @@ hr {
         border-radius: 16px !important;
     }
 
-    [data-testid="stRadio"] {
-        position: sticky;
-        top: 0.15rem;
-        z-index: 20;
-        background: linear-gradient(180deg, rgba(8, 17, 31, 0.96) 0%, rgba(8, 17, 31, 0.88) 100%);
-        padding: 0.15rem 0 0.2rem;
-        margin-bottom: 0.55rem;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-    }
-
-    [data-testid="stRadio"] > div {
-        width: 100% !important;
-    }
-
-    [data-testid="stRadio"] label {
-        min-height: auto !important;
-        width: auto !important;
-        min-width: max-content !important;
-        flex: 0 0 auto !important;
-        white-space: nowrap !important;
-        padding: 0.72rem 0.95rem !important;
-        border-radius: 15px !important;
-        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18) !important;
-        margin: 0 !important;
-    }
-
-    [data-testid="stRadio"] [role="radiogroup"] {
-        display: grid !important;
-        grid-auto-flow: column !important;
-        grid-auto-columns: max-content !important;
-        flex-wrap: nowrap !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        gap: 0.65rem !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0.1rem 0.1rem 0.72rem 0.1rem !important;
-        margin-bottom: 0.2rem !important;
-        scrollbar-width: thin !important;
-        -webkit-overflow-scrolling: touch !important;
-        scroll-snap-type: x proximity;
-        align-items: stretch !important;
-    }
-
-    [data-testid="stRadio"] [role="radiogroup"] > label {
-        scroll-snap-align: start;
-    }
-
-    [data-testid="stRadio"] label p {
-        font-size: 0.94rem !important;
-        line-height: 1.2 !important;
-    }
-
     [data-testid="stHorizontalBlock"] {
         gap: 0.7rem !important;
         flex-wrap: wrap !important;
@@ -543,6 +534,24 @@ hr {
         margin: 0.55rem 0 0.85rem;
         font-size: 0.92rem;
         line-height: 1.45;
+    }
+
+    .mc-module-strip {
+        position: sticky;
+        top: 0.1rem;
+        z-index: 20;
+        background: linear-gradient(180deg, rgba(8, 17, 31, 0.96) 0%, rgba(8, 17, 31, 0.88) 100%);
+        padding: 0.1rem 0.1rem 0.75rem;
+        margin-bottom: 0.7rem;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .mc-module-pill {
+        font-size: 0.92rem;
+        padding: 0.72rem 0.95rem;
+        border-radius: 15px;
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18);
     }
 
     [data-testid="stExpander"] {
