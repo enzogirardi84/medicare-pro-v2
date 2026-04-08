@@ -28,6 +28,25 @@ pip install -r requirements.txt
 streamlit run main.py
 ```
 
+## Deploy con dominio propio
+
+La app tambien queda preparada para desplegarse en Render con dominio personalizado.
+
+Archivos incluidos:
+
+- `render.yaml`
+- `runtime.txt`
+
+Comando de arranque configurado:
+
+```bash
+streamlit run main.py --server.port $PORT --server.address 0.0.0.0
+```
+
+La guia paso a paso para Render + Donweb esta en:
+
+- `DEPLOY_GUIDE.md`
+
 ## Configuracion
 
 Si se quiere usar Supabase, crear:
