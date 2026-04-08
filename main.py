@@ -49,14 +49,16 @@ VIEW_CONFIG = {
 }
 
 VIEW_ROLE_RULES = {
-    "Dashboard": ["Coordinador"],
-    "Caja": ["Coordinador"],
-    "Cierre Diario": ["Coordinador"],
+    "Dashboard": ["Administrativo", "Coordinador"],
+    "Admision": ["Administrativo", "Coordinador"],
+    "Recetas": ["Medico", "Coordinador"],
+    "Caja": ["Administrativo", "Coordinador"],
+    "Cierre Diario": ["Administrativo", "Coordinador"],
     "Mi Equipo": ["Coordinador"],
     "Asistencia en Vivo": ["Coordinador"],
-    "RRHH y Fichajes": ["Coordinador"],
-    "Auditoria": ["Coordinador"],
-    "Auditoria Legal": ["Coordinador"],
+    "RRHH y Fichajes": ["Administrativo", "Coordinador"],
+    "Auditoria": ["Auditoria", "Coordinador"],
+    "Auditoria Legal": ["Auditoria", "Coordinador"],
 }
 
 VIEW_LABELS = {

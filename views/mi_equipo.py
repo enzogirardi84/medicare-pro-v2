@@ -38,7 +38,11 @@ def render_mi_equipo(mi_empresa, rol):
         u_emp = st.text_input("Asignar a Clinica / Empresa", value=mi_empresa) if rol == "SuperAdmin" else mi_empresa
         u_rl = st.selectbox(
             "Rol en el sistema",
-            ["Operativo", "Coordinador", "SuperAdmin"] if rol == "SuperAdmin" else ["Operativo", "Coordinador"],
+            (
+                ["Operativo", "Administrativo", "Medico", "Enfermeria", "Auditoria", "Coordinador", "SuperAdmin"]
+                if rol == "SuperAdmin"
+                else ["Operativo", "Administrativo", "Medico", "Enfermeria", "Auditoria", "Coordinador"]
+            ),
         )
 
         if st.form_submit_button("Habilitar Acceso", use_container_width=True, type="primary"):

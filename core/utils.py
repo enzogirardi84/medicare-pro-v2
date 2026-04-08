@@ -28,7 +28,11 @@ DEFAULT_ADMIN_USER = {
 
 ROLE_LEVELS = {
     "Operativo": 1,
+    "Administrativo": 1,
+    "Medico": 1,
+    "Enfermeria": 1,
     "Coordinador": 2,
+    "Auditoria": 2,
     "SuperAdmin": 3,
 }
 
@@ -36,9 +40,11 @@ ROLE_LEVELS = {
 def tiene_permiso(rol_actual, roles_permitidos=None):
     if not roles_permitidos:
         return True
+    if rol_actual in roles_permitidos:
+        return True
     nivel_actual = ROLE_LEVELS.get(rol_actual, 0)
-    niveles_permitidos = [ROLE_LEVELS.get(rol, 99) for rol in roles_permitidos]
-    return nivel_actual >= min(niveles_permitidos)
+    niveles_permitidos = [ROLE_LEVELS.get(rol, 0) for rol in roles_permitidos]
+    return bool(niveles_permitidos) and nivel_actual > max(niveles_permitidos)
 
 
 def ahora():
@@ -100,6 +106,47 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
+    consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
+    if not consentimientos:
+        alertas.append(
+            {
+                "nivel": "alta",
+                "titulo": "Consentimiento legal pendiente",
+                "detalle": "Todavia no hay un consentimiento domiciliario firmado para este paciente.",
+            }
+        )
+
+    vitales = [x for x in session_state.get("vitales_db", []) if x.get("paciente") == paciente_sel]
+    if vitales:
+        ultimo_vital = sorted(vitales, key=lambda x: parse_fecha_hora(x.get("fecha", "")))[-1]
+        sat = _to_float(ultimo_vital.get("Sat"))
+        temp = _to_float(ultimo_vital.get("Temp"))
+        fc = _to_float(ultimo_vital.get("FC"))
+        if sat is not None and sat < 92:
+            alertas.append(
+                {
+                    "nivel": "critica",
+                    "titulo": "Desaturacion reciente",
+                    "detalle": f"Ultimo SatO2 registrado: {sat:.0f}% | {ultimo_vital.get('fecha', 'S/D')}",
+                }
+            )
+        if temp is not None and temp >= 38:
+            alertas.append(
+                {
+                    "nivel": "alta",
+                    "titulo": "Fiebre registrada",
+                    "detalle": f"Ultima temperatura: {temp:.1f} C | {ultimo_vital.get('fecha', 'S/D')}",
+                }
+            )
+        if fc is not None and (fc > 110 or fc < 50):
+            alertas.append(
+                {
+                    "nivel": "alta",
+                    "titulo": "Frecuencia cardiaca fuera de rango",
+                    "detalle": f"Ultima FC: {fc:.0f} lpm | {ultimo_vital.get('fecha', 'S/D')}",
+                }
+            )
+
     for indicacion in reversed(session_state.get("indicaciones_db", [])):
         if indicacion.get("paciente") != paciente_sel:
             continue
@@ -118,6 +165,47 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             )
 
     return alertas[:5]
+
+
+def _to_float(value):
+    try:
+        if value in ("", None):
+            return None
+        return float(value)
+    except Exception:
+        return None
+
+
+def parse_fecha_hora(fecha_str):
+    formatos = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y")
+    for formato in formatos:
+        try:
+            return datetime.strptime(str(fecha_str), formato)
+        except Exception:
+            continue
+    return datetime.min
+
+
+def parse_agenda_datetime(item):
+    fecha = str(item.get("fecha", "")).strip()
+    hora = str(item.get("hora", "")).strip() or "00:00"
+    combinado = f"{fecha} {hora}"
+    return parse_fecha_hora(combinado)
+
+
+def calcular_estado_agenda(item, now=None):
+    now = now or ahora().replace(tzinfo=None)
+    estado = str(item.get("estado", "Pendiente")).strip() or "Pendiente"
+    if estado in {"Realizada", "Cancelada"}:
+        return estado
+    dt = parse_agenda_datetime(item)
+    if dt == datetime.min:
+        return estado
+    if dt.date() == now.date() and dt <= now:
+        return "En curso"
+    if dt < now:
+        return "Vencida"
+    return "Pendiente"
 
 
 @st.cache_data(show_spinner=False)
