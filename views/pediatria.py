@@ -37,6 +37,28 @@ def render_pediatria(paciente_sel, user):
         c3.metric("IMC", f"{ultimo_ped.get('imc', '-')}")
         c4.metric("Percentil", ultimo_ped.get("percentil_sug", "-"))
 
+        df_preview = pd.DataFrame(ped)
+        df_preview["fecha_dt"] = df_preview["fecha"].apply(_parse_fecha_hora)
+        df_preview = df_preview.sort_values(by="fecha_dt")
+        if len(df_preview) >= 2:
+            st.markdown("##### Tendencia de crecimiento")
+            col_graph1, col_graph2 = st.columns(2)
+            with col_graph1:
+                st.caption("Peso en el tiempo")
+                st.line_chart(
+                    df_preview.set_index("fecha")["peso"],
+                    use_container_width=True,
+                    color="#38bdf8",
+                )
+            with col_graph2:
+                st.caption("Talla en el tiempo")
+                st.line_chart(
+                    df_preview.set_index("fecha")["talla"],
+                    use_container_width=True,
+                    color="#818cf8",
+                )
+            st.caption("Vista rapida para ver si el crecimiento viene acompanando la evolucion esperada.")
+
     st.divider()
     with st.form("pedia", clear_on_submit=True):
         st.markdown("##### Nuevo Control Pediatrico")
@@ -82,13 +104,16 @@ def render_pediatria(paciente_sel, user):
             df_g = pd.DataFrame(ped)
             df_g["fecha_dt"] = df_g["fecha"].apply(_parse_fecha_hora)
             df_g = df_g.sort_values(by="fecha_dt")
-            col_g1, col_g2 = st.columns(2)
+            col_g1, col_g2, col_g3 = st.columns(3)
             with col_g1:
                 st.caption("Peso (kg)")
-                st.line_chart(df_g.set_index("fecha")["peso"], use_container_width=True)
+                st.line_chart(df_g.set_index("fecha")["peso"], use_container_width=True, color="#38bdf8")
             with col_g2:
                 st.caption("Talla (cm)")
-                st.line_chart(df_g.set_index("fecha")["talla"], use_container_width=True)
+                st.line_chart(df_g.set_index("fecha")["talla"], use_container_width=True, color="#818cf8")
+            with col_g3:
+                st.caption("IMC")
+                st.area_chart(df_g.set_index("fecha")["imc"], use_container_width=True, color="#22c55e")
         st.divider()
         col_tit, col_btn = st.columns([3, 1])
         col_tit.markdown("#### Historial")

@@ -56,6 +56,31 @@ def render_dashboard(mi_empresa, rol):
     col2.metric("Profesionales activos", resumen["Profesional"].nunique())
     col3.metric("Promedio por profesional", round(len(df_visitas) / max(len(resumen), 1), 1))
 
+    st.markdown("#### Actividad semanal")
+    visitas_por_dia = df_visitas.copy()
+    visitas_por_dia["fecha_dt"] = pd.to_datetime(visitas_por_dia["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+    visitas_por_dia.loc[visitas_por_dia["fecha_dt"].isna(), "fecha_dt"] = pd.to_datetime(
+        visitas_por_dia.loc[visitas_por_dia["fecha_dt"].isna(), "fecha_hora"],
+        format="%d/%m/%Y %H:%M",
+        errors="coerce",
+    )
+    visitas_por_dia = visitas_por_dia.dropna(subset=["fecha_dt"])
+    if not visitas_por_dia.empty:
+        por_dia = (
+            visitas_por_dia.assign(Dia=visitas_por_dia["fecha_dt"].dt.strftime("%d/%m"))
+            .groupby("Dia")
+            .size()
+            .reset_index(name="Visitas")
+        )
+        por_dia = por_dia.sort_values("Dia")
+        col_g1, col_g2 = st.columns([1.15, 1])
+        with col_g1:
+            st.caption("Visitas registradas por dia")
+            st.bar_chart(por_dia.set_index("Dia")["Visitas"], use_container_width=True)
+        with col_g2:
+            st.caption("Distribucion por profesional")
+            st.bar_chart(resumen.head(min(8, len(resumen))).set_index("Profesional")["Visitas"], use_container_width=True)
+
     max_top = min(20, max(len(resumen), 1))
     if max_top <= 5:
         top_n = max_top
