@@ -1,7 +1,7 @@
 import streamlit as st
 
 from core.database import cargar_datos, guardar_datos
-from core.utils import ahora
+from core.utils import ahora, asegurar_usuarios_base
 
 
 def render_login():
@@ -28,6 +28,7 @@ def render_login():
                         if db_f:
                             for k, v in db_f.items():
                                 st.session_state[k] = v
+                        asegurar_usuarios_base()
                         u_limpio = u.strip().lower()
                         usuario_encontrado = None
                         for key_db in st.session_state["usuarios_db"].keys():
@@ -69,6 +70,7 @@ def render_login():
                         if db_f:
                             for k, v in db_f.items():
                                 st.session_state[k] = v
+                        asegurar_usuarios_base()
                         u_limpio = rec_u.strip().lower()
                         if u_limpio in st.session_state["usuarios_db"]:
                             user_data = st.session_state["usuarios_db"][u_limpio]

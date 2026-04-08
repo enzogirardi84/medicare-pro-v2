@@ -13,6 +13,19 @@ ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 
+DEFAULT_ADMIN_USER = {
+    "pass": "37108100",
+    "rol": "SuperAdmin",
+    "nombre": "Enzo Girardi",
+    "empresa": "SISTEMAS E.G.",
+    "matricula": "M.P 21947",
+    "dni": "37108100",
+    "titulo": "Director de Sistemas",
+    "estado": "Activo",
+    "pin": "1234",
+}
+
+
 def ahora():
     return datetime.now(ARG_TZ)
 
@@ -33,6 +46,16 @@ def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula=""
             **extra,
         }
     )
+
+
+def asegurar_usuarios_base():
+    st.session_state.setdefault("usuarios_db", {})
+    if "admin" not in st.session_state["usuarios_db"]:
+        st.session_state["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
+    else:
+        combinado = DEFAULT_ADMIN_USER.copy()
+        combinado.update(st.session_state["usuarios_db"]["admin"])
+        st.session_state["usuarios_db"]["admin"] = combinado
 
 
 @st.cache_data(show_spinner=False)
@@ -80,17 +103,7 @@ def inicializar_db_state(db):
     if "db_inicializada" not in st.session_state:
         claves_base = {
             "usuarios_db": {
-                "admin": {
-                    "pass": "37108100",
-                    "rol": "SuperAdmin",
-                    "nombre": "Enzo Girardi",
-                    "empresa": "SISTEMAS E.G.",
-                    "matricula": "M.P 21947",
-                    "dni": "37108100",
-                    "titulo": "Director de Sistemas",
-                    "estado": "Activo",
-                    "pin": "1234",
-                }
+                "admin": DEFAULT_ADMIN_USER.copy()
             },
             "pacientes_db": [],
             "detalles_pacientes_db": {},
@@ -127,4 +140,5 @@ def inicializar_db_state(db):
         else:
             for k, v in claves_base.items():
                 st.session_state[k] = v
+        asegurar_usuarios_base()
         st.session_state["db_inicializada"] = True
