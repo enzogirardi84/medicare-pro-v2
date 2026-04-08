@@ -202,12 +202,26 @@ def render_dashboard(mi_empresa, rol):
         st.caption("Cambios recientes de medicacion")
         if meds_suspendidas:
             df_med = pd.DataFrame(meds_suspendidas)
-            df_med["Estado"] = df_med["estado_receta"].fillna("Activa")
-            if "medico_nombre" in df_med.columns:
-                df_med["Profesional"] = df_med["profesional_estado"].fillna(df_med["medico_nombre"])
-            else:
-                df_med["Profesional"] = df_med["profesional_estado"].fillna("")
+            estado_base = df_med["estado_receta"] if "estado_receta" in df_med.columns else pd.Series(["Activa"] * len(df_med))
+            df_med["Estado"] = estado_base.fillna("Activa")
+
+            profesional_estado = (
+                df_med["profesional_estado"]
+                if "profesional_estado" in df_med.columns
+                else pd.Series([""] * len(df_med))
+            )
+            medico_nombre = (
+                df_med["medico_nombre"]
+                if "medico_nombre" in df_med.columns
+                else pd.Series([""] * len(df_med))
+            )
+            df_med["Profesional"] = profesional_estado.fillna("").replace("", pd.NA).fillna(medico_nombre.fillna("")).replace("", "Sin profesional")
+
             df_med = df_med.rename(columns={"fecha_estado": "Fecha", "med": "Indicacion"})
+            if "Fecha" not in df_med.columns:
+                df_med["Fecha"] = df_med.get("fecha", "S/D")
+            if "Indicacion" not in df_med.columns:
+                df_med["Indicacion"] = df_med.get("med", "Sin detalle")
             df_med = df_med[["Fecha", "Indicacion", "Estado", "Profesional"]].sort_values("Fecha", ascending=False)
             limite_med = seleccionar_limite_registros(
                 "Cambios a mostrar",
