@@ -418,6 +418,49 @@ hr {
     letter-spacing: -0.03em;
 }
 
+[data-testid="stPills"] {
+    width: 100% !important;
+}
+
+[data-testid="stPills"] [role="listbox"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 0.78rem !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0.05rem 0.05rem 0.95rem 0.05rem !important;
+    margin: 0 !important;
+    scrollbar-width: thin !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+[data-testid="stPills"] [role="option"] {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    border-radius: 17px !important;
+    min-height: 46px !important;
+    padding: 0.82rem 1.02rem !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
+    background: linear-gradient(180deg, rgba(25, 38, 63, 0.94) 0%, rgba(17, 27, 47, 0.98) 100%) !important;
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+    color: #e8f1ff !important;
+    font-weight: 700 !important;
+}
+
+[data-testid="stPills"] [role="option"][aria-selected="true"] {
+    border-color: rgba(56, 189, 248, 0.54) !important;
+    background: linear-gradient(135deg, rgba(18, 94, 159, 0.34) 0%, rgba(79, 70, 229, 0.26) 100%) !important;
+    box-shadow: 0 14px 32px rgba(56, 189, 248, 0.14) !important;
+    color: #ffffff !important;
+}
+
+[data-testid="stPills"] [role="option"] p,
+[data-testid="stPills"] [role="option"] span {
+    color: inherit !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+}
+
 .mc-module-strip {
     display: flex;
     gap: 0.9rem;
@@ -615,16 +658,20 @@ hr {
         font-size: 1rem !important;
     }
 
-    .mc-module-strip {
-        gap: 0.78rem;
-        padding: 0.08rem 0.1rem 0.95rem;
+    [data-testid="stPills"] [role="listbox"] {
+        gap: 0.78rem !important;
+        padding: 0.08rem 0.1rem 0.95rem !important;
     }
 
-    .mc-module-strip .mc-module-pill {
-        font-size: 0.9rem;
-        min-height: 46px;
-        padding: 0.82rem 1.02rem;
-        border-radius: 17px;
+    [data-testid="stPills"] [role="option"] {
+        min-height: 46px !important;
+        padding: 0.82rem 1.02rem !important;
+        border-radius: 17px !important;
+    }
+
+    [data-testid="stPills"] [role="option"] p,
+    [data-testid="stPills"] [role="option"] span {
+        font-size: 0.9rem !important;
     }
 
     .mc-hero {

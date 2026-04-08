@@ -4,7 +4,6 @@ import sys
 from html import escape
 from importlib import import_module
 from pathlib import Path
-from urllib.parse import quote, unquote
 
 import streamlit as st
 
@@ -182,75 +181,38 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
 
 
 def resolve_current_view(menu):
-    modulo_param = st.query_params.get("modulo")
-    if isinstance(modulo_param, list):
-        modulo_param = modulo_param[0] if modulo_param else None
-    if modulo_param:
-        modulo_param = unquote(str(modulo_param))
-        if modulo_param in menu:
-            st.session_state["modulo_actual"] = modulo_param
-            return modulo_param
-
     vista_actual = st.session_state.get("modulo_actual", menu[0])
     if vista_actual not in menu:
         vista_actual = menu[0]
     st.session_state["modulo_actual"] = vista_actual
-    st.query_params["modulo"] = vista_actual
     return vista_actual
 
 
 def render_module_nav(menu, vista_actual):
-    items = []
-    for modulo in menu:
-        href = f"?modulo={quote(modulo)}"
-        label = escape(VIEW_NAV_LABELS.get(modulo, modulo))
-        pill_style = (
-            "display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;"
-            "min-width:max-content;white-space:nowrap;text-decoration:none;"
-            "font-weight:700;font-size:0.92rem;line-height:1.1;min-height:46px;"
-            "padding:0.82rem 1.02rem;border-radius:17px;"
-            "border:1px solid rgba(148,163,184,0.18);"
-            "background:linear-gradient(180deg, rgba(25,38,63,0.94) 0%, rgba(17,27,47,0.98) 100%);"
-            "box-shadow:0 8px 18px rgba(2,6,23,0.18);"
-            "color:#e8f1ff;"
-        )
-        if modulo == vista_actual:
-            pill_style += (
-                "border-color:rgba(56,189,248,0.54);"
-                "background:linear-gradient(135deg, rgba(18,94,159,0.34) 0%, rgba(79,70,229,0.26) 100%);"
-                "box-shadow:0 14px 32px rgba(56,189,248,0.14);color:#ffffff;"
-            )
-        items.append(f"<a class='mc-module-pill' href='{href}' style=\"{pill_style}\">{label}</a>")
-
     st.markdown(
-        f"""
-        <section class="mc-module-shell" aria-label="Navegacion principal de modulos" style="
-            background:linear-gradient(180deg, rgba(14,23,42,0.72) 0%, rgba(10,18,34,0.88) 100%);
-            border:1px solid rgba(96,165,250,0.14);
-            border-radius:24px;
-            padding:0.92rem 0.92rem 0.55rem;
-            margin:0 0 1rem 0;
-            box-shadow:0 22px 48px rgba(2,6,23,0.24);">
-            <div class="mc-module-shell-head" style="display:flex;flex-direction:column;gap:0.26rem;margin-bottom:0.8rem;padding:0 0.18rem;">
-                <span class="mc-module-shell-kicker" style="font-size:0.7rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#7dd3fc;">Navegacion</span>
-                <h3 class="mc-module-shell-title" style="margin:0;color:#f8fbff;font-size:1rem;font-weight:800;letter-spacing:-0.03em;">Modulos del sistema</h3>
-            </div>
-            <div class="mc-module-strip" style="
-                display:flex;
-                gap:0.78rem;
-                align-items:stretch;
-                overflow-x:auto;
-                overflow-y:hidden;
-                padding:0.08rem 0.1rem 0.95rem;
-                margin:0;
-                -webkit-overflow-scrolling:touch;
-                scrollbar-width:thin;">
-                {''.join(items)}
+        """
+        <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
+            <div class="mc-module-shell-head">
+                <span class="mc-module-shell-kicker">Navegacion</span>
+                <h3 class="mc-module-shell-title">Modulos del sistema</h3>
             </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
+    selected = st.pills(
+        "Modulos del sistema",
+        menu,
+        default=vista_actual,
+        selection_mode="single",
+        format_func=lambda x: VIEW_NAV_LABELS.get(x, x),
+        label_visibility="collapsed",
+        key="module_nav_pills",
+    )
+    if selected and selected != vista_actual:
+        st.session_state["modulo_actual"] = selected
+        return selected
+    return selected or vista_actual
 
 
 if "entered_app" not in st.session_state:
@@ -512,7 +474,7 @@ with st.sidebar:
         st.rerun()
 
 vista_actual = resolve_current_view(menu)
-render_module_nav(menu, vista_actual)
+vista_actual = render_module_nav(menu, vista_actual)
 
 if paciente_sel:
     det_actual = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
