@@ -2,7 +2,6 @@ import base64
 import io
 
 import streamlit as st
-from PIL import Image
 
 from core.clinical_exports import (
     build_backup_pdf_bytes,
@@ -11,7 +10,7 @@ from core.clinical_exports import (
     build_patient_excel_bytes,
 )
 from core.database import guardar_datos
-from core.utils import ahora, registrar_auditoria_legal
+from core.utils import ahora, firma_a_base64, obtener_config_firma, registrar_auditoria_legal
 
 CANVAS_DISPONIBLE = False
 try:
@@ -113,29 +112,34 @@ def render_pdf(paciente_sel, mi_empresa, user):
 
     canvas_result = None
     if CANVAS_DISPONIBLE:
+        firma_cfg = obtener_config_firma(f"consent_{paciente_sel}")
+        firma_subida = st.file_uploader(
+            "O subir foto de la firma del paciente / familiar",
+            type=["png", "jpg", "jpeg"],
+            key=f"cons_upload_{paciente_sel}",
+        )
         canvas_result = st_canvas(
             fill_color="rgba(255,255,255,1)",
-            stroke_width=3,
+            stroke_width=firma_cfg["stroke_width"],
             stroke_color="#000000",
             background_color="#ffffff",
-            height=160,
-            width=480,
+            height=firma_cfg["height"],
+            width=firma_cfg["width"],
             drawing_mode="freedraw",
+            display_toolbar=firma_cfg["display_toolbar"],
             key=f"canvas_consent_{paciente_sel}",
         )
+    else:
+        firma_subida = None
 
     if st.button("Guardar consentimiento legal", use_container_width=True, type="primary", key=f"save_consent_{paciente_sel}"):
         if not acepta:
             st.error("Debe confirmar la aceptacion del tratamiento domiciliario.")
         else:
-            firma_b64 = ""
-            if CANVAS_DISPONIBLE and canvas_result is not None and canvas_result.image_data is not None:
-                img = Image.fromarray(canvas_result.image_data.astype("uint8"), "RGBA")
-                fondo = Image.new("RGB", img.size, (255, 255, 255))
-                fondo.paste(img, mask=img.split()[-1])
-                buf = io.BytesIO()
-                fondo.save(buf, format="JPEG", optimize=True, quality=65)
-                firma_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            firma_b64 = firma_a_base64(
+                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
+                uploaded_file=firma_subida,
+            )
             if not firma_b64:
                 st.error("La firma del paciente o familiar no se detecto. Dibujala antes de guardar.")
             else:

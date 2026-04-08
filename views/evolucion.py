@@ -2,10 +2,15 @@ import base64
 import io
 
 import streamlit as st
-from PIL import Image
 
 from core.database import guardar_datos
-from core.utils import ahora, optimizar_imagen_bytes, seleccionar_limite_registros
+from core.utils import (
+    ahora,
+    firma_a_base64,
+    obtener_config_firma,
+    optimizar_imagen_bytes,
+    seleccionar_limite_registros,
+)
 
 CANVAS_DISPONIBLE = False
 try:
@@ -24,26 +29,31 @@ def render_evolucion(paciente_sel, user):
 
     if CANVAS_DISPONIBLE:
         st.markdown("##### Firma Digital del Paciente / Familiar")
+        firma_cfg = obtener_config_firma("evolucion")
+        firma_subida = st.file_uploader(
+            "O subir foto de la firma",
+            type=["png", "jpg", "jpeg"],
+            key="firma_upload_evolucion",
+        )
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 1)",
-            stroke_width=3,
+            stroke_width=firma_cfg["stroke_width"],
             stroke_color="#000000",
             background_color="#ffffff",
-            height=180,
-            width=500,
+            height=firma_cfg["height"],
+            width=firma_cfg["width"],
             drawing_mode="freedraw",
+            display_toolbar=firma_cfg["display_toolbar"],
             key="canvas_firma_evolucion",
         )
 
         if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
-            if canvas_result.image_data is not None:
-                img = Image.fromarray(canvas_result.image_data.astype("uint8"), "RGBA")
-                bg = Image.new("RGB", img.size, (255, 255, 255))
-                bg.paste(img, mask=img.split()[-1])
-                buf = io.BytesIO()
-                bg.save(buf, format="JPEG", optimize=True, quality=65)
-                b64_firma = base64.b64encode(buf.getvalue()).decode("utf-8")
+            b64_firma = firma_a_base64(
+                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
+                uploaded_file=firma_subida,
+            )
 
+            if b64_firma:
                 st.session_state["firmas_tactiles_db"].append({
                     "paciente": paciente_sel,
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
@@ -52,6 +62,8 @@ def render_evolucion(paciente_sel, user):
                 guardar_datos()
                 st.success("Firma guardada correctamente.")
                 st.rerun()
+            else:
+                st.error("No se detecto una firma valida. Puedes dibujarla o subir una foto.")
     else:
         st.warning("Libreria de firma no disponible.")
 

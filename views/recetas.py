@@ -4,11 +4,18 @@ import os
 
 import pandas as pd
 import streamlit as st
-from PIL import Image
 
 from core.clinical_exports import build_prescription_pdf_bytes
 from core.database import guardar_datos
-from core.utils import ahora, cargar_json_asset, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
+from core.utils import (
+    ahora,
+    cargar_json_asset,
+    firma_a_base64,
+    mostrar_dataframe_con_scroll,
+    obtener_config_firma,
+    registrar_auditoria_legal,
+    seleccionar_limite_registros,
+)
 
 FPDF_DISPONIBLE = False
 try:
@@ -93,15 +100,23 @@ def render_recetas(paciente_sel, mi_empresa, user):
         medico_matricula = col_m2.text_input("Matricula profesional")
 
         firma_canvas = None
+        firma_subida = None
         if CANVAS_DISPONIBLE and st.checkbox("Cargar firma digital", value=False):
+            firma_cfg = obtener_config_firma("receta")
+            firma_subida = st.file_uploader(
+                "O subir foto de la firma medica",
+                type=["png", "jpg", "jpeg"],
+                key="firma_upload_receta",
+            )
             firma_canvas = st_canvas(
                 key="firma_receta_activa",
                 background_color="#ffffff",
-                height=140,
+                height=firma_cfg["height"],
+                width=firma_cfg["width"],
                 drawing_mode="freedraw",
-                stroke_width=3,
+                stroke_width=firma_cfg["stroke_width"],
                 stroke_color="#000000",
-                display_toolbar=True,
+                display_toolbar=firma_cfg["display_toolbar"],
             )
 
         if st.button("Guardar prescripcion medica", use_container_width=True, type="primary"):
@@ -110,14 +125,10 @@ def render_recetas(paciente_sel, mi_empresa, user):
                 if not medico_matricula.strip():
                     st.error("Debe ingresar la matricula del medico.")
                 else:
-                    firma_b64 = ""
-                    if CANVAS_DISPONIBLE and firma_canvas is not None and firma_canvas.image_data is not None:
-                        img = Image.fromarray(firma_canvas.image_data.astype("uint8"), "RGBA")
-                        fondo = Image.new("RGB", img.size, (255, 255, 255))
-                        fondo.paste(img, mask=img.split()[-1])
-                        buf = io.BytesIO()
-                        fondo.save(buf, format="JPEG", optimize=True, quality=65)
-                        firma_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+                    firma_b64 = firma_a_base64(
+                        canvas_image_data=firma_canvas.image_data if firma_canvas is not None else None,
+                        uploaded_file=firma_subida,
+                    )
 
                     texto_receta = f"{med_final} | Via: {via} | {frecuencia} | Durante {dias} dias"
                     st.session_state["indicaciones_db"].append(

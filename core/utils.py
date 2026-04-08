@@ -1,5 +1,6 @@
 import json
 import urllib.request
+import base64
 from io import BytesIO
 from datetime import datetime
 from pathlib import Path
@@ -82,6 +83,46 @@ def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
             return salida.getvalue(), "jpg"
     except Exception:
         return image_bytes, None
+
+
+def obtener_config_firma(key_prefix, default_liviano=True):
+    modo_liviano = st.checkbox(
+        "Modo firma liviana (recomendado en celulares viejos)",
+        value=default_liviano,
+        key=f"{key_prefix}_firma_liviana",
+    )
+    if modo_liviano:
+        st.caption("Reduce el tamaño del lienzo y las herramientas para que firme mas fluido.")
+        return {
+            "height": 120,
+            "width": 320,
+            "stroke_width": 2,
+            "display_toolbar": False,
+        }
+    return {
+        "height": 160,
+        "width": 480,
+        "stroke_width": 3,
+        "display_toolbar": True,
+    }
+
+
+def firma_a_base64(canvas_image_data=None, uploaded_file=None):
+    try:
+        if uploaded_file is not None:
+            firma_bytes, _ = optimizar_imagen_bytes(uploaded_file.getvalue(), max_size=(900, 300), quality=60)
+            return base64.b64encode(firma_bytes).decode("utf-8")
+
+        if canvas_image_data is not None:
+            img = Image.fromarray(canvas_image_data.astype("uint8"), "RGBA")
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            bg.paste(img, mask=img.split()[-1])
+            buf = BytesIO()
+            bg.save(buf, format="JPEG", optimize=True, quality=60)
+            return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        return ""
+    return ""
 
 
 def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20, 30, 50, 100, 200, 500)):
