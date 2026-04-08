@@ -2,7 +2,9 @@ import base64
 import io
 import json
 import os
+import re
 import tempfile
+import unicodedata
 from pathlib import Path
 
 import pandas as pd
@@ -13,7 +15,35 @@ ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
 
 def _safe_text(value):
-    return str(value or "").encode("latin-1", "replace").decode("latin-1")
+    if value is None:
+        text = ""
+    elif isinstance(value, bytes):
+        text = value.decode("utf-8", "replace")
+    elif isinstance(value, (list, tuple, set)):
+        text = ", ".join(_safe_text(item) for item in value if item not in [None, ""])
+    elif isinstance(value, dict):
+        try:
+            text = json.dumps(value, ensure_ascii=False, default=str)
+        except Exception:
+            text = str(value)
+    else:
+        text = str(value)
+
+    text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\t", "    ")
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if ch == "\n" or (ord(ch) >= 32 and ch != "\x7f"))
+    text = re.sub(r"[ ]{2,}", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+
+    # FPDF se rompe facil con tokens muy largos sin cortes.
+    parts = []
+    for token in text.split(" "):
+        if len(token) > 40:
+            token = " ".join(token[i : i + 32] for i in range(0, len(token), 32))
+        parts.append(token)
+    text = " ".join(parts)
+
+    return text.encode("latin-1", "replace").decode("latin-1")
 
 
 def _patient_signature_bytes(session_state, paciente_sel):
