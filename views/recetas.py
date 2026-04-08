@@ -103,21 +103,30 @@ def render_recetas(paciente_sel, mi_empresa, user):
         firma_subida = None
         if CANVAS_DISPONIBLE and st.checkbox("Cargar firma digital", value=False):
             firma_cfg = obtener_config_firma("receta")
-            firma_subida = st.file_uploader(
-                "O subir foto de la firma medica",
-                type=["png", "jpg", "jpeg"],
-                key="firma_upload_receta",
+            metodo_firma = st.radio(
+                "Metodo de firma medica",
+                ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
+                horizontal=True,
+                key="metodo_firma_receta",
             )
-            firma_canvas = st_canvas(
-                key="firma_receta_activa",
-                background_color="#ffffff",
-                height=firma_cfg["height"],
-                width=firma_cfg["width"],
-                drawing_mode="freedraw",
-                stroke_width=firma_cfg["stroke_width"],
-                stroke_color="#000000",
-                display_toolbar=firma_cfg["display_toolbar"],
-            )
+            if metodo_firma.startswith("Subir"):
+                firma_subida = st.file_uploader(
+                    "Subir imagen de la firma medica",
+                    type=["png", "jpg", "jpeg"],
+                    key="firma_upload_receta",
+                )
+            else:
+                st.caption("Si el telefono va lento, vuelve a la opcion de subir foto.")
+                firma_canvas = st_canvas(
+                    key="firma_receta_activa",
+                    background_color="#ffffff",
+                    height=firma_cfg["height"],
+                    width=firma_cfg["width"],
+                    drawing_mode="freedraw",
+                    stroke_width=firma_cfg["stroke_width"],
+                    stroke_color="#000000",
+                    display_toolbar=firma_cfg["display_toolbar"],
+                )
 
         if st.button("Guardar prescripcion medica", use_container_width=True, type="primary"):
             med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum

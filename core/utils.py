@@ -1,8 +1,8 @@
+import base64
 import json
 import urllib.request
-import base64
-from io import BytesIO
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
 import pytz
@@ -110,7 +110,10 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
                 {
                     "nivel": "alta" if estado == "Suspendida" else "media",
                     "titulo": f"Medicacion {estado.lower()}",
-                    "detalle": f"{indicacion.get('med', 'Sin detalle')} | {fecha_estado} | {indicacion.get('profesional_estado', indicacion.get('medico_nombre', 'Sin profesional'))}",
+                    "detalle": (
+                        f"{indicacion.get('med', 'Sin detalle')} | {fecha_estado} | "
+                        f"{indicacion.get('profesional_estado', indicacion.get('medico_nombre', 'Sin profesional'))}"
+                    ),
                 }
             )
 
@@ -150,17 +153,17 @@ def obtener_config_firma(key_prefix, default_liviano=True):
         key=f"{key_prefix}_firma_liviana",
     )
     if modo_liviano:
-        st.caption("Reduce el tamaño del lienzo y las herramientas para que firme mas fluido.")
+        st.caption("Reduce el tamano del lienzo y las herramientas para que firme mas fluido.")
         return {
-            "height": 120,
-            "width": 320,
-            "stroke_width": 2,
+            "height": 96,
+            "width": 280,
+            "stroke_width": 1.8,
             "display_toolbar": False,
         }
     return {
-        "height": 160,
-        "width": 480,
-        "stroke_width": 3,
+        "height": 140,
+        "width": 420,
+        "stroke_width": 2.5,
         "display_toolbar": True,
     }
 
@@ -168,15 +171,16 @@ def obtener_config_firma(key_prefix, default_liviano=True):
 def firma_a_base64(canvas_image_data=None, uploaded_file=None):
     try:
         if uploaded_file is not None:
-            firma_bytes, _ = optimizar_imagen_bytes(uploaded_file.getvalue(), max_size=(900, 300), quality=60)
+            firma_bytes, _ = optimizar_imagen_bytes(uploaded_file.getvalue(), max_size=(700, 220), quality=55)
             return base64.b64encode(firma_bytes).decode("utf-8")
 
         if canvas_image_data is not None:
             img = Image.fromarray(canvas_image_data.astype("uint8"), "RGBA")
             bg = Image.new("RGB", img.size, (255, 255, 255))
             bg.paste(img, mask=img.split()[-1])
+            bg.thumbnail((700, 220))
             buf = BytesIO()
-            bg.save(buf, format="JPEG", optimize=True, quality=60)
+            bg.save(buf, format="JPEG", optimize=True, quality=55)
             return base64.b64encode(buf.getvalue()).decode("utf-8")
     except Exception:
         return ""
@@ -230,9 +234,7 @@ def obtener_direccion_real(lat, lon):
 def inicializar_db_state(db):
     if "db_inicializada" not in st.session_state:
         claves_base = {
-            "usuarios_db": {
-                "admin": DEFAULT_ADMIN_USER.copy()
-            },
+            "usuarios_db": {"admin": DEFAULT_ADMIN_USER.copy()},
             "pacientes_db": [],
             "detalles_pacientes_db": {},
             "vitales_db": [],

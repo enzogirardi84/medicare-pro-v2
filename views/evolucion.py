@@ -27,25 +27,37 @@ def render_evolucion(paciente_sel, user):
 
     st.subheader("Evolucion Medica y Firma Digital")
 
+    firma_subida = None
     if CANVAS_DISPONIBLE:
         st.markdown("##### Firma Digital del Paciente / Familiar")
         firma_cfg = obtener_config_firma("evolucion")
-        firma_subida = st.file_uploader(
-            "O subir foto de la firma",
-            type=["png", "jpg", "jpeg"],
-            key="firma_upload_evolucion",
+        metodo_firma = st.radio(
+            "Metodo de firma",
+            ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
+            horizontal=True,
+            key="metodo_firma_evolucion",
         )
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 255, 255, 1)",
-            stroke_width=firma_cfg["stroke_width"],
-            stroke_color="#000000",
-            background_color="#ffffff",
-            height=firma_cfg["height"],
-            width=firma_cfg["width"],
-            drawing_mode="freedraw",
-            display_toolbar=firma_cfg["display_toolbar"],
-            key="canvas_firma_evolucion",
-        )
+        firma_subida = None
+        canvas_result = None
+        if metodo_firma.startswith("Subir"):
+            firma_subida = st.file_uploader(
+                "Subir imagen de la firma",
+                type=["png", "jpg", "jpeg"],
+                key="firma_upload_evolucion",
+            )
+        else:
+            st.caption("Usa el lienzo solo si el telefono responde fluido.")
+            canvas_result = st_canvas(
+                fill_color="rgba(255, 255, 255, 1)",
+                stroke_width=firma_cfg["stroke_width"],
+                stroke_color="#000000",
+                background_color="#ffffff",
+                height=firma_cfg["height"],
+                width=firma_cfg["width"],
+                drawing_mode="freedraw",
+                display_toolbar=firma_cfg["display_toolbar"],
+                key="canvas_firma_evolucion",
+            )
 
         if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
             b64_firma = firma_a_base64(
@@ -63,9 +75,14 @@ def render_evolucion(paciente_sel, user):
                 st.success("Firma guardada correctamente.")
                 st.rerun()
             else:
-                st.error("No se detecto una firma valida. Puedes dibujarla o subir una foto.")
+                st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
     else:
-        st.warning("Libreria de firma no disponible.")
+        st.warning("Libreria de firma no disponible. Puedes subir una imagen de la firma.")
+        firma_subida = st.file_uploader(
+            "Subir imagen de la firma",
+            type=["png", "jpg", "jpeg"],
+            key="firma_upload_evolucion_sin_canvas",
+        )
 
     st.divider()
 
