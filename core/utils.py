@@ -26,6 +26,20 @@ DEFAULT_ADMIN_USER = {
     "pin": "1234",
 }
 
+ROLE_LEVELS = {
+    "Operativo": 1,
+    "Coordinador": 2,
+    "SuperAdmin": 3,
+}
+
+
+def tiene_permiso(rol_actual, roles_permitidos=None):
+    if not roles_permitidos:
+        return True
+    nivel_actual = ROLE_LEVELS.get(rol_actual, 0)
+    niveles_permitidos = [ROLE_LEVELS.get(rol, 99) for rol in roles_permitidos]
+    return nivel_actual >= min(niveles_permitidos)
+
 
 def ahora():
     return datetime.now(ARG_TZ)
@@ -57,6 +71,50 @@ def asegurar_usuarios_base():
         combinado = DEFAULT_ADMIN_USER.copy()
         combinado.update(st.session_state["usuarios_db"]["admin"])
         st.session_state["usuarios_db"]["admin"] = combinado
+
+
+def obtener_alertas_clinicas(session_state, paciente_sel):
+    if not paciente_sel:
+        return []
+
+    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    alertas = []
+
+    alergias = str(detalles.get("alergias", "") or "").strip()
+    if alergias:
+        alertas.append(
+            {
+                "nivel": "critica",
+                "titulo": "Alergias registradas",
+                "detalle": alergias,
+            }
+        )
+
+    patologias = str(detalles.get("patologias", "") or "").strip()
+    if patologias:
+        alertas.append(
+            {
+                "nivel": "media",
+                "titulo": "Patologias y riesgos",
+                "detalle": patologias,
+            }
+        )
+
+    for indicacion in reversed(session_state.get("indicaciones_db", [])):
+        if indicacion.get("paciente") != paciente_sel:
+            continue
+        estado = str(indicacion.get("estado_receta") or indicacion.get("estado_clinico") or "Activa").strip()
+        if estado in {"Suspendida", "Modificada"}:
+            fecha_estado = indicacion.get("fecha_estado") or indicacion.get("fecha_suspension") or indicacion.get("fecha", "")
+            alertas.append(
+                {
+                    "nivel": "alta" if estado == "Suspendida" else "media",
+                    "titulo": f"Medicacion {estado.lower()}",
+                    "detalle": f"{indicacion.get('med', 'Sin detalle')} | {fecha_estado} | {indicacion.get('profesional_estado', indicacion.get('medico_nombre', 'Sin profesional'))}",
+                }
+            )
+
+    return alertas[:5]
 
 
 @st.cache_data(show_spinner=False)

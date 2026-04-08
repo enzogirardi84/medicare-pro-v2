@@ -8,7 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from core.auth import check_inactividad, render_login
-from core.utils import cargar_texto_asset, inicializar_db_state
+from core.utils import cargar_texto_asset, inicializar_db_state, obtener_alertas_clinicas, tiene_permiso
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -46,6 +46,17 @@ VIEW_CONFIG = {
     "RRHH y Fichajes": ("views.rrhh", "render_rrhh"),
     "Auditoria": ("views.auditoria", "render_auditoria"),
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
+}
+
+VIEW_ROLE_RULES = {
+    "Dashboard": ["Coordinador"],
+    "Caja": ["Coordinador"],
+    "Cierre Diario": ["Coordinador"],
+    "Mi Equipo": ["Coordinador"],
+    "Asistencia en Vivo": ["Coordinador"],
+    "RRHH y Fichajes": ["Coordinador"],
+    "Auditoria": ["Coordinador"],
+    "Auditoria Legal": ["Coordinador"],
 }
 
 VIEW_LABELS = {
@@ -130,6 +141,9 @@ VIEW_NAV_LABELS = {
 }
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
+    if not tiene_permiso(rol, VIEW_ROLE_RULES.get(tab_name)):
+        st.error("No tienes permisos para acceder a este modulo.")
+        return
     module_name, function_name = VIEW_CONFIG[tab_name]
     render_fn = getattr(import_module(module_name), function_name)
 
@@ -429,6 +443,7 @@ with st.sidebar:
     if rol in ["SuperAdmin", "Coordinador"]:
         menu.insert(1, "Dashboard")
         menu.extend(["Cierre Diario", "Mi Equipo", "Asistencia en Vivo", "RRHH y Fichajes", "Auditoria", "Auditoria Legal"])
+    menu = [modulo for modulo in menu if tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
     buscar = st.text_input("Buscar Paciente")
     ver_altas = st.checkbox("Mostrar Pacientes de Alta") if rol in ["SuperAdmin", "Coordinador"] else False
 
@@ -461,18 +476,29 @@ with st.sidebar:
         st.session_state["paciente_actual"] = paciente_sel
 
     if paciente_sel:
-        det_pac = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
-        alergias_pac = det_pac.get("alergias", "").strip()
-        patologias_pac = det_pac.get("patologias", "").strip()
-        if alergias_pac or patologias_pac:
-            alergias_html = escape(alergias_pac).replace("\n", "<br>") if alergias_pac else ""
-            patologias_html = escape(patologias_pac).replace("\n", "<br>") if patologias_pac else ""
-            alerta_html = f"""<div style='background-color: #450a0a; border: 2px solid #ef4444; border-radius: 10px; padding: 12px; margin-top: 15px; margin-bottom: 15px;'>
-            <h4 style='color: #f87171; margin-top: 0; margin-bottom: 8px; text-transform: uppercase; font-weight: 900;'>ALERTA CLINICA</h4>
-            {f"<p style='color: #fca5a5; margin: 0 0 6px 0; font-size: 0.9rem;'><b>Alergias:</b><br>{alergias_html}</p>" if alergias_pac else ""}
-            {f"<p style='color: #fca5a5; margin: 0; font-size: 0.9rem;'><b>Patologias / Riesgos:</b><br>{patologias_html}</p>" if patologias_pac else ""}
-            </div>"""
-            st.markdown(alerta_html, unsafe_allow_html=True)
+        alertas = obtener_alertas_clinicas(st.session_state, paciente_sel)
+        if alertas:
+            colores = {
+                "critica": ("#7f1d1d", "#fecaca", "#ef4444"),
+                "alta": ("#78350f", "#fde68a", "#f59e0b"),
+                "media": ("#172554", "#bfdbfe", "#38bdf8"),
+            }
+            bloques = []
+            for alerta in alertas:
+                fondo, texto, borde = colores.get(alerta["nivel"], colores["media"])
+                bloques.append(
+                    f"<div style='background:{fondo}; border:1px solid {borde}; border-radius:10px; padding:10px; margin-top:10px;'>"
+                    f"<div style='color:{texto}; font-weight:800; margin-bottom:6px;'>{escape(alerta['titulo'])}</div>"
+                    f"<div style='color:{texto}; font-size:0.92rem;'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
+                    "</div>"
+                )
+            st.markdown(
+                "<div style='margin-top:15px; margin-bottom:15px;'>"
+                "<div style='color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.02em;'>ALERTAS CLINICAS</div>"
+                + "".join(bloques)
+                + "</div>",
+                unsafe_allow_html=True,
+            )
     if st.button("Cerrar Sesion", use_container_width=True):
         limpiar_sesion_app()
         st.rerun()

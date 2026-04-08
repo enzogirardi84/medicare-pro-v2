@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
@@ -119,24 +120,22 @@ def render_rrhh(mi_empresa, rol, user):
             height=480,
         )
 
-        csv_data = df_mostrar.drop(columns=["fecha_dt"], errors='ignore').to_csv(index=False, encoding="utf-8-sig")
-        st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{mi_empresa}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", use_container_width=True)
+        csv_data = dataframe_csv_bytes(df_mostrar.drop(columns=["fecha_dt"], errors='ignore'))
+        st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", use_container_width=True)
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF RRHH", value=False):
-            def t(txt):
-                return str(txt).encode("latin-1", "replace").decode("latin-1")
             pdf = FPDF(orientation='L')
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 12, t(f"REPORTE OFICIAL DE RRHH - {mi_empresa}"), ln=True, align='C')
+            pdf.cell(0, 12, safe_text(f"REPORTE OFICIAL DE RRHH - {mi_empresa}"), ln=True, align='C')
             pdf.set_font("Arial", '', 11)
-            pdf.cell(0, 8, t(f"Periodo: {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}"), ln=True, align='C')
+            pdf.cell(0, 8, safe_text(f"Periodo: {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}"), ln=True, align='C')
             pdf.ln(8)
             pdf.set_font("Arial", 'B', 9)
             for _, fila in df_mostrar.sort_values(by="fecha_dt", ascending=False).head(200).iterrows():
-                pdf.cell(0, 7, t(f"{fila['Fecha']} {fila['Hora']} | {fila['Profesional']} | {fila['Accion']} | {fila['Paciente']} | {fila['Tiempo Trabajado']}"), ln=True)
-            pdf_bytes = pdf.output(dest='S').encode('latin-1')
-            st.download_button("Descargar PDF RRHH", data=pdf_bytes, file_name=f"RRHH_{mi_empresa}.pdf", mime="application/pdf", use_container_width=True)
+                pdf.cell(0, 7, safe_text(f"{fila['Fecha']} {fila['Hora']} | {fila['Profesional']} | {fila['Accion']} | {fila['Paciente']} | {fila['Tiempo Trabajado']}"), ln=True)
+            pdf_bytes = pdf_output_bytes(pdf)
+            st.download_button("Descargar PDF RRHH", data=pdf_bytes, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}.pdf", mime="application/pdf", use_container_width=True)
         return
 
     if seccion == "Resumen":

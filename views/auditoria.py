@@ -4,6 +4,7 @@ import io
 import pandas as pd
 import streamlit as st
 
+from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora, mostrar_dataframe_con_scroll
 
 FPDF_DISPONIBLE = False
@@ -69,15 +70,11 @@ def render_auditoria(mi_empresa, user):
             height=460,
         )
 
-        out_logs = io.BytesIO()
         df_descarga = df_filtrado.drop(columns=["fecha_dt"], errors="ignore").copy()
         rename_dict = {"U": "Usuario", "A": "Accion", "F": "Fecha", "H": "Hora", "E": "Empresa"}
         df_descarga = df_descarga.rename(columns=rename_dict)
-        df_descarga.to_csv(out_logs, index=False, encoding="utf-8-sig")
-        out_logs.seek(0)
-
-        nombre_csv = f"Auditoria_Logs_{ahora().strftime('%d_%m_%Y_%H%M')}.csv"
-        st.download_button("Descargar auditoria CSV", data=out_logs.getvalue(), file_name=nombre_csv, mime="text/csv", use_container_width=True)
+        nombre_csv = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.csv"
+        st.download_button("Descargar auditoria CSV", data=dataframe_csv_bytes(df_descarga), file_name=nombre_csv, mime="text/csv", use_container_width=True)
         return
 
     st.subheader("Auditoria de Asistencia por Profesional")
@@ -117,32 +114,29 @@ def render_auditoria(mi_empresa, user):
         mostrar_dataframe_con_scroll(pd.DataFrame(chks_prof[-limite:]).iloc[::-1], height=420)
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF de asistencia", value=False):
-            def t(txt):
-                return str(txt).encode("latin-1", "replace").decode("latin-1")
-
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 15)
-            pdf.cell(0, 12, t(f"REPORTE RRHH - {mi_empresa}"), ln=True, align='C')
+            pdf.cell(0, 12, safe_text(f"REPORTE RRHH - {mi_empresa}"), ln=True, align='C')
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, t(f"Profesional: {prof_sel}"), ln=True)
+            pdf.cell(0, 10, safe_text(f"Profesional: {prof_sel}"), ln=True)
             pdf.set_font("Arial", 'I', 10)
-            pdf.cell(0, 8, t(f"Periodo: {fecha_rrhh_desde.strftime('%d/%m/%Y')} - {fecha_rrhh_hasta.strftime('%d/%m/%Y')}"), ln=True)
+            pdf.cell(0, 8, safe_text(f"Periodo: {fecha_rrhh_desde.strftime('%d/%m/%Y')} - {fecha_rrhh_hasta.strftime('%d/%m/%Y')}"), ln=True)
             pdf.ln(10)
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(30, 8, t("Fecha"), border=1)
-            pdf.cell(45, 8, t("Paciente"), border=1)
-            pdf.cell(35, 8, t("Accion"), border=1)
-            pdf.cell(40, 8, t("GPS"), border=1)
-            pdf.cell(40, 8, t("Duracion"), border=1, ln=True)
+            pdf.cell(30, 8, safe_text("Fecha"), border=1)
+            pdf.cell(45, 8, safe_text("Paciente"), border=1)
+            pdf.cell(35, 8, safe_text("Accion"), border=1)
+            pdf.cell(40, 8, safe_text("GPS"), border=1)
+            pdf.cell(40, 8, safe_text("Duracion"), border=1, ln=True)
             pdf.set_font("Arial", '', 9)
             for c in reversed(chks_prof[-200:]):
-                pdf.cell(30, 8, t(c.get("fecha_hora", "")[:16]), border=1)
-                pdf.cell(45, 8, t(str(c.get("paciente", "-"))[:25]), border=1)
-                pdf.cell(35, 8, t(str(c.get("tipo", "-"))[:15]), border=1)
-                pdf.cell(40, 8, t(str(c.get("gps", "-"))[:25]), border=1)
-                pdf.cell(40, 8, t("-"), border=1, ln=True)
+                pdf.cell(30, 8, safe_text(c.get("fecha_hora", "")[:16]), border=1)
+                pdf.cell(45, 8, safe_text(str(c.get("paciente", "-"))[:25]), border=1)
+                pdf.cell(35, 8, safe_text(str(c.get("tipo", "-"))[:15]), border=1)
+                pdf.cell(40, 8, safe_text(str(c.get("gps", "-"))[:25]), border=1)
+                pdf.cell(40, 8, safe_text("-"), border=1, ln=True)
 
-            pdf_bytes = pdf.output(dest='S').encode('latin-1')
-            nombre_pdf = f"Asistencia_{prof_sel.replace(' ', '_')}_{fecha_rrhh_desde.strftime('%d%m%Y')}.pdf"
+            pdf_bytes = pdf_output_bytes(pdf)
+            nombre_pdf = f"Asistencia_{sanitize_filename_component(prof_sel, 'profesional')}_{fecha_rrhh_desde.strftime('%d%m%Y')}.pdf"
             st.download_button("Descargar reporte asistencia PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", use_container_width=True)

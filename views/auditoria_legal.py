@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 
+from core.export_utils import dataframe_csv_bytes, sanitize_filename_component
 from core.utils import mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -45,11 +46,11 @@ def render_auditoria_legal(mi_empresa, user):
     )
     mostrar_dataframe_con_scroll(df.tail(limite).iloc[::-1], height=460)
 
-    csv_data = df.iloc[::-1].to_csv(index=False, encoding="utf-8-sig")
+    csv_data = dataframe_csv_bytes(df.iloc[::-1])
     st.download_button(
         "Descargar CSV auditoria legal",
         data=csv_data,
-        file_name="auditoria_legal.csv",
+        file_name=f"auditoria_legal_{sanitize_filename_component(mi_empresa, 'empresa')}.csv",
         mime="text/csv",
         use_container_width=True,
     )

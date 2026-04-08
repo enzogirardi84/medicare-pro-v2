@@ -2,55 +2,16 @@ import base64
 import io
 import json
 import os
-import re
 import tempfile
-import unicodedata
 from pathlib import Path
 
 import pandas as pd
 from fpdf import FPDF
 
+from core.export_utils import pdf_output_bytes, safe_text
+
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-
-
-def _safe_text(value):
-    if value is None:
-        text = ""
-    elif isinstance(value, bytes):
-        text = value.decode("utf-8", "replace")
-    elif isinstance(value, (list, tuple, set)):
-        text = ", ".join(_safe_text(item) for item in value if item not in [None, ""])
-    elif isinstance(value, dict):
-        try:
-            text = json.dumps(value, ensure_ascii=False, default=str)
-        except Exception:
-            text = str(value)
-    else:
-        text = str(value)
-
-    text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\t", "    ")
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(ch for ch in text if ch == "\n" or (ord(ch) >= 32 and ch != "\x7f"))
-    text = re.sub(r"[ ]{2,}", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-
-    # FPDF se rompe facil con tokens muy largos sin cortes.
-    parts = []
-    for token in text.split(" "):
-        if len(token) > 40:
-            token = " ".join(token[i : i + 32] for i in range(0, len(token), 32))
-        parts.append(token)
-    text = " ".join(parts)
-
-    return text.encode("latin-1", "replace").decode("latin-1")
-
-
-def _pdf_output_bytes(pdf):
-    out = pdf.output(dest="S")
-    if isinstance(out, str):
-        return out.encode("latin-1", "replace")
-    return bytes(out)
 
 
 def _patient_signature_bytes(session_state, paciente_sel):
@@ -163,7 +124,7 @@ def _section_title(pdf, title):
     pdf.set_fill_color(230, 238, 250)
     pdf.set_text_color(21, 37, 69)
     pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 8, _safe_text(title), ln=True, fill=True)
+    pdf.cell(0, 8, safe_text(title), ln=True, fill=True)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(1)
 
@@ -172,8 +133,8 @@ def _write_pairs(pdf, pairs):
     for label, value in pairs:
         if value in [None, ""]:
             continue
-        label_txt = _safe_text(label).strip()
-        value_txt = _safe_text(value).strip()
+        label_txt = safe_text(label).strip()
+        value_txt = safe_text(value).strip()
         if not value_txt:
             continue
         pdf.set_font("Arial", "B", 9)
@@ -195,10 +156,10 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 
     pdf.set_xy(40, 12)
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 8, _safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, _safe_text("Historia Clinica Digital Integral"), ln=True)
+    pdf.cell(0, 6, safe_text("Historia Clinica Digital Integral"), ln=True)
     pdf.ln(8)
 
     _section_title(pdf, f"Paciente: {paciente_sel}")
@@ -226,7 +187,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
             if pdf.get_y() > 260:
                 pdf.add_page()
             pdf.set_font("Arial", "B", 9)
-            pdf.cell(0, 6, _safe_text(f"Registro {idx}"), ln=True)
+            pdf.cell(0, 6, safe_text(f"Registro {idx}"), ln=True)
             pdf.set_font("Arial", "", 8)
             for key, value in record.items():
                 if key in {"paciente", "imagen", "base64_foto", "firma_b64", "firma_img"}:
@@ -274,20 +235,20 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     pdf.line(15, y_base, 85, y_base)
     pdf.set_xy(15, y_base + 2)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, _safe_text(f"Profesional: {nombre_prof or 'S/D'}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"Profesional: {nombre_prof or 'S/D'}"), ln=True)
     pdf.set_x(15)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Matricula: {matricula_prof or 'S/D'} | DNI: {dni_prof or 'S/D'}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"Matricula: {matricula_prof or 'S/D'} | DNI: {dni_prof or 'S/D'}"), ln=True)
 
     pdf.line(120, y_base, 190, y_base)
     pdf.set_xy(120, y_base + 2)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, _safe_text("Paciente / Familiar"), ln=True)
+    pdf.cell(70, 5, safe_text("Paciente / Familiar"), ln=True)
     pdf.set_x(120)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
     pdf.set_x(120)
-    pdf.cell(70, 5, _safe_text(f"DNI: {detalles.get('dni', 'S/D')}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"DNI: {detalles.get('dni', 'S/D')}"), ln=True)
 
     firma_bytes = _patient_signature_bytes(session_state, paciente_sel)
     if firma_bytes:
@@ -303,7 +264,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
 
-    return _pdf_output_bytes(pdf)
+    return pdf_output_bytes(pdf)
 
 
 def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
@@ -315,10 +276,10 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
 
     pdf.set_xy(40, 12)
     pdf.set_font("Arial", "B", 15)
-    pdf.cell(0, 8, _safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, _safe_text("Respaldo Clinico Imprimible del Paciente"), ln=True)
+    pdf.cell(0, 7, safe_text("Respaldo Clinico Imprimible del Paciente"), ln=True)
     pdf.ln(10)
 
     _section_title(pdf, "Identificacion del paciente")
@@ -339,7 +300,7 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
     _section_title(pdf, "Resumen de registros")
     for section_name, records in collect_patient_sections(session_state, paciente_sel).items():
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 7, _safe_text(f"{section_name}: {len(records)} registro(s)"), ln=True)
+        pdf.cell(0, 7, safe_text(f"{section_name}: {len(records)} registro(s)"), ln=True)
         if records:
             ultimo = records[-1]
             pdf.set_font("Arial", "", 9)
@@ -354,7 +315,7 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
     pdf.multi_cell(
         0,
         6,
-        _safe_text(
+        safe_text(
             "Este respaldo resume la informacion clinica y administrativa registrada en el sistema para su archivo, "
             "impresion y presentacion institucional cuando resulte necesario."
         ),
@@ -368,17 +329,17 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
     pdf.line(15, y_base, 85, y_base)
     pdf.set_xy(15, y_base + 2)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Profesional: {(profesional or {}).get('nombre', 'S/D')}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"Profesional: {(profesional or {}).get('nombre', 'S/D')}"), ln=True)
     pdf.set_x(15)
-    pdf.cell(70, 5, _safe_text(f"Matricula: {(profesional or {}).get('matricula', 'S/D')}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"Matricula: {(profesional or {}).get('matricula', 'S/D')}"), ln=True)
 
     pdf.line(120, y_base, 190, y_base)
     pdf.set_xy(120, y_base + 2)
-    pdf.cell(70, 5, _safe_text("Paciente / Familiar"), ln=True)
+    pdf.cell(70, 5, safe_text("Paciente / Familiar"), ln=True)
     pdf.set_x(120)
-    pdf.cell(70, 5, _safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
+    pdf.cell(70, 5, safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
 
-    return _pdf_output_bytes(pdf)
+    return pdf_output_bytes(pdf)
 
 
 def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
@@ -395,10 +356,10 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     _insert_logo(pdf)
     pdf.set_xy(40, 12)
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 8, _safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, _safe_text("Consentimiento Informado para Atencion y Terapia en Domicilio"), ln=True)
+    pdf.cell(0, 7, safe_text("Consentimiento Informado para Atencion y Terapia en Domicilio"), ln=True)
     pdf.ln(10)
 
     texto = (
@@ -416,7 +377,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "satisfactoria por parte del profesional interviniente."
     )
     pdf.set_font("Arial", "", 11)
-    pdf.multi_cell(0, 7, _safe_text(texto))
+    pdf.multi_cell(0, 7, safe_text(texto))
     pdf.ln(6)
 
     _write_pairs(
@@ -438,7 +399,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 
     pdf.ln(6)
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, _safe_text("Clausulas de conformidad"), ln=True)
+    pdf.cell(0, 6, safe_text("Clausulas de conformidad"), ln=True)
     pdf.set_font("Arial", "", 9)
     clausulas = [
         "1. El firmante acepta la atencion domiciliaria en el domicilio consignado.",
@@ -446,7 +407,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "3. La firma acredita conformidad con la modalidad de prestacion y con el registro documental.",
     ]
     for clausula in clausulas:
-        pdf.multi_cell(0, 5, _safe_text(clausula))
+        pdf.multi_cell(0, 5, safe_text(clausula))
 
     firma_bytes = None
     if consentimiento.get("firma_b64"):
@@ -475,13 +436,13 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     pdf.line(25, y_firma, 90, y_firma)
     pdf.set_xy(25, y_firma + 2)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(65, 5, _safe_text("Firma paciente / familiar"), align="C")
+    pdf.cell(65, 5, safe_text("Firma paciente / familiar"), align="C")
 
     pdf.line(120, y_firma, 185, y_firma)
     pdf.set_xy(120, y_firma + 2)
-    pdf.cell(65, 5, _safe_text("Firma y sello profesional"), align="C")
+    pdf.cell(65, 5, safe_text("Firma y sello profesional"), align="C")
 
-    return _pdf_output_bytes(pdf)
+    return pdf_output_bytes(pdf)
 
 
 def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
@@ -497,13 +458,13 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
 
     pdf.set_xy(40, 12)
     pdf.set_font("Arial", "B", 15)
-    pdf.cell(0, 8, _safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, _safe_text("Prescripcion y Acta Legal de Medicacion"), ln=True)
+    pdf.cell(0, 7, safe_text("Prescripcion y Acta Legal de Medicacion"), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, _safe_text("Documento imprimible con trazabilidad clinica y legal"), ln=True)
+    pdf.cell(0, 6, safe_text("Documento imprimible con trazabilidad clinica y legal"), ln=True)
     pdf.ln(8)
 
     _section_title(pdf, "Datos del paciente")
@@ -550,7 +511,7 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
         pdf.multi_cell(
             0,
             6,
-            _safe_text(
+            safe_text(
                 "La presente constancia deja asentado el cambio de estado de la indicacion farmacologica dentro del "
                 "registro clinico institucional, con fecha, hora y profesional responsable."
             ),
@@ -568,12 +529,12 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
             pdf.image(tmp_path, x=20, y=y_img, w=60)
             pdf.set_xy(90, y_img + 8)
             pdf.set_font("Arial", "B", 10)
-            pdf.cell(0, 6, _safe_text(medico_indicante), ln=True)
+            pdf.cell(0, 6, safe_text(medico_indicante), ln=True)
             pdf.set_x(90)
             pdf.set_font("Arial", "", 10)
-            pdf.cell(0, 6, _safe_text(f"Matricula: {matricula_indicante}"), ln=True)
+            pdf.cell(0, 6, safe_text(f"Matricula: {matricula_indicante}"), ln=True)
             pdf.set_x(90)
-            pdf.cell(0, 6, _safe_text(f"Fecha de firma: {record.get('fecha', 'S/D')}"), ln=True)
+            pdf.cell(0, 6, safe_text(f"Fecha de firma: {record.get('fecha', 'S/D')}"), ln=True)
             pdf.ln(34)
         except Exception:
             pass
@@ -600,22 +561,22 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
     pdf.line(20, y_base, 90, y_base)
     pdf.set_xy(20, y_base + 2)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, _safe_text(medico_indicante), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(medico_indicante), ln=True, align="C")
     pdf.set_x(20)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Matricula: {matricula_indicante}"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(f"Matricula: {matricula_indicante}"), ln=True, align="C")
 
     pdf.line(120, y_base, 190, y_base)
     pdf.set_xy(120, y_base + 2)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, _safe_text("Paciente / Familiar notificado"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text("Paciente / Familiar notificado"), ln=True, align="C")
     pdf.set_x(120)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True, align="C")
     pdf.set_x(120)
-    pdf.cell(70, 5, _safe_text(f"DNI: {detalles.get('dni', 'S/D')}"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(f"DNI: {detalles.get('dni', 'S/D')}"), ln=True, align="C")
 
-    return _pdf_output_bytes(pdf)
+    return pdf_output_bytes(pdf)
 
 
 def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
@@ -635,13 +596,13 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
 
     pdf.set_xy(40, 12)
     pdf.set_font("Arial", "B", 15)
-    pdf.cell(0, 8, _safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, _safe_text("Acta de Emergencia, Ambulancia y Traslado"), ln=True)
+    pdf.cell(0, 7, safe_text("Acta de Emergencia, Ambulancia y Traslado"), ln=True)
     pdf.set_x(40)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, _safe_text("Registro prehospitalario, clinico y legal"), ln=True)
+    pdf.cell(0, 6, safe_text("Registro prehospitalario, clinico y legal"), ln=True)
     pdf.ln(8)
 
     _section_title(pdf, "Paciente")
@@ -727,10 +688,10 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
             pdf.image(tmp_path, x=20, y=y_img, w=60)
             pdf.set_xy(90, y_img + 8)
             pdf.set_font("Arial", "B", 10)
-            pdf.cell(0, 6, _safe_text(record.get("profesional", (profesional or {}).get("nombre", "S/D"))), ln=True)
+            pdf.cell(0, 6, safe_text(record.get("profesional", (profesional or {}).get("nombre", "S/D"))), ln=True)
             pdf.set_x(90)
             pdf.set_font("Arial", "", 10)
-            pdf.cell(0, 6, _safe_text(f"Matricula: {record.get('matricula', (profesional or {}).get('matricula', 'S/D'))}"), ln=True)
+            pdf.cell(0, 6, safe_text(f"Matricula: {record.get('matricula', (profesional or {}).get('matricula', 'S/D'))}"), ln=True)
             pdf.ln(34)
         except Exception:
             pass
@@ -746,17 +707,17 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     pdf.line(20, y_base, 90, y_base)
     pdf.set_xy(20, y_base + 2)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, _safe_text(record.get("profesional", (profesional or {}).get("nombre", "S/D"))), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(record.get("profesional", (profesional or {}).get("nombre", "S/D"))), ln=True, align="C")
     pdf.set_x(20)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Matricula: {record.get('matricula', (profesional or {}).get('matricula', 'S/D'))}"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(f"Matricula: {record.get('matricula', (profesional or {}).get('matricula', 'S/D'))}"), ln=True, align="C")
 
     pdf.line(120, y_base, 190, y_base)
     pdf.set_xy(120, y_base + 2)
     pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, _safe_text("Recepcion / conformidad"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text("Recepcion / conformidad"), ln=True, align="C")
     pdf.set_x(120)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, _safe_text(f"Familiar notificado: {record.get('familiar_notificado', 'S/D')}"), ln=True, align="C")
+    pdf.cell(70, 5, safe_text(f"Familiar notificado: {record.get('familiar_notificado', 'S/D')}"), ln=True, align="C")
 
-    return _pdf_output_bytes(pdf)
+    return pdf_output_bytes(pdf)

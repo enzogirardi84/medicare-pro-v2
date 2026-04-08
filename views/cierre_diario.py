@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora
 
 FPDF_DISPONIBLE = False
@@ -114,9 +115,6 @@ def render_cierre_diario(mi_empresa, user):
     if FPDF_DISPONIBLE:
         st.markdown("#### Generar Documento Oficial de Cierre")
 
-        def t(txt):
-            return str(txt).encode('latin-1', 'replace').decode('latin-1')
-
         def generar_pdf_cierre(fecha_para_pdf=None):
             fecha_str_pdf = fecha_str if fecha_para_pdf is None else (fecha_para_pdf.strftime("%d/%m/%Y") if isinstance(fecha_para_pdf, date) else str(fecha_para_pdf))
             consumos_pdf = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str_pdf) and c.get("empresa") == mi_empresa]
@@ -125,28 +123,28 @@ def render_cierre_diario(mi_empresa, user):
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 15)
-            pdf.cell(0, 12, t(f"REPORTE DE CIERRE DIARIO - {mi_empresa}"), ln=True, align='C')
+            pdf.cell(0, 12, safe_text(f"REPORTE DE CIERRE DIARIO - {mi_empresa}"), ln=True, align='C')
             pdf.set_font("Arial", 'I', 10)
-            pdf.cell(0, 8, t(f"Fecha auditada: {fecha_str_pdf} | Generado por: {user['nombre']} a las {ahora().strftime('%H:%M')}"), ln=True, align='C')
+            pdf.cell(0, 8, safe_text(f"Fecha auditada: {fecha_str_pdf} | Generado por: {user['nombre']} a las {ahora().strftime('%H:%M')}"), ln=True, align='C')
             pdf.ln(8)
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, t("1. INSUMOS CONSUMIDOS EN EL DIA"), ln=True)
+            pdf.cell(0, 10, safe_text("1. INSUMOS CONSUMIDOS EN EL DIA"), ln=True)
             pdf.set_font("Arial", '', 10)
             for c in consumos_pdf[:80]:
-                pdf.cell(0, 6, t(f"- {c.get('cantidad')}x {c.get('insumo')} | Paciente: {c.get('paciente')}"), ln=True)
+                pdf.cell(0, 6, safe_text(f"- {c.get('cantidad')}x {c.get('insumo')} | Paciente: {c.get('paciente')}"), ln=True)
             pdf.ln(5)
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, t("2. PROCEDIMIENTOS Y FACTURACION DEL DIA"), ln=True)
+            pdf.cell(0, 10, safe_text("2. PROCEDIMIENTOS Y FACTURACION DEL DIA"), ln=True)
             pdf.set_font("Arial", '', 10)
             for f in facturacion_pdf[:80]:
-                pdf.cell(0, 6, t(f"- ${f.get('monto')} | {f.get('serv')} | {f.get('paciente')}"), ln=True)
+                pdf.cell(0, 6, safe_text(f"- ${f.get('monto')} | {f.get('serv')} | {f.get('paciente')}"), ln=True)
             pdf.set_font("Arial", 'B', 11)
-            pdf.cell(0, 10, t(f"TOTAL FACTURADO DEL DIA: ${total_facturado_pdf:,.2f}"), ln=True)
-            return pdf.output(dest='S').encode('latin-1')
+            pdf.cell(0, 10, safe_text(f"TOTAL FACTURADO DEL DIA: ${total_facturado_pdf:,.2f}"), ln=True)
+            return pdf_output_bytes(pdf)
 
         if st.checkbox("Preparar y guardar cierre en PDF", value=False):
             pdf_bytes = generar_pdf_cierre()
-            st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{fecha_str.replace('/','-')}.pdf", mime="application/pdf", use_container_width=True)
+            st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
             if st.button("Guardar cierre en historial", use_container_width=True, type="primary"):
                 b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                 st.session_state["reportes_diarios_db"].append({
@@ -175,7 +173,7 @@ def render_cierre_diario(mi_empresa, user):
                         c2_hist.download_button(
                             "Descargar PDF",
                             data=pdf_bytes,
-                            file_name=f"Cierre_Diario_{r['fecha_reporte'].replace('/','-')}.pdf",
+                            file_name=f"Cierre_Diario_{sanitize_filename_component(r['fecha_reporte'].replace('/','-'), 'fecha')}.pdf",
                             mime="application/pdf",
                             key=f"cierre_pdf_{i}",
                             use_container_width=True,

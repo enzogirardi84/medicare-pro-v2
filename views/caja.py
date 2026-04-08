@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora
 
 FPDF_DISPONIBLE = False
@@ -90,9 +91,6 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         def generar_recibo_pdf(mov):
             if not FPDF_DISPONIBLE:
                 return b""
-            def safe_text(text):
-                return str(text).encode("latin-1", errors="replace").decode("latin-1")
-
             pdf = FPDF(format="A5")
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
@@ -112,7 +110,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             pdf.set_fill_color(240, 240, 240)
             pdf.set_font("Arial", 'B', 18)
             pdf.cell(0, 14, safe_text(f"TOTAL: ${mov['monto']:,.2f}"), 1, 1, 'C', True)
-            return pdf.output(dest='S').encode('latin-1')
+            return pdf_output_bytes(pdf)
 
         with st.container(height=420):
             for i, mov in enumerate(reversed(fact_paciente[-limite:])):
@@ -124,7 +122,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     with col_r2:
                         if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_mov_{i}", value=False):
                             pdf_bytes = generar_recibo_pdf(mov)
-                            st.download_button("Descargar PDF", data=pdf_bytes, file_name=f"Recibo_{i+1}.pdf", mime="application/pdf", key=f"pdf_btn_{i}", use_container_width=True)
+                            st.download_button("Descargar PDF", data=pdf_bytes, file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf", mime="application/pdf", key=f"pdf_btn_{i}", use_container_width=True)
     else:
         st.info("No hay movimientos registrados para este paciente aun.")
 
@@ -152,7 +150,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             with st.container(height=400, border=True):
                 st.dataframe(df_mostrar.tail(limite).iloc[::-1], use_container_width=True, hide_index=True)
 
-            csv_data = df_mostrar.to_csv(index=False, encoding="utf-8-sig")
-            st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{mi_empresa}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
+            csv_data = dataframe_csv_bytes(df_mostrar)
+            st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
         else:
             st.info("No hay registros de facturacion aun.")
