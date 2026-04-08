@@ -200,6 +200,8 @@ def inicializar_db_state(db):
             "cuidados_enfermeria_db": [],
             "escalas_clinicas_db": [],
             "auditoria_legal_db": [],
+            "profesionales_red_db": [],
+            "solicitudes_servicios_db": [],
         }
         if db:
             for k, v in db.items():
