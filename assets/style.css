@@ -443,6 +443,21 @@ hr {
         border-radius: 16px !important;
     }
 
+    [data-testid="stRadio"] {
+        position: sticky;
+        top: 0.15rem;
+        z-index: 20;
+        background: linear-gradient(180deg, rgba(8, 17, 31, 0.96) 0%, rgba(8, 17, 31, 0.88) 100%);
+        padding: 0.15rem 0 0.2rem;
+        margin-bottom: 0.55rem;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    [data-testid="stRadio"] > div {
+        width: 100% !important;
+    }
+
     [data-testid="stRadio"] label {
         min-height: auto !important;
         width: auto !important;
@@ -452,19 +467,25 @@ hr {
         padding: 0.72rem 0.95rem !important;
         border-radius: 15px !important;
         box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18) !important;
+        margin: 0 !important;
     }
 
     [data-testid="stRadio"] [role="radiogroup"] {
-        display: flex !important;
+        display: grid !important;
+        grid-auto-flow: column !important;
+        grid-auto-columns: max-content !important;
         flex-wrap: nowrap !important;
         overflow-x: auto !important;
         overflow-y: hidden !important;
         gap: 0.65rem !important;
-        padding: 0.1rem 0.1rem 0.65rem 0.1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.1rem 0.1rem 0.72rem 0.1rem !important;
         margin-bottom: 0.2rem !important;
         scrollbar-width: thin !important;
         -webkit-overflow-scrolling: touch !important;
         scroll-snap-type: x proximity;
+        align-items: stretch !important;
     }
 
     [data-testid="stRadio"] [role="radiogroup"] > label {
@@ -522,6 +543,20 @@ hr {
         margin: 0.55rem 0 0.85rem;
         font-size: 0.92rem;
         line-height: 1.45;
+    }
+
+    [data-testid="stExpander"] {
+        width: 100% !important;
+    }
+
+    [data-testid="stExpander"] details {
+        width: 100% !important;
+    }
+
+    [data-testid="stExpander"] details summary {
+        min-height: 46px !important;
+        display: flex !important;
+        align-items: center !important;
     }
 
     .stButton > button,
