@@ -346,7 +346,7 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
             for key, value in ultimo.items():
                 if key in {"paciente", "imagen", "base64_foto", "firma_b64", "firma_img"} or value in [None, ""]:
                     continue
-                pdf.multi_cell(0, 5, _safe_text(f"{key}: {value}"))
+                _write_pairs(pdf, [(key, value)])
             pdf.ln(1)
 
     pdf.ln(8)
