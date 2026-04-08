@@ -516,6 +516,110 @@ hr {
     margin: 1.2rem 0 !important;
 }
 
+.mc-sidebar-section {
+    margin: 0.35rem 0 0.25rem;
+}
+
+.mc-sidebar-kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6fb9ff;
+    margin-bottom: 0.18rem;
+}
+
+.mc-sidebar-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f8fbff;
+    letter-spacing: -0.01em;
+}
+
+.mc-patient-card {
+    margin: 0.8rem 0 0.95rem;
+    padding: 0.95rem 0.95rem 0.9rem;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(19, 33, 57, 0.94) 0%, rgba(14, 24, 42, 0.98) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.22);
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.22);
+}
+
+.mc-patient-card-kicker {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #7dd3fc;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+}
+
+.mc-patient-card-name {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.28;
+    margin-bottom: 0.34rem;
+}
+
+.mc-patient-card-meta {
+    color: #bfd0e6;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.mc-sidebar-alert-shell {
+    margin: 0.4rem 0 1rem;
+}
+
+.mc-sidebar-alert-card {
+    border: 1px solid;
+    border-radius: 14px;
+    padding: 0.85rem 0.88rem;
+    margin-top: 0.65rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.mc-sidebar-alert-title {
+    font-size: 0.98rem;
+    font-weight: 900;
+    margin-bottom: 0.34rem;
+    line-height: 1.25;
+}
+
+.mc-sidebar-alert-body {
+    font-size: 0.89rem;
+    line-height: 1.5;
+}
+
+[data-testid="stSidebar"] .stTextInput input {
+    border-radius: 16px !important;
+    padding-left: 0.95rem !important;
+    min-height: 3rem !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {
+    border-radius: 18px !important;
+    min-height: 3.4rem !important;
+    background: linear-gradient(180deg, rgba(61, 82, 117, 0.98) 0%, rgba(50, 68, 98, 0.98) 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.28) !important;
+    box-shadow: 0 10px 22px rgba(2, 6, 23, 0.2) !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] span {
+    font-weight: 700 !important;
+}
+
+[data-testid="stSidebar"] .stCheckbox {
+    margin-top: 0.2rem !important;
+    margin-bottom: 0.35rem !important;
+}
+
+[data-testid="stSidebar"] .stCaptionContainer,
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+    color: #8ea8cb !important;
+}
+
 [data-testid="stVerticalBlock"] > [style*="overflow: auto"],
 [data-testid="stVerticalBlock"] > [style*="overflow:auto"] {
     scrollbar-width: thin;

@@ -207,6 +207,29 @@ def resolve_current_view(menu):
     return vista_actual
 
 
+def _compact_patient_label(nombre, estado):
+    nombre = str(nombre or "").strip()
+    sufijo = " [ALTA]" if estado == "De Alta" else ""
+    limite = 34 if sufijo else 40
+    if len(nombre) > limite:
+        nombre = f"{nombre[:limite - 1].rstrip()}…"
+    return f"{nombre}{sufijo}"
+
+
+def _sidebar_patient_card(paciente_sel, detalles):
+    return f"""
+    <div class="mc-patient-card">
+        <div class="mc-patient-card-kicker">Paciente activo</div>
+        <div class="mc-patient-card-name">{escape(paciente_sel)}</div>
+        <div class="mc-patient-card-meta">
+            DNI: {escape(detalles.get('dni', 'S/D'))}<br>
+            OS: {escape(detalles.get('obra_social', 'S/D'))}<br>
+            Estado: {escape(detalles.get('estado', 'Activo'))}
+        </div>
+    </div>
+    """
+
+
 def render_module_nav(menu, vista_actual):
     st.markdown(
         """
@@ -446,7 +469,16 @@ with st.sidebar:
         menu.insert(1, "Dashboard")
         menu.extend(["Cierre Diario", "Mi Equipo", "Asistencia en Vivo", "RRHH y Fichajes", "Auditoria", "Auditoria Legal"])
     menu = [modulo for modulo in menu if tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
-    buscar = st.text_input("Buscar Paciente")
+    st.markdown(
+        """
+        <div class="mc-sidebar-section">
+            <div class="mc-sidebar-kicker">Pacientes</div>
+            <div class="mc-sidebar-title">Buscador y seleccion</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    buscar = st.text_input("Buscar Paciente", placeholder="Nombre, DNI o palabra clave")
     ver_altas = st.checkbox("Mostrar Pacientes de Alta") if rol in ["SuperAdmin", "Coordinador"] else False
 
     pacientes_visibles = []
@@ -456,8 +488,8 @@ with st.sidebar:
             continue
         estado = det.get("estado", "Activo")
         if estado == "Activo" or ver_altas:
-            display_name = f"{p} [ALTA]" if estado == "De Alta" else p
-            pacientes_visibles.append((p, display_name))
+            display_name = _compact_patient_label(p, estado)
+            pacientes_visibles.append((p, display_name, det.get("dni", ""), det.get("obra_social", ""), estado))
 
     pacientes_visibles.sort(key=lambda x: x[1].lower())
     p_f = [pv for pv in pacientes_visibles if buscar.lower() in pv[1].lower()]
@@ -468,14 +500,28 @@ with st.sidebar:
 
     if not p_f and buscar:
         st.caption("No hay pacientes que coincidan con la busqueda.")
+    elif p_f:
+        st.caption(f"{len(p_f)} paciente(s) visibles")
 
     paciente_actual = st.session_state.get("paciente_actual")
     opciones_ids = [item[0] for item in p_f]
     index_actual = opciones_ids.index(paciente_actual) if paciente_actual in opciones_ids else 0
-    paciente_sel_tuple = st.selectbox("Seleccionar Paciente", p_f, index=index_actual, format_func=lambda x: x[1], key="paciente_actual_select") if p_f else None
+    paciente_sel_tuple = (
+        st.selectbox(
+            "Seleccionar Paciente",
+            p_f,
+            index=index_actual,
+            format_func=lambda x: x[1],
+            key="paciente_actual_select",
+        )
+        if p_f
+        else None
+    )
     paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
+        det_sidebar = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
+        st.markdown(_sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
 
     if paciente_sel:
         alertas = obtener_alertas_clinicas(st.session_state, paciente_sel)
@@ -489,14 +535,14 @@ with st.sidebar:
             for alerta in alertas:
                 fondo, texto, borde = colores.get(alerta["nivel"], colores["media"])
                 bloques.append(
-                    f"<div style='background:{fondo}; border:1px solid {borde}; border-radius:10px; padding:10px; margin-top:10px;'>"
-                    f"<div style='color:{texto}; font-weight:800; margin-bottom:6px;'>{escape(alerta['titulo'])}</div>"
-                    f"<div style='color:{texto}; font-size:0.92rem;'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
+                    f"<div class='mc-sidebar-alert-card' style='background:{fondo}; border-color:{borde};'>"
+                    f"<div class='mc-sidebar-alert-title' style='color:{texto};'>{escape(alerta['titulo'])}</div>"
+                    f"<div class='mc-sidebar-alert-body' style='color:{texto};'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
                     "</div>"
                 )
             st.markdown(
-                "<div style='margin-top:15px; margin-bottom:15px;'>"
-                "<div style='color:#fff; font-weight:900; font-size:1rem; letter-spacing:0.02em;'>ALERTAS CLINICAS</div>"
+                "<div class='mc-sidebar-alert-shell'>"
+                "<div class='mc-sidebar-title'>Alertas clinicas</div>"
                 + "".join(bloques)
                 + "</div>",
                 unsafe_allow_html=True,
