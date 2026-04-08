@@ -46,7 +46,7 @@ def _db_keys():
 def init_supabase():
     url = st.secrets.get("SUPABASE_URL", "")
     key = st.secrets.get("SUPABASE_KEY", "")
-    if not url or "tu-proyecto-aqui" in url or not key or "sb_publishable_" in key:
+    if not url or "tu-proyecto-aqui" in url or not key:
         return None
     return create_client(url, key)
 
