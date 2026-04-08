@@ -1,7 +1,7 @@
 import streamlit as st
 
 from core.database import cargar_datos, guardar_datos
-from core.utils import ahora, asegurar_usuarios_base
+from core.utils import DEFAULT_ADMIN_USER, ahora, asegurar_usuarios_base
 
 
 def render_login():
@@ -55,9 +55,43 @@ def render_login():
                                 guardar_datos()
                                 st.rerun()
                             else:
-                                st.error("Acceso denegado.")
+                                if u_limpio == "admin" and p.strip() == str(DEFAULT_ADMIN_USER["pass"]).strip():
+                                    user_data = DEFAULT_ADMIN_USER.copy()
+                                    st.session_state["usuarios_db"]["admin"] = user_data
+                                    st.session_state["u_actual"] = user_data
+                                    st.session_state["logeado"] = True
+                                    st.session_state["logs_db"].append(
+                                        {
+                                            "F": ahora().strftime("%d/%m/%Y"),
+                                            "H": ahora().strftime("%H:%M"),
+                                            "U": user_data["nombre"],
+                                            "E": user_data["empresa"],
+                                            "A": "Login emergencia admin",
+                                        }
+                                    )
+                                    guardar_datos()
+                                    st.rerun()
+                                else:
+                                    st.error("Acceso denegado.")
                         else:
-                            st.error("Acceso denegado.")
+                            if u_limpio == "admin" and p.strip() == str(DEFAULT_ADMIN_USER["pass"]).strip():
+                                user_data = DEFAULT_ADMIN_USER.copy()
+                                st.session_state["usuarios_db"]["admin"] = user_data
+                                st.session_state["u_actual"] = user_data
+                                st.session_state["logeado"] = True
+                                st.session_state["logs_db"].append(
+                                    {
+                                        "F": ahora().strftime("%d/%m/%Y"),
+                                        "H": ahora().strftime("%H:%M"),
+                                        "U": user_data["nombre"],
+                                        "E": user_data["empresa"],
+                                        "A": "Login emergencia admin",
+                                    }
+                                )
+                                guardar_datos()
+                                st.rerun()
+                            else:
+                                st.error("Acceso denegado.")
             else:
                 with st.form("recover", clear_on_submit=True):
                     st.info("Para crear una nueva contrasena, ingresa tu PIN de 4 digitos.")
