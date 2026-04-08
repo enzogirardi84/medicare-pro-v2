@@ -226,7 +226,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
                     continue
                 if value in [None, ""]:
                     continue
-                pdf.multi_cell(0, 5, _safe_text(f"{key}: {value}"))
+                _write_pairs(pdf, [(key, value)])
             firma_medica = _doctor_signature_bytes(record)
             if firma_medica:
                 tmp_path = None
