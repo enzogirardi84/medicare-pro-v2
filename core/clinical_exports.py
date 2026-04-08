@@ -46,6 +46,13 @@ def _safe_text(value):
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
+def _pdf_output_bytes(pdf):
+    out = pdf.output(dest="S")
+    if isinstance(out, str):
+        return out.encode("latin-1", "replace")
+    return bytes(out)
+
+
 def _patient_signature_bytes(session_state, paciente_sel):
     consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
     for registro in reversed(consentimientos):
@@ -296,7 +303,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
 
-    return pdf.output(dest="S").encode("latin-1")
+    return _pdf_output_bytes(pdf)
 
 
 def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
@@ -371,7 +378,7 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
     pdf.set_x(120)
     pdf.cell(70, 5, _safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
 
-    return pdf.output(dest="S").encode("latin-1")
+    return _pdf_output_bytes(pdf)
 
 
 def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
@@ -474,7 +481,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     pdf.set_xy(120, y_firma + 2)
     pdf.cell(65, 5, _safe_text("Firma y sello profesional"), align="C")
 
-    return pdf.output(dest="S").encode("latin-1")
+    return _pdf_output_bytes(pdf)
 
 
 def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
@@ -608,7 +615,7 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
     pdf.set_x(120)
     pdf.cell(70, 5, _safe_text(f"DNI: {detalles.get('dni', 'S/D')}"), ln=True, align="C")
 
-    return pdf.output(dest="S").encode("latin-1")
+    return _pdf_output_bytes(pdf)
 
 
 def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
@@ -752,4 +759,4 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     pdf.set_font("Arial", "", 9)
     pdf.cell(70, 5, _safe_text(f"Familiar notificado: {record.get('familiar_notificado', 'S/D')}"), ln=True, align="C")
 
-    return pdf.output(dest="S").encode("latin-1")
+    return _pdf_output_bytes(pdf)
