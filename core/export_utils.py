@@ -4,6 +4,19 @@ import re
 import unicodedata
 
 
+def _repair_mojibake(text):
+    if not text:
+        return text
+    sospechoso = ("Ã", "Â", "â", "ð", "�")
+    if not any(token in text for token in sospechoso):
+        return text
+    try:
+        reparado = text.encode("latin-1", "ignore").decode("utf-8", "ignore")
+        return reparado or text
+    except Exception:
+        return text
+
+
 def safe_text(value):
     if value is None:
         text = ""
@@ -19,6 +32,7 @@ def safe_text(value):
     else:
         text = str(value)
 
+    text = _repair_mojibake(text)
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\t", "    ")
     text = unicodedata.normalize("NFKD", text)
     text = "".join(ch for ch in text if ch == "\n" or (ord(ch) >= 32 and ch != "\x7f"))

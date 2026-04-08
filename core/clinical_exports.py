@@ -121,6 +121,7 @@ def _insert_logo(pdf_obj):
 def _section_title(pdf, title):
     if pdf.get_y() > 250:
         pdf.add_page()
+    pdf.set_x(pdf.l_margin)
     pdf.set_fill_color(230, 238, 250)
     pdf.set_text_color(21, 37, 69)
     pdf.set_font("Arial", "B", 11)
@@ -137,10 +138,18 @@ def _write_pairs(pdf, pairs):
         value_txt = safe_text(value).strip()
         if not value_txt:
             continue
+        pdf.set_x(pdf.l_margin)
+        x_inicio = pdf.get_x()
+        y_inicio = pdf.get_y()
+        label_w = 46
         pdf.set_font("Arial", "B", 9)
-        pdf.write(6, f"{label_txt}: ")
+        pdf.multi_cell(label_w, 6, f"{label_txt}:", border=0)
+        y_fin_label = pdf.get_y()
+        pdf.set_xy(x_inicio + label_w + 2, y_inicio)
         pdf.set_font("Arial", "", 9)
-        pdf.multi_cell(0, 6, value_txt)
+        pdf.multi_cell(0, 6, value_txt, border=0)
+        pdf.set_y(max(pdf.get_y(), y_fin_label))
+        pdf.ln(1)
 
 
 def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
