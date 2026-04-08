@@ -162,14 +162,17 @@ def _section_title(pdf, title):
 
 
 def _write_pairs(pdf, pairs):
-    pdf.set_font("Arial", "", 9)
     for label, value in pairs:
         if value in [None, ""]:
             continue
+        label_txt = _safe_text(label).strip()
+        value_txt = _safe_text(value).strip()
+        if not value_txt:
+            continue
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(42, 6, _safe_text(f"{label}:"))
+        pdf.write(6, f"{label_txt}: ")
         pdf.set_font("Arial", "", 9)
-        pdf.multi_cell(0, 6, _safe_text(value))
+        pdf.multi_cell(0, 6, value_txt)
 
 
 def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
