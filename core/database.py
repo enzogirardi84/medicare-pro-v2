@@ -39,6 +39,8 @@ def _db_keys():
         "cuidados_enfermeria_db",
         "escalas_clinicas_db",
         "auditoria_legal_db",
+        "profesionales_red_db",
+        "solicitudes_servicios_db",
     ]
 
 
