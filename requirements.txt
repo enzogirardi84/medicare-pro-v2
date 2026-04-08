@@ -1,0 +1,8 @@
+streamlit
+pandas
+Pillow
+pytz
+supabase
+fpdf2
+streamlit-drawable-canvas
+streamlit-geolocation
