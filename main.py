@@ -104,6 +104,33 @@ VIEW_LABELS = {
     "Auditoria Legal": "\u2696\ufe0f Auditoria Legal",
 }
 
+VIEW_NAV_LABELS = {
+    "Visitas y Agenda": "Visitas",
+    "Dashboard": "Dashboard",
+    "Admision": "Admision",
+    "Clinica": "Clinica",
+    "Pediatria": "Pediatria",
+    "Evolucion": "Evolucion",
+    "Estudios": "Estudios",
+    "Materiales": "Materiales",
+    "Recetas": "Recetas",
+    "Balance": "Balance",
+    "Inventario": "Inventario",
+    "Caja": "Caja",
+    "Emergencias y Ambulancia": "Emergencias",
+    "Enfermeria": "Enfermeria",
+    "Escalas Clinicas": "Escalas",
+    "Historial": "Historial",
+    "PDF": "PDF",
+    "Telemedicina": "Telemedicina",
+    "Cierre Diario": "Cierre",
+    "Mi Equipo": "Equipo",
+    "Asistencia en Vivo": "Asistencia",
+    "RRHH y Fichajes": "RRHH",
+    "Auditoria": "Auditoria",
+    "Auditoria Legal": "Legal",
+}
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     module_name, function_name = VIEW_CONFIG[tab_name]
     render_fn = getattr(import_module(module_name), function_name)
@@ -181,7 +208,7 @@ def render_module_nav(menu, vista_actual):
     for modulo in menu:
         active_class = " active" if modulo == vista_actual else ""
         href = f"?modulo={quote(modulo)}"
-        label = escape(VIEW_LABELS.get(modulo, modulo))
+        label = escape(VIEW_NAV_LABELS.get(modulo, modulo))
         items.append(f"<a class='mc-module-pill{active_class}' href='{href}'>{label}</a>")
 
     st.markdown(
