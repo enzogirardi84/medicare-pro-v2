@@ -38,6 +38,8 @@ ROLE_LEVELS = {
 
 
 def tiene_permiso(rol_actual, roles_permitidos=None):
+    if rol_actual in {"SuperAdmin", "Coordinador"}:
+        return True
     if not roles_permitidos:
         return True
     if rol_actual in roles_permitidos:
