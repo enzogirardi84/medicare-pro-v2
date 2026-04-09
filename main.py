@@ -467,7 +467,6 @@ with st.sidebar:
 
     menu = [
         "Visitas y Agenda",
-        "Admision",
         "Clinica",
         "Pediatria",
         "Evolucion",
@@ -475,10 +474,7 @@ with st.sidebar:
         "Materiales",
         "Recetas",
         "Balance",
-        "Inventario",
-        "Caja",
         "Emergencias y Ambulancia",
-        "Red de Profesionales",
         "Escalas Clinicas",
         "Historial",
         "PDF",
@@ -486,14 +482,45 @@ with st.sidebar:
     ]
 
     if rol in ["SuperAdmin", "Coordinador"]:
-        menu.insert(1, "Dashboard")
-        menu.extend(["Cierre Diario", "Mi Equipo", "Asistencia en Vivo", "RRHH y Fichajes", "Auditoria", "Auditoria Legal"])
+        menu = [
+            "Visitas y Agenda",
+            "Dashboard",
+            "Admision",
+            "Clinica",
+            "Pediatria",
+            "Evolucion",
+            "Estudios",
+            "Materiales",
+            "Recetas",
+            "Balance",
+            "Inventario",
+            "Caja",
+            "Emergencias y Ambulancia",
+            "Red de Profesionales",
+            "Escalas Clinicas",
+            "Historial",
+            "PDF",
+            "Telemedicina",
+            "Cierre Diario",
+            "Mi Equipo",
+            "Asistencia en Vivo",
+            "RRHH y Fichajes",
+            "Auditoria",
+            "Auditoria Legal",
+        ]
     elif rol == "Administrativo":
         menu = [
+            "Dashboard",
             "Admision",
             "Inventario",
             "Caja",
             "Red de Profesionales",
+            "Cierre Diario",
+            "Mi Equipo",
+            "Asistencia en Vivo",
+            "RRHH y Fichajes",
+            "Auditoria",
+            "Auditoria Legal",
         ]
     menu = [modulo for modulo in menu if tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
     st.markdown(
