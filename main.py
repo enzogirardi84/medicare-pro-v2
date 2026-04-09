@@ -471,12 +471,19 @@ if not st.session_state.entered_app:
         ".brochure-text { position: relative; margin: 0 auto; max-width: 760px; color: #cbd5e1; font-size: 1rem; line-height: 1.8; }",
         ".brochure-badges { position: relative; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }",
         ".brochure-badge { padding: 10px 14px; border-radius: 999px; background: rgba(15,23,42,0.64); border: 1px solid rgba(255,255,255,0.08); color: #e2e8f0; font-size: 0.88rem; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }",
-        ".brochure-actions { max-width: 1040px; width: 100%; display: flex; justify-content: center; margin: 12px 0 34px; }",
-        ".brochure-download-link { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: min(100%, 540px); padding: 18px 28px; border-radius: 22px; text-decoration: none; color: #ffffff !important; background: linear-gradient(135deg, #0b1220 0%, #1d4ed8 58%, #38bdf8 100%); border: 1px solid rgba(191,219,254,0.34); box-shadow: 0 20px 46px rgba(29,78,216,0.28), 0 0 0 1px rgba(255,255,255,0.05) inset; font-size: 1.03rem; font-weight: 900; letter-spacing: 0.2px; transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease; }",
-        ".brochure-download-link:hover { transform: translateY(-3px); color: #ffffff !important; box-shadow: 0 28px 56px rgba(29,78,216,0.34), 0 0 24px rgba(56,189,248,0.20); filter: brightness(1.06); }",
+        ".brochure-actions { max-width: 1040px; width: 100%; display: flex; justify-content: center; margin: 4px 0 34px; }",
+        ".brochure-cta-card { width: min(100%, 760px); display: grid; gap: 16px; padding: 24px 24px 22px; border-radius: 28px; background: linear-gradient(145deg, rgba(7, 16, 34, 0.98), rgba(15, 23, 42, 0.96)); border: 1px solid rgba(56, 189, 248, 0.24); box-shadow: 0 26px 54px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.04); text-align: left; position: relative; overflow: hidden; }",
+        ".brochure-cta-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(56,189,248,0.08), rgba(99,102,241,0.02) 55%, rgba(0,0,0,0) 75%); pointer-events: none; }",
+        ".brochure-cta-copy { position: relative; display: grid; gap: 6px; }",
+        ".brochure-cta-kicker { color: #6ee7b7; text-transform: uppercase; letter-spacing: 1.8px; font-size: 0.76rem; font-weight: 800; margin: 0; }",
+        ".brochure-cta-title { color: #ffffff; font-size: 1.22rem; font-weight: 900; margin: 0; }",
+        ".brochure-cta-text { color: #cbd5e1; font-size: 0.96rem; line-height: 1.7; margin: 0; }",
+        ".brochure-download-link { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 14px; width: min(100%, 420px); padding: 18px 26px; border-radius: 20px; text-decoration: none; color: #ffffff !important; background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 52%, #38bdf8 100%); border: 1px solid rgba(191,219,254,0.42); box-shadow: 0 22px 42px rgba(29,78,216,0.28), inset 0 1px 0 rgba(255,255,255,0.08); font-size: 1rem; font-weight: 900; letter-spacing: 0.2px; transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease; }",
+        ".brochure-download-link:hover { transform: translateY(-3px); color: #ffffff !important; box-shadow: 0 30px 58px rgba(29,78,216,0.34), 0 0 24px rgba(56,189,248,0.18); filter: brightness(1.04); }",
         ".brochure-download-link span { color: #ffffff !important; }",
+        ".brochure-download-icon { width: 34px; height: 34px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.12); font-size: 1rem; }",
         "@media (max-width: 900px) { .spotlight-grid, .closing-banner { grid-template-columns: 1fr; } }",
-        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } .brochure-download-link { width: 100%; } div.stDownloadButton > button { min-width: 100% !important; width: 100% !important; } }",
+        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band, .brochure-cta-card { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } .brochure-download-link { width: 100%; } div.stDownloadButton > button { min-width: 100% !important; width: 100% !important; } }",
         "</style>",
         "<div class='landing-page'>",
         f"<div class='logo-shell'>{logo_html}</div>",
@@ -591,17 +598,6 @@ if not st.session_state.entered_app:
         .replace("liquidaciÃ³n", "liquidacion")
     )
     folleto_path = obtener_folleto_landing()
-    brochure_action_html = ""
-    if folleto_path:
-        with folleto_path.open("rb") as brochure_file:
-            st.download_button(
-                "📥 Descargar presentacion comercial (PDF)",
-                data=brochure_file.read(),
-                file_name=folleto_path.name,
-                mime="application/pdf",
-                key="download_landing_brochure_pdf",
-                use_container_width=True,
-            )
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
@@ -610,9 +606,16 @@ if not st.session_state.entered_app:
         st.markdown(
             (
                 "<div class='brochure-actions'>"
+                "<div class='brochure-cta-card'>"
+                "<div class='brochure-cta-copy'>"
+                "<p class='brochure-cta-kicker'>Material comercial</p>"
+                "<p class='brochure-cta-title'>Descarga una presentacion comercial lista para clientes</p>"
+                "<p class='brochure-cta-text'>Incluye propuesta de valor, modulos, beneficios, perfiles de uso y enfoque clinico-operativo para mostrar MediCare Enterprise PRO con una imagen mucho mas profesional.</p>"
+                "</div>"
                 f"<a class='brochure-download-link' href='data:application/pdf;base64,{brochure_b64}' download='{folleto_path.name}'>"
-                "<span>📄</span><span>Descargar presentacion comercial (PDF)</span>"
-                "</a></div>"
+                "<span class='brochure-download-icon'>PDF</span><span>Descargar presentacion comercial</span>"
+                "</a>"
+                "</div></div>"
             ),
             unsafe_allow_html=True,
         )
