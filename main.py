@@ -359,22 +359,24 @@ if not st.session_state.entered_app:
                 box-shadow: 0 15px 40px rgba(99, 102, 241, 0.65) !important;
                 background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
             }
-            div.stDownloadButton { display: flex; justify-content: center; }
+            div.stDownloadButton { display: flex; justify-content: center; margin-top: 18px; }
             div.stDownloadButton > button {
-                background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%) !important;
+                background: linear-gradient(135deg, #14b8a6 0%, #22c55e 50%, #38bdf8 100%) !important;
                 color: white !important;
-                font-size: 1rem !important;
-                font-weight: 800 !important;
-                padding: 14px 26px !important;
-                border-radius: 18px !important;
-                border: 1px solid rgba(255,255,255,0.22) !important;
-                box-shadow: 0 14px 30px rgba(20, 184, 166, 0.28) !important;
+                font-size: 1.05rem !important;
+                font-weight: 900 !important;
+                padding: 16px 30px !important;
+                border-radius: 20px !important;
+                border: 1px solid rgba(255,255,255,0.28) !important;
+                box-shadow: 0 18px 38px rgba(20, 184, 166, 0.26), 0 0 0 1px rgba(255,255,255,0.04) inset !important;
                 transition: all 0.25s ease !important;
+                min-width: 390px !important;
+                letter-spacing: 0.2px !important;
             }
             div.stDownloadButton > button:hover {
-                transform: translateY(-2px) !important;
-                box-shadow: 0 18px 34px rgba(34,197,94,0.34) !important;
-                filter: brightness(1.05);
+                transform: translateY(-3px) scale(1.01) !important;
+                box-shadow: 0 22px 44px rgba(34,197,94,0.34), 0 0 28px rgba(56,189,248,0.18) !important;
+                filter: brightness(1.06);
             }
         </style>
         """,
@@ -433,12 +435,16 @@ if not st.session_state.entered_app:
         ".closing-panel { padding: 32px 30px; border-radius: 32px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(79, 70, 229, 0.22)); border: 1px solid rgba(99, 102, 241, 0.24); box-shadow: 0 20px 44px rgba(0,0,0,0.2); }",
         ".closing-panel h3 { margin: 0 0 12px; color: #ffffff; font-size: 1.75rem; font-weight: 900; }",
         ".closing-panel p { margin: 0; color: #dbeafe; font-size: 1rem; line-height: 1.8; }",
-        ".brochure-band { max-width: 980px; width: 100%; margin: 0 0 34px; padding: 32px 28px; border-radius: 30px; background: linear-gradient(145deg, rgba(6, 16, 34, 0.96), rgba(15, 23, 42, 0.94)); border: 1px solid rgba(34, 197, 94, 0.18); box-shadow: 0 22px 44px rgba(0,0,0,0.22); text-align: center; }",
-        ".brochure-kicker { margin: 0 0 10px; color: #6ee7b7; text-transform: uppercase; letter-spacing: 2px; font-size: 0.78rem; font-weight: 800; }",
-        ".brochure-title { margin: 0 0 12px; color: #ffffff; font-size: 2rem; font-weight: 900; letter-spacing: -0.8px; }",
-        ".brochure-text { margin: 0 auto; max-width: 720px; color: #cbd5e1; font-size: 1rem; line-height: 1.8; }",
+        ".brochure-band { max-width: 1040px; width: 100%; margin: 0 0 34px; padding: 36px 32px; border-radius: 34px; background: linear-gradient(145deg, rgba(6, 16, 34, 0.98), rgba(15, 23, 42, 0.92)); border: 1px solid rgba(56, 189, 248, 0.22); box-shadow: 0 28px 58px rgba(0,0,0,0.24); text-align: center; position: relative; overflow: hidden; }",
+        ".brochure-band::before { content: ''; position: absolute; width: 220px; height: 220px; left: -70px; top: -70px; background: radial-gradient(circle, rgba(34,197,94,0.18) 0%, rgba(34,197,94,0) 70%); }",
+        ".brochure-band::after { content: ''; position: absolute; width: 240px; height: 240px; right: -90px; bottom: -120px; background: radial-gradient(circle, rgba(56,189,248,0.16) 0%, rgba(56,189,248,0) 74%); }",
+        ".brochure-kicker { position: relative; margin: 0 0 10px; color: #6ee7b7; text-transform: uppercase; letter-spacing: 2px; font-size: 0.78rem; font-weight: 800; }",
+        ".brochure-title { position: relative; margin: 0 0 12px; color: #ffffff; font-size: 2.15rem; font-weight: 900; letter-spacing: -1px; text-shadow: 0 10px 28px rgba(2,6,23,0.24); }",
+        ".brochure-text { position: relative; margin: 0 auto; max-width: 760px; color: #cbd5e1; font-size: 1rem; line-height: 1.8; }",
+        ".brochure-badges { position: relative; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }",
+        ".brochure-badge { padding: 10px 14px; border-radius: 999px; background: rgba(15,23,42,0.64); border: 1px solid rgba(255,255,255,0.08); color: #e2e8f0; font-size: 0.88rem; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }",
         "@media (max-width: 900px) { .spotlight-grid, .closing-banner { grid-template-columns: 1fr; } }",
-        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } }",
+        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } div.stDownloadButton > button { min-width: 100% !important; width: 100% !important; } }",
         "</style>",
         "<div class='landing-page'>",
         f"<div class='logo-shell'>{logo_html}</div>",
@@ -473,6 +479,7 @@ if not st.session_state.entered_app:
         "<p class='brochure-kicker'>Material comercial listo para enviar</p>",
         "<h3 class='brochure-title'>Descarga una presentacion profesional de la app</h3>",
         "<p class='brochure-text'>Comparte un PDF comercial con modulos, beneficios, propuesta de valor y enfoque clinico-operativo para mostrar MediCare Enterprise PRO en reuniones, WhatsApp o presentaciones con potenciales clientes.</p>",
+        "<div class='brochure-badges'><span class='brochure-badge'>Presentacion institucional</span><span class='brochure-badge'>Beneficios claros</span><span class='brochure-badge'>Ideal para WhatsApp y reuniones</span></div>",
         "</div>",
         "<div class='grid-cards'>",
         "<div class='glass-card-pro'><div class='icon-box-pro'>📍</div><h4 class='card-title-pro'>Fichaje GPS</h4><p class='card-text-pro'>Control de asistencia verificado por coordenadas exactas del domicilio del paciente.</p></div>",

@@ -9,6 +9,10 @@ ASSETS_DIR = PROJECT_DIR / "assets"
 OUTPUT_PATH = BASE_DIR / "Folleto_Comercial_MediCare_Enterprise_PRO.pdf"
 
 
+class BrochurePDF(FPDF):
+    pass
+
+
 def pick_logo() -> Path | None:
     for name in ("logo_medicare_pro.jpeg", "logo_medicare_pro.jpg", "logo_medicare_pro.png"):
         path = ASSETS_DIR / name
@@ -24,177 +28,293 @@ def safe_pdf_bytes(pdf: FPDF) -> bytes:
     return str(payload).encode("latin-1", errors="replace")
 
 
+def draw_gradient_band(pdf: FPDF, y: float, h: float, left: tuple[int, int, int], right: tuple[int, int, int]) -> None:
+    steps = 42
+    width = 210 / steps
+    for idx in range(steps):
+        ratio = idx / max(steps - 1, 1)
+        r = int(left[0] + (right[0] - left[0]) * ratio)
+        g = int(left[1] + (right[1] - left[1]) * ratio)
+        b = int(left[2] + (right[2] - left[2]) * ratio)
+        pdf.set_fill_color(r, g, b)
+        pdf.rect(idx * width, y, width + 1, h, style="F")
+
+
+def draw_soft_card(pdf: FPDF, x: float, y: float, w: float, h: float, fill: tuple[int, int, int], border: tuple[int, int, int]) -> None:
+    pdf.set_draw_color(*border)
+    pdf.set_fill_color(*fill)
+    pdf.rect(x, y, w, h, style="DF")
+
+
 def add_cover(pdf: FPDF, logo_path: Path | None) -> None:
     pdf.add_page()
-    pdf.set_fill_color(8, 15, 34)
+    pdf.set_fill_color(5, 12, 28)
     pdf.rect(0, 0, 210, 297, style="F")
-    pdf.set_fill_color(14, 165, 233)
-    pdf.rect(0, 0, 210, 16, style="F")
+    draw_gradient_band(pdf, 0, 22, (14, 165, 233), (79, 70, 229))
+    draw_gradient_band(pdf, 230, 67, (15, 23, 42), (9, 14, 28))
+
+    pdf.set_fill_color(17, 24, 39)
+    pdf.rect(14, 32, 182, 176, style="F")
+    pdf.set_draw_color(56, 189, 248)
+    pdf.rect(14, 32, 182, 176, style="D")
 
     if logo_path:
         pdf.set_fill_color(255, 255, 255)
-        pdf.rect(72, 32, 66, 48, style="F")
-        pdf.image(str(logo_path), x=80, y=38, w=50)
+        pdf.rect(73, 44, 64, 46, style="F")
+        pdf.image(str(logo_path), x=81, y=49, w=48)
 
-    pdf.set_xy(18, 92)
+    pdf.set_xy(18, 104)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 26)
-    pdf.multi_cell(174, 12, "MediCare Enterprise PRO", align="C")
+    pdf.set_font("Helvetica", "B", 28)
+    pdf.multi_cell(174, 13, "MediCare Enterprise PRO", align="C")
 
+    pdf.ln(3)
     pdf.set_text_color(110, 231, 255)
-    pdf.set_font("Helvetica", "B", 15)
-    pdf.ln(4)
-    pdf.multi_cell(174, 8, "Gestion clinica, operativa y legal para empresas y profesionales de salud", align="C")
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.multi_cell(174, 8, "Software para gestion clinica, operativa y legal en salud", align="C")
 
-    pdf.ln(8)
+    pdf.ln(7)
     pdf.set_text_color(210, 223, 241)
     pdf.set_font("Helvetica", "", 12)
     pdf.multi_cell(
         174,
         7,
-        "Control clinico, operativo y legal en una sola plataforma. Pensada para internacion domiciliaria, coordinacion, equipos en calle, emergencias y documentacion con respaldo.",
+        "Una sola plataforma para internacion domiciliaria, coordinacion, guardias, documentacion legal, control de personal, pacientes y trazabilidad completa.",
         align="C",
     )
 
-    cards = [
-        ("Pacientes y visitas", "Historia clinica, agenda, GPS, evoluciones, signos vitales y estudios."),
-        ("Recetas y PDF legal", "Consentimientos, recetas, respaldo clinico y firmas trazables."),
-        ("Coordinacion y RRHH", "Equipo, asistencia, auditoria, cierres y supervision operativa."),
-        ("Emergencias", "Triage, traslados, tiempos y respaldo legal del evento."),
+    ribbons = [
+        "Historia clinica digital",
+        "Fichada GPS",
+        "Recetas y firmas",
+        "Auditoria legal",
+        "Emergencias",
     ]
-    x_positions = [18, 108]
-    y_positions = [156, 218]
-    idx = 0
-    for y in y_positions:
-        for x in x_positions:
-            title, text = cards[idx]
-            pdf.set_fill_color(17, 24, 39)
-            pdf.set_draw_color(56, 189, 248)
-            pdf.rect(x, y, 84, 46, style="DF")
-            pdf.set_xy(x + 6, y + 6)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Helvetica", "B", 12)
-            pdf.multi_cell(72, 6, title)
-            pdf.set_x(x + 6)
-            pdf.set_text_color(203, 213, 225)
-            pdf.set_font("Helvetica", "", 9)
-            pdf.multi_cell(72, 5, text)
-            idx += 1
+    x = 22
+    y = 176
+    for ribbon in ribbons:
+        width = max(28, len(ribbon) * 2.35)
+        if x + width > 188:
+            x = 22
+            y += 16
+        pdf.set_fill_color(15, 23, 42)
+        pdf.set_draw_color(71, 85, 105)
+        pdf.rect(x, y, width, 11, style="DF")
+        pdf.set_xy(x, y + 2.4)
+        pdf.set_text_color(232, 240, 255)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.cell(width, 5, ribbon, align="C")
+        x += width + 5
 
-
-def add_section_title(pdf: FPDF, title: str, subtitle: str | None = None) -> None:
-    pdf.set_text_color(10, 16, 36)
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, title, ln=1)
-    if subtitle:
-        pdf.set_text_color(71, 85, 105)
-        pdf.set_font("Helvetica", "", 11)
-        pdf.multi_cell(0, 6, subtitle)
-    pdf.ln(2)
-
-
-def add_bullet_card(pdf: FPDF, title: str, items: list[str], fill: tuple[int, int, int]) -> None:
-    pdf.set_fill_color(*fill)
-    pdf.set_draw_color(220, 229, 239)
-    start_y = pdf.get_y()
-    height = 12 + max(1, len(items)) * 9
-    pdf.rect(14, start_y, 182, height, style="DF")
-    pdf.set_xy(20, start_y + 6)
-    pdf.set_text_color(15, 23, 42)
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.cell(0, 6, title, ln=1)
+    pdf.set_xy(22, 241)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 8, "Ideal para empresas, coordinacion y profesionales de salud", ln=1)
     pdf.set_x(22)
-    pdf.set_font("Helvetica", "", 10.5)
-    for item in items:
-        pdf.set_x(22)
-        pdf.multi_cell(168, 6, f"- {item}")
-    pdf.ln(2)
+    pdf.set_text_color(196, 208, 227)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.multi_cell(
+        164,
+        6,
+        "Presenta una plataforma moderna, usable en PC y celular, con respaldo legal, control clinico y vision operativa lista para vender o implementar.",
+    )
 
 
-def add_inner_pages(pdf: FPDF) -> None:
+def add_section_title(pdf: FPDF, kicker: str, title: str, text: str) -> None:
+    pdf.set_text_color(14, 165, 233)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(0, 6, kicker.upper(), ln=1)
+    pdf.set_text_color(10, 16, 36)
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.multi_cell(0, 10, title)
+    pdf.set_text_color(71, 85, 105)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.multi_cell(0, 6, text)
+    pdf.ln(3)
+
+
+def add_feature_card(pdf: FPDF, x: float, y: float, title: str, items: list[str], accent: tuple[int, int, int]) -> None:
+    draw_soft_card(pdf, x, y, 86, 58, (247, 250, 252), (226, 232, 240))
+    pdf.set_fill_color(*accent)
+    pdf.rect(x, y, 86, 7, style="F")
+    pdf.set_xy(x + 5, y + 10)
+    pdf.set_text_color(10, 16, 36)
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.cell(76, 6, title, ln=1)
+    pdf.set_font("Helvetica", "", 9.5)
+    pdf.set_text_color(71, 85, 105)
+    for item in items[:4]:
+        pdf.set_x(x + 5)
+        pdf.multi_cell(74, 5, f"- {item}")
+
+
+def add_value_page(pdf: FPDF) -> None:
     pdf.add_page()
     pdf.set_fill_color(245, 248, 252)
     pdf.rect(0, 0, 210, 297, style="F")
+    draw_gradient_band(pdf, 0, 14, (14, 165, 233), (99, 102, 241))
 
     add_section_title(
         pdf,
-        "Que incluye la plataforma",
-        "Una base comun para empresas, coordinacion, profesionales y servicios de emergencia.",
+        "Propuesta de valor",
+        "Todo lo que necesita una operacion de salud en una sola app",
+        "La plataforma ordena la atencion del paciente, la documentacion legal, la coordinacion operativa y la supervision del equipo en tiempo real.",
     )
-    add_bullet_card(
+
+    add_feature_card(
         pdf,
-        "Modulos principales",
+        14,
+        52,
+        "Atencion del paciente",
         [
-            "Historia clinica digital y evolucion medica.",
-            "Visitas con agenda, estados y fichada GPS.",
-            "Recetas, consentimientos y PDF legal.",
-            "Estudios, adjuntos y escalas clinicas.",
-            "Balance hidrico, pediatria y alertas clinicas.",
-            "Emergencias, triage, traslados y ambulancia.",
-            "RRHH, asistencia, auditoria y cierre diario.",
-            "Red profesional y servicios domiciliarios.",
+            "Historia clinica y evolucion.",
+            "Signos vitales y escalas.",
+            "Estudios y adjuntos.",
+            "Balance y pediatria.",
         ],
-        (233, 246, 255),
+        (56, 189, 248),
     )
-    add_bullet_card(
+    add_feature_card(
         pdf,
-        "Beneficios para la empresa",
+        110,
+        52,
+        "Operacion diaria",
         [
-            "Menor uso de papel y menos errores de carga.",
-            "Mayor control sobre horarios, visitas y equipo.",
-            "Informacion centralizada y ordenada.",
-            "Respaldo legal frente a auditorias y reclamos.",
-            "Una imagen mas profesional frente al paciente y la familia.",
+            "Agenda y visitas.",
+            "Fichada GPS real.",
+            "Carga por profesional.",
+            "Acciones rapidas en calle.",
         ],
-        (236, 253, 245),
+        (34, 197, 94),
     )
-    add_bullet_card(
+    add_feature_card(
         pdf,
-        "Beneficios para el profesional",
+        14,
+        118,
+        "Respaldo legal",
         [
-            "Trabajo desde el celular o la PC.",
-            "Carga rapida de signos, evoluciones e indicaciones.",
-            "Acceso a la historia del paciente al momento de atender.",
-            "Menos tareas repetitivas y mejor seguimiento.",
+            "Recetas con firma.",
+            "Consentimientos.",
+            "PDF legal descargable.",
+            "Auditoria de cambios.",
         ],
-        (240, 249, 255),
+        (249, 115, 22),
     )
+    add_feature_card(
+        pdf,
+        110,
+        118,
+        "Gestion y control",
+        [
+            "RRHH y asistencia.",
+            "Cierre diario.",
+            "Auditoria operativa.",
+            "Dashboard ejecutivo.",
+        ],
+        (99, 102, 241),
+    )
+
+    draw_soft_card(pdf, 14, 190, 182, 74, (13, 21, 44), (56, 189, 248))
+    pdf.set_xy(24, 203)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 8, "Que gana el cliente con MediCare Enterprise PRO", ln=1)
+    pdf.set_x(24)
+    pdf.set_text_color(203, 213, 225)
+    pdf.set_font("Helvetica", "", 11)
+    pdf.multi_cell(
+        160,
+        7,
+        "Menos papel, menos errores, mejor coordinacion, mas control del personal, mejor imagen frente al paciente y documentacion lista para auditorias, familiares o instituciones.",
+    )
+    pdf.set_xy(24, 238)
+    pdf.set_text_color(110, 231, 255)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 6, "Usable desde celular o PC, con enfoque real para salud domiciliaria.", ln=1)
+
+
+def add_sales_page(pdf: FPDF) -> None:
+    pdf.add_page()
+    pdf.set_fill_color(251, 252, 254)
+    pdf.rect(0, 0, 210, 297, style="F")
+    draw_gradient_band(pdf, 0, 14, (15, 23, 42), (30, 41, 59))
 
     add_section_title(
         pdf,
-        "Como vender la solucion",
-        "Presentala segun el tipo de cliente para que vea rapido el valor.",
-    )
-    add_bullet_card(
-        pdf,
-        "Perfiles ideales",
-        [
-            "Empresas de internacion domiciliaria.",
-            "Profesionales independientes de salud.",
-            "Coordinacion operativa y administrativa.",
-            "Ambulancias y servicios de emergencia.",
-            "Instituciones o redes interdisciplinarias.",
-        ],
-        (249, 250, 251),
+        "Venta y demo",
+        "Como presentar la plataforma segun el tipo de cliente",
+        "Muestra el sistema segun el perfil comercial para que el valor sea inmediato en la reunion.",
     )
 
-    pdf.set_fill_color(14, 165, 233)
-    pdf.rect(14, 248, 182, 34, style="F")
-    pdf.set_xy(22, 257)
+    blocks = [
+        (
+            "Empresas de internacion domiciliaria",
+            [
+                "Control de pacientes, visitas y coordinacion.",
+                "RRHH, auditoria, cierres y supervision.",
+                "Documentacion legal lista para descargar.",
+            ],
+        ),
+        (
+            "Profesionales independientes",
+            [
+                "Visitas, historia clinica y contacto directo.",
+                "Recetas, firmas y respaldo PDF.",
+                "Uso simple desde el celular.",
+            ],
+        ),
+        (
+            "Ambulancias y emergencias",
+            [
+                "Triage por colores.",
+                "Traslados, tiempos y parte legal.",
+                "Seguimiento del evento y del paciente.",
+            ],
+        ),
+        (
+            "Instituciones y redes de salud",
+            [
+                "Perfiles por profesional o empresa.",
+                "Servicios, zonas y disponibilidad.",
+                "Coordinacion entre multiples actores.",
+            ],
+        ),
+    ]
+
+    y = 52
+    accents = [(56, 189, 248), (34, 197, 94), (249, 115, 22), (99, 102, 241)]
+    for idx, (title, items) in enumerate(blocks):
+        draw_soft_card(pdf, 14, y, 182, 40, (255, 255, 255), (226, 232, 240))
+        pdf.set_fill_color(*accents[idx % len(accents)])
+        pdf.rect(14, y, 7, 40, style="F")
+        pdf.set_xy(27, y + 7)
+        pdf.set_text_color(10, 16, 36)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(160, 6, title, ln=1)
+        pdf.set_text_color(71, 85, 105)
+        pdf.set_font("Helvetica", "", 10)
+        for item in items:
+            pdf.set_x(27)
+            pdf.multi_cell(156, 5, f"- {item}")
+        y += 48
+
+    draw_soft_card(pdf, 14, 246, 182, 34, (14, 165, 233), (14, 165, 233))
+    pdf.set_xy(20, 255)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 7, "Solicita una demo personalizada", ln=1)
-    pdf.set_x(22)
+    pdf.cell(0, 7, "Solicita demo, implementacion o propuesta comercial personalizada", ln=1)
+    pdf.set_x(20)
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 6, "Presentacion comercial, demo funcional y propuesta adaptada a tu servicio.", ln=1)
+    pdf.cell(0, 6, "Ideal para presentar por WhatsApp, mail o reuniones con clientes.", ln=1)
 
 
 def build_pdf() -> bytes:
-    pdf = FPDF()
+    pdf = BrochurePDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     logo = pick_logo()
     add_cover(pdf, logo)
-    add_inner_pages(pdf)
+    add_value_page(pdf)
+    add_sales_page(pdf)
     return safe_pdf_bytes(pdf)
 
 
