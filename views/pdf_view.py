@@ -21,6 +21,36 @@ except ImportError:
     pass
 
 
+def _render_lazy_download(container, key_base, prepare_label, download_label, build_fn, file_name, mime, unavailable_message=None):
+    cache_key = f"lazy_export_{key_base}"
+    payload = st.session_state.get(cache_key)
+
+    if payload:
+        container.download_button(
+            download_label,
+            data=payload,
+            file_name=file_name,
+            mime=mime,
+            key=f"download_{key_base}",
+            use_container_width=True,
+        )
+        if container.button("Actualizar archivo", key=f"refresh_{key_base}", use_container_width=True):
+            st.session_state.pop(cache_key, None)
+            st.rerun()
+        return
+
+    if container.button(prepare_label, key=f"prepare_{key_base}", use_container_width=True):
+        with st.spinner("Preparando archivo..."):
+            payload = build_fn()
+        if payload:
+            st.session_state[cache_key] = payload
+            st.rerun()
+        elif unavailable_message:
+            container.info(unavailable_message)
+        else:
+            container.warning("No se pudo generar el archivo solicitado.")
+
+
 def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
         return
@@ -42,34 +72,35 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
 
     st.markdown("### Generar Documentos del Paciente")
     detalles = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
-    pdf_hc = build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user)
-    pdf_respaldo = build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user)
-    excel_bytes = build_patient_excel_bytes(st.session_state, paciente_sel)
 
     col_d1, col_d2, col_d3 = st.columns(3)
-    col_d1.download_button(
-        "Descargar Historia Clinica Completa (PDF)",
-        data=pdf_hc,
+    _render_lazy_download(
+        col_d1,
+        key_base=f"pdf_hc_{paciente_sel}",
+        prepare_label="Preparar historia clinica completa",
+        download_label="Descargar Historia Clinica Completa (PDF)",
+        build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
         file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
-        use_container_width=True,
     )
-    if excel_bytes:
-        col_d2.download_button(
-            "Descargar Historia Clinica (Excel)",
-            data=excel_bytes,
-            file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-    else:
-        col_d2.info("Excel no disponible.")
-    col_d3.download_button(
-        "Descargar Respaldo Clinico (PDF)",
-        data=pdf_respaldo,
+    _render_lazy_download(
+        col_d2,
+        key_base=f"pdf_excel_{paciente_sel}",
+        prepare_label="Preparar historia clinica en Excel",
+        download_label="Descargar Historia Clinica (Excel)",
+        build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
+        file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        unavailable_message="Excel no disponible en este equipo.",
+    )
+    _render_lazy_download(
+        col_d3,
+        key_base=f"pdf_respaldo_{paciente_sel}",
+        prepare_label="Preparar respaldo clinico",
+        download_label="Descargar Respaldo Clinico (PDF)",
+        build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
         file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
-        use_container_width=True,
     )
 
     st.success("Descargas seguras activadas.")

@@ -156,6 +156,33 @@ VIEW_NAV_LABELS = {
     "Auditoria Legal": "⚖️ Legal",
 }
 
+VIEW_NAV_LABELS = {
+    "Visitas y Agenda": "\U0001F4CD Visitas",
+    "Dashboard": "\U0001F4CA Dashboard",
+    "Admision": "\U0001FA7E Admision",
+    "Clinica": "\U0001FA7A Clinica",
+    "Pediatria": "\U0001F476 Pediatria",
+    "Evolucion": "\u270D\ufe0f Evolucion",
+    "Estudios": "\U0001F9EA Estudios",
+    "Materiales": "\U0001F4E6 Materiales",
+    "Recetas": "\U0001F48A Recetas",
+    "Balance": "\U0001F4A7 Balance",
+    "Inventario": "\U0001F3E5 Inventario",
+    "Caja": "\U0001F4B5 Caja",
+    "Emergencias y Ambulancia": "\U0001F691 Emergencias",
+    "Red de Profesionales": "\U0001F91D Red",
+    "Escalas Clinicas": "\U0001F4CF Escalas",
+    "Historial": "\U0001F5C2\ufe0f Historial",
+    "PDF": "\U0001F4C4 PDF",
+    "Telemedicina": "\U0001F3A5 Telemedicina",
+    "Cierre Diario": "\U0001F9EE Cierre",
+    "Mi Equipo": "\U0001F465 Equipo",
+    "Asistencia en Vivo": "\U0001F6F0\ufe0f Asistencia",
+    "RRHH y Fichajes": "\u23F1\ufe0f RRHH",
+    "Auditoria": "\U0001F50E Auditoria",
+    "Auditoria Legal": "\u2696\ufe0f Legal",
+}
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     if not tiene_permiso(rol, VIEW_ROLE_RULES.get(tab_name)):
         st.error("No tienes permisos para acceder a este modulo.")
@@ -536,7 +563,30 @@ if not st.session_state.entered_app:
         "</div>",
         "</div>",
     ]
-    st.markdown("".join(html_lines), unsafe_allow_html=True)
+    landing_html = "".join(html_lines)
+    landing_html = (
+        landing_html.replace("ðŸ“", "\U0001F4CD")
+        .replace("ðŸ“„", "\U0001F4C4")
+        .replace("ðŸ’Š", "\U0001F48A")
+        .replace("âœï¸", "\u270D\ufe0f")
+        .replace("ðŸ“¹", "\U0001F4F9")
+        .replace("ðŸ‘¶", "\U0001F476")
+        .replace("ðŸ’§", "\U0001F4A7")
+        .replace("ðŸ“‹", "\U0001F4CB")
+        .replace("EvoluciÃ³n MÃ©dica", "Evolucion Medica")
+        .replace("GestiÃ³n", "Gestion")
+        .replace("automÃ¡tico", "automatico")
+        .replace("prÃ¡ctica", "practica")
+        .replace("biomÃ©trica", "biometrica")
+        .replace("PediatrÃ­a", "Pediatria")
+        .replace("grÃ¡ficas", "graficas")
+        .replace("CÃ¡lculo", "Calculo")
+        .replace("retenciÃ³n", "retencion")
+        .replace("AuditorÃ­a RRHH", "Auditoria RRHH")
+        .replace("desempeÃ±o", "desempeno")
+        .replace("liquidaciÃ³n", "liquidacion")
+    )
+    st.markdown(landing_html, unsafe_allow_html=True)
     folleto_path = obtener_folleto_landing()
     if folleto_path:
         with folleto_path.open("rb") as brochure_file:
@@ -546,7 +596,7 @@ if not st.session_state.entered_app:
                 file_name=folleto_path.name,
                 mime="application/pdf",
                 key="download_landing_brochure_pdf",
-                use_container_width=False,
+                use_container_width=True,
             )
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True

@@ -22,6 +22,36 @@ def _limitar_registros(opcion_limite):
     return 200
 
 
+def _render_lazy_download(container, key_base, prepare_label, download_label, build_fn, file_name, mime, unavailable_message=None):
+    cache_key = f"lazy_export_{key_base}"
+    payload = st.session_state.get(cache_key)
+
+    if payload:
+        container.download_button(
+            download_label,
+            data=payload,
+            file_name=file_name,
+            mime=mime,
+            key=f"download_{key_base}",
+            use_container_width=True,
+        )
+        if container.button("Actualizar archivo", key=f"refresh_{key_base}", use_container_width=True):
+            st.session_state.pop(cache_key, None)
+            st.rerun()
+        return
+
+    if container.button(prepare_label, key=f"prepare_{key_base}", use_container_width=True):
+        with st.spinner("Preparando archivo..."):
+            payload = build_fn()
+        if payload:
+            st.session_state[cache_key] = payload
+            st.rerun()
+        elif unavailable_message:
+            container.info(unavailable_message)
+        else:
+            container.warning("No se pudo generar el archivo solicitado.")
+
+
 def render_historial(paciente_sel):
     if not paciente_sel:
         return
@@ -54,34 +84,33 @@ def render_historial(paciente_sel):
 
     st.markdown("##### Exportacion y resguardo")
     col_exp1, col_exp2, col_exp3 = st.columns(3)
-    pdf_bytes = build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", ""))
-    respaldo_pdf = build_backup_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", ""))
-    col_exp1.download_button(
-        "Descargar historia completa PDF",
-        data=pdf_bytes,
+    _render_lazy_download(
+        col_exp1,
+        key_base=f"historial_pdf_{paciente_sel}",
+        prepare_label="Preparar historia completa PDF",
+        download_label="Descargar historia completa PDF",
+        build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
         file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
-        use_container_width=True,
     )
-
-    excel_bytes = build_patient_excel_bytes(st.session_state, paciente_sel)
-    if excel_bytes:
-        col_exp2.download_button(
-            "Descargar historia Excel",
-            data=excel_bytes,
-            file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-    else:
-        col_exp2.info("Excel no disponible en este equipo.")
-
-    col_exp3.download_button(
-        "Descargar respaldo PDF",
-        data=respaldo_pdf,
+    _render_lazy_download(
+        col_exp2,
+        key_base=f"historial_excel_{paciente_sel}",
+        prepare_label="Preparar historia en Excel",
+        download_label="Descargar historia Excel",
+        build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
+        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        unavailable_message="Excel no disponible en este equipo.",
+    )
+    _render_lazy_download(
+        col_exp3,
+        key_base=f"historial_respaldo_{paciente_sel}",
+        prepare_label="Preparar respaldo PDF",
+        download_label="Descargar respaldo PDF",
+        build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
         file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
-        use_container_width=True,
     )
     st.divider()
     st.markdown(
