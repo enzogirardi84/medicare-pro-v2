@@ -23,6 +23,12 @@ try:
 except ImportError:
     core_utils = import_module("core.utils")
 
+try:
+    from core.database import cargar_datos
+except ImportError:
+    core_database = import_module("core.database")
+    cargar_datos = core_database.cargar_datos
+
 cargar_texto_asset = core_utils.cargar_texto_asset
 compactar_etiqueta_paciente = getattr(core_utils, "compactar_etiqueta_paciente", lambda nombre, estado: str(nombre or ""))
 es_control_total = getattr(core_utils, "es_control_total", lambda rol: rol in {"SuperAdmin", "Coordinador"})
@@ -51,7 +57,14 @@ try:
 except Exception:
     pass
 
-inicializar_db_state(None)
+if "_db_bootstrapped" not in st.session_state:
+    data_inicial = None
+    try:
+        data_inicial = cargar_datos()
+    except Exception:
+        data_inicial = None
+    inicializar_db_state(data_inicial)
+    st.session_state["_db_bootstrapped"] = True
 
 VIEW_CONFIG = {
     "Visitas y Agenda": ("views.visitas", "render_visitas"),
