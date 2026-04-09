@@ -10,6 +10,7 @@ from core.utils import (
     calcular_estado_agenda,
     es_control_total,
     filtrar_registros_empresa,
+    obtener_profesionales_visibles,
     mostrar_dataframe_con_scroll,
     obtener_direccion_real,
     parse_agenda_datetime,
@@ -61,6 +62,13 @@ def _resumen_agenda(items):
         "proximas": proximas,
         "profesionales": profesionales,
     }
+
+
+def _zona_corta(direccion):
+    texto = str(direccion or "").strip()
+    if not texto or texto == "No registrada":
+        return "Zona sin definir"
+    return texto.split(",")[0].strip()[:60]
 
 
 def render_visitas(paciente_sel, mi_empresa, user, rol):
@@ -190,26 +198,50 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         hora_ag_str = c2_ag.text_input("Hora aproximada (HH:MM)", value=ahora().strftime("%H:%M"))
         profesionales = [
             v["nombre"]
-            for _, v in st.session_state["usuarios_db"].items()
-            if es_control_total(rol) or v.get("empresa") == mi_empresa
+            for v in obtener_profesionales_visibles(
+                st.session_state,
+                mi_empresa,
+                rol,
+                roles_validos=["Operativo", "Enfermeria", "Medico", "Coordinador", "SuperAdmin"],
+            )
         ]
         idx_prof = profesionales.index(user["nombre"]) if user["nombre"] in profesionales else 0
         prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
         if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
             hora_limpia = hora_ag_str.strip() if ":" in hora_ag_str else ahora().strftime("%H:%M")
-            st.session_state["agenda_db"].append(
-                {
-                    "paciente": paciente_sel,
-                    "profesional": prof_ag,
-                    "fecha": fecha_ag.strftime("%d/%m/%Y"),
-                    "hora": hora_limpia,
-                    "empresa": mi_empresa,
-                    "estado": "Pendiente",
-                }
+            fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
+            conflicto = next(
+                (
+                    item
+                    for item in _agenda_empresa(mi_empresa, rol)
+                    if item.get("profesional") == prof_ag
+                    and item.get("fecha") == fecha_ag_str
+                    and item.get("hora") == hora_limpia
+                    and item.get("estado", "Pendiente") not in {"Cancelada", "Realizada"}
+                    and item.get("paciente") != paciente_sel
+                ),
+                None,
             )
-            guardar_datos()
-            st.success("Turno agendado correctamente.")
-            st.rerun()
+            if conflicto:
+                st.error(
+                    f"{prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}."
+                )
+            else:
+                st.session_state["agenda_db"].append(
+                    {
+                        "paciente": paciente_sel,
+                        "profesional": prof_ag,
+                        "fecha": fecha_ag_str,
+                        "hora": hora_limpia,
+                        "empresa": mi_empresa,
+                        "estado": "Pendiente",
+                        "zona": _zona_corta(dire_paciente),
+                        "creado_por": user.get("nombre", ""),
+                    }
+                )
+                guardar_datos()
+                st.success("Turno agendado correctamente.")
+                st.rerun()
 
     if agenda_paciente:
         st.divider()
@@ -270,6 +302,64 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                     guardar_datos()
                     st.success("Agenda actualizada correctamente.")
                     st.rerun()
+
+        st.markdown("##### Agenda semanal del paciente")
+        semana_ref = st.date_input(
+            "Semana de referencia",
+            value=ahora().date(),
+            key=f"agenda_semana_ref_{paciente_sel}",
+        )
+        inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
+        fin_semana = inicio_semana + timedelta(days=6)
+        agenda_semana = [
+            item
+            for item in agenda_paciente
+            if item["_fecha_dt"] != datetime.min and inicio_semana <= item["_fecha_dt"].date() <= fin_semana
+        ]
+
+        cols_semana = st.columns(7)
+        for idx_dia in range(7):
+            dia = inicio_semana + timedelta(days=idx_dia)
+            items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
+            pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})
+            realizadas_dia = sum(1 for x in items_dia if x["estado_calc"] == "Realizada")
+            cols_semana[idx_dia].markdown(
+                f"""
+                <div class="mc-card" style="padding:14px 12px; min-height:118px;">
+                    <div style="font-size:0.78rem; color:#93c5fd; text-transform:uppercase; letter-spacing:1px;">
+                        {dia.strftime('%a')}
+                    </div>
+                    <div style="font-size:1rem; font-weight:800; color:#f8fafc; margin-top:4px;">
+                        {dia.strftime('%d/%m')}
+                    </div>
+                    <div style="font-size:1.4rem; font-weight:900; color:#ffffff; margin-top:10px;">{len(items_dia)}</div>
+                    <div style="font-size:0.86rem; color:#cbd5e1; margin-top:4px;">
+                        {pendientes_dia} pendientes<br>{realizadas_dia} realizadas
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        if agenda_semana:
+            df_semana = pd.DataFrame(agenda_semana)
+            df_semana["Dia"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%A") if x != datetime.min else "Sin fecha")
+            df_semana["Fecha"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y") if x != datetime.min else "Sin fecha")
+            df_semana["Hora"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%H:%M") if x != datetime.min else "--:--")
+            df_semana["Profesional"] = df_semana["profesional"].fillna("Sin profesional")
+            df_semana["Zona"] = df_semana.get("zona", pd.Series(["Zona sin definir"] * len(df_semana))).fillna("Zona sin definir")
+            df_semana["Estado"] = df_semana["estado_calc"]
+            df_semana = df_semana[["Dia", "Fecha", "Hora", "Profesional", "Zona", "Estado"]].sort_values(["Fecha", "Hora"])
+            limite_semana = seleccionar_limite_registros(
+                "Filas de la semana",
+                len(df_semana),
+                key=f"agenda_semana_limit_{paciente_sel}",
+                default=14,
+                opciones=(7, 14, 21, 35, 50),
+            )
+            mostrar_dataframe_con_scroll(df_semana.head(limite_semana), height=300)
+        else:
+            st.info("No hay visitas cargadas para la semana seleccionada.")
 
         limite = seleccionar_limite_registros(
             "Visitas a mostrar",

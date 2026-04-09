@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+from datetime import time as dt_time
 
 import pandas as pd
 import streamlit as st
@@ -11,9 +12,13 @@ from core.utils import (
     ahora,
     cargar_json_asset,
     firma_a_base64,
+    format_horarios_receta,
+    horarios_programados_desde_frecuencia,
     mostrar_dataframe_con_scroll,
     obtener_config_firma,
+    obtener_horarios_receta,
     puede_accion,
+    parse_horarios_programados,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
@@ -125,6 +130,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 ],
             )
             dias = col5.number_input("Dias", min_value=1, max_value=90, value=7)
+            hora_inicio = st.time_input("Hora inicial de administracion", value=dt_time(8, 0), key="hora_inicio_receta")
+            horarios_sugeridos = horarios_programados_desde_frecuencia(
+                frecuencia,
+                hora_inicio.strftime("%H:%M"),
+            )
+            if horarios_sugeridos:
+                st.caption(f"Horarios sugeridos para la guardia: {' | '.join(horarios_sugeridos)}")
+            else:
+                st.caption("Indicacion sin horario fijo. Se mostrara como dosis unica o a demanda segun la frecuencia.")
             col_m1, col_m2 = st.columns(2)
             medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
             medico_matricula = col_m2.text_input("Matricula profesional")
@@ -182,10 +196,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 "firmado_por": user["nombre"],
                                 "estado_clinico": "Activa",
                                 "estado_receta": "Activa",
+                                "frecuencia": frecuencia,
+                                "hora_inicio": hora_inicio.strftime("%H:%M"),
+                                "horarios_programados": horarios_sugeridos,
                                 "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                                 "profesional_estado": user["nombre"],
                                 "matricula_estado": medico_matricula.strip(),
                                 "origen_registro": "Prescripcion digital",
+                                "empresa": mi_empresa,
                             }
                         )
                         registrar_auditoria_legal(
@@ -218,6 +236,16 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key="detalle_papel_receta",
                 placeholder="Ej: Ceftriaxona 1g EV cada 12 horas por 7 dias. Control de temperatura y signos vitales.",
             )
+            c_p3, c_p4 = st.columns([1, 2])
+            dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
+            horarios_papel_txt = c_p4.text_input(
+                "Horarios programados (opcional)",
+                key="horarios_papel_receta",
+                placeholder="Ej: 08:00 | 16:00 | 22:00",
+            )
+            horarios_papel = parse_horarios_programados(horarios_papel_txt)
+            if horarios_papel:
+                st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
             adjunto_papel = st.file_uploader(
                 "Subir orden medica en papel o PDF",
                 type=["pdf", "png", "jpg", "jpeg"],
@@ -236,13 +264,16 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         "paciente": paciente_sel,
                         "med": detalle_papel.strip(),
                         "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                        "dias_duracion": 7,
+                        "dias_duracion": dias_papel,
                         "medico_nombre": medico_papel.strip(),
                         "medico_matricula": matricula_papel.strip(),
                         "firma_b64": "",
                         "firmado_por": user["nombre"],
                         "estado_clinico": "Activa",
                         "estado_receta": "Activa",
+                        "frecuencia": "",
+                        "hora_inicio": horarios_papel[0] if horarios_papel else "",
+                        "horarios_programados": horarios_papel,
                         "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                         "profesional_estado": user["nombre"],
                         "matricula_estado": user.get("matricula", ""),
@@ -250,6 +281,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         "adjunto_papel_b64": adjunto_b64,
                         "adjunto_papel_nombre": adjunto_nombre,
                         "adjunto_papel_tipo": adjunto_tipo,
+                        "empresa": mi_empresa,
                     }
                     st.session_state["indicaciones_db"].append(registro)
                     registrar_auditoria_legal(
@@ -276,61 +308,129 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             for a in st.session_state.get("administracion_med_db", [])
             if a.get("paciente") == paciente_sel and a.get("fecha") == fecha_hoy
         ]
-        mostrar_sabana = st.checkbox("Mostrar sabana completa de 24 horas", value=False)
-
-        table_data = []
-        horas = [f"{h:02d}:00" for h in range(24 if mostrar_sabana else 12)]
-        for r in recs_activas[:30]:
+        plan_dia = []
+        sabana_resumen = []
+        for r in recs_activas[:40]:
             partes = r["med"].split(" | ")
             nombre = partes[0].strip()
             via_texto = partes[1].replace("Via: ", "") if len(partes) > 1 else ""
-            freq = partes[2] if len(partes) > 2 else ""
-            fila = {"Medicamento": nombre, "Via": via_texto, "Frecuencia": freq}
-            for h in horas:
-                realizada = any(a.get("med") == nombre and a.get("hora", "").startswith(h[:2]) for a in admin_hoy)
-                fila[h] = "OK" if realizada else "-"
-            table_data.append(fila)
-        mostrar_dataframe_con_scroll(pd.DataFrame(table_data), height=360)
-        st.caption("OK = administrado | - = pendiente")
+            frecuencia_texto = r.get("frecuencia") or (partes[2] if len(partes) > 2 else "")
+            horarios = obtener_horarios_receta(r)
+            horarios_legibles = format_horarios_receta(r)
+            sabana_resumen.append(
+                {
+                    "Medicamento": nombre,
+                    "Via": via_texto or "S/D",
+                    "Frecuencia": frecuencia_texto or "S/D",
+                    "Horarios": horarios_legibles,
+                    "Estado": r.get("estado_receta", "Activa"),
+                }
+            )
+
+            if horarios:
+                for horario in horarios:
+                    admin_reg = next(
+                        (
+                            a
+                            for a in admin_hoy
+                            if a.get("med") == nombre
+                            and (a.get("horario_programado") == horario or a.get("hora") == horario)
+                        ),
+                        None,
+                    )
+                    plan_dia.append(
+                        {
+                            "Hora": horario,
+                            "Medicamento": nombre,
+                            "Via": via_texto or "S/D",
+                            "Frecuencia": frecuencia_texto or "S/D",
+                            "Estado": admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente",
+                            "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
+                            "Registrado por": admin_reg.get("firma", "") if admin_reg else "",
+                            "Hora real": admin_reg.get("hora", "") if admin_reg else "",
+                        }
+                    )
+            else:
+                admin_reg = next((a for a in admin_hoy if a.get("med") == nombre), None)
+                plan_dia.append(
+                    {
+                        "Hora": "A demanda",
+                        "Medicamento": nombre,
+                        "Via": via_texto or "S/D",
+                        "Frecuencia": frecuencia_texto or "A demanda",
+                        "Estado": admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente",
+                        "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
+                        "Registrado por": admin_reg.get("firma", "") if admin_reg else "",
+                        "Hora real": admin_reg.get("hora", "") if admin_reg else "",
+                    }
+                )
+
+        st.caption("Plan de administracion del dia")
+        mostrar_dataframe_con_scroll(pd.DataFrame(plan_dia), height=360)
+
+        with st.expander("Ver sabana resumida de medicacion"):
+            mostrar_dataframe_con_scroll(pd.DataFrame(sabana_resumen), height=280)
 
         if puede_registrar_dosis:
             with st.form("form_registro_dosis", clear_on_submit=True):
-                meds_activas_nombres = [r["med"].split(" |")[0].strip() for r in recs_activas]
+                recetas_map = {
+                    f"{r['med'].split(' |')[0].strip()} | {format_horarios_receta(r)}": r
+                    for r in recs_activas
+                }
                 c_med, c_hora = st.columns([2, 1])
-                med_sel = c_med.selectbox("Medicacion a registrar", meds_activas_nombres)
-                opciones_hora = [f"{i:02d}:00" for i in range(24)]
+                receta_label = c_med.selectbox("Medicacion a registrar", list(recetas_map.keys()))
+                receta_actual = recetas_map[receta_label]
+                horarios_receta = obtener_horarios_receta(receta_actual)
+                opciones_hora = horarios_receta or [f"{i:02d}:00" for i in range(24)]
+                if "A demanda" not in opciones_hora and not horarios_receta:
+                    pass
                 hora_actual_str = f"{ahora().hour:02d}:00"
                 idx_hora = opciones_hora.index(hora_actual_str) if hora_actual_str in opciones_hora else 0
-                hora_sel = c_hora.selectbox("Hora de la dosis", opciones_hora, index=idx_hora)
+                hora_sel = c_hora.selectbox(
+                    "Horario programado",
+                    opciones_hora if opciones_hora else ["A demanda"],
+                    index=idx_hora if opciones_hora else 0,
+                )
                 estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
                 justificacion = st.text_input("Justificacion clinica")
                 if st.form_submit_button("Guardar registro", use_container_width=True):
                     if "No realizada" in estado_sel and not justificacion.strip():
                         st.error("Es obligatorio justificar por que no se administro la dosis.")
                     else:
+                        nombre_med = receta_actual["med"].split(" |")[0].strip()
                         st.session_state["administracion_med_db"] = [
                             a
                             for a in st.session_state.get("administracion_med_db", [])
                             if not (
                                 a.get("paciente") == paciente_sel
                                 and a.get("fecha") == fecha_hoy
-                                and a.get("med") == med_sel
-                                and a.get("hora") == hora_sel
+                                and a.get("med") == nombre_med
+                                and (a.get("horario_programado") == hora_sel or a.get("hora") == hora_sel)
                             )
                         ]
                         st.session_state["administracion_med_db"].append(
                             {
                                 "paciente": paciente_sel,
-                                "med": med_sel,
+                                "med": nombre_med,
                                 "fecha": fecha_hoy,
-                                "hora": hora_sel,
+                                "hora": ahora().strftime("%H:%M"),
+                                "horario_programado": hora_sel,
                                 "estado": estado_sel,
                                 "motivo": justificacion.strip() if "No realizada" in estado_sel else "",
                                 "firma": user["nombre"],
+                                "empresa": mi_empresa,
                             }
                         )
+                        registrar_auditoria_legal(
+                            "Medicacion",
+                            paciente_sel,
+                            "Registro de administracion",
+                            user.get("nombre", ""),
+                            user.get("matricula", ""),
+                            f"{nombre_med} | Horario: {hora_sel} | Estado: {estado_sel}",
+                        )
                         guardar_datos()
-                        st.success(f"Registro guardado para las {hora_sel}.")
+                        st.success(f"Registro guardado para el horario {hora_sel}.")
                         st.rerun()
         else:
             st.caption("El registro de administracion queda deshabilitado para este rol.")
@@ -387,11 +487,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                     "firmado_por": user["nombre"],
                                     "estado_clinico": "Activa",
                                     "estado_receta": "Activa",
+                                    "frecuencia": r.get("frecuencia", ""),
+                                    "hora_inicio": r.get("hora_inicio", ""),
+                                    "horarios_programados": r.get("horarios_programados", []),
                                     "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                                     "profesional_estado": user["nombre"],
                                     "matricula_estado": user.get("matricula", ""),
                                     "motivo_estado": f"Reemplaza indicacion previa. Motivo: {motivo_cambio.strip()}".strip(),
                                     "origen_registro": "Prescripcion digital",
+                                    "empresa": r.get("empresa", mi_empresa),
                                 }
                             )
                             registrar_auditoria_legal(
@@ -434,6 +538,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     if r.get("origen_registro"):
                         c_info.caption(f"Origen: {r.get('origen_registro')}")
                     c_info.markdown(f"*{r.get('med', '')}*")
+                    c_info.caption(f"Horarios: {format_horarios_receta(r)}")
                     if r.get("firma_b64"):
                         try:
                             c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)

@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import urllib.request
 from datetime import datetime
 from io import BytesIO
@@ -164,8 +165,11 @@ def ahora():
     return datetime.now(ARG_TZ)
 
 
-def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula="", detalle="", referencia="", extra=None):
+def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula="", detalle="", referencia="", extra=None, empresa=None):
     extra = extra or {}
+    if empresa is None:
+        detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente, {})
+        empresa = detalles.get("empresa") or st.session_state.get("user", {}).get("empresa", "")
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append(
         {
@@ -177,6 +181,7 @@ def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula=""
             "matricula": matricula,
             "detalle": detalle,
             "referencia": referencia,
+            "empresa": empresa,
             **extra,
         }
     )
@@ -319,6 +324,123 @@ def calcular_estado_agenda(item, now=None):
     if dt < now:
         return "Vencida"
     return "Pendiente"
+
+
+def normalizar_hora_texto(valor, default="08:00"):
+    texto = str(valor or "").strip()
+    if not texto:
+        return default
+
+    match = re.search(r"^(\d{1,2})(?::(\d{1,2}))?$", texto)
+    if not match:
+        return default
+
+    horas = int(match.group(1))
+    minutos = int(match.group(2) or 0)
+    if horas > 23 or minutos > 59:
+        return default
+    return f"{horas:02d}:{minutos:02d}"
+
+
+def parse_horarios_programados(texto):
+    if isinstance(texto, list):
+        candidatos = texto
+    else:
+        candidatos = re.split(r"[,\|;/\n]+", str(texto or ""))
+
+    horarios = []
+    for valor in candidatos:
+        hora = normalizar_hora_texto(valor, default="")
+        if hora:
+            horarios.append(hora)
+
+    horarios_unicos = sorted(set(horarios), key=lambda x: (int(x.split(":")[0]), int(x.split(":")[1])))
+    return horarios_unicos
+
+
+def horarios_programados_desde_frecuencia(frecuencia, hora_inicio="08:00"):
+    frecuencia = str(frecuencia or "").strip()
+    hora_inicio = normalizar_hora_texto(hora_inicio)
+
+    intervalos = {
+        "Cada 1 hora": 1,
+        "Cada 2 horas": 2,
+        "Cada 4 horas": 4,
+        "Cada 6 horas": 6,
+        "Cada 8 horas": 8,
+        "Cada 12 horas": 12,
+        "Cada 24 horas": 24,
+    }
+
+    if frecuencia == "Dosis unica":
+        return [hora_inicio]
+    if frecuencia == "Segun necesidad":
+        return []
+
+    intervalo = intervalos.get(frecuencia)
+    if not intervalo:
+        return []
+
+    hora_base = int(hora_inicio.split(":")[0])
+    minuto_base = int(hora_inicio.split(":")[1])
+    horas = []
+    total = 24 if intervalo < 24 else 1
+    for paso in range(total):
+        horas.append(f"{(hora_base + (paso * intervalo)) % 24:02d}:{minuto_base:02d}")
+        if intervalo == 24:
+            break
+    return sorted(set(horas), key=lambda x: (int(x.split(":")[0]), int(x.split(":")[1])))
+
+
+def extraer_frecuencia_desde_indicacion(indicacion):
+    texto = str(indicacion or "")
+    partes = [parte.strip() for parte in texto.split("|")]
+    for parte in partes:
+        if parte.startswith("Cada ") or parte == "Dosis unica" or parte == "Segun necesidad":
+            return parte
+    return ""
+
+
+def obtener_horarios_receta(registro):
+    horarios_guardados = registro.get("horarios_programados", [])
+    horarios = parse_horarios_programados(horarios_guardados)
+    if horarios:
+        return horarios
+
+    frecuencia = registro.get("frecuencia") or extraer_frecuencia_desde_indicacion(registro.get("med", ""))
+    hora_inicio = registro.get("hora_inicio", "08:00")
+    return horarios_programados_desde_frecuencia(frecuencia, hora_inicio)
+
+
+def format_horarios_receta(registro):
+    horarios = obtener_horarios_receta(registro)
+    if not horarios:
+        return "A demanda / sin horario fijo"
+    return " | ".join(horarios)
+
+
+def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_validos=None):
+    empresa_actual = str(mi_empresa or "").strip().lower()
+    visibles = []
+    for username, data in session_state.get("usuarios_db", {}).items():
+        if not isinstance(data, dict):
+            continue
+        rol_usuario = str(data.get("rol", "") or "").strip()
+        if roles_validos and rol_usuario not in roles_validos:
+            continue
+        if not es_control_total(rol_actual):
+            empresa_usuario = str(data.get("empresa", "") or "").strip().lower()
+            if empresa_usuario != empresa_actual:
+                continue
+        visibles.append(
+            {
+                "username": username,
+                **data,
+            }
+        )
+
+    visibles.sort(key=lambda x: (str(x.get("nombre", "")).lower(), str(x.get("username", "")).lower()))
+    return visibles
 
 
 @st.cache_data(show_spinner=False)
