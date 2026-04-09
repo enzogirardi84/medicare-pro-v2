@@ -386,7 +386,7 @@ if not st.session_state.entered_app:
                 box-shadow: 0 15px 40px rgba(99, 102, 241, 0.65) !important;
                 background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
             }
-            div.stDownloadButton { display: flex; justify-content: center; margin-top: 18px; }
+            div.stDownloadButton { display: none !important; justify-content: center; margin-top: 18px; }
             div.stDownloadButton > button {
                 background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #38bdf8 100%) !important;
                 color: #ffffff !important;
@@ -471,8 +471,12 @@ if not st.session_state.entered_app:
         ".brochure-text { position: relative; margin: 0 auto; max-width: 760px; color: #cbd5e1; font-size: 1rem; line-height: 1.8; }",
         ".brochure-badges { position: relative; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }",
         ".brochure-badge { padding: 10px 14px; border-radius: 999px; background: rgba(15,23,42,0.64); border: 1px solid rgba(255,255,255,0.08); color: #e2e8f0; font-size: 0.88rem; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }",
+        ".brochure-actions { max-width: 1040px; width: 100%; display: flex; justify-content: center; margin: 12px 0 34px; }",
+        ".brochure-download-link { display: inline-flex; align-items: center; justify-content: center; gap: 12px; width: min(100%, 540px); padding: 18px 28px; border-radius: 22px; text-decoration: none; color: #ffffff !important; background: linear-gradient(135deg, #0b1220 0%, #1d4ed8 58%, #38bdf8 100%); border: 1px solid rgba(191,219,254,0.34); box-shadow: 0 20px 46px rgba(29,78,216,0.28), 0 0 0 1px rgba(255,255,255,0.05) inset; font-size: 1.03rem; font-weight: 900; letter-spacing: 0.2px; transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease; }",
+        ".brochure-download-link:hover { transform: translateY(-3px); color: #ffffff !important; box-shadow: 0 28px 56px rgba(29,78,216,0.34), 0 0 24px rgba(56,189,248,0.20); filter: brightness(1.06); }",
+        ".brochure-download-link span { color: #ffffff !important; }",
         "@media (max-width: 900px) { .spotlight-grid, .closing-banner { grid-template-columns: 1fr; } }",
-        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } div.stDownloadButton > button { min-width: 100% !important; width: 100% !important; } }",
+        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } .brochure-download-link { width: 100%; } div.stDownloadButton > button { min-width: 100% !important; width: 100% !important; } }",
         "</style>",
         "<div class='landing-page'>",
         f"<div class='logo-shell'>{logo_html}</div>",
@@ -586,8 +590,8 @@ if not st.session_state.entered_app:
         .replace("desempeÃ±o", "desempeno")
         .replace("liquidaciÃ³n", "liquidacion")
     )
-    st.markdown(landing_html, unsafe_allow_html=True)
     folleto_path = obtener_folleto_landing()
+    brochure_action_html = ""
     if folleto_path:
         with folleto_path.open("rb") as brochure_file:
             st.download_button(
@@ -601,6 +605,17 @@ if not st.session_state.entered_app:
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
+    if folleto_path:
+        brochure_b64 = base64.b64encode(folleto_path.read_bytes()).decode()
+        st.markdown(
+            (
+                "<div class='brochure-actions'>"
+                f"<a class='brochure-download-link' href='data:application/pdf;base64,{brochure_b64}' download='{folleto_path.name}'>"
+                "<span>📄</span><span>Descargar presentacion comercial (PDF)</span>"
+                "</a></div>"
+            ),
+            unsafe_allow_html=True,
+        )
     st.stop()
 
 render_login()
