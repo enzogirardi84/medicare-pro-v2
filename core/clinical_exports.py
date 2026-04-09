@@ -137,6 +137,27 @@ def _section_title(pdf, title):
     pdf.ln(1)
 
 
+def _usable_width(pdf):
+    return max(20, getattr(pdf, "epw", pdf.w - pdf.l_margin - pdf.r_margin))
+
+
+def _write_multiline_text(pdf, text, line_height=6, indent=0):
+    content = safe_text(text).strip()
+    if not content:
+        return
+
+    width = max(20, _usable_width(pdf) - indent)
+    x_base = pdf.l_margin + indent
+
+    for paragraph in content.split("\n"):
+        paragraph = paragraph.strip()
+        if not paragraph:
+            pdf.ln(line_height)
+            continue
+        pdf.set_x(x_base)
+        pdf.multi_cell(width, line_height, paragraph, border=0)
+
+
 def _write_pairs(pdf, pairs):
     for label, value in pairs:
         if value in [None, ""]:
@@ -149,12 +170,13 @@ def _write_pairs(pdf, pairs):
         x_inicio = pdf.get_x()
         y_inicio = pdf.get_y()
         label_w = 46
+        value_w = max(30, _usable_width(pdf) - label_w - 2)
         pdf.set_font("Arial", "B", 9)
         pdf.multi_cell(label_w, 6, f"{label_txt}:", border=0)
         y_fin_label = pdf.get_y()
         pdf.set_xy(x_inicio + label_w + 2, y_inicio)
         pdf.set_font("Arial", "", 9)
-        pdf.multi_cell(0, 6, value_txt, border=0)
+        pdf.multi_cell(value_w, 6, value_txt, border=0)
         pdf.set_y(max(pdf.get_y(), y_fin_label))
         pdf.ln(1)
 
@@ -350,13 +372,13 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
 
     pdf.ln(8)
     pdf.set_font("Arial", "B", 10)
-    pdf.multi_cell(
-        0,
-        6,
-        safe_text(
+    _write_multiline_text(
+        pdf,
+        (
             "Este respaldo resume la informacion clinica y administrativa registrada en el sistema para su archivo, "
             "impresion y presentacion institucional cuando resulte necesario."
         ),
+        line_height=6,
     )
 
     y_base = max(pdf.get_y() + 16, 240)
@@ -415,7 +437,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "satisfactoria por parte del profesional interviniente."
     )
     pdf.set_font("Arial", "", 11)
-    pdf.multi_cell(0, 7, safe_text(texto))
+    _write_multiline_text(pdf, texto, line_height=7)
     pdf.ln(6)
 
     _write_pairs(
@@ -445,7 +467,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "3. La firma acredita conformidad con la modalidad de prestacion y con el registro documental.",
     ]
     for clausula in clausulas:
-        pdf.multi_cell(0, 5, safe_text(clausula))
+        _write_multiline_text(pdf, clausula, line_height=5)
 
     firma_bytes = None
     if consentimiento.get("firma_b64"):
@@ -550,13 +572,13 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
         )
         pdf.ln(2)
         pdf.set_font("Arial", "B", 10)
-        pdf.multi_cell(
-            0,
-            6,
-            safe_text(
+        _write_multiline_text(
+            pdf,
+            (
                 "La presente constancia deja asentado el cambio de estado de la indicacion farmacologica dentro del "
                 "registro clinico institucional, con fecha, hora y profesional responsable."
             ),
+            line_height=6,
         )
 
     firma_medica = _doctor_signature_bytes(record)
