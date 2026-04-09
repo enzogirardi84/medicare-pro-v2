@@ -361,22 +361,23 @@ if not st.session_state.entered_app:
             }
             div.stDownloadButton { display: flex; justify-content: center; margin-top: 18px; }
             div.stDownloadButton > button {
-                background: linear-gradient(135deg, #14b8a6 0%, #22c55e 50%, #38bdf8 100%) !important;
-                color: white !important;
+                background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #38bdf8 100%) !important;
+                color: #ffffff !important;
                 font-size: 1.05rem !important;
                 font-weight: 900 !important;
                 padding: 16px 30px !important;
                 border-radius: 20px !important;
                 border: 1px solid rgba(255,255,255,0.28) !important;
-                box-shadow: 0 18px 38px rgba(20, 184, 166, 0.26), 0 0 0 1px rgba(255,255,255,0.04) inset !important;
+                box-shadow: 0 18px 38px rgba(29, 78, 216, 0.28), 0 0 0 1px rgba(255,255,255,0.05) inset !important;
                 transition: all 0.25s ease !important;
                 min-width: 390px !important;
                 letter-spacing: 0.2px !important;
+                text-shadow: 0 1px 1px rgba(2, 6, 23, 0.45) !important;
             }
             div.stDownloadButton > button:hover {
                 transform: translateY(-3px) scale(1.01) !important;
-                box-shadow: 0 22px 44px rgba(34,197,94,0.34), 0 0 28px rgba(56,189,248,0.18) !important;
-                filter: brightness(1.06);
+                box-shadow: 0 22px 44px rgba(29,78,216,0.34), 0 0 28px rgba(56,189,248,0.20) !important;
+                filter: brightness(1.08);
             }
         </style>
         """,
