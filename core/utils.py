@@ -295,7 +295,16 @@ def _to_float(value):
 
 
 def parse_fecha_hora(fecha_str):
-    formatos = ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y")
+    formatos = (
+        "%d/%m/%Y %H:%M:%S",
+        "%d/%m/%Y %H:%M",
+        "%d/%m/%Y",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d %H:%M",
+        "%Y-%m-%d",
+    )
     for formato in formatos:
         try:
             return datetime.strptime(str(fecha_str), formato)
@@ -305,8 +314,14 @@ def parse_fecha_hora(fecha_str):
 
 
 def parse_agenda_datetime(item):
-    fecha = str(item.get("fecha", "")).strip()
-    hora = str(item.get("hora", "")).strip() or "00:00"
+    fecha_hora_programada = str(item.get("fecha_hora_programada", "")).strip()
+    if fecha_hora_programada:
+        dt_programado = parse_fecha_hora(fecha_hora_programada)
+        if dt_programado != datetime.min:
+            return dt_programado
+
+    fecha = str(item.get("fecha_programada", "") or item.get("fecha", "")).strip()
+    hora = normalizar_hora_texto(item.get("hora", ""), default="00:00")
     combinado = f"{fecha} {hora}"
     return parse_fecha_hora(combinado)
 
@@ -327,9 +342,19 @@ def calcular_estado_agenda(item, now=None):
 
 
 def normalizar_hora_texto(valor, default="08:00"):
-    texto = str(valor or "").strip()
+    texto = str(valor or "").strip().lower()
     if not texto:
         return default
+
+    texto = (
+        texto.replace(" horas", "")
+        .replace(" hora", "")
+        .replace("hrs", "")
+        .replace("hs.", "")
+        .replace("hs", "")
+        .replace("h", "")
+        .strip()
+    )
 
     match = re.search(r"^(\d{1,2})(?::(\d{1,2}))?$", texto)
     if not match:

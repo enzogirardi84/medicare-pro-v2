@@ -10,6 +10,7 @@ from core.utils import (
     calcular_estado_agenda,
     es_control_total,
     filtrar_registros_empresa,
+    normalizar_hora_texto,
     obtener_profesionales_visibles,
     mostrar_dataframe_con_scroll,
     obtener_direccion_real,
@@ -195,7 +196,11 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     with st.form("agenda_form", clear_on_submit=True):
         c1_ag, c2_ag = st.columns(2)
         fecha_ag = c1_ag.date_input("Fecha programada", value=ahora().date())
-        hora_ag_str = c2_ag.text_input("Hora aproximada (HH:MM)", value=ahora().strftime("%H:%M"))
+        hora_ag = c2_ag.time_input(
+            "Hora aproximada (HH:MM)",
+            value=ahora().replace(second=0, microsecond=0).time(),
+            step=300,
+        )
         profesionales = [
             v["nombre"]
             for v in obtener_profesionales_visibles(
@@ -208,15 +213,16 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         idx_prof = profesionales.index(user["nombre"]) if user["nombre"] in profesionales else 0
         prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
         if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
-            hora_limpia = hora_ag_str.strip() if ":" in hora_ag_str else ahora().strftime("%H:%M")
+            hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
             fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
+            fecha_hora_programada = datetime.combine(fecha_ag, hora_ag).strftime("%Y-%m-%d %H:%M:%S")
             conflicto = next(
                 (
                     item
                     for item in _agenda_empresa(mi_empresa, rol)
                     if item.get("profesional") == prof_ag
                     and item.get("fecha") == fecha_ag_str
-                    and item.get("hora") == hora_limpia
+                    and normalizar_hora_texto(item.get("hora", ""), default="") == hora_limpia
                     and item.get("estado", "Pendiente") not in {"Cancelada", "Realizada"}
                     and item.get("paciente") != paciente_sel
                 ),
@@ -232,15 +238,18 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         "paciente": paciente_sel,
                         "profesional": prof_ag,
                         "fecha": fecha_ag_str,
+                        "fecha_programada": fecha_ag_str,
+                        "fecha_hora_programada": fecha_hora_programada,
                         "hora": hora_limpia,
                         "empresa": mi_empresa,
                         "estado": "Pendiente",
                         "zona": _zona_corta(dire_paciente),
                         "creado_por": user.get("nombre", ""),
+                        "creado_en": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                     }
                 )
                 guardar_datos()
-                st.success("Turno agendado correctamente.")
+                st.success(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
                 st.rerun()
 
     if agenda_paciente:
@@ -295,7 +304,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             item.get("paciente") == objetivo.get("paciente")
                             and item.get("profesional") == objetivo.get("profesional")
                             and item.get("fecha") == objetivo.get("fecha")
-                            and item.get("hora") == objetivo.get("hora")
+                            and normalizar_hora_texto(item.get("hora", ""), default="") == normalizar_hora_texto(objetivo.get("hora", ""), default="")
                         ):
                             item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
                             break
