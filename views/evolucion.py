@@ -9,6 +9,7 @@ from core.utils import (
     firma_a_base64,
     obtener_config_firma,
     optimizar_imagen_bytes,
+    puede_accion,
     seleccionar_limite_registros,
 )
 
@@ -26,7 +27,8 @@ def render_evolucion(paciente_sel, user, rol=None):
         return
 
     rol = rol or user.get("rol", "")
-    puede_borrar = rol in {"Medico", "Coordinador", "SuperAdmin"}
+    puede_registrar = puede_accion(rol, "evolucion_registrar")
+    puede_borrar = puede_accion(rol, "evolucion_borrar")
 
     st.subheader("Evolucion Medica y Firma Digital")
 
@@ -89,42 +91,45 @@ def render_evolucion(paciente_sel, user, rol=None):
 
     st.divider()
 
-    with st.form("evol", clear_on_submit=True):
-        nota = st.text_area("Nota medica / Evolucion clinica", height=200, placeholder="Escribir aqui la evolucion...")
-        col_foto1, col_foto2 = st.columns([3, 1])
-        desc_w = col_foto1.text_input("Descripcion de la herida / lesion (opcional)")
+    if puede_registrar:
+        with st.form("evol", clear_on_submit=True):
+            nota = st.text_area("Nota medica / Evolucion clinica", height=200, placeholder="Escribir aqui la evolucion...")
+            col_foto1, col_foto2 = st.columns([3, 1])
+            desc_w = col_foto1.text_input("Descripcion de la herida / lesion (opcional)")
 
-        with col_foto2:
-            st.markdown("Foto de la herida")
-            usar_camara = st.checkbox("Encender camara")
-            foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if usar_camara else None
+            with col_foto2:
+                st.markdown("Foto de la herida")
+                usar_camara = st.checkbox("Encender camara")
+                foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if usar_camara else None
 
-        if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
-            if nota.strip():
-                fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
-                st.session_state["evoluciones_db"].append({
-                    "paciente": paciente_sel,
-                    "nota": nota.strip(),
-                    "fecha": fecha_n,
-                    "firma": user["nombre"],
-                })
-
-                if foto_w is not None:
-                    foto_bytes, _ = optimizar_imagen_bytes(foto_w.getvalue(), max_size=(1280, 1280), quality=70)
-                    base64_foto = base64.b64encode(foto_bytes).decode("utf-8")
-                    st.session_state["fotos_heridas_db"].append({
+            if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
+                if nota.strip():
+                    fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
+                    st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
+                        "nota": nota.strip(),
                         "fecha": fecha_n,
-                        "descripcion": desc_w.strip(),
-                        "base64_foto": base64_foto,
                         "firma": user["nombre"],
                     })
 
-                guardar_datos()
-                st.success("Evolucion guardada correctamente.")
-                st.rerun()
-            else:
-                st.error("La nota medica no puede estar vacia.")
+                    if foto_w is not None:
+                        foto_bytes, _ = optimizar_imagen_bytes(foto_w.getvalue(), max_size=(1280, 1280), quality=70)
+                        base64_foto = base64.b64encode(foto_bytes).decode("utf-8")
+                        st.session_state["fotos_heridas_db"].append({
+                            "paciente": paciente_sel,
+                            "fecha": fecha_n,
+                            "descripcion": desc_w.strip(),
+                            "base64_foto": base64_foto,
+                            "firma": user["nombre"],
+                        })
+
+                    guardar_datos()
+                    st.success("Evolucion guardada correctamente.")
+                    st.rerun()
+                else:
+                    st.error("La nota medica no puede estar vacia.")
+    else:
+        st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
 
     evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
     if evs_paciente:

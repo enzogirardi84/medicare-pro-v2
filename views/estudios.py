@@ -3,7 +3,7 @@ import base64
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, optimizar_imagen_bytes, seleccionar_limite_registros
+from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros
 
 
 def render_estudios(paciente_sel, user, rol=None):
@@ -12,52 +12,56 @@ def render_estudios(paciente_sel, user, rol=None):
         return
 
     rol = rol or user.get("rol", "")
-    puede_borrar = rol in {"Medico", "Coordinador", "SuperAdmin"}
+    puede_registrar = puede_accion(rol, "estudios_registrar")
+    puede_borrar = puede_accion(rol, "estudios_borrar")
 
     st.subheader("Ordenes y Resultados de Estudios")
 
-    with st.form("form_estudios", clear_on_submit=True):
-        col_e1, col_e2 = st.columns([1, 2])
-        tipo_estudio = col_e1.selectbox("Tipo de Estudio", [
-            "Laboratorio (Sangre/Orina)", "Radiografia (Rx)", "Ecografia",
-            "Electrocardiograma (ECG)", "Tomografia (TAC)", "Resonancia Magnetica (RMN)", "Otro"
-        ])
-        detalle_estudio = col_e2.text_input("Detalle del Pedido o Resultado")
+    if puede_registrar:
+        with st.form("form_estudios", clear_on_submit=True):
+            col_e1, col_e2 = st.columns([1, 2])
+            tipo_estudio = col_e1.selectbox("Tipo de Estudio", [
+                "Laboratorio (Sangre/Orina)", "Radiografia (Rx)", "Ecografia",
+                "Electrocardiograma (ECG)", "Tomografia (TAC)", "Resonancia Magnetica (RMN)", "Otro"
+            ])
+            detalle_estudio = col_e2.text_input("Detalle del Pedido o Resultado")
 
-        st.markdown("##### Adjuntar Documento (Opcional)")
-        archivo_subido = st.file_uploader("Subir archivo, foto de galeria o PDF", type=["png", "jpg", "jpeg", "pdf"], key="uploader_estudio")
+            st.markdown("##### Adjuntar Documento (Opcional)")
+            archivo_subido = st.file_uploader("Subir archivo, foto de galeria o PDF", type=["png", "jpg", "jpeg", "pdf"], key="uploader_estudio")
 
-        with st.expander("O tomar foto con la camara ahora", expanded=False):
-            usar_cam = st.checkbox("Activar Camara")
-            foto_estudio = st.camera_input("Tomar foto en vivo", key="camara_estudio") if usar_cam else None
+            with st.expander("O tomar foto con la camara ahora", expanded=False):
+                usar_cam = st.checkbox("Activar Camara")
+                foto_estudio = st.camera_input("Tomar foto en vivo", key="camara_estudio") if usar_cam else None
 
-        if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
-            img_b64 = ""
-            ext = ""
-            if archivo_subido is not None:
-                raw_bytes = archivo_subido.getvalue()
-                ext = archivo_subido.name.split('.')[-1].lower()
-                if ext in ["png", "jpg", "jpeg"]:
-                    raw_bytes, ext_optimizada = optimizar_imagen_bytes(raw_bytes)
-                    ext = ext_optimizada or ext
-                img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-            elif foto_estudio is not None:
-                raw_bytes, ext_optimizada = optimizar_imagen_bytes(foto_estudio.getvalue())
-                img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-                ext = ext_optimizada or "jpg"
+            if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
+                img_b64 = ""
+                ext = ""
+                if archivo_subido is not None:
+                    raw_bytes = archivo_subido.getvalue()
+                    ext = archivo_subido.name.split('.')[-1].lower()
+                    if ext in ["png", "jpg", "jpeg"]:
+                        raw_bytes, ext_optimizada = optimizar_imagen_bytes(raw_bytes)
+                        ext = ext_optimizada or ext
+                    img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                elif foto_estudio is not None:
+                    raw_bytes, ext_optimizada = optimizar_imagen_bytes(foto_estudio.getvalue())
+                    img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                    ext = ext_optimizada or "jpg"
 
-            st.session_state["estudios_db"].append({
-                "paciente": paciente_sel,
-                "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                "tipo": tipo_estudio,
-                "detalle": detalle_estudio,
-                "imagen": img_b64,
-                "extension": ext,
-                "firma": user["nombre"],
-            })
-            guardar_datos()
-            st.success("Estudio guardado correctamente.")
-            st.rerun()
+                st.session_state["estudios_db"].append({
+                    "paciente": paciente_sel,
+                    "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                    "tipo": tipo_estudio,
+                    "detalle": detalle_estudio,
+                    "imagen": img_b64,
+                    "extension": ext,
+                    "firma": user["nombre"],
+                })
+                guardar_datos()
+                st.success("Estudio guardado correctamente.")
+                st.rerun()
+    else:
+        st.caption("La carga de estudios queda deshabilitada para este rol.")
 
     estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e["paciente"] == paciente_sel]
 

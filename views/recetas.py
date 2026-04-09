@@ -13,6 +13,7 @@ from core.utils import (
     firma_a_base64,
     mostrar_dataframe_con_scroll,
     obtener_config_firma,
+    puede_accion,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
@@ -56,8 +57,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         return
 
     rol = rol or user.get("rol", "")
-    puede_prescribir = rol in {"Medico", "Coordinador", "SuperAdmin"}
-    puede_cargar_papel = rol in {"Operativo", "Enfermeria", "Medico", "Coordinador", "SuperAdmin"}
+    puede_prescribir = puede_accion(rol, "recetas_prescribir")
+    puede_cargar_papel = puede_accion(rol, "recetas_cargar_papel")
+    puede_registrar_dosis = puede_accion(rol, "recetas_registrar_dosis")
+    puede_cambiar_estado = puede_accion(rol, "recetas_cambiar_estado")
 
     st.markdown(
         """
@@ -290,47 +293,50 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         mostrar_dataframe_con_scroll(pd.DataFrame(table_data), height=360)
         st.caption("OK = administrado | - = pendiente")
 
-        with st.form("form_registro_dosis", clear_on_submit=True):
-            meds_activas_nombres = [r["med"].split(" |")[0].strip() for r in recs_activas]
-            c_med, c_hora = st.columns([2, 1])
-            med_sel = c_med.selectbox("Medicacion a registrar", meds_activas_nombres)
-            opciones_hora = [f"{i:02d}:00" for i in range(24)]
-            hora_actual_str = f"{ahora().hour:02d}:00"
-            idx_hora = opciones_hora.index(hora_actual_str) if hora_actual_str in opciones_hora else 0
-            hora_sel = c_hora.selectbox("Hora de la dosis", opciones_hora, index=idx_hora)
-            estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
-            justificacion = st.text_input("Justificacion clinica")
-            if st.form_submit_button("Guardar registro", use_container_width=True):
-                if "No realizada" in estado_sel and not justificacion.strip():
-                    st.error("Es obligatorio justificar por que no se administro la dosis.")
-                else:
-                    st.session_state["administracion_med_db"] = [
-                        a
-                        for a in st.session_state.get("administracion_med_db", [])
-                        if not (
-                            a.get("paciente") == paciente_sel
-                            and a.get("fecha") == fecha_hoy
-                            and a.get("med") == med_sel
-                            and a.get("hora") == hora_sel
+        if puede_registrar_dosis:
+            with st.form("form_registro_dosis", clear_on_submit=True):
+                meds_activas_nombres = [r["med"].split(" |")[0].strip() for r in recs_activas]
+                c_med, c_hora = st.columns([2, 1])
+                med_sel = c_med.selectbox("Medicacion a registrar", meds_activas_nombres)
+                opciones_hora = [f"{i:02d}:00" for i in range(24)]
+                hora_actual_str = f"{ahora().hour:02d}:00"
+                idx_hora = opciones_hora.index(hora_actual_str) if hora_actual_str in opciones_hora else 0
+                hora_sel = c_hora.selectbox("Hora de la dosis", opciones_hora, index=idx_hora)
+                estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
+                justificacion = st.text_input("Justificacion clinica")
+                if st.form_submit_button("Guardar registro", use_container_width=True):
+                    if "No realizada" in estado_sel and not justificacion.strip():
+                        st.error("Es obligatorio justificar por que no se administro la dosis.")
+                    else:
+                        st.session_state["administracion_med_db"] = [
+                            a
+                            for a in st.session_state.get("administracion_med_db", [])
+                            if not (
+                                a.get("paciente") == paciente_sel
+                                and a.get("fecha") == fecha_hoy
+                                and a.get("med") == med_sel
+                                and a.get("hora") == hora_sel
+                            )
+                        ]
+                        st.session_state["administracion_med_db"].append(
+                            {
+                                "paciente": paciente_sel,
+                                "med": med_sel,
+                                "fecha": fecha_hoy,
+                                "hora": hora_sel,
+                                "estado": estado_sel,
+                                "motivo": justificacion.strip() if "No realizada" in estado_sel else "",
+                                "firma": user["nombre"],
+                            }
                         )
-                    ]
-                    st.session_state["administracion_med_db"].append(
-                        {
-                            "paciente": paciente_sel,
-                            "med": med_sel,
-                            "fecha": fecha_hoy,
-                            "hora": hora_sel,
-                            "estado": estado_sel,
-                            "motivo": justificacion.strip() if "No realizada" in estado_sel else "",
-                            "firma": user["nombre"],
-                        }
-                    )
-                    guardar_datos()
-                    st.success(f"Registro guardado para las {hora_sel}.")
-                    st.rerun()
+                        guardar_datos()
+                        st.success(f"Registro guardado para las {hora_sel}.")
+                        st.rerun()
+        else:
+            st.caption("El registro de administracion queda deshabilitado para este rol.")
 
         st.divider()
-        if puede_prescribir:
+        if puede_cambiar_estado:
             c_ed1, c_ed2 = st.columns([3, 2])
             opciones_recetas = [f"[{r.get('fecha', '')}] {r.get('med', '')}" for r in recs_activas]
             receta_seleccionada = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas)

@@ -37,6 +37,26 @@ ROLE_LEVELS = {
 }
 
 
+ACTION_ROLE_RULES = {
+    "recetas_prescribir": ["Medico"],
+    "recetas_cargar_papel": ["Operativo", "Enfermeria", "Medico"],
+    "recetas_registrar_dosis": ["Operativo", "Enfermeria", "Medico"],
+    "recetas_cambiar_estado": ["Medico"],
+    "pdf_exportar_historia": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
+    "pdf_exportar_excel": ["Administrativo", "Auditoria"],
+    "pdf_exportar_respaldo": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
+    "pdf_guardar_consentimiento": ["Operativo", "Enfermeria", "Medico"],
+    "pdf_descargar_consentimiento": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
+    "evolucion_registrar": ["Operativo", "Enfermeria", "Medico"],
+    "evolucion_borrar": ["Medico"],
+    "estudios_registrar": ["Operativo", "Enfermeria", "Medico"],
+    "estudios_borrar": ["Medico"],
+    "equipo_crear_usuario": ["Coordinador"],
+    "equipo_cambiar_estado": ["Coordinador"],
+    "equipo_eliminar_usuario": ["SuperAdmin"],
+}
+
+
 def tiene_permiso(rol_actual, roles_permitidos=None):
     if rol_actual in {"SuperAdmin", "Coordinador"}:
         return True
@@ -47,6 +67,26 @@ def tiene_permiso(rol_actual, roles_permitidos=None):
     nivel_actual = ROLE_LEVELS.get(rol_actual, 0)
     niveles_permitidos = [ROLE_LEVELS.get(rol, 0) for rol in roles_permitidos]
     return bool(niveles_permitidos) and nivel_actual > max(niveles_permitidos)
+
+
+def puede_accion(rol_actual, accion, roles_extra=None):
+    roles_base = list(ACTION_ROLE_RULES.get(accion, []))
+    if roles_extra:
+        roles_base.extend(roles_extra)
+    return tiene_permiso(rol_actual, roles_base)
+
+
+def descripcion_acceso_rol(rol_actual):
+    descripciones = {
+        "SuperAdmin": "Acceso de gestion, control y trazabilidad completa.",
+        "Coordinador": "Acceso total a la operacion, horarios, auditoria y control del equipo.",
+        "Medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
+        "Enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
+        "Operativo": "Acceso asistencial limitado al registro clinico del paciente.",
+        "Administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
+        "Auditoria": "Acceso de control, revision y trazabilidad legal.",
+    }
+    return descripciones.get(rol_actual, "Acceso configurado segun el rol asignado.")
 
 
 def ahora():

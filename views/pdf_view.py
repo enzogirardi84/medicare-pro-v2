@@ -10,7 +10,7 @@ from core.clinical_exports import (
     build_patient_excel_bytes,
 )
 from core.database import guardar_datos
-from core.utils import ahora, firma_a_base64, obtener_config_firma, registrar_auditoria_legal
+from core.utils import ahora, firma_a_base64, obtener_config_firma, puede_accion, registrar_auditoria_legal
 
 CANVAS_DISPONIBLE = False
 try:
@@ -41,7 +41,10 @@ def _render_lazy_download(container, key_base, prepare_label, download_label, bu
 
     if container.button(prepare_label, key=f"prepare_{key_base}", use_container_width=True):
         with st.spinner("Preparando archivo..."):
-            payload = build_fn()
+            try:
+                payload = build_fn()
+            except Exception:
+                payload = None
         if payload:
             st.session_state[cache_key] = payload
             st.rerun()
@@ -54,6 +57,12 @@ def _render_lazy_download(container, key_base, prepare_label, download_label, bu
 def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
         return
+    rol = rol or user.get("rol", "")
+    puede_exportar_historia = puede_accion(rol, "pdf_exportar_historia")
+    puede_exportar_excel = puede_accion(rol, "pdf_exportar_excel")
+    puede_exportar_respaldo = puede_accion(rol, "pdf_exportar_respaldo")
+    puede_guardar_consentimiento = puede_accion(rol, "pdf_guardar_consentimiento")
+    puede_descargar_consentimiento = puede_accion(rol, "pdf_descargar_consentimiento")
 
     st.markdown(
         """
@@ -74,34 +83,43 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     detalles = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
 
     col_d1, col_d2, col_d3 = st.columns(3)
-    _render_lazy_download(
-        col_d1,
-        key_base=f"pdf_hc_{paciente_sel}",
-        prepare_label="Preparar historia clinica completa",
-        download_label="Descargar Historia Clinica Completa (PDF)",
-        build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
-        file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-    )
-    _render_lazy_download(
-        col_d2,
-        key_base=f"pdf_excel_{paciente_sel}",
-        prepare_label="Preparar historia clinica en Excel",
-        download_label="Descargar Historia Clinica (Excel)",
-        build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
-        file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        unavailable_message="Excel no disponible en este equipo.",
-    )
-    _render_lazy_download(
-        col_d3,
-        key_base=f"pdf_respaldo_{paciente_sel}",
-        prepare_label="Preparar respaldo clinico",
-        download_label="Descargar Respaldo Clinico (PDF)",
-        build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
-        file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-    )
+    if puede_exportar_historia:
+        _render_lazy_download(
+            col_d1,
+            key_base=f"pdf_hc_{paciente_sel}",
+            prepare_label="Preparar historia clinica completa",
+            download_label="Descargar Historia Clinica Completa (PDF)",
+            build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
+            file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+        )
+    else:
+        col_d1.info("Disponible para roles clinicos y de control.")
+    if puede_exportar_excel:
+        _render_lazy_download(
+            col_d2,
+            key_base=f"pdf_excel_{paciente_sel}",
+            prepare_label="Preparar historia clinica en Excel",
+            download_label="Descargar Historia Clinica (Excel)",
+            build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
+            file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            unavailable_message="Excel no disponible en este equipo.",
+        )
+    else:
+        col_d2.caption("Excel reservado a perfiles administrativos o de auditoria.")
+    if puede_exportar_respaldo:
+        _render_lazy_download(
+            col_d3,
+            key_base=f"pdf_respaldo_{paciente_sel}",
+            prepare_label="Preparar respaldo clinico",
+            download_label="Descargar Respaldo Clinico (PDF)",
+            build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
+            file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+        )
+    else:
+        col_d3.info("Disponible para roles clinicos y de control.")
 
     st.success("Descargas seguras activadas.")
     st.markdown(
@@ -178,53 +196,63 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
             key=f"cons_upload_{paciente_sel}_sin_canvas",
         )
 
-    if st.button("Guardar consentimiento legal", use_container_width=True, type="primary", key=f"save_consent_{paciente_sel}"):
-        if not acepta:
-            st.error("Debe confirmar la aceptacion del tratamiento domiciliario.")
-        else:
-            firma_b64 = firma_a_base64(
-                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
-                uploaded_file=firma_subida,
-            )
-            if not firma_b64:
-                st.error("La firma del paciente o familiar no se detecto. Dibujala antes de guardar.")
+    if puede_guardar_consentimiento:
+        if st.button("Guardar consentimiento legal", use_container_width=True, type="primary", key=f"save_consent_{paciente_sel}"):
+            if not acepta:
+                st.error("Debe confirmar la aceptacion del tratamiento domiciliario.")
             else:
-                st.session_state["consentimientos_db"].append(
-                    {
-                        "paciente": paciente_sel,
-                        "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-                        "firmante": firmante.strip() or paciente_sel.split(" - ")[0],
-                        "dni_firmante": dni_firmante.strip() or detalles.get("dni", ""),
-                        "vinculo": vinculo,
-                        "telefono": telefono.strip(),
-                        "observaciones": observaciones.strip(),
-                        "firma_b64": firma_b64,
-                        "profesional": user.get("nombre", ""),
-                        "matricula_profesional": user.get("matricula", ""),
-                    }
+                firma_b64 = firma_a_base64(
+                    canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
+                    uploaded_file=firma_subida,
                 )
-                registrar_auditoria_legal(
-                    "Consentimiento",
-                    paciente_sel,
-                    "Consentimiento legal guardado",
-                    user.get("nombre", ""),
-                    user.get("matricula", ""),
-                    f"Firmante: {firmante.strip() or paciente_sel.split(' - ')[0]} | Vinculo: {vinculo}",
-                )
-                guardar_datos()
-                st.success("Consentimiento legal guardado en la historia clinica.")
-                st.rerun()
+                if not firma_b64:
+                    st.error("La firma del paciente o familiar no se detecto. Dibujala antes de guardar.")
+                else:
+                    st.session_state["consentimientos_db"].append(
+                        {
+                            "paciente": paciente_sel,
+                            "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                            "firmante": firmante.strip() or paciente_sel.split(" - ")[0],
+                            "dni_firmante": dni_firmante.strip() or detalles.get("dni", ""),
+                            "vinculo": vinculo,
+                            "telefono": telefono.strip(),
+                            "observaciones": observaciones.strip(),
+                            "firma_b64": firma_b64,
+                            "profesional": user.get("nombre", ""),
+                            "matricula_profesional": user.get("matricula", ""),
+                        }
+                    )
+                    registrar_auditoria_legal(
+                        "Consentimiento",
+                        paciente_sel,
+                        "Consentimiento legal guardado",
+                        user.get("nombre", ""),
+                        user.get("matricula", ""),
+                        f"Firmante: {firmante.strip() or paciente_sel.split(' - ')[0]} | Vinculo: {vinculo}",
+                    )
+                    guardar_datos()
+                    st.success("Consentimiento legal guardado en la historia clinica.")
+                    st.rerun()
+    else:
+        st.caption("Guardar consentimientos queda reservado a roles asistenciales y de coordinacion.")
 
-    consentimiento_pdf = build_consent_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user)
-    if consentimiento_pdf:
-        st.download_button(
-            "Descargar consentimiento legal para imprimir (PDF)",
-            data=consentimiento_pdf,
+    consentimientos_paciente = [x for x in st.session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
+    if puede_descargar_consentimiento:
+        _render_lazy_download(
+            st,
+            key_base=f"consent_pdf_{paciente_sel}",
+            prepare_label="Preparar consentimiento legal",
+            download_label="Descargar consentimiento legal para imprimir (PDF)",
+            build_fn=lambda: build_consent_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
             file_name=f"Consentimiento_{paciente_sel.replace(' ', '_')}.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            unavailable_message="Todavia no hay consentimiento guardado para este paciente.",
         )
-        ultimo = [x for x in st.session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel][-1]
+    else:
+        st.caption("La descarga del consentimiento queda reservada a roles clinicos y de control.")
+
+    if consentimientos_paciente:
+        ultimo = consentimientos_paciente[-1]
         st.info(
             f"Ultimo consentimiento registrado: {ultimo.get('fecha', 'S/D')} | "
             f"Firmante: {ultimo.get('firmante', 'S/D')} | Vinculo: {ultimo.get('vinculo', 'S/D')}"

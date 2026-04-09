@@ -8,7 +8,13 @@ from pathlib import Path
 import streamlit as st
 
 from core.auth import check_inactividad, render_login
-from core.utils import cargar_texto_asset, inicializar_db_state, obtener_alertas_clinicas, tiene_permiso
+from core.utils import (
+    cargar_texto_asset,
+    descripcion_acceso_rol,
+    inicializar_db_state,
+    obtener_alertas_clinicas,
+    tiene_permiso,
+)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -610,12 +616,7 @@ with st.sidebar:
     )
     st.header(mi_empresa)
     st.write(f"**{user['nombre']}** ({rol})")
-    alcance = (
-        "Acceso de gestion y control total"
-        if rol in ["SuperAdmin", "Coordinador"]
-        else "Acceso asistencial limitado al registro clinico del paciente"
-    )
-    st.caption(alcance)
+    st.caption(descripcion_acceso_rol(rol))
     st.divider()
 
     menu = [
@@ -748,7 +749,7 @@ with st.sidebar:
                     "</div>"
                 )
             st.markdown(
-                "<div class='mc-sidebar-alert-shell'>"
+                "<div class='mc-sidebar-alert-shell' style='max-height:360px; overflow-y:auto; padding-right:4px;'>"
                 "<div class='mc-sidebar-title'>Alertas clinicas</div>"
                 + "".join(bloques)
                 + "</div>",
