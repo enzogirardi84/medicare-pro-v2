@@ -5,18 +5,37 @@ from html import escape
 from importlib import import_module
 from pathlib import Path
 
+ROOT_DIR = Path(__file__).resolve().parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import streamlit as st
 
-from core.auth import check_inactividad, render_login
-from core.utils import (
-    cargar_texto_asset,
-    descripcion_acceso_rol,
-    inicializar_db_state,
-    obtener_alertas_clinicas,
-    tiene_permiso,
-)
+try:
+    from core.auth import check_inactividad, render_login
+except ImportError:
+    core_auth = import_module("core.auth")
+    check_inactividad = core_auth.check_inactividad
+    render_login = core_auth.render_login
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from core import utils as core_utils
+except ImportError:
+    core_utils = import_module("core.utils")
+
+cargar_texto_asset = core_utils.cargar_texto_asset
+inicializar_db_state = core_utils.inicializar_db_state
+obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
+tiene_permiso = core_utils.tiene_permiso
+descripcion_acceso_rol = getattr(
+    core_utils,
+    "descripcion_acceso_rol",
+    lambda rol: (
+        "Acceso de gestion y control total"
+        if rol in ["SuperAdmin", "Coordinador"]
+        else "Acceso asistencial limitado al registro clinico del paciente"
+    ),
+)
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
