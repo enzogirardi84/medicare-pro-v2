@@ -6,7 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -52,37 +52,52 @@ def render_cierre_diario(mi_empresa, user):
         with col_r1.container(border=True):
             st.markdown("#### Insumos del dia")
             if consumos_dia:
+                limite_insumos = seleccionar_limite_registros(
+                    "Insumos visibles",
+                    len(consumos_dia),
+                    key="cierre_resumen_insumos_limite",
+                    default=30,
+                    opciones=(10, 20, 30, 50, 100, 200),
+                )
                 st.caption(f"Se registraron {len(consumos_dia)} movimientos de insumos.")
-                with st.container(height=340):
-                    st.dataframe(
-                        pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(100).iloc[::-1],
-                        use_container_width=True,
-                        hide_index=True,
-                    )
+                mostrar_dataframe_con_scroll(
+                    pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(limite_insumos).iloc[::-1],
+                    height=340,
+                )
             else:
                 st.info("No hubo registro de uso de insumos en este dia.")
         with col_r2.container(border=True):
             st.markdown("#### Facturacion del dia")
             if facturacion_dia:
+                limite_fact = seleccionar_limite_registros(
+                    "Facturacion visible",
+                    len(facturacion_dia),
+                    key="cierre_resumen_facturacion_limite",
+                    default=30,
+                    opciones=(10, 20, 30, 50, 100, 200),
+                )
                 st.success(f"Total facturado: ${total_facturado:,.2f}")
-                with st.container(height=340):
-                    st.dataframe(
-                        pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(100).iloc[::-1],
-                        use_container_width=True,
-                        hide_index=True,
-                    )
+                mostrar_dataframe_con_scroll(
+                    pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(limite_fact).iloc[::-1],
+                    height=340,
+                )
             else:
                 st.info("No hubo facturacion registrada en este dia.")
 
     elif vista == "Insumos":
         st.markdown(f"#### Insumos consumidos el {fecha_str}")
         if consumos_dia:
-            with st.container(height=460, border=True):
-                st.dataframe(
-                    pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(200).iloc[::-1],
-                    use_container_width=True,
-                    hide_index=True,
-                )
+            limite = seleccionar_limite_registros(
+                "Insumos a mostrar",
+                len(consumos_dia),
+                key="cierre_insumos_limite",
+                default=50,
+                opciones=(10, 20, 50, 100, 200, 500),
+            )
+            mostrar_dataframe_con_scroll(
+                pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(limite).iloc[::-1],
+                height=460,
+            )
         else:
             st.info("No hubo registro de uso de insumos en este dia.")
 
@@ -90,24 +105,34 @@ def render_cierre_diario(mi_empresa, user):
         st.markdown(f"#### Procedimientos y facturacion del {fecha_str}")
         if facturacion_dia:
             st.success(f"Total facturado en el dia: ${total_facturado:,.2f}")
-            with st.container(height=460, border=True):
-                st.dataframe(
-                    pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(200).iloc[::-1],
-                    use_container_width=True,
-                    hide_index=True,
-                )
+            limite = seleccionar_limite_registros(
+                "Movimientos a mostrar",
+                len(facturacion_dia),
+                key="cierre_facturacion_limite",
+                default=50,
+                opciones=(10, 20, 50, 100, 200, 500),
+            )
+            mostrar_dataframe_con_scroll(
+                pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(limite).iloc[::-1],
+                height=460,
+            )
         else:
             st.info("No hubo facturacion registrada en este dia.")
 
     elif vista == "Stock":
         st.markdown("#### Estado actual de stock")
         if stock_actual:
-            with st.container(height=460, border=True):
-                st.dataframe(
-                    pd.DataFrame(stock_actual).drop(columns="empresa", errors="ignore").head(200),
-                    use_container_width=True,
-                    hide_index=True,
-                )
+            limite = seleccionar_limite_registros(
+                "Stock a mostrar",
+                len(stock_actual),
+                key="cierre_stock_limite",
+                default=50,
+                opciones=(10, 20, 50, 100, 200, 500),
+            )
+            mostrar_dataframe_con_scroll(
+                pd.DataFrame(stock_actual).drop(columns="empresa", errors="ignore").head(limite),
+                height=460,
+            )
         else:
             st.info("No hay stock cargado.")
 
@@ -163,8 +188,15 @@ def render_cierre_diario(mi_empresa, user):
         st.markdown("#### Archivo historico de cierres diarios")
         reportes_mios = [r for r in reversed(st.session_state.get("reportes_diarios_db", [])) if r.get("empresa") == mi_empresa]
         if reportes_mios:
+            limite_archivo = seleccionar_limite_registros(
+                "Cierres a mostrar",
+                len(reportes_mios),
+                key="cierre_archivo_limite",
+                default=20,
+                opciones=(10, 20, 30, 50, 100),
+            )
             with st.container(height=460):
-                for i, r in enumerate(reportes_mios[:60]):
+                for i, r in enumerate(reportes_mios[:limite_archivo]):
                     with st.container(border=True):
                         c1_hist, c2_hist = st.columns([4, 1])
                         c1_hist.markdown(f"**Cierre del dia {r['fecha_reporte']}**")

@@ -1,6 +1,7 @@
 import streamlit as st
 
 from core.database import guardar_datos
+from core.utils import seleccionar_limite_registros
 
 
 def render_mi_equipo(mi_empresa, rol):
@@ -90,12 +91,17 @@ def render_mi_equipo(mi_empresa, rol):
         return
 
     st.caption(f"Mostrando {len(usuarios_filtrados)} usuarios")
+    usuarios_ordenados = [(u, d) for u, d in usuarios_filtrados.items() if u != "admin"]
+    limite = seleccionar_limite_registros(
+        "Usuarios a mostrar",
+        len(usuarios_ordenados),
+        key="equipo_limite_usuarios",
+        default=20,
+        opciones=(10, 20, 30, 50, 100, 200),
+    )
     with st.container(height=620, border=True):
         mostro_usuario = False
-        for u, d in usuarios_filtrados.items():
-            if u == "admin":
-                continue
-
+        for u, d in usuarios_ordenados[:limite]:
             mostro_usuario = True
             with st.container(border=True):
                 col1, col2, col3, col4 = st.columns([3.5, 1, 1.2, 1.2])

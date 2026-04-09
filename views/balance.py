@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def render_balance(paciente_sel, user):
@@ -113,14 +113,18 @@ def render_balance(paciente_sel, user):
 
     df_bal["Shift (Resultado)"] = df_bal["balance"].apply(formato_shift)
     df_mostrar = df_bal.rename(columns={"fecha": "Fecha y hora", "turno": "Turno", "firma": "Profesional"})
+    limite = seleccionar_limite_registros(
+        "Balances a mostrar",
+        len(df_mostrar),
+        key="balance_limite_historial",
+        default=30,
+        opciones=(10, 20, 30, 50, 100, 200, 500),
+    )
 
-    with st.container(height=450, border=True):
-        st.dataframe(
-            df_mostrar[["Fecha y hora", "Turno", "Ingresos", "Egresos", "Shift (Resultado)", "Profesional"]],
-            use_container_width=True,
-            hide_index=True,
-            height=450,
-        )
+    mostrar_dataframe_con_scroll(
+        df_mostrar.head(limite)[["Fecha y hora", "Turno", "Ingresos", "Egresos", "Shift (Resultado)", "Profesional"]],
+        height=450,
+    )
 
     st.divider()
     if st.button("Borrar ultimo balance", use_container_width=True, type="secondary"):

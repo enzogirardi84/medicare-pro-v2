@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def render_materiales(paciente_sel, mi_empresa, user):
@@ -83,11 +83,13 @@ def render_materiales(paciente_sel, mi_empresa, user):
                 st.success("Consumo eliminado correctamente.")
                 st.rerun()
 
-        max_cons = min(200, max(len(cons_paciente), 1))
-        if max_cons <= 10:
-            limite = max_cons
-        else:
-            limite = st.slider("Consumos a mostrar", min_value=10, max_value=max_cons, value=min(50, len(cons_paciente)), step=10)
+        limite = seleccionar_limite_registros(
+            "Consumos a mostrar",
+            len(cons_paciente),
+            key="materiales_limite_consumos",
+            default=50,
+            opciones=(10, 20, 50, 100, 200, 500),
+        )
         df_cons = pd.DataFrame(cons_paciente[-limite:])
         if not df_cons.empty:
             df_cons["fecha_dt"] = pd.to_datetime(df_cons["fecha"], format="%d/%m/%Y %H:%M", errors="coerce")
@@ -100,7 +102,6 @@ def render_materiales(paciente_sel, mi_empresa, user):
                     "firma": "Registrado por",
                 }
             )
-            with st.container(height=380, border=True):
-                st.dataframe(df_cons, use_container_width=True, hide_index=True)
+            mostrar_dataframe_con_scroll(df_cons, height=380)
     else:
         st.info("Aun no se han registrado consumos de materiales para este paciente.")

@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def _parse_fecha_hora(fecha_str):
@@ -88,15 +88,15 @@ def render_clinica(paciente_sel):
                 guardar_datos()
                 st.success("Registro eliminado.")
                 st.rerun()
-        max_controles = min(200, len(vits))
-        if max_controles <= 10:
-            limite = max_controles
-            st.caption(f"Mostrando {limite} control(es).")
-        else:
-            limite = st.slider("Controles a mostrar", min_value=10, max_value=max_controles, value=min(50, len(vits)), step=10)
-        with st.container(height=360):
-            df_vits = pd.DataFrame(vits[-limite:]).drop(columns=["paciente"], errors='ignore')
-            df_vits["fecha_dt"] = df_vits["fecha"].apply(_parse_fecha_hora)
-            df_vits = df_vits.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
-            df_vits = df_vits.rename(columns={"fecha": "Fecha y Hora", "TA": "T.A.", "FC": "F.C.", "FR": "F.R.", "Sat": "SatO2%", "Temp": "Temp C", "HGT": "HGT"})
-            st.dataframe(df_vits, use_container_width=True, hide_index=True)
+        limite = seleccionar_limite_registros(
+            "Controles a mostrar",
+            len(vits),
+            key="clinica_limite_vitales",
+            default=50,
+            opciones=(10, 20, 50, 100, 150, 200),
+        )
+        df_vits = pd.DataFrame(vits[-limite:]).drop(columns=["paciente"], errors='ignore')
+        df_vits["fecha_dt"] = df_vits["fecha"].apply(_parse_fecha_hora)
+        df_vits = df_vits.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
+        df_vits = df_vits.rename(columns={"fecha": "Fecha y Hora", "TA": "T.A.", "FC": "F.C.", "FR": "F.R.", "Sat": "SatO2%", "Temp": "Temp C", "HGT": "HGT"})
+        mostrar_dataframe_con_scroll(df_vits, height=360)

@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, registrar_auditoria_legal
+from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 
 TIPOS_CUIDADO = [
@@ -202,5 +202,12 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
             st.info("No hay registros que coincidan con el filtro.")
             return
 
-        resumen_df = pd.DataFrame(registros_filtrados[:200]).drop(columns=["paciente", "empresa"], errors="ignore")
-        st.dataframe(resumen_df, use_container_width=True, hide_index=True)
+        limite = seleccionar_limite_registros(
+            "Registros a mostrar",
+            len(registros_filtrados),
+            key="enfermeria_limite_historial",
+            default=30,
+            opciones=(10, 20, 30, 50, 100, 200, 500),
+        )
+        resumen_df = pd.DataFrame(registros_filtrados[:limite]).drop(columns=["paciente", "empresa"], errors="ignore")
+        mostrar_dataframe_con_scroll(resumen_df, height=420)

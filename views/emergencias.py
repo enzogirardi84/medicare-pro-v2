@@ -8,7 +8,7 @@ from PIL import Image
 
 from core.clinical_exports import build_emergency_pdf_bytes
 from core.database import guardar_datos
-from core.utils import ahora, registrar_auditoria_legal
+from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 CANVAS_DISPONIBLE = False
 try:
@@ -393,11 +393,13 @@ def render_emergencias(paciente_sel, mi_empresa, user):
             st.info("No hay eventos registrados para exportar.")
             return
 
-        max_eventos = len(eventos)
-        if max_eventos <= 5:
-            limite = max_eventos
-        else:
-            limite = st.slider("Eventos a mostrar", min_value=5, max_value=max_eventos, value=min(20, max_eventos), step=5)
+        limite = seleccionar_limite_registros(
+            "Eventos a mostrar",
+            len(eventos),
+            key="emergencias_historial_limite",
+            default=20,
+            opciones=(5, 10, 20, 30, 50, 100, 200, 500),
+        )
 
         registros = list(reversed(eventos[-limite:]))
         resumen_df = pd.DataFrame(
@@ -416,7 +418,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 for x in registros
             ]
         )
-        st.dataframe(resumen_df, use_container_width=True, hide_index=True)
+        mostrar_dataframe_con_scroll(resumen_df, height=380)
 
         with st.container(height=520):
             for idx, evento in enumerate(registros):

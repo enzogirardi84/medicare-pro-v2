@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import cargar_json_asset
+from core.utils import cargar_json_asset, seleccionar_limite_registros
 
 
 def render_inventario(mi_empresa):
@@ -77,6 +77,13 @@ def render_inventario(mi_empresa):
     if inv_mio:
         st.markdown("#### Stock actual")
         df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual"})
+        limite_stock = seleccionar_limite_registros(
+            "Insumos a mostrar",
+            len(df_stock),
+            key="inventario_limite_stock",
+            default=50,
+            opciones=(10, 20, 50, 100, 200, 500),
+        )
 
         def colorear_stock(row):
             stock = row["Stock Actual"]
@@ -86,9 +93,13 @@ def render_inventario(mi_empresa):
                 return ["background-color: #3c3217; color: #ffe08a; font-weight: 600"] * len(row)
             return ["background-color: #122033; color: #ffffff"] * len(row)
 
-        styled = df_stock[["Insumo", "Stock Actual"]].style.apply(colorear_stock, axis=1)
+        styled = (
+            df_stock.sort_values(by="Stock Actual", ascending=True)[["Insumo", "Stock Actual"]]
+            .head(limite_stock)
+            .style.apply(colorear_stock, axis=1)
+        )
         with st.container(height=520, border=True):
-            st.dataframe(styled, use_container_width=True, hide_index=True)
+            st.dataframe(styled, use_container_width=True, hide_index=True, height=496)
     else:
         st.info("Aun no hay insumos cargados en el inventario.")
 

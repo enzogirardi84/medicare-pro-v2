@@ -5,7 +5,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -81,12 +81,13 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     st.divider()
     st.markdown("#### Historial de Recibos del Paciente")
     if fact_paciente:
-        max_movimientos = min(200, len(fact_paciente))
-        if max_movimientos <= 10:
-            limite = max_movimientos
-            st.caption(f"Mostrando {limite} movimiento(s).")
-        else:
-            limite = st.slider("Movimientos a mostrar", min_value=10, max_value=max_movimientos, value=min(50, len(fact_paciente)), step=10)
+        limite = seleccionar_limite_registros(
+            "Movimientos a mostrar",
+            len(fact_paciente),
+            key="caja_limite_recibos",
+            default=30,
+            opciones=(10, 20, 30, 50, 100, 200),
+        )
 
         def generar_recibo_pdf(mov):
             if not FPDF_DISPONIBLE:
@@ -141,14 +142,14 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 "monto": "Monto ($)", "metodo": "Medio de Pago", "estado": "Estado", "operador": "Registro",
             }).drop(columns=["empresa", "operador_dni"], errors='ignore')
 
-            max_filas_caja = min(500, len(df_mostrar))
-            if max_filas_caja <= 20:
-                limite = max_filas_caja
-                st.caption(f"Mostrando {limite} fila(s) de caja.")
-            else:
-                limite = st.slider("Filas de caja", min_value=20, max_value=max_filas_caja, value=min(100, len(df_mostrar)), step=20)
-            with st.container(height=400, border=True):
-                st.dataframe(df_mostrar.tail(limite).iloc[::-1], use_container_width=True, hide_index=True)
+            limite = seleccionar_limite_registros(
+                "Filas de caja",
+                len(df_mostrar),
+                key="caja_limite_auditoria",
+                default=100,
+                opciones=(20, 50, 100, 200, 500),
+            )
+            mostrar_dataframe_con_scroll(df_mostrar.tail(limite).iloc[::-1], height=400)
 
             csv_data = dataframe_csv_bytes(df_mostrar)
             st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
