@@ -167,17 +167,10 @@ def _write_pairs(pdf, pairs):
         if not value_txt:
             continue
         pdf.set_x(pdf.l_margin)
-        x_inicio = pdf.get_x()
-        y_inicio = pdf.get_y()
-        label_w = 46
-        value_w = max(30, _usable_width(pdf) - label_w - 2)
         pdf.set_font("Arial", "B", 9)
-        pdf.multi_cell(label_w, 6, f"{label_txt}:", border=0)
-        y_fin_label = pdf.get_y()
-        pdf.set_xy(x_inicio + label_w + 2, y_inicio)
+        pdf.cell(0, 5, f"{label_txt}:", ln=True)
         pdf.set_font("Arial", "", 9)
-        pdf.multi_cell(value_w, 6, value_txt, border=0)
-        pdf.set_y(max(pdf.get_y(), y_fin_label))
+        _write_multiline_text(pdf, value_txt, line_height=6, indent=4)
         pdf.ln(1)
 
 
