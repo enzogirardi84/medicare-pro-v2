@@ -1,10 +1,16 @@
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import puede_accion, seleccionar_limite_registros
+from core.utils import (
+    filtrar_registros_empresa,
+    puede_accion,
+    registrar_auditoria_legal,
+    seleccionar_limite_registros,
+)
 
 
-def render_mi_equipo(mi_empresa, rol):
+def render_mi_equipo(mi_empresa, rol, user=None):
+    user = user or {}
     st.subheader(f"Gestion de Personal - {mi_empresa}")
     puede_crear = puede_accion(rol, "equipo_crear_usuario")
     puede_cambiar_estado = puede_accion(rol, "equipo_cambiar_estado")
@@ -69,6 +75,15 @@ def render_mi_equipo(mi_empresa, rol):
                         "estado": "Activo",
                         "pin": u_pin.strip(),
                     }
+                    registrar_auditoria_legal(
+                        "Equipo",
+                        "GLOBAL",
+                        "Alta de usuario",
+                        user.get("nombre", "Sistema"),
+                        user.get("matricula", ""),
+                        f"Se creo el usuario {u_id.strip().lower()} con rol {u_rl} para {u_emp.strip() if isinstance(u_emp, str) else mi_empresa}.",
+                        referencia=u_id.strip().lower(),
+                    )
                     guardar_datos()
                     st.success(f"Usuario {u_id} habilitado correctamente.")
                     st.rerun()
@@ -80,15 +95,20 @@ def render_mi_equipo(mi_empresa, rol):
     st.subheader("Control de Accesos")
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 
+    usuarios_base = []
+    for login, datos in st.session_state["usuarios_db"].items():
+        fila = dict(datos)
+        fila["_login"] = login
+        usuarios_base.append(fila)
+
     usuarios_filtrados = {
-        k: v
-        for k, v in st.session_state["usuarios_db"].items()
-        if (v.get("empresa") == mi_empresa or rol == "SuperAdmin")
-        and (
+        fila["_login"]: {k: v for k, v in fila.items() if k != "_login"}
+        for fila in filtrar_registros_empresa(usuarios_base, mi_empresa, rol)
+        if (
             not buscar_usuario
-            or buscar_usuario.lower() in k.lower()
-            or buscar_usuario.lower() in v.get("nombre", "").lower()
-            or buscar_usuario.lower() in str(v.get("dni", "")).lower()
+            or buscar_usuario.lower() in fila["_login"].lower()
+            or buscar_usuario.lower() in fila.get("nombre", "").lower()
+            or buscar_usuario.lower() in str(fila.get("dni", "")).lower()
         )
     }
 
@@ -128,11 +148,29 @@ def render_mi_equipo(mi_empresa, rol):
                         if d.get("estado", "Activo") == "Activo":
                             if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
                                 st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
+                                registrar_auditoria_legal(
+                                    "Equipo",
+                                    "GLOBAL",
+                                    "Suspension de usuario",
+                                    user.get("nombre", "Sistema"),
+                                    user.get("matricula", ""),
+                                    f"Se suspendio el usuario {u}.",
+                                    referencia=u,
+                                )
                                 guardar_datos()
                                 st.rerun()
                         else:
                             if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
                                 st.session_state["usuarios_db"][u]["estado"] = "Activo"
+                                registrar_auditoria_legal(
+                                    "Equipo",
+                                    "GLOBAL",
+                                    "Reactivacion de usuario",
+                                    user.get("nombre", "Sistema"),
+                                    user.get("matricula", ""),
+                                    f"Se reactivo el usuario {u}.",
+                                    referencia=u,
+                                )
                                 guardar_datos()
                                 st.rerun()
 
@@ -146,6 +184,15 @@ def render_mi_equipo(mi_empresa, rol):
                                 disabled=not seguro,
                                 type="primary" if seguro else "secondary",
                             ):
+                                registrar_auditoria_legal(
+                                    "Equipo",
+                                    "GLOBAL",
+                                    "Eliminacion de usuario",
+                                    user.get("nombre", "Sistema"),
+                                    user.get("matricula", ""),
+                                    f"Se elimino el usuario {u}.",
+                                    referencia=u,
+                                )
                                 del st.session_state["usuarios_db"][u]
                                 guardar_datos()
                                 st.toast(f"Usuario {u} eliminado.")

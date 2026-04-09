@@ -6,17 +6,12 @@ import streamlit as st
 from core.utils import (
     ahora,
     calcular_estado_agenda,
+    filtrar_registros_empresa,
     mostrar_dataframe_con_scroll,
     parse_agenda_datetime,
     parse_fecha_hora,
     seleccionar_limite_registros,
 )
-
-
-def _filtrar_empresa(items, mi_empresa, rol):
-    if rol == "SuperAdmin":
-        return list(items)
-    return [x for x in items if x.get("empresa") == mi_empresa]
 
 
 def _sumar_importe(registros):
@@ -51,7 +46,7 @@ def render_dashboard(mi_empresa, rol):
         unsafe_allow_html=True,
     )
 
-    pacientes = _filtrar_empresa(
+    pacientes = filtrar_registros_empresa(
         [
             {
                 "paciente": p,
@@ -66,11 +61,11 @@ def render_dashboard(mi_empresa, rol):
         st.warning("No hay pacientes cargados para esta empresa.")
         return
 
-    agenda = _filtrar_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
-    checkins = _filtrar_empresa(st.session_state.get("checkin_db", []), mi_empresa, rol)
-    emergencias = _filtrar_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
-    facturacion = _filtrar_empresa(st.session_state.get("facturacion_db", []), mi_empresa, rol)
-    balance = _filtrar_empresa(st.session_state.get("balance_db", []), mi_empresa, rol)
+    agenda = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
+    checkins = filtrar_registros_empresa(st.session_state.get("checkin_db", []), mi_empresa, rol)
+    emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
+    facturacion = filtrar_registros_empresa(st.session_state.get("facturacion_db", []), mi_empresa, rol)
+    balance = filtrar_registros_empresa(st.session_state.get("balance_db", []), mi_empresa, rol)
     indicaciones = [
         x
         for x in st.session_state.get("indicaciones_db", [])

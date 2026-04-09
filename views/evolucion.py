@@ -10,6 +10,7 @@ from core.utils import (
     obtener_config_firma,
     optimizar_imagen_bytes,
     puede_accion,
+    registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
 
@@ -91,9 +92,27 @@ def render_evolucion(paciente_sel, user, rol=None):
 
     st.divider()
 
+    plantillas_evolucion = {
+        "Libre": "",
+        "Clinica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
+        "Enfermeria": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curacion:\nTolerancia al procedimiento:\nIndicaciones para el proximo control:",
+        "Heridas": "Ubicacion de la lesion:\nAspecto del lecho:\nExudado / olor:\nCuracion aplicada:\nEvolucion respecto al control previo:",
+        "Respiratorio": "Saturacion actual:\nDispositivo / flujo de oxigeno:\nTrabajo respiratorio:\nAuscultacion:\nConducta y seguimiento:",
+        "Pediatria": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentacion / hidratacion:\nEvaluacion general:\nPlan y recomendaciones:",
+        "Cuidados paliativos": "Sintomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las proximas horas:",
+    }
+
     if puede_registrar:
         with st.form("evol", clear_on_submit=True):
-            nota = st.text_area("Nota medica / Evolucion clinica", height=200, placeholder="Escribir aqui la evolucion...")
+            plantilla = st.selectbox("Plantilla de evolucion", list(plantillas_evolucion.keys()))
+            if plantilla != "Libre":
+                st.caption("Se carga una guia sugerida para agilizar el registro y mantener el formato clinico.")
+            nota = st.text_area(
+                "Nota medica / Evolucion clinica",
+                value=plantillas_evolucion.get(plantilla, ""),
+                height=220,
+                placeholder="Escribir aqui la evolucion...",
+            )
             col_foto1, col_foto2 = st.columns([3, 1])
             desc_w = col_foto1.text_input("Descripcion de la herida / lesion (opcional)")
 
@@ -110,6 +129,7 @@ def render_evolucion(paciente_sel, user, rol=None):
                         "nota": nota.strip(),
                         "fecha": fecha_n,
                         "firma": user["nombre"],
+                        "plantilla": plantilla,
                     })
 
                     if foto_w is not None:
@@ -123,6 +143,14 @@ def render_evolucion(paciente_sel, user, rol=None):
                             "firma": user["nombre"],
                         })
 
+                    registrar_auditoria_legal(
+                        "Evolucion Clinica",
+                        paciente_sel,
+                        "Nueva evolucion",
+                        user.get("nombre", ""),
+                        user.get("matricula", ""),
+                        f"Se registro evolucion con plantilla {plantilla}.",
+                    )
                     guardar_datos()
                     st.success("Evolucion guardada correctamente.")
                     st.rerun()
@@ -144,7 +172,16 @@ def render_evolucion(paciente_sel, user, rol=None):
         if puede_borrar:
             if st.button("Borrar ultima evolucion", use_container_width=True):
                 if st.checkbox("Confirmar borrado", key="conf_del_evol"):
+                    ultima = evs_paciente[-1]
                     st.session_state["evoluciones_db"].remove(evs_paciente[-1])
+                    registrar_auditoria_legal(
+                        "Evolucion Clinica",
+                        paciente_sel,
+                        "Borrado de evolucion",
+                        user.get("nombre", ""),
+                        user.get("matricula", ""),
+                        f"Se elimino la evolucion del {ultima.get('fecha', 'S/D')}.",
+                    )
                     guardar_datos()
                     st.rerun()
         else:
@@ -155,7 +192,31 @@ def render_evolucion(paciente_sel, user, rol=None):
             for ev in reversed(evs_paciente[-limite_evol:]):
                 with st.container(border=True):
                     st.markdown(f"**{ev['fecha']}** | **{ev['firma']}**")
+                    if ev.get("plantilla"):
+                        st.caption(f"Plantilla: {ev['plantilla']}")
                     st.write(ev["nota"])
                     st.caption("-" * 40)
     else:
         st.info("Aun no hay evoluciones registradas para este paciente.")
+
+    fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
+    if fotos_heridas:
+        st.divider()
+        st.markdown("#### Linea de tiempo de heridas y lesiones")
+        limite_fotos = seleccionar_limite_registros(
+            "Fotos a mostrar",
+            len(fotos_heridas),
+            key=f"limite_fotos_heridas_{paciente_sel}",
+            default=12,
+            opciones=(6, 12, 20, 30),
+        )
+        with st.container(height=520):
+            for foto in reversed(fotos_heridas[-limite_fotos:]):
+                with st.container(border=True):
+                    st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")
+                    if foto.get("descripcion"):
+                        st.caption(foto.get("descripcion"))
+                    try:
+                        st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
+                    except Exception:
+                        st.warning("No se pudo mostrar una foto registrada.")

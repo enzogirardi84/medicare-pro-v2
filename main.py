@@ -24,8 +24,15 @@ except ImportError:
     core_utils = import_module("core.utils")
 
 cargar_texto_asset = core_utils.cargar_texto_asset
+compactar_etiqueta_paciente = getattr(core_utils, "compactar_etiqueta_paciente", lambda nombre, estado: str(nombre or ""))
+es_control_total = getattr(core_utils, "es_control_total", lambda rol: rol in {"SuperAdmin", "Coordinador"})
 inicializar_db_state = core_utils.inicializar_db_state
 obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
+obtener_pacientes_visibles = getattr(
+    core_utils,
+    "obtener_pacientes_visibles",
+    lambda session_state, mi_empresa, rol, incluir_altas=False, busqueda="": [],
+)
 tiene_permiso = core_utils.tiene_permiso
 descripcion_acceso_rol = getattr(
     core_utils,
@@ -254,7 +261,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     elif tab_name == "Cierre Diario":
         render_fn(mi_empresa, user)
     elif tab_name == "Mi Equipo":
-        render_fn(mi_empresa, rol)
+        render_fn(mi_empresa, rol, user)
     elif tab_name == "Asistencia en Vivo":
         render_fn(mi_empresa, user)
     elif tab_name == "RRHH y Fichajes":
@@ -274,12 +281,7 @@ def resolve_current_view(menu):
 
 
 def _compact_patient_label(nombre, estado):
-    nombre = str(nombre or "").strip()
-    sufijo = " [ALTA]" if estado == "De Alta" else ""
-    limite = 34 if sufijo else 40
-    if len(nombre) > limite:
-        nombre = f"{nombre[:limite - 1].rstrip()}…"
-    return f"{nombre}{sufijo}"
+    return compactar_etiqueta_paciente(nombre, estado)
 
 
 def _sidebar_patient_card(paciente_sel, detalles):
@@ -290,6 +292,7 @@ def _sidebar_patient_card(paciente_sel, detalles):
         <div class="mc-patient-card-meta">
             DNI: {escape(detalles.get('dni', 'S/D'))}<br>
             OS: {escape(detalles.get('obra_social', 'S/D'))}<br>
+            Empresa: {escape(detalles.get('empresa', 'S/D'))}<br>
             Estado: {escape(detalles.get('estado', 'Activo'))}
         </div>
     </div>
@@ -706,20 +709,15 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     buscar = st.text_input("Buscar Paciente", placeholder="Nombre, DNI o palabra clave")
-    ver_altas = st.checkbox("Mostrar Pacientes de Alta") if rol in ["SuperAdmin", "Coordinador"] else False
+    ver_altas = st.checkbox("Mostrar Pacientes de Alta") if es_control_total(rol) else False
 
-    pacientes_visibles = []
-    for p in st.session_state.get("pacientes_db", []):
-        det = st.session_state.get("detalles_pacientes_db", {}).get(p, {})
-        if rol != "SuperAdmin" and det.get("empresa") != mi_empresa:
-            continue
-        estado = det.get("estado", "Activo")
-        if estado == "Activo" or ver_altas:
-            display_name = _compact_patient_label(p, estado)
-            pacientes_visibles.append((p, display_name, det.get("dni", ""), det.get("obra_social", ""), estado))
-
-    pacientes_visibles.sort(key=lambda x: x[1].lower())
-    p_f = [pv for pv in pacientes_visibles if buscar.lower() in pv[1].lower()]
+    p_f = obtener_pacientes_visibles(
+        st.session_state,
+        mi_empresa,
+        rol,
+        incluir_altas=ver_altas,
+        busqueda=buscar,
+    )
     limite_pacientes = 80
     if not buscar and len(p_f) > limite_pacientes:
         st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")

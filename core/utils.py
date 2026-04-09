@@ -89,6 +89,77 @@ def descripcion_acceso_rol(rol_actual):
     return descripciones.get(rol_actual, "Acceso configurado segun el rol asignado.")
 
 
+def es_control_total(rol_actual):
+    return rol_actual in {"SuperAdmin", "Coordinador"}
+
+
+def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empresa"):
+    if es_control_total(rol_actual):
+        return list(items or [])
+
+    empresa_actual = str(mi_empresa or "").strip().lower()
+    filtrados = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        empresa_item = str(item.get(empresa_key, "") or "").strip().lower()
+        if empresa_item == empresa_actual:
+            filtrados.append(item)
+    return filtrados
+
+
+def compactar_etiqueta_paciente(nombre, estado):
+    nombre = str(nombre or "").strip()
+    sufijo = " [ALTA]" if estado == "De Alta" else ""
+    limite = 34 if sufijo else 40
+    if len(nombre) > limite:
+        nombre = f"{nombre[:limite - 3].rstrip()}..."
+    return f"{nombre}{sufijo}"
+
+
+def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
+    busqueda_norm = str(busqueda or "").strip().lower()
+    detalles_db = session_state.get("detalles_pacientes_db", {})
+    pacientes_visibles = []
+
+    for paciente in session_state.get("pacientes_db", []):
+        detalles = detalles_db.get(paciente, {})
+        if not es_control_total(rol_actual):
+            empresa_paciente = str(detalles.get("empresa", "") or "").strip().lower()
+            empresa_actual = str(mi_empresa or "").strip().lower()
+            if empresa_paciente != empresa_actual:
+                continue
+
+        estado = detalles.get("estado", "Activo")
+        if estado != "Activo" and not incluir_altas:
+            continue
+
+        dni = str(detalles.get("dni", "") or "")
+        obra_social = str(detalles.get("obra_social", "") or "")
+        empresa = str(detalles.get("empresa", "") or "")
+        etiqueta = compactar_etiqueta_paciente(paciente, estado)
+
+        searchable = " ".join(
+            [
+                str(paciente),
+                etiqueta,
+                dni,
+                obra_social,
+                empresa,
+                str(estado),
+            ]
+        ).lower()
+        if busqueda_norm and busqueda_norm not in searchable:
+            continue
+
+        pacientes_visibles.append(
+            (paciente, etiqueta, dni, obra_social, estado, empresa)
+        )
+
+    pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
+    return pacientes_visibles
+
+
 def ahora():
     return datetime.now(ARG_TZ)
 

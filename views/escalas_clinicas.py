@@ -13,6 +13,48 @@ def _braden(sensorial, humedad, actividad, movilidad, nutricion, friccion):
     return sensorial + humedad + actividad + movilidad + nutricion + friccion
 
 
+def _interpretacion_visual(escala, puntaje, resumen):
+    base = {
+        "titulo": resumen,
+        "detalle": "Lectura automatica del puntaje para apoyar la decision clinica.",
+        "color": "#38bdf8",
+        "fondo": "rgba(56, 189, 248, 0.12)",
+    }
+    recomendaciones = {
+        "Glasgow": {
+            "Compromiso severo": ("#ef4444", "Monitoreo intensivo y aviso medico inmediato."),
+            "Compromiso moderado": ("#f59e0b", "Revalorar neurologia y seguimiento estrecho."),
+            "Leve / normal": ("#22c55e", "Continuar control evolutivo segun cuadro clinico."),
+        },
+        "Braden": {
+            "Alto riesgo UPP": ("#ef4444", "Rotacion, alivio de presion y vigilancia de piel."),
+            "Riesgo moderado": ("#f59e0b", "Implementar medidas preventivas y control diario."),
+            "Bajo riesgo": ("#22c55e", "Mantener prevencion basica y reevaluacion periodica."),
+        },
+        "Barthel": {
+            "Dependencia total": ("#ef4444", "Requiere apoyo integral y plan intensivo de cuidados."),
+            "Dependencia severa": ("#f59e0b", "Priorizar asistencia funcional y seguimiento familiar."),
+            "Dependencia leve/moderada": ("#38bdf8", "Promover autonomia supervisada y reevaluacion."),
+            "Independiente": ("#22c55e", "Mantener control periodico y objetivos de sostén."),
+        },
+        "EVA": {
+            "Sin dolor": ("#22c55e", "Sin analgesia adicional inmediata."),
+            "Dolor leve": ("#38bdf8", "Continuar seguimiento del dolor y respuesta clinica."),
+            "Dolor moderado": ("#f59e0b", "Revisar analgesia indicada y reevaluar pronto."),
+            "Dolor severo": ("#ef4444", "Escalar manejo del dolor y notificar conducta medica."),
+        },
+    }
+    color, detalle = recomendaciones.get(escala, {}).get(resumen, (base["color"], base["detalle"]))
+    base["color"] = color
+    base["detalle"] = detalle
+    base["fondo"] = {
+        "#ef4444": "rgba(239, 68, 68, 0.14)",
+        "#f59e0b": "rgba(245, 158, 11, 0.16)",
+        "#22c55e": "rgba(34, 197, 94, 0.14)",
+    }.get(color, "rgba(56, 189, 248, 0.12)")
+    return base
+
+
 def render_escalas_clinicas(paciente_sel, user):
     if not paciente_sel:
         st.info("Selecciona un paciente para registrar escalas clinicas.")
@@ -73,7 +115,17 @@ def render_escalas_clinicas(paciente_sel, user):
             st.metric("Puntaje EVA", puntaje)
 
         observaciones = st.text_area("Observaciones", height=90)
-        st.info(f"Interpretacion: {resumen}")
+        card = _interpretacion_visual(escala, puntaje, resumen)
+        st.markdown(
+            f"""
+            <div style="border:1px solid {card['color']}; background:{card['fondo']}; border-radius:18px; padding:16px 18px; margin:8px 0 12px 0;">
+                <div style="font-size:0.82rem; letter-spacing:0.08em; text-transform:uppercase; color:{card['color']}; font-weight:700;">Interpretacion automatica</div>
+                <div style="font-size:1.15rem; font-weight:700; color:#f8fafc; margin-top:4px;">{card['titulo']}</div>
+                <div style="font-size:0.98rem; color:#cbd5e1; margin-top:6px;">{card['detalle']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         if st.button(f"Guardar {escala}", use_container_width=True, type="primary"):
             nuevo = {

@@ -8,6 +8,8 @@ from core.database import guardar_datos
 from core.utils import (
     ahora,
     calcular_estado_agenda,
+    es_control_total,
+    filtrar_registros_empresa,
     mostrar_dataframe_con_scroll,
     obtener_direccion_real,
     parse_agenda_datetime,
@@ -24,10 +26,7 @@ except ImportError:
 
 
 def _agenda_empresa(mi_empresa, rol):
-    agenda = st.session_state.get("agenda_db", [])
-    if rol == "SuperAdmin":
-        return list(agenda)
-    return [a for a in agenda if a.get("empresa") == mi_empresa]
+    return filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
 
 
 def _agenda_paciente(mi_empresa, paciente_sel, rol):
@@ -192,7 +191,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         profesionales = [
             v["nombre"]
             for _, v in st.session_state["usuarios_db"].items()
-            if v.get("empresa") == mi_empresa or rol == "SuperAdmin"
+            if es_control_total(rol) or v.get("empresa") == mi_empresa
         ]
         idx_prof = profesionales.index(user["nombre"]) if user["nombre"] in profesionales else 0
         prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
