@@ -49,14 +49,28 @@ VIEW_CONFIG = {
 }
 
 VIEW_ROLE_RULES = {
-    "Dashboard": ["Administrativo", "Coordinador"],
+    "Visitas y Agenda": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Dashboard": ["Coordinador"],
     "Admision": ["Administrativo", "Coordinador"],
+    "Clinica": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Pediatria": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Evolucion": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Estudios": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Materiales": ["Operativo", "Enfermeria", "Coordinador"],
     "Recetas": ["Medico", "Coordinador"],
+    "Balance": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Inventario": ["Administrativo", "Coordinador"],
     "Caja": ["Administrativo", "Coordinador"],
-    "Cierre Diario": ["Administrativo", "Coordinador"],
+    "Emergencias y Ambulancia": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Red de Profesionales": ["Administrativo", "Coordinador"],
+    "Escalas Clinicas": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Historial": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "PDF": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Telemedicina": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
+    "Cierre Diario": ["Coordinador"],
     "Mi Equipo": ["Coordinador"],
     "Asistencia en Vivo": ["Coordinador"],
-    "RRHH y Fichajes": ["Administrativo", "Coordinador"],
+    "RRHH y Fichajes": ["Coordinador"],
     "Auditoria": ["Auditoria", "Coordinador"],
     "Auditoria Legal": ["Auditoria", "Coordinador"],
 }
@@ -443,6 +457,12 @@ with st.sidebar:
     )
     st.header(mi_empresa)
     st.write(f"**{user['nombre']}** ({rol})")
+    alcance = (
+        "Acceso de gestion y control total"
+        if rol in ["SuperAdmin", "Coordinador"]
+        else "Acceso asistencial limitado al registro clinico del paciente"
+    )
+    st.caption(alcance)
     st.divider()
 
     menu = [
@@ -468,6 +488,13 @@ with st.sidebar:
     if rol in ["SuperAdmin", "Coordinador"]:
         menu.insert(1, "Dashboard")
         menu.extend(["Cierre Diario", "Mi Equipo", "Asistencia en Vivo", "RRHH y Fichajes", "Auditoria", "Auditoria Legal"])
+    elif rol == "Administrativo":
+        menu = [
+            "Admision",
+            "Inventario",
+            "Caja",
+            "Red de Profesionales",
+        ]
     menu = [modulo for modulo in menu if tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
     st.markdown(
         """
