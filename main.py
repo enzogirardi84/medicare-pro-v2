@@ -57,7 +57,7 @@ VIEW_ROLE_RULES = {
     "Evolucion": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
     "Estudios": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
     "Materiales": ["Operativo", "Enfermeria", "Coordinador"],
-    "Recetas": ["Medico", "Coordinador"],
+    "Recetas": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
     "Balance": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
     "Inventario": ["Administrativo", "Coordinador"],
     "Caja": ["Administrativo", "Coordinador"],
@@ -178,7 +178,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     elif tab_name == "Materiales":
         render_fn(paciente_sel, mi_empresa, user)
     elif tab_name == "Recetas":
-        render_fn(paciente_sel, mi_empresa, user)
+        render_fn(paciente_sel, mi_empresa, user, rol)
     elif tab_name == "Balance":
         render_fn(paciente_sel, user)
     elif tab_name == "Inventario":

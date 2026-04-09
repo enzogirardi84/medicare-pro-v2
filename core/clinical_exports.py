@@ -43,6 +43,13 @@ def _doctor_signature_bytes(record):
         return None
 
 
+def _order_attachment_note(record):
+    nombre = record.get("adjunto_papel_nombre", "").strip()
+    if not nombre:
+        return ""
+    return f"Orden medica adjunta en sistema: {nombre}"
+
+
 def collect_patient_sections(session_state, paciente_sel):
     return {
         "Auditoria de Presencia": [x for x in session_state.get("checkin_db", []) if x.get("paciente") == paciente_sel],
@@ -199,11 +206,22 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
             pdf.cell(0, 6, safe_text(f"Registro {idx}"), ln=True)
             pdf.set_font("Arial", "", 8)
             for key, value in record.items():
-                if key in {"paciente", "imagen", "base64_foto", "firma_b64", "firma_img"}:
+                if key in {
+                    "paciente",
+                    "imagen",
+                    "base64_foto",
+                    "firma_b64",
+                    "firma_img",
+                    "adjunto_papel_b64",
+                    "adjunto_papel_tipo",
+                }:
                     continue
                 if value in [None, ""]:
                     continue
                 _write_pairs(pdf, [(key, value)])
+            nota_adjunto = _order_attachment_note(record)
+            if nota_adjunto:
+                _write_pairs(pdf, [("Adjunto legal", nota_adjunto)])
             firma_medica = _doctor_signature_bytes(record)
             if firma_medica:
                 tmp_path = None
@@ -314,9 +332,20 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
             ultimo = records[-1]
             pdf.set_font("Arial", "", 9)
             for key, value in ultimo.items():
-                if key in {"paciente", "imagen", "base64_foto", "firma_b64", "firma_img"} or value in [None, ""]:
+                if key in {
+                    "paciente",
+                    "imagen",
+                    "base64_foto",
+                    "firma_b64",
+                    "firma_img",
+                    "adjunto_papel_b64",
+                    "adjunto_papel_tipo",
+                } or value in [None, ""]:
                     continue
                 _write_pairs(pdf, [(key, value)])
+            nota_adjunto = _order_attachment_note(ultimo)
+            if nota_adjunto:
+                _write_pairs(pdf, [("Adjunto legal", nota_adjunto)])
             pdf.ln(1)
 
     pdf.ln(8)
@@ -497,11 +526,15 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
             ("Fecha de indicacion", record.get("fecha", "S/D")),
             ("Medicacion / Indicacion", record.get("med", "S/D")),
             ("Estado actual", estado_actual),
+            ("Origen del registro", record.get("origen_registro", "Prescripcion digital")),
             ("Medico indicante", medico_indicante),
             ("Matricula profesional", matricula_indicante),
             ("Registrado por", record.get("firmado_por", "S/D")),
         ],
     )
+    nota_adjunto = _order_attachment_note(record)
+    if nota_adjunto:
+        _write_pairs(pdf, [("Adjunto legal", nota_adjunto)])
 
     if estado_actual != "Activa":
         _section_title(pdf, "Acta de cambio terapeutico")

@@ -202,6 +202,7 @@ def render_historial(paciente_sel):
                 st.caption(f"Responsable: {firma}")
                 if seccion_actual == "Plan Terapeutico":
                     estado = registro.get("estado_receta", registro.get("estado_clinico", "Activa"))
+                    origen = registro.get("origen_registro", "")
                     if estado == "Suspendida":
                         st.error(
                             f"Medicacion suspendida | Fecha: {registro.get('fecha_suspension', 'S/D')} | "
@@ -214,6 +215,11 @@ def render_historial(paciente_sel):
                         )
                     else:
                         st.success("Medicacion activa")
+                    if origen:
+                        if "papel" in origen.lower():
+                            st.info(f"Origen del registro: {origen}")
+                        else:
+                            st.caption(f"Origen del registro: {origen}")
                     if registro.get("motivo_estado"):
                         st.caption(f"Motivo: {registro.get('motivo_estado')}")
                     if registro.get("firma_b64"):
@@ -221,7 +227,28 @@ def render_historial(paciente_sel):
                             st.image(base64.b64decode(registro["firma_b64"]), caption="Firma medica", width=220)
                         except Exception:
                             pass
+                    if registro.get("adjunto_papel_b64"):
+                        try:
+                            st.download_button(
+                                "Descargar orden medica adjunta",
+                                data=base64.b64decode(registro["adjunto_papel_b64"]),
+                                file_name=registro.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
+                                mime=registro.get("adjunto_papel_tipo", "application/octet-stream"),
+                                key=f"historial_adjunto_receta_{registro.get('fecha', 's_d')}_{registro.get('med', '')[:12]}",
+                                use_container_width=True,
+                            )
+                        except Exception:
+                            st.caption("El adjunto cargado no pudo prepararse para descarga.")
                 for clave, valor in registro.items():
-                    if clave in {"paciente", "empresa", "fecha", "firma", "firmado_por", "firma_b64"} or valor in [None, ""]:
+                    if clave in {
+                        "paciente",
+                        "empresa",
+                        "fecha",
+                        "firma",
+                        "firmado_por",
+                        "firma_b64",
+                        "adjunto_papel_b64",
+                        "adjunto_papel_tipo",
+                    } or valor in [None, ""]:
                         continue
                     st.write(f"**{clave}:** {valor}")
