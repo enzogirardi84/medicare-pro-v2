@@ -21,7 +21,7 @@ except ImportError:
     pass
 
 
-def render_pdf(paciente_sel, mi_empresa, user):
+def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
         return
 

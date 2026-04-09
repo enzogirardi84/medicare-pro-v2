@@ -6,10 +6,13 @@ from core.database import guardar_datos
 from core.utils import ahora, optimizar_imagen_bytes, seleccionar_limite_registros
 
 
-def render_estudios(paciente_sel, user):
+def render_estudios(paciente_sel, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
         return
+
+    rol = rol or user.get("rol", "")
+    puede_borrar = rol in {"Medico", "Coordinador", "SuperAdmin"}
 
     st.subheader("Ordenes y Resultados de Estudios")
 
@@ -65,31 +68,34 @@ def render_estudios(paciente_sel, user):
     st.divider()
     st.markdown("#### Archivo de Estudios del Paciente")
 
-    col_del1, _ = st.columns([3, 1])
-    if col_del1.button("Borrar ultimo estudio", use_container_width=True):
-        st.session_state["estudios_db"].remove(estudios_pac[-1])
-        guardar_datos()
-        st.success("Estudio eliminado correctamente.")
-        st.rerun()
-
-    st.markdown("**Selecciona el estudio que quieres eliminar:**")
-    opciones = []
-    for est in reversed(estudios_pac[-200:]):
-        label = f"{est['fecha']} - {est['tipo']}"
-        if est.get("detalle"):
-            label += f" | {est['detalle'][:50]}..."
-        opciones.append((label, est))
-
-    estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
-    if st.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True):
-        if st.checkbox("Estas completamente seguro", key="conf_borrar_estudio"):
-            st.session_state["estudios_db"] = [
-                e for e in st.session_state["estudios_db"]
-                if not (e["paciente"] == paciente_sel and e["fecha"] == estudio_seleccionado[1]["fecha"])
-            ]
+    if puede_borrar:
+        col_del1, _ = st.columns([3, 1])
+        if col_del1.button("Borrar ultimo estudio", use_container_width=True):
+            st.session_state["estudios_db"].remove(estudios_pac[-1])
             guardar_datos()
             st.success("Estudio eliminado correctamente.")
             st.rerun()
+
+        st.markdown("**Selecciona el estudio que quieres eliminar:**")
+        opciones = []
+        for est in reversed(estudios_pac[-200:]):
+            label = f"{est['fecha']} - {est['tipo']}"
+            if est.get("detalle"):
+                label += f" | {est['detalle'][:50]}..."
+            opciones.append((label, est))
+
+        estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
+        if st.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True):
+            if st.checkbox("Estas completamente seguro", key="conf_borrar_estudio"):
+                st.session_state["estudios_db"] = [
+                    e for e in st.session_state["estudios_db"]
+                    if not (e["paciente"] == paciente_sel and e["fecha"] == estudio_seleccionado[1]["fecha"])
+                ]
+                guardar_datos()
+                st.success("Estudio eliminado correctamente.")
+                st.rerun()
+    else:
+        st.caption("La eliminacion de estudios queda reservada a medico, coordinacion o administracion total.")
 
     st.divider()
     limite_est = seleccionar_limite_registros(
@@ -112,7 +118,7 @@ def render_estudios(paciente_sel, user):
                     if est.get("detalle"):
                         st.caption(est.get("detalle"))
                 with col2:
-                    if st.button("Eliminar", key=f"del_est_{est['fecha']}_{idx}"):
+                    if puede_borrar and st.button("Eliminar", key=f"del_est_{est['fecha']}_{idx}"):
                         st.session_state["estudios_db"] = [
                             e for e in st.session_state["estudios_db"]
                             if not (e["paciente"] == paciente_sel and e["fecha"] == est["fecha"])

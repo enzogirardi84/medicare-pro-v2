@@ -20,10 +20,13 @@ except ImportError:
     pass
 
 
-def render_evolucion(paciente_sel, user):
+def render_evolucion(paciente_sel, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
         return
+
+    rol = rol or user.get("rol", "")
+    puede_borrar = rol in {"Medico", "Coordinador", "SuperAdmin"}
 
     st.subheader("Evolucion Medica y Firma Digital")
 
@@ -133,11 +136,14 @@ def render_evolucion(paciente_sel, user):
             key=f"limite_evol_{paciente_sel}",
             default=20,
         )
-        if st.button("Borrar ultima evolucion", use_container_width=True):
-            if st.checkbox("Confirmar borrado", key="conf_del_evol"):
-                st.session_state["evoluciones_db"].remove(evs_paciente[-1])
-                guardar_datos()
-                st.rerun()
+        if puede_borrar:
+            if st.button("Borrar ultima evolucion", use_container_width=True):
+                if st.checkbox("Confirmar borrado", key="conf_del_evol"):
+                    st.session_state["evoluciones_db"].remove(evs_paciente[-1])
+                    guardar_datos()
+                    st.rerun()
+        else:
+            st.caption("El borrado de evoluciones queda reservado a medico, coordinacion o administracion total.")
 
         st.caption(f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones registradas.")
         with st.container(height=560):

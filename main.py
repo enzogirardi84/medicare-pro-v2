@@ -172,9 +172,9 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     elif tab_name == "Pediatria":
         render_fn(paciente_sel, user)
     elif tab_name == "Evolucion":
-        render_fn(paciente_sel, user)
+        render_fn(paciente_sel, user, rol)
     elif tab_name == "Estudios":
-        render_fn(paciente_sel, user)
+        render_fn(paciente_sel, user, rol)
     elif tab_name == "Materiales":
         render_fn(paciente_sel, mi_empresa, user)
     elif tab_name == "Recetas":
@@ -194,7 +194,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     elif tab_name == "Historial":
         render_fn(paciente_sel)
     elif tab_name == "PDF":
-        render_fn(paciente_sel, mi_empresa, user)
+        render_fn(paciente_sel, mi_empresa, user, rol)
     elif tab_name == "Telemedicina":
         render_fn(paciente_sel)
     elif tab_name == "Dashboard":
