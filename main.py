@@ -323,6 +323,17 @@ def obtener_logo_landing():
     encoded = base64.b64encode(svg.encode("utf-8")).decode()
     return f"<img src='data:image/svg+xml;base64,{encoded}' style='height: 112px; margin-bottom: 24px;'>"
 
+
+def obtener_folleto_landing():
+    posibles = [
+        Path(__file__).resolve().parent / "marketing" / "Folleto_Comercial_MediCare_Enterprise_PRO.pdf",
+        Path(__file__).resolve().parent / "marketing" / "folleto_comercial.pdf",
+    ]
+    for ruta in posibles:
+        if ruta.exists():
+            return ruta
+    return None
+
 if not st.session_state.entered_app:
     logo_html = obtener_logo_landing()
     st.markdown(
@@ -347,6 +358,23 @@ if not st.session_state.entered_app:
                 transform: translateY(-4px) !important;
                 box-shadow: 0 15px 40px rgba(99, 102, 241, 0.65) !important;
                 background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
+            }
+            div.stDownloadButton { display: flex; justify-content: center; }
+            div.stDownloadButton > button {
+                background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%) !important;
+                color: white !important;
+                font-size: 1rem !important;
+                font-weight: 800 !important;
+                padding: 14px 26px !important;
+                border-radius: 18px !important;
+                border: 1px solid rgba(255,255,255,0.22) !important;
+                box-shadow: 0 14px 30px rgba(20, 184, 166, 0.28) !important;
+                transition: all 0.25s ease !important;
+            }
+            div.stDownloadButton > button:hover {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 18px 34px rgba(34,197,94,0.34) !important;
+                filter: brightness(1.05);
             }
         </style>
         """,
@@ -405,8 +433,12 @@ if not st.session_state.entered_app:
         ".closing-panel { padding: 32px 30px; border-radius: 32px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(79, 70, 229, 0.22)); border: 1px solid rgba(99, 102, 241, 0.24); box-shadow: 0 20px 44px rgba(0,0,0,0.2); }",
         ".closing-panel h3 { margin: 0 0 12px; color: #ffffff; font-size: 1.75rem; font-weight: 900; }",
         ".closing-panel p { margin: 0; color: #dbeafe; font-size: 1rem; line-height: 1.8; }",
+        ".brochure-band { max-width: 980px; width: 100%; margin: 0 0 34px; padding: 32px 28px; border-radius: 30px; background: linear-gradient(145deg, rgba(6, 16, 34, 0.96), rgba(15, 23, 42, 0.94)); border: 1px solid rgba(34, 197, 94, 0.18); box-shadow: 0 22px 44px rgba(0,0,0,0.22); text-align: center; }",
+        ".brochure-kicker { margin: 0 0 10px; color: #6ee7b7; text-transform: uppercase; letter-spacing: 2px; font-size: 0.78rem; font-weight: 800; }",
+        ".brochure-title { margin: 0 0 12px; color: #ffffff; font-size: 2rem; font-weight: 900; letter-spacing: -0.8px; }",
+        ".brochure-text { margin: 0 auto; max-width: 720px; color: #cbd5e1; font-size: 1rem; line-height: 1.8; }",
         "@media (max-width: 900px) { .spotlight-grid, .closing-banner { grid-template-columns: 1fr; } }",
-        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel { padding: 24px 20px; } .spotlight-title { font-size: 1.75rem; } }",
+        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .grid-cards { gap: 20px; margin-bottom: 40px; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; } .trust-strip { justify-content: flex-start; } .spotlight-card, .segment-card, .closing-panel, .brochure-band { padding: 24px 20px; } .spotlight-title, .brochure-title { font-size: 1.75rem; } }",
         "</style>",
         "<div class='landing-page'>",
         f"<div class='logo-shell'>{logo_html}</div>",
@@ -436,6 +468,11 @@ if not st.session_state.entered_app:
         "<div class='check-item'>Control de personal, coordinacion, auditoria y RRHH.</div>",
         "</div>",
         "</div>",
+        "</div>",
+        "<div class='brochure-band'>",
+        "<p class='brochure-kicker'>Material comercial listo para enviar</p>",
+        "<h3 class='brochure-title'>Descarga una presentacion profesional de la app</h3>",
+        "<p class='brochure-text'>Comparte un PDF comercial con modulos, beneficios, propuesta de valor y enfoque clinico-operativo para mostrar MediCare Enterprise PRO en reuniones, WhatsApp o presentaciones con potenciales clientes.</p>",
         "</div>",
         "<div class='grid-cards'>",
         "<div class='glass-card-pro'><div class='icon-box-pro'>📍</div><h4 class='card-title-pro'>Fichaje GPS</h4><p class='card-text-pro'>Control de asistencia verificado por coordenadas exactas del domicilio del paciente.</p></div>",
@@ -492,6 +529,17 @@ if not st.session_state.entered_app:
         "</div>",
     ]
     st.markdown("".join(html_lines), unsafe_allow_html=True)
+    folleto_path = obtener_folleto_landing()
+    if folleto_path:
+        with folleto_path.open("rb") as brochure_file:
+            st.download_button(
+                "📥 Descargar presentacion comercial (PDF)",
+                data=brochure_file.read(),
+                file_name=folleto_path.name,
+                mime="application/pdf",
+                key="download_landing_brochure_pdf",
+                use_container_width=False,
+            )
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
