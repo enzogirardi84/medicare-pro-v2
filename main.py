@@ -50,6 +50,8 @@ descripcion_acceso_rol = getattr(
     ),
 )
 
+APP_BUILD_TAG = "Build 2026-04-10 02:05 ART"
+
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
 try:
@@ -749,6 +751,7 @@ with st.sidebar:
     if st.button("Cerrar Sesion", use_container_width=True):
         limpiar_sesion_app()
         st.rerun()
+    st.caption(APP_BUILD_TAG)
 
 vista_actual = resolve_current_view(menu)
 vista_actual = render_module_nav(menu, vista_actual)
