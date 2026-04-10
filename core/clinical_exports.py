@@ -178,7 +178,7 @@ def _write_pairs(pdf, pairs):
 
 
 # =====================================================================
-# MOTOR REPORTLAB: HISTORIA CLÍNICA INTEGRAL
+# MOTOR REPORTLAB: HISTORIA CLÍNICA INTEGRAL (CORREGIDA)
 # =====================================================================
 def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
     """Genera la Historia Clínica Integral usando ReportLab para un diseño tabular profesional."""
@@ -187,35 +187,41 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     elements = []
     styles = getSampleStyleSheet()
 
-    # --- Estilos ---
+    # --- Estilos base ---
     title_style = styles['Heading1']
-    title_style.alignment = 1  # Centrado
+    title_style.alignment = 1  
     subtitle_style = styles['Heading3']
     subtitle_style.alignment = 1
     
     section_style = ParagraphStyle(
         'Section', parent=styles['Heading2'], 
-        textColor=colors.HexColor("#1E3A8A"), # Azul oscuro médico
+        textColor=colors.HexColor("#1E3A8A"), 
         spaceAfter=10, spaceBefore=15
     )
     
     normal_style = styles['Normal']
     normal_style.fontSize = 9
 
+    # --- Helper para evitar que ReportLab se rompa con caracteres y forzar saltos ---
+    def _limpiar_texto(texto):
+        if texto in [None, ""]: return "-"
+        t = str(texto).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return t.replace("\n", "<br/>")
+
     # --- 1. Cabecera Institucional ---
     detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     nombre_empresa = detalles.get("empresa", mi_empresa)
     
-    elements.append(Paragraph(f"<b>{nombre_empresa.upper()}</b>", title_style))
+    elements.append(Paragraph(f"<b>{_limpiar_texto(nombre_empresa).upper()}</b>", title_style))
     elements.append(Paragraph("HISTORIA CLÍNICA DIGITAL INTEGRAL", subtitle_style))
     elements.append(Spacer(1, 15))
 
     # --- 2. Panel de Datos Demográficos ---
     datos_paciente = [
-        ["Paciente:", paciente_sel.split(" - ")[0], "DNI:", detalles.get("dni", "S/D")],
-        ["Fecha Nac.:", detalles.get("fnac", "S/D"), "Sexo:", detalles.get("sexo", "S/D")],
-        ["Obra Social:", detalles.get("obra_social", "S/D"), "Teléfono:", detalles.get("telefono", "S/D")],
-        ["Domicilio:", Paragraph(detalles.get("direccion", "S/D"), normal_style), "Estado:", detalles.get("estado", "Activo")]
+        ["Paciente:", Paragraph(_limpiar_texto(paciente_sel.split(" - ")[0]), normal_style), "DNI:", Paragraph(_limpiar_texto(detalles.get("dni")), normal_style)],
+        ["Fecha Nac.:", Paragraph(_limpiar_texto(detalles.get("fnac")), normal_style), "Sexo:", Paragraph(_limpiar_texto(detalles.get("sexo")), normal_style)],
+        ["Obra Social:", Paragraph(_limpiar_texto(detalles.get("obra_social")), normal_style), "Teléfono:", Paragraph(_limpiar_texto(detalles.get("telefono")), normal_style)],
+        ["Domicilio:", Paragraph(_limpiar_texto(detalles.get("direccion")), normal_style), "Estado:", Paragraph(_limpiar_texto(detalles.get("estado", "Activo")), normal_style)]
     ]
     
     t_paciente = Table(datos_paciente, colWidths=[70, 180, 70, 120])
@@ -230,43 +236,50 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     ]))
     elements.append(t_paciente)
     
-    # Riesgos y Alergias
     riesgos_data = [
-        ["Alergias:", Paragraph(detalles.get("alergias", "Sin datos"), normal_style)],
-        ["Riesgos/Patologías:", Paragraph(detalles.get("patologias", "Sin datos"), normal_style)]
+        ["Alergias:", Paragraph(_limpiar_texto(detalles.get("alergias", "Sin datos")), normal_style)],
+        ["Riesgos/Patologías:", Paragraph(_limpiar_texto(detalles.get("patologias", "Sin datos")), normal_style)]
     ]
     t_riesgos = Table(riesgos_data, colWidths=[100, 340])
     t_riesgos.setStyle(TableStyle([
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor("#991B1B")), # Rojo oscuro
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor("#991B1B")), 
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
     ]))
     elements.append(t_riesgos)
     elements.append(Spacer(1, 20))
 
-    # --- Función Auxiliar para Tablas Internas ---
+    # --- Función Auxiliar Blindada para Tablas ---
     def _crear_tabla_seccion(titulo, cabeceras, claves_datos, registros, anchos_columnas):
         if not registros:
             return
         elements.append(Paragraph(titulo, section_style))
         
-        datos_tabla = [cabeceras]
+        # Estilos específicos para celdas de tablas
+        header_style = ParagraphStyle('Header', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.whitesmoke, alignment=1)
+        cell_center = ParagraphStyle('CellCenter', parent=styles['Normal'], fontSize=8, alignment=1)
+        cell_left = ParagraphStyle('CellLeft', parent=styles['Normal'], fontSize=8, alignment=0)
+        
+        datos_tabla = [[Paragraph(c, header_style) for c in cabeceras]]
+        
         for reg in registros:
             fila = []
             for clave in claves_datos:
-                valor = str(reg.get(clave, "-"))
-                fila.append(Paragraph(valor, normal_style) if len(valor) > 30 else valor)
+                valor = _limpiar_texto(reg.get(clave, "-"))
+                # Los textos largos se alinean a la izquierda, los números/fechas al centro
+                estilo = cell_left if clave in ["med", "insumo"] else cell_center
+                fila.append(Paragraph(valor, estilo))
             datos_tabla.append(fila)
             
         t = Table(datos_tabla, colWidths=anchos_columnas, repeatRows=1)
         t.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#374151")),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9FAFB")]),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
         ]))
         elements.append(t)
         elements.append(Spacer(1, 15))
@@ -281,9 +294,9 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     if registros_clinicos:
         elements.append(Paragraph("Evoluciones Clínicas y Enfermería", section_style))
         for reg in sorted(registros_clinicos, key=lambda x: x.get("fecha", "")):
-            fecha = reg.get("fecha", "S/D")
-            firma = reg.get("firma", reg.get("profesional", "S/D"))
-            nota = reg.get("nota", reg.get("observaciones", "Sin detalle"))
+            fecha = _limpiar_texto(reg.get("fecha", "S/D"))
+            firma = _limpiar_texto(reg.get("firma", reg.get("profesional", "S/D")))
+            nota = _limpiar_texto(reg.get("nota", reg.get("observaciones", "Sin detalle")))
             
             bloque = []
             bloque.append(Paragraph(f"<b>{fecha}</b> | Profesional: {firma}", styles['Italic']))
@@ -298,7 +311,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "Control de Signos Vitales",
         ["Fecha", "T.A.", "F.C.", "F.R.", "SatO2", "Temp", "HGT"],
         ["fecha", "TA", "FC", "FR", "Sat", "Temp", "HGT"],
-        vits, [85, 60, 50, 50, 50, 50, 50]
+        vits, [95, 60, 50, 50, 50, 50, 50] # Ancho de fecha expandido a 95
     )
 
     # Balance Hídrico
@@ -307,7 +320,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "Balance Hídrico",
         ["Fecha", "Turno", "Ingresos", "Egresos", "Balance Total", "Firma"],
         ["fecha", "turno", "ingresos", "egresos", "balance", "firma"],
-        balances, [80, 100, 55, 55, 60, 90]
+        balances, [95, 100, 55, 55, 65, 100] # Ancho de fecha expandido
     )
 
     # Plan Terapéutico
@@ -316,7 +329,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "Plan Terapéutico (Histórico y Activo)",
         ["Fecha", "Medicación e Indicación", "Estado", "Profesional"],
         ["fecha", "med", "estado_receta", "medico_nombre"],
-        meds, [75, 205, 60, 100]
+        meds, [95, 230, 60, 100] # Ancho de fecha expandido, medicacion a 230
     )
 
     # Materiales Utilizados
@@ -325,7 +338,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         "Materiales e Insumos Utilizados",
         ["Fecha", "Insumo / Descripción", "Cantidad", "Firma"],
         ["fecha", "insumo", "cantidad", "firma"],
-        materiales, [90, 200, 60, 90]
+        materiales, [95, 220, 60, 100]
     )
 
     doc.build(elements)
