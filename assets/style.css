@@ -549,6 +549,70 @@ hr {
     letter-spacing: -0.01em;
 }
 
+.mc-brand-card {
+    margin: 0.15rem 0 0.95rem;
+    padding: 1.05rem 1rem 1rem;
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 34%),
+        linear-gradient(180deg, rgba(18, 31, 54, 0.96) 0%, rgba(11, 20, 36, 0.98) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    box-shadow: 0 18px 36px rgba(2, 6, 23, 0.24);
+}
+
+.mc-brand-logo-shell {
+    width: 132px;
+    margin: 0 auto 1rem;
+    padding: 12px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241,245,249,0.94));
+    box-shadow: 0 16px 34px rgba(2, 6, 23, 0.22), 0 0 0 1px rgba(255,255,255,0.28) inset;
+}
+
+.mc-brand-logo {
+    display: block;
+    width: 100%;
+    border-radius: 18px;
+    object-fit: cover;
+}
+
+.mc-brand-kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7dd3fc;
+    margin-bottom: 0.55rem;
+}
+
+.mc-brand-company {
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -0.05em;
+    margin-bottom: 0.55rem;
+}
+
+.mc-brand-user {
+    color: #e2ecf9;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.35;
+    margin-bottom: 0.55rem;
+}
+
+.mc-brand-user span {
+    color: #a5b9d8;
+    font-weight: 700;
+}
+
+.mc-brand-copy {
+    color: #bfd0e6;
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
 .mc-patient-card {
     margin: 0.8rem 0 0.95rem;
     padding: 0.95rem 0.95rem 0.9rem;
