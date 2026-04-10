@@ -251,6 +251,7 @@ def obtener_modulos_permitidos(rol_actual):
         "Mi Equipo",
         "Asistencia en Vivo",
         "RRHH y Fichajes",
+        "Proyecto y Roadmap",
         "Auditoria",
         "Auditoria Legal",
     ]

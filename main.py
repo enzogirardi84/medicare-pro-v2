@@ -94,6 +94,7 @@ VIEW_CONFIG = {
     "Mi Equipo": ("views.mi_equipo", "render_mi_equipo"),
     "Asistencia en Vivo": ("views.asistencia", "render_asistencia"),
     "RRHH y Fichajes": ("views.rrhh", "render_rrhh"),
+    "Proyecto y Roadmap": ("views.project_management", "render_project_management"),
     "Auditoria": ("views.auditoria", "render_auditoria"),
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
 }
@@ -123,6 +124,7 @@ VIEW_NAV_LABELS = {
     "Mi Equipo": "\U0001F465 Equipo",
     "Asistencia en Vivo": "\U0001F6F0\ufe0f Asistencia",
     "RRHH y Fichajes": "\u23F1\ufe0f RRHH",
+    "Proyecto y Roadmap": "\U0001F6E0\ufe0f Roadmap",
     "Auditoria": "\U0001F50E Auditoria",
     "Auditoria Legal": "\u2696\ufe0f Legal",
 }
@@ -184,6 +186,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
             render_fn(mi_empresa, user)
         elif tab_name == "RRHH y Fichajes":
             render_fn(mi_empresa, rol, user)
+        elif tab_name == "Proyecto y Roadmap":
+            render_fn(mi_empresa, user, rol)
         elif tab_name == "Auditoria":
             render_fn(mi_empresa, user)
         elif tab_name == "Auditoria Legal":
@@ -437,7 +441,7 @@ if not st.session_state.entered_app:
         "<div class='check-list'>",
         "<div class='check-item'>Visitas, agenda y trazabilidad diaria para equipos en calle.</div>",
         "<div class='check-item'>Historia clinica, signos vitales, estudios y escalas en tiempo real.</div>",
-        "<div class='check-item'>Recetas, consentimientos y respaldo PDF con enfoque legal.</div>",
+        "<div class='check-item'>Recetas, consentimientos y respaldo documental con enfoque legal.</div>",
         "<div class='check-item'>Control de personal, coordinacion, auditoria y RRHH.</div>",
         "</div>",
         "</div>",
@@ -458,7 +462,7 @@ if not st.session_state.entered_app:
         "<div class='benefit-grid'>",
         "<div class='benefit-card'><h5>Menos errores</h5><p>Reduce fallas de carga, medicacion y seguimiento con informacion mas clara y centralizada.</p></div>",
         "<div class='benefit-card'><h5>Mas control</h5><p>Coordina visitas, fichadas, urgencias, personal y documentacion desde un solo lugar.</p></div>",
-        "<div class='benefit-card'><h5>Mas respaldo</h5><p>Deja cada accion registrada con firmas, auditoria y PDFs listos para presentar.</p></div>",
+        "<div class='benefit-card'><h5>Mas respaldo</h5><p>Deja cada accion registrada con firmas, auditoria y documentacion lista para presentar.</p></div>",
         "<div class='benefit-card'><h5>Mas escalable</h5><p>Sirve para profesionales independientes, empresas, coordinacion y redes de atencion.</p></div>",
         "</div>",
         "</div>",
