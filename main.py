@@ -5,12 +5,12 @@ from importlib import import_module
 from pathlib import Path
 import streamlit as st
 
-# Configuración de rutas
+# 1. Rutas
 ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-# --- IMPORTACIONES ---
+# 2. Importaciones
 try:
     from core.auth import check_inactividad, render_login
     from core import utils as core_utils
@@ -19,7 +19,7 @@ except ImportError as e:
     st.error(f"Error crítico: {e}")
     st.stop()
 
-# --- ASIGNACIÓN DE UTILIDADES ---
+# 3. Utilidades
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = core_utils.es_control_total
 inicializar_db_state = core_utils.inicializar_db_state
@@ -27,19 +27,13 @@ obtener_modulos_permitidos = core_utils.obtener_modulos_permitidos
 obtener_pacientes_visibles = core_utils.obtener_pacientes_visibles
 descripcion_acceso_rol = core_utils.descripcion_acceso_rol
 
-# --- CONFIGURACIÓN UI ---
+# 4. Configuración UI
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
-
-# Inyectar CSS global
-css_content = cargar_texto_asset('style.css')
-if css_content:
-    st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
 
 if "_db_bootstrapped" not in st.session_state:
     inicializar_db_state(cargar_datos() if cargar_datos else None)
     st.session_state["_db_bootstrapped"] = True
 
-# Diccionario de módulos
 VIEW_CONFIG = {
     "Visitas y Agenda": ("views.visitas", "render_visitas"), 
     "Dashboard": ("views.dashboard", "render_dashboard"),
@@ -73,35 +67,27 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     if tab_name not in VIEW_CONFIG: return
     module_name, function_name = VIEW_CONFIG[tab_name]
     render_fn = getattr(import_module(module_name), function_name)
-    
-    if tab_name in ["Visitas y Agenda", "Recetas", "Caja", "PDF"]:
-        render_fn(paciente_sel, mi_empresa, user, rol)
-    elif tab_name in ["Admision", "Dashboard", "Inventario"]:
-        render_fn(mi_empresa, rol)
-    elif tab_name in ["Evolucion", "Estudios", "Red de Profesionales", "RRHH y Fichajes"]:
-        render_fn(paciente_sel, user, rol)
-    elif tab_name == "Mi Equipo":
-        render_fn(mi_empresa, rol, user)
-    elif tab_name in ["Clinica", "Telemedicina", "Historial"]:
-        render_fn(paciente_sel)
-    else:
-        render_fn(paciente_sel, user)
+    if tab_name in ["Visitas y Agenda", "Recetas", "Caja", "PDF"]: render_fn(paciente_sel, mi_empresa, user, rol)
+    elif tab_name in ["Admision", "Dashboard", "Inventario"]: render_fn(mi_empresa, rol)
+    elif tab_name in ["Evolucion", "Estudios", "Red de Profesionales", "RRHH y Fichajes"]: render_fn(paciente_sel, user, rol)
+    elif tab_name == "Mi Equipo": render_fn(mi_empresa, rol, user)
+    elif tab_name in ["Clinica", "Telemedicina", "Historial"]: render_fn(paciente_sel)
+    else: render_fn(paciente_sel, user)
 
 # --- PUBLICIDAD ---
 if not st.session_state.get("entered_app", False):
-    publicidad_html = """
-    <style>
-        .stApp { background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 100%) !important; }
-        #MainMenu, header, footer { visibility: hidden !important; }
-        .hero { font-family: 'Inter', sans-serif; color: #f8fafc; text-align: center; padding: 40px 20px; }
-        .hero-title { font-size: 4rem; font-weight: 900; background: linear-gradient(135deg, #fff 30%, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 25px; }
-    </style>
-    <div class="hero">
-        <h1 class="hero-title">MediCare Enterprise PRO</h1>
-        <p style="color:#94a3b8; font-size:1.2rem; margin-bottom:40px;">Gestión de Salud de Alto Rendimiento</p>
-    </div>
-    """
-    st.markdown(publicidad_html, unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+            .stApp { background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 100%) !important; }
+            #MainMenu, header, footer { visibility: hidden !important; }
+            .hero { text-align: center; padding: 60px 20px; font-family: 'Inter', sans-serif; color: white; }
+            .hero-title { font-size: 3.5rem; font-weight: 900; background: linear-gradient(135deg, #fff, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        </style>
+        <div class="hero">
+            <h1 class="hero-title">MediCare Enterprise PRO</h1>
+            <p style="color:#94a3b8; font-size:1.2rem; margin-bottom:40px;">Gestión de Salud de Alto Rendimiento</p>
+        </div>
+    """, unsafe_allow_html=True)
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True):
         st.session_state.entered_app = True
         st.rerun()
@@ -127,7 +113,7 @@ with st.sidebar:
     paciente_sel = None
     if p_f:
         idx = 0
-        p_tuple = st.selectbox("Seleccionar para atención", p_f, index=idx, format_func=lambda x: x[1])
+        p_tuple = st.selectbox("Atención actual", p_f, index=idx, format_func=lambda x: x[1])
         paciente_sel = p_tuple[0]
         st.session_state["paciente_actual"] = paciente_sel
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
@@ -138,10 +124,10 @@ with st.sidebar:
 if menu:
     vista_actual = st.session_state.get("modulo_actual", menu[0])
     if vista_actual not in menu: vista_actual = menu[0]
-    selected = st.pills("Módulos", menu, default=vista_actual, format_func=lambda x: VIEW_NAV_LABELS.get(x, x), key="nav_pills")
+    selected = st.pills("Menú", menu, default=vista_actual, format_func=lambda x: VIEW_NAV_LABELS.get(x, x))
     if selected:
         st.session_state["modulo_actual"] = selected
         vista_actual = selected
     if paciente_sel:
-        st.info(f"📍 Atendiendo a: **{paciente_sel}**")
+        st.info(f"📍 **Atendiendo a:** {paciente_sel}")
     render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol)
