@@ -306,7 +306,7 @@ def _render_tabla_clinica(
 
 
 def _render_dataframe_filas_tarjetas(df):
-    """Un expander por fila: lectura clara en pantallas angostas."""
+    """Tarjetas sin st.expander: en movil el chevron de expander mostraba el texto _arrow_right (bug Streamlit / fuentes)."""
     if df is None or df.empty:
         return
     cols = list(df.columns)
@@ -315,12 +315,20 @@ def _render_dataframe_filas_tarjetas(df):
         med = str(row.get("Medicacion", "") or "").strip()
         est = str(row.get("Estado", "") or "").strip()
         label = " · ".join(p for p in (h, med, est) if p) or "Dosis"
-        with st.expander(label, expanded=False):
+        with st.container(border=True):
+            st.markdown(
+                f'<p class="mc-rx-card-title">{escape(label)}</p>',
+                unsafe_allow_html=True,
+            )
             for col in cols:
                 val = row.get(col, "")
                 if pd.isna(val) or str(val).strip() == "":
                     continue
-                st.markdown(f"**{col}:** {val}")
+                v_html = escape(str(val).strip()).replace("\n", "<br/>")
+                st.markdown(
+                    f'<p class="mc-rx-card-line"><span class="mc-rx-card-k">{escape(str(col))}:</span> {v_html}</p>',
+                    unsafe_allow_html=True,
+                )
 
 
 def _chips_estado_sabana(valor):

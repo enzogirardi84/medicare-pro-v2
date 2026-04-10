@@ -947,6 +947,36 @@ hr {
     }
 }
 
+/* Recetas: tarjetas (vista movil) — sin expander para evitar _arrow_right roto */
+.mc-rx-card-title {
+    font-weight: 800;
+    font-size: 1rem;
+    margin: 0 0 0.55rem 0;
+    color: #f8fafc;
+    line-height: 1.35;
+}
+
+.mc-rx-card-line {
+    margin: 0.28rem 0;
+    font-size: 0.94rem;
+    color: #e2e8f0;
+    line-height: 1.45;
+}
+
+.mc-rx-card-k {
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+/* Streamlit expander: si no carga Material Symbols, se ve texto tipo _arrow_right */
+@media (max-width: 900px) {
+    [data-testid="stExpander"] summary .material-symbols-rounded,
+    [data-testid="stExpander"] summary .material-symbols-outlined,
+    [data-testid="stExpander"] summary [data-testid="stIconMaterial"] {
+        display: none !important;
+    }
+}
+
 /* --- Recetas: sábana 24 h y tablas HTML (móvil / tablet / tactil) --- */
 .mc-recetas-sabana-zone [class^="mc-sheet-shell-"],
 .mc-recetas-table-zone [class^="mc-table-shell-"] {
