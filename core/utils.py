@@ -21,7 +21,7 @@ DEFAULT_ADMIN_USER = {
     "titulo": "Director de Sistemas", "estado": "Activo", "pin": "1234",
 }
 
-# --- MOTOR DE PERMISOS ---
+# --- MOTOR DE PERMISOS (ULTRA-FLEXIBLE) ---
 def obtener_modulos_permitidos(rol: str) -> List[str]:
     r = str(rol or "").strip().lower()
     atencion = [
@@ -50,9 +50,10 @@ def tiene_permiso(rol_actual: str, roles_permitidos: List[str] = None) -> bool:
 
 def descripcion_acceso_rol(rol: str) -> str:
     r = str(rol or "").strip().lower()
-    return "Control total" if "admin" in r else "Acceso restringido"
+    if "admin" in r: return "Control total de infraestructura y seguridad clínica."
+    return "Acceso asistencial restringido."
 
-# --- UTILIDADES DE DATOS ---
+# --- UTILIDADES DE ASSETS Y DATOS ---
 @st.cache_data(show_spinner=False)
 def cargar_texto_asset(nombre: str) -> str:
     ruta = ASSETS_DIR / nombre
@@ -89,9 +90,9 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
         alertas.append({"nivel": "critica", "titulo": "Alergias", "detalle": alg})
     return alertas
 
-# --- FIRMAS Y CONFIG ---
+# --- FIRMAS Y MULTIMEDIA (REQUERIDO POR VISITAS.PY) ---
 def obtener_config_firma(key_prefix: str):
-    """Esta función es requerida por visitas.py y otras vistas."""
+    """Retorna la configuración del canvas de firma."""
     return {"height": 150, "width": 400, "stroke_width": 2, "display_toolbar": True}
 
 def firma_a_base64(canvas_image_data=None, uploaded_file=None) -> str:
@@ -113,7 +114,17 @@ def firma_a_base64(canvas_image_data=None, uploaded_file=None) -> str:
     except: return ""
     return ""
 
-def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, detalle="", empresa=None):
+def optimizar_imagen_bytes(image_bytes: bytes, max_size=(1280, 1280), quality=70) -> Tuple[bytes, str]:
+    try:
+        with Image.open(BytesIO(image_bytes)) as img:
+            if img.mode != "RGB": img = img.convert("RGB")
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            buf = BytesIO()
+            img.save(buf, format="JPEG", optimize=True, quality=quality)
+            return buf.getvalue(), "jpg"
+    except: return image_bytes, "bin"
+
+def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula="", detalle="", referencia="", extra=None, empresa=None):
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append({
         "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
@@ -129,11 +140,11 @@ def asegurar_usuarios_base():
 
 def inicializar_db_state(db: Optional[Dict]):
     if "db_inicializada" not in st.session_state:
-        for c in ["pacientes_db", "vitales_db", "indicaciones_db", "evoluciones_db", 
-                  "auditoria_legal_db", "consumos_db", "emergencias_db", "estudios_db"]:
-            st.session_state.setdefault(c, [])
-        for c in ["usuarios_db", "detalles_pacientes_db"]:
-            st.session_state.setdefault(c, {})
+        listas = ["pacientes_db", "vitales_db", "indicaciones_db", "evoluciones_db", 
+                  "auditoria_legal_db", "consumos_db", "emergencias_db", "estudios_db"]
+        dicts = ["usuarios_db", "detalles_pacientes_db"]
+        for c in listas: st.session_state.setdefault(c, [])
+        for c in dicts: st.session_state.setdefault(c, {})
         if db:
             for k, v in db.items(): st.session_state[k] = v
         asegurar_usuarios_base()
