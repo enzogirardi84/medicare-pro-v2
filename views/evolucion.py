@@ -22,20 +22,15 @@ try:
 except ImportError:
     pass
 
-# --- 1. Plantillas Multidisciplinarias ---
+# --- 1. Plantillas Exclusivas de Profesionales de Salud ---
 PLANTILLAS_EVOLUCION = {
     "Libre": "",
-    "Clínica Médica": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
-    "Enfermería": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curación:\nTolerancia al procedimiento:\nIndicaciones:",
-    "Kinesiología y Fisioterapia": "Evaluación funcional:\nTono y trofismo muscular:\nEjercicios / Técnicas aplicadas:\nTolerancia a la sesión:\nPautas para el hogar:",
+    "Médico": "Motivo de consulta:\nExamen físico / Signos relevantes:\nDiagnóstico presuntivo:\nConducta / Tratamiento indicado:\nPlan y seguimiento:",
+    "Enfermería": "Procedimiento realizado / Control:\nEstado general del paciente:\nSitio de acceso / Curación:\nTolerancia al procedimiento:\nIndicaciones al paciente/familia:",
+    "Kinesiología": "Evaluación funcional / Respiratoria:\nTono y trofismo muscular:\nTécnicas aplicadas:\nTolerancia a la sesión:\nPautas para el hogar:",
     "Psicología": "Estado de ánimo / Afectividad:\nContenido del discurso:\nIntervención realizada:\nEvolución respecto a sesión previa:\nPlan terapéutico:",
     "Nutrición": "Peso / IMC actual:\nTolerancia a la dieta:\nAdherencia al plan alimentario:\nModificaciones indicadas:\nEducación nutricional brindada:",
-    "Fonoaudiología": "Evaluación de la deglución/fonación:\nEjercicios realizados:\nRespuesta del paciente:\nPautas alimentarias/fonatorias:\nSeguimiento:",
-    "Trabajo Social": "Evaluación del entorno sociofamiliar:\nRed de contención activa:\nGestiones realizadas (certificados, insumos):\nObservaciones:\nPlan de acción:",
-    "Heridas / Curaciones": "Ubicación de la lesión:\nAspecto del lecho:\nExudado / olor:\nCuración aplicada:\nEvolución respecto al control previo:",
-    "Respiratorio": "Saturación actual:\nDispositivo / flujo de oxígeno:\nTrabajo respiratorio:\nAuscultación:\nConducta y seguimiento:",
-    "Pediatría": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentación / hidratación:\nEvaluación general:\nPlan y recomendaciones:",
-    "Cuidados Paliativos": "Síntomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las próximas horas:",
+    "Fonoaudiología": "Evaluación de la deglución / fonación:\nEjercicios realizados:\nRespuesta del paciente:\nPautas alimentarias / fonatorias:\nSeguimiento:"
 }
 
 # --- Funciones de Utilidad y Seguridad Legal ---
@@ -118,7 +113,7 @@ def _render_formulario_evolucion(paciente_sel: str, user: Dict[str, Any]) -> Non
     """Renderiza el formulario para registrar una nueva evolución médica o interdisciplinaria."""
     with st.form("evol_form", clear_on_submit=True):
         st.markdown("##### Nueva Evolución")
-        plantilla = st.selectbox("Especialidad / Plantilla Clínica", list(PLANTILLAS_EVOLUCION.keys()))
+        plantilla = st.selectbox("Especialidad del Profesional", list(PLANTILLAS_EVOLUCION.keys()))
         
         if plantilla != "Libre":
             st.caption(f"Guía sugerida para {plantilla}. Puedes modificar el texto como necesites.")
@@ -173,7 +168,7 @@ def _render_formulario_evolucion(paciente_sel: str, user: Dict[str, Any]) -> Non
                 "Nueva evolución",
                 profesional_nombre,
                 user.get("matricula", ""),
-                f"Plantilla: {plantilla} | Foto adjunta: {'Sí' if foto_w else 'No'}",
+                f"Especialidad: {plantilla} | Foto adjunta: {'Sí' if foto_w else 'No'}",
             )
             guardar_datos()
             st.toast("Evolución clínica guardada en la historia.", icon="✅")
@@ -248,7 +243,6 @@ def _render_historial_evoluciones(evs_paciente: List[Dict[str, Any]], paciente_s
                         # Acción Borrar (Protegida por checkbox)
                         chk_borrar = col_btn2.checkbox("Habilitar borrado", key=f"chk_del_{real_index}")
                         if col_btn3.button("🗑️ Borrar registro", key=f"btn_del_{real_index}", type="primary", disabled=not chk_borrar):
-                            # Eliminamos usando pop() para remover exactamente ese registro de la base
                             st.session_state["evoluciones_db"].pop(real_index)
                             registrar_auditoria_legal(
                                 "Evolución Clínica", paciente_sel, "Borrado de evolución",
