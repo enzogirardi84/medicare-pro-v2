@@ -946,3 +946,161 @@ hr {
         min-height: 320px !important;
     }
 }
+
+/* --- Recetas: sábana 24 h y tablas HTML (móvil / tablet / tactil) --- */
+.mc-recetas-sabana-zone [class^="mc-sheet-shell-"],
+.mc-recetas-table-zone [class^="mc-table-shell-"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+@media (max-width: 1024px) {
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] {
+        max-height: min(48vh, 400px);
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-rx {
+        min-width: 160px;
+        max-width: 260px;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] {
+        max-height: min(52vh, 440px);
+    }
+}
+
+@media (max-width: 640px) {
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] {
+        max-height: min(42vh, 320px);
+        border-radius: 14px;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] table {
+        font-size: 0.7rem;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] thead th {
+        padding: 6px 4px;
+        font-size: 0.68rem;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-val {
+        min-width: 52px;
+        max-width: 60px;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-rx {
+        min-width: 120px;
+        max-width: 180px;
+        padding: 6px 8px;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-rx-title {
+        font-size: 0.78rem;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-rx-meta,
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-rx-detail {
+        font-size: 0.65rem;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] tbody td {
+        min-width: 36px;
+        max-width: 44px;
+        padding: 4px 2px;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-badge {
+        min-width: 32px;
+        min-height: 28px;
+        font-size: 0.58rem;
+        border-radius: 8px;
+    }
+
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-validada {
+        min-width: 52px;
+        min-height: 24px;
+        font-size: 0.62rem;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] {
+        max-height: min(50vh, 360px);
+        border-radius: 14px;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] table {
+        font-size: 0.76rem;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] thead th {
+        padding: 8px 6px;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] tbody td {
+        padding: 6px 6px;
+    }
+}
+
+@media (pointer: coarse) {
+    .mc-recetas-sabana-zone [class^="mc-sheet-shell-"] .mc-sheet-badge {
+        min-width: 40px;
+        min-height: 36px;
+        padding: 4px 5px;
+    }
+}
+
+/* Tablas HTML Recetas: scroll + sin guiones automaticos (Safari iOS) */
+.mc-recetas-table-zone,
+.mc-recetas-table-zone [class^="mc-table-shell-"] {
+    hyphens: none !important;
+    -webkit-hyphens: none !important;
+}
+
+@media (max-width: 900px) {
+    [data-testid="stMarkdownContainer"] .mc-recetas-table-zone {
+        overflow-x: auto !important;
+        max-width: 100% !important;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] {
+        overflow-x: auto !important;
+        overflow-y: auto;
+        max-width: 100%;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] table {
+        width: max-content !important;
+        min-width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] thead th {
+        white-space: nowrap !important;
+        hyphens: none !important;
+        -webkit-hyphens: none !important;
+    }
+
+    .mc-recetas-table-zone [class^="mc-table-shell-"] tbody td {
+        min-width: 6rem !important;
+        max-width: none !important;
+        white-space: nowrap !important;
+        hyphens: none !important;
+        -webkit-hyphens: none !important;
+        overflow-wrap: normal !important;
+    }
+}
+
+/* Grillas Streamlit (data_editor / dataframe): scroll horizontal en modulos anchos */
+@media (max-width: 900px) {
+    [data-testid="stAppViewContainer"] [data-testid="stElementContainer"]:has([data-testid="stDataFrame"]) {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-width: 100%;
+    }
+
+    [data-testid="stAppViewContainer"] [data-testid="stElementContainer"]:has([data-testid="stDataEditor"]) {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-width: 100%;
+    }
+}

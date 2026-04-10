@@ -185,23 +185,23 @@ def _render_tabla_clinica(
     key,
     max_height=360,
     sticky_first_col=True,
-    fit_container=False,
     compact=False,
+    nowrap_cells=True,
 ):
     if df is None or df.empty:
         return
 
     safe_key = _css_safe_key(key)
-    table_width = "100%" if fit_container else "max-content"
-    table_layout = "fixed" if fit_container else "auto"
-    header_white_space = "normal" if fit_container else "nowrap"
+    # Tabla ancha + scroll horizontal; nowrap evita guiones tipo "Medica-cion" en Safari iOS.
+    table_width = "max-content"
+    table_layout = "auto"
+    cell_ws = "nowrap" if nowrap_cells else "normal"
     header_padding = "9px 8px" if compact else "12px 10px"
     cell_padding = "7px 8px" if compact else "10px 10px"
     font_size = "0.80rem" if compact else "0.92rem"
     sticky_min_width = "220px" if compact else "260px"
     sticky_max_width = "280px" if compact else "340px"
-    cell_min_width = "58px" if compact else ("0" if fit_container else "92px")
-    cell_max_width = "110px" if compact else ("none" if fit_container else "220px")
+    cell_min = "72px" if compact else "6rem"
 
     clases_th = []
     clases_td = []
@@ -213,9 +213,11 @@ def _render_tabla_clinica(
         f"""
         <style>
             .mc-table-shell-{safe_key} {{
-                width: 100%;
-                overflow-x: auto;
-                overflow-y: auto;
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
                 max-height: {max_height}px;
                 border: 1px solid rgba(148, 163, 184, 0.18);
                 border-radius: 18px;
@@ -223,12 +225,15 @@ def _render_tabla_clinica(
                 box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
             }}
             .mc-table-shell-{safe_key} table {{
-                width: {table_width};
-                min-width: 100%;
-                table-layout: {table_layout};
-                border-collapse: separate;
-                border-spacing: 0;
+                width: max-content !important;
+                min-width: 100% !important;
+                max-width: none !important;
+                table-layout: auto !important;
+                border-collapse: separate !important;
+                border-spacing: 0 !important;
                 font-size: {font_size};
+                hyphens: none !important;
+                -webkit-hyphens: none !important;
             }}
             .mc-table-shell-{safe_key} thead th {{
                 position: sticky;
@@ -240,7 +245,11 @@ def _render_tabla_clinica(
                 text-align: left;
                 border-bottom: 1px solid rgba(148, 163, 184, 0.18);
                 border-right: 1px solid rgba(148, 163, 184, 0.12);
-                white-space: {header_white_space};
+                white-space: nowrap !important;
+                hyphens: none !important;
+                -webkit-hyphens: none !important;
+                word-break: normal !important;
+                overflow-wrap: normal !important;
                 line-height: 1.25;
             }}
             .mc-table-shell-{safe_key} tbody td {{
@@ -249,12 +258,14 @@ def _render_tabla_clinica(
                 border-bottom: 1px solid rgba(148, 163, 184, 0.10);
                 border-right: 1px solid rgba(148, 163, 184, 0.08);
                 vertical-align: top;
-                white-space: pre-wrap;
-                word-break: break-word;
-                overflow-wrap: anywhere;
-                min-width: {cell_min_width};
-                max-width: {cell_max_width};
-                line-height: 1.35;
+                white-space: {cell_ws} !important;
+                hyphens: none !important;
+                -webkit-hyphens: none !important;
+                word-break: normal !important;
+                overflow-wrap: normal !important;
+                min-width: {cell_min} !important;
+                max-width: none !important;
+                line-height: 1.4;
                 background: rgba(5, 10, 22, 0.98);
             }}
             .mc-table-shell-{safe_key} .mc-table-sticky {{
@@ -272,7 +283,10 @@ def _render_tabla_clinica(
         </style>
         """
     ]
-    html.append(f'<div class="mc-table-shell-{safe_key}"><table><thead><tr>')
+    html.append(
+        f'<div class="mc-recetas-table-zone" style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:100%;">'
+        f'<div class="mc-table-shell-{safe_key}"><table><thead><tr>'
+    )
     for idx, col in enumerate(df.columns):
         html.append(f"<th{clases_th[idx]}>{escape(str(col))}</th>")
     html.append("</tr></thead><tbody>")
@@ -287,8 +301,26 @@ def _render_tabla_clinica(
                 texto = escape(str(valor)).replace("\n", "<br>")
             html.append(f"<td{clases_td[idx]}>{texto}</td>")
         html.append("</tr>")
-    html.append("</tbody></table></div>")
+    html.append("</tbody></table></div></div>")
     st.markdown("".join(html), unsafe_allow_html=True)
+
+
+def _render_dataframe_filas_tarjetas(df):
+    """Un expander por fila: lectura clara en pantallas angostas."""
+    if df is None or df.empty:
+        return
+    cols = list(df.columns)
+    for _, row in df.iterrows():
+        h = str(row.get("Hora", "") or "").strip()
+        med = str(row.get("Medicacion", "") or "").strip()
+        est = str(row.get("Estado", "") or "").strip()
+        label = " · ".join(p for p in (h, med, est) if p) or "Dosis"
+        with st.expander(label, expanded=False):
+            for col in cols:
+                val = row.get(col, "")
+                if pd.isna(val) or str(val).strip() == "":
+                    continue
+                st.markdown(f"**{col}:** {val}")
 
 
 def _chips_estado_sabana(valor):
@@ -462,7 +494,7 @@ def _render_sabana_prescripcion_visual(sabana_rows, horas_mar, key, hora_actual=
         </style>
         """
     ]
-    html.append(f'<div class="mc-sheet-shell-{safe_key}"><table><thead><tr>')
+    html.append(f'<div class="mc-recetas-sabana-zone"><div class="mc-sheet-shell-{safe_key}"><table><thead><tr>')
     html.append('<th class="mc-sheet-sticky mc-sheet-val">Validada</th>')
     html.append('<th class="mc-sheet-sticky mc-sheet-rx">Prescripcion</th>')
     for hora_col in horas_mar:
@@ -502,7 +534,7 @@ def _render_sabana_prescripcion_visual(sabana_rows, horas_mar, key, hora_actual=
             html.append("</td>")
         html.append("</tr>")
 
-    html.append("</tbody></table></div>")
+    html.append("</tbody></table></div></div>")
     st.markdown("".join(html), unsafe_allow_html=True)
 
 
@@ -648,7 +680,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             tipo_indicacion = st.radio(
                 "Tipo de indicacion",
                 ["Medicacion", "Infusion / hidratacion"],
-                horizontal=True,
+                horizontal=False,
                 key="tipo_indicacion_receta",
             )
 
@@ -803,7 +835,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 metodo_firma = st.radio(
                     "Metodo de firma medica",
                     ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
-                    horizontal=True,
+                    horizontal=False,
                     key="metodo_firma_receta",
                 )
                 if metodo_firma.startswith("Subir"):
@@ -900,174 +932,174 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         st.rerun()
 
     if puede_cargar_papel:
-        st.markdown("##### Cargar indicacion medica en papel")
-        with st.container(border=True):
-            st.caption(
-                "Usa esta opcion cuando el medico deja una indicacion firmada en papel o PDF y queres dejarla trazable en el sistema."
-            )
-            tipo_indicacion_papel = st.radio(
-                "Tipo de indicacion a cargar",
-                ["Medicacion", "Infusion / hidratacion"],
-                horizontal=True,
-                key="tipo_indicacion_papel_receta",
-            )
-            c_p1, c_p2 = st.columns(2)
-            medico_papel = c_p1.text_input(
-                "Medico que indica",
-                key="medico_papel_nombre",
-                value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
-            )
-            matricula_papel = c_p2.text_input("Matricula del medico", key="medico_papel_matricula")
-            c_p3, c_p4 = st.columns([1, 2])
-            dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
-            hora_papel = c_p4.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
+        with st.expander("Cargar indicacion medica en papel o PDF", expanded=False):
+            with st.container(border=True):
+                st.caption(
+                    "Usa esta opcion cuando el medico deja una indicacion firmada en papel o PDF y queres dejarla trazable en el sistema."
+                )
+                tipo_indicacion_papel = st.radio(
+                    "Tipo de indicacion a cargar",
+                    ["Medicacion", "Infusion / hidratacion"],
+                    horizontal=False,
+                    key="tipo_indicacion_papel_receta",
+                )
+                c_p1, c_p2 = st.columns(2)
+                medico_papel = c_p1.text_input(
+                    "Medico que indica",
+                    key="medico_papel_nombre",
+                    value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
+                )
+                matricula_papel = c_p2.text_input("Matricula del medico", key="medico_papel_matricula")
+                c_p3, c_p4 = st.columns([1, 2])
+                dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
+                hora_papel = c_p4.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
 
-            horarios_papel = []
-            detalle_papel = ""
-            solucion_papel = ""
-            volumen_papel = 0
-            velocidad_papel = None
-            alternar_papel = ""
-            plan_papel = []
+                horarios_papel = []
+                detalle_papel = ""
+                solucion_papel = ""
+                volumen_papel = 0
+                velocidad_papel = None
+                alternar_papel = ""
+                plan_papel = []
 
-            if tipo_indicacion_papel == "Medicacion":
-                detalle_papel = st.text_area(
-                    "Resumen de la indicacion",
-                    key="detalle_papel_receta",
-                    placeholder="Ej: Ceftriaxona 1g EV cada 12 horas por 7 dias. Control de temperatura y signos vitales.",
-                )
-                horarios_papel_txt = st.text_input(
-                    "Horarios programados (opcional)",
-                    key="horarios_papel_receta",
-                    placeholder="Ej: 08:00 | 16:00 | 22:00",
-                )
-                horarios_papel = parse_horarios_programados(horarios_papel_txt)
-                if horarios_papel:
-                    st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
-            else:
-                c_inf_p1, c_inf_p2, c_inf_p3 = st.columns(3)
-                solucion_papel = c_inf_p1.selectbox(
-                    "Solucion principal",
-                    ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
-                    key="solucion_papel_receta",
-                )
-                volumen_papel = c_inf_p2.number_input(
-                    "Volumen total (ml)",
-                    min_value=0,
-                    step=50,
-                    value=500,
-                    key="volumen_papel_receta",
-                )
-                velocidad_papel = c_inf_p3.number_input(
-                    "Velocidad (ml/h)",
-                    min_value=0.0,
-                    step=1.0,
-                    value=21.0,
-                    key="velocidad_papel_receta",
-                )
-                alternar_papel = st.selectbox(
-                    "Alternar con",
-                    ["", "Fisiologico 0.9%", "Ringer lactato", "Dextrosa 5%", "Otra"],
-                    key="alternar_papel_receta",
-                )
-                detalle_papel = st.text_area(
-                    "Explicacion medica de la infusion / hidratacion",
-                    key="detalle_papel_infusion_receta",
-                    placeholder="Ej: pasar Dextrosa 5% 500 ml a 21 ml/h, alternar con Ringer lactato por bolsa y aumentar segun tolerancia.",
-                )
-                usar_plan_papel = st.checkbox(
-                    "Plan escalonado en la orden",
-                    value=False,
-                    key="usar_plan_papel_receta",
-                )
-                if usar_plan_papel:
-                    c_inf_p4, c_inf_p5, c_inf_p6, c_inf_p7 = st.columns(4)
-                    inicio_papel = c_inf_p4.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_papel_receta")
-                    maximo_papel = c_inf_p5.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_papel_receta")
-                    incremento_papel = c_inf_p6.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_papel_receta")
-                    intervalo_papel = c_inf_p7.number_input("Cada cuantas horas", min_value=1, step=1, value=1, key="intervalo_papel_receta")
-                    plan_papel = generar_plan_escalonado_ml_h(
-                        inicio_papel,
-                        maximo_papel,
-                        incremento_papel,
-                        hora_papel.strftime("%H:%M"),
-                        intervalo_papel,
+                if tipo_indicacion_papel == "Medicacion":
+                    detalle_papel = st.text_area(
+                        "Resumen de la indicacion",
+                        key="detalle_papel_receta",
+                        placeholder="Ej: Ceftriaxona 1g EV cada 12 horas por 7 dias. Control de temperatura y signos vitales.",
                     )
-                    if plan_papel:
-                        mostrar_dataframe_con_scroll(pd.DataFrame(plan_papel), height=220)
-                        horarios_papel = [item["Hora sugerida"] for item in plan_papel]
-                if not horarios_papel:
-                    horarios_papel = [hora_papel.strftime("%H:%M")]
-                st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_papel)}")
-            adjunto_papel = st.file_uploader(
-                "Subir orden medica en papel o PDF",
-                type=["pdf", "png", "jpg", "jpeg"],
-                key="adjunto_papel_receta",
-            )
-            if st.button("Guardar indicacion en papel", use_container_width=True, key="guardar_indicacion_papel"):
-                if not medico_papel.strip() or not matricula_papel.strip():
-                    st.error("Debe completar medico y matricula para dejar respaldo legal.")
-                elif not detalle_papel.strip():
-                    st.error("Debe resumir la indicacion medica para que se vea rapido en la guardia.")
-                elif adjunto_papel is None:
-                    st.error("Debe adjuntar la orden medica escaneada o fotografiada.")
+                    horarios_papel_txt = st.text_input(
+                        "Horarios programados (opcional)",
+                        key="horarios_papel_receta",
+                        placeholder="Ej: 08:00 | 16:00 | 22:00",
+                    )
+                    horarios_papel = parse_horarios_programados(horarios_papel_txt)
+                    if horarios_papel:
+                        st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
                 else:
-                    adjunto_b64, adjunto_nombre, adjunto_tipo = _archivo_a_base64(adjunto_papel)
-                    texto_guardado = _construir_texto_indicacion(
-                        tipo_indicacion=tipo_indicacion_papel,
-                        med_final=detalle_papel.strip(),
-                        via="Via Endovenosa" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
-                        frecuencia="Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
-                        dias=dias_papel,
-                        solucion=solucion_papel,
-                        volumen_ml=volumen_papel,
-                        velocidad_ml_h=velocidad_papel,
-                        alternar_con=alternar_papel,
-                        detalle_infusion=detalle_papel.strip() if tipo_indicacion_papel == "Infusion / hidratacion" else "",
-                        plan_hidratacion=plan_papel,
+                    c_inf_p1, c_inf_p2, c_inf_p3 = st.columns(3)
+                    solucion_papel = c_inf_p1.selectbox(
+                        "Solucion principal",
+                        ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
+                        key="solucion_papel_receta",
                     )
-                    registro = {
-                        "paciente": paciente_sel,
-                        "med": texto_guardado,
-                        "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                        "dias_duracion": dias_papel,
-                        "medico_nombre": medico_papel.strip(),
-                        "medico_matricula": matricula_papel.strip(),
-                        "firma_b64": "",
-                        "firmado_por": user["nombre"],
-                        "estado_clinico": "Activa",
-                        "estado_receta": "Activa",
-                        "frecuencia": "Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
-                        "hora_inicio": horarios_papel[0] if horarios_papel else hora_papel.strftime("%H:%M"),
-                        "horarios_programados": horarios_papel,
-                        "tipo_indicacion": tipo_indicacion_papel,
-                        "solucion": solucion_papel,
-                        "volumen_ml": volumen_papel,
-                        "velocidad_ml_h": velocidad_papel,
-                        "alternar_con": alternar_papel,
-                        "detalle_infusion": detalle_papel.strip() if tipo_indicacion_papel == "Infusion / hidratacion" else "",
-                        "plan_hidratacion": plan_papel,
-                        "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                        "profesional_estado": user["nombre"],
-                        "matricula_estado": user.get("matricula", ""),
-                        "origen_registro": "Indicacion medica en papel",
-                        "adjunto_papel_b64": adjunto_b64,
-                        "adjunto_papel_nombre": adjunto_nombre,
-                        "adjunto_papel_tipo": adjunto_tipo,
-                        "empresa": mi_empresa,
-                    }
-                    st.session_state["indicaciones_db"].append(registro)
-                    registrar_auditoria_legal(
-                        "Medicacion",
-                        paciente_sel,
-                        "Indicacion medica en papel cargada",
-                        user.get("nombre", ""),
-                        user.get("matricula", ""),
-                        f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
+                    volumen_papel = c_inf_p2.number_input(
+                        "Volumen total (ml)",
+                        min_value=0,
+                        step=50,
+                        value=500,
+                        key="volumen_papel_receta",
                     )
-                    guardar_datos()
-                    st.success("La indicacion medica en papel quedo guardada y disponible en el historial.")
-                    st.rerun()
+                    velocidad_papel = c_inf_p3.number_input(
+                        "Velocidad (ml/h)",
+                        min_value=0.0,
+                        step=1.0,
+                        value=21.0,
+                        key="velocidad_papel_receta",
+                    )
+                    alternar_papel = st.selectbox(
+                        "Alternar con",
+                        ["", "Fisiologico 0.9%", "Ringer lactato", "Dextrosa 5%", "Otra"],
+                        key="alternar_papel_receta",
+                    )
+                    detalle_papel = st.text_area(
+                        "Explicacion medica de la infusion / hidratacion",
+                        key="detalle_papel_infusion_receta",
+                        placeholder="Ej: pasar Dextrosa 5% 500 ml a 21 ml/h, alternar con Ringer lactato por bolsa y aumentar segun tolerancia.",
+                    )
+                    usar_plan_papel = st.checkbox(
+                        "Plan escalonado en la orden",
+                        value=False,
+                        key="usar_plan_papel_receta",
+                    )
+                    if usar_plan_papel:
+                        c_inf_p4, c_inf_p5, c_inf_p6, c_inf_p7 = st.columns(4)
+                        inicio_papel = c_inf_p4.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_papel_receta")
+                        maximo_papel = c_inf_p5.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_papel_receta")
+                        incremento_papel = c_inf_p6.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_papel_receta")
+                        intervalo_papel = c_inf_p7.number_input("Cada cuantas horas", min_value=1, step=1, value=1, key="intervalo_papel_receta")
+                        plan_papel = generar_plan_escalonado_ml_h(
+                            inicio_papel,
+                            maximo_papel,
+                            incremento_papel,
+                            hora_papel.strftime("%H:%M"),
+                            intervalo_papel,
+                        )
+                        if plan_papel:
+                            mostrar_dataframe_con_scroll(pd.DataFrame(plan_papel), height=220)
+                            horarios_papel = [item["Hora sugerida"] for item in plan_papel]
+                    if not horarios_papel:
+                        horarios_papel = [hora_papel.strftime("%H:%M")]
+                    st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_papel)}")
+                adjunto_papel = st.file_uploader(
+                    "Subir orden medica en papel o PDF",
+                    type=["pdf", "png", "jpg", "jpeg"],
+                    key="adjunto_papel_receta",
+                )
+                if st.button("Guardar indicacion en papel", use_container_width=True, key="guardar_indicacion_papel"):
+                    if not medico_papel.strip() or not matricula_papel.strip():
+                        st.error("Debe completar medico y matricula para dejar respaldo legal.")
+                    elif not detalle_papel.strip():
+                        st.error("Debe resumir la indicacion medica para que se vea rapido en la guardia.")
+                    elif adjunto_papel is None:
+                        st.error("Debe adjuntar la orden medica escaneada o fotografiada.")
+                    else:
+                        adjunto_b64, adjunto_nombre, adjunto_tipo = _archivo_a_base64(adjunto_papel)
+                        texto_guardado = _construir_texto_indicacion(
+                            tipo_indicacion=tipo_indicacion_papel,
+                            med_final=detalle_papel.strip(),
+                            via="Via Endovenosa" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                            frecuencia="Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                            dias=dias_papel,
+                            solucion=solucion_papel,
+                            volumen_ml=volumen_papel,
+                            velocidad_ml_h=velocidad_papel,
+                            alternar_con=alternar_papel,
+                            detalle_infusion=detalle_papel.strip() if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                            plan_hidratacion=plan_papel,
+                        )
+                        registro = {
+                            "paciente": paciente_sel,
+                            "med": texto_guardado,
+                            "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                            "dias_duracion": dias_papel,
+                            "medico_nombre": medico_papel.strip(),
+                            "medico_matricula": matricula_papel.strip(),
+                            "firma_b64": "",
+                            "firmado_por": user["nombre"],
+                            "estado_clinico": "Activa",
+                            "estado_receta": "Activa",
+                            "frecuencia": "Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                            "hora_inicio": horarios_papel[0] if horarios_papel else hora_papel.strftime("%H:%M"),
+                            "horarios_programados": horarios_papel,
+                            "tipo_indicacion": tipo_indicacion_papel,
+                            "solucion": solucion_papel,
+                            "volumen_ml": volumen_papel,
+                            "velocidad_ml_h": velocidad_papel,
+                            "alternar_con": alternar_papel,
+                            "detalle_infusion": detalle_papel.strip() if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                            "plan_hidratacion": plan_papel,
+                            "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                            "profesional_estado": user["nombre"],
+                            "matricula_estado": user.get("matricula", ""),
+                            "origen_registro": "Indicacion medica en papel",
+                            "adjunto_papel_b64": adjunto_b64,
+                            "adjunto_papel_nombre": adjunto_nombre,
+                            "adjunto_papel_tipo": adjunto_tipo,
+                            "empresa": mi_empresa,
+                        }
+                        st.session_state["indicaciones_db"].append(registro)
+                        registrar_auditoria_legal(
+                            "Medicacion",
+                            paciente_sel,
+                            "Indicacion medica en papel cargada",
+                            user.get("nombre", ""),
+                            user.get("matricula", ""),
+                            f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
+                        )
+                        guardar_datos()
+                        st.success("La indicacion medica en papel quedo guardada y disponible en el historial.")
+                        st.rerun()
 
     st.divider()
     recs_todas = [r for r in st.session_state.get("indicaciones_db", []) if r.get("paciente") == paciente_sel]
@@ -1165,6 +1197,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         c_res1.metric("Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
         c_res2.metric("No realizadas", int((plan_dia_df.get("Estado") == "No realizada").sum()) if not plan_dia_df.empty else 0)
         c_res3.metric("Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
+        st.caption(
+            "En telefonos viejos o con poca RAM: preferi el formulario Registrar dosis (mas abajo); "
+            "las grillas con muchas columnas estan en secciones colapsables."
+        )
 
         columnas_tabla = [
             col
@@ -1256,98 +1292,105 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             st.info("No se pudo construir la sabana 24 hs con las indicaciones activas.")
 
         if puede_registrar_dosis and matriz_registro_rows:
-            st.caption("Tildado rapido desde la sabana")
-            st.caption("Marca solo los casilleros de la fila y la hora correspondiente. Al guardar se registra la hora real y el usuario.")
-            columnas_mar = ["Prescripcion"] + horas_mar + ["A demanda"]
-            matriz_registro_df = pd.DataFrame(matriz_registro_rows)
-            matriz_registro_df["Prescripcion"] = matriz_registro_df.apply(
-                lambda fila: "\n".join(
-                    [
-                        str(fila.get("Indicacion", "") or "").strip(),
-                        " | ".join(
-                            [
-                                valor
-                                for valor in [
-                                    str(fila.get("Via", "") or "").strip(),
-                                    str(fila.get("Frecuencia", "") or "").strip(),
+            with st.expander(
+                "Grilla 24 h: marcar varias dosis (pesada en celulares viejos; preferi el formulario abajo)",
+                expanded=False,
+            ):
+                st.caption("Tildado rapido desde la sabana")
+                st.caption(
+                    "Marca solo los casilleros de la fila y la hora correspondiente. Al guardar se registra la hora real y el usuario."
+                )
+                columnas_mar = ["Prescripcion"] + horas_mar + ["A demanda"]
+                matriz_registro_df = pd.DataFrame(matriz_registro_rows)
+                matriz_registro_df["Prescripcion"] = matriz_registro_df.apply(
+                    lambda fila: "\n".join(
+                        [
+                            str(fila.get("Indicacion", "") or "").strip(),
+                            " | ".join(
+                                [
+                                    valor
+                                    for valor in [
+                                        str(fila.get("Via", "") or "").strip(),
+                                        str(fila.get("Frecuencia", "") or "").strip(),
+                                    ]
+                                    if valor
                                 ]
-                                if valor
-                            ]
-                        ),
-                        str(fila.get("Detalle", "") or "").strip(),
-                    ]
-                ).strip(),
-                axis=1,
-            )
-            matriz_registro_df = matriz_registro_df[columnas_mar]
-            for hora_col in horas_mar + ["A demanda"]:
-                matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
+                            ),
+                            str(fila.get("Detalle", "") or "").strip(),
+                        ]
+                    ).strip(),
+                    axis=1,
+                )
+                matriz_registro_df = matriz_registro_df[columnas_mar]
+                for hora_col in horas_mar + ["A demanda"]:
+                    matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
 
-            column_config = {
-                "Prescripcion": st.column_config.TextColumn("Prescripcion", width="large"),
-            }
-            for hora_col in horas_mar + ["A demanda"]:
-                column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
+                column_config = {
+                    "Prescripcion": st.column_config.TextColumn("Prescripcion", width="large"),
+                }
+                for hora_col in horas_mar + ["A demanda"]:
+                    column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
 
-            editor_mar_df = st.data_editor(
-                matriz_registro_df,
-                hide_index=True,
-                use_container_width=True,
-                disabled=["Prescripcion"],
-                column_config=column_config,
-                key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
-            )
+                editor_mar_df = st.data_editor(
+                    matriz_registro_df,
+                    hide_index=True,
+                    use_container_width=True,
+                    disabled=["Prescripcion"],
+                    column_config=column_config,
+                    key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
+                )
 
-            if st.button("Guardar sabana tipo prescripcion", use_container_width=True, key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
-                registros_guardados = 0
-                for row_idx in range(len(editor_mar_df)):
-                    for hora_col in horas_mar + ["A demanda"]:
-                        original_valor = matriz_registro_df.at[row_idx, hora_col]
-                        nuevo_valor = editor_mar_df.at[row_idx, hora_col]
+                if st.button("Guardar sabana tipo prescripcion", use_container_width=True, key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
+                    registros_guardados = 0
+                    for row_idx in range(len(editor_mar_df)):
+                        for hora_col in horas_mar + ["A demanda"]:
+                            original_valor = matriz_registro_df.at[row_idx, hora_col]
+                            nuevo_valor = editor_mar_df.at[row_idx, hora_col]
 
-                        if pd.isna(original_valor):
-                            continue
-                        if bool(original_valor):
-                            continue
-                        if pd.isna(nuevo_valor) or not bool(nuevo_valor):
-                            continue
+                            if pd.isna(original_valor):
+                                continue
+                            if bool(original_valor):
+                                continue
+                            if pd.isna(nuevo_valor) or not bool(nuevo_valor):
+                                continue
 
-                        meta = matriz_registro_map.get((row_idx, hora_col))
-                        if not meta:
-                            continue
+                            meta = matriz_registro_map.get((row_idx, hora_col))
+                            if not meta:
+                                continue
 
-                        nombre_med = str(meta.get("medicamento", "") or "").strip()
-                        horario_sel = str(meta.get("horario_programado", "") or "").strip()
-                        if not nombre_med:
-                            continue
+                            nombre_med = str(meta.get("medicamento", "") or "").strip()
+                            horario_sel = str(meta.get("horario_programado", "") or "").strip()
+                            if not nombre_med:
+                                continue
 
-                        _guardar_administracion_medicacion(
-                            paciente_sel,
-                            mi_empresa,
-                            user,
-                            nombre_med,
-                            fecha_hoy,
-                            horario_sel,
-                            "Realizada",
-                        )
-                        registrar_auditoria_legal(
-                            "Medicacion",
-                            paciente_sel,
-                            "Registro de administracion desde sabana 24 hs",
-                            user.get("nombre", ""),
-                            user.get("matricula", ""),
-                            f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
-                        )
-                        registros_guardados += 1
+                            _guardar_administracion_medicacion(
+                                paciente_sel,
+                                mi_empresa,
+                                user,
+                                nombre_med,
+                                fecha_hoy,
+                                horario_sel,
+                                "Realizada",
+                            )
+                            registrar_auditoria_legal(
+                                "Medicacion",
+                                paciente_sel,
+                                "Registro de administracion desde sabana 24 hs",
+                                user.get("nombre", ""),
+                                user.get("matricula", ""),
+                                f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                            )
+                            registros_guardados += 1
 
-                if registros_guardados:
-                    guardar_datos()
-                    st.success(f"Se guardaron {registros_guardados} administraciones desde la sabana 24 hs.")
-                    st.rerun()
-                else:
-                    st.info("No hay nuevos horarios tildados para guardar.")
+                    if registros_guardados:
+                        guardar_datos()
+                        st.success(f"Se guardaron {registros_guardados} administraciones desde la sabana 24 hs.")
+                        st.rerun()
+                    else:
+                        st.info("No hay nuevos horarios tildados para guardar.")
 
         st.markdown("#### Tabla de medicacion indicada")
+        st.caption("En celular se muestran tarjetas por defecto. La tabla ancha solo si la activas y deslizas.")
         if not plan_dia_df.empty:
             df_plan_visible = pd.DataFrame(
                 {
@@ -1378,73 +1421,85 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     "Registrado por": plan_dia_df["Registrado por"],
                 }
             )
-            _render_tabla_clinica(
-                df_plan_visible,
-                key=f"plan_{paciente_sel}",
-                max_height=420,
-                sticky_first_col=False,
-                fit_container=True,
+            mostrar_tabla_planilla = st.checkbox(
+                "Mostrar tabla ancha (deslizar horizontalmente; en iPhone suele ir mejor la vista tarjetas)",
+                value=False,
+                key=f"mostrar_tabla_plan_{paciente_sel}_{fecha_hoy}",
             )
+            if mostrar_tabla_planilla:
+                _render_tabla_clinica(
+                    df_plan_visible,
+                    key=f"plan_{paciente_sel}",
+                    max_height=420,
+                    sticky_first_col=False,
+                )
+            else:
+                _render_dataframe_filas_tarjetas(df_plan_visible)
         else:
-            st.info("No hay medicacion activa cargada para mostrar en la cortina.")
+            st.info("No hay medicacion activa cargada para mostrar en la tabla de hoy.")
 
         if puede_registrar_dosis and not plan_dia_df.empty:
             pendientes_df = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
             if not pendientes_df.empty:
-                st.caption("Tildar administracion desde la tabla")
-                pendientes_df.insert(0, "Administrada", False)
-                editor_columnas = ["Administrada"] + columnas_tabla
-                editor_df = st.data_editor(
-                    pendientes_df[editor_columnas],
-                    hide_index=True,
-                    use_container_width=True,
-                    disabled=[col for col in editor_columnas if col != "Administrada"],
-                    column_config={
-                        "Administrada": st.column_config.CheckboxColumn(
-                            "Tildar",
-                            help="Marca la indicacion como realizada y guarda la hora real.",
-                            default=False,
-                        )
-                    },
-                    key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
-                )
+                with st.expander("Tildar dosis desde tabla detallada (muchas columnas: mejor en tablet o PC)", expanded=False):
+                    st.caption("Tildar administracion desde la tabla")
+                    pendientes_df.insert(0, "Administrada", False)
+                    editor_columnas = ["Administrada"] + columnas_tabla
+                    editor_df = st.data_editor(
+                        pendientes_df[editor_columnas],
+                        hide_index=True,
+                        use_container_width=True,
+                        disabled=[col for col in editor_columnas if col != "Administrada"],
+                        column_config={
+                            "Administrada": st.column_config.CheckboxColumn(
+                                "Tildar",
+                                help="Marca la indicacion como realizada y guarda la hora real.",
+                                default=False,
+                            )
+                        },
+                        key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
+                    )
 
-                if st.button("Guardar tildes de la cortina", use_container_width=True, key=f"guardar_tildes_cortina_{paciente_sel}"):
-                    registros_guardados = 0
-                    for idx, fila in editor_df.iterrows():
-                        if not bool(fila.get("Administrada")):
-                            continue
+                    if st.button(
+                        "Guardar tildes de la tabla",
+                        use_container_width=True,
+                        key=f"guardar_tildes_cortina_{paciente_sel}",
+                    ):
+                        registros_guardados = 0
+                        for idx, fila in editor_df.iterrows():
+                            if not bool(fila.get("Administrada")):
+                                continue
 
-                        horario_sel = str(fila.get("Hora programada", "") or "").strip()
-                        nombre_med = str(fila.get("Medicamento", "") or "").strip()
-                        if not nombre_med:
-                            continue
+                            horario_sel = str(fila.get("Hora programada", "") or "").strip()
+                            nombre_med = str(fila.get("Medicamento", "") or "").strip()
+                            if not nombre_med:
+                                continue
 
-                        _guardar_administracion_medicacion(
-                            paciente_sel,
-                            mi_empresa,
-                            user,
-                            nombre_med,
-                            fecha_hoy,
-                            horario_sel,
-                            "Realizada",
-                        )
-                        registrar_auditoria_legal(
-                            "Medicacion",
-                            paciente_sel,
-                            "Registro de administracion desde tabla de cortina",
-                            user.get("nombre", ""),
-                            user.get("matricula", ""),
-                            f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
-                        )
-                        registros_guardados += 1
+                            _guardar_administracion_medicacion(
+                                paciente_sel,
+                                mi_empresa,
+                                user,
+                                nombre_med,
+                                fecha_hoy,
+                                horario_sel,
+                                "Realizada",
+                            )
+                            registrar_auditoria_legal(
+                                "Medicacion",
+                                paciente_sel,
+                                "Registro de administracion desde tabla de cortina",
+                                user.get("nombre", ""),
+                                user.get("matricula", ""),
+                                f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                            )
+                            registros_guardados += 1
 
-                    if registros_guardados:
-                        guardar_datos()
-                        st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina.")
-                        st.rerun()
-                    else:
-                        st.info("Marca al menos una indicacion para guardar.")
+                        if registros_guardados:
+                            guardar_datos()
+                            st.success(f"Se guardaron {registros_guardados} administraciones desde la tabla.")
+                            st.rerun()
+                        else:
+                            st.info("Marca al menos una indicacion para guardar.")
             else:
                 st.caption("Todas las indicaciones de hoy ya figuran como realizadas.")
 
@@ -1455,7 +1510,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key=f"hidra_{paciente_sel}",
                 max_height=320,
                 sticky_first_col=False,
-                fit_container=True,
             )
 
         if sabana_resumen:
@@ -1465,7 +1519,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key=f"resumen_{paciente_sel}",
                 max_height=260,
                 sticky_first_col=False,
-                fit_container=True,
             )
 
         if puede_registrar_dosis:
@@ -1488,7 +1541,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     opciones_hora if opciones_hora else ["A demanda"],
                     index=idx_hora if opciones_hora else 0,
                 )
-                estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
+                estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=False)
                 justificacion = st.text_input("Justificacion clinica")
                 if st.form_submit_button("Guardar registro", use_container_width=True):
                     if "No realizada" in estado_sel and not justificacion.strip():
@@ -1521,85 +1574,86 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         st.divider()
         if puede_cambiar_estado:
-            c_ed1, c_ed2 = st.columns([3, 2])
-            opciones_recetas = [f"[{r.get('fecha', '')}] {r.get('med', '')}" for r in recs_activas]
-            receta_seleccionada = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas)
-            accion_receta = c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
-            nuevo_texto_receta = ""
-            motivo_cambio = st.text_input("Motivo medico / legal del cambio", key="motivo_cambio_receta")
-            if accion_receta == "Editar indicacion" and receta_seleccionada:
-                nuevo_texto_receta = st.text_input(
-                    "Modificar detalle",
-                    value=receta_seleccionada.split("] ", 1)[1] if "] " in receta_seleccionada else receta_seleccionada,
-                )
-            if st.button("Aplicar cambios", use_container_width=True):
-                for r in st.session_state["indicaciones_db"]:
-                    if r["paciente"] == paciente_sel and f"[{r.get('fecha', '')}] {r.get('med', '')}" == receta_seleccionada:
-                        if accion_receta == "Suspender / Anular":
-                            r["estado_receta"] = "Suspendida"
-                            r["estado_clinico"] = "Suspendida"
-                            r["fecha_suspension"] = ahora().strftime("%d/%m/%Y %H:%M:%S")
-                            r["fecha_estado"] = r["fecha_suspension"]
-                            r["profesional_estado"] = user["nombre"]
-                            r["matricula_estado"] = user.get("matricula", "")
-                            r["motivo_estado"] = motivo_cambio.strip()
-                            registrar_auditoria_legal(
-                                "Medicacion",
-                                paciente_sel,
-                                "Indicacion suspendida",
-                                user.get("nombre", ""),
-                                user.get("matricula", ""),
-                                f"{r.get('med', '')} | Motivo: {motivo_cambio.strip()}",
-                            )
-                        elif accion_receta == "Editar indicacion" and nuevo_texto_receta:
-                            r["estado_receta"] = "Modificada"
-                            r["estado_clinico"] = "Modificada"
-                            r["fecha_suspension"] = ahora().strftime("%d/%m/%Y %H:%M:%S")
-                            r["fecha_estado"] = r["fecha_suspension"]
-                            r["profesional_estado"] = user["nombre"]
-                            r["matricula_estado"] = user.get("matricula", "")
-                            r["motivo_estado"] = motivo_cambio.strip()
-                            st.session_state["indicaciones_db"].append(
-                                {
-                                    "paciente": paciente_sel,
-                                    "med": nuevo_texto_receta,
-                                    "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                                    "dias_duracion": r.get("dias_duracion", 7),
-                                    "medico_nombre": r.get("medico_nombre", ""),
-                                    "medico_matricula": r.get("medico_matricula", ""),
-                                    "firma_b64": r.get("firma_b64", ""),
-                                    "firmado_por": user["nombre"],
-                                    "estado_clinico": "Activa",
-                                    "estado_receta": "Activa",
-                                    "frecuencia": r.get("frecuencia", ""),
-                                    "hora_inicio": r.get("hora_inicio", ""),
-                                    "horarios_programados": r.get("horarios_programados", []),
-                                    "tipo_indicacion": r.get("tipo_indicacion", "Medicacion"),
-                                    "solucion": r.get("solucion", ""),
-                                    "volumen_ml": r.get("volumen_ml", 0),
-                                    "velocidad_ml_h": r.get("velocidad_ml_h"),
-                                    "alternar_con": r.get("alternar_con", ""),
-                                    "detalle_infusion": r.get("detalle_infusion", ""),
-                                    "plan_hidratacion": r.get("plan_hidratacion", []),
-                                    "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                                    "profesional_estado": user["nombre"],
-                                    "matricula_estado": user.get("matricula", ""),
-                                    "motivo_estado": f"Reemplaza indicacion previa. Motivo: {motivo_cambio.strip()}".strip(),
-                                    "origen_registro": "Prescripcion digital",
-                                    "empresa": r.get("empresa", mi_empresa),
-                                }
-                            )
-                            registrar_auditoria_legal(
-                                "Medicacion",
-                                paciente_sel,
-                                "Indicacion modificada",
-                                user.get("nombre", ""),
-                                user.get("matricula", ""),
-                                f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta} | Motivo: {motivo_cambio.strip()}",
-                            )
-                        break
-                guardar_datos()
-                st.rerun()
+            with st.expander("Gestion medica: suspender o editar una indicacion activa", expanded=False):
+                c_ed1, c_ed2 = st.columns([3, 2])
+                opciones_recetas = [f"[{r.get('fecha', '')}] {r.get('med', '')}" for r in recs_activas]
+                receta_seleccionada = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas)
+                accion_receta = c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
+                nuevo_texto_receta = ""
+                motivo_cambio = st.text_input("Motivo medico / legal del cambio", key="motivo_cambio_receta")
+                if accion_receta == "Editar indicacion" and receta_seleccionada:
+                    nuevo_texto_receta = st.text_input(
+                        "Modificar detalle",
+                        value=receta_seleccionada.split("] ", 1)[1] if "] " in receta_seleccionada else receta_seleccionada,
+                    )
+                if st.button("Aplicar cambios", use_container_width=True):
+                    for r in st.session_state["indicaciones_db"]:
+                        if r["paciente"] == paciente_sel and f"[{r.get('fecha', '')}] {r.get('med', '')}" == receta_seleccionada:
+                            if accion_receta == "Suspender / Anular":
+                                r["estado_receta"] = "Suspendida"
+                                r["estado_clinico"] = "Suspendida"
+                                r["fecha_suspension"] = ahora().strftime("%d/%m/%Y %H:%M:%S")
+                                r["fecha_estado"] = r["fecha_suspension"]
+                                r["profesional_estado"] = user["nombre"]
+                                r["matricula_estado"] = user.get("matricula", "")
+                                r["motivo_estado"] = motivo_cambio.strip()
+                                registrar_auditoria_legal(
+                                    "Medicacion",
+                                    paciente_sel,
+                                    "Indicacion suspendida",
+                                    user.get("nombre", ""),
+                                    user.get("matricula", ""),
+                                    f"{r.get('med', '')} | Motivo: {motivo_cambio.strip()}",
+                                )
+                            elif accion_receta == "Editar indicacion" and nuevo_texto_receta:
+                                r["estado_receta"] = "Modificada"
+                                r["estado_clinico"] = "Modificada"
+                                r["fecha_suspension"] = ahora().strftime("%d/%m/%Y %H:%M:%S")
+                                r["fecha_estado"] = r["fecha_suspension"]
+                                r["profesional_estado"] = user["nombre"]
+                                r["matricula_estado"] = user.get("matricula", "")
+                                r["motivo_estado"] = motivo_cambio.strip()
+                                st.session_state["indicaciones_db"].append(
+                                    {
+                                        "paciente": paciente_sel,
+                                        "med": nuevo_texto_receta,
+                                        "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                                        "dias_duracion": r.get("dias_duracion", 7),
+                                        "medico_nombre": r.get("medico_nombre", ""),
+                                        "medico_matricula": r.get("medico_matricula", ""),
+                                        "firma_b64": r.get("firma_b64", ""),
+                                        "firmado_por": user["nombre"],
+                                        "estado_clinico": "Activa",
+                                        "estado_receta": "Activa",
+                                        "frecuencia": r.get("frecuencia", ""),
+                                        "hora_inicio": r.get("hora_inicio", ""),
+                                        "horarios_programados": r.get("horarios_programados", []),
+                                        "tipo_indicacion": r.get("tipo_indicacion", "Medicacion"),
+                                        "solucion": r.get("solucion", ""),
+                                        "volumen_ml": r.get("volumen_ml", 0),
+                                        "velocidad_ml_h": r.get("velocidad_ml_h"),
+                                        "alternar_con": r.get("alternar_con", ""),
+                                        "detalle_infusion": r.get("detalle_infusion", ""),
+                                        "plan_hidratacion": r.get("plan_hidratacion", []),
+                                        "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                                        "profesional_estado": user["nombre"],
+                                        "matricula_estado": user.get("matricula", ""),
+                                        "motivo_estado": f"Reemplaza indicacion previa. Motivo: {motivo_cambio.strip()}".strip(),
+                                        "origen_registro": "Prescripcion digital",
+                                        "empresa": r.get("empresa", mi_empresa),
+                                    }
+                                )
+                                registrar_auditoria_legal(
+                                    "Medicacion",
+                                    paciente_sel,
+                                    "Indicacion modificada",
+                                    user.get("nombre", ""),
+                                    user.get("matricula", ""),
+                                    f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta} | Motivo: {motivo_cambio.strip()}",
+                                )
+                            break
+                    guardar_datos()
+                    st.rerun()
         else:
             st.caption(
                 "La suspension o modificacion de indicaciones queda reservada a medico, coordinacion o administracion con acceso total."
@@ -1609,81 +1663,82 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     st.divider()
     if recs_todas:
-        st.markdown("#### Historial completo de prescripciones")
-        limite_hist = seleccionar_limite_registros(
-            "Prescripciones a mostrar",
-            len(recs_todas),
-            key=f"limite_recetas_hist_{paciente_sel}",
-            default=30,
-        )
+        with st.expander("Historial de prescripciones", expanded=False):
+            st.markdown("#### Historial completo")
+            limite_hist = seleccionar_limite_registros(
+                "Prescripciones a mostrar",
+                len(recs_todas),
+                key=f"limite_recetas_hist_{paciente_sel}",
+                default=30,
+            )
 
-        with st.container(height=450):
-            for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
-                with st.container(border=True):
-                    c_info, c_btn = st.columns([3, 1])
-                    estado_actual = r.get("estado_receta", "Activa")
-                    c_info.markdown(f"**{r.get('fecha', '-')}**")
-                    c_info.markdown(
-                        f"**Indicado por:** {r.get('medico_nombre', '-')} | **Matricula:** {r.get('medico_matricula', '-')}"
-                    )
-                    if r.get("origen_registro"):
-                        c_info.caption(f"Origen: {r.get('origen_registro')}")
-                    c_info.markdown(f"*{r.get('med', '')}*")
-                    c_info.caption(f"Horarios: {format_horarios_receta(r)}")
-                    if r.get("tipo_indicacion") == "Infusion / hidratacion":
-                        detalle_inf = []
-                        if r.get("velocidad_ml_h") not in ("", None):
-                            detalle_inf.append(f"Velocidad: {r.get('velocidad_ml_h')} ml/h")
-                        if r.get("alternar_con"):
-                            detalle_inf.append(f"Alternar con: {r.get('alternar_con')}")
-                        if detalle_inf:
-                            c_info.caption(" | ".join(detalle_inf))
-                        if r.get("plan_hidratacion"):
-                            c_info.caption(f"Plan de hidratacion: {_resumen_plan_hidratacion(r.get('plan_hidratacion', []))}")
-                        if r.get("detalle_infusion"):
-                            c_info.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
-                    if r.get("firma_b64"):
-                        try:
-                            c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
-                        except Exception:
-                            pass
-                    if r.get("adjunto_papel_b64"):
-                        try:
+            with st.container(height=400):
+                for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
+                    with st.container(border=True):
+                        c_info, c_btn = st.columns([3, 1])
+                        estado_actual = r.get("estado_receta", "Activa")
+                        c_info.markdown(f"**{r.get('fecha', '-')}**")
+                        c_info.markdown(
+                            f"**Indicado por:** {r.get('medico_nombre', '-')} | **Matricula:** {r.get('medico_matricula', '-')}"
+                        )
+                        if r.get("origen_registro"):
+                            c_info.caption(f"Origen: {r.get('origen_registro')}")
+                        c_info.markdown(f"*{r.get('med', '')}*")
+                        c_info.caption(f"Horarios: {format_horarios_receta(r)}")
+                        if r.get("tipo_indicacion") == "Infusion / hidratacion":
+                            detalle_inf = []
+                            if r.get("velocidad_ml_h") not in ("", None):
+                                detalle_inf.append(f"Velocidad: {r.get('velocidad_ml_h')} ml/h")
+                            if r.get("alternar_con"):
+                                detalle_inf.append(f"Alternar con: {r.get('alternar_con')}")
+                            if detalle_inf:
+                                c_info.caption(" | ".join(detalle_inf))
+                            if r.get("plan_hidratacion"):
+                                c_info.caption(f"Plan de hidratacion: {_resumen_plan_hidratacion(r.get('plan_hidratacion', []))}")
+                            if r.get("detalle_infusion"):
+                                c_info.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
+                        if r.get("firma_b64"):
+                            try:
+                                c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
+                            except Exception:
+                                pass
+                        if r.get("adjunto_papel_b64"):
+                            try:
+                                c_btn.download_button(
+                                    "Descargar orden adjunta",
+                                    data=base64.b64decode(r["adjunto_papel_b64"]),
+                                    file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
+                                    mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
+                                    key=f"adj_papel_btn_{idx}",
+                                    use_container_width=True,
+                                )
+                            except Exception:
+                                c_info.caption("No se pudo preparar el adjunto cargado.")
+                        if estado_actual != "Activa":
+                            c_info.error(
+                                f"Estado: {estado_actual.upper()} | Fecha: {r.get('fecha_suspension', 'S/D')} | "
+                                f"Profesional: {r.get('profesional_estado', 'S/D')}"
+                            )
+                            if r.get("motivo_estado"):
+                                c_info.caption(f"Motivo: {r.get('motivo_estado')}")
+                        if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_rec_{idx}", value=False):
+                            pdf_bytes = build_prescription_pdf_bytes(
+                                st.session_state,
+                                paciente_sel,
+                                mi_empresa,
+                                r,
+                                {"nombre": r.get("medico_nombre", user.get("nombre", "")), "matricula": r.get("medico_matricula", "")},
+                            )
+                            estado_arch = (r.get("estado_receta") or "Activa").replace(" ", "_")
+                            nombre_arch = (
+                                f"Receta_Legal_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
+                                f"{r.get('fecha', '')[:10].replace('/','')}_{estado_arch}.pdf"
+                            )
                             c_btn.download_button(
-                                "Descargar orden adjunta",
-                                data=base64.b64decode(r["adjunto_papel_b64"]),
-                                file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
-                                mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
-                                key=f"adj_papel_btn_{idx}",
+                                "Descargar PDF legal",
+                                data=pdf_bytes,
+                                file_name=nombre_arch,
+                                mime="application/pdf",
+                                key=f"pdf_rec_btn_{idx}",
                                 use_container_width=True,
                             )
-                        except Exception:
-                            c_info.caption("No se pudo preparar el adjunto cargado.")
-                    if estado_actual != "Activa":
-                        c_info.error(
-                            f"Estado: {estado_actual.upper()} | Fecha: {r.get('fecha_suspension', 'S/D')} | "
-                            f"Profesional: {r.get('profesional_estado', 'S/D')}"
-                        )
-                        if r.get("motivo_estado"):
-                            c_info.caption(f"Motivo: {r.get('motivo_estado')}")
-                    if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_rec_{idx}", value=False):
-                        pdf_bytes = build_prescription_pdf_bytes(
-                            st.session_state,
-                            paciente_sel,
-                            mi_empresa,
-                            r,
-                            {"nombre": r.get("medico_nombre", user.get("nombre", "")), "matricula": r.get("medico_matricula", "")},
-                        )
-                        estado_arch = (r.get("estado_receta") or "Activa").replace(" ", "_")
-                        nombre_arch = (
-                            f"Receta_Legal_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
-                            f"{r.get('fecha', '')[:10].replace('/','')}_{estado_arch}.pdf"
-                        )
-                        c_btn.download_button(
-                            "Descargar PDF legal",
-                            data=pdf_bytes,
-                            file_name=nombre_arch,
-                            mime="application/pdf",
-                            key=f"pdf_rec_btn_{idx}",
-                            use_container_width=True,
-                        )
