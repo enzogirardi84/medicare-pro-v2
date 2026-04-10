@@ -1,15 +1,21 @@
 import base64
-import os
-import sys
-from html import escape
-from importlib import import_module
+import json
+import re
+import urllib.request
+from datetime import datetime
+from io import BytesIO
 from pathlib import Path
+from html import escape
+import sys
+from importlib import import_module
+
+import pytz
+import streamlit as st
+from PIL import Image
 
 ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
-
-import streamlit as st
 
 try:
     from core.auth import check_inactividad, render_login
@@ -29,11 +35,13 @@ except ImportError:
     core_database = import_module("core.database")
     cargar_datos = core_database.cargar_datos
 
+# --- Funciones Importadas desde utils ---
 cargar_texto_asset = core_utils.cargar_texto_asset
 compactar_etiqueta_paciente = getattr(core_utils, "compactar_etiqueta_paciente", lambda nombre, estado: str(nombre or ""))
 es_control_total = getattr(core_utils, "es_control_total", lambda rol: rol in {"SuperAdmin", "Coordinador"})
 inicializar_db_state = core_utils.inicializar_db_state
 obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
+obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", lambda rol: []) # NUEVA FUNCIÓN
 obtener_pacientes_visibles = getattr(
     core_utils,
     "obtener_pacientes_visibles",
@@ -50,6 +58,7 @@ descripcion_acceso_rol = getattr(
     ),
 )
 
+# --- Configuración de Página ---
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
 try:
@@ -57,6 +66,7 @@ try:
 except Exception:
     pass
 
+# --- Inicialización de Base de Datos ---
 if "_db_bootstrapped" not in st.session_state:
     data_inicial = None
     try:
@@ -66,6 +76,7 @@ if "_db_bootstrapped" not in st.session_state:
     inicializar_db_state(data_inicial)
     st.session_state["_db_bootstrapped"] = True
 
+# --- Configuración de Vistas y Roles ---
 VIEW_CONFIG = {
     "Visitas y Agenda": ("views.visitas", "render_visitas"),
     "Dashboard": ("views.dashboard", "render_dashboard"),
@@ -120,67 +131,14 @@ VIEW_ROLE_RULES = {
     "Auditoria Legal": ["Auditoria", "Coordinador"],
 }
 
-VIEW_LABELS = {
-    "Visitas y Agenda": "📍 Visitas y Agenda",
-    "Dashboard": "📊 Dashboard",
-    "Admision": "🧾 Admision",
-    "Clinica": "🩺 Clinica",
-    "Pediatria": "👶 Pediatria",
-    "Evolucion": "✍️ Evolucion",
-    "Estudios": "🧪 Estudios",
-    "Materiales": "📦 Materiales",
-    "Recetas": "💊 Recetas",
-    "Balance": "💧 Balance",
-    "Inventario": "🏥 Inventario",
-    "Caja": "💵 Caja",
-    "Emergencias y Ambulancia": "🚑 Emergencias y Ambulancia",
-    "Escalas Clinicas": "📏 Escalas Clinicas",
-    "Historial": "🗂️ Historial",
-    "PDF": "📄 PDF",
-    "Telemedicina": "🎥 Telemedicina",
-    "Cierre Diario": "🧮 Cierre Diario",
-    "Mi Equipo": "👥 Mi Equipo",
-    "Asistencia en Vivo": "🛰️ Asistencia en Vivo",
-    "RRHH y Fichajes": "⏱️ RRHH y Fichajes",
-    "Auditoria": "🔎 Auditoria",
-    "Auditoria Legal": "⚖️ Auditoria Legal",
-}
-
-
-VIEW_LABELS = {
-    "Visitas y Agenda": "\U0001F4CD Visitas y Agenda",
-    "Dashboard": "\U0001F4CA Dashboard",
-    "Admision": "\U0001FA7E Admision",
-    "Clinica": "\U0001FA7A Clinica",
-    "Pediatria": "\U0001F476 Pediatria",
-    "Evolucion": "\u270D\ufe0f Evolucion",
-    "Estudios": "\U0001F9EA Estudios",
-    "Materiales": "\U0001F4E6 Materiales",
-    "Recetas": "\U0001F48A Recetas",
-    "Balance": "\U0001F4A7 Balance",
-    "Inventario": "\U0001F3E5 Inventario",
-    "Caja": "\U0001F4B5 Caja",
-    "Emergencias y Ambulancia": "\U0001F691 Emergencias y Ambulancia",
-    "Red de Profesionales": "\U0001F91D Red de Profesionales",
-    "Escalas Clinicas": "\U0001F4CF Escalas Clinicas",
-    "Historial": "\U0001F5C2\ufe0f Historial",
-    "PDF": "\U0001F4C4 PDF",
-    "Telemedicina": "\U0001F3A5 Telemedicina",
-    "Cierre Diario": "\U0001F9EE Cierre Diario",
-    "Mi Equipo": "\U0001F465 Mi Equipo",
-    "Asistencia en Vivo": "\U0001F6F0\ufe0f Asistencia en Vivo",
-    "RRHH y Fichajes": "\u23F1\ufe0f RRHH y Fichajes",
-    "Auditoria": "\U0001F50E Auditoria",
-    "Auditoria Legal": "\u2696\ufe0f Auditoria Legal",
-}
-
+# Unificado y limpio
 VIEW_NAV_LABELS = {
     "Visitas y Agenda": "📍 Visitas",
     "Dashboard": "📊 Dashboard",
-    "Admision": "🧾 Admision",
-    "Clinica": "🩺 Clinica",
-    "Pediatria": "👶 Pediatria",
-    "Evolucion": "✍️ Evolucion",
+    "Admision": "🧾 Admisión",
+    "Clinica": "🩺 Clínica",
+    "Pediatria": "👶 Pediatría",
+    "Evolucion": "✍️ Evolución",
     "Estudios": "🧪 Estudios",
     "Materiales": "📦 Materiales",
     "Recetas": "💊 Recetas",
@@ -188,7 +146,7 @@ VIEW_NAV_LABELS = {
     "Inventario": "🏥 Inventario",
     "Caja": "💵 Caja",
     "Emergencias y Ambulancia": "🚑 Emergencias",
-    "Enfermeria": "🩹 Enfermeria",
+    "Red de Profesionales": "🤝 Red",
     "Escalas Clinicas": "📏 Escalas",
     "Historial": "🗂️ Historial",
     "PDF": "📄 PDF",
@@ -197,104 +155,52 @@ VIEW_NAV_LABELS = {
     "Mi Equipo": "👥 Equipo",
     "Asistencia en Vivo": "🛰️ Asistencia",
     "RRHH y Fichajes": "⏱️ RRHH",
-    "Auditoria": "🔎 Auditoria",
+    "Auditoria": "🔎 Auditoría",
     "Auditoria Legal": "⚖️ Legal",
-}
-
-VIEW_NAV_LABELS = {
-    "Visitas y Agenda": "\U0001F4CD Visitas",
-    "Dashboard": "\U0001F4CA Dashboard",
-    "Admision": "\U0001FA7E Admision",
-    "Clinica": "\U0001FA7A Clinica",
-    "Pediatria": "\U0001F476 Pediatria",
-    "Evolucion": "\u270D\ufe0f Evolucion",
-    "Estudios": "\U0001F9EA Estudios",
-    "Materiales": "\U0001F4E6 Materiales",
-    "Recetas": "\U0001F48A Recetas",
-    "Balance": "\U0001F4A7 Balance",
-    "Inventario": "\U0001F3E5 Inventario",
-    "Caja": "\U0001F4B5 Caja",
-    "Emergencias y Ambulancia": "\U0001F691 Emergencias",
-    "Red de Profesionales": "\U0001F91D Red",
-    "Escalas Clinicas": "\U0001F4CF Escalas",
-    "Historial": "\U0001F5C2\ufe0f Historial",
-    "PDF": "\U0001F4C4 PDF",
-    "Telemedicina": "\U0001F3A5 Telemedicina",
-    "Cierre Diario": "\U0001F9EE Cierre",
-    "Mi Equipo": "\U0001F465 Equipo",
-    "Asistencia en Vivo": "\U0001F6F0\ufe0f Asistencia",
-    "RRHH y Fichajes": "\u23F1\ufe0f RRHH",
-    "Auditoria": "\U0001F50E Auditoria",
-    "Auditoria Legal": "\u2696\ufe0f Legal",
 }
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     if not tiene_permiso(rol, VIEW_ROLE_RULES.get(tab_name)):
-        st.error("No tienes permisos para acceder a este modulo.")
+        st.error("No tienes permisos para acceder a este módulo.")
         return
     module_name, function_name = VIEW_CONFIG[tab_name]
     render_fn = getattr(import_module(module_name), function_name)
 
-    if tab_name == "Visitas y Agenda":
-        render_fn(paciente_sel, mi_empresa, user, rol)
-    elif tab_name == "Admision":
-        render_fn(mi_empresa, rol)
-    elif tab_name == "Clinica":
-        render_fn(paciente_sel)
-    elif tab_name == "Pediatria":
-        render_fn(paciente_sel, user)
-    elif tab_name == "Evolucion":
-        render_fn(paciente_sel, user, rol)
-    elif tab_name == "Estudios":
-        render_fn(paciente_sel, user, rol)
-    elif tab_name == "Materiales":
-        render_fn(paciente_sel, mi_empresa, user)
-    elif tab_name == "Recetas":
-        render_fn(paciente_sel, mi_empresa, user, rol)
-    elif tab_name == "Balance":
-        render_fn(paciente_sel, user)
-    elif tab_name == "Inventario":
-        render_fn(mi_empresa)
-    elif tab_name == "Caja":
-        render_fn(paciente_sel, mi_empresa, user, rol)
-    elif tab_name == "Emergencias y Ambulancia":
-        render_fn(paciente_sel, mi_empresa, user)
-    elif tab_name == "Red de Profesionales":
-        render_fn(mi_empresa, user, rol)
-    elif tab_name == "Escalas Clinicas":
-        render_fn(paciente_sel, user)
-    elif tab_name == "Historial":
-        render_fn(paciente_sel)
-    elif tab_name == "PDF":
-        render_fn(paciente_sel, mi_empresa, user, rol)
-    elif tab_name == "Telemedicina":
-        render_fn(paciente_sel)
-    elif tab_name == "Dashboard":
-        render_fn(mi_empresa, rol)
-    elif tab_name == "Cierre Diario":
-        render_fn(mi_empresa, user)
-    elif tab_name == "Mi Equipo":
-        render_fn(mi_empresa, rol, user)
-    elif tab_name == "Asistencia en Vivo":
-        render_fn(mi_empresa, user)
-    elif tab_name == "RRHH y Fichajes":
-        render_fn(mi_empresa, rol, user)
-    elif tab_name == "Auditoria":
-        render_fn(mi_empresa, user)
-    elif tab_name == "Auditoria Legal":
-        render_fn(mi_empresa, user)
+    # Inyección de dependencias estricta según el módulo
+    if tab_name == "Visitas y Agenda": render_fn(paciente_sel, mi_empresa, user, rol)
+    elif tab_name == "Admision": render_fn(mi_empresa, rol)
+    elif tab_name == "Clinica": render_fn(paciente_sel)
+    elif tab_name == "Pediatria": render_fn(paciente_sel, user)
+    elif tab_name == "Evolucion": render_fn(paciente_sel, user, rol)
+    elif tab_name == "Estudios": render_fn(paciente_sel, user, rol)
+    elif tab_name == "Materiales": render_fn(paciente_sel, mi_empresa, user)
+    elif tab_name == "Recetas": render_fn(paciente_sel, mi_empresa, user, rol)
+    elif tab_name == "Balance": render_fn(paciente_sel, user)
+    elif tab_name == "Inventario": render_fn(mi_empresa)
+    elif tab_name == "Caja": render_fn(paciente_sel, mi_empresa, user, rol)
+    elif tab_name == "Emergencias y Ambulancia": render_fn(paciente_sel, mi_empresa, user)
+    elif tab_name == "Red de Profesionales": render_fn(mi_empresa, user, rol)
+    elif tab_name == "Escalas Clinicas": render_fn(paciente_sel, user)
+    elif tab_name == "Historial": render_fn(paciente_sel)
+    elif tab_name == "PDF": render_fn(paciente_sel, mi_empresa, user, rol)
+    elif tab_name == "Telemedicina": render_fn(paciente_sel)
+    elif tab_name == "Dashboard": render_fn(mi_empresa, rol)
+    elif tab_name == "Cierre Diario": render_fn(mi_empresa, user)
+    elif tab_name == "Mi Equipo": render_fn(mi_empresa, rol, user)
+    elif tab_name == "Asistencia en Vivo": render_fn(mi_empresa, user)
+    elif tab_name == "RRHH y Fichajes": render_fn(mi_empresa, rol, user)
+    elif tab_name == "Auditoria": render_fn(mi_empresa, user)
+    elif tab_name == "Auditoria Legal": render_fn(mi_empresa, user)
 
 
 def resolve_current_view(menu):
+    if not menu:
+        return None
     vista_actual = st.session_state.get("modulo_actual", menu[0])
     if vista_actual not in menu:
         vista_actual = menu[0]
     st.session_state["modulo_actual"] = vista_actual
     return vista_actual
-
-
-def _compact_patient_label(nombre, estado):
-    return compactar_etiqueta_paciente(nombre, estado)
 
 
 def _sidebar_patient_card(paciente_sel, detalles):
@@ -313,19 +219,21 @@ def _sidebar_patient_card(paciente_sel, detalles):
 
 
 def render_module_nav(menu, vista_actual):
+    if not menu:
+        return None
     st.markdown(
         """
         <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
             <div class="mc-module-shell-head">
-                <span class="mc-module-shell-kicker">Navegacion</span>
-                <h3 class="mc-module-shell-title">Modulos del sistema</h3>
+                <span class="mc-module-shell-kicker">Navegación</span>
+                <h3 class="mc-module-shell-title">Módulos del sistema</h3>
             </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
     selected = st.pills(
-        "Modulos del sistema",
+        "Módulos del sistema",
         menu,
         default=vista_actual,
         selection_mode="single",
@@ -392,16 +300,6 @@ def obtener_logo_landing():
     return f"<img src='data:image/svg+xml;base64,{encoded}' style='height: 112px; margin-bottom: 24px;'>"
 
 
-def obtener_folleto_landing():
-    posibles = [
-        Path(__file__).resolve().parent / "marketing" / "Folleto_Comercial_MediCare_Enterprise_PRO.pdf",
-        Path(__file__).resolve().parent / "marketing" / "folleto_comercial.pdf",
-    ]
-    for ruta in posibles:
-        if ruta.exists():
-            return ruta
-    return None
-
 if not st.session_state.entered_app:
     logo_html = obtener_logo_landing()
     st.markdown(
@@ -428,25 +326,6 @@ if not st.session_state.entered_app:
                 background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
             }
             div.stDownloadButton { display: none !important; justify-content: center; margin-top: 18px; }
-            div.stDownloadButton > button {
-                background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #38bdf8 100%) !important;
-                color: #ffffff !important;
-                font-size: 1.05rem !important;
-                font-weight: 900 !important;
-                padding: 16px 30px !important;
-                border-radius: 20px !important;
-                border: 1px solid rgba(255,255,255,0.28) !important;
-                box-shadow: 0 18px 38px rgba(29, 78, 216, 0.28), 0 0 0 1px rgba(255,255,255,0.05) inset !important;
-                transition: all 0.25s ease !important;
-                min-width: 390px !important;
-                letter-spacing: 0.2px !important;
-                text-shadow: 0 1px 1px rgba(2, 6, 23, 0.45) !important;
-            }
-            div.stDownloadButton > button:hover {
-                transform: translateY(-3px) scale(1.01) !important;
-                box-shadow: 0 22px 44px rgba(29,78,216,0.34), 0 0 28px rgba(56,189,248,0.20) !important;
-                filter: brightness(1.08);
-            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -591,34 +470,13 @@ if not st.session_state.entered_app:
         "</div>",
     ]
     landing_html = "".join(html_lines)
-    landing_html = (
-        landing_html.replace("ðŸ“", "\U0001F4CD")
-        .replace("ðŸ“„", "\U0001F4C4")
-        .replace("ðŸ’Š", "\U0001F48A")
-        .replace("âœï¸", "\u270D\ufe0f")
-        .replace("ðŸ“¹", "\U0001F4F9")
-        .replace("ðŸ‘¶", "\U0001F476")
-        .replace("ðŸ’§", "\U0001F4A7")
-        .replace("ðŸ“‹", "\U0001F4CB")
-        .replace("EvoluciÃ³n MÃ©dica", "Evolucion Medica")
-        .replace("GestiÃ³n", "Gestion")
-        .replace("automÃ¡tico", "automatico")
-        .replace("prÃ¡ctica", "practica")
-        .replace("biomÃ©trica", "biometrica")
-        .replace("PediatrÃ­a", "Pediatria")
-        .replace("grÃ¡ficas", "graficas")
-        .replace("CÃ¡lculo", "Calculo")
-        .replace("retenciÃ³n", "retencion")
-        .replace("AuditorÃ­a RRHH", "Auditoria RRHH")
-        .replace("desempeÃ±o", "desempeno")
-        .replace("liquidaciÃ³n", "liquidacion")
-    )
     st.markdown(landing_html, unsafe_allow_html=True)
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
     st.stop()
 
+# --- Control de Sesión Principal ---
 render_login()
 check_inactividad()
 
@@ -628,12 +486,16 @@ if not user:
 
 mi_empresa = user["empresa"]
 rol = user["rol"]
+
 logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
 logo_sidebar_b64 = base64.b64encode(logo_sidebar_path.read_bytes()).decode() if logo_sidebar_path.exists() else ""
 
 if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
+# ==========================================
+# MENÚ LATERAL Y RUTEO (INTEGRACIÓN DE ROLES)
+# ==========================================
 with st.sidebar:
     if st.button("Volver a la Publicidad", use_container_width=True):
         st.session_state.entered_app = False
@@ -654,73 +516,26 @@ with st.sidebar:
     st.caption(descripcion_acceso_rol(rol))
     st.divider()
 
-    menu = [
-        "Visitas y Agenda",
-        "Clinica",
-        "Pediatria",
-        "Evolucion",
-        "Estudios",
-        "Materiales",
-        "Recetas",
-        "Balance",
-        "Emergencias y Ambulancia",
-        "Escalas Clinicas",
-        "Historial",
-        "PDF",
-        "Telemedicina",
-    ]
-
-    if rol in ["SuperAdmin", "Coordinador"]:
-        menu = [
-            "Visitas y Agenda",
-            "Dashboard",
-            "Admision",
-            "Clinica",
-            "Pediatria",
-            "Evolucion",
-            "Estudios",
-            "Materiales",
-            "Recetas",
-            "Balance",
-            "Inventario",
-            "Caja",
-            "Emergencias y Ambulancia",
-            "Red de Profesionales",
-            "Escalas Clinicas",
-            "Historial",
-            "PDF",
-            "Telemedicina",
-            "Cierre Diario",
-            "Mi Equipo",
-            "Asistencia en Vivo",
-            "RRHH y Fichajes",
-            "Auditoria",
-            "Auditoria Legal",
-        ]
-    elif rol == "Administrativo":
-        menu = [
-            "Dashboard",
-            "Admision",
-            "Inventario",
-            "Caja",
-            "Red de Profesionales",
-            "Cierre Diario",
-            "Mi Equipo",
-            "Asistencia en Vivo",
-            "RRHH y Fichajes",
-            "Auditoria",
-            "Auditoria Legal",
-        ]
+    # --- Invocamos el Nuevo Motor de Permisos ---
+    menu = obtener_modulos_permitidos(rol)
+    
+    # Validamos extra por si acaso el config base prohíbe algo (Doble seguridad)
     menu = [modulo for modulo in menu if tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
+
+    if not menu:
+        st.error("No tienes módulos asignados. Contacta al administrador.")
+        st.stop()
+
     st.markdown(
         """
         <div class="mc-sidebar-section">
             <div class="mc-sidebar-kicker">Pacientes</div>
-            <div class="mc-sidebar-title">Buscador y seleccion</div>
+            <div class="mc-sidebar-title">Buscador y selección</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    
     buscar = st.text_input("Buscar Paciente", placeholder="Nombre, DNI o palabra clave")
     ver_altas = st.checkbox("Mostrar Pacientes de Alta") if es_control_total(rol) else False
 
@@ -733,11 +548,11 @@ with st.sidebar:
     )
     limite_pacientes = 80
     if not buscar and len(p_f) > limite_pacientes:
-        st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
+        st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribí para filtrar y ahorrar memoria.")
         p_f = p_f[:limite_pacientes]
 
     if not p_f and buscar:
-        st.caption("No hay pacientes que coincidan con la busqueda.")
+        st.caption("No hay pacientes que coincidan con la búsqueda.")
     elif p_f:
         st.caption(f"{len(p_f)} paciente(s) visibles")
 
@@ -756,6 +571,7 @@ with st.sidebar:
         else None
     )
     paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
+    
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
         det_sidebar = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
@@ -780,17 +596,23 @@ with st.sidebar:
                 )
             st.markdown(
                 "<div class='mc-sidebar-alert-shell' style='max-height:360px; overflow-y:auto; padding-right:4px;'>"
-                "<div class='mc-sidebar-title'>Alertas clinicas</div>"
+                "<div class='mc-sidebar-title'>Alertas clínicas</div>"
                 + "".join(bloques)
                 + "</div>",
                 unsafe_allow_html=True,
             )
-    if st.button("Cerrar Sesion", use_container_width=True):
+            
+    if st.button("Cerrar Sesión", use_container_width=True):
         limpiar_sesion_app()
         st.rerun()
 
+# --- Renderizado Principal (Área Central) ---
 vista_actual = resolve_current_view(menu)
 vista_actual = render_module_nav(menu, vista_actual)
+
+if not vista_actual:
+    st.error("No tienes acceso a ninguna vista. Por favor, revisa tus permisos.")
+    st.stop()
 
 if paciente_sel:
     det_actual = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
@@ -804,4 +626,5 @@ if paciente_sel:
         unsafe_allow_html=True,
     )
 
+# Disparo del módulo
 render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol)
