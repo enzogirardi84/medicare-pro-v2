@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 from typing import Dict, Any, List
 
 import streamlit as st
@@ -32,8 +33,28 @@ PLANTILLAS_EVOLUCION = {
     "Cuidados paliativos": "Síntomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las próximas horas:",
 }
 
-# --- Subcomponentes de UI ---
+# --- Funciones de Utilidad ---
+def _es_editable(fecha_str: str, firma_registro: str, nombre_usuario: str) -> tuple[bool, int]:
+    """Evalúa si una evolución tiene menos de 30 minutos y pertenece al usuario actual."""
+    if firma_registro != nombre_usuario:
+        return False, 0
+    try:
+        fecha_dt = datetime.strptime(fecha_str, "%d/%m/%Y %H:%M")
+        ahora_dt = ahora()
+        
+        # Compatibilidad de zonas horarias por si el servidor usa aware datetimes
+        if ahora_dt.tzinfo is not None:
+            ahora_dt = ahora_dt.replace(tzinfo=None)
+            
+        minutos_transcurridos = (ahora_dt - fecha_dt).total_seconds() / 60.0
+        minutos_restantes = int(30 - minutos_transcurridos)
+        
+        return (minutos_transcurridos <= 30), max(0, minutos_restantes)
+    except Exception:
+        return False, 0
 
+
+# --- Subcomponentes de UI ---
 def _render_captura_firma(paciente_sel: str) -> None:
     """Renderiza el bloque de captura de firma digital del paciente/familiar."""
     st.markdown("##### Firma Digital del Paciente / Familiar")
@@ -161,7 +182,7 @@ def _render_historial_evoluciones(evs_paciente: List[Dict[str, Any]], paciente_s
     col_tit, col_btn = st.columns([3, 1])
     col_tit.markdown("#### Historial de Evoluciones Clínicas")
     
-    # Lógica corregida para borrar el último registro de forma segura
+    # Botón de borrado de última evolución (SuperAdmin / Coord)
     if puede_borrar:
         with col_btn:
             confirmar = st.checkbox("Habilitar borrado", key="conf_del_evol")
@@ -187,9 +208,12 @@ def _render_historial_evoluciones(evs_paciente: List[Dict[str, Any]], paciente_s
     registros_mostrar = evs_paciente[-limite_evol:]
     st.caption(f"Mostrando {len(registros_mostrar)} de {len(evs_paciente)} evoluciones (Vista global compartida).")
     
-    # Contenedor con scroll para evitar colapso visual
+    # Contenedor con SCROLL ACTIVO para anti-colapso (height=560)
     with st.container(height=560):
+        # Iteramos buscando el índice real en la DB para poder editar
         for ev in reversed(registros_mostrar):
+            real_index = st.session_state["evoluciones_db"].index(ev)
+            
             with st.container(border=True):
                 col_cab1, col_cab2 = st.columns([3, 1])
                 col_cab1.markdown(f"**🗓️ {ev.get('fecha', 'S/D')}** | 🩺 **{ev.get('firma', 'Profesional S/D')}**")
@@ -197,8 +221,37 @@ def _render_historial_evoluciones(evs_paciente: List[Dict[str, Any]], paciente_s
                 if plantilla := ev.get("plantilla"):
                     if plantilla != "Libre":
                         col_cab2.caption(f"_{plantilla}_")
+                
+                # --- Lógica de Edición Temporal (30 min) ---
+                editable, mins_restantes = _es_editable(ev.get("fecha", ""), ev.get("firma", ""), user.get("nombre", ""))
+                edit_state_key = f"edit_mode_{real_index}"
+                
+                if st.session_state.get(edit_state_key, False):
+                    # Modo Edición Activo
+                    nueva_nota = st.text_area("Editar contenido", value=ev.get("nota", ""), height=150, key=f"text_edit_{real_index}")
+                    col_e1, col_e2 = st.columns(2)
+                    if col_e1.button("Guardar Cambios", key=f"save_{real_index}", type="primary"):
+                        marca_edicion = f"\n\n*(Editado: {ahora().strftime('%H:%M')})*"
+                        st.session_state["evoluciones_db"][real_index]["nota"] = nueva_nota.strip() + marca_edicion
+                        st.session_state[edit_state_key] = False
                         
-                st.write(ev.get("nota", "Sin contenido registrado."))
+                        registrar_auditoria_legal(
+                            "Evolución Clínica", paciente_sel, "Edición de evolución",
+                            user.get("nombre", ""), user.get("matricula", ""),
+                            f"Evolución original de {ev.get('fecha')} editada.",
+                        )
+                        guardar_datos()
+                        st.rerun()
+                    if col_e2.button("Cancelar", key=f"cancel_{real_index}"):
+                        st.session_state[edit_state_key] = False
+                        st.rerun()
+                else:
+                    # Modo Vista Normal
+                    st.write(ev.get("nota", "Sin contenido registrado."))
+                    if editable:
+                        if st.button(f"✏️ Editar (Restan {mins_restantes} min)", key=f"btn_edit_{real_index}"):
+                            st.session_state[edit_state_key] = True
+                            st.rerun()
 
 
 def _render_historial_fotos(fotos_heridas: List[Dict[str, Any]], paciente_sel: str) -> None:
@@ -249,8 +302,6 @@ def render_evolucion(paciente_sel: str, user: Dict[str, Any], rol: str = None) -
         st.caption("La carga de nuevas evoluciones está deshabilitada para tu perfil.")
 
     # Recuperación Global de Datos
-    # Se obtienen TODAS las evoluciones de la DB filtrando solo por paciente (no por usuario)
-    # Esto asegura que todos los profesionales vean las notas de los demás.
     evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
     if evs_paciente:
         _render_historial_evoluciones(evs_paciente, paciente_sel, user, puede_borrar)
