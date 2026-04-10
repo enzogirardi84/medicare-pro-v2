@@ -732,7 +732,17 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     hora_inicio.strftime("%H:%M"),
                 )
                 if horarios_sugeridos:
-                    st.caption(f"Horarios sugeridos para la guardia: {' | '.join(horarios_sugeridos)}")
+                    n_h = len(horarios_sugeridos)
+                    st.caption(f"Horarios sugeridos para la guardia: {n_h} horario(s).")
+                    if n_h > 10:
+                        if st.checkbox(
+                            "Ver lista completa de horarios sugeridos",
+                            value=False,
+                            key="ver_lista_horarios_receta_med",
+                        ):
+                            st.text("\n".join(horarios_sugeridos))
+                    else:
+                        st.caption(" ".join(horarios_sugeridos))
                 else:
                     st.caption("Indicacion sin horario fijo. Se mostrara como dosis unica o a demanda segun la frecuencia.")
             else:
@@ -830,7 +840,17 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         "Referencia general de bomba: ml/h = volumen total (ml) / tiempo (h). "
                         "Verificar siempre con protocolo institucional y criterio medico."
                     )
-                st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_sugeridos)}")
+                n_vis = len(horarios_sugeridos)
+                st.caption(f"Horarios visibles en la sabana diaria: {n_vis} horario(s).")
+                if n_vis > 10:
+                    if st.checkbox(
+                        "Ver lista de horarios en sabana (infusion)",
+                        value=False,
+                        key="ver_horarios_sabana_infusion_receta",
+                    ):
+                        st.text("\n".join(horarios_sugeridos))
+                else:
+                    st.caption(" ".join(horarios_sugeridos))
 
             col_m1, col_m2 = st.columns(2)
             medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
@@ -940,7 +960,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         st.rerun()
 
     if puede_cargar_papel:
-        with st.expander("Cargar indicacion medica en papel o PDF", expanded=False):
+        abrir_papel_receta = st.checkbox(
+            "Mostrar: cargar indicacion medica en papel o PDF",
+            value=False,
+            key=f"abrir_papel_receta_{paciente_sel}",
+        )
+        if abrir_papel_receta:
             with st.container(border=True):
                 st.caption(
                     "Usa esta opcion cuando el medico deja una indicacion firmada en papel o PDF y queres dejarla trazable en el sistema."
@@ -1300,10 +1325,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             st.info("No se pudo construir la sabana 24 hs con las indicaciones activas.")
 
         if puede_registrar_dosis and matriz_registro_rows:
-            with st.expander(
-                "Grilla 24 h: marcar varias dosis (pesada en celulares viejos; preferi el formulario abajo)",
-                expanded=False,
-            ):
+            abrir_grilla_mar = st.checkbox(
+                "Mostrar grilla 24 h para marcar varias dosis (pesada en celulares; preferi el formulario abajo)",
+                value=False,
+                key=f"abrir_grilla_mar_{paciente_sel}_{fecha_hoy}",
+            )
+            if abrir_grilla_mar:
                 st.caption("Tildado rapido desde la sabana")
                 st.caption(
                     "Marca solo los casilleros de la fila y la hora correspondiente. Al guardar se registra la hora real y el usuario."
@@ -1449,7 +1476,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         if puede_registrar_dosis and not plan_dia_df.empty:
             pendientes_df = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
             if not pendientes_df.empty:
-                with st.expander("Tildar dosis desde tabla detallada (muchas columnas: mejor en tablet o PC)", expanded=False):
+                abrir_tabla_tildes = st.checkbox(
+                    "Mostrar tabla detallada para tildar dosis (muchas columnas; mejor en tablet o PC)",
+                    value=False,
+                    key=f"abrir_tabla_tildes_{paciente_sel}_{fecha_hoy}",
+                )
+                if abrir_tabla_tildes:
                     st.caption("Tildar administracion desde la tabla")
                     pendientes_df.insert(0, "Administrada", False)
                     editor_columnas = ["Administrada"] + columnas_tabla
@@ -1582,7 +1614,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         st.divider()
         if puede_cambiar_estado:
-            with st.expander("Gestion medica: suspender o editar una indicacion activa", expanded=False):
+            abrir_gestion_receta = st.checkbox(
+                "Mostrar gestion medica: suspender o editar una indicacion activa",
+                value=False,
+                key=f"abrir_gestion_receta_{paciente_sel}",
+            )
+            if abrir_gestion_receta:
                 c_ed1, c_ed2 = st.columns([3, 2])
                 opciones_recetas = [f"[{r.get('fecha', '')}] {r.get('med', '')}" for r in recs_activas]
                 receta_seleccionada = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas)
@@ -1671,7 +1708,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     st.divider()
     if recs_todas:
-        with st.expander("Historial de prescripciones", expanded=False):
+        abrir_historial_recetas = st.checkbox(
+            "Mostrar historial de prescripciones",
+            value=False,
+            key=f"abrir_historial_recetas_{paciente_sel}",
+        )
+        if abrir_historial_recetas:
             st.markdown("#### Historial completo")
             limite_hist = seleccionar_limite_registros(
                 "Prescripciones a mostrar",
