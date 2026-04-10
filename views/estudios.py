@@ -39,9 +39,16 @@ def render_estudios(paciente_sel, user, rol=None):
             st.markdown("##### Adjuntar Documento (Opcional)")
             archivo_subido = st.file_uploader("Subir archivo, foto de galeria o PDF", type=["png", "jpg", "jpeg", "pdf"], key="uploader_estudio")
 
-            with st.expander("O tomar foto con la camara ahora", expanded=False):
-                usar_cam = st.checkbox("Activar Camara")
-                foto_estudio = st.camera_input("Tomar foto en vivo", key="camara_estudio") if usar_cam else None
+            mostrar_cam_estudio = st.checkbox(
+                "Mostrar opcion de tomar foto con la camara ahora",
+                value=False,
+                key="mostrar_cam_estudio_form",
+            )
+            foto_estudio = None
+            if mostrar_cam_estudio:
+                usar_cam = st.checkbox("Activar camara", key="activar_cam_estudio_form")
+                if usar_cam:
+                    foto_estudio = st.camera_input("Tomar foto en vivo", key="camara_estudio")
 
             if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
                 img_b64 = ""

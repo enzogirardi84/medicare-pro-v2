@@ -141,6 +141,13 @@ div[data-testid="stForm"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
+/* Streamlit expander: sin icono Material evita texto _arrow_right si la fuente no carga */
+[data-testid="stExpander"] summary .material-symbols-rounded,
+[data-testid="stExpander"] summary .material-symbols-outlined,
+[data-testid="stExpander"] summary [data-testid="stIconMaterial"] {
+    display: none !important;
+}
+
 [data-baseweb="input"] > div,
 [data-baseweb="select"] > div,
 [data-baseweb="textarea"] > div,
@@ -966,15 +973,6 @@ hr {
 .mc-rx-card-k {
     color: #94a3b8;
     font-weight: 700;
-}
-
-/* Streamlit expander: si no carga Material Symbols, se ve texto tipo _arrow_right */
-@media (max-width: 900px) {
-    [data-testid="stExpander"] summary .material-symbols-rounded,
-    [data-testid="stExpander"] summary .material-symbols-outlined,
-    [data-testid="stExpander"] summary [data-testid="stIconMaterial"] {
-        display: none !important;
-    }
 }
 
 /* --- Recetas: sábana 24 h y tablas HTML (móvil / tablet / tactil) --- */
