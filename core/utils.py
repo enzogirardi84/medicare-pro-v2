@@ -34,6 +34,7 @@ def obtener_modulos_permitidos(rol: str) -> List[str]:
         "Cierre Diario", "Mi Equipo", "Asistencia en Vivo", "RRHH y Fichajes",
         "Auditoria", "Auditoria Legal"
     ]
+    # Si sos cualquier tipo de Admin o Coordinador, tenés todo
     if any(k in r for k in ["admin", "coord", "geren", "sistemas"]):
         return atencion + gestion
     return atencion if "operativo" in r else ["Visitas y Agenda", "Clinica"]
@@ -50,10 +51,10 @@ def tiene_permiso(rol_actual: str, roles_permitidos: List[str] = None) -> bool:
 
 def descripcion_acceso_rol(rol: str) -> str:
     r = str(rol or "").strip().lower()
-    if "admin" in r: return "Control total de infraestructura y seguridad clínica."
+    if "admin" in r: return "Control total de infraestructura y seguridad."
     return "Acceso asistencial restringido."
 
-# --- UTILIDADES DE ASSETS Y DATOS ---
+# --- UTILIDADES DE ASSETS Y TIEMPO ---
 @st.cache_data(show_spinner=False)
 def cargar_texto_asset(nombre: str) -> str:
     ruta = ASSETS_DIR / nombre
@@ -62,6 +63,7 @@ def cargar_texto_asset(nombre: str) -> str:
 def ahora() -> datetime:
     return datetime.now(ARG_TZ)
 
+# --- MANEJO DE PACIENTES ---
 def compactar_etiqueta_paciente(nombre: str, estado: str) -> str:
     nombre = str(nombre or "").strip()
     tag = " [ALTA]" if estado == "De Alta" else ""
@@ -90,9 +92,9 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
         alertas.append({"nivel": "critica", "titulo": "Alergias", "detalle": alg})
     return alertas
 
-# --- FIRMAS Y MULTIMEDIA (REQUERIDO POR VISITAS.PY) ---
+# --- MULTIMEDIA Y FIRMAS (REQUERIDO POR LAS VISTAS) ---
 def obtener_config_firma(key_prefix: str):
-    """Retorna la configuración del canvas de firma."""
+    """Configuración estándar para el canvas de firma en las vistas."""
     return {"height": 150, "width": 400, "stroke_width": 2, "display_toolbar": True}
 
 def firma_a_base64(canvas_image_data=None, uploaded_file=None) -> str:
