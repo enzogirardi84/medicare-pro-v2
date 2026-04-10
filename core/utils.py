@@ -27,13 +27,14 @@ DEFAULT_ADMIN_USER = {
     "pin": "1234",
 }
 
-# --- NUEVA ESTRUCTURA DE ROLES SIMPLIFICADA ---
+# --- ESTRUCTURA DE ROLES SIMPLIFICADA (NIVELES) ---
 ROLE_LEVELS = {
     "Operativo": 1,
     "Coordinador / Administrativo": 2,
     "Admin": 3,
 }
 
+# Reglas de acciones específicas
 ACTION_ROLE_RULES = {
     "recetas_prescribir": ["Operativo"],
     "recetas_cargar_papel": ["Operativo"],
@@ -53,6 +54,8 @@ ACTION_ROLE_RULES = {
     "equipo_eliminar_usuario": ["Admin"],
 }
 
+# --- FUNCIONES DE ACCESO Y PERMISOS ---
+
 def tiene_permiso(rol_actual, roles_permitidos=None):
     """Evalúa permisos por jerarquía: Niveles superiores heredan permisos de inferiores."""
     if rol_actual == "Admin":
@@ -63,7 +66,10 @@ def tiene_permiso(rol_actual, roles_permitidos=None):
         return True
     
     nivel_actual = ROLE_LEVELS.get(rol_actual, 0)
-    nivel_minimo_requerido = min([ROLE_LEVELS.get(r, 99) for r in roles_permitidos])
+    # Buscamos el nivel mínimo de los roles permitidos
+    roles_validos = [ROLE_LEVELS.get(r, 99) for r in roles_permitidos]
+    nivel_minimo_requerido = min(roles_validos) if roles_validos else 99
+    
     return nivel_actual >= nivel_minimo_requerido
 
 def obtener_modulos_permitidos(rol: str) -> list:
@@ -107,6 +113,26 @@ def descripcion_acceso_rol(rol_actual):
 def es_control_total(rol_actual):
     return rol_actual in {"Admin", "Coordinador / Administrativo"}
 
+# --- UTILIDADES DE ARCHIVOS Y ASSETS (RESTAURADO) ---
+
+@st.cache_data(show_spinner=False)
+def cargar_texto_asset(nombre_archivo):
+    """Carga archivos de texto (como CSS) desde la carpeta assets."""
+    ruta = ASSETS_DIR / nombre_archivo
+    if ruta.exists():
+        return ruta.read_text(encoding="utf-8")
+    return ""
+
+@st.cache_data(show_spinner=False)
+def cargar_json_asset(nombre_archivo):
+    ruta = ASSETS_DIR / nombre_archivo
+    if ruta.exists():
+        with ruta.open("r", encoding="utf-8") as archivo:
+            return json.load(archivo)
+    return {}
+
+# --- MANEJO DE DATOS Y PACIENTES ---
+
 def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empresa"):
     if es_control_total(rol_actual):
         return list(items or [])
@@ -133,13 +159,17 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
         estado = detalles.get("estado", "Activo")
         if estado != "Activo" and not incluir_altas:
             continue
-        dni, os, emp = str(detalles.get("dni", "")), str(detalles.get("obra_social", "")), str(detalles.get("empresa", ""))
+        dni = str(detalles.get("dni", ""))
+        os = str(detalles.get("obra_social", ""))
+        emp = str(detalles.get("empresa", ""))
         etiqueta = compactar_etiqueta_paciente(paciente, estado)
         if busqueda_norm and busqueda_norm not in f"{paciente} {dni} {os} {emp}".lower():
             continue
         pacientes_visibles.append((paciente, etiqueta, dni, os, estado, emp))
     pacientes_visibles.sort(key=lambda x: x[1].lower())
     return pacientes_visibles
+
+# --- AUDITORÍA Y TIEMPO ---
 
 def ahora():
     return datetime.now(ARG_TZ)
@@ -157,10 +187,31 @@ def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula=""
         "referencia": referencia, "empresa": empresa, **extra
     })
 
+# --- ESTADO INICIAL ---
+
 def asegurar_usuarios_base():
     st.session_state.setdefault("usuarios_db", {})
     if "admin" not in st.session_state["usuarios_db"]:
         st.session_state["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
+
+def inicializar_db_state(db):
+    if "db_inicializada" not in st.session_state:
+        claves = [
+            "usuarios_db", "pacientes_db", "detalles_pacientes_db", "vitales_db", 
+            "indicaciones_db", "evoluciones_db", "auditoria_legal_db", "consumos_db",
+            "emergencias_db", "estudios_db", "balance_db", "pediatria_db", "fotos_heridas_db"
+        ]
+        for c in claves: 
+            if c == "usuarios_db" or c == "detalles_pacientes_db":
+                st.session_state.setdefault(c, {})
+            else:
+                st.session_state.setdefault(c, [])
+        if db:
+            for k, v in db.items(): st.session_state[k] = v
+        asegurar_usuarios_base()
+        st.session_state["db_inicializada"] = True
+
+# --- OTROS ---
 
 def obtener_alertas_clinicas(session_state, paciente_sel):
     if not paciente_sel: return []
@@ -172,29 +223,10 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
         alertas.append({"nivel": "media", "titulo": "Patologías", "detalle": pat})
     return alertas[:5]
 
-def parse_fecha_hora(fecha_str):
-    for f in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y", "%Y-%m-%d"):
-        try: return datetime.strptime(str(fecha_str), f)
-        except: continue
-    return datetime.min
-
 def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20, 30, 50, 100)):
     if total <= 0: return 0
     ops = sorted({v for v in opciones if v < total} | {total, min(total, default)})
     return st.selectbox(label, ops, index=ops.index(min(total, default)), key=key)
-
-def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
-    with st.container(height=height, border=border):
-        st.dataframe(df, use_container_width=True, hide_index=hide_index, height=height - 24)
-
-def inicializar_db_state(db):
-    if "db_inicializada" not in st.session_state:
-        claves = ["usuarios_db", "pacientes_db", "detalles_pacientes_db", "vitales_db", "indicaciones_db", "evoluciones_db", "auditoria_legal_db", "consumos_db"]
-        for c in claves: st.session_state.setdefault(c, {} if "db" in c and "pacientes" not in c else [])
-        if db:
-            for k, v in db.items(): st.session_state[k] = v
-        asegurar_usuarios_base()
-        st.session_state["db_inicializada"] = True
 
 def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
     try:
@@ -225,3 +257,7 @@ def firma_a_base64(canvas_image_data=None, uploaded_file=None):
             return base64.b64encode(buf.getvalue()).decode("utf-8")
     except: return ""
     return ""
+
+def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
+    with st.container(height=height, border=border):
+        st.dataframe(df, use_container_width=True, hide_index=hide_index, height=height - 24)
