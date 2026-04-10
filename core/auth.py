@@ -17,7 +17,7 @@ def render_login():
             modo_auth = st.radio(
                 "Acceso",
                 ["Iniciar sesion", "Olvide mi contrasena"],
-                horizontal=True,
+                horizontal=False,
                 label_visibility="collapsed",
             )
 

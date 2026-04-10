@@ -191,8 +191,9 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     vista = st.radio(
         "Vista del modulo",
         ["Registrar evento", "Panel operativo", "Historial y PDF"],
-        horizontal=True,
+        horizontal=False,
         label_visibility="collapsed",
+        key="emergencias_vista_radio",
     )
 
     if vista == "Registrar evento":

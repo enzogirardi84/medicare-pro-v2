@@ -104,7 +104,7 @@ def render_rrhh(mi_empresa, rol, user):
     col_m3.metric("Profesionales", df_fichajes["Profesional"].nunique())
     col_m4.metric("Visitas Completadas", len(df_egresos))
 
-    seccion = st.radio("Vista", ["Historico", "Resumen", "Gestion"], horizontal=True, label_visibility="collapsed")
+    seccion = st.radio("Vista", ["Historico", "Resumen", "Gestion"], horizontal=False, label_visibility="collapsed")
 
     if seccion == "Historico":
         prof_filtrar = st.selectbox("Filtrar por Profesional", ["Todos"] + sorted(df_fichajes["Profesional"].unique().tolist()))

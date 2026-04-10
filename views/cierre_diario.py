@@ -42,7 +42,7 @@ def render_cierre_diario(mi_empresa, user):
     vista = st.radio(
         "Vista del cierre",
         ["Resumen del Dia", "Insumos", "Facturacion", "Stock", "Archivo de Cierres"],
-        horizontal=True,
+        horizontal=False,
         label_visibility="collapsed",
         key="cierre_vista_radio",
     )

@@ -40,7 +40,7 @@ def render_evolucion(paciente_sel, user, rol=None):
         metodo_firma = st.radio(
             "Metodo de firma",
             ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
-            horizontal=True,
+            horizontal=False,
             key="metodo_firma_evolucion",
         )
         firma_subida = None

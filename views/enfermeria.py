@@ -66,7 +66,7 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
     vista = st.radio(
         "Vista enfermería",
         ["Nuevo registro", "Plan actual", "Historial"],
-        horizontal=True,
+        horizontal=False,
         label_visibility="collapsed",
         key="enf_vista",
     )

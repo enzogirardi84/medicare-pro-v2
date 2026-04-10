@@ -53,7 +53,7 @@ descripcion_acceso_rol = getattr(
 )
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 
-APP_BUILD_TAG = "Build 2026-04-10 18:00 ART"
+APP_BUILD_TAG = "Build 2026-04-10 20:00 ART"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 

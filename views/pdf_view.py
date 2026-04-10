@@ -166,7 +166,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
         metodo_firma = st.radio(
             "Metodo de firma del paciente / familiar",
             ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
-            horizontal=True,
+            horizontal=False,
             key=f"cons_method_{paciente_sel}",
         )
         if metodo_firma.startswith("Subir"):

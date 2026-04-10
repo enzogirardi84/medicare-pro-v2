@@ -78,7 +78,7 @@ def render_escalas_clinicas(paciente_sel, user):
         unsafe_allow_html=True,
     )
 
-    escala = st.radio("Escala", ["Glasgow", "Braden", "Barthel", "EVA"], horizontal=True)
+    escala = st.radio("Escala", ["Glasgow", "Braden", "Barthel", "EVA"], horizontal=False)
 
     with st.container(border=True):
         st.markdown(f"### Registro de {escala}")

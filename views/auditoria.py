@@ -19,7 +19,7 @@ def render_auditoria(mi_empresa, user):
     st.subheader("Auditoria General de Movimientos")
     st.info("Consulta completa de movimientos del sistema. Visible para SuperAdmin, Coordinador y Administrativo.")
 
-    seccion = st.radio("Seccion", ["Logs del sistema", "Asistencia por profesional"], horizontal=True, label_visibility="collapsed")
+    seccion = st.radio("Seccion", ["Logs del sistema", "Asistencia por profesional"], horizontal=False, label_visibility="collapsed")
 
     if seccion == "Logs del sistema":
         logs = st.session_state.get("logs_db", [])

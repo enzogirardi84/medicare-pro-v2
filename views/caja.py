@@ -57,7 +57,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             "Bono / Coseguro", "Cobertura / Obra Social", "Cheque",
         ]
         metodo = c3.selectbox("Metodo de Pago", opciones_pago)
-        estado = c4.radio("Estado del Cobro", ["Cobrado", "Pendiente / A Facturar"], horizontal=True)
+        estado = c4.radio("Estado del Cobro", ["Cobrado", "Pendiente / A Facturar"], horizontal=False)
 
         if st.form_submit_button("Registrar Cobro / Practica", use_container_width=True, type="primary"):
             desc_final = practica_manual.strip() if practica_sel == "-- Otro (Especificar manualmente) --" else f"{practica_sel} {('- ' + practica_manual.strip()) if practica_manual.strip() else ''}"
