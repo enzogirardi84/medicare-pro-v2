@@ -8,8 +8,13 @@ from pathlib import Path
 import pandas as pd
 from fpdf import FPDF
 
-from core.export_utils import pdf_output_bytes, safe_text
+# --- Nuevas importaciones para la Historia Clínica Avanzada ---
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from core.export_utils import pdf_output_bytes, safe_text
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
@@ -83,12 +88,10 @@ def build_patient_excel_bytes(session_state, paciente_sel):
     engine = None
     try:
         import openpyxl  # noqa: F401
-
         engine = "openpyxl"
     except Exception:
         try:
             import xlsxwriter  # noqa: F401
-
             engine = "xlsxwriter"
         except Exception:
             return None
@@ -174,141 +177,164 @@ def _write_pairs(pdf, pairs):
         pdf.ln(1)
 
 
+# =====================================================================
+# MOTOR REPORTLAB: HISTORIA CLÍNICA INTEGRAL
+# =====================================================================
 def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    _insert_logo(pdf)
+    """Genera la Historia Clínica Integral usando ReportLab para un diseño tabular profesional."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=40)
+    elements = []
+    styles = getSampleStyleSheet()
 
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
-    nombre_prof = (profesional or {}).get("nombre", "")
-    matricula_prof = (profesional or {}).get("matricula", "")
-    dni_prof = (profesional or {}).get("dni", "")
-
-    pdf.set_xy(40, 12)
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
-    pdf.set_x(40)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, safe_text("Historia Clinica Digital Integral"), ln=True)
-    pdf.ln(8)
-
-    _section_title(pdf, f"Paciente: {paciente_sel}")
-    _write_pairs(
-        pdf,
-        [
-            ("DNI", detalles.get("dni", "S/D")),
-            ("Fecha de nacimiento", detalles.get("fnac", "S/D")),
-            ("Sexo", detalles.get("sexo", "S/D")),
-            ("Telefono", detalles.get("telefono", "S/D")),
-            ("Obra social", detalles.get("obra_social", "S/D")),
-            ("Domicilio", detalles.get("direccion", "S/D")),
-            ("Estado", detalles.get("estado", "Activo")),
-            ("Alergias", detalles.get("alergias", "Sin datos")),
-            ("Patologias / Riesgos", detalles.get("patologias", "Sin datos")),
-        ],
+    # --- Estilos ---
+    title_style = styles['Heading1']
+    title_style.alignment = 1  # Centrado
+    subtitle_style = styles['Heading3']
+    subtitle_style.alignment = 1
+    
+    section_style = ParagraphStyle(
+        'Section', parent=styles['Heading2'], 
+        textColor=colors.HexColor("#1E3A8A"), # Azul oscuro médico
+        spaceAfter=10, spaceBefore=15
     )
-    pdf.ln(2)
+    
+    normal_style = styles['Normal']
+    normal_style.fontSize = 9
 
-    for section_name, records in collect_patient_sections(session_state, paciente_sel).items():
-        if not records:
-            continue
-        _section_title(pdf, section_name)
-        for idx, record in enumerate(records, start=1):
-            if pdf.get_y() > 260:
-                pdf.add_page()
-            pdf.set_font("Arial", "B", 9)
-            pdf.cell(0, 6, safe_text(f"Registro {idx}"), ln=True)
-            pdf.set_font("Arial", "", 8)
-            for key, value in record.items():
-                if key in {
-                    "paciente",
-                    "imagen",
-                    "base64_foto",
-                    "firma_b64",
-                    "firma_img",
-                    "adjunto_papel_b64",
-                    "adjunto_papel_tipo",
-                }:
-                    continue
-                if value in [None, ""]:
-                    continue
-                _write_pairs(pdf, [(key, value)])
-            nota_adjunto = _order_attachment_note(record)
-            if nota_adjunto:
-                _write_pairs(pdf, [("Adjunto legal", nota_adjunto)])
-            firma_medica = _doctor_signature_bytes(record)
-            if firma_medica:
-                tmp_path = None
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-                        tmp.write(firma_medica)
-                        tmp_path = tmp.name
-                    pdf.image(tmp_path, x=150, y=max(pdf.get_y() - 18, 20), w=35)
-                    pdf.ln(18)
-                except Exception:
-                    pass
-                finally:
-                    if tmp_path and os.path.exists(tmp_path):
-                        os.remove(tmp_path)
-            pdf.ln(1)
+    # --- 1. Cabecera Institucional ---
+    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    nombre_empresa = detalles.get("empresa", mi_empresa)
+    
+    elements.append(Paragraph(f"<b>{nombre_empresa.upper()}</b>", title_style))
+    elements.append(Paragraph("HISTORIA CLÍNICA DIGITAL INTEGRAL", subtitle_style))
+    elements.append(Spacer(1, 15))
 
-    consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
-    if consentimientos:
-        ultimo = consentimientos[-1]
-        _section_title(pdf, "Consentimiento de Atencion Domiciliaria")
-        _write_pairs(
-            pdf,
-            [
-                ("Fecha", ultimo.get("fecha", "S/D")),
-                ("Firmante", ultimo.get("firmante", paciente_sel)),
-                ("DNI firmante", ultimo.get("dni_firmante", detalles.get("dni", "S/D"))),
-                ("Vinculo", ultimo.get("vinculo", "Paciente")),
-                ("Aceptacion", "Acepta recibir terapia en domicilio"),
-                ("Observaciones", ultimo.get("observaciones", "")),
-            ],
-        )
+    # --- 2. Panel de Datos Demográficos ---
+    datos_paciente = [
+        ["Paciente:", paciente_sel.split(" - ")[0], "DNI:", detalles.get("dni", "S/D")],
+        ["Fecha Nac.:", detalles.get("fnac", "S/D"), "Sexo:", detalles.get("sexo", "S/D")],
+        ["Obra Social:", detalles.get("obra_social", "S/D"), "Teléfono:", detalles.get("telefono", "S/D")],
+        ["Domicilio:", Paragraph(detalles.get("direccion", "S/D"), normal_style), "Estado:", detalles.get("estado", "Activo")]
+    ]
+    
+    t_paciente = Table(datos_paciente, colWidths=[70, 180, 70, 120])
+    t_paciente.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F3F4F6")),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    elements.append(t_paciente)
+    
+    # Riesgos y Alergias
+    riesgos_data = [
+        ["Alergias:", Paragraph(detalles.get("alergias", "Sin datos"), normal_style)],
+        ["Riesgos/Patologías:", Paragraph(detalles.get("patologias", "Sin datos"), normal_style)]
+    ]
+    t_riesgos = Table(riesgos_data, colWidths=[100, 340])
+    t_riesgos.setStyle(TableStyle([
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor("#991B1B")), # Rojo oscuro
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+    ]))
+    elements.append(t_riesgos)
+    elements.append(Spacer(1, 20))
 
-    y_base = max(pdf.get_y() + 14, 235)
-    if y_base > 260:
-        pdf.add_page()
-        y_base = 235
+    # --- Función Auxiliar para Tablas Internas ---
+    def _crear_tabla_seccion(titulo, cabeceras, claves_datos, registros, anchos_columnas):
+        if not registros:
+            return
+        elements.append(Paragraph(titulo, section_style))
+        
+        datos_tabla = [cabeceras]
+        for reg in registros:
+            fila = []
+            for clave in claves_datos:
+                valor = str(reg.get(clave, "-"))
+                fila.append(Paragraph(valor, normal_style) if len(valor) > 30 else valor)
+            datos_tabla.append(fila)
+            
+        t = Table(datos_tabla, colWidths=anchos_columnas, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#374151")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9FAFB")]),
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 15))
 
-    pdf.line(15, y_base, 85, y_base)
-    pdf.set_xy(15, y_base + 2)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, safe_text(f"Profesional: {nombre_prof or 'S/D'}"), ln=True)
-    pdf.set_x(15)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, safe_text(f"Matricula: {matricula_prof or 'S/D'} | DNI: {dni_prof or 'S/D'}"), ln=True)
+    # --- 3. Renderizado de Secciones ---
+    
+    # Evoluciones y Enfermería
+    evoluciones = session_state.get("evoluciones_db", [])
+    cuidados = session_state.get("cuidados_enfermeria_db", [])
+    registros_clinicos = [r for r in evoluciones + cuidados if r.get("paciente") == paciente_sel]
+    
+    if registros_clinicos:
+        elements.append(Paragraph("Evoluciones Clínicas y Enfermería", section_style))
+        for reg in sorted(registros_clinicos, key=lambda x: x.get("fecha", "")):
+            fecha = reg.get("fecha", "S/D")
+            firma = reg.get("firma", reg.get("profesional", "S/D"))
+            nota = reg.get("nota", reg.get("observaciones", "Sin detalle"))
+            
+            bloque = []
+            bloque.append(Paragraph(f"<b>{fecha}</b> | Profesional: {firma}", styles['Italic']))
+            bloque.append(Spacer(1, 3))
+            bloque.append(Paragraph(nota, normal_style))
+            bloque.append(Spacer(1, 10))
+            elements.append(KeepTogether(bloque))
 
-    pdf.line(120, y_base, 190, y_base)
-    pdf.set_xy(120, y_base + 2)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, safe_text("Paciente / Familiar"), ln=True)
-    pdf.set_x(120)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
-    pdf.set_x(120)
-    pdf.cell(70, 5, safe_text(f"DNI: {detalles.get('dni', 'S/D')}"), ln=True)
+    # Signos Vitales
+    vits = [v for v in session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
+    _crear_tabla_seccion(
+        "Control de Signos Vitales",
+        ["Fecha", "T.A.", "F.C.", "F.R.", "SatO2", "Temp", "HGT"],
+        ["fecha", "TA", "FC", "FR", "Sat", "Temp", "HGT"],
+        vits, [85, 60, 50, 50, 50, 50, 50]
+    )
 
-    firma_bytes = _patient_signature_bytes(session_state, paciente_sel)
-    if firma_bytes:
-        tmp_path = None
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-                tmp.write(firma_bytes)
-                tmp_path = tmp.name
-            pdf.image(tmp_path, x=125, y=y_base - 20, w=50)
-        except Exception:
-            pass
-        finally:
-            if tmp_path and os.path.exists(tmp_path):
-                os.remove(tmp_path)
+    # Balance Hídrico
+    balances = [b for b in session_state.get("balance_db", []) if b.get("paciente") == paciente_sel]
+    _crear_tabla_seccion(
+        "Balance Hídrico",
+        ["Fecha", "Turno", "Ingresos", "Egresos", "Balance Total", "Firma"],
+        ["fecha", "turno", "ingresos", "egresos", "balance", "firma"],
+        balances, [80, 100, 55, 55, 60, 90]
+    )
 
-    return pdf_output_bytes(pdf)
+    # Plan Terapéutico
+    meds = [m for m in session_state.get("indicaciones_db", []) if m.get("paciente") == paciente_sel]
+    _crear_tabla_seccion(
+        "Plan Terapéutico (Histórico y Activo)",
+        ["Fecha", "Medicación e Indicación", "Estado", "Profesional"],
+        ["fecha", "med", "estado_receta", "medico_nombre"],
+        meds, [75, 205, 60, 100]
+    )
+
+    # Materiales Utilizados
+    materiales = [m for m in session_state.get("consumos_db", []) if m.get("paciente") == paciente_sel]
+    _crear_tabla_seccion(
+        "Materiales e Insumos Utilizados",
+        ["Fecha", "Insumo / Descripción", "Cantidad", "Firma"],
+        ["fecha", "insumo", "cantidad", "firma"],
+        materiales, [90, 200, 60, 90]
+    )
+
+    doc.build(elements)
+    return buffer.getvalue()
 
 
+# =====================================================================
+# EXPORTACIONES RESTANTES (MANTIENEN FPDF)
+# =====================================================================
 def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
     detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     pdf = FPDF()
