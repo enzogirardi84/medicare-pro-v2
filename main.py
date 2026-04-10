@@ -72,7 +72,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     else: render_fn(paciente_sel, user)
 
 # =====================================================================
-# LANDING PAGE (PUBLICIDAD ULTRA-PREMIUM V3.2 - FIX RENDER + OPTIMIZADO)
+# LANDING PAGE (PUBLICIDAD ULTRA-PREMIUM V3.2 - 100% FUNCIONAL)
 # =====================================================================
 if not st.session_state.get("entered_app", False):
     
@@ -80,9 +80,7 @@ if not st.session_state.get("entered_app", False):
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         
-        .stApp {
-            background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 100%) !important;
-        }
+        .stApp { background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 100%) !important; }
         #MainMenu, header, footer, .st-emotion-cache-1r4qj8v { visibility: hidden !important; }
         
         .landing-container {
@@ -90,7 +88,7 @@ if not st.session_state.get("entered_app", False):
             color: #f8fafc;
             max-width: 1280px;
             margin: 0 auto;
-            padding: 40px 20px 80px;
+            padding: 40px 20px 100px;
             text-align: center;
         }
         
@@ -132,10 +130,7 @@ if not st.session_state.get("entered_app", False):
             margin-bottom: 60px;
         }
         
-        .stat-item {
-            text-align: center;
-            min-width: 110px;
-        }
+        .stat-item { text-align: center; min-width: 110px; }
         .stat-num {
             font-size: 2.6rem;
             font-weight: 900;
@@ -175,11 +170,7 @@ if not st.session_state.get("entered_app", False):
             box-shadow: 0 20px 40px rgba(56, 189, 248, 0.15);
         }
         
-        .card-icon { 
-            font-size: 3rem; 
-            margin-bottom: 20px; 
-            display: block;
-        }
+        .card-icon { font-size: 3rem; margin-bottom: 20px; display: block; }
         .card-title { 
             font-size: 1.35rem; 
             font-weight: 700; 
@@ -226,7 +217,6 @@ if not st.session_state.get("entered_app", False):
             border: 1px solid rgba(255,255,255,0.08);
         }
         
-        /* Estilo premium para el botón de Streamlit */
         .stButton > button {
             background: linear-gradient(90deg, #38bdf8, #818cf8) !important;
             color: white !important;
@@ -236,8 +226,6 @@ if not st.session_state.get("entered_app", False):
             border-radius: 50px !important;
             box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4) !important;
             transition: all 0.3s ease !important;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
         .stButton > button:hover {
             transform: scale(1.05);
@@ -249,8 +237,8 @@ if not st.session_state.get("entered_app", False):
         <div class="badge-new">Versión 9.12 Enterprise PRO</div>
         <h1 class="main-title">Escale su Operación<br>Médica al Siguiente Nivel</h1>
         <p class="subtitle">
-            La plataforma líder en gestión clínica y operativa. Control total sobre equipos,<br>
-            insumos y trazabilidad legal de pacientes.
+            La plataforma líder en gestión clínica y operativa.<br>
+            Control total sobre equipos, insumos y trazabilidad legal de pacientes.
         </p>
 
         <div class="stats-container">
@@ -313,7 +301,6 @@ if not st.session_state.get("entered_app", False):
 
     st.markdown(html_publicidad, unsafe_allow_html=True)
     
-    # Botón de ingreso (ahora con estilo premium gracias al CSS)
     st.markdown("<br><br>", unsafe_allow_html=True)
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True):
         st.session_state.entered_app = True
