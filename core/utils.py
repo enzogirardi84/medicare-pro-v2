@@ -622,3 +622,63 @@ def inicializar_db_state(db):
                 st.session_state[k] = v
         asegurar_usuarios_base()
         st.session_state["db_inicializada"] = True
+
+
+# =====================================================================
+# MOTOR DE PERMISOS: OBTENER MÓDULOS PERMITIDOS SEGÚN EL ROL
+# =====================================================================
+def obtener_modulos_permitidos(rol: str) -> list:
+    """
+    Devuelve la lista estricta de módulos a los que tiene acceso el rol actual.
+    Sirve para dibujar o esconder los botones en el menú de navegación (main.py).
+    """
+    rol_seguro = str(rol or "").strip()
+
+    # 1. ACCESO TOTAL (Directores y Jefatura)
+    if rol_seguro in ["SuperAdmin", "Coordinador"]:
+        return [
+            "Visitas y Agenda", "Clinica", "Pediatria", "Evolucion", "Estudios",
+            "Materiales", "Recetas", "Balance", "Emergencias y Ambulancia",
+            "Escalas Clinicas", "Historial", "PDF", "Telemedicina",
+            "Dashboard", "Admision", "Inventario", "Caja", "Red de Profesionales",
+            "Cierre Diario", "Mi Equipo", "Asistencia en Vivo", "RRHH y Fichajes",
+            "Auditoria", "Auditoria Legal"
+        ]
+        
+    # 2. PERFIL CLÍNICO (Profesionales de Salud en Domicilio o Consultorio)
+    # Solo ven la atención del paciente.
+    if rol_seguro in ["Medico", "Enfermeria", "Operativo"]:
+        return [
+            "Visitas y Agenda", 
+            "Clinica", 
+            "Pediatria", 
+            "Evolucion", 
+            "Estudios", 
+            "Materiales", 
+            "Recetas", 
+            "Balance", 
+            "Emergencias y Ambulancia", 
+            "Escalas Clinicas", 
+            "Historial", 
+            "PDF", 
+            "Telemedicina"
+        ]
+        
+    # 3. PERFIL ADMINISTRATIVO (Recepción, Facturación y Control)
+    if rol_seguro in ["Administrativo", "Auditoria"]:
+        return [
+            "Dashboard", 
+            "Admision", 
+            "Inventario", 
+            "Caja", 
+            "Red de Profesionales", 
+            "Cierre Diario", 
+            "Mi Equipo", 
+            "Asistencia en Vivo", 
+            "RRHH y Fichajes", 
+            "Auditoria", 
+            "Auditoria Legal"
+        ]
+        
+    # Si el rol es desconocido o no está seteado, por seguridad no ve nada.
+    return []
