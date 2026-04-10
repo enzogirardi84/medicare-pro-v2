@@ -22,9 +22,8 @@ except ImportError as e:
     st.stop()
 
 # --- ASIGNACIÓN DE UTILIDADES ---
-# Usamos getattr para evitar el AttributeError si alguna función falta en utils.py
 cargar_texto_asset = getattr(core_utils, "cargar_texto_asset", lambda x: "")
-es_control_total = getattr(core_utils, "es_control_total", lambda r: r in ["Admin", "Coordinador / Administrativo"])
+es_control_total = core_utils.es_control_total
 inicializar_db_state = core_utils.inicializar_db_state
 obtener_modulos_permitidos = core_utils.obtener_modulos_permitidos
 obtener_pacientes_visibles = core_utils.obtener_pacientes_visibles
@@ -40,7 +39,6 @@ css_content = cargar_texto_asset('style.css')
 if css_content:
     st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
 
-# Bootstrapping de la Base de Datos
 if "_db_bootstrapped" not in st.session_state:
     try:
         data_inicial = cargar_datos()
@@ -90,7 +88,6 @@ VIEW_NAV_LABELS = {
 }
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
-    """Enrutador de renderizado con inyección de dependencias."""
     if tab_name not in VIEW_CONFIG: return
     module_name, function_name = VIEW_CONFIG[tab_name]
     render_fn = getattr(import_module(module_name), function_name)
@@ -108,26 +105,75 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     else:
         render_fn(paciente_sel, user)
 
-# --- LANDING PAGE (PUBLICIDAD) ---
+# --- LANDING PAGE (PUBLICIDAD COMPLETA) ---
 if not st.session_state.get("entered_app", False):
-    st.markdown(
-        """
-        <div style='text-align:center; padding: 100px 20px;'>
-            <h1 style='font-size: 4rem; font-weight: 900; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-                MediCare Enterprise PRO
-            </h1>
-            <p style='color: #cbd5e1; font-size: 1.5rem; margin-bottom: 40px;'>
-                Gestión clínica, operativa y legal en una sola plataforma integrada.
-            </p>
+    st.markdown("""
+        <style>
+            #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
+            .stApp { background-color: #020617 !important; }
+            .landing-page { font-family: 'Inter', sans-serif; color: #f8fafc; display: flex; flex-direction: column; align-items: center; padding: 60px 20px; }
+            .title { font-size: 3.8rem; font-weight: 900; text-align: center; line-height: 1; margin-bottom: 20px; background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .subtitle { font-size: 1.3rem; color: #cbd5e1; text-align: center; max-width: 850px; margin-bottom: 50px; line-height: 1.6; }
+            .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; max-width: 1200px; width: 100%; margin-bottom: 60px; }
+            .glass-card { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 30px; transition: 0.3s; }
+            .glass-card:hover { transform: translateY(-5px); border-color: #38bdf8; }
+            .card-icon { font-size: 2.5rem; margin-bottom: 15px; }
+            .card-title { font-size: 1.4rem; font-weight: 700; color: white; margin-bottom: 10px; }
+            .card-text { color: #94a3b8; font-size: 0.95rem; }
+            .contact-box { background: linear-gradient(145deg, #0f172a, #1e293b); border: 1px solid #38bdf8; border-radius: 30px; padding: 40px; text-align: center; max-width: 900px; width: 100%; }
+        </style>
+        <div class="landing-page">
+            <h1 class="title">MediCare Enterprise PRO</h1>
+            <p class="subtitle">La plataforma integral definitiva para la gestión de salud. Ordenamos la complejidad clínica, operativa y legal en un solo ecosistema digital diseñado para el alto rendimiento.</p>
+            
+            <div class="grid-cards">
+                <div class="glass-card">
+                    <div class="card-icon">📍</div>
+                    <div class="card-title">Trazabilidad GPS</div>
+                    <div class="card-text">Control de asistencia y visitas verificado por geolocalización en tiempo real.</div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-icon">🩺</div>
+                    <div class="card-title">Historia Clínica</div>
+                    <div class="card-text">Evoluciones multidisciplinarias, signos vitales y escalas con respaldo legal.</div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">Gestión de Stock</div>
+                    <div class="card-text">Inventario inteligente con descuento automático de insumos por cada práctica.</div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-icon">⚖️</div>
+                    <div class="card-title">Auditoría Legal</div>
+                    <div class="card-text">Trazabilidad completa de cada acción realizada para máxima seguridad institucional.</div>
+                </div>
+            </div>
+
+            <div class="contact-box">
+                <h2 style="color:white; margin-bottom:15px;">¿Necesitas soporte técnico o implementación?</h2>
+                <p style="color:#cbd5e1; margin-bottom:30px;">Comunícate directamente con los desarrolladores del sistema.</p>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; min-width: 250px;">
+                        <h4 style="color:#38bdf8; margin:0;">Enzo N. Girardi</h4>
+                        <p style="font-size:0.8rem; color:#94a3b8;">Desarrollo y Soporte</p>
+                        <a href="https://wa.me/5493584302024" style="color:white; text-decoration:none; font-weight:700;">WhatsApp 📲</a>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; min-width: 250px;">
+                        <h4 style="color:#38bdf8; margin:0;">Dario Lanfranco</h4>
+                        <p style="font-size:0.8rem; color:#94a3b8;">Implementación y Contratos</p>
+                        <a href="https://wa.me/5493584201263" style="color:white; text-decoration:none; font-weight:700;">WhatsApp 📲</a>
+                    </div>
+                </div>
+            </div>
         </div>
-        """, unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
+    
     if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True):
         st.session_state.entered_app = True
         st.rerun()
     st.stop()
 
-# --- CONTROL DE ACCESO ---
+# --- CONTROL DE ACCESO (POST-LANDING) ---
 render_login()
 check_inactividad()
 
@@ -136,18 +182,17 @@ if not user: st.stop()
 
 mi_empresa, rol = user["empresa"], user["rol"]
 
-# --- SIDEBAR (GESTIÓN DE PACIENTES) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.markdown(f"### {mi_empresa}\n**{user['nombre']}** ({rol})")
     st.caption(descripcion_acceso_rol(rol))
     st.divider()
     
-    # Motor de Permisos (Obtiene los módulos según los 3 niveles de acceso)
     menu = obtener_modulos_permitidos(rol)
     
     st.markdown("### 👤 Pacientes")
     buscar = st.text_input("Buscador rápido", placeholder="Nombre o DNI...")
-    ver_altas = st.checkbox("Incluir Pacientes de Alta") if es_control_total(rol) else False
+    ver_altas = st.checkbox("Incluir Altas") if es_control_total(rol) else False
     
     p_f = obtener_pacientes_visibles(st.session_state, mi_empresa, rol, incluir_altas=ver_altas, busqueda=buscar)
     
@@ -166,27 +211,19 @@ with st.sidebar:
 
 # --- NAVEGACIÓN Y RENDERIZADO CENTRAL ---
 if not menu:
-    st.error("No tienes módulos asignados. Contacta al administrador.")
+    st.error("No tienes módulos asignados.")
 else:
     vista_actual = st.session_state.get("modulo_actual", menu[0])
     if vista_actual not in menu: vista_actual = menu[0]
     
-    # Selector de módulos estilo Pills
-    selected = st.pills(
-        "Módulos del Sistema", 
-        menu, 
-        default=vista_actual, 
-        format_func=lambda x: VIEW_NAV_LABELS.get(x, x),
-        key="main_nav_pills"
-    )
+    selected = st.pills("Módulos", menu, default=vista_actual, format_func=lambda x: VIEW_NAV_LABELS.get(x, x), key="main_nav_pills")
     
     if selected:
         st.session_state["modulo_actual"] = selected
         vista_actual = selected
     
-    # Header del paciente activo en el área central
     if paciente_sel:
         det = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
-        st.info(f"**Atendiendo a:** {paciente_sel} | **DNI:** {det.get('dni','S/D')} | **O.S:** {det.get('obra_social','S/D')}")
+        st.info(f"**Atendiendo a:** {paciente_sel} | **DNI:** {det.get('dni','S/D')}")
 
     render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol)
