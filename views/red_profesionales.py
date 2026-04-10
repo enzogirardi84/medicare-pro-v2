@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 TIPOS_PERFIL = [
@@ -134,16 +134,29 @@ def _servicios_sugeridos(tipo):
     return SERVICIOS_POR_TIPO.get(tipo, SERVICIOS_POR_TIPO["Otro"])
 
 
+def _identificador_profesional(user):
+    login = str(user.get("usuario_login", "") or "").strip().lower()
+    if login:
+        return login
+    return str(user.get("nombre", "") or "").strip().lower()
+
+
 def _obtener_profesional_actual(user, mi_empresa):
-    nombre = user.get("nombre", "")
+    identificador = _identificador_profesional(user)
+    nombre = str(user.get("nombre", "") or "").strip()
     registros = st.session_state.get("profesionales_red_db", [])
     for reg in registros:
-        if reg.get("nombre") == nombre and reg.get("empresa") == mi_empresa:
+        mismo_login = str(reg.get("usuario_login", "") or "").strip().lower() == identificador if identificador else False
+        mismo_nombre = reg.get("nombre") == nombre and reg.get("empresa") == mi_empresa
+        if reg.get("empresa") == mi_empresa and (mismo_login or mismo_nombre):
             return reg
     return None
 
 
 def render_red_profesionales(mi_empresa, user, rol):
+    rol_normalizado = str(rol or "").strip().lower()
+    acceso_total = es_control_total(rol_normalizado)
+    usuario_login = _identificador_profesional(user)
     st.markdown(
         """
         <div class="mc-hero">
@@ -226,6 +239,8 @@ def render_red_profesionales(mi_empresa, user, rol):
             if st.button("Guardar perfil profesional", use_container_width=True, type="primary"):
                 nuevo = {
                     "nombre": nombre.strip() or user.get("nombre", ""),
+                    "usuario_login": usuario_login,
+                    "usuario_base": user.get("nombre", ""),
                     "tipo": tipo,
                     "titulo": titulo.strip(),
                     "especialidad": especialidad.strip(),
@@ -243,7 +258,9 @@ def render_red_profesionales(mi_empresa, user, rol):
                 registros = st.session_state.get("profesionales_red_db", [])
                 reemplazado = False
                 for idx, reg in enumerate(registros):
-                    if reg.get("nombre") == user.get("nombre", "") and reg.get("empresa") == mi_empresa:
+                    mismo_login = str(reg.get("usuario_login", "") or "").strip().lower() == usuario_login if usuario_login else False
+                    mismo_nombre = reg.get("nombre") == user.get("nombre", "") and reg.get("empresa") == mi_empresa
+                    if reg.get("empresa") == mi_empresa and (mismo_login or mismo_nombre):
                         registros[idx] = nuevo
                         reemplazado = True
                         break
@@ -370,7 +387,7 @@ def render_red_profesionales(mi_empresa, user, rol):
 
         solicitudes = [
             x for x in st.session_state.get("solicitudes_servicios_db", [])
-            if x.get("empresa") == mi_empresa or rol == "SuperAdmin"
+            if x.get("empresa") == mi_empresa or acceso_total
         ]
         if not solicitudes:
             st.info("Todavia no hay solicitudes cargadas.")

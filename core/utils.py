@@ -13,7 +13,13 @@ from PIL import Image
 # Zona horaria fija para Argentina
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador"}
+ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador", "administrativo"}
+LEGACY_ROLE_TO_PROFILE = {
+    "medico": "Medico",
+    "enfermeria": "Enfermeria",
+    "operativo": "Operativo",
+    "auditoria": "Administrativo",
+}
 
 
 DEFAULT_ADMIN_USER = {
@@ -24,6 +30,7 @@ DEFAULT_ADMIN_USER = {
     "matricula": "M.P 21947",
     "dni": "37108100",
     "titulo": "Director de Sistemas",
+    "perfil_profesional": "Direccion",
     "estado": "Activo",
     "pin": "1234",
 }
@@ -46,6 +53,124 @@ ACTION_ROLE_RULES = {
     "equipo_cambiar_estado": ["Coordinador"],
     "equipo_eliminar_usuario": ["SuperAdmin"],
 }
+
+
+def _texto_normalizado(valor):
+    return str(valor or "").strip().lower()
+
+
+def inferir_perfil_profesional(data):
+    if not isinstance(data, dict):
+        return ""
+
+    perfil_cargado = str(data.get("perfil_profesional", "") or "").strip()
+    if perfil_cargado:
+        return perfil_cargado
+
+    rol_normalizado = _texto_normalizado(data.get("rol", ""))
+    titulo_normalizado = _texto_normalizado(data.get("titulo", ""))
+
+    if rol_normalizado in LEGACY_ROLE_TO_PROFILE:
+        return LEGACY_ROLE_TO_PROFILE[rol_normalizado]
+    if rol_normalizado == "coordinador":
+        return "Coordinacion"
+    if rol_normalizado in {"superadmin", "admin"}:
+        return "Direccion"
+    if rol_normalizado == "administrativo":
+        return "Administrativo"
+    if "medic" in titulo_normalizado:
+        return "Medico"
+    if "enfermer" in titulo_normalizado:
+        return "Enfermeria"
+    if any(
+        clave in titulo_normalizado
+        for clave in (
+            "kinesi",
+            "fono",
+            "nutri",
+            "psico",
+            "acompan",
+            "terapeut",
+            "trabajador",
+            "social",
+            "cuidad",
+            "auxiliar",
+        )
+    ):
+        return "Operativo"
+    if any(clave in titulo_normalizado for clave in ("admin", "recep", "factur", "secretar")):
+        return "Administrativo"
+    if "coord" in titulo_normalizado:
+        return "Coordinacion"
+    if any(clave in titulo_normalizado for clave in ("director", "direccion", "geren")):
+        return "Direccion"
+    return ""
+
+
+def normalizar_usuario_sistema(data):
+    if not isinstance(data, dict):
+        return {}
+
+    usuario = dict(data)
+    perfil = inferir_perfil_profesional(usuario)
+    rol_normalizado = _texto_normalizado(usuario.get("rol", ""))
+
+    if rol_normalizado in {"superadmin", "admin"}:
+        usuario["rol"] = "SuperAdmin"
+    elif rol_normalizado == "coordinador":
+        usuario["rol"] = "Coordinador"
+    elif rol_normalizado in {"administrativo", "medico", "enfermeria", "operativo", "auditoria"}:
+        usuario["rol"] = "Administrativo"
+    elif not str(usuario.get("rol", "") or "").strip():
+        usuario["rol"] = "Administrativo"
+
+    if perfil:
+        usuario["perfil_profesional"] = perfil
+    return usuario
+
+
+def _roles_usuario_para_filtrado(data):
+    roles = set()
+    rol_normalizado = _texto_normalizado(data.get("rol", ""))
+    titulo_normalizado = _texto_normalizado(data.get("titulo", ""))
+    perfil_normalizado = _texto_normalizado(data.get("perfil_profesional", ""))
+    perfil_inferido = _texto_normalizado(inferir_perfil_profesional(data))
+
+    for valor in {rol_normalizado, perfil_normalizado, perfil_inferido}:
+        if valor:
+            roles.add(valor)
+
+    if rol_normalizado in {"superadmin", "admin"}:
+        roles.update({"superadmin", "admin"})
+    if rol_normalizado == "coordinador":
+        roles.add("coordinador")
+
+    if perfil_inferido == "medico" or "medic" in titulo_normalizado:
+        roles.update({"medico", "operativo"})
+    if perfil_inferido == "enfermeria" or "enfermer" in titulo_normalizado:
+        roles.update({"enfermeria", "operativo"})
+    if perfil_inferido == "operativo" or any(
+        clave in titulo_normalizado
+        for clave in (
+            "kinesi",
+            "fono",
+            "nutri",
+            "psico",
+            "acompan",
+            "terapeut",
+            "trabajador",
+            "social",
+            "cuidad",
+            "auxiliar",
+        )
+    ):
+        roles.add("operativo")
+    if perfil_inferido == "administrativo" or any(
+        clave in titulo_normalizado for clave in ("admin", "recep", "factur", "secretar")
+    ):
+        roles.add("administrativo")
+
+    return roles
 
 
 def tiene_permiso(rol_actual, roles_permitidos=None):
@@ -71,14 +196,16 @@ def descripcion_acceso_rol(rol_actual):
         return "Acceso de gestion, control y trazabilidad completa."
     if rol_normalizado == "coordinador":
         return "Acceso total a la operacion, horarios, auditoria y control del equipo."
+    if rol_normalizado == "administrativo":
+        return "Acceso total al sistema con foco administrativo, operativo y de control."
     descripciones = {
-        "Medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
-        "Enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
-        "Operativo": "Acceso asistencial limitado al registro clinico del paciente.",
-        "Administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
-        "Auditoria": "Acceso de control, revision y trazabilidad legal.",
+        "medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
+        "enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
+        "operativo": "Acceso asistencial limitado al registro clinico del paciente.",
+        "administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
+        "auditoria": "Acceso de control, revision y trazabilidad legal.",
     }
-    return descripciones.get(rol_actual, "Acceso configurado segun el rol asignado.")
+    return descripciones.get(rol_normalizado, "Acceso configurado segun el rol asignado.")
 
 
 def es_control_total(rol_actual):
@@ -127,24 +254,9 @@ def obtener_modulos_permitidos(rol_actual):
         "Auditoria",
         "Auditoria Legal",
     ]
-    menu_administrativo = [
-        "Dashboard",
-        "Admision",
-        "Inventario",
-        "Caja",
-        "Red de Profesionales",
-        "Cierre Diario",
-        "Mi Equipo",
-        "Asistencia en Vivo",
-        "RRHH y Fichajes",
-        "Auditoria",
-        "Auditoria Legal",
-    ]
     rol_normalizado = str(rol_actual or "").strip().lower()
     if rol_normalizado in ROL_ADMIN_TOTAL:
         return menu_admin_total
-    if rol_normalizado == "administrativo":
-        return menu_administrativo
     return menu_base
 
 
@@ -249,6 +361,12 @@ def asegurar_usuarios_base():
         combinado = DEFAULT_ADMIN_USER.copy()
         combinado.update(st.session_state["usuarios_db"]["admin"])
         st.session_state["usuarios_db"]["admin"] = combinado
+    for login, datos in list(st.session_state["usuarios_db"].items()):
+        if not isinstance(datos, dict):
+            continue
+        usuario_normalizado = normalizar_usuario_sistema(datos)
+        usuario_normalizado.setdefault("usuario_login", login)
+        st.session_state["usuarios_db"][login] = usuario_normalizado
 
 
 def obtener_alertas_clinicas(session_state, paciente_sel):
@@ -551,21 +669,27 @@ def format_horarios_receta(registro):
 
 def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_validos=None):
     empresa_actual = str(mi_empresa or "").strip().lower()
+    roles_validos_normalizados = (
+        {str(rol).strip().lower() for rol in roles_validos if rol}
+        if roles_validos
+        else None
+    )
     visibles = []
     for username, data in session_state.get("usuarios_db", {}).items():
         if not isinstance(data, dict):
             continue
-        rol_usuario = str(data.get("rol", "") or "").strip()
-        if roles_validos and rol_usuario not in roles_validos:
+        data_normalizada = normalizar_usuario_sistema(data)
+        roles_usuario = _roles_usuario_para_filtrado(data_normalizada)
+        if roles_validos_normalizados and not roles_usuario.intersection(roles_validos_normalizados):
             continue
         if not es_control_total(rol_actual):
-            empresa_usuario = str(data.get("empresa", "") or "").strip().lower()
+            empresa_usuario = str(data_normalizada.get("empresa", "") or "").strip().lower()
             if empresa_usuario != empresa_actual:
                 continue
         visibles.append(
             {
                 "username": username,
-                **data,
+                **data_normalizada,
             }
         )
 

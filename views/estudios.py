@@ -6,6 +6,16 @@ from core.database import guardar_datos
 from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros
 
 
+def _mismo_estudio(registro, objetivo):
+    return (
+        registro.get("paciente") == objetivo.get("paciente")
+        and registro.get("fecha") == objetivo.get("fecha")
+        and registro.get("tipo") == objetivo.get("tipo")
+        and registro.get("detalle") == objetivo.get("detalle")
+        and registro.get("firma") == objetivo.get("firma")
+    )
+
+
 def render_estudios(paciente_sel, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
@@ -73,8 +83,9 @@ def render_estudios(paciente_sel, user, rol=None):
     st.markdown("#### Archivo de Estudios del Paciente")
 
     if puede_borrar:
-        col_del1, _ = st.columns([3, 1])
-        if col_del1.button("Borrar ultimo estudio", use_container_width=True):
+        col_del1, col_del1_chk = st.columns([3, 1.2])
+        confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
+        if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
             st.session_state["estudios_db"].remove(estudios_pac[-1])
             guardar_datos()
             st.success("Estudio eliminado correctamente.")
@@ -89,15 +100,17 @@ def render_estudios(paciente_sel, user, rol=None):
             opciones.append((label, est))
 
         estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
-        if st.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True):
-            if st.checkbox("Estas completamente seguro", key="conf_borrar_estudio"):
-                st.session_state["estudios_db"] = [
-                    e for e in st.session_state["estudios_db"]
-                    if not (e["paciente"] == paciente_sel and e["fecha"] == estudio_seleccionado[1]["fecha"])
-                ]
-                guardar_datos()
-                st.success("Estudio eliminado correctamente.")
-                st.rerun()
+        col_sel_chk, col_sel_btn = st.columns([1.2, 2.8])
+        confirmar_estudio = col_sel_chk.checkbox("Confirmar seleccion", key="conf_borrar_estudio")
+        if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True, disabled=not confirmar_estudio):
+            objetivo = estudio_seleccionado[1]
+            st.session_state["estudios_db"] = [
+                e for e in st.session_state["estudios_db"]
+                if not _mismo_estudio(e, objetivo)
+            ]
+            guardar_datos()
+            st.success("Estudio eliminado correctamente.")
+            st.rerun()
     else:
         st.caption("La eliminacion de estudios queda reservada a medico, coordinacion o administracion total.")
 
@@ -125,7 +138,7 @@ def render_estudios(paciente_sel, user, rol=None):
                     if puede_borrar and st.button("Eliminar", key=f"del_est_{est['fecha']}_{idx}"):
                         st.session_state["estudios_db"] = [
                             e for e in st.session_state["estudios_db"]
-                            if not (e["paciente"] == paciente_sel and e["fecha"] == est["fecha"])
+                            if not _mismo_estudio(e, est)
                         ]
                         guardar_datos()
                         st.rerun()

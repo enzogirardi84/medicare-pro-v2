@@ -5,6 +5,17 @@ from core.database import guardar_datos
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
+def _restaurar_stock(mi_empresa, insumo, cantidad):
+    for item in st.session_state.get("inventario_db", []):
+        if item.get("item") == insumo and item.get("empresa") == mi_empresa:
+            item["stock"] = item.get("stock", 0) + cantidad
+            return
+    if insumo and cantidad > 0:
+        st.session_state.setdefault("inventario_db", []).append(
+            {"item": insumo, "stock": cantidad, "empresa": mi_empresa}
+        )
+
+
 def render_materiales(paciente_sel, mi_empresa, user):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
@@ -45,13 +56,16 @@ def render_materiales(paciente_sel, mi_empresa, user):
             c1, c2 = st.columns([3, 1])
             insumo_sel = c1.selectbox("Seleccionar insumo utilizado", [i["item"] for i in inv_mi_empresa], key="select_insumo")
             cant_usada = c2.number_input("Cantidad", min_value=1, value=1, step=1)
+            stock_disponible = next((i.get("stock", 0) for i in inv_mi_empresa if i.get("item") == insumo_sel), 0)
+            st.caption(f"Stock disponible: {stock_disponible} unidad(es)")
             if st.form_submit_button("Registrar consumo", use_container_width=True, type="primary"):
                 stock_actualizado = False
                 for i in st.session_state["inventario_db"]:
                     if i["item"] == insumo_sel and i.get("empresa") == mi_empresa:
                         stock_actual = i.get("stock", 0)
                         if stock_actual < cant_usada:
-                            st.warning(f"Stock insuficiente. Quedaran {stock_actual - cant_usada} unidades.")
+                            st.error(f"Stock insuficiente para registrar {cant_usada}. Solo hay {stock_actual} unidad(es) disponibles.")
+                            break
                         i["stock"] = stock_actual - cant_usada
                         stock_actualizado = True
                         break
@@ -76,12 +90,15 @@ def render_materiales(paciente_sel, mi_empresa, user):
     if cons_paciente:
         st.divider()
         st.markdown("#### Materiales registrados para este paciente")
-        if st.button("Borrar ultimo consumo", use_container_width=True):
-            if st.checkbox("Confirmar borrado", key="conf_del_consumo"):
-                st.session_state["consumos_db"].remove(cons_paciente[-1])
-                guardar_datos()
-                st.success("Consumo eliminado correctamente.")
-                st.rerun()
+        col_chk, col_btn = st.columns([1.2, 2.8])
+        confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
+        if col_btn.button("Borrar ultimo consumo", use_container_width=True, disabled=not confirmar_borrado):
+            ultimo_consumo = cons_paciente[-1]
+            st.session_state["consumos_db"].remove(ultimo_consumo)
+            _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
+            guardar_datos()
+            st.success("Consumo eliminado correctamente.")
+            st.rerun()
 
         limite = seleccionar_limite_registros(
             "Consumos a mostrar",

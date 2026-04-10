@@ -745,6 +745,47 @@ hr {
         min-width: 268px !important;
     }
 
+    .mc-brand-card {
+        padding: 0.9rem 0.82rem 0.88rem;
+        border-radius: 20px;
+    }
+
+    .mc-brand-logo-shell {
+        width: 104px;
+        margin-bottom: 0.85rem;
+        padding: 10px;
+        border-radius: 20px;
+    }
+
+    .mc-brand-company {
+        font-size: 1.5rem;
+        line-height: 1.06;
+    }
+
+    .mc-brand-user {
+        font-size: 0.92rem;
+        line-height: 1.3;
+    }
+
+    .mc-brand-copy {
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+
+    .mc-patient-card {
+        padding: 0.82rem 0.82rem 0.8rem;
+        border-radius: 16px;
+    }
+
+    .mc-patient-card-name {
+        font-size: 0.94rem;
+    }
+
+    .mc-patient-card-meta {
+        font-size: 0.82rem;
+        line-height: 1.42;
+    }
+
     div[data-testid="stForm"],
     div[data-testid="stVerticalBlock"] > div[style*="border"],
     div[data-testid="stExpander"],

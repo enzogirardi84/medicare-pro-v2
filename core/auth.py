@@ -25,7 +25,7 @@ def render_login():
                 with st.form("login", clear_on_submit=True):
                     u = st.text_input("Usuario")
                     p = st.text_input("Contrasena", type="password")
-                    if st.form_submit_button("Ingresar al Sistema", width="stretch"):
+                    if st.form_submit_button("Ingresar al Sistema", use_container_width=True):
                         db_f = cargar_datos(force=True)
                         if db_f:
                             for k, v in db_f.items():
@@ -39,7 +39,9 @@ def render_login():
                                 break
 
                         if usuario_encontrado:
-                            user_data = st.session_state["usuarios_db"][usuario_encontrado]
+                            user_data = dict(st.session_state["usuarios_db"][usuario_encontrado])
+                            user_data["usuario_login"] = usuario_encontrado
+                            st.session_state["usuarios_db"][usuario_encontrado]["usuario_login"] = usuario_encontrado
                             if user_data.get("estado", "Activo") == "Bloqueado":
                                 st.error("Acceso suspendido.")
                             elif str(user_data["pass"]).strip() == p.strip():
@@ -59,6 +61,7 @@ def render_login():
                             else:
                                 if u_limpio == "admin" and p.strip() == str(DEFAULT_ADMIN_USER["pass"]).strip():
                                     user_data = DEFAULT_ADMIN_USER.copy()
+                                    user_data["usuario_login"] = "admin"
                                     st.session_state["usuarios_db"]["admin"] = user_data
                                     st.session_state["u_actual"] = user_data
                                     st.session_state["logeado"] = True
@@ -78,6 +81,7 @@ def render_login():
                         else:
                             if u_limpio == "admin" and p.strip() == str(DEFAULT_ADMIN_USER["pass"]).strip():
                                 user_data = DEFAULT_ADMIN_USER.copy()
+                                user_data["usuario_login"] = "admin"
                                 st.session_state["usuarios_db"]["admin"] = user_data
                                 st.session_state["u_actual"] = user_data
                                 st.session_state["logeado"] = True
@@ -101,7 +105,7 @@ def render_login():
                     rec_emp = st.text_input("Empresa / Clinica asignada")
                     rec_pin = st.text_input("PIN de Seguridad", type="password", max_chars=4)
                     rec_pass = st.text_input("Nueva Contrasena", type="password")
-                    if st.form_submit_button("Cambiar Contrasena", width="stretch"):
+                    if st.form_submit_button("Cambiar Contrasena", use_container_width=True):
                         db_f = cargar_datos(force=True)
                         if db_f:
                             for k, v in db_f.items():

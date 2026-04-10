@@ -193,64 +193,73 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
 
     st.divider()
     st.subheader("Agendar Proxima Visita")
-    with st.form("agenda_form", clear_on_submit=True):
-        c1_ag, c2_ag = st.columns(2)
-        fecha_ag = c1_ag.date_input("Fecha programada", value=ahora().date())
-        hora_ag = c2_ag.time_input(
-            "Hora aproximada (HH:MM)",
-            value=ahora().replace(second=0, microsecond=0).time(),
-            step=300,
-        )
-        profesionales = [
-            v["nombre"]
+    profesionales = sorted(
+        {
+            str(v.get("nombre", "")).strip()
             for v in obtener_profesionales_visibles(
                 st.session_state,
                 mi_empresa,
                 rol,
                 roles_validos=["Operativo", "Enfermeria", "Medico", "Coordinador", "SuperAdmin"],
             )
-        ]
-        idx_prof = profesionales.index(user["nombre"]) if user["nombre"] in profesionales else 0
-        prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
-        if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
-            hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
-            fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
-            fecha_hora_programada = datetime.combine(fecha_ag, hora_ag).strftime("%Y-%m-%d %H:%M:%S")
-            conflicto = next(
-                (
-                    item
-                    for item in _agenda_empresa(mi_empresa, rol)
-                    if item.get("profesional") == prof_ag
-                    and item.get("fecha") == fecha_ag_str
-                    and normalizar_hora_texto(item.get("hora", ""), default="") == hora_limpia
-                    and item.get("estado", "Pendiente") not in {"Cancelada", "Realizada"}
-                    and item.get("paciente") != paciente_sel
-                ),
-                None,
+            if str(v.get("nombre", "")).strip()
+        }
+    )
+    if not profesionales and user.get("nombre"):
+        profesionales = [user["nombre"]]
+
+    if not profesionales:
+        st.warning("No hay profesionales visibles para asignar visitas. Revisa el equipo cargado o los permisos del usuario.")
+    else:
+        with st.form("agenda_form", clear_on_submit=True):
+            c1_ag, c2_ag = st.columns(2)
+            fecha_ag = c1_ag.date_input("Fecha programada", value=ahora().date())
+            hora_ag = c2_ag.time_input(
+                "Hora aproximada (HH:MM)",
+                value=ahora().replace(second=0, microsecond=0).time(),
+                step=300,
             )
-            if conflicto:
-                st.error(
-                    f"{prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}."
+            idx_prof = profesionales.index(user["nombre"]) if user.get("nombre") in profesionales else 0
+            prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
+            if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
+                hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
+                fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
+                fecha_hora_programada = datetime.combine(fecha_ag, hora_ag).strftime("%Y-%m-%d %H:%M:%S")
+                conflicto = next(
+                    (
+                        item
+                        for item in _agenda_empresa(mi_empresa, rol)
+                        if item.get("profesional") == prof_ag
+                        and item.get("fecha") == fecha_ag_str
+                        and normalizar_hora_texto(item.get("hora", ""), default="") == hora_limpia
+                        and item.get("estado", "Pendiente") not in {"Cancelada", "Realizada"}
+                        and item.get("paciente") != paciente_sel
+                    ),
+                    None,
                 )
-            else:
-                st.session_state["agenda_db"].append(
-                    {
-                        "paciente": paciente_sel,
-                        "profesional": prof_ag,
-                        "fecha": fecha_ag_str,
-                        "fecha_programada": fecha_ag_str,
-                        "fecha_hora_programada": fecha_hora_programada,
-                        "hora": hora_limpia,
-                        "empresa": mi_empresa,
-                        "estado": "Pendiente",
-                        "zona": _zona_corta(dire_paciente),
-                        "creado_por": user.get("nombre", ""),
-                        "creado_en": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                    }
-                )
-                guardar_datos()
-                st.success(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
-                st.rerun()
+                if conflicto:
+                    st.error(
+                        f"{prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}."
+                    )
+                else:
+                    st.session_state["agenda_db"].append(
+                        {
+                            "paciente": paciente_sel,
+                            "profesional": prof_ag,
+                            "fecha": fecha_ag_str,
+                            "fecha_programada": fecha_ag_str,
+                            "fecha_hora_programada": fecha_hora_programada,
+                            "hora": hora_limpia,
+                            "empresa": mi_empresa,
+                            "estado": "Pendiente",
+                            "zona": _zona_corta(dire_paciente),
+                            "creado_por": user.get("nombre", ""),
+                            "creado_en": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                        }
+                    )
+                    guardar_datos()
+                    st.success(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
+                    st.rerun()
 
     if agenda_paciente:
         st.divider()

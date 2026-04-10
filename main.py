@@ -1,5 +1,4 @@
 import base64
-import os
 import sys
 from html import escape
 from importlib import import_module
@@ -30,8 +29,11 @@ except ImportError:
     cargar_datos = core_database.cargar_datos
 
 cargar_texto_asset = core_utils.cargar_texto_asset
-compactar_etiqueta_paciente = getattr(core_utils, "compactar_etiqueta_paciente", lambda nombre, estado: str(nombre or ""))
-es_control_total = getattr(core_utils, "es_control_total", lambda rol: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador"})
+es_control_total = getattr(
+    core_utils,
+    "es_control_total",
+    lambda rol: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"},
+)
 inicializar_db_state = core_utils.inicializar_db_state
 obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
 obtener_pacientes_visibles = getattr(
@@ -45,12 +47,13 @@ descripcion_acceso_rol = getattr(
     "descripcion_acceso_rol",
     lambda rol: (
         "Acceso de gestion y control total"
-        if str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador"}
+        if str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"}
         else "Acceso asistencial limitado al registro clinico del paciente"
     ),
 )
+obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 
-APP_BUILD_TAG = "Build 2026-04-10 02:05 ART"
+APP_BUILD_TAG = "Build 2026-04-10 07:30 ART"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -95,59 +98,7 @@ VIEW_CONFIG = {
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
 }
 
-VIEW_ROLE_RULES = {
-    "Visitas y Agenda": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Dashboard": ["Coordinador"],
-    "Admision": ["Administrativo", "Coordinador"],
-    "Clinica": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Pediatria": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Evolucion": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Estudios": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Materiales": ["Operativo", "Enfermeria", "Coordinador"],
-    "Recetas": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Balance": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Inventario": ["Administrativo", "Coordinador"],
-    "Caja": ["Administrativo", "Coordinador"],
-    "Emergencias y Ambulancia": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Red de Profesionales": ["Administrativo", "Coordinador"],
-    "Escalas Clinicas": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Historial": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "PDF": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Telemedicina": ["Operativo", "Medico", "Enfermeria", "Coordinador"],
-    "Cierre Diario": ["Coordinador"],
-    "Mi Equipo": ["Coordinador"],
-    "Asistencia en Vivo": ["Coordinador"],
-    "RRHH y Fichajes": ["Coordinador"],
-    "Auditoria": ["Auditoria", "Coordinador"],
-    "Auditoria Legal": ["Auditoria", "Coordinador"],
-}
-
-VIEW_LABELS = {
-    "Visitas y Agenda": "\U0001F4CD Visitas y Agenda",
-    "Dashboard": "\U0001F4CA Dashboard",
-    "Admision": "\U0001FA7E Admision",
-    "Clinica": "\U0001FA7A Clinica",
-    "Pediatria": "\U0001F476 Pediatria",
-    "Evolucion": "\u270D\ufe0f Evolucion",
-    "Estudios": "\U0001F9EA Estudios",
-    "Materiales": "\U0001F4E6 Materiales",
-    "Recetas": "\U0001F48A Recetas",
-    "Balance": "\U0001F4A7 Balance",
-    "Inventario": "\U0001F3E5 Inventario",
-    "Caja": "\U0001F4B5 Caja",
-    "Emergencias y Ambulancia": "\U0001F691 Emergencias y Ambulancia",
-    "Red de Profesionales": "\U0001F91D Red de Profesionales",
-    "Escalas Clinicas": "\U0001F4CF Escalas Clinicas",
-    "Historial": "\U0001F5C2\ufe0f Historial",
-    "PDF": "\U0001F4C4 PDF",
-    "Telemedicina": "\U0001F3A5 Telemedicina",
-    "Cierre Diario": "\U0001F9EE Cierre Diario",
-    "Mi Equipo": "\U0001F465 Mi Equipo",
-    "Asistencia en Vivo": "\U0001F6F0\ufe0f Asistencia en Vivo",
-    "RRHH y Fichajes": "\u23F1\ufe0f RRHH y Fichajes",
-    "Auditoria": "\U0001F50E Auditoria",
-    "Auditoria Legal": "\u2696\ufe0f Auditoria Legal",
-}
+VIEW_ROLE_RULES = {vista: ["Administrativo", "Coordinador", "SuperAdmin", "Admin"] for vista in VIEW_CONFIG}
 
 VIEW_NAV_LABELS = {
     "Visitas y Agenda": "\U0001F4CD Visitas",
@@ -243,6 +194,9 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
 
 
 def resolve_current_view(menu):
+    if not menu:
+        st.session_state.pop("modulo_actual", None)
+        return None
     vista_actual = st.session_state.get("modulo_actual", menu[0])
     if vista_actual not in menu:
         vista_actual = menu[0]
@@ -250,47 +204,43 @@ def resolve_current_view(menu):
     return vista_actual
 
 
-def _compact_patient_label(nombre, estado):
-    return compactar_etiqueta_paciente(nombre, estado)
-
-
 def _sidebar_patient_card(paciente_sel, detalles):
-    return f"""
-    <div class="mc-patient-card">
-        <div class="mc-patient-card-kicker">Paciente activo</div>
-        <div class="mc-patient-card-name">{escape(paciente_sel)}</div>
-        <div class="mc-patient-card-meta">
-            DNI: {escape(detalles.get('dni', 'S/D'))}<br>
-            OS: {escape(detalles.get('obra_social', 'S/D'))}<br>
-            Empresa: {escape(detalles.get('empresa', 'S/D'))}<br>
-            Estado: {escape(detalles.get('estado', 'Activo'))}
-        </div>
-    </div>
-    """
+    return (
+        f'<div class="mc-patient-card">'
+        f'<div class="mc-patient-card-kicker">Paciente activo</div>'
+        f'<div class="mc-patient-card-name">{escape(paciente_sel)}</div>'
+        f'<div class="mc-patient-card-meta">'
+        f"DNI: {escape(detalles.get('dni', 'S/D'))}<br>"
+        f"OS: {escape(detalles.get('obra_social', 'S/D'))}<br>"
+        f"Empresa: {escape(detalles.get('empresa', 'S/D'))}<br>"
+        f"Estado: {escape(detalles.get('estado', 'Activo'))}"
+        f"</div>"
+        f"</div>"
+    )
 
 
 def _sidebar_brand_card(mi_empresa, user, rol, descripcion, logo_sidebar_b64):
     logo_html = (
-        f"""
-        <div class="mc-brand-logo-shell">
-            <img src="data:image/jpeg;base64,{logo_sidebar_b64}" class="mc-brand-logo" />
-        </div>
-        """
+        f'<div class="mc-brand-logo-shell">'
+        f'<img src="data:image/jpeg;base64,{logo_sidebar_b64}" class="mc-brand-logo" />'
+        f"</div>"
         if logo_sidebar_b64
         else ""
     )
-    return f"""
-    <div class="mc-brand-card">
-        {logo_html}
-        <div class="mc-brand-kicker">MediCare Enterprise PRO</div>
-        <div class="mc-brand-company">{escape(mi_empresa)}</div>
-        <div class="mc-brand-user">{escape(user.get('nombre', ''))} <span>({escape(rol)})</span></div>
-        <div class="mc-brand-copy">{escape(descripcion)}</div>
-    </div>
-    """
+    return (
+        f'<div class="mc-brand-card">'
+        f"{logo_html}"
+        f'<div class="mc-brand-kicker">MediCare Enterprise PRO</div>'
+        f'<div class="mc-brand-company">{escape(mi_empresa)}</div>'
+        f'<div class="mc-brand-user">{escape(user.get("nombre", ""))} <span>({escape(rol)})</span></div>'
+        f'<div class="mc-brand-copy">{escape(descripcion)}</div>'
+        f"</div>"
+    )
 
 
 def render_module_nav(menu, vista_actual):
+    if not menu:
+        return None
     st.markdown(
         """
         <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
@@ -315,6 +265,14 @@ def render_module_nav(menu, vista_actual):
         st.session_state["modulo_actual"] = selected
         return selected
     return selected or vista_actual
+
+
+def resolve_menu_for_role(rol):
+    if callable(obtener_modulos_permitidos):
+        menu_base = obtener_modulos_permitidos(rol) or []
+    else:
+        menu_base = list(VIEW_CONFIG)
+    return [modulo for modulo in menu_base if modulo in VIEW_CONFIG and tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
 
 
 if "entered_app" not in st.session_state:
@@ -370,16 +328,6 @@ def obtener_logo_landing():
     return f"<img src='data:image/svg+xml;base64,{encoded}' style='height: 112px; margin-bottom: 24px;'>"
 
 
-def obtener_folleto_landing():
-    posibles = [
-        Path(__file__).resolve().parent / "marketing" / "Folleto_Comercial_MediCare_Enterprise_PRO.pdf",
-        Path(__file__).resolve().parent / "marketing" / "folleto_comercial.pdf",
-    ]
-    for ruta in posibles:
-        if ruta.exists():
-            return ruta
-    return None
-
 if not st.session_state.entered_app:
     logo_html = obtener_logo_landing()
     st.markdown(
@@ -404,26 +352,6 @@ if not st.session_state.entered_app:
                 transform: translateY(-4px) !important;
                 box-shadow: 0 15px 40px rgba(99, 102, 241, 0.65) !important;
                 background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
-            }
-            div.stDownloadButton { display: flex !important; justify-content: center; margin-top: 18px; }
-            div.stDownloadButton > button {
-                background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #38bdf8 100%) !important;
-                color: #ffffff !important;
-                font-size: 1.05rem !important;
-                font-weight: 900 !important;
-                padding: 16px 30px !important;
-                border-radius: 20px !important;
-                border: 1px solid rgba(255,255,255,0.28) !important;
-                box-shadow: 0 18px 38px rgba(29, 78, 216, 0.28), 0 0 0 1px rgba(255,255,255,0.05) inset !important;
-                transition: all 0.25s ease !important;
-                min-width: 390px !important;
-                letter-spacing: 0.2px !important;
-                text-shadow: 0 1px 1px rgba(2, 6, 23, 0.45) !important;
-            }
-            div.stDownloadButton > button:hover {
-                transform: translateY(-3px) scale(1.01) !important;
-                box-shadow: 0 22px 44px rgba(29,78,216,0.34), 0 0 28px rgba(56,189,248,0.20) !important;
-                filter: brightness(1.08);
             }
         </style>
         """,
@@ -568,17 +496,8 @@ if not st.session_state.entered_app:
         "</div>",
         "</div>",
     ]
-    folleto_path = obtener_folleto_landing()
     landing_html = "".join(html_lines)
     st.markdown(landing_html, unsafe_allow_html=True)
-    if folleto_path:
-        st.download_button(
-            "Descargar folleto comercial",
-            data=folleto_path.read_bytes(),
-            file_name=folleto_path.name,
-            mime="application/pdf",
-            use_container_width=True,
-        )
     if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
@@ -617,64 +536,7 @@ with st.sidebar:
     )
     st.divider()
 
-    menu = [
-        "Visitas y Agenda",
-        "Clinica",
-        "Pediatria",
-        "Evolucion",
-        "Estudios",
-        "Materiales",
-        "Recetas",
-        "Balance",
-        "Emergencias y Ambulancia",
-        "Escalas Clinicas",
-        "Historial",
-        "PDF",
-        "Telemedicina",
-    ]
-
-    if es_control_total(rol):
-        menu = [
-            "Visitas y Agenda",
-            "Dashboard",
-            "Admision",
-            "Clinica",
-            "Pediatria",
-            "Evolucion",
-            "Estudios",
-            "Materiales",
-            "Recetas",
-            "Balance",
-            "Inventario",
-            "Caja",
-            "Emergencias y Ambulancia",
-            "Red de Profesionales",
-            "Escalas Clinicas",
-            "Historial",
-            "PDF",
-            "Telemedicina",
-            "Cierre Diario",
-            "Mi Equipo",
-            "Asistencia en Vivo",
-            "RRHH y Fichajes",
-            "Auditoria",
-            "Auditoria Legal",
-        ]
-    elif str(rol or "").strip().lower() == "administrativo":
-        menu = [
-            "Dashboard",
-            "Admision",
-            "Inventario",
-            "Caja",
-            "Red de Profesionales",
-            "Cierre Diario",
-            "Mi Equipo",
-            "Asistencia en Vivo",
-            "RRHH y Fichajes",
-            "Auditoria",
-            "Auditoria Legal",
-        ]
-    menu = [modulo for modulo in menu if tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
+    menu = resolve_menu_for_role(rol)
     st.markdown(
         """
         <div class="mc-sidebar-section">
@@ -754,7 +616,13 @@ with st.sidebar:
     st.caption(APP_BUILD_TAG)
 
 vista_actual = resolve_current_view(menu)
+if not vista_actual:
+    st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
+    st.stop()
 vista_actual = render_module_nav(menu, vista_actual)
+if not vista_actual:
+    st.warning("No se pudo resolver un modulo visible para este usuario.")
+    st.stop()
 
 if paciente_sel:
     det_actual = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})

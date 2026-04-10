@@ -5,7 +5,11 @@ import time
 from pathlib import Path
 
 import streamlit as st
-from supabase import Client, create_client
+
+try:
+    from supabase import create_client
+except ImportError:
+    create_client = None
 
 LOCAL_DB_PATH = Path(__file__).resolve().parent.parent / ".streamlit" / "local_data.json"
 LOCAL_DB_DIR = Path(__file__).resolve().parent.parent / ".streamlit" / "data_store"
@@ -46,8 +50,13 @@ def _db_keys():
 
 @st.cache_resource
 def init_supabase():
-    url = st.secrets.get("SUPABASE_URL", "")
-    key = st.secrets.get("SUPABASE_KEY", "")
+    if create_client is None:
+        return None
+    try:
+        url = st.secrets.get("SUPABASE_URL", "")
+        key = st.secrets.get("SUPABASE_KEY", "")
+    except Exception:
+        return None
     if not url or "tu-proyecto-aqui" in url or not key:
         return None
     return create_client(url, key)

@@ -10,10 +10,13 @@ from core.clinical_exports import build_prescription_pdf_bytes
 from core.database import guardar_datos
 from core.utils import (
     ahora,
+    calcular_velocidad_ml_h,
     cargar_json_asset,
     firma_a_base64,
     format_horarios_receta,
+    generar_plan_escalonado_ml_h,
     horarios_programados_desde_frecuencia,
+    inferir_perfil_profesional,
     mostrar_dataframe_con_scroll,
     obtener_config_firma,
     obtener_horarios_receta,
@@ -56,12 +59,107 @@ def _archivo_a_base64(uploaded_file):
         return "", "", ""
 
 
+def _estado_icono(estado):
+    estado_norm = str(estado or "").strip().lower()
+    if estado_norm == "realizada":
+        return "✅"
+    if "no realizada" in estado_norm or "suspendida" in estado_norm:
+        return "❌"
+    return "⏳"
+
+
+def _estado_legible(estado):
+    estado_norm = str(estado or "").strip().lower()
+    if estado_norm == "realizada":
+        return "Realizada"
+    if "no realizada" in estado_norm or "suspendida" in estado_norm:
+        return "No realizada"
+    return "Pendiente"
+
+
+def _extraer_nombre_medicacion(texto):
+    return str(texto or "").split(" | ")[0].strip()
+
+
+def _resumen_plan_hidratacion(plan_hidratacion):
+    if not plan_hidratacion:
+        return ""
+    partes = []
+    for item in plan_hidratacion:
+        hora = item.get("Hora sugerida", "")
+        velocidad = item.get("Velocidad (ml/h)", "")
+        if hora and velocidad != "":
+            partes.append(f"{hora}: {velocidad} ml/h")
+    return " | ".join(partes)
+
+
+def _detalle_horario_infusion(registro, horario):
+    plan = registro.get("plan_hidratacion", []) or []
+    for item in plan:
+        if item.get("Hora sugerida") == horario:
+            velocidad = item.get("Velocidad (ml/h)")
+            if velocidad not in ("", None):
+                return f"{velocidad} ml/h"
+    velocidad = registro.get("velocidad_ml_h")
+    if velocidad not in ("", None):
+        return f"{velocidad} ml/h"
+    return registro.get("detalle_infusion", "")
+
+
+def _construir_texto_indicacion(
+    tipo_indicacion,
+    med_final="",
+    via="",
+    frecuencia="",
+    dias=None,
+    solucion="",
+    volumen_ml=None,
+    velocidad_ml_h=None,
+    alternar_con="",
+    detalle_infusion="",
+    plan_hidratacion=None,
+):
+    if tipo_indicacion == "Infusion / hidratacion":
+        partes = []
+        titulo = solucion.strip() or "Infusion endovenosa"
+        if volumen_ml:
+            titulo = f"{titulo} {int(volumen_ml)} ml"
+        partes.append(titulo)
+        if via:
+            partes.append(f"Via: {via}")
+        if velocidad_ml_h not in ("", None):
+            partes.append(f"Velocidad: {velocidad_ml_h} ml/h")
+        if alternar_con:
+            partes.append(f"Alternar con: {alternar_con}")
+        if dias:
+            partes.append(f"Durante {dias} dias")
+        if plan_hidratacion:
+            resumen = _resumen_plan_hidratacion(plan_hidratacion)
+            if resumen:
+                partes.append(f"Plan: {resumen}")
+        if detalle_infusion:
+            partes.append(f"Indicacion: {detalle_infusion.strip()}")
+        return " | ".join([p for p in partes if str(p).strip()])
+
+    texto_base = med_final.strip().title()
+    partes = [texto_base]
+    if via:
+        partes.append(f"Via: {via}")
+    if frecuencia:
+        partes.append(frecuencia)
+    if dias:
+        partes.append(f"Durante {dias} dias")
+    return " | ".join([p for p in partes if str(p).strip()])
+
+
 def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
         return
 
     rol = rol or user.get("rol", "")
+    perfil_usuario = inferir_perfil_profesional(user)
+    perfil_usuario_norm = str(perfil_usuario or "").strip().lower()
     puede_prescribir = puede_accion(rol, "recetas_prescribir")
     puede_cargar_papel = puede_accion(rol, "recetas_cargar_papel")
     puede_registrar_dosis = puede_accion(rol, "recetas_registrar_dosis")
@@ -82,7 +180,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         unsafe_allow_html=True,
     )
 
-    if rol in {"Operativo", "Enfermeria"}:
+    if perfil_usuario_norm in {"operativo", "enfermeria"}:
         st.info(
             "El personal asistencial puede ver indicaciones activas, registrar dosis y cargar una indicacion medica en papel o PDF "
             "cuando el medico la deja firmada fuera del sistema."
@@ -107,38 +205,153 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if puede_prescribir:
         st.markdown("##### Nueva prescripcion medica")
         with st.container(border=True):
-            c1, c2 = st.columns([3, 1])
-            med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
-            med_manual = c2.text_input("O escribir manualmente")
-            col3, col4, col5 = st.columns([2, 2, 1])
-            via = col3.selectbox(
-                "Via de administracion",
-                ["Via Oral", "Via Endovenosa", "Via Intramuscular", "Via Subcutanea", "Via Topica", "Via Inhalatoria", "Otra"],
+            tipo_indicacion = st.radio(
+                "Tipo de indicacion",
+                ["Medicacion", "Infusion / hidratacion"],
+                horizontal=True,
+                key="tipo_indicacion_receta",
             )
-            frecuencia = col4.selectbox(
-                "Frecuencia",
-                [
-                    "Cada 1 hora",
-                    "Cada 2 horas",
-                    "Cada 4 horas",
-                    "Cada 6 horas",
-                    "Cada 8 horas",
-                    "Cada 12 horas",
-                    "Cada 24 horas",
-                    "Dosis unica",
-                    "Segun necesidad",
-                ],
-            )
-            dias = col5.number_input("Dias", min_value=1, max_value=90, value=7)
-            hora_inicio = st.time_input("Hora inicial de administracion", value=dt_time(8, 0), key="hora_inicio_receta")
-            horarios_sugeridos = horarios_programados_desde_frecuencia(
-                frecuencia,
-                hora_inicio.strftime("%H:%M"),
-            )
-            if horarios_sugeridos:
-                st.caption(f"Horarios sugeridos para la guardia: {' | '.join(horarios_sugeridos)}")
+
+            med_vademecum = "-- Seleccionar del vademecum --"
+            med_manual = ""
+            solucion = ""
+            volumen_ml = 0
+            velocidad_ml_h = None
+            alternar_con = ""
+            detalle_infusion = ""
+            plan_hidratacion = []
+            frecuencia = ""
+
+            if tipo_indicacion == "Medicacion":
+                c1, c2 = st.columns([3, 1])
+                med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
+                med_manual = c2.text_input("O escribir manualmente")
+                col3, col4, col5 = st.columns([2, 2, 1])
+                via = col3.selectbox(
+                    "Via de administracion",
+                    ["Via Oral", "Via Endovenosa", "Via Intramuscular", "Via Subcutanea", "Via Topica", "Via Inhalatoria", "Otra"],
+                )
+                frecuencia = col4.selectbox(
+                    "Frecuencia",
+                    [
+                        "Cada 1 hora",
+                        "Cada 2 horas",
+                        "Cada 4 horas",
+                        "Cada 6 horas",
+                        "Cada 8 horas",
+                        "Cada 12 horas",
+                        "Cada 24 horas",
+                        "Dosis unica",
+                        "Segun necesidad",
+                    ],
+                )
+                dias = col5.number_input("Dias", min_value=1, max_value=90, value=7)
+                hora_inicio = st.time_input("Hora inicial de administracion", value=dt_time(8, 0), key="hora_inicio_receta")
+                horarios_sugeridos = horarios_programados_desde_frecuencia(
+                    frecuencia,
+                    hora_inicio.strftime("%H:%M"),
+                )
+                if horarios_sugeridos:
+                    st.caption(f"Horarios sugeridos para la guardia: {' | '.join(horarios_sugeridos)}")
+                else:
+                    st.caption("Indicacion sin horario fijo. Se mostrara como dosis unica o a demanda segun la frecuencia.")
             else:
-                st.caption("Indicacion sin horario fijo. Se mostrara como dosis unica o a demanda segun la frecuencia.")
+                via = "Via Endovenosa"
+                frecuencia = "Infusion continua"
+                c1, c2, c3 = st.columns([2, 1, 1])
+                solucion = c1.selectbox(
+                    "Solucion principal",
+                    [
+                        "Dextrosa 5%",
+                        "Fisiologico 0.9%",
+                        "Ringer lactato",
+                        "Mixta",
+                        "Otra",
+                    ],
+                    key="solucion_receta",
+                )
+                volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
+                dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
+
+                c4, c5, c6 = st.columns([1, 1, 1])
+                velocidad_ml_h = c4.number_input(
+                    "Velocidad (ml/h)",
+                    min_value=0.0,
+                    step=1.0,
+                    value=21.0,
+                    key="velocidad_receta",
+                )
+                duracion_horas = c5.number_input(
+                    "Duracion estimada (horas)",
+                    min_value=0.0,
+                    step=0.5,
+                    value=0.0,
+                    key="duracion_horas_receta",
+                )
+                alternar_con = c6.selectbox(
+                    "Alternar con",
+                    ["", "Fisiologico 0.9%", "Ringer lactato", "Dextrosa 5%", "Otra"],
+                    key="alternar_con_receta",
+                )
+
+                hora_inicio = st.time_input(
+                    "Hora inicial del plan de infusion",
+                    value=dt_time(8, 0),
+                    key="hora_inicio_infusion_receta",
+                )
+                detalle_infusion = st.text_area(
+                    "Indicacion medica de infusion / hidratacion",
+                    placeholder=(
+                        "Ej: pasar Dextrosa 5% 500 ml a 21 ml/h, alternar con Fisiologico 0.9% por bolsa. "
+                        "Aumentar segun tolerancia y control clinico."
+                    ),
+                    key="detalle_infusion_receta",
+                )
+
+                velocidad_sugerida = calcular_velocidad_ml_h(volumen_ml, duracion_horas)
+                if velocidad_sugerida is not None:
+                    st.caption(
+                        f"Referencia de calculo: {int(volumen_ml)} ml / {duracion_horas:g} h = {velocidad_sugerida:g} ml/h."
+                    )
+
+                usar_plan_escalonado = st.checkbox(
+                    "Plan escalonado de hidratacion / infusion",
+                    value=False,
+                    key="usar_plan_escalonado_receta",
+                )
+                if usar_plan_escalonado:
+                    c7, c8, c9, c10 = st.columns(4)
+                    inicio_ml_h = c7.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_ml_h_receta")
+                    maximo_ml_h = c8.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_ml_h_receta")
+                    incremento_ml_h = c9.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_ml_h_receta")
+                    intervalo_horas = c10.number_input(
+                        "Cada cuantas horas",
+                        min_value=1,
+                        step=1,
+                        value=1,
+                        key="intervalo_escalonado_receta",
+                    )
+                    plan_hidratacion = generar_plan_escalonado_ml_h(
+                        inicio_ml_h,
+                        maximo_ml_h,
+                        incremento_ml_h,
+                        hora_inicio.strftime("%H:%M"),
+                        intervalo_horas,
+                    )
+                    if plan_hidratacion:
+                        st.caption("Vista previa del plan de infusion / hidratacion")
+                        mostrar_dataframe_con_scroll(pd.DataFrame(plan_hidratacion), height=220)
+                        horarios_sugeridos = [item["Hora sugerida"] for item in plan_hidratacion]
+                    else:
+                        horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
+                else:
+                    horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
+                    st.caption(
+                        "Referencia general de bomba: ml/h = volumen total (ml) / tiempo (h). "
+                        "Verificar siempre con protocolo institucional y criterio medico."
+                    )
+                st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_sugeridos)}")
+
             col_m1, col_m2 = st.columns(2)
             medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
             medico_matricula = col_m2.text_input("Matricula profesional")
@@ -174,7 +387,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
             if st.button("Guardar prescripcion medica", use_container_width=True, type="primary"):
                 med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum
-                if med_final and med_final != "-- Seleccionar del vademecum --":
+                if tipo_indicacion == "Medicacion" and (not med_final or med_final == "-- Seleccionar del vademecum --"):
+                    st.error("Debe seleccionar o escribir un medicamento.")
+                elif tipo_indicacion == "Infusion / hidratacion" and not solucion.strip():
+                    st.error("Debe indicar la solucion principal.")
+                elif tipo_indicacion == "Infusion / hidratacion" and not detalle_infusion.strip():
+                    st.error("Debe explicar como pasar la infusion o hidratacion.")
+                elif tipo_indicacion == "Infusion / hidratacion" and (velocidad_ml_h in (None, "", 0) and not plan_hidratacion):
+                    st.error("Debe indicar una velocidad en ml/h o cargar un plan escalonado.")
+                else:
                     if not medico_matricula.strip():
                         st.error("Debe ingresar la matricula del medico.")
                     else:
@@ -183,7 +404,19 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             uploaded_file=firma_subida,
                         )
 
-                        texto_receta = f"{med_final} | Via: {via} | {frecuencia} | Durante {dias} dias"
+                        texto_receta = _construir_texto_indicacion(
+                            tipo_indicacion=tipo_indicacion,
+                            med_final=med_final,
+                            via=via,
+                            frecuencia=frecuencia,
+                            dias=dias,
+                            solucion=solucion,
+                            volumen_ml=volumen_ml,
+                            velocidad_ml_h=velocidad_ml_h,
+                            alternar_con=alternar_con,
+                            detalle_infusion=detalle_infusion,
+                            plan_hidratacion=plan_hidratacion,
+                        )
                         st.session_state["indicaciones_db"].append(
                             {
                                 "paciente": paciente_sel,
@@ -199,6 +432,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 "frecuencia": frecuencia,
                                 "hora_inicio": hora_inicio.strftime("%H:%M"),
                                 "horarios_programados": horarios_sugeridos,
+                                "tipo_indicacion": tipo_indicacion,
+                                "solucion": solucion,
+                                "volumen_ml": volumen_ml,
+                                "velocidad_ml_h": velocidad_ml_h,
+                                "alternar_con": alternar_con,
+                                "detalle_infusion": detalle_infusion,
+                                "plan_hidratacion": plan_hidratacion,
                                 "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                                 "profesional_estado": user["nombre"],
                                 "matricula_estado": medico_matricula.strip(),
@@ -224,6 +464,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             st.caption(
                 "Usa esta opcion cuando el medico deja una indicacion firmada en papel o PDF y queres dejarla trazable en el sistema."
             )
+            tipo_indicacion_papel = st.radio(
+                "Tipo de indicacion a cargar",
+                ["Medicacion", "Infusion / hidratacion"],
+                horizontal=True,
+                key="tipo_indicacion_papel_receta",
+            )
             c_p1, c_p2 = st.columns(2)
             medico_papel = c_p1.text_input(
                 "Medico que indica",
@@ -231,21 +477,87 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
             )
             matricula_papel = c_p2.text_input("Matricula del medico", key="medico_papel_matricula")
-            detalle_papel = st.text_area(
-                "Resumen de la indicacion",
-                key="detalle_papel_receta",
-                placeholder="Ej: Ceftriaxona 1g EV cada 12 horas por 7 dias. Control de temperatura y signos vitales.",
-            )
             c_p3, c_p4 = st.columns([1, 2])
             dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
-            horarios_papel_txt = c_p4.text_input(
-                "Horarios programados (opcional)",
-                key="horarios_papel_receta",
-                placeholder="Ej: 08:00 | 16:00 | 22:00",
-            )
-            horarios_papel = parse_horarios_programados(horarios_papel_txt)
-            if horarios_papel:
-                st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
+            hora_papel = c_p4.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
+
+            horarios_papel = []
+            detalle_papel = ""
+            solucion_papel = ""
+            volumen_papel = 0
+            velocidad_papel = None
+            alternar_papel = ""
+            plan_papel = []
+
+            if tipo_indicacion_papel == "Medicacion":
+                detalle_papel = st.text_area(
+                    "Resumen de la indicacion",
+                    key="detalle_papel_receta",
+                    placeholder="Ej: Ceftriaxona 1g EV cada 12 horas por 7 dias. Control de temperatura y signos vitales.",
+                )
+                horarios_papel_txt = st.text_input(
+                    "Horarios programados (opcional)",
+                    key="horarios_papel_receta",
+                    placeholder="Ej: 08:00 | 16:00 | 22:00",
+                )
+                horarios_papel = parse_horarios_programados(horarios_papel_txt)
+                if horarios_papel:
+                    st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
+            else:
+                c_inf_p1, c_inf_p2, c_inf_p3 = st.columns(3)
+                solucion_papel = c_inf_p1.selectbox(
+                    "Solucion principal",
+                    ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
+                    key="solucion_papel_receta",
+                )
+                volumen_papel = c_inf_p2.number_input(
+                    "Volumen total (ml)",
+                    min_value=0,
+                    step=50,
+                    value=500,
+                    key="volumen_papel_receta",
+                )
+                velocidad_papel = c_inf_p3.number_input(
+                    "Velocidad (ml/h)",
+                    min_value=0.0,
+                    step=1.0,
+                    value=21.0,
+                    key="velocidad_papel_receta",
+                )
+                alternar_papel = st.selectbox(
+                    "Alternar con",
+                    ["", "Fisiologico 0.9%", "Ringer lactato", "Dextrosa 5%", "Otra"],
+                    key="alternar_papel_receta",
+                )
+                detalle_papel = st.text_area(
+                    "Explicacion medica de la infusion / hidratacion",
+                    key="detalle_papel_infusion_receta",
+                    placeholder="Ej: pasar Dextrosa 5% 500 ml a 21 ml/h, alternar con Ringer lactato por bolsa y aumentar segun tolerancia.",
+                )
+                usar_plan_papel = st.checkbox(
+                    "Plan escalonado en la orden",
+                    value=False,
+                    key="usar_plan_papel_receta",
+                )
+                if usar_plan_papel:
+                    c_inf_p4, c_inf_p5, c_inf_p6, c_inf_p7 = st.columns(4)
+                    inicio_papel = c_inf_p4.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_papel_receta")
+                    maximo_papel = c_inf_p5.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_papel_receta")
+                    incremento_papel = c_inf_p6.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_papel_receta")
+                    intervalo_papel = c_inf_p7.number_input("Cada cuantas horas", min_value=1, step=1, value=1, key="intervalo_papel_receta")
+                    plan_papel = generar_plan_escalonado_ml_h(
+                        inicio_papel,
+                        maximo_papel,
+                        incremento_papel,
+                        hora_papel.strftime("%H:%M"),
+                        intervalo_papel,
+                    )
+                    if plan_papel:
+                        mostrar_dataframe_con_scroll(pd.DataFrame(plan_papel), height=220)
+                        horarios_papel = [item["Hora sugerida"] for item in plan_papel]
+                if not horarios_papel:
+                    horarios_papel = [hora_papel.strftime("%H:%M")]
+                st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_papel)}")
             adjunto_papel = st.file_uploader(
                 "Subir orden medica en papel o PDF",
                 type=["pdf", "png", "jpg", "jpeg"],
@@ -260,9 +572,22 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     st.error("Debe adjuntar la orden medica escaneada o fotografiada.")
                 else:
                     adjunto_b64, adjunto_nombre, adjunto_tipo = _archivo_a_base64(adjunto_papel)
+                    texto_guardado = _construir_texto_indicacion(
+                        tipo_indicacion=tipo_indicacion_papel,
+                        med_final=detalle_papel.strip(),
+                        via="Via Endovenosa" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        frecuencia="Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        dias=dias_papel,
+                        solucion=solucion_papel,
+                        volumen_ml=volumen_papel,
+                        velocidad_ml_h=velocidad_papel,
+                        alternar_con=alternar_papel,
+                        detalle_infusion=detalle_papel.strip() if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        plan_hidratacion=plan_papel,
+                    )
                     registro = {
                         "paciente": paciente_sel,
-                        "med": detalle_papel.strip(),
+                        "med": texto_guardado,
                         "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                         "dias_duracion": dias_papel,
                         "medico_nombre": medico_papel.strip(),
@@ -271,9 +596,16 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         "firmado_por": user["nombre"],
                         "estado_clinico": "Activa",
                         "estado_receta": "Activa",
-                        "frecuencia": "",
-                        "hora_inicio": horarios_papel[0] if horarios_papel else "",
+                        "frecuencia": "Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        "hora_inicio": horarios_papel[0] if horarios_papel else hora_papel.strftime("%H:%M"),
                         "horarios_programados": horarios_papel,
+                        "tipo_indicacion": tipo_indicacion_papel,
+                        "solucion": solucion_papel,
+                        "volumen_ml": volumen_papel,
+                        "velocidad_ml_h": velocidad_papel,
+                        "alternar_con": alternar_papel,
+                        "detalle_infusion": detalle_papel.strip() if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        "plan_hidratacion": plan_papel,
                         "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                         "profesional_estado": user["nombre"],
                         "matricula_estado": user.get("matricula", ""),
@@ -312,8 +644,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         sabana_resumen = []
         for r in recs_activas[:40]:
             partes = r["med"].split(" | ")
-            nombre = partes[0].strip()
-            via_texto = partes[1].replace("Via: ", "") if len(partes) > 1 else ""
+            nombre = _extraer_nombre_medicacion(r.get("med", ""))
+            via_texto = partes[1].replace("Via: ", "") if len(partes) > 1 and "Via:" in partes[1] else r.get("via", "")
             frecuencia_texto = r.get("frecuencia") or (partes[2] if len(partes) > 2 else "")
             horarios = obtener_horarios_receta(r)
             horarios_legibles = format_horarios_receta(r)
@@ -338,35 +670,53 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         ),
                         None,
                     )
+                    estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
                     plan_dia.append(
                         {
-                            "Hora": horario,
+                            "OK": _estado_icono(estado_actual),
+                            "Hora programada": horario,
+                            "Hora realizada": admin_reg.get("hora", "") if admin_reg else "",
                             "Medicamento": nombre,
+                            "Detalle / velocidad": _detalle_horario_infusion(r, horario),
                             "Via": via_texto or "S/D",
                             "Frecuencia": frecuencia_texto or "S/D",
-                            "Estado": admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente",
+                            "Estado": _estado_legible(estado_actual),
                             "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                             "Registrado por": admin_reg.get("firma", "") if admin_reg else "",
-                            "Hora real": admin_reg.get("hora", "") if admin_reg else "",
                         }
                     )
             else:
                 admin_reg = next((a for a in admin_hoy if a.get("med") == nombre), None)
+                estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
                 plan_dia.append(
                     {
-                        "Hora": "A demanda",
+                        "OK": _estado_icono(estado_actual),
+                        "Hora programada": "A demanda",
+                        "Hora realizada": admin_reg.get("hora", "") if admin_reg else "",
                         "Medicamento": nombre,
+                        "Detalle / velocidad": _detalle_horario_infusion(r, ""),
                         "Via": via_texto or "S/D",
                         "Frecuencia": frecuencia_texto or "A demanda",
-                        "Estado": admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente",
+                        "Estado": _estado_legible(estado_actual),
                         "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                         "Registrado por": admin_reg.get("firma", "") if admin_reg else "",
-                        "Hora real": admin_reg.get("hora", "") if admin_reg else "",
                     }
                 )
 
-        st.caption("Plan de administracion del dia")
-        mostrar_dataframe_con_scroll(pd.DataFrame(plan_dia), height=360)
+        plan_dia_df = pd.DataFrame(plan_dia)
+        if not plan_dia_df.empty:
+            plan_dia_df["_orden"] = plan_dia_df["Hora programada"].apply(
+                lambda valor: 9999 if valor == "A demanda" else int(str(valor).split(":")[0]) * 60 + int(str(valor).split(":")[1])
+            )
+            plan_dia_df = plan_dia_df.sort_values(by=["_orden", "Medicamento"]).drop(columns=["_orden"])
+
+        c_res1, c_res2, c_res3 = st.columns(3)
+        c_res1.metric("✅ Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
+        c_res2.metric("❌ No realizadas", int((plan_dia_df.get("Estado") == "No realizada").sum()) if not plan_dia_df.empty else 0)
+        c_res3.metric("⏳ Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
+
+        st.caption("Sabana diaria de medicacion e infusiones")
+        mostrar_dataframe_con_scroll(plan_dia_df, height=360)
 
         with st.expander("Ver sabana resumida de medicacion"):
             mostrar_dataframe_con_scroll(pd.DataFrame(sabana_resumen), height=280)
@@ -539,6 +889,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         c_info.caption(f"Origen: {r.get('origen_registro')}")
                     c_info.markdown(f"*{r.get('med', '')}*")
                     c_info.caption(f"Horarios: {format_horarios_receta(r)}")
+                    if r.get("tipo_indicacion") == "Infusion / hidratacion":
+                        detalle_inf = []
+                        if r.get("velocidad_ml_h") not in ("", None):
+                            detalle_inf.append(f"Velocidad: {r.get('velocidad_ml_h')} ml/h")
+                        if r.get("alternar_con"):
+                            detalle_inf.append(f"Alternar con: {r.get('alternar_con')}")
+                        if detalle_inf:
+                            c_info.caption(" | ".join(detalle_inf))
+                        if r.get("plan_hidratacion"):
+                            c_info.caption(f"Plan de hidratacion: {_resumen_plan_hidratacion(r.get('plan_hidratacion', []))}")
+                        if r.get("detalle_infusion"):
+                            c_info.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
                     if r.get("firma_b64"):
                         try:
                             c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)

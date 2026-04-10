@@ -6,7 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -27,6 +27,8 @@ def _obtener_dt(fecha_hora):
 
 
 def render_rrhh(mi_empresa, rol, user):
+    rol_normalizado = str(rol or "").strip().lower()
+    acceso_total = es_control_total(rol_normalizado)
     st.subheader("Control de RRHH y Fichaje Historico")
     st.info("Genera reportes de presentismo, horas trabajadas y movimientos GPS sin cargar tablas gigantes por defecto.")
 
@@ -36,7 +38,7 @@ def render_rrhh(mi_empresa, rol, user):
 
     fichajes_lista = []
     rastreador_ingresos = {}
-    checkins = [c for c in st.session_state.get("checkin_db", []) if c.get("empresa") == mi_empresa or rol == "SuperAdmin"]
+    checkins = [c for c in st.session_state.get("checkin_db", []) if c.get("empresa") == mi_empresa or acceso_total]
     checkins_ordenados = sorted(checkins, key=lambda c: _obtener_dt(c.get("fecha_hora", "")))
 
     usuarios_db = st.session_state.get("usuarios_db", {})
@@ -153,6 +155,9 @@ def render_rrhh(mi_empresa, rol, user):
                 "Visitas": len(grupo),
                 "Horas Totales": round(horas_totales, 1),
             })
+        if not resumen_rows:
+            st.info("Todavia no hay egresos completos en el periodo para calcular horas trabajadas.")
+            return
         resumen_prof = pd.DataFrame(resumen_rows).sort_values(by=["Horas Totales", "Visitas"], ascending=False)
         limite_resumen = seleccionar_limite_registros(
             "Profesionales en resumen",
@@ -177,12 +182,13 @@ def render_rrhh(mi_empresa, rol, user):
     opciones_borrar = [
         (f"{c.get('fecha_hora', '-')} | {c.get('profesional', 'S/D')} | {c.get('tipo', '-')} | Paciente: {c.get('paciente', 'S/D')}", idx)
         for idx, c in enumerate(st.session_state.get("checkin_db", []))
-        if c.get("empresa") == mi_empresa or rol == "SuperAdmin"
+        if c.get("empresa") == mi_empresa or acceso_total
     ]
     if opciones_borrar:
         col_del1, col_del2 = st.columns([3, 1])
         registro_sel = col_del1.selectbox("Seleccionar fichaje a eliminar", options=opciones_borrar, format_func=lambda x: x[0])
-        if col_del2.button("Eliminar Fichaje", type="secondary", use_container_width=True):
+        confirmar_borrado = col_del1.checkbox("Confirmar eliminacion del fichaje", key="rrhh_conf_del_fichaje")
+        if col_del2.button("Eliminar Fichaje", type="secondary", use_container_width=True, disabled=not confirmar_borrado):
             del st.session_state["checkin_db"][registro_sel[1]]
             guardar_datos()
             st.rerun()

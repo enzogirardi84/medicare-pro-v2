@@ -115,13 +115,13 @@ def render_pediatria(paciente_sel, user):
                 st.caption("IMC")
                 st.area_chart(df_g.set_index("fecha")["imc"], use_container_width=True, color="#22c55e")
         st.divider()
-        col_tit, col_btn = st.columns([3, 1])
+        col_tit, col_chk, col_btn = st.columns([3, 1.2, 1])
         col_tit.markdown("#### Historial")
-        if col_btn.button("Borrar ultimo", use_container_width=True):
-            if st.checkbox("Confirmar borrado", key="conf_del_ped"):
-                st.session_state["pediatria_db"].remove(ped[-1])
-                guardar_datos()
-                st.rerun()
+        confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
+        if col_btn.button("Borrar ultimo", use_container_width=True, disabled=not confirmar_borrado):
+            st.session_state["pediatria_db"].remove(ped[-1])
+            guardar_datos()
+            st.rerun()
         max_controles = min(200, len(ped))
         if max_controles <= 10:
             limite = max_controles

@@ -127,9 +127,10 @@ def render_balance(paciente_sel, user):
     )
 
     st.divider()
-    if st.button("Borrar ultimo balance", use_container_width=True, type="secondary"):
-        if st.checkbox("Confirmar borrado", key="conf_del_balance"):
-            st.session_state["balance_db"].remove(blp[-1])
-            guardar_datos()
-            st.success("Ultimo balance eliminado.")
-            st.rerun()
+    col_chk, col_btn = st.columns([1.2, 2.8])
+    confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_balance")
+    if col_btn.button("Borrar ultimo balance", use_container_width=True, type="secondary", disabled=not confirmar_borrado):
+        st.session_state["balance_db"].remove(blp[-1])
+        guardar_datos()
+        st.success("Ultimo balance eliminado.")
+        st.rerun()

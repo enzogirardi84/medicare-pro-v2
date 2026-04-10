@@ -5,7 +5,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -16,6 +16,7 @@ except ImportError:
 
 
 def render_caja(paciente_sel, mi_empresa, user, rol):
+    rol_normalizado = str(rol or "").strip().lower()
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral para ver su cuenta corriente.")
         return
@@ -127,7 +128,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     else:
         st.info("No hay movimientos registrados para este paciente aun.")
 
-    if rol in ["SuperAdmin", "Coordinador"]:
+    if es_control_total(rol_normalizado):
         st.divider()
         st.markdown("#### Auditoria de Facturacion General")
         df_caja = pd.DataFrame([f for f in st.session_state.get("facturacion_db", []) if f.get("empresa") == mi_empresa])

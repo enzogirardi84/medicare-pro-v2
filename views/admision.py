@@ -1,226 +1,512 @@
-from datetime import datetime, date
-from typing import Dict, Any, List
+from datetime import date, datetime
 
+import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, seleccionar_limite_registros
+from core.utils import (
+    ahora,
+    es_control_total,
+    mostrar_dataframe_con_scroll,
+    obtener_pacientes_visibles,
+    registrar_auditoria_legal,
+    seleccionar_limite_registros,
+)
+
+DB_LABELS = {
+    "agenda_db": "Agenda",
+    "checkin_db": "Fichajes",
+    "vitales_db": "Signos vitales",
+    "indicaciones_db": "Recetas e indicaciones",
+    "evoluciones_db": "Evoluciones",
+    "balance_db": "Balance",
+    "pediatria_db": "Pediatria",
+    "fotos_heridas_db": "Fotos de heridas",
+    "consumos_db": "Materiales",
+    "estudios_db": "Estudios",
+    "administracion_med_db": "Administracion medicacion",
+    "consentimientos_db": "Consentimientos",
+    "emergencias_db": "Emergencias",
+    "cuidados_enfermeria_db": "Cuidados de enfermeria",
+    "escalas_clinicas_db": "Escalas clinicas",
+    "auditoria_legal_db": "Auditoria legal",
+    "facturacion_db": "Caja y facturacion",
+    "firmas_tactiles_db": "Firmas",
+}
+NON_PATIENT_DB_KEYS = {
+    "usuarios_db",
+    "pacientes_db",
+    "detalles_pacientes_db",
+    "inventario_db",
+    "nomenclador_db",
+    "logs_db",
+    "reportes_diarios_db",
+    "profesionales_red_db",
+    "solicitudes_servicios_db",
+}
 
 
-def _parse_fecha_nacimiento(fecha_str: str) -> date:
-    """Intenta parsear la fecha de nacimiento que viene de la DB como string a objeto date."""
-    try:
-        return datetime.strptime(fecha_str, "%d/%m/%Y").date()
-    except (ValueError, TypeError):
-        return date(1990, 1, 1)
+def _paciente_id(nombre, dni):
+    return f"{str(nombre or '').strip()} - {str(dni or '').strip()}"
 
 
-def _actualizar_id_en_cascada(viejo_id: str, nuevo_id: str) -> None:
-    """Busca en todas las tablas de la base de datos y actualiza el ID del paciente si cambió."""
-    if viejo_id == nuevo_id:
-        return
-        
-    for key, value in st.session_state.items():
-        if key.endswith("_db") and isinstance(value, list):
-            for registro in value:
-                if isinstance(registro, dict) and registro.get("paciente") == viejo_id:
-                    registro["paciente"] = nuevo_id
+def _nombre_legible(paciente_id):
+    partes = str(paciente_id or "").rsplit(" - ", 1)
+    return partes[0].strip() if partes else ""
 
 
-def _render_formulario_admision(mi_empresa: str, rol: str, paciente_editar: str = None) -> None:
-    """Renderiza el formulario tanto para crear como para editar pacientes."""
-    es_edicion = paciente_editar is not None
-    detalles_previos = st.session_state["detalles_pacientes_db"].get(paciente_editar, {}) if es_edicion else {}
-    
-    # Pre-llenar datos si es edición
-    nombre_previo = paciente_editar.split(" - ")[0] if es_edicion else ""
-    dni_previo = detalles_previos.get("dni", "")
-    
-    with st.form("adm_form", clear_on_submit=not es_edicion):
-        st.markdown(f"##### {'✏️ Editar legajo de ' + nombre_previo if es_edicion else '📝 Datos del nuevo legajo'}")
-        
-        if es_edicion:
-            st.warning("⚠️ Si modificas el Nombre o el DNI, el sistema actualizará automáticamente todas las historias clínicas y evoluciones asociadas para no perder datos.")
-            
-        col_a, col_b = st.columns(2)
-        n = col_a.text_input("Nombre y apellido *", value=nombre_previo, placeholder="Juan Perez")
-        o = col_b.text_input("Obra social / prepaga", value=detalles_previos.get("obra_social", ""), placeholder="OSDE / PAMI / Particular")
+def _parsear_fecha_guardada(valor):
+    for formato in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(str(valor or "").strip(), formato).date()
+        except Exception:
+            continue
+    return date(1990, 1, 1)
 
-        col_c, col_d = st.columns(2)
-        d = col_c.text_input("DNI del paciente *", value=dni_previo, placeholder="35123456")
-        f_nac = col_d.date_input(
-            "Fecha de nacimiento",
-            value=_parse_fecha_nacimiento(detalles_previos.get("fnac", "")),
-            min_value=date(1900, 1, 1),
-            max_value=ahora().date(),
+
+def _dni_duplicado(dni, excluir_paciente=None):
+    dni_limpio = str(dni or "").strip()
+    for paciente_id, detalles in st.session_state.get("detalles_pacientes_db", {}).items():
+        if excluir_paciente and paciente_id == excluir_paciente:
+            continue
+        if str(detalles.get("dni", "") or "").strip() == dni_limpio:
+            return True
+    return False
+
+
+def _iterar_tablas_paciente():
+    for clave, registros in st.session_state.items():
+        if not clave.endswith("_db") or clave in NON_PATIENT_DB_KEYS or not isinstance(registros, list):
+            continue
+        yield clave, registros
+
+
+def _resumen_impacto_paciente(paciente_id):
+    resumen = {}
+    for clave, registros in _iterar_tablas_paciente():
+        cantidad = sum(
+            1 for registro in registros if isinstance(registro, dict) and registro.get("paciente") == paciente_id
         )
+        if cantidad:
+            resumen[clave] = cantidad
+    return dict(sorted(resumen.items(), key=lambda item: (-item[1], item[0])))
 
-        col_e, col_f = st.columns(2)
-        sexo_previo = detalles_previos.get("sexo", "Otro")
-        idx_sexo = ["F", "M", "Otro"].index(sexo_previo) if sexo_previo in ["F", "M", "Otro"] else 2
-        se = col_e.selectbox("Sexo", ["F", "M", "Otro"], index=idx_sexo)
-        
-        tel = col_f.text_input("WhatsApp / teléfono", value=detalles_previos.get("telefono", ""), placeholder="3584302024")
-        dir_p = st.text_input("Dirección exacta", value=detalles_previos.get("direccion", ""), placeholder="Calle 123, barrio, ciudad")
 
-        st.markdown("##### Alertas y antecedentes")
-        col_alg, col_pat = st.columns(2)
-        alergias = col_alg.text_area("Alergias", value=detalles_previos.get("alergias", ""), placeholder="Ej: penicilina, ibuprofeno...", height=90)
-        patologias = col_pat.text_area("Patologías previas / riesgos", value=detalles_previos.get("patologias", ""), placeholder="Ej: DBT, HTA, marcapasos...", height=90)
+def _renombrar_referencias_paciente(paciente_anterior, paciente_nuevo):
+    total_actualizado = 0
+    for _, registros in _iterar_tablas_paciente():
+        for registro in registros:
+            if isinstance(registro, dict) and registro.get("paciente") == paciente_anterior:
+                registro["paciente"] = paciente_nuevo
+                total_actualizado += 1
 
-        # Manejo de Empresa
-        empresa_previa = detalles_previos.get("empresa", mi_empresa)
-        if rol == "SuperAdmin":
-            emp_d = st.text_input("Empresa / clínica", value=empresa_previa)
-        else:
-            emp_d = empresa_previa
-            st.info(f"Paciente asignado a: {emp_d}")
-            
-        estado_opciones = ["Activo", "De Alta", "Inactivo"]
-        estado_previo = detalles_previos.get("estado", "Activo")
-        idx_estado = estado_opciones.index(estado_previo) if estado_previo in estado_opciones else 0
-        estado_actual = st.selectbox("Estado del paciente", estado_opciones, index=idx_estado)
+    if st.session_state.get("paciente_actual") == paciente_anterior:
+        st.session_state["paciente_actual"] = paciente_nuevo
 
-        col_btn1, col_btn2 = st.columns([3, 1])
-        label_boton = "Guardar cambios" if es_edicion else "Habilitar paciente"
-        
-        if col_btn1.form_submit_button(label_boton, use_container_width=True, type="primary"):
-            if not n.strip() or not d.strip():
-                st.error("Nombre y DNI son obligatorios.")
-                return
-                
-            nuevo_id = f"{n.strip()} - {d.strip()}"
-            
-            # Validación de duplicados (solo si es nuevo, o si cambió el DNI)
-            if not es_edicion or (es_edicion and d.strip() != dni_previo):
-                dni_existente = any(det.get("dni") == d.strip() for k, det in st.session_state["detalles_pacientes_db"].items() if k != paciente_editar)
-                if dni_existente:
-                    st.error("Ya existe otro paciente con ese DNI en el sistema.")
-                    return
+    for clave in [k for k in st.session_state if k.startswith("lazy_export_")]:
+        st.session_state.pop(clave, None)
+    return total_actualizado
 
-            # Si es edición, limpiamos el registro viejo y actualizamos cascada
-            if es_edicion:
-                if paciente_editar != nuevo_id:
-                    _actualizar_id_en_cascada(paciente_editar, nuevo_id)
-                    st.session_state["pacientes_db"].remove(paciente_editar)
-                    del st.session_state["detalles_pacientes_db"][paciente_editar]
-            
-            # Guardar/Actualizar detalles
-            if nuevo_id not in st.session_state["pacientes_db"]:
-                 st.session_state["pacientes_db"].append(nuevo_id)
-                 
-            st.session_state["detalles_pacientes_db"][nuevo_id] = {
-                "dni": d.strip(),
-                "fnac": f_nac.strftime("%d/%m/%Y"),
-                "sexo": se,
-                "telefono": tel.strip(),
-                "direccion": dir_p.strip(),
-                "empresa": emp_d.strip(),
-                "estado": estado_actual,
-                "obra_social": o.strip(),
-                "alergias": alergias.strip(),
-                "patologias": patologias.strip(),
+
+def _eliminar_referencias_paciente(paciente_id):
+    resumen = {}
+    for clave, registros in list(_iterar_tablas_paciente()):
+        nuevos_registros = []
+        eliminados = 0
+        for registro in registros:
+            if isinstance(registro, dict) and registro.get("paciente") == paciente_id:
+                eliminados += 1
+                continue
+            nuevos_registros.append(registro)
+        if eliminados:
+            st.session_state[clave] = nuevos_registros
+            resumen[clave] = eliminados
+
+    if st.session_state.get("paciente_actual") == paciente_id:
+        st.session_state.pop("paciente_actual", None)
+
+    for clave in [k for k in st.session_state if k.startswith("lazy_export_")]:
+        st.session_state.pop(clave, None)
+    return dict(sorted(resumen.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False, empresa_filtro=""):
+    pacientes = []
+    for paciente_id, _, dni, obra_social, estado, empresa in obtener_pacientes_visibles(
+        st.session_state,
+        mi_empresa,
+        rol,
+        incluir_altas=incluir_altas,
+        busqueda=busqueda,
+    ):
+        if empresa_filtro and empresa != empresa_filtro:
+            continue
+        detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_id, {})
+        pacientes.append(
+            {
+                "id": paciente_id,
+                "nombre": _nombre_legible(paciente_id),
+                "dni": dni,
+                "empresa": empresa,
+                "obra_social": obra_social,
+                "estado": estado,
+                "telefono": detalles.get("telefono", ""),
+                "direccion": detalles.get("direccion", ""),
             }
-            
-            guardar_datos()
-            
-            if es_edicion:
-                st.session_state["editando_admision"] = None
-                st.toast(f"Legajo de {n} actualizado correctamente.", icon="✅")
-            else:
-                st.toast(f"Paciente {n} dado de alta correctamente.", icon="✅")
-                
-            st.rerun()
-
-        # Botón de cancelar si estamos en modo edición
-        if es_edicion:
-            if col_btn2.form_submit_button("Cancelar", use_container_width=True):
-                st.session_state["editando_admision"] = None
-                st.rerun()
+        )
+    return pacientes
 
 
-def _render_padron_pacientes() -> None:
-    """Renderiza el padrón de pacientes con búsqueda, edición y borrado (Anti-colapso)."""
-    st.markdown("##### Buscador y Gestión de Padrón")
-    buscar_padron = st.text_input("🔍 Buscar por nombre, DNI o empresa...", key="buscar_padron").lower()
-    
-    # Filtrar pacientes
-    pacientes_filtrados = []
-    for p in st.session_state.get("pacientes_db", []):
-        det = st.session_state["detalles_pacientes_db"].get(p, {})
-        texto_busqueda = f"{p.lower()} {det.get('dni', '')} {det.get('empresa', '').lower()}"
-        if not buscar_padron or buscar_padron in texto_busqueda:
-            pacientes_filtrados.append(p)
-
-    limite = seleccionar_limite_registros(
-        "Pacientes a mostrar", len(pacientes_filtrados),
-        key="limite_padron", default=20, opciones=(10, 20, 50, 100)
-    )
-    
-    st.caption(f"Mostrando {min(limite, len(pacientes_filtrados))} de {len(pacientes_filtrados)} pacientes encontrados.")
-
-    # Contenedor con SCROLL ACTIVO (Anti-colapso)
-    with st.container(height=600):
-        for p in pacientes_filtrados[:limite]:
-            det = st.session_state["detalles_pacientes_db"].get(p, {})
-            
-            with st.container(border=True):
-                col_info, col_acciones = st.columns([3, 1])
-                
-                estado_badge = "🟢" if det.get('estado') == 'Activo' else "🔴"
-                col_info.markdown(f"**{estado_badge} {p.split(' - ')[0]}**")
-                col_info.caption(f"DNI: {det.get('dni', 'S/D')} | O.S: {det.get('obra_social', 'S/D')} | Empresa: {det.get('empresa', 'S/D')}")
-                
-                with col_acciones:
-                    if st.button("✏️ Editar", key=f"edit_adm_{p}", use_container_width=True):
-                        st.session_state["editando_admision"] = p
-                        st.rerun()
-                        
-                    # Borrado protegido por checkbox
-                    chk_borrar = st.checkbox("Habilitar", key=f"chk_del_adm_{p}")
-                    if st.button("🗑️ Borrar", key=f"btn_del_adm_{p}", type="primary", use_container_width=True, disabled=not chk_borrar):
-                        st.session_state["pacientes_db"].remove(p)
-                        if p in st.session_state["detalles_pacientes_db"]:
-                            del st.session_state["detalles_pacientes_db"][p]
-                        guardar_datos()
-                        st.toast(f"Paciente {p.split(' - ')[0]} eliminado del padrón.", icon="🗑️")
-                        st.rerun()
+def _dataframe_pacientes(registros):
+    filas = []
+    for item in registros:
+        filas.append(
+            {
+                "Paciente": item["nombre"],
+                "DNI": item["dni"],
+                "Clinica": item["empresa"],
+                "Obra social": item["obra_social"] or "S/D",
+                "Estado": item["estado"],
+                "Telefono": item["telefono"] or "S/D",
+                "Direccion": item["direccion"] or "S/D",
+            }
+        )
+    return pd.DataFrame(filas)
 
 
-# --- Función Principal (Enrutador) ---
-def render_admision(mi_empresa: str, rol: str) -> None:
+def render_admision(mi_empresa, rol):
+    rol_normalizado = str(rol or "").strip().lower()
+    admin_total = es_control_total(rol)
+
     st.markdown(
         """
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Admisión y Gestión de Pacientes</h2>
-            <p class="mc-hero-text">Controla el padrón activo de pacientes. Carga nuevos legajos, corrige errores de tipeo y administra las bajas sin perder la integridad de las historias clínicas.</p>
+            <h2 class="mc-hero-title">Admision de nuevo paciente</h2>
+            <p class="mc-hero-text">Carga, corrige y administra legajos completos. Desde esta vista puedes buscar pacientes por clinica, editar datos errados y eliminar registros con limpieza segura de los modulos asociados.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">1. Buscar si ya existe</span>
+                <span class="mc-chip">2. Completar datos obligatorios</span>
+                <span class="mc-chip">3. Guardar, corregir o depurar</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # Revisar si estamos en modo edición para forzar esa vista
-    paciente_en_edicion = st.session_state.get("editando_admision")
+    st.markdown("##### Buscar paciente existente")
+    buscar_adm = st.text_input("Nombre, DNI o apellido", placeholder="Ej: Juan Perez o 35123456")
 
-    if paciente_en_edicion:
-        st.info("Modo Edición Activado. Modifica los datos y presiona Guardar cambios.")
-        _render_formulario_admision(mi_empresa, rol, paciente_editar=paciente_en_edicion)
-    else:
-        # Usamos pestañas para organizar la UI de forma limpia
-        tab1, tab2 = st.tabs(["➕ Nueva Admisión", "📋 Padrón y Gestión (Editar/Borrar)"])
-        
-        with tab1:
-            st.markdown(
-                """
-                <div class="mc-grid-3">
-                    <div class="mc-card"><h4>Datos personales</h4><p>Nombre, DNI, nacimiento y contacto.</p></div>
-                    <div class="mc-card"><h4>Datos administrativos</h4><p>Obra social y empresa asignada.</p></div>
-                    <div class="mc-card"><h4>Alertas clínicas</h4><p>Alergias y patologías para visualización rápida.</p></div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+    if buscar_adm:
+        coincidencias = [
+            p
+            for p in st.session_state["pacientes_db"]
+            if buscar_adm.lower() in p.lower()
+            or (buscar_adm.isdigit() and buscar_adm in st.session_state["detalles_pacientes_db"].get(p, {}).get("dni", ""))
+        ]
+        if coincidencias:
+            st.warning(f"Se encontraron {len(coincidencias)} pacientes similares.")
+            for p in coincidencias[:5]:
+                det = st.session_state["detalles_pacientes_db"].get(p, {})
+                st.caption(f"{p} | DNI: {det.get('dni', 'S/D')} | Empresa: {det.get('empresa', 'S/D')}")
+        else:
+            st.success("No hay pacientes con ese nombre o DNI.")
+
+    st.markdown("##### Gestion de pacientes por clinica")
+    col_f1, col_f2 = st.columns([2.2, 1])
+    buscar_gestion = col_f1.text_input(
+        "Buscar en legajos cargados",
+        placeholder="Nombre, DNI, obra social, clinica o estado",
+        key="adm_buscar_gestion",
+    )
+    incluir_altas = col_f2.checkbox("Incluir altas", key="adm_incluir_altas")
+
+    empresa_filtro = ""
+    if admin_total:
+        empresas_disponibles = sorted(
+            {
+                str(det.get("empresa", "") or "").strip()
+                for det in st.session_state.get("detalles_pacientes_db", {}).values()
+                if str(det.get("empresa", "") or "").strip()
+            }
+        )
+        opciones_empresa = ["Todas las clinicas"] + empresas_disponibles
+        empresa_sel = st.selectbox("Filtrar por clinica", opciones_empresa, key="adm_empresa_filtro")
+        if empresa_sel != "Todas las clinicas":
+            empresa_filtro = empresa_sel
+
+    pacientes_gestion = _listar_pacientes_gestion(
+        mi_empresa,
+        rol,
+        busqueda=buscar_gestion,
+        incluir_altas=incluir_altas,
+        empresa_filtro=empresa_filtro,
+    )
+
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Pacientes visibles", len(pacientes_gestion))
+    col_m2.metric("Activos", sum(1 for item in pacientes_gestion if item["estado"] == "Activo"))
+    col_m3.metric("No activos", sum(1 for item in pacientes_gestion if item["estado"] != "Activo"))
+
+    if pacientes_gestion:
+        limite = seleccionar_limite_registros(
+            "Pacientes a mostrar en la lista",
+            len(pacientes_gestion),
+            key="adm_limite_pacientes",
+            default=30,
+            opciones=(10, 20, 30, 50, 100, 200, 500),
+        )
+        mostrar_dataframe_con_scroll(_dataframe_pacientes(pacientes_gestion[:limite]), height=420)
+
+        opciones_pacientes = [item["id"] for item in pacientes_gestion]
+        paciente_sel_admin = st.selectbox(
+            "Seleccionar paciente para editar o eliminar",
+            opciones_pacientes,
+            format_func=lambda item: (
+                f"{_nombre_legible(item)} | DNI {st.session_state['detalles_pacientes_db'].get(item, {}).get('dni', 'S/D')} | "
+                f"{st.session_state['detalles_pacientes_db'].get(item, {}).get('empresa', 'S/D')} | "
+                f"{st.session_state['detalles_pacientes_db'].get(item, {}).get('estado', 'Activo')}"
+            ),
+            key="adm_paciente_edicion",
+        )
+
+        detalle_sel = dict(st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel_admin, {}))
+        impacto_actual = _resumen_impacto_paciente(paciente_sel_admin)
+        total_impacto = sum(impacto_actual.values())
+
+        with st.container(border=True):
+            st.markdown("#### Editar legajo seleccionado")
+            if impacto_actual:
+                texto_impacto = " | ".join(
+                    f"{DB_LABELS.get(clave, clave)}: {cantidad}" for clave, cantidad in list(impacto_actual.items())[:6]
+                )
+                st.caption(f"Registros vinculados detectados: {total_impacto}. {texto_impacto}")
+            else:
+                st.caption("Este legajo todavia no tiene registros clinicos vinculados.")
+
+            estado_actual = detalle_sel.get("estado", "Activo") or "Activo"
+            estados_disponibles = ["Activo", "De Alta"]
+            if estado_actual not in estados_disponibles:
+                estados_disponibles.append(estado_actual)
+
+            with st.form("adm_edit_form"):
+                col_e1, col_e2 = st.columns(2)
+                nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
+                obra_edit = col_e2.text_input("Obra social / prepaga", value=detalle_sel.get("obra_social", ""))
+
+                col_e3, col_e4 = st.columns(2)
+                dni_edit = col_e3.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
+                fnac_edit = col_e4.date_input(
+                    "Fecha de nacimiento",
+                    value=_parsear_fecha_guardada(detalle_sel.get("fnac", "")),
+                    min_value=date(1900, 1, 1),
+                    max_value=ahora().date(),
+                )
+
+                col_e5, col_e6 = st.columns(2)
+                sexo_opciones = ["F", "M", "Otro"]
+                sexo_actual = detalle_sel.get("sexo", "F")
+                if sexo_actual not in sexo_opciones:
+                    sexo_opciones.append(sexo_actual)
+                sexo_edit = col_e5.selectbox("Sexo", sexo_opciones, index=sexo_opciones.index(sexo_actual))
+                estado_edit = col_e6.selectbox("Estado", estados_disponibles, index=estados_disponibles.index(estado_actual))
+
+                col_e7, col_e8 = st.columns(2)
+                telefono_edit = col_e7.text_input("WhatsApp / telefono", value=detalle_sel.get("telefono", ""))
+                if admin_total:
+                    empresa_edit = col_e8.text_input("Empresa / clinica", value=detalle_sel.get("empresa", mi_empresa))
+                else:
+                    empresa_edit = mi_empresa
+                    col_e8.info(f"Clinica fija: {mi_empresa}")
+
+                direccion_edit = st.text_input("Direccion exacta", value=detalle_sel.get("direccion", ""))
+                col_e9, col_e10 = st.columns(2)
+                alergias_edit = col_e9.text_area("Alergias", value=detalle_sel.get("alergias", ""), height=90)
+                patologias_edit = col_e10.text_area(
+                    "Patologias previas / riesgos",
+                    value=detalle_sel.get("patologias", ""),
+                    height=90,
+                )
+
+                if st.form_submit_button("Guardar cambios del legajo", use_container_width=True, type="primary"):
+                    if not nombre_edit.strip() or not dni_edit.strip():
+                        st.error("Nombre y DNI son obligatorios.")
+                    elif _dni_duplicado(dni_edit, excluir_paciente=paciente_sel_admin):
+                        st.error("Ya existe otro paciente con ese DNI.")
+                    else:
+                        paciente_nuevo = _paciente_id(nombre_edit, dni_edit)
+                        if paciente_nuevo != paciente_sel_admin and paciente_nuevo in st.session_state["detalles_pacientes_db"]:
+                            st.error("Ya existe un legajo con ese nombre y DNI.")
+                        else:
+                            detalles_actualizados = dict(detalle_sel)
+                            detalles_actualizados.update(
+                                {
+                                    "dni": dni_edit.strip(),
+                                    "fnac": fnac_edit.strftime("%d/%m/%Y"),
+                                    "sexo": sexo_edit,
+                                    "telefono": telefono_edit.strip(),
+                                    "direccion": direccion_edit.strip(),
+                                    "empresa": str(empresa_edit or mi_empresa).strip(),
+                                    "estado": estado_edit,
+                                    "obra_social": obra_edit.strip(),
+                                    "alergias": alergias_edit.strip(),
+                                    "patologias": patologias_edit.strip(),
+                                }
+                            )
+
+                            pacientes_db = list(st.session_state.get("pacientes_db", []))
+                            if paciente_sel_admin in pacientes_db:
+                                indice = pacientes_db.index(paciente_sel_admin)
+                                pacientes_db[indice] = paciente_nuevo
+                            else:
+                                pacientes_db.append(paciente_nuevo)
+                            st.session_state["pacientes_db"] = list(dict.fromkeys(pacientes_db))
+
+                            st.session_state["detalles_pacientes_db"].pop(paciente_sel_admin, None)
+                            st.session_state["detalles_pacientes_db"][paciente_nuevo] = detalles_actualizados
+
+                            registros_actualizados = 0
+                            if paciente_nuevo != paciente_sel_admin:
+                                registros_actualizados = _renombrar_referencias_paciente(paciente_sel_admin, paciente_nuevo)
+
+                            registrar_auditoria_legal(
+                                "Admision",
+                                paciente_nuevo,
+                                "Actualizacion de legajo",
+                                st.session_state.get("u_actual", {}).get("nombre", "Sistema"),
+                                st.session_state.get("u_actual", {}).get("matricula", ""),
+                                (
+                                    f"Legajo editado desde admision. "
+                                    f"Paciente anterior: {paciente_sel_admin}. Registros actualizados: {registros_actualizados}."
+                                ),
+                                empresa=detalles_actualizados.get("empresa", mi_empresa),
+                            )
+                            guardar_datos()
+                            st.success("Legajo actualizado correctamente.")
+                            st.rerun()
+
+        with st.container(border=True):
+            st.markdown("#### Eliminar paciente y registros asociados")
+            st.warning(
+                "Usa esta accion solo si el legajo fue cargado por error. Se borraran tambien los registros clinicos, legales y operativos vinculados."
             )
-            _render_formulario_admision(mi_empresa, rol)
-            
-        with tab2:
-            _render_padron_pacientes()
+            if impacto_actual:
+                for clave, cantidad in impacto_actual.items():
+                    st.caption(f"{DB_LABELS.get(clave, clave)}: {cantidad} registro(s)")
+            else:
+                st.caption("No se detectaron registros clinicos vinculados para este paciente.")
+
+            confirmar_borrado = st.checkbox(
+                f"Confirmo eliminar por completo el legajo de {_nombre_legible(paciente_sel_admin)}",
+                key=f"adm_confirm_delete_{paciente_sel_admin}",
+            )
+            if st.button(
+                "Eliminar paciente y limpiar historial vinculado",
+                key=f"adm_delete_{paciente_sel_admin}",
+                use_container_width=True,
+                disabled=not confirmar_borrado,
+                type="primary" if confirmar_borrado else "secondary",
+            ):
+                resumen_eliminado = _eliminar_referencias_paciente(paciente_sel_admin)
+                st.session_state["detalles_pacientes_db"].pop(paciente_sel_admin, None)
+                st.session_state["pacientes_db"] = [
+                    item for item in st.session_state.get("pacientes_db", []) if item != paciente_sel_admin
+                ]
+                detalle_empresa = detalle_sel.get("empresa", mi_empresa)
+                detalle_texto = (
+                    " | ".join(f"{DB_LABELS.get(clave, clave)}: {cantidad}" for clave, cantidad in resumen_eliminado.items())
+                    if resumen_eliminado
+                    else "Paciente eliminado sin registros asociados."
+                )
+                registrar_auditoria_legal(
+                    "Admision",
+                    paciente_sel_admin,
+                    "Eliminacion de legajo",
+                    st.session_state.get("u_actual", {}).get("nombre", "Sistema"),
+                    st.session_state.get("u_actual", {}).get("matricula", ""),
+                    f"Paciente eliminado desde admision. {detalle_texto}",
+                    empresa=detalle_empresa,
+                )
+                guardar_datos()
+                st.success("Paciente eliminado correctamente.")
+                st.rerun()
+    else:
+        st.info("No hay pacientes cargados con los filtros actuales.")
+
+    st.markdown(
+        """
+        <div class="mc-grid-3">
+            <div class="mc-card"><h4>Datos personales</h4><p>Nombre, DNI, fecha de nacimiento, sexo y telefono quedan visibles en todo el sistema.</p></div>
+            <div class="mc-card"><h4>Datos administrativos</h4><p>La obra social y la empresa asignada se usan en historia clinica, reportes y documentos.</p></div>
+            <div class="mc-card"><h4>Alertas clinicas</h4><p>Alergias y patologias se muestran en la barra lateral para reducir errores del equipo.</p></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.form("adm_form", clear_on_submit=True):
+        st.markdown("##### Datos del legajo")
+        col_a, col_b = st.columns(2)
+        n = col_a.text_input("Nombre y apellido *", placeholder="Juan Perez")
+        o = col_b.text_input("Obra social / prepaga", placeholder="OSDE / PAMI / Particular")
+
+        col_c, col_d = st.columns(2)
+        d = col_c.text_input("DNI del paciente *", placeholder="35123456")
+        f_nac = col_d.date_input(
+            "Fecha de nacimiento",
+            value=date(1990, 1, 1),
+            min_value=date(1900, 1, 1),
+            max_value=ahora().date(),
+        )
+
+        col_e, col_f = st.columns(2)
+        se = col_e.selectbox("Sexo", ["F", "M", "Otro"])
+        tel = col_f.text_input("WhatsApp / telefono", placeholder="3584302024")
+
+        dir_p = st.text_input("Direccion exacta", placeholder="Calle 123, barrio, ciudad")
+
+        st.markdown("##### Alertas y antecedentes")
+        col_alg, col_pat = st.columns(2)
+        alergias = col_alg.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
+        patologias = col_pat.text_area("Patologias previas / riesgos", placeholder="Ej: DBT, HTA, marcapasos...", height=90)
+
+        if rol_normalizado == "superadmin":
+            emp_d = st.text_input("Empresa / clinica", value=mi_empresa)
+        else:
+            emp_d = mi_empresa
+            st.info(f"Paciente asignado a: {mi_empresa}")
+
+        if st.form_submit_button("Habilitar paciente", use_container_width=True, type="primary"):
+            if not n or not d:
+                st.error("Nombre y DNI son obligatorios.")
+            else:
+                if _dni_duplicado(d):
+                    st.error("Ya existe un paciente con ese DNI.")
+                else:
+                    id_p = _paciente_id(n, d)
+                    st.session_state["pacientes_db"].append(id_p)
+                    st.session_state["detalles_pacientes_db"][id_p] = {
+                        "dni": d.strip(),
+                        "fnac": f_nac.strftime("%d/%m/%Y"),
+                        "sexo": se,
+                        "telefono": tel.strip(),
+                        "direccion": dir_p.strip(),
+                        "empresa": emp_d.strip(),
+                        "estado": "Activo",
+                        "obra_social": o.strip(),
+                        "alergias": alergias.strip(),
+                        "patologias": patologias.strip(),
+                    }
+                    registrar_auditoria_legal(
+                        "Admision",
+                        id_p,
+                        "Alta de paciente",
+                        st.session_state.get("u_actual", {}).get("nombre", "Sistema"),
+                        st.session_state.get("u_actual", {}).get("matricula", ""),
+                        "Alta inicial del legajo del paciente.",
+                        empresa=emp_d.strip(),
+                    )
+                    guardar_datos()
+                    st.success(f"Paciente {n} dado de alta correctamente.")
+                    st.rerun()
+
+    st.caption("Los pacientes quedan disponibles en visitas, historia clinica y documentos.")
