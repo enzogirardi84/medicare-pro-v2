@@ -6,3 +6,4 @@ supabase
 fpdf2
 streamlit-drawable-canvas
 streamlit-geolocation
+reportlab
