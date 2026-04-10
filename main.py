@@ -72,227 +72,211 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     else: render_fn(paciente_sel, user)
 
 # =====================================================================
-# LANDING PAGE (PUBLICIDAD ULTRA-PREMIUM V3.0)
+# LANDING PAGE (PUBLICIDAD ULTRA-PREMIUM V3.1 - FIX RENDER)
 # =====================================================================
 if not st.session_state.get("entered_app", False):
-    st.markdown("""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-            
-            .stApp { 
-                background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 100%) !important; 
-            }
-            #MainMenu, header, footer { visibility: hidden; }
+    # 1. Definimos todo el contenido visual en una variable limpia
+    html_publicidad = """
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        .stApp { background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 100%) !important; }
+        #MainMenu, header, footer { visibility: hidden; }
+        
+        .landing-container { 
+            font-family: 'Inter', sans-serif; 
+            color: #f8fafc; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 40px 20px; 
+            text-align: center; 
+        }
+        
+        .badge-new { 
+            background: linear-gradient(90deg, #38bdf8, #818cf8); 
+            color: #020617; 
+            padding: 5px 15px; 
+            border-radius: 50px; 
+            font-size: 0.8rem; 
+            font-weight: 800; 
+            margin-bottom: 20px; 
+            text-transform: uppercase; 
+        }
+        
+        .main-title { 
+            font-size: clamp(2.5rem, 6vw, 5rem); 
+            font-weight: 900; 
+            background: linear-gradient(135deg, #fff 30%, #38bdf8); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            line-height: 1.1; 
+            margin-bottom: 25px; 
+        }
+        
+        .stats-container { 
+            display: flex; 
+            gap: 30px; 
+            margin-bottom: 50px; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+        }
+        
+        .stat-item { text-align: center; min-width: 100px; }
+        .stat-num { font-size: 2.2rem; font-weight: 900; color: #38bdf8; display: block; }
+        .stat-label { font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
+        
+        .grid-cards { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px; 
+            width: 100%; 
+            max-width: 1200px; 
+            margin-bottom: 60px; 
+        }
+        
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.02); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 30px; 
+            padding: 35px; 
+            transition: 0.4s; 
+            text-align: left; 
+        }
+        
+        .glass-card:hover { 
+            transform: translateY(-10px); 
+            border-color: #38bdf8; 
+            background: rgba(56, 189, 248, 0.05); 
+        }
+        
+        .card-icon { font-size: 2.5rem; margin-bottom: 15px; display: block; }
+        .card-title { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+        .card-text { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; }
+        
+        .modules-section { 
+            width: 100%; 
+            max-width: 1100px; 
+            background: rgba(255,255,255,0.02); 
+            border-radius: 30px; 
+            padding: 40px 20px; 
+            margin-bottom: 60px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+        }
+        
+        .module-tag { 
+            display: inline-block; 
+            padding: 6px 14px; 
+            background: rgba(56, 189, 248, 0.1); 
+            border: 1px solid rgba(56, 189, 248, 0.2); 
+            border-radius: 10px; 
+            margin: 4px; 
+            font-size: 0.85rem; 
+            color: #38bdf8; 
+        }
+        
+        .contact-section { 
+            width: 100%; 
+            max-width: 1100px; 
+            padding: 60px 30px; 
+            background: #0f172a; 
+            border-radius: 40px; 
+            border: 1px solid rgba(56, 189, 248, 0.2); 
+        }
+        
+        .dev-card { 
+            background: rgba(0,0,0,0.2); 
+            padding: 30px; 
+            border-radius: 25px; 
+            min-width: 280px; 
+            flex: 1; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            margin: 10px; 
+        }
+        
+        .btn-wpp { 
+            display: block; 
+            background: #22c55e; 
+            color: white !important; 
+            padding: 12px; 
+            border-radius: 15px; 
+            text-decoration: none; 
+            font-weight: 700; 
+            margin-top: 15px; 
+            transition: 0.3s;
+        }
+        .btn-wpp:hover { background: #16a34a; transform: scale(1.02); }
+    </style>
 
-            .landing-container {
-                font-family: 'Inter', sans-serif;
-                color: #f8fafc;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 40px 20px;
-                text-align: center;
-            }
+    <div class="landing-container">
+        <div class="badge-new">Versión 9.12 Enterprise PRO</div>
+        <h1 class="main-title">Escale su Operación<br>Médica al Siguiente Nivel</h1>
+        <p style="color:#94a3b8; font-size:1.2rem; margin-bottom:40px; max-width:800px;">
+            La plataforma líder en gestión clínica y operativa. Control total sobre equipos, 
+            insumos y trazabilidad legal de pacientes.
+        </p>
+        
+        <div class="stats-container">
+            <div class="stat-item"><span class="stat-num">100%</span><span class="stat-label">Digital</span></div>
+            <div class="stat-item"><span class="stat-num">+50</span><span class="stat-label">Módulos</span></div>
+            <div class="stat-item"><span class="stat-num">GPS</span><span class="stat-label">Real Time</span></div>
+        </div>
 
-            .badge-new {
-                background: linear-gradient(90deg, #38bdf8, #818cf8);
-                color: #020617;
-                padding: 5px 15px;
-                border-radius: 50px;
-                font-size: 0.8rem;
-                font-weight: 800;
-                margin-bottom: 20px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-
-            .main-title {
-                font-size: clamp(2.8rem, 7vw, 5.5rem);
-                font-weight: 900;
-                letter-spacing: -3px;
-                background: linear-gradient(135deg, #fff 30%, #38bdf8;);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                line-height: 1;
-                margin-bottom: 25px;
-            }
-
-            /* SECCIÓN DE STATS */
-            .stats-container {
-                display: flex;
-                gap: 40px;
-                margin-bottom: 60px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            .stat-item { text-align: center; }
-            .stat-num { font-size: 2.5rem; font-weight: 900; color: #38bdf8; display: block; }
-            .stat-label { font-size: 0.9rem; color: #64748b; text-transform: uppercase; }
-
-            /* GRILLA PRINCIPAL */
-            .grid-cards {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 25px;
-                width: 100%;
-                max-width: 1300px;
-                margin-bottom: 80px;
-            }
-
-            .glass-card {
-                background: rgba(255, 255, 255, 0.02);
-                backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 35px;
-                padding: 40px;
-                transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-                text-align: left;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .glass-card:hover {
-                transform: translateY(-15px);
-                border-color: #38bdf8;
-                background: rgba(56, 189, 248, 0.04);
-            }
-
-            .card-icon { font-size: 3rem; margin-bottom: 20px; display: block; }
-            .card-title { font-size: 1.6rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
-            .card-text { color: #94a3b8; font-size: 1rem; line-height: 1.6; }
-
-            /* SECCIÓN MODULOS CHECKLIST */
-            .modules-section {
-                width: 100%;
-                max-width: 1200px;
-                background: rgba(255,255,255,0.01);
-                border-radius: 40px;
-                padding: 60px 20px;
-                margin-bottom: 80px;
-                border: 1px solid rgba(255,255,255,0.05);
-            }
-            .module-tag {
-                display: inline-block;
-                padding: 8px 18px;
-                background: rgba(56, 189, 248, 0.1);
-                border: 1px solid rgba(56, 189, 248, 0.2);
-                border-radius: 12px;
-                margin: 5px;
-                font-size: 0.9rem;
-                color: #38bdf8;
-            }
-
-            /* CONTACTO BANNER */
-            .contact-section {
-                width: 100%;
-                max-width: 1150px;
-                padding: 80px 40px;
-                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-                border-radius: 50px;
-                box-shadow: 0 50px 100px rgba(0,0,0,0.5);
-                border: 1px solid rgba(56, 189, 248, 0.2);
-            }
-
-            .dev-card {
-                background: rgba(0,0,0,0.2);
-                padding: 40px;
-                border-radius: 30px;
-                min-width: 320px;
-                flex: 1;
-                border: 1px solid rgba(255,255,255,0.05);
-                transition: 0.3s;
-            }
-            .dev-card:hover { border-color: #22c55e; transform: scale(1.02); }
-
-            .btn-wpp {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 12px;
-                background: #22c55e;
-                color: white !important;
-                padding: 18px 30px;
-                border-radius: 20px;
-                text-decoration: none;
-                font-weight: 800;
-                font-size: 1.1rem;
-                box-shadow: 0 15px 30px rgba(34, 197, 94, 0.3);
-            }
-        </style>
-
-        <div class="landing-container">
-            <div class="badge-new">Nueva Versión 9.12 Enterprise</div>
-            <h1 class="main-title">Potencia tu Operación<br>Médica al 100%</h1>
-            <p class="main-subtitle">La plataforma líder en gestión domiciliaria y ambulatoria. Control total sobre tu equipo, tus insumos y la seguridad legal de tus pacientes.</p>
-            
-            <div class="stats-container">
-                <div class="stat-item"><span class="stat-num">100%</span><span class="stat-label">Digital</span></div>
-                <div class="stat-item"><span class="stat-num">+50</span><span class="stat-label">Módulos</span></div>
-                <div class="stat-item"><span class="stat-num">0%</span><span class="stat-label">Papel</span></div>
-                <div class="stat-item"><span class="stat-num">GPS</span><span class="stat-label">Real Time</span></div>
+        <div class="grid-cards">
+            <div class="glass-card">
+                <span class="card-icon">🛰️</span>
+                <h3 class="card-title">Geolocalización</h3>
+                <p class="card-text">Auditoría satelital de visitas. Sepa exactamente dónde y cuándo se realizó la atención.</p>
             </div>
-
-            <div class="grid-cards">
-                <div class="glass-card">
-                    <span class="card-icon">🛰️</span>
-                    <h3 class="card-title">Geolocalización</h3>
-                    <p class="card-text">Auditoría satelital de visitas. Sepa exactamente dónde y cuándo se realizó la atención con respaldo GPS inalterable.</p>
-                </div>
-                <div class="glass-card">
-                    <span class="card-icon">📂</span>
-                    <h3 class="card-title">Historia Clínica Unificada</h3>
-                    <p class="card-text">Evoluciones multidisciplinarias (Médico, Enfermería, Kine) con adjunto de fotos de heridas y estudios.</p>
-                </div>
-                <div class="glass-card">
-                    <span class="card-icon">💳</span>
-                    <h3 class="card-title">Control de Caja y Honorarios</h3>
-                    <p class="card-text">Liquidación automatizada de profesionales y control estricto de ingresos/egresos de la clínica.</p>
-                </div>
-                <div class="glass-card">
-                    <span class="card-icon">🛡️</span>
-                    <h3 class="card-title">Protección Jurídica</h3>
-                    <p class="card-text">Consentimientos informados y recetas firmadas digitalmente con validez legal y exportación PDF inmediata.</p>
-                </div>
+            <div class="glass-card">
+                <span class="card-icon">📂</span>
+                <h3 class="card-title">Historia Clínica</h3>
+                <p class="card-text">Evoluciones multidisciplinarias con adjunto de fotos de heridas y estudios en tiempo real.</p>
             </div>
-
-            <div class="modules-section">
-                <h3 style="margin-bottom:30px;">Todo lo que tu empresa necesita</h3>
-                <div class="module-tag">Pediatría PRO</div>
-                <div class="module-tag">Telemedicina P2P</div>
-                <div class="module-tag">Gestión de Stock</div>
-                <div class="module-tag">Auditoría Médica</div>
-                <div class="module-tag">Cierre Diario</div>
-                <div class="module-tag">RRHH y Fichajes</div>
-                <div class="module-tag">Balances Hídricos</div>
-                <div class="module-tag">Escalas Clínicas</div>
-                <div class="module-tag">Red de Profesionales</div>
+            <div class="glass-card">
+                <span class="card-icon">💳</span>
+                <h3 class="card-title">Finanzas & Honorarios</h3>
+                <p class="card-text">Liquidación automatizada de profesionales y control estricto de ingresos y egresos.</p>
             </div>
-
-            <div class="contact-section">
-                <h2 class="contact-title">¿Listo para escalar tu empresa de salud?</h2>
-                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 30px;">
-                    <div class="dev-card">
-                        <div style="color:#38bdf8; font-weight:800; margin-bottom:10px;">DIRECTOR TÉCNICO</div>
-                        <div style="font-size:1.8rem; font-weight:900; margin-bottom:20px;">Enzo N. Girardi</div>
-                        <a href="https://wa.me/5493584302024" target="_blank" class="btn-wpp">
-                            SOPORTE TÉCNICO 📲
-                        </a>
-                    </div>
-                    <div class="dev-card">
-                        <div style="color:#38bdf8; font-weight:800; margin-bottom:10px;">DESARROLLO DE NEGOCIOS</div>
-                        <div style="font-size:1.8rem; font-weight:900; margin-bottom:20px;">Dario Lanfranco</div>
-                        <a href="https://wa.me/5493584201263" target="_blank" class="btn-wpp">
-                            CONTRATACIONES 📲
-                        </a>
-                    </div>
-                </div>
-                <p style="margin-top:40px; color:#64748b;">MediCare Enterprise PRO © 2026 - Río Cuarto, Córdoba.</p>
+            <div class="glass-card">
+                <span class="card-icon">🛡️</span>
+                <h3 class="card-title">Blindaje Legal</h3>
+                <p class="card-text">Recetas y consentimientos con firma digital biométrica y validez jurídica total.</p>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+
+        <div class="modules-section">
+            <h3 style="margin-bottom:20px; color:white;">Ecosistema Integrado</h3>
+            <div class="module-tag">Pediatría</div><div class="module-tag">Telemedicina</div>
+            <div class="module-tag">Gestión Stock</div><div class="module-tag">Auditoría</div>
+            <div class="module-tag">RRHH</div><div class="module-tag">Balances</div>
+            <div class="module-tag">Red de Profesionales</div>
+        </div>
+
+        <div class="contact-section">
+            <h2 style="color:white; margin-bottom:30px;">Soporte e Implementación</h2>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+                <div class="dev-card">
+                    <div style="color:#38bdf8; font-weight:800; font-size:0.8rem;">TECNOLOGÍA</div>
+                    <div style="font-size:1.5rem; font-weight:900;">Enzo N. Girardi</div>
+                    <a href="https://wa.me/5493584302024" target="_blank" class="btn-wpp">SOPORTE TÉCNICO 📲</a>
+                </div>
+                <div class="dev-card">
+                    <div style="color:#38bdf8; font-weight:800; font-size:0.8rem;">NEGOCIOS</div>
+                    <div style="font-size:1.5rem; font-weight:900;">Dario Lanfranco</div>
+                    <a href="https://wa.me/5493584201263" target="_blank" class="btn-wpp">CONTRATACIONES 📲</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+    # 2. Renderizamos el HTML
+    st.markdown(html_publicidad, unsafe_allow_html=True)
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    if st.button("🚀 ACCEDER AL SISTEMA AHORA", key="btn_ingresar_main", use_container_width=True):
+    # 3. Botón de ingreso de Streamlit (fuera de la variable HTML)
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🚀 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True):
         st.session_state.entered_app = True
         st.rerun()
     st.stop()
