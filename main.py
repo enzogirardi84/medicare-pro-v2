@@ -130,7 +130,7 @@ VIEW_NAV_LABELS = {
 }
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
-    if not tiene_permiso(rol, VIEW_ROLE_RULES.get(tab_name)):
+    if tab_name not in resolve_menu_for_role(rol):
         st.error("No tienes permisos para acceder a este modulo.")
         return
     module_name, function_name = VIEW_CONFIG[tab_name]
@@ -273,10 +273,10 @@ def render_module_nav(menu, vista_actual):
 
 def resolve_menu_for_role(rol):
     if callable(obtener_modulos_permitidos):
-        menu_base = obtener_modulos_permitidos(rol) or []
+        menu_base = obtener_modulos_permitidos(rol, list(VIEW_CONFIG)) or []
     else:
         menu_base = list(VIEW_CONFIG)
-    return [modulo for modulo in menu_base if modulo in VIEW_CONFIG and tiene_permiso(rol, VIEW_ROLE_RULES.get(modulo))]
+    return [modulo for modulo in menu_base if modulo in VIEW_CONFIG]
 
 
 if "entered_app" not in st.session_state:

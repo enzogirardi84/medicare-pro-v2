@@ -56,9 +56,59 @@ ACTION_ROLE_RULES = {
     "equipo_eliminar_usuario": ["SuperAdmin", "Coordinador"],
 }
 
+MODULO_ALIAS = {
+    "Visitas": "Visitas y Agenda",
+    "Red": "Red de Profesionales",
+    "Emergencias": "Emergencias y Ambulancia",
+    "Escalas": "Escalas Clinicas",
+    "Cierre": "Cierre Diario",
+    "Equipo": "Mi Equipo",
+    "Asistencia": "Asistencia en Vivo",
+    "RRHH": "RRHH y Fichajes",
+    "Legal": "Auditoria Legal",
+}
+
+PERMISOS_MODULOS = {
+    "administrativo": [
+        "Dashboard",
+        "Admision",
+        "Materiales",
+        "Balance",
+        "Inventario",
+        "Caja",
+        "Red",
+        "Historial",
+        "PDF",
+        "Equipo",
+        "Asistencia",
+        "RRHH",
+        "Legal",
+    ],
+    "operativo": [
+        "Visitas",
+        "Clinica",
+        "Pediatria",
+        "Evolucion",
+        "Estudios",
+        "Materiales",
+        "Recetas",
+        "Emergencias",
+        "Escalas",
+        "Historial",
+        "PDF",
+        "Telemedicina",
+        "Cierre",
+    ],
+}
+
 
 def _texto_normalizado(valor):
     return str(valor or "").strip().lower()
+
+
+def _modulo_canonico(nombre_modulo):
+    nombre = str(nombre_modulo or "").strip()
+    return MODULO_ALIAS.get(nombre, nombre)
 
 
 def inferir_perfil_profesional(data):
@@ -121,7 +171,9 @@ def normalizar_usuario_sistema(data):
         usuario["rol"] = "SuperAdmin"
     elif rol_normalizado == "coordinador":
         usuario["rol"] = "Coordinador"
-    elif rol_normalizado in {"administrativo", "medico", "enfermeria", "operativo", "auditoria"}:
+    elif rol_normalizado == "operativo":
+        usuario["rol"] = "Operativo"
+    elif rol_normalizado in {"administrativo", "medico", "enfermeria", "auditoria"}:
         usuario["rol"] = "Administrativo"
     elif not str(usuario.get("rol", "") or "").strip():
         usuario["rol"] = "Administrativo"
@@ -209,7 +261,7 @@ def descripcion_acceso_rol(rol_actual):
     if rol_normalizado == "coordinador":
         return "Acceso total a la operacion, horarios, auditoria y control del equipo."
     if rol_normalizado == "administrativo":
-        return "Acceso total al sistema con foco administrativo, operativo y de control."
+        return "Acceso administrativo a modulos de gestion, soporte y control."
     descripciones = {
         "medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
         "enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
@@ -224,23 +276,8 @@ def es_control_total(rol_actual):
     return str(rol_actual or "").strip().lower() in ROL_ADMIN_TOTAL
 
 
-def obtener_modulos_permitidos(rol_actual):
-    menu_base = [
-        "Visitas y Agenda",
-        "Clinica",
-        "Pediatria",
-        "Evolucion",
-        "Estudios",
-        "Materiales",
-        "Recetas",
-        "Balance",
-        "Emergencias y Ambulancia",
-        "Escalas Clinicas",
-        "Historial",
-        "PDF",
-        "Telemedicina",
-    ]
-    menu_admin_total = [
+def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None):
+    menu_base = list(todos_los_modulos or [
         "Visitas y Agenda",
         "Dashboard",
         "Admision",
@@ -253,8 +290,8 @@ def obtener_modulos_permitidos(rol_actual):
         "Balance",
         "Inventario",
         "Caja",
-        "Emergencias y Ambulancia",
         "Red de Profesionales",
+        "Emergencias y Ambulancia",
         "Escalas Clinicas",
         "Historial",
         "PDF",
@@ -266,11 +303,16 @@ def obtener_modulos_permitidos(rol_actual):
         "Proyecto y Roadmap",
         "Auditoria",
         "Auditoria Legal",
-    ]
-    rol_normalizado = str(rol_actual or "").strip().lower()
-    if rol_normalizado in ROL_ADMIN_TOTAL:
-        return menu_admin_total
-    return menu_base
+    ])
+    rol_normalizado = _texto_normalizado(rol_actual)
+    if rol_normalizado in {"superadmin", "admin", "coordinador"}:
+        return menu_base
+
+    modulos_autorizados = {
+        _modulo_canonico(modulo)
+        for modulo in PERMISOS_MODULOS.get(rol_normalizado, [])
+    }
+    return [modulo for modulo in menu_base if modulo in modulos_autorizados]
 
 
 def rol_ve_datos_todas_las_clinicas(rol_actual):
