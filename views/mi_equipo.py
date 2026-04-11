@@ -108,6 +108,10 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     st.divider()
 
     st.subheader("Control de Accesos")
+    st.caption(
+        "**Suspender / Reactivar / Eliminar:** **SuperAdmin** o **Coordinador** de la misma clinica "
+        "(sin cuentas globales). **Administrativo** no puede ejecutar estas acciones."
+    )
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 
     usuarios_base = []
@@ -147,6 +151,19 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             with st.container(border=True):
                 col1, col2, col3, col4 = st.columns([3.5, 1, 1.2, 1.2])
                 estado_color = "Activo" if d.get("estado", "Activo") == "Activo" else "Bloqueado"
+                rol_actual_norm = str(rol or "").strip().lower()
+                empresa_actor_norm = str(mi_empresa or "").strip().lower()
+                empresa_objetivo_norm = str(d.get("empresa", "") or "").strip().lower()
+                rol_objetivo_norm = str(d.get("rol", "") or "").strip().lower()
+                es_superadmin = rol_actual_norm == "superadmin"
+                es_coordinador_valido = (
+                    rol_actual_norm == "coordinador"
+                    and empresa_objetivo_norm == empresa_actor_norm
+                    and rol_objetivo_norm not in {"superadmin", "admin"}
+                )
+                puede_gestionar_objetivo = es_superadmin or es_coordinador_valido
+                mostrar_ui_suspender = puede_cambiar_estado and puede_gestionar_objetivo
+                mostrar_ui_eliminar = puede_eliminar and puede_gestionar_objetivo
 
                 with col1:
                     perfil_usuario = d.get("perfil_profesional", "") or inferir_perfil_profesional(d) or "Sin perfil"
@@ -160,8 +177,8 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 with col2:
                     st.markdown(f"**{estado_color}**")
 
-                if puede_cambiar_estado:
-                    with col3:
+                with col3:
+                    if mostrar_ui_suspender:
                         if d.get("estado", "Activo") == "Activo":
                             if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
                                 st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
@@ -190,32 +207,34 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                                 )
                                 guardar_datos()
                                 st.rerun()
+                    elif puede_cambiar_estado:
+                        st.caption("—")
 
-                    with col4:
-                        if puede_eliminar:
-                            seguro = st.checkbox("Confirmar baja", key=f"chk_del_{u}")
-                            if st.button(
-                                "Eliminar",
-                                key=f"del_{u}",
-                                use_container_width=True,
-                                disabled=not seguro,
-                                type="primary" if seguro else "secondary",
-                            ):
-                                registrar_auditoria_legal(
-                                    "Equipo",
-                                    "GLOBAL",
-                                    "Eliminacion de usuario",
-                                    user.get("nombre", "Sistema"),
-                                    user.get("matricula", ""),
-                                    f"Se elimino el usuario {u}.",
-                                    referencia=u,
-                                )
-                                del st.session_state["usuarios_db"][u]
-                                guardar_datos()
-                                st.toast(f"Usuario {u} eliminado.")
-                                st.rerun()
-                        else:
-                            st.caption("Solo SuperAdmin")
+                with col4:
+                    if mostrar_ui_eliminar:
+                        seguro = st.checkbox("Confirmar baja", key=f"chk_del_{u}")
+                        if st.button(
+                            "Eliminar",
+                            key=f"del_{u}",
+                            use_container_width=True,
+                            disabled=not seguro,
+                            type="primary" if seguro else "secondary",
+                        ):
+                            registrar_auditoria_legal(
+                                "Equipo",
+                                "GLOBAL",
+                                "Eliminacion de usuario",
+                                user.get("nombre", "Sistema"),
+                                user.get("matricula", ""),
+                                f"Se elimino el usuario {u}.",
+                                referencia=u,
+                            )
+                            del st.session_state["usuarios_db"][u]
+                            guardar_datos()
+                            st.toast(f"Usuario {u} eliminado.")
+                            st.rerun()
+                    elif puede_eliminar:
+                        st.caption("—")
 
         if not mostro_usuario:
             st.info("No hay otros usuarios cargados aparte del administrador principal.")

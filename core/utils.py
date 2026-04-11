@@ -14,6 +14,8 @@ from PIL import Image
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador", "administrativo"}
+ROLES_GLOBAL_DATOS_MULTICLINICA = frozenset({"superadmin", "admin"})
+ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL = frozenset({"equipo_eliminar_usuario", "equipo_cambiar_estado"})
 LEGACY_ROLE_TO_PROFILE = {
     "medico": "Medico",
     "enfermeria": "Enfermeria",
@@ -50,8 +52,8 @@ ACTION_ROLE_RULES = {
     "estudios_registrar": ["Operativo", "Enfermeria", "Medico"],
     "estudios_borrar": ["Medico"],
     "equipo_crear_usuario": ["Coordinador"],
-    "equipo_cambiar_estado": ["Coordinador"],
-    "equipo_eliminar_usuario": ["SuperAdmin"],
+    "equipo_cambiar_estado": ["SuperAdmin", "Coordinador"],
+    "equipo_eliminar_usuario": ["SuperAdmin", "Coordinador"],
 }
 
 
@@ -183,10 +185,20 @@ def tiene_permiso(rol_actual, roles_permitidos=None):
     return rol_normalizado in roles_normalizados
 
 
+def _permiso_estricto_lista_roles(rol_actual, roles_permitidos=None):
+    rol_normalizado = str(rol_actual or "").strip().lower()
+    if not roles_permitidos:
+        return False
+    roles_normalizados = {str(rol).strip().lower() for rol in roles_permitidos if rol}
+    return rol_normalizado in roles_normalizados
+
+
 def puede_accion(rol_actual, accion, roles_extra=None):
     roles_base = list(ACTION_ROLE_RULES.get(accion, []))
     if roles_extra:
         roles_base.extend(roles_extra)
+    if accion in ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL:
+        return _permiso_estricto_lista_roles(rol_actual, roles_base)
     return tiene_permiso(rol_actual, roles_base)
 
 
@@ -261,8 +273,12 @@ def obtener_modulos_permitidos(rol_actual):
     return menu_base
 
 
+def rol_ve_datos_todas_las_clinicas(rol_actual):
+    return str(rol_actual or "").strip().lower() in ROLES_GLOBAL_DATOS_MULTICLINICA
+
+
 def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empresa"):
-    if es_control_total(rol_actual):
+    if rol_ve_datos_todas_las_clinicas(rol_actual):
         return list(items or [])
 
     empresa_actual = str(mi_empresa or "").strip().lower()
