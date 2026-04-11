@@ -277,6 +277,31 @@ def rol_ve_datos_todas_las_clinicas(rol_actual):
     return str(rol_actual or "").strip().lower() in ROLES_GLOBAL_DATOS_MULTICLINICA
 
 
+def puede_gestionar_usuario_mi_equipo(rol_actual, empresa_actor, usuario_actual, login_objetivo, usuario_objetivo):
+    rol_actor = str(rol_actual or "").strip().lower()
+    if rol_actor not in {"superadmin", "coordinador"}:
+        return False, "Sin permisos para gestionar usuarios."
+
+    login_actor = str((usuario_actual or {}).get("usuario_login", "") or "").strip().lower()
+    login_obj = str(login_objetivo or "").strip().lower()
+    if login_actor and login_obj and login_actor == login_obj:
+        return False, "Tu propio usuario no se puede suspender ni eliminar desde esta pantalla."
+
+    if rol_actor == "superadmin":
+        return True, ""
+
+    empresa_actor_norm = str(empresa_actor or "").strip().lower()
+    empresa_objetivo_norm = str((usuario_objetivo or {}).get("empresa", "") or "").strip().lower()
+    if empresa_objetivo_norm != empresa_actor_norm:
+        return False, "Solo podes gestionar usuarios de tu misma clinica."
+
+    rol_objetivo_norm = str((usuario_objetivo or {}).get("rol", "") or "").strip().lower()
+    if rol_objetivo_norm in {"superadmin", "admin"}:
+        return False, "Las cuentas globales solo las gestiona un SuperAdmin."
+
+    return True, ""
+
+
 def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empresa"):
     if rol_ve_datos_todas_las_clinicas(rol_actual):
         return list(items or [])

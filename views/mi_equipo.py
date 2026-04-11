@@ -5,6 +5,7 @@ from core.utils import (
     filtrar_registros_empresa,
     inferir_perfil_profesional,
     puede_accion,
+    puede_gestionar_usuario_mi_equipo,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
@@ -151,17 +152,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             with st.container(border=True):
                 col1, col2, col3, col4 = st.columns([3.5, 1, 1.2, 1.2])
                 estado_color = "Activo" if d.get("estado", "Activo") == "Activo" else "Bloqueado"
-                rol_actual_norm = str(rol or "").strip().lower()
-                empresa_actor_norm = str(mi_empresa or "").strip().lower()
-                empresa_objetivo_norm = str(d.get("empresa", "") or "").strip().lower()
-                rol_objetivo_norm = str(d.get("rol", "") or "").strip().lower()
-                es_superadmin = rol_actual_norm == "superadmin"
-                es_coordinador_valido = (
-                    rol_actual_norm == "coordinador"
-                    and empresa_objetivo_norm == empresa_actor_norm
-                    and rol_objetivo_norm not in {"superadmin", "admin"}
+                puede_gestionar_objetivo, motivo_gestion = puede_gestionar_usuario_mi_equipo(
+                    rol, mi_empresa, user, u, d
                 )
-                puede_gestionar_objetivo = es_superadmin or es_coordinador_valido
                 mostrar_ui_suspender = puede_cambiar_estado and puede_gestionar_objetivo
                 mostrar_ui_eliminar = puede_eliminar and puede_gestionar_objetivo
 
@@ -173,6 +166,8 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         f"Login: {u} | Rol sistema: {d.get('rol', 'S/D')} | "
                         f"Perfil: {perfil_usuario} | Titulo: {d.get('titulo', 'S/D')} | DNI: {d.get('dni', 'S/D')}"
                     )
+                    if motivo_gestion and str(rol or "").strip().lower() in {"superadmin", "coordinador"}:
+                        st.caption(f"Acciones restringidas: {motivo_gestion}")
 
                 with col2:
                     st.markdown(f"**{estado_color}**")
@@ -181,32 +176,44 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                     if mostrar_ui_suspender:
                         if d.get("estado", "Activo") == "Activo":
                             if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
-                                st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
-                                registrar_auditoria_legal(
-                                    "Equipo",
-                                    "GLOBAL",
-                                    "Suspension de usuario",
-                                    user.get("nombre", "Sistema"),
-                                    user.get("matricula", ""),
-                                    f"Se suspendio el usuario {u}.",
-                                    referencia=u,
+                                ok_gestionar_click, motivo_click = puede_gestionar_usuario_mi_equipo(
+                                    rol, mi_empresa, user, u, d
                                 )
-                                guardar_datos()
-                                st.rerun()
+                                if not ok_gestionar_click:
+                                    st.error(motivo_click)
+                                else:
+                                    st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
+                                    registrar_auditoria_legal(
+                                        "Equipo",
+                                        "GLOBAL",
+                                        "Suspension de usuario",
+                                        user.get("nombre", "Sistema"),
+                                        user.get("matricula", ""),
+                                        f"Se suspendio el usuario {u}.",
+                                        referencia=u,
+                                    )
+                                    guardar_datos()
+                                    st.rerun()
                         else:
                             if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
-                                st.session_state["usuarios_db"][u]["estado"] = "Activo"
-                                registrar_auditoria_legal(
-                                    "Equipo",
-                                    "GLOBAL",
-                                    "Reactivacion de usuario",
-                                    user.get("nombre", "Sistema"),
-                                    user.get("matricula", ""),
-                                    f"Se reactivo el usuario {u}.",
-                                    referencia=u,
+                                ok_gestionar_click, motivo_click = puede_gestionar_usuario_mi_equipo(
+                                    rol, mi_empresa, user, u, d
                                 )
-                                guardar_datos()
-                                st.rerun()
+                                if not ok_gestionar_click:
+                                    st.error(motivo_click)
+                                else:
+                                    st.session_state["usuarios_db"][u]["estado"] = "Activo"
+                                    registrar_auditoria_legal(
+                                        "Equipo",
+                                        "GLOBAL",
+                                        "Reactivacion de usuario",
+                                        user.get("nombre", "Sistema"),
+                                        user.get("matricula", ""),
+                                        f"Se reactivo el usuario {u}.",
+                                        referencia=u,
+                                    )
+                                    guardar_datos()
+                                    st.rerun()
                     elif puede_cambiar_estado:
                         st.caption("—")
 
@@ -220,19 +227,25 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                             disabled=not seguro,
                             type="primary" if seguro else "secondary",
                         ):
-                            registrar_auditoria_legal(
-                                "Equipo",
-                                "GLOBAL",
-                                "Eliminacion de usuario",
-                                user.get("nombre", "Sistema"),
-                                user.get("matricula", ""),
-                                f"Se elimino el usuario {u}.",
-                                referencia=u,
+                            ok_gestionar_click, motivo_click = puede_gestionar_usuario_mi_equipo(
+                                rol, mi_empresa, user, u, d
                             )
-                            del st.session_state["usuarios_db"][u]
-                            guardar_datos()
-                            st.toast(f"Usuario {u} eliminado.")
-                            st.rerun()
+                            if not ok_gestionar_click:
+                                st.error(motivo_click)
+                            else:
+                                registrar_auditoria_legal(
+                                    "Equipo",
+                                    "GLOBAL",
+                                    "Eliminacion de usuario",
+                                    user.get("nombre", "Sistema"),
+                                    user.get("matricula", ""),
+                                    f"Se elimino el usuario {u}.",
+                                    referencia=u,
+                                )
+                                del st.session_state["usuarios_db"][u]
+                                guardar_datos()
+                                st.toast(f"Usuario {u} eliminado.")
+                                st.rerun()
                     elif puede_eliminar:
                         st.caption("—")
 
