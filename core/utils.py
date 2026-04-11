@@ -1,6 +1,9 @@
 import base64
+import hashlib
+import hmac
 import json
 import re
+import secrets
 import urllib.request
 from datetime import datetime
 from io import BytesIO
@@ -14,8 +17,12 @@ from PIL import Image
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador", "administrativo"}
+ROLES_BYPASS_PERMISOS = frozenset({"superadmin", "admin", "coordinador"})
 ROLES_GLOBAL_DATOS_MULTICLINICA = frozenset({"superadmin", "admin"})
 ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL = frozenset({"equipo_eliminar_usuario", "equipo_cambiar_estado"})
+PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
+PASSWORD_HASH_ITERATIONS = 390000
+PASSWORD_MIN_LENGTH = 8
 LEGACY_ROLE_TO_PROFILE = {
     "medico": "Medico",
     "enfermeria": "Enfermeria",
@@ -106,6 +113,57 @@ def _texto_normalizado(valor):
     return str(valor or "").strip().lower()
 
 
+def _password_normalizado(password):
+    return str(password or "").strip()
+
+
+def password_hash_formato_valido(valor):
+    return str(valor or "").startswith(f"{PASSWORD_HASH_PREFIX}$")
+
+
+def generar_hash_password(password, salt=None, iterations=PASSWORD_HASH_ITERATIONS):
+    password_limpio = _password_normalizado(password)
+    salt_hex = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_limpio.encode("utf-8"),
+        salt_hex.encode("utf-8"),
+        int(iterations),
+    ).hex()
+    return f"{PASSWORD_HASH_PREFIX}${int(iterations)}${salt_hex}${digest}"
+
+
+def validar_password_guardado(valor_guardado, password_ingresado):
+    password_limpio = _password_normalizado(password_ingresado)
+    if not password_limpio:
+        return False
+
+    stored = str(valor_guardado or "")
+    if password_hash_formato_valido(stored):
+        try:
+            _, iterations_str, salt_hex, expected = stored.split("$", 3)
+            calculado = hashlib.pbkdf2_hmac(
+                "sha256",
+                password_limpio.encode("utf-8"),
+                salt_hex.encode("utf-8"),
+                int(iterations_str),
+            ).hex()
+            return hmac.compare_digest(calculado, expected)
+        except Exception:
+            return False
+    return stored.strip() == password_limpio
+
+
+def actualizar_password_usuario(usuario_data, password_plano):
+    if isinstance(usuario_data, dict):
+        usuario_data["pass"] = generar_hash_password(password_plano)
+
+
+def password_requiere_migracion(valor_guardado):
+    valor = str(valor_guardado or "").strip()
+    return bool(valor) and not password_hash_formato_valido(valor)
+
+
 def _modulo_canonico(nombre_modulo):
     nombre = str(nombre_modulo or "").strip()
     return MODULO_ALIAS.get(nombre, nombre)
@@ -113,14 +171,18 @@ def _modulo_canonico(nombre_modulo):
 
 def clave_menu_usuario(rol_actual, usuario_actual=None):
     rol_normalizado = _texto_normalizado(rol_actual or (usuario_actual or {}).get("rol"))
-    if rol_normalizado in {"superadmin", "admin", "coordinador", "operativo"}:
+    if rol_normalizado in {"superadmin", "admin", "coordinador"}:
         return rol_normalizado
+    if rol_normalizado in {"medico", "enfermeria", "operativo"}:
+        return "operativo"
+    if rol_normalizado == "auditoria":
+        return "administrativo"
 
     if rol_normalizado == "administrativo":
         perfil_normalizado = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
         if not perfil_normalizado and isinstance(usuario_actual, dict):
             perfil_normalizado = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
-        if perfil_normalizado == "operativo":
+        if perfil_normalizado in {"operativo", "medico", "enfermeria"}:
             return "operativo"
 
     return rol_normalizado
@@ -181,15 +243,29 @@ def normalizar_usuario_sistema(data):
     usuario = dict(data)
     perfil = inferir_perfil_profesional(usuario)
     rol_normalizado = _texto_normalizado(usuario.get("rol", ""))
+    perfil_normalizado = _texto_normalizado(perfil)
 
     if rol_normalizado in {"superadmin", "admin"}:
         usuario["rol"] = "SuperAdmin"
     elif rol_normalizado == "coordinador":
         usuario["rol"] = "Coordinador"
+    elif rol_normalizado == "medico":
+        usuario["rol"] = "Medico"
+    elif rol_normalizado == "enfermeria":
+        usuario["rol"] = "Enfermeria"
     elif rol_normalizado == "operativo":
         usuario["rol"] = "Operativo"
-    elif rol_normalizado in {"administrativo", "medico", "enfermeria", "auditoria"}:
-        usuario["rol"] = "Administrativo"
+    elif rol_normalizado == "auditoria":
+        usuario["rol"] = "Auditoria"
+    elif rol_normalizado == "administrativo":
+        if perfil_normalizado == "medico":
+            usuario["rol"] = "Medico"
+        elif perfil_normalizado == "enfermeria":
+            usuario["rol"] = "Enfermeria"
+        elif perfil_normalizado == "operativo":
+            usuario["rol"] = "Operativo"
+        else:
+            usuario["rol"] = "Administrativo"
     elif not str(usuario.get("rol", "") or "").strip():
         usuario["rol"] = "Administrativo"
 
@@ -244,7 +320,7 @@ def _roles_usuario_para_filtrado(data):
 
 def tiene_permiso(rol_actual, roles_permitidos=None):
     rol_normalizado = str(rol_actual or "").strip().lower()
-    if rol_normalizado in ROL_ADMIN_TOTAL:
+    if rol_normalizado in ROLES_BYPASS_PERMISOS:
         return True
     if not roles_permitidos:
         return True
@@ -390,7 +466,7 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
 
     for paciente in session_state.get("pacientes_db", []):
         detalles = detalles_db.get(paciente, {})
-        if not es_control_total(rol_actual):
+        if not rol_ve_datos_todas_las_clinicas(rol_actual):
             empresa_paciente = str(detalles.get("empresa", "") or "").strip().lower()
             empresa_actual = str(mi_empresa or "").strip().lower()
             if empresa_paciente != empresa_actual:
@@ -460,11 +536,15 @@ def asegurar_usuarios_base():
         combinado = DEFAULT_ADMIN_USER.copy()
         combinado.update(st.session_state["usuarios_db"]["admin"])
         st.session_state["usuarios_db"]["admin"] = combinado
+    if password_requiere_migracion(st.session_state["usuarios_db"]["admin"].get("pass")):
+        actualizar_password_usuario(st.session_state["usuarios_db"]["admin"], st.session_state["usuarios_db"]["admin"].get("pass"))
     for login, datos in list(st.session_state["usuarios_db"].items()):
         if not isinstance(datos, dict):
             continue
         usuario_normalizado = normalizar_usuario_sistema(datos)
         usuario_normalizado.setdefault("usuario_login", login)
+        if password_requiere_migracion(usuario_normalizado.get("pass")):
+            actualizar_password_usuario(usuario_normalizado, usuario_normalizado.get("pass"))
         st.session_state["usuarios_db"][login] = usuario_normalizado
 
 
@@ -781,7 +861,7 @@ def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_
         roles_usuario = _roles_usuario_para_filtrado(data_normalizada)
         if roles_validos_normalizados and not roles_usuario.intersection(roles_validos_normalizados):
             continue
-        if not es_control_total(rol_actual):
+        if not rol_ve_datos_todas_las_clinicas(rol_actual):
             empresa_usuario = str(data_normalizada.get("empresa", "") or "").strip().lower()
             if empresa_usuario != empresa_actual:
                 continue

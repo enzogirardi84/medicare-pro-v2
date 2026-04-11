@@ -6,7 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import ahora, mostrar_dataframe_con_scroll, rol_ve_datos_todas_las_clinicas, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -28,7 +28,7 @@ def _obtener_dt(fecha_hora):
 
 def render_rrhh(mi_empresa, rol, user):
     rol_normalizado = str(rol or "").strip().lower()
-    acceso_total = es_control_total(rol_normalizado)
+    acceso_total = rol_ve_datos_todas_las_clinicas(rol_normalizado)
     st.subheader("Control de RRHH y Fichaje Historico")
     st.info("Genera reportes de presentismo, horas trabajadas y movimientos GPS sin cargar tablas gigantes por defecto.")
 

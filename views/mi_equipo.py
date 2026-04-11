@@ -2,6 +2,8 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.utils import (
+    PASSWORD_MIN_LENGTH,
+    actualizar_password_usuario,
     filtrar_registros_empresa,
     inferir_perfil_profesional,
     puede_accion,
@@ -25,6 +27,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             col_id, col_pw, col_pin = st.columns([2, 2, 1])
             u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
             u_pw = col_pw.text_input("Clave de acceso", type="password")
+            col_pw.caption(f"Minimo {PASSWORD_MIN_LENGTH} caracteres.")
             u_pin = col_pin.text_input("PIN (4 digitos)", max_chars=4, placeholder="1234")
 
             u_nm = st.text_input("Nombre Completo del Profesional")
@@ -64,9 +67,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             u_rl = st.selectbox(
                 "Rol en el sistema",
                 (
-                    ["Administrativo", "Operativo", "Coordinador", "SuperAdmin"]
+                    ["Administrativo", "Operativo", "Medico", "Enfermeria", "Auditoria", "Coordinador", "SuperAdmin"]
                     if rol_normalizado == "superadmin"
-                    else ["Administrativo", "Operativo", "Coordinador"]
+                    else ["Administrativo", "Operativo", "Medico", "Enfermeria", "Auditoria", "Coordinador"]
                 ),
             )
             st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
@@ -76,11 +79,12 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                     st.error("Todos los campos obligatorios deben completarse.")
                 elif len(u_pin) != 4 or not u_pin.isdigit():
                     st.error("El PIN debe tener exactamente 4 digitos numericos.")
+                elif len(u_pw.strip()) < PASSWORD_MIN_LENGTH:
+                    st.error(f"La clave de acceso debe tener al menos {PASSWORD_MIN_LENGTH} caracteres.")
                 elif u_id.strip().lower() in st.session_state["usuarios_db"]:
                     st.error("El usuario ya existe. Elija otro login.")
                 else:
                     st.session_state["usuarios_db"][u_id.strip().lower()] = {
-                        "pass": u_pw.strip(),
                         "nombre": u_nm.strip(),
                         "rol": u_rl,
                         "titulo": u_ti,
@@ -91,6 +95,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         "estado": "Activo",
                         "pin": u_pin.strip(),
                     }
+                    actualizar_password_usuario(st.session_state["usuarios_db"][u_id.strip().lower()], u_pw)
                     registrar_auditoria_legal(
                         "Equipo",
                         "GLOBAL",

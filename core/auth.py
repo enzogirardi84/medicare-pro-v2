@@ -1,7 +1,15 @@
 import streamlit as st
 
 from core.database import cargar_datos, guardar_datos
-from core.utils import DEFAULT_ADMIN_USER, ahora, asegurar_usuarios_base
+from core.utils import (
+    DEFAULT_ADMIN_USER,
+    PASSWORD_MIN_LENGTH,
+    ahora,
+    actualizar_password_usuario,
+    asegurar_usuarios_base,
+    password_requiere_migracion,
+    validar_password_guardado,
+)
 
 SESSION_TIMEOUT_MINUTES = 90
 
@@ -44,7 +52,10 @@ def render_login():
                             st.session_state["usuarios_db"][usuario_encontrado]["usuario_login"] = usuario_encontrado
                             if user_data.get("estado", "Activo") == "Bloqueado":
                                 st.error("Acceso suspendido.")
-                            elif str(user_data["pass"]).strip() == p.strip():
+                            elif validar_password_guardado(user_data.get("pass"), p):
+                                if password_requiere_migracion(user_data.get("pass")):
+                                    actualizar_password_usuario(st.session_state["usuarios_db"][usuario_encontrado], p)
+                                    user_data["pass"] = st.session_state["usuarios_db"][usuario_encontrado]["pass"]
                                 st.session_state["u_actual"] = user_data
                                 st.session_state["logeado"] = True
                                 st.session_state["logs_db"].append(
@@ -59,8 +70,10 @@ def render_login():
                                 guardar_datos()
                                 st.rerun()
                             else:
-                                if u_limpio == "admin" and p.strip() == str(DEFAULT_ADMIN_USER["pass"]).strip():
+                                if u_limpio == "admin" and validar_password_guardado(DEFAULT_ADMIN_USER.get("pass"), p):
                                     user_data = DEFAULT_ADMIN_USER.copy()
+                                    if password_requiere_migracion(user_data.get("pass")):
+                                        actualizar_password_usuario(user_data, p)
                                     user_data["usuario_login"] = "admin"
                                     st.session_state["usuarios_db"]["admin"] = user_data
                                     st.session_state["u_actual"] = user_data
@@ -79,8 +92,10 @@ def render_login():
                                 else:
                                     st.error("Acceso denegado.")
                         else:
-                            if u_limpio == "admin" and p.strip() == str(DEFAULT_ADMIN_USER["pass"]).strip():
+                            if u_limpio == "admin" and validar_password_guardado(DEFAULT_ADMIN_USER.get("pass"), p):
                                 user_data = DEFAULT_ADMIN_USER.copy()
+                                if password_requiere_migracion(user_data.get("pass")):
+                                    actualizar_password_usuario(user_data, p)
                                 user_data["usuario_login"] = "admin"
                                 st.session_state["usuarios_db"]["admin"] = user_data
                                 st.session_state["u_actual"] = user_data
@@ -100,7 +115,7 @@ def render_login():
                                 st.error("Acceso denegado.")
             else:
                 with st.form("recover", clear_on_submit=True):
-                    st.info("Para crear una nueva contrasena, ingresa tu PIN de 4 digitos.")
+                    st.info(f"Para crear una nueva contrasena, ingresa tu PIN de 4 digitos. Minimo {PASSWORD_MIN_LENGTH} caracteres.")
                     rec_u = st.text_input("Usuario (Login)")
                     rec_emp = st.text_input("Empresa / Clinica asignada")
                     rec_pin = st.text_input("PIN de Seguridad", type="password", max_chars=4)
@@ -116,12 +131,12 @@ def render_login():
                             user_data = st.session_state["usuarios_db"][u_limpio]
                             if user_data["empresa"].strip().lower() == rec_emp.strip().lower():
                                 if str(user_data.get("pin", "")) == str(rec_pin).strip() and str(rec_pin).strip() != "":
-                                    if len(rec_pass) >= 4:
-                                        st.session_state["usuarios_db"][u_limpio]["pass"] = rec_pass
+                                    if len(rec_pass.strip()) >= PASSWORD_MIN_LENGTH:
+                                        actualizar_password_usuario(st.session_state["usuarios_db"][u_limpio], rec_pass)
                                         guardar_datos()
                                         st.success("Contrasena actualizada.")
                                     else:
-                                        st.error("Contrasena minima de 4 caracteres.")
+                                        st.error(f"Contrasena minima de {PASSWORD_MIN_LENGTH} caracteres.")
                                 else:
                                     st.error("PIN incorrecto.")
                             else:

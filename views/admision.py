@@ -6,10 +6,10 @@ import streamlit as st
 from core.database import guardar_datos
 from core.utils import (
     ahora,
-    es_control_total,
     mostrar_dataframe_con_scroll,
     obtener_pacientes_visibles,
     registrar_auditoria_legal,
+    rol_ve_datos_todas_las_clinicas,
     seleccionar_limite_registros,
 )
 
@@ -176,7 +176,7 @@ def _dataframe_pacientes(registros):
 
 def render_admision(mi_empresa, rol):
     rol_normalizado = str(rol or "").strip().lower()
-    admin_total = es_control_total(rol)
+    admin_total = rol_ve_datos_todas_las_clinicas(rol)
 
     st.markdown(
         """

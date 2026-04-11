@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import ahora, mostrar_dataframe_con_scroll, rol_ve_datos_todas_las_clinicas, seleccionar_limite_registros
 
 
 TIPOS_PERFIL = [
@@ -155,7 +155,7 @@ def _obtener_profesional_actual(user, mi_empresa):
 
 def render_red_profesionales(mi_empresa, user, rol):
     rol_normalizado = str(rol or "").strip().lower()
-    acceso_total = es_control_total(rol_normalizado)
+    acceso_total = rol_ve_datos_todas_las_clinicas(rol_normalizado)
     usuario_login = _identificador_profesional(user)
     st.markdown(
         """
