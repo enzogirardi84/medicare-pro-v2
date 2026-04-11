@@ -130,7 +130,7 @@ VIEW_NAV_LABELS = {
 }
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
-    if tab_name not in resolve_menu_for_role(rol):
+    if tab_name not in resolve_menu_for_role(rol, user):
         st.error("No tienes permisos para acceder a este modulo.")
         return
     module_name, function_name = VIEW_CONFIG[tab_name]
@@ -271,9 +271,9 @@ def render_module_nav(menu, vista_actual):
     return selected or vista_actual
 
 
-def resolve_menu_for_role(rol):
+def resolve_menu_for_role(rol, user=None):
     if callable(obtener_modulos_permitidos):
-        menu_base = obtener_modulos_permitidos(rol, list(VIEW_CONFIG)) or []
+        menu_base = obtener_modulos_permitidos(rol, list(VIEW_CONFIG), user) or []
     else:
         menu_base = list(VIEW_CONFIG)
     return [modulo for modulo in menu_base if modulo in VIEW_CONFIG]
@@ -533,14 +533,14 @@ with st.sidebar:
             mi_empresa,
             user,
             rol,
-            descripcion_acceso_rol(rol),
+            descripcion_acceso_rol(rol, user),
             logo_sidebar_b64,
         ),
         unsafe_allow_html=True,
     )
     st.divider()
 
-    menu = resolve_menu_for_role(rol)
+    menu = resolve_menu_for_role(rol, user)
     st.markdown(
         """
         <div class="mc-sidebar-section">

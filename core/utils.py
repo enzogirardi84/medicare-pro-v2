@@ -111,6 +111,21 @@ def _modulo_canonico(nombre_modulo):
     return MODULO_ALIAS.get(nombre, nombre)
 
 
+def clave_menu_usuario(rol_actual, usuario_actual=None):
+    rol_normalizado = _texto_normalizado(rol_actual or (usuario_actual or {}).get("rol"))
+    if rol_normalizado in {"superadmin", "admin", "coordinador", "operativo"}:
+        return rol_normalizado
+
+    if rol_normalizado == "administrativo":
+        perfil_normalizado = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
+        if not perfil_normalizado and isinstance(usuario_actual, dict):
+            perfil_normalizado = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
+        if perfil_normalizado == "operativo":
+            return "operativo"
+
+    return rol_normalizado
+
+
 def inferir_perfil_profesional(data):
     if not isinstance(data, dict):
         return ""
@@ -254,13 +269,13 @@ def puede_accion(rol_actual, accion, roles_extra=None):
     return tiene_permiso(rol_actual, roles_base)
 
 
-def descripcion_acceso_rol(rol_actual):
-    rol_normalizado = str(rol_actual or "").strip().lower()
-    if rol_normalizado in {"superadmin", "admin"}:
+def descripcion_acceso_rol(rol_actual, usuario_actual=None):
+    clave_menu = clave_menu_usuario(rol_actual, usuario_actual)
+    if clave_menu in {"superadmin", "admin"}:
         return "Acceso de gestion, control y trazabilidad completa."
-    if rol_normalizado == "coordinador":
+    if clave_menu == "coordinador":
         return "Acceso total a la operacion, horarios, auditoria y control del equipo."
-    if rol_normalizado == "administrativo":
+    if clave_menu == "administrativo":
         return "Acceso administrativo a modulos de gestion, soporte y control."
     descripciones = {
         "medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
@@ -269,14 +284,14 @@ def descripcion_acceso_rol(rol_actual):
         "administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
         "auditoria": "Acceso de control, revision y trazabilidad legal.",
     }
-    return descripciones.get(rol_normalizado, "Acceso configurado segun el rol asignado.")
+    return descripciones.get(clave_menu, "Acceso configurado segun el rol asignado.")
 
 
 def es_control_total(rol_actual):
     return str(rol_actual or "").strip().lower() in ROL_ADMIN_TOTAL
 
 
-def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None):
+def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None, usuario_actual=None):
     menu_base = list(todos_los_modulos or [
         "Visitas y Agenda",
         "Dashboard",
@@ -304,13 +319,13 @@ def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None):
         "Auditoria",
         "Auditoria Legal",
     ])
-    rol_normalizado = _texto_normalizado(rol_actual)
-    if rol_normalizado in {"superadmin", "admin", "coordinador"}:
+    clave_menu = clave_menu_usuario(rol_actual, usuario_actual)
+    if clave_menu in {"superadmin", "admin", "coordinador"}:
         return menu_base
 
     modulos_autorizados = {
         _modulo_canonico(modulo)
-        for modulo in PERMISOS_MODULOS.get(rol_normalizado, [])
+        for modulo in PERMISOS_MODULOS.get(clave_menu, [])
     }
     return [modulo for modulo in menu_base if modulo in modulos_autorizados]
 
