@@ -247,6 +247,7 @@ def render_historial(paciente_sel: str) -> None:
         build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
         file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
+        unavailable_message="Historia clinica PDF no disponible en este equipo. Instala reportlab para habilitarla.",
     )
     _render_lazy_download(
         col_exp2,

@@ -92,6 +92,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
             build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
             file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
             mime="application/pdf",
+            unavailable_message="Historia clinica PDF no disponible en este equipo. Instala reportlab para habilitarla.",
         )
     else:
         col_d1.info("Disponible para roles clinicos y de control.")

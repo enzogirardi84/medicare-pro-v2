@@ -9,10 +9,24 @@ import pandas as pd
 from fpdf import FPDF
 
 # --- Nuevas importaciones para la Historia Clínica Avanzada ---
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+REPORTLAB_DISPONIBLE = True
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+except ImportError:
+    REPORTLAB_DISPONIBLE = False
+    colors = None
+    A4 = None
+    ParagraphStyle = None
+    getSampleStyleSheet = None
+    KeepTogether = None
+    Paragraph = None
+    SimpleDocTemplate = None
+    Spacer = None
+    Table = None
+    TableStyle = None
 
 from core.export_utils import pdf_output_bytes, safe_text
 
@@ -181,7 +195,10 @@ def _write_pairs(pdf, pairs):
 # MOTOR REPORTLAB: HISTORIA CLÍNICA INTEGRAL (CORREGIDA)
 # =====================================================================
 def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
-    """Genera la Historia Clínica Integral usando ReportLab para un diseño tabular profesional."""
+    if not REPORTLAB_DISPONIBLE:
+        return None
+
+    # La historia clinica integral depende de ReportLab; si falta, la vista muestra un fallback amigable.
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=40)
     elements = []
