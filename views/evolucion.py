@@ -6,6 +6,7 @@ import streamlit as st
 from core.database import guardar_datos
 from core.utils import (
     ahora,
+    contenedores_responsivos,
     decodificar_base64_seguro,
     firma_a_base64,
     limite_archivo_mb,
@@ -15,6 +16,7 @@ from core.utils import (
     preparar_imagen_clinica_bytes,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
+    valor_por_modo_liviano,
 )
 
 CANVAS_DISPONIBLE = False
@@ -50,13 +52,28 @@ def render_evolucion(paciente_sel, user, rol=None):
     modo_liviano = modo_celular_viejo_activo()
     puede_registrar = puede_accion(rol, "evolucion_registrar")
     puede_borrar = puede_accion(rol, "evolucion_borrar")
+    evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
+    fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
 
     st.subheader("Evolucion Medica y Firma Digital")
+    if modo_liviano:
+        st.caption("Modo celular viejo activo: la carga se simplifica, los adjuntos son opcionales y el historial usa menos memoria.")
+
+    m1, m2, m3 = contenedores_responsivos(3, modo_liviano)
+    m1.metric("Evoluciones", len(evs_paciente))
+    m2.metric("Fotos clinicas", len(fotos_heridas))
+    m3.metric("Ultimo registro", evs_paciente[-1]["fecha"] if evs_paciente else "Sin evoluciones")
 
     firma_subida = None
-    if CANVAS_DISPONIBLE:
+    canvas_result = None
+    abrir_firma = st.checkbox(
+        "Mostrar registro de firma del paciente / familiar",
+        value=not modo_liviano,
+        key="abrir_firma_evolucion",
+    )
+    if abrir_firma and CANVAS_DISPONIBLE:
         st.markdown("##### Firma Digital del Paciente / Familiar")
-        firma_cfg = obtener_config_firma("evolucion")
+        firma_cfg = obtener_config_firma("evolucion", default_liviano=modo_liviano)
         metodo_firma = st.radio(
             "Metodo de firma",
             ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
@@ -64,7 +81,6 @@ def render_evolucion(paciente_sel, user, rol=None):
             key="metodo_firma_evolucion",
         )
         firma_subida = None
-        canvas_result = None
         if metodo_firma.startswith("Subir"):
             firma_subida = st.file_uploader(
                 "Subir imagen de la firma",
@@ -84,40 +100,40 @@ def render_evolucion(paciente_sel, user, rol=None):
                 display_toolbar=firma_cfg["display_toolbar"],
                 key="canvas_firma_evolucion",
             )
-
-        if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
-            b64_firma = firma_a_base64(
-                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
-                uploaded_file=firma_subida,
-            )
-
-            if b64_firma:
-                st.session_state["firmas_tactiles_db"].append({
-                    "paciente": paciente_sel,
-                    "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-                    "firma_img": b64_firma,
-                })
-                _auditar_evolucion(
-                    paciente_sel,
-                    user,
-                    "Firma del paciente / familiar registrada",
-                    "Se registro una firma tactil o subida de imagen para dejar soporte documental de evolucion.",
-                    criticidad="alta",
-                    referencia="firma_evolucion",
-                    extra={"origen_firma": "canvas" if canvas_result is not None and firma_subida is None else "archivo"},
-                )
-                guardar_datos()
-                st.success("Firma guardada correctamente.")
-                st.rerun()
-            else:
-                st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
-    else:
+    elif abrir_firma:
         st.warning("Libreria de firma no disponible. Puedes subir una imagen de la firma.")
         firma_subida = st.file_uploader(
             "Subir imagen de la firma",
             type=["png", "jpg", "jpeg"],
             key="firma_upload_evolucion_sin_canvas",
         )
+
+    if abrir_firma and st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
+        b64_firma = firma_a_base64(
+            canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
+            uploaded_file=firma_subida,
+        )
+
+        if b64_firma:
+            st.session_state["firmas_tactiles_db"].append({
+                "paciente": paciente_sel,
+                "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                "firma_img": b64_firma,
+            })
+            _auditar_evolucion(
+                paciente_sel,
+                user,
+                "Firma del paciente / familiar registrada",
+                "Se registro una firma tactil o subida de imagen para dejar soporte documental de evolucion.",
+                criticidad="alta",
+                referencia="firma_evolucion",
+                extra={"origen_firma": "canvas" if canvas_result is not None and firma_subida is None else "archivo"},
+            )
+            guardar_datos()
+            st.success("Firma guardada correctamente.")
+            st.rerun()
+        else:
+            st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
 
     st.divider()
 
@@ -142,36 +158,58 @@ def render_evolucion(paciente_sel, user, rol=None):
                 height=220,
                 placeholder="Escribir aqui la evolucion...",
             )
-            col_foto1, col_foto2 = st.columns([3, 1])
+            col_foto1, col_foto2 = contenedores_responsivos([3, 1], modo_liviano)
             desc_w = col_foto1.text_input("Descripcion de la herida / lesion (opcional)")
 
             with col_foto2:
-                st.markdown("Foto de la herida")
-                usar_camara = st.checkbox("Encender camara")
-                foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if usar_camara else None
+                st.markdown("Adjunto clinico")
+                origen_foto = st.radio(
+                    "Foto de herida / lesion",
+                    ["No adjuntar", "Camara", "Subir archivo"],
+                    horizontal=False,
+                    key="origen_foto_evolucion",
+                )
+                foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if origen_foto == "Camara" else None
+                foto_subida = (
+                    st.file_uploader(
+                        "Subir foto existente",
+                        type=["png", "jpg", "jpeg"],
+                        key="upload_foto_evolucion",
+                    )
+                    if origen_foto == "Subir archivo"
+                    else None
+                )
                 st.caption(f"Imagen sugerida hasta {limite_archivo_mb('imagen')} MB.")
 
             if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
                 if nota.strip():
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
-                    st.session_state["evoluciones_db"].append({
-                        "paciente": paciente_sel,
-                        "nota": nota.strip(),
-                        "fecha": fecha_n,
-                        "firma": user["nombre"],
-                        "plantilla": plantilla,
-                    })
-
-                    if foto_w is not None:
+                    foto_preparada = None
+                    origen_foto_guardado = ""
+                    if foto_w is not None or foto_subida is not None:
+                        bytes_foto = foto_w.getvalue() if foto_w is not None else foto_subida.getvalue()
+                        nombre_foto = "camara_evolucion.jpg" if foto_w is not None else (foto_subida.name or "foto_evolucion.jpg")
+                        origen_foto_guardado = "camara" if foto_w is not None else "archivo"
                         foto_preparada = preparar_imagen_clinica_bytes(
-                            foto_w.getvalue(),
-                            nombre_archivo="camara_evolucion.jpg",
+                            bytes_foto,
+                            nombre_archivo=nombre_foto,
                             max_size=(1280, 1280),
                             quality=70,
                         )
                         if not foto_preparada["ok"]:
                             st.error(foto_preparada["error"])
                             return
+
+                    registro_evolucion = {
+                        "paciente": paciente_sel,
+                        "nota": nota.strip(),
+                        "fecha": fecha_n,
+                        "firma": user["nombre"],
+                        "plantilla": plantilla,
+                    }
+
+                    st.session_state["evoluciones_db"].append(registro_evolucion)
+                    if foto_preparada is not None:
                         base64_foto = base64.b64encode(foto_preparada["bytes"]).decode("utf-8")
                         st.session_state["fotos_heridas_db"].append({
                             "paciente": paciente_sel,
@@ -190,7 +228,8 @@ def render_evolucion(paciente_sel, user, rol=None):
                         referencia=plantilla,
                         extra={
                             "plantilla": plantilla,
-                            "adjunta_foto": foto_w is not None,
+                            "adjunta_foto": foto_preparada is not None,
+                            "origen_foto": origen_foto_guardado,
                             "longitud_nota": len(nota.strip()),
                         },
                     )
@@ -202,7 +241,6 @@ def render_evolucion(paciente_sel, user, rol=None):
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
 
-    evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
     if evs_paciente:
         st.divider()
         st.markdown("#### Historial de Evoluciones Clinicas")
@@ -210,10 +248,10 @@ def render_evolucion(paciente_sel, user, rol=None):
             "Evoluciones a mostrar",
             len(evs_paciente),
             key=f"limite_evol_{paciente_sel}",
-            default=20,
+            default=valor_por_modo_liviano(20, 10),
         )
         if puede_borrar:
-            col_chk, col_btn = st.columns([1.2, 2.8])
+            col_chk, col_btn = contenedores_responsivos([1.2, 2.8], modo_liviano)
             confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_evol")
             if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
                 ultima = evs_paciente[-1]
@@ -236,7 +274,7 @@ def render_evolucion(paciente_sel, user, rol=None):
             st.caption("El borrado de evoluciones queda reservado a medico, coordinacion o administracion total.")
 
         st.caption(f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones registradas.")
-        with st.container(height=560):
+        with st.container(height=valor_por_modo_liviano(560, 420)):
             for ev in reversed(evs_paciente[-limite_evol:]):
                 with st.container(border=True):
                     st.markdown(f"**{ev['fecha']}** | **{ev['firma']}**")
@@ -247,7 +285,6 @@ def render_evolucion(paciente_sel, user, rol=None):
     else:
         st.info("Aun no hay evoluciones registradas para este paciente.")
 
-    fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
     if fotos_heridas:
         st.divider()
         st.markdown("#### Linea de tiempo de heridas y lesiones")
@@ -255,7 +292,7 @@ def render_evolucion(paciente_sel, user, rol=None):
             "Fotos a mostrar",
             len(fotos_heridas),
             key=f"limite_fotos_heridas_{paciente_sel}",
-            default=12,
+            default=valor_por_modo_liviano(12, 6),
             opciones=(6, 12, 20, 30),
         )
         mostrar_fotos = (not modo_liviano) or st.checkbox(
@@ -263,7 +300,7 @@ def render_evolucion(paciente_sel, user, rol=None):
             value=False,
             key=f"mostrar_fotos_evolucion_{paciente_sel}",
         )
-        with st.container(height=520):
+        with st.container(height=valor_por_modo_liviano(520, 380)):
             for foto in reversed(fotos_heridas[-limite_fotos:]):
                 with st.container(border=True):
                     st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")
