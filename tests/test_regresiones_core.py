@@ -5,6 +5,7 @@ from core import clinical_exports
 from core.utils import (
     ARG_TZ,
     construir_registro_auditoria_legal,
+    decodificar_base64_seguro,
     generar_hash_password,
     limite_archivo_mb,
     modo_celular_viejo_activo,
@@ -128,3 +129,7 @@ def test_preparar_imagen_clinica_bytes_optimiza_y_devuelve_jpg():
     assert preparado["extension"] == "jpg"
     assert preparado["mime"] == "image/jpeg"
     assert preparado["size_bytes"] > 0
+
+
+def test_decodificar_base64_seguro_no_explota_con_payload_invalido():
+    assert decodificar_base64_seguro("esto-no-es-base64") == b""

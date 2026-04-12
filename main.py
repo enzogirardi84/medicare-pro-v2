@@ -27,6 +27,7 @@ try:
 except ImportError:
     core_database = import_module("core.database")
     cargar_datos = core_database.cargar_datos
+obtener_estado_guardado = getattr(core_database if "core_database" in locals() else import_module("core.database"), "obtener_estado_guardado", lambda: {})
 
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(
@@ -627,6 +628,24 @@ with st.sidebar:
     if st.button("Cerrar Sesion", use_container_width=True):
         limpiar_sesion_app()
         st.rerun()
+    estado_guardado = obtener_estado_guardado()
+    estado_clave = str(estado_guardado.get("estado", "") or "").strip().lower()
+    timestamp_guardado = estado_guardado.get("timestamp")
+    if timestamp_guardado:
+        import datetime as _dt
+
+        hora_guardado = _dt.datetime.fromtimestamp(timestamp_guardado).strftime("%H:%M:%S")
+        if estado_clave == "nube":
+            st.caption(f"Guardado: nube {hora_guardado}")
+        elif estado_clave == "local":
+            st.caption(f"Guardado: local {hora_guardado}")
+        elif estado_clave == "error":
+            st.caption(f"Guardado: error {hora_guardado}")
+        elif estado_clave == "sin_cambios":
+            st.caption(f"Sin cambios pendientes {hora_guardado}")
+    detalle_guardado = str(estado_guardado.get("detalle", "") or "").strip()
+    if detalle_guardado and estado_clave in {"local", "error"}:
+        st.caption(detalle_guardado)
     st.caption(APP_BUILD_TAG)
 
 vista_actual = resolve_current_view(menu)

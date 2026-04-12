@@ -6,7 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import ahora, decodificar_base64_seguro, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -201,14 +201,17 @@ def render_cierre_diario(mi_empresa, user):
                         c1_hist, c2_hist = st.columns([4, 1])
                         c1_hist.markdown(f"**Cierre del dia {r['fecha_reporte']}**")
                         c1_hist.caption(f"Generado el {r['fecha_generacion']} por {r['generado_por']}")
-                        pdf_bytes = base64.b64decode(r['pdf_base64'])
-                        c2_hist.download_button(
-                            "Descargar PDF",
-                            data=pdf_bytes,
-                            file_name=f"Cierre_Diario_{sanitize_filename_component(r['fecha_reporte'].replace('/','-'), 'fecha')}.pdf",
-                            mime="application/pdf",
-                            key=f"cierre_pdf_{i}",
-                            use_container_width=True,
-                        )
+                        pdf_bytes = decodificar_base64_seguro(r['pdf_base64'])
+                        if pdf_bytes:
+                            c2_hist.download_button(
+                                "Descargar PDF",
+                                data=pdf_bytes,
+                                file_name=f"Cierre_Diario_{sanitize_filename_component(r['fecha_reporte'].replace('/','-'), 'fecha')}.pdf",
+                                mime="application/pdf",
+                                key=f"cierre_pdf_{i}",
+                                use_container_width=True,
+                            )
+                        else:
+                            c2_hist.caption("PDF dañado")
         else:
             st.info("Aun no hay reportes de cierre diario guardados.")

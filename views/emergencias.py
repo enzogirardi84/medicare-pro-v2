@@ -8,7 +8,7 @@ from PIL import Image
 
 from core.clinical_exports import build_emergency_pdf_bytes
 from core.database import guardar_datos
-from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
+from core.utils import ahora, decodificar_base64_seguro, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 CANVAS_DISPONIBLE = False
 try:
@@ -384,7 +384,9 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                     )
                     if evento.get("firma_b64"):
                         try:
-                            col_badges.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=180)
+                            firma_bytes = decodificar_base64_seguro(evento["firma_b64"])
+                            if firma_bytes:
+                                col_badges.image(firma_bytes, caption="Firma profesional", width=180)
                         except Exception:
                             pass
 

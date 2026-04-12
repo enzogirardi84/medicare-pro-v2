@@ -15,6 +15,24 @@ LOCAL_DB_PATH = Path(__file__).resolve().parent.parent / ".streamlit" / "local_d
 LOCAL_DB_DIR = Path(__file__).resolve().parent.parent / ".streamlit" / "data_store"
 
 
+def _registrar_estado_guardado(estado, detalle="", guardado_nube=False, guardado_local=False):
+    st.session_state["_ultimo_guardado_estado"] = estado
+    st.session_state["_ultimo_guardado_detalle"] = str(detalle or "").strip()
+    st.session_state["_ultimo_guardado_ts"] = time.time()
+    st.session_state["_ultimo_guardado_nube"] = bool(guardado_nube)
+    st.session_state["_ultimo_guardado_local"] = bool(guardado_local)
+
+
+def obtener_estado_guardado():
+    return {
+        "estado": st.session_state.get("_ultimo_guardado_estado", ""),
+        "detalle": st.session_state.get("_ultimo_guardado_detalle", ""),
+        "timestamp": st.session_state.get("_ultimo_guardado_ts"),
+        "guardado_nube": bool(st.session_state.get("_ultimo_guardado_nube", False)),
+        "guardado_local": bool(st.session_state.get("_ultimo_guardado_local", False)),
+    }
+
+
 def _db_keys():
     return [
         "usuarios_db",
@@ -153,15 +171,18 @@ def guardar_datos():
     payload_hash = hashlib.md5(payload_serializado.encode("utf-8")).hexdigest()
 
     if st.session_state.get("_db_cache_hash") == payload_hash:
+        _registrar_estado_guardado("sin_cambios", "No habia cambios pendientes.", guardado_nube=supabase is not None, guardado_local=True)
         return
 
     guardado_nube = False
+    error_nube = ""
     if supabase is not None:
         try:
             supabase.table("medicare_db").upsert({"id": 1, "datos": data}).execute()
             guardado_nube = True
             st.session_state["_modo_offline"] = False
         except Exception as e:
+            error_nube = str(e)
             st.session_state["_modo_offline"] = True
             if not st.session_state.get("_aviso_offline_mostrado"):
                 st.warning(f"No se pudo subir a la nube. Se guardara localmente ({e}).")
@@ -171,6 +192,19 @@ def guardar_datos():
     st.session_state["_db_cache"] = copy.deepcopy(data)
     st.session_state["_db_cache_hash"] = payload_hash
 
+    if guardado_nube:
+        _registrar_estado_guardado("nube", "Guardado sincronizado en la nube.", guardado_nube=True, guardado_local=guardado_local)
+    elif guardado_local:
+        detalle = "Guardado local activo."
+        if error_nube:
+            detalle = f"Guardado local por falta de nube: {error_nube}"
+        _registrar_estado_guardado("local", detalle, guardado_nube=False, guardado_local=True)
+    else:
+        detalle = "No se pudo guardar ni en la nube ni en este equipo."
+        if error_nube:
+            detalle = f"{detalle} Error nube: {error_nube}"
+        _registrar_estado_guardado("error", detalle, guardado_nube=False, guardado_local=False)
+
     ultimo_toast = st.session_state.get("_ultimo_toast_guardado")
     ahora_ts = time.time()
     if ultimo_toast is None or ahora_ts - ultimo_toast > 8:
@@ -178,4 +212,12 @@ def guardar_datos():
             st.toast("Guardado exitosamente en la nube")
         elif guardado_local:
             st.toast("Guardado localmente")
+        else:
+            st.error("No se pudo guardar la informacion. Verifica conexion y permisos de escritura.")
         st.session_state["_ultimo_toast_guardado"] = ahora_ts
+
+    return {
+        "guardado_nube": guardado_nube,
+        "guardado_local": guardado_local,
+        "error_nube": error_nube,
+    }

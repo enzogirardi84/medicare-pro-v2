@@ -29,6 +29,7 @@ except ImportError:
     TableStyle = None
 
 from core.export_utils import pdf_output_bytes, safe_text
+from core.utils import decodificar_base64_seguro
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
@@ -37,18 +38,16 @@ def _patient_signature_bytes(session_state, paciente_sel):
     consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
     for registro in reversed(consentimientos):
         if registro.get("firma_b64"):
-            try:
-                return base64.b64decode(registro["firma_b64"])
-            except Exception:
-                pass
+            firma_bytes = decodificar_base64_seguro(registro["firma_b64"])
+            if firma_bytes:
+                return firma_bytes
 
     firmas = [x for x in session_state.get("firmas_tactiles_db", []) if x.get("paciente") == paciente_sel]
     for registro in reversed(firmas):
         if registro.get("firma_img"):
-            try:
-                return base64.b64decode(registro["firma_img"])
-            except Exception:
-                pass
+            firma_bytes = decodificar_base64_seguro(registro["firma_img"])
+            if firma_bytes:
+                return firma_bytes
     return None
 
 
@@ -56,10 +55,8 @@ def _doctor_signature_bytes(record):
     firma_b64 = record.get("firma_b64", "")
     if not firma_b64:
         return None
-    try:
-        return base64.b64decode(firma_b64)
-    except Exception:
-        return None
+    firma_bytes = decodificar_base64_seguro(firma_b64)
+    return firma_bytes or None
 
 
 def _order_attachment_note(record):
@@ -520,10 +517,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 
     firma_bytes = None
     if consentimiento.get("firma_b64"):
-        try:
-            firma_bytes = base64.b64decode(consentimiento["firma_b64"])
-        except Exception:
-            firma_bytes = None
+        firma_bytes = decodificar_base64_seguro(consentimiento["firma_b64"]) or None
     if firma_bytes:
         tmp_path = None
         try:
@@ -697,10 +691,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     firma_b64 = record.get("firma_b64", "")
     firma_bytes = None
     if firma_b64:
-        try:
-            firma_bytes = base64.b64decode(firma_b64)
-        except Exception:
-            firma_bytes = None
+        firma_bytes = decodificar_base64_seguro(firma_b64) or None
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
