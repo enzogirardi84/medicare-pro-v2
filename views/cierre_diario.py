@@ -6,7 +6,15 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora, decodificar_base64_seguro, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import (
+    ahora,
+    contenedores_responsivos,
+    decodificar_base64_seguro,
+    modo_celular_viejo_activo,
+    mostrar_dataframe_con_scroll,
+    seleccionar_limite_registros,
+    valor_por_modo_liviano,
+)
 
 FPDF_DISPONIBLE = False
 try:
@@ -17,11 +25,15 @@ except ImportError:
 
 
 def render_cierre_diario(mi_empresa, user):
+    modo_liviano = modo_celular_viejo_activo()
     st.subheader("Conciliacion y Cierre Diario de Operaciones")
     st.info("Selecciona un dia para auditar insumos, facturacion y stock sin cargar reportes pesados por defecto.")
+    if modo_liviano:
+        st.caption("Modo celular viejo activo: el cierre se apila en vertical y el PDF queda a pedido.")
 
-    c1_rep, _ = st.columns([1, 2])
+    c1_rep, c2_rep = contenedores_responsivos([1, 2], modo_liviano)
     fecha_reporte = c1_rep.date_input("Filtrar por Fecha", value=ahora().date())
+    c2_rep.caption("Usa una fecha por vez para abrir mas rapido el resumen del dia.")
     fecha_str = fecha_reporte.strftime("%d/%m/%Y")
 
     consumos_dia = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str) and c.get("empresa") == mi_empresa]
@@ -32,7 +44,7 @@ def render_cierre_diario(mi_empresa, user):
     total_facturado = sum(f.get("monto", 0) for f in facturacion_dia)
     stock_critico = len([s for s in stock_actual if s.get("stock", 0) <= 10])
 
-    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1, col_m2, col_m3 = contenedores_responsivos(3, modo_liviano)
     col_m1.metric("Insumos Consumidos", f"{total_insumos} unidades")
     col_m2.metric("Facturado del Dia", f"${total_facturado:,.2f}")
     col_m3.metric("Stock Critico", f"{stock_critico} insumos")
@@ -48,7 +60,7 @@ def render_cierre_diario(mi_empresa, user):
     )
 
     if vista == "Resumen del Dia":
-        col_r1, col_r2 = st.columns(2)
+        col_r1, col_r2 = contenedores_responsivos(2, modo_liviano)
         with col_r1.container(border=True):
             st.markdown("#### Insumos del dia")
             if consumos_dia:
@@ -62,7 +74,7 @@ def render_cierre_diario(mi_empresa, user):
                 st.caption(f"Se registraron {len(consumos_dia)} movimientos de insumos.")
                 mostrar_dataframe_con_scroll(
                     pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(limite_insumos).iloc[::-1],
-                    height=340,
+                    height=valor_por_modo_liviano(340, 250),
                 )
             else:
                 st.info("No hubo registro de uso de insumos en este dia.")
@@ -79,7 +91,7 @@ def render_cierre_diario(mi_empresa, user):
                 st.success(f"Total facturado: ${total_facturado:,.2f}")
                 mostrar_dataframe_con_scroll(
                     pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(limite_fact).iloc[::-1],
-                    height=340,
+                    height=valor_por_modo_liviano(340, 250),
                 )
             else:
                 st.info("No hubo facturacion registrada en este dia.")
@@ -96,7 +108,7 @@ def render_cierre_diario(mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(
                 pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(limite).iloc[::-1],
-                height=460,
+                height=valor_por_modo_liviano(460, 320),
             )
         else:
             st.info("No hubo registro de uso de insumos en este dia.")
@@ -114,7 +126,7 @@ def render_cierre_diario(mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(
                 pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(limite).iloc[::-1],
-                height=460,
+                height=valor_por_modo_liviano(460, 320),
             )
         else:
             st.info("No hubo facturacion registrada en este dia.")
@@ -131,7 +143,7 @@ def render_cierre_diario(mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(
                 pd.DataFrame(stock_actual).drop(columns="empresa", errors="ignore").head(limite),
-                height=460,
+                height=valor_por_modo_liviano(460, 320),
             )
         else:
             st.info("No hay stock cargado.")
@@ -167,7 +179,15 @@ def render_cierre_diario(mi_empresa, user):
             pdf.cell(0, 10, safe_text(f"TOTAL FACTURADO DEL DIA: ${total_facturado_pdf:,.2f}"), ln=True)
             return pdf_output_bytes(pdf)
 
-        if st.checkbox("Preparar y guardar cierre en PDF", value=False):
+        habilitar_pdf = st.checkbox(
+            "Preparar y guardar cierre en PDF" if not modo_liviano else "Mostrar herramientas PDF del cierre",
+            value=False,
+            key="cierre_pdf_toggle",
+        )
+        if modo_liviano and not habilitar_pdf:
+            st.caption("En modo celular viejo el PDF se genera solo cuando lo pedis para evitar carga innecesaria.")
+
+        if habilitar_pdf:
             pdf_bytes = generar_pdf_cierre()
             st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
             if st.button("Guardar cierre en historial", use_container_width=True, type="primary"):
@@ -192,13 +212,13 @@ def render_cierre_diario(mi_empresa, user):
                 "Cierres a mostrar",
                 len(reportes_mios),
                 key="cierre_archivo_limite",
-                default=20,
+                default=valor_por_modo_liviano(20, 10),
                 opciones=(10, 20, 30, 50, 100),
             )
-            with st.container(height=460):
+            with st.container(height=valor_por_modo_liviano(460, 360)):
                 for i, r in enumerate(reportes_mios[:limite_archivo]):
                     with st.container(border=True):
-                        c1_hist, c2_hist = st.columns([4, 1])
+                        c1_hist, c2_hist = contenedores_responsivos([4, 1], modo_liviano)
                         c1_hist.markdown(f"**Cierre del dia {r['fecha_reporte']}**")
                         c1_hist.caption(f"Generado el {r['fecha_generacion']} por {r['generado_por']}")
                         pdf_bytes = decodificar_base64_seguro(r['pdf_base64'])

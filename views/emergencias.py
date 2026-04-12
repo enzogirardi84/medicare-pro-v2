@@ -8,7 +8,17 @@ from PIL import Image
 
 from core.clinical_exports import build_emergency_pdf_bytes
 from core.database import guardar_datos
-from core.utils import ahora, decodificar_base64_seguro, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
+from core.utils import (
+    ahora,
+    contenedores_responsivos,
+    decodificar_base64_seguro,
+    modo_celular_viejo_activo,
+    mostrar_dataframe_con_scroll,
+    obtener_config_firma,
+    registrar_auditoria_legal,
+    seleccionar_limite_registros,
+    valor_por_modo_liviano,
+)
 
 CANVAS_DISPONIBLE = False
 try:
@@ -148,45 +158,53 @@ def render_emergencias(paciente_sel, mi_empresa, user):
         st.info("Selecciona un paciente para registrar una emergencia o traslado.")
         return
 
+    modo_liviano = modo_celular_viejo_activo()
     detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     eventos = [x for x in st.session_state.get("emergencias_db", []) if x.get("paciente") == paciente_sel]
     activos = [x for x in eventos if x.get("triage_grado") in {"Grado 1 - Rojo", "Grado 2 - Amarillo"}]
     traslados = [x for x in eventos if x.get("ambulancia_solicitada")]
 
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Emergencias y ambulancia</h2>
-            <p class="mc-hero-text">Modulo operativo y legal para registrar alertas criticas, triage, solicitud de movil,
-            parte prehospitalario, traslado y recepcion del paciente con trazabilidad profesional.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip mc-chip-danger">Grado 1 rojo</span>
-                <span class="mc-chip mc-chip-warning">Grado 2 amarillo</span>
-                <span class="mc-chip mc-chip-success">Grado 3 verde</span>
-                <span class="mc-chip">Ambulancia</span>
-                <span class="mc-chip">PDF legal</span>
+    if modo_liviano:
+        st.subheader("Emergencias y ambulancia")
+        st.caption(
+            "Modo celular viejo activo: se prioriza carga rapida, menos columnas y acciones PDF a pedido."
+        )
+    else:
+        st.markdown(
+            """
+            <div class="mc-hero">
+                <h2 class="mc-hero-title">Emergencias y ambulancia</h2>
+                <p class="mc-hero-text">Modulo operativo y legal para registrar alertas criticas, triage, solicitud de movil,
+                parte prehospitalario, traslado y recepcion del paciente con trazabilidad profesional.</p>
+                <div class="mc-chip-row">
+                    <span class="mc-chip mc-chip-danger">Grado 1 rojo</span>
+                    <span class="mc-chip mc-chip-warning">Grado 2 amarillo</span>
+                    <span class="mc-chip mc-chip-success">Grado 3 verde</span>
+                    <span class="mc-chip">Ambulancia</span>
+                    <span class="mc-chip">PDF legal</span>
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4 = contenedores_responsivos(4, modo_liviano)
     m1.metric("Eventos registrados", len(eventos))
     m2.metric("Triage rojo/amarillo", len(activos))
     m3.metric("Traslados solicitados", len(traslados))
     m4.metric("Ultimo evento", eventos[-1]["fecha_evento"] if eventos else "Sin eventos")
 
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>1. Alerta inmediata</h4><p>Deja asentado el tipo de urgencia, prioridad, domicilio y hora exacta del inicio del evento.</p></div>
-            <div class="mc-card"><h4>2. Triage por grados</h4><p>Clasifica rapido en Grado 1 rojo, Grado 2 amarillo o Grado 3 verde con impacto operativo inmediato.</p></div>
-            <div class="mc-card"><h4>3. Traslado trazable</h4><p>Guarda movil, tiempos de respuesta, destino, familiar notificado y PDF imprimible.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    if not modo_liviano:
+        st.markdown(
+            """
+            <div class="mc-grid-3">
+                <div class="mc-card"><h4>1. Alerta inmediata</h4><p>Deja asentado el tipo de urgencia, prioridad, domicilio y hora exacta del inicio del evento.</p></div>
+                <div class="mc-card"><h4>2. Triage por grados</h4><p>Clasifica rapido en Grado 1 rojo, Grado 2 amarillo o Grado 3 verde con impacto operativo inmediato.</p></div>
+                <div class="mc-card"><h4>3. Traslado trazable</h4><p>Guarda movil, tiempos de respuesta, destino, familiar notificado y PDF imprimible.</p></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     vista = st.radio(
         "Vista del modulo",
@@ -200,7 +218,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
         st.markdown("### Nuevo evento critico o traslado")
         with st.container(border=True):
             fecha_actual = ahora()
-            c1, c2, c3 = st.columns([2, 2, 1])
+            c1, c2, c3 = contenedores_responsivos([2, 2, 1], modo_liviano)
             categoria_evento = c1.selectbox("Categoria principal", list(EVENTO_CATEGORIAS.keys()))
             patologias_categoria = EVENTO_CATEGORIAS.get(categoria_evento, ["Evento no clasificado"])
             tipo_evento = c2.selectbox("Patologia / motivo presuntivo", patologias_categoria)
@@ -223,7 +241,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 unsafe_allow_html=True,
             )
 
-            c4, c5, c6 = st.columns(3)
+            c4, c5, c6 = contenedores_responsivos(3, modo_liviano)
             fecha_evento = c4.date_input("Fecha del evento", value=fecha_actual.date())
             hora_evento = c5.time_input("Hora del evento", value=fecha_actual.time().replace(microsecond=0))
             tipo_traslado = c6.selectbox(
@@ -243,23 +261,23 @@ def render_emergencias(paciente_sel, mi_empresa, user):
             direccion_evento = st.text_input("Domicilio / lugar del evento", value=detalles.get("direccion", ""))
 
             st.markdown("#### Triage inicial")
-            t1, t2, t3, t4 = st.columns(4)
+            t1, t2, t3, t4 = contenedores_responsivos(4, modo_liviano)
             presion = t1.text_input("Presion arterial", placeholder="120/80")
             fc = t2.text_input("Frecuencia cardiaca", placeholder="78 lpm")
             saturacion = t3.text_input("Saturacion O2", placeholder="98%")
             temperatura = t4.text_input("Temperatura", placeholder="36.5 C")
-            t5, t6, t7 = st.columns(3)
+            t5, t6, t7 = contenedores_responsivos(3, modo_liviano)
             glucemia = t5.text_input("Glucemia", placeholder="110 mg/dl")
             dolor = t6.selectbox("Dolor (EVA)", [str(x) for x in range(11)], index=0)
             conciencia = t7.selectbox("Estado de conciencia", ["Alerta", "Somnoliento", "Confuso", "No responde"])
             observaciones = st.text_area("Observaciones clinicas", height=90)
 
             st.markdown("#### Ambulancia, traslado y recepcion")
-            a1, a2, a3 = st.columns(3)
+            a1, a2, a3 = contenedores_responsivos(3, modo_liviano)
             ambulancia_solicitada = a1.checkbox("Solicitar ambulancia", value=triage_info["prioridad"] in {"Alta", "Critica"})
             movil = a2.text_input("Movil / empresa", placeholder="Emerger / privado / SAME")
             destino = a3.text_input("Destino", placeholder="Clinica / hospital / guardia")
-            a4, a5, a6 = st.columns(3)
+            a4, a5, a6 = contenedores_responsivos(3, modo_liviano)
             hora_solicitud = a4.text_input("Hora de solicitud", value=fecha_actual.strftime("%H:%M"))
             hora_arribo = a5.text_input("Hora de arribo", placeholder="HH:MM")
             hora_salida = a6.text_input("Hora de salida / entrega", placeholder="HH:MM")
@@ -272,21 +290,23 @@ def render_emergencias(paciente_sel, mi_empresa, user):
             respuesta = st.text_area("Respuesta del paciente", height=80)
             observaciones_legales = st.text_area("Observaciones legales / cadena de custodia / conformidad", height=80)
 
-            p1, p2 = st.columns(2)
+            p1, p2 = contenedores_responsivos(2, modo_liviano)
             profesional = p1.text_input("Profesional a cargo", value=user.get("nombre", ""))
             matricula = p2.text_input("Matricula profesional", value=user.get("matricula", ""))
 
             firma_canvas = None
             if CANVAS_DISPONIBLE:
                 st.caption("Firma digital del profesional interviniente")
+                firma_cfg = obtener_config_firma("emergencias", default_liviano=modo_liviano)
                 firma_canvas = st_canvas(
                     key="firma_emergencias",
                     background_color="#ffffff",
-                    height=140,
+                    height=firma_cfg["height"],
+                    width=firma_cfg["width"],
                     drawing_mode="freedraw",
-                    stroke_width=3,
+                    stroke_width=firma_cfg["stroke_width"],
                     stroke_color="#000000",
-                    display_toolbar=True,
+                    display_toolbar=firma_cfg["display_toolbar"],
                 )
 
             if st.button("Guardar evento critico", use_container_width=True, type="primary"):
@@ -363,14 +383,14 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 unsafe_allow_html=True,
             )
 
-        recientes = list(reversed(eventos[-6:]))
+        recientes = list(reversed(eventos[-valor_por_modo_liviano(6, 4):]))
         if not recientes:
             st.info("Todavia no hay eventos de emergencia o ambulancia registrados para este paciente.")
         else:
             for evento in recientes:
                 titulo = f"{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')} | {evento.get('tipo_evento', '')}"
                 with st.container(border=True):
-                    col_info, col_badges = st.columns([4, 2])
+                    col_info, col_badges = contenedores_responsivos([4, 2], modo_liviano)
                     col_info.markdown(f"#### {titulo}")
                     col_info.markdown(evento.get("motivo", ""))
                     badges = [
@@ -386,7 +406,11 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                         try:
                             firma_bytes = decodificar_base64_seguro(evento["firma_b64"])
                             if firma_bytes:
-                                col_badges.image(firma_bytes, caption="Firma profesional", width=180)
+                                col_badges.image(
+                                    firma_bytes,
+                                    caption="Firma profesional",
+                                    width=valor_por_modo_liviano(180, 120),
+                                )
                         except Exception:
                             pass
 
@@ -400,7 +424,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
             "Eventos a mostrar",
             len(eventos),
             key="emergencias_historial_limite",
-            default=20,
+            default=valor_por_modo_liviano(20, 10),
             opciones=(5, 10, 20, 30, 50, 100, 200, 500),
         )
 
@@ -421,12 +445,22 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 for x in registros
             ]
         )
-        mostrar_dataframe_con_scroll(resumen_df, height=380)
+        mostrar_dataframe_con_scroll(resumen_df, height=valor_por_modo_liviano(380, 260))
 
-        with st.container(height=520):
+        mostrar_acciones_pdf = True
+        if modo_liviano:
+            mostrar_acciones_pdf = st.checkbox(
+                "Mostrar acciones PDF por evento",
+                value=False,
+                key="emergencias_historial_pdf_toggle",
+            )
+            if not mostrar_acciones_pdf:
+                st.caption("En modo celular viejo los PDF se preparan solo cuando los pedis, para que esta pantalla abra mas rapido.")
+
+        with st.container(height=valor_por_modo_liviano(520, 420)):
             for idx, evento in enumerate(registros):
                 with st.container(border=True):
-                    c1, c2 = st.columns([3, 1])
+                    c1, c2 = contenedores_responsivos([3, 1], modo_liviano)
                     c1.markdown(
                         f"**{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')}** | {evento.get('tipo_evento', '')}"
                     )
@@ -439,22 +473,25 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                             f"Movil: {evento.get('movil', 'S/D')} | Solicitud: {evento.get('hora_solicitud', 'S/D')} | "
                             f"Arribo: {evento.get('hora_arribo', 'S/D')} | Destino: {evento.get('destino', 'S/D')}"
                         )
-                    pdf_bytes = build_emergency_pdf_bytes(
-                        st.session_state,
-                        paciente_sel,
-                        mi_empresa,
-                        evento,
-                        {"nombre": evento.get("profesional", ""), "matricula": evento.get("matricula", "")},
-                    )
-                    nombre_arch = (
-                        f"Emergencia_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
-                        f"{evento.get('fecha_evento', '').replace('/','')}_{idx + 1}.pdf"
-                    )
-                    c2.download_button(
-                        "Descargar PDF",
-                        data=pdf_bytes,
-                        file_name=nombre_arch,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"pdf_emerg_{idx}",
-                    )
+                    if mostrar_acciones_pdf:
+                        pdf_bytes = build_emergency_pdf_bytes(
+                            st.session_state,
+                            paciente_sel,
+                            mi_empresa,
+                            evento,
+                            {"nombre": evento.get("profesional", ""), "matricula": evento.get("matricula", "")},
+                        )
+                        nombre_arch = (
+                            f"Emergencia_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
+                            f"{evento.get('fecha_evento', '').replace('/','')}_{idx + 1}.pdf"
+                        )
+                        c2.download_button(
+                            "Descargar PDF",
+                            data=pdf_bytes,
+                            file_name=nombre_arch,
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"pdf_emerg_{idx}",
+                        )
+                    else:
+                        c2.caption("PDF a pedido")
