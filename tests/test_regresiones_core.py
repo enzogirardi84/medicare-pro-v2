@@ -1,5 +1,9 @@
+from datetime import datetime
+
 from core import clinical_exports
 from core.utils import (
+    ARG_TZ,
+    construir_registro_auditoria_legal,
     generar_hash_password,
     normalizar_usuario_sistema,
     obtener_modulos_permitidos,
@@ -52,3 +56,36 @@ def test_historia_pdf_degrada_bien_sin_reportlab(monkeypatch):
     payload = clinical_exports.build_history_pdf_bytes({}, "Paciente Demo", "Clinica Demo")
 
     assert payload is None
+
+
+def test_auditoria_legal_construye_metadata_trazable():
+    fecha_evento = ARG_TZ.localize(datetime(2026, 4, 12, 9, 45, 30))
+    registro = construir_registro_auditoria_legal(
+        tipo_evento="Medicacion",
+        paciente="Paciente Demo",
+        accion="Registro de administracion",
+        actor="Ana Enfermera",
+        detalle="Dipirona 1 g | Horario: 08:00 | Estado: Realizada",
+        referencia="Dipirona 1 g",
+        empresa="Clinica Demo",
+        usuario={
+            "usuario_login": "ana.enf",
+            "rol": "Enfermeria",
+            "perfil_profesional": "Enfermeria",
+            "empresa": "Clinica Demo",
+        },
+        modulo="Recetas",
+        criticidad="alta",
+        extra={"horario_programado": "08:00"},
+        fecha_evento=fecha_evento,
+    )
+
+    assert registro["modulo"] == "Recetas"
+    assert registro["criticidad"] == "alta"
+    assert registro["actor_login"] == "ana.enf"
+    assert registro["actor_rol"] == "Enfermeria"
+    assert registro["actor_perfil"] == "Enfermeria"
+    assert registro["empresa"] == "Clinica Demo"
+    assert registro["fecha_iso"] == "2026-04-12T09:45:30-03:00"
+    assert registro["horario_programado"] == "08:00"
+    assert registro["audit_id"].startswith("AUD-20260412094530-")

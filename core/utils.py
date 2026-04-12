@@ -506,25 +506,104 @@ def ahora():
     return datetime.now(ARG_TZ)
 
 
-def registrar_auditoria_legal(tipo_evento, paciente, accion, actor, matricula="", detalle="", referencia="", extra=None, empresa=None):
-    extra = extra or {}
+def construir_registro_auditoria_legal(
+    tipo_evento,
+    paciente,
+    accion,
+    actor,
+    matricula="",
+    detalle="",
+    referencia="",
+    extra=None,
+    empresa="",
+    usuario=None,
+    modulo="",
+    criticidad="media",
+    fecha_evento=None,
+):
+    extra = dict(extra or {})
+    usuario = normalizar_usuario_sistema(usuario or {}) if isinstance(usuario, dict) else {}
+    fecha_evento = fecha_evento or ahora()
+    actor_nombre = str(actor or usuario.get("nombre") or "Sistema").strip()
+    actor_login = str(extra.pop("actor_login", usuario.get("usuario_login", "")) or "").strip().lower()
+    actor_rol = str(extra.pop("actor_rol", usuario.get("rol", "")) or "").strip()
+    actor_perfil = str(
+        extra.pop("actor_perfil", usuario.get("perfil_profesional", inferir_perfil_profesional(usuario)))
+        or ""
+    ).strip()
+    actor_empresa = str(extra.pop("actor_empresa", usuario.get("empresa", "")) or "").strip()
+    modulo_registro = str(extra.pop("modulo", modulo or tipo_evento or "General") or "General").strip()
+    criticidad_registro = str(extra.pop("criticidad", criticidad or "media") or "media").strip().lower()
+    referencia_txt = str(referencia or "").strip()
+    detalle_txt = str(detalle or "").strip()
+    empresa_txt = str(empresa or "").strip()
+
+    registro = {
+        "audit_id": extra.pop(
+            "audit_id",
+            f"AUD-{fecha_evento.strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(4).upper()}",
+        ),
+        "fecha": fecha_evento.strftime("%d/%m/%Y %H:%M:%S"),
+        "fecha_iso": fecha_evento.isoformat(timespec="seconds"),
+        "tipo_evento": str(tipo_evento or "").strip(),
+        "modulo": modulo_registro,
+        "criticidad": criticidad_registro,
+        "paciente": str(paciente or "").strip(),
+        "accion": str(accion or "").strip(),
+        "actor": actor_nombre,
+        "actor_login": actor_login,
+        "actor_rol": actor_rol,
+        "actor_perfil": actor_perfil,
+        "actor_empresa": actor_empresa,
+        "matricula": str(matricula or usuario.get("matricula", "")) or "",
+        "detalle": detalle_txt,
+        "referencia": referencia_txt,
+        "empresa": empresa_txt,
+    }
+
+    for clave, valor in extra.items():
+        if valor in (None, "", [], {}):
+            continue
+        registro[clave] = valor
+
+    return registro
+
+
+def registrar_auditoria_legal(
+    tipo_evento,
+    paciente,
+    accion,
+    actor,
+    matricula="",
+    detalle="",
+    referencia="",
+    extra=None,
+    empresa=None,
+    usuario=None,
+    modulo="",
+    criticidad="media",
+):
+    extra = dict(extra or {})
+    usuario_ctx = usuario if isinstance(usuario, dict) else st.session_state.get("user", {})
     if empresa is None:
         detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente, {})
-        empresa = detalles.get("empresa") or st.session_state.get("user", {}).get("empresa", "")
+        empresa = detalles.get("empresa") or usuario_ctx.get("empresa", "")
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append(
-        {
-            "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-            "tipo_evento": tipo_evento,
-            "paciente": paciente,
-            "accion": accion,
-            "actor": actor,
-            "matricula": matricula,
-            "detalle": detalle,
-            "referencia": referencia,
-            "empresa": empresa,
-            **extra,
-        }
+        construir_registro_auditoria_legal(
+            tipo_evento=tipo_evento,
+            paciente=paciente,
+            accion=accion,
+            actor=actor,
+            matricula=matricula,
+            detalle=detalle,
+            referencia=referencia,
+            extra=extra,
+            empresa=empresa,
+            usuario=usuario_ctx,
+            modulo=modulo,
+            criticidad=criticidad,
+        )
     )
 
 

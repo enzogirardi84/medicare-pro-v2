@@ -22,6 +22,22 @@ except ImportError:
     pass
 
 
+def _auditar_evolucion(paciente_sel, user, accion, detalle, criticidad="media", referencia="", extra=None):
+    registrar_auditoria_legal(
+        "Evolucion Clinica",
+        paciente_sel,
+        accion,
+        user.get("nombre", "Sistema"),
+        user.get("matricula", ""),
+        detalle,
+        referencia=referencia,
+        extra=extra or {},
+        usuario=user,
+        modulo="Evolucion",
+        criticidad=criticidad,
+    )
+
+
 def render_evolucion(paciente_sel, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
@@ -77,6 +93,15 @@ def render_evolucion(paciente_sel, user, rol=None):
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
                     "firma_img": b64_firma,
                 })
+                _auditar_evolucion(
+                    paciente_sel,
+                    user,
+                    "Firma del paciente / familiar registrada",
+                    "Se registro una firma tactil o subida de imagen para dejar soporte documental de evolucion.",
+                    criticidad="alta",
+                    referencia="firma_evolucion",
+                    extra={"origen_firma": "canvas" if canvas_result is not None and firma_subida is None else "archivo"},
+                )
                 guardar_datos()
                 st.success("Firma guardada correctamente.")
                 st.rerun()
@@ -143,13 +168,18 @@ def render_evolucion(paciente_sel, user, rol=None):
                             "firma": user["nombre"],
                         })
 
-                    registrar_auditoria_legal(
-                        "Evolucion Clinica",
+                    _auditar_evolucion(
                         paciente_sel,
+                        user,
                         "Nueva evolucion",
-                        user.get("nombre", ""),
-                        user.get("matricula", ""),
                         f"Se registro evolucion con plantilla {plantilla}.",
+                        criticidad="media",
+                        referencia=plantilla,
+                        extra={
+                            "plantilla": plantilla,
+                            "adjunta_foto": foto_w is not None,
+                            "longitud_nota": len(nota.strip()),
+                        },
                     )
                     guardar_datos()
                     st.success("Evolucion guardada correctamente.")
@@ -175,13 +205,17 @@ def render_evolucion(paciente_sel, user, rol=None):
             if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
                 ultima = evs_paciente[-1]
                 st.session_state["evoluciones_db"].remove(evs_paciente[-1])
-                registrar_auditoria_legal(
-                    "Evolucion Clinica",
+                _auditar_evolucion(
                     paciente_sel,
+                    user,
                     "Borrado de evolucion",
-                    user.get("nombre", ""),
-                    user.get("matricula", ""),
                     f"Se elimino la evolucion del {ultima.get('fecha', 'S/D')}.",
+                    criticidad="alta",
+                    referencia=ultima.get("fecha", ""),
+                    extra={
+                        "plantilla": ultima.get("plantilla", ""),
+                        "firma_registro": ultima.get("firma", ""),
+                    },
                 )
                 guardar_datos()
                 st.rerun()

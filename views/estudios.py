@@ -3,7 +3,7 @@ import base64
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros
+from core.utils import ahora, optimizar_imagen_bytes, puede_accion, registrar_auditoria_legal, seleccionar_limite_registros
 
 
 def _mismo_estudio(registro, objetivo):
@@ -13,6 +13,22 @@ def _mismo_estudio(registro, objetivo):
         and registro.get("tipo") == objetivo.get("tipo")
         and registro.get("detalle") == objetivo.get("detalle")
         and registro.get("firma") == objetivo.get("firma")
+    )
+
+
+def _auditar_estudio(paciente_sel, user, accion, detalle, criticidad="media", referencia="", extra=None):
+    registrar_auditoria_legal(
+        "Estudios",
+        paciente_sel,
+        accion,
+        user.get("nombre", "Sistema"),
+        user.get("matricula", ""),
+        detalle,
+        referencia=referencia,
+        extra=extra or {},
+        usuario=user,
+        modulo="Estudios",
+        criticidad=criticidad,
     )
 
 
@@ -74,6 +90,20 @@ def render_estudios(paciente_sel, user, rol=None):
                     "extension": ext,
                     "firma": user["nombre"],
                 })
+                _auditar_estudio(
+                    paciente_sel,
+                    user,
+                    "Estudio clinico registrado",
+                    f"{tipo_estudio} | {detalle_estudio.strip()}".strip(" |"),
+                    criticidad="media",
+                    referencia=tipo_estudio,
+                    extra={
+                        "tipo_estudio": tipo_estudio,
+                        "origen_adjunto": "archivo" if archivo_subido is not None else "camara" if foto_estudio is not None else "sin_adjunto",
+                        "extension_adjunto": ext,
+                        "adjunto": bool(img_b64),
+                    },
+                )
                 guardar_datos()
                 st.success("Estudio guardado correctamente.")
                 st.rerun()
@@ -93,7 +123,17 @@ def render_estudios(paciente_sel, user, rol=None):
         col_del1, col_del1_chk = st.columns([3, 1.2])
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
-            st.session_state["estudios_db"].remove(estudios_pac[-1])
+            ultimo_estudio = estudios_pac[-1]
+            st.session_state["estudios_db"].remove(ultimo_estudio)
+            _auditar_estudio(
+                paciente_sel,
+                user,
+                "Borrado de estudio",
+                f"Se elimino el estudio {ultimo_estudio.get('tipo', 'S/D')} del {ultimo_estudio.get('fecha', 'S/D')}.",
+                criticidad="alta",
+                referencia=ultimo_estudio.get("fecha", ""),
+                extra={"tipo_estudio": ultimo_estudio.get("tipo", ""), "firma_registro": ultimo_estudio.get("firma", "")},
+            )
             guardar_datos()
             st.success("Estudio eliminado correctamente.")
             st.rerun()
@@ -115,6 +155,15 @@ def render_estudios(paciente_sel, user, rol=None):
                 e for e in st.session_state["estudios_db"]
                 if not _mismo_estudio(e, objetivo)
             ]
+            _auditar_estudio(
+                paciente_sel,
+                user,
+                "Borrado de estudio seleccionado",
+                f"Se elimino el estudio {objetivo.get('tipo', 'S/D')} del {objetivo.get('fecha', 'S/D')}.",
+                criticidad="alta",
+                referencia=objetivo.get("fecha", ""),
+                extra={"tipo_estudio": objetivo.get("tipo", ""), "firma_registro": objetivo.get("firma", "")},
+            )
             guardar_datos()
             st.success("Estudio eliminado correctamente.")
             st.rerun()
@@ -147,6 +196,15 @@ def render_estudios(paciente_sel, user, rol=None):
                             e for e in st.session_state["estudios_db"]
                             if not _mismo_estudio(e, est)
                         ]
+                        _auditar_estudio(
+                            paciente_sel,
+                            user,
+                            "Borrado rapido de estudio",
+                            f"Se elimino el estudio {est.get('tipo', 'S/D')} del {est.get('fecha', 'S/D')}.",
+                            criticidad="alta",
+                            referencia=est.get("fecha", ""),
+                            extra={"tipo_estudio": est.get("tipo", ""), "firma_registro": est.get("firma", "")},
+                        )
                         guardar_datos()
                         st.rerun()
 

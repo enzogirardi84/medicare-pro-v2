@@ -558,6 +558,7 @@ def _guardar_administracion_medicacion(
 ):
     hora_real = ahora().strftime("%H:%M")
     estado_guardado = "Realizada" if str(estado).strip().lower() == "realizada" else "No realizada"
+    usuario_login = str(user.get("usuario_login", "") or "").strip().lower()
 
     st.session_state["administracion_med_db"] = [
         a
@@ -581,11 +582,41 @@ def _guardar_administracion_medicacion(
             "estado": estado_guardado,
             "motivo": motivo.strip() if estado_guardado != "Realizada" else "",
             "firma": user["nombre"],
+            "actor_login": usuario_login,
+            "actor_rol": user.get("rol", ""),
+            "actor_perfil": user.get("perfil_profesional", ""),
             "empresa": mi_empresa,
+            "modulo_origen": "Recetas",
             "fecha_hora_registro": ahora().strftime("%d/%m/%Y %H:%M:%S"),
         }
     )
     return estado_guardado, hora_real
+
+
+def _auditar_recetas(
+    paciente_sel,
+    user,
+    accion,
+    detalle,
+    referencia="",
+    criticidad="media",
+    extra=None,
+    actor=None,
+    matricula=None,
+):
+    registrar_auditoria_legal(
+        "Medicacion",
+        paciente_sel,
+        accion,
+        actor or user.get("nombre", "Sistema"),
+        matricula if matricula is not None else user.get("matricula", ""),
+        detalle,
+        referencia=referencia,
+        extra=extra or {},
+        usuario=user,
+        modulo="Recetas",
+        criticidad=criticidad,
+    )
 
 
 def _construir_texto_indicacion(
@@ -947,13 +978,22 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 "empresa": mi_empresa,
                             }
                         )
-                        registrar_auditoria_legal(
-                            "Medicacion",
+                        _auditar_recetas(
                             paciente_sel,
+                            user,
                             "Indicacion medica registrada",
-                            medico_nombre.strip() or user.get("nombre", ""),
-                            medico_matricula.strip(),
                             texto_receta,
+                            referencia=texto_receta[:80],
+                            criticidad="alta",
+                            extra={
+                                "tipo_indicacion": tipo_indicacion,
+                                "frecuencia": frecuencia,
+                                "horarios_programados": " | ".join(horarios_sugeridos),
+                                "origen_registro": "Prescripcion digital",
+                                "firma_digital": bool(firma_b64),
+                            },
+                            actor=medico_nombre.strip() or user.get("nombre", ""),
+                            matricula=medico_matricula.strip(),
                         )
                         guardar_datos()
                         st.success(f"Prescripcion de {descripcion_guardada} guardada con firma medica.")
@@ -1122,13 +1162,21 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "empresa": mi_empresa,
                         }
                         st.session_state["indicaciones_db"].append(registro)
-                        registrar_auditoria_legal(
-                            "Medicacion",
+                        _auditar_recetas(
                             paciente_sel,
+                            user,
                             "Indicacion medica en papel cargada",
-                            user.get("nombre", ""),
-                            user.get("matricula", ""),
                             f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
+                            referencia=detalle_papel.strip()[:80],
+                            criticidad="alta",
+                            extra={
+                                "tipo_indicacion": tipo_indicacion_papel,
+                                "frecuencia": frecuencia_papel,
+                                "origen_registro": "Indicacion medica en papel",
+                                "adjunto_respaldo": bool(adjunto_b64),
+                                "medico_indicado": medico_papel.strip(),
+                                "matricula_indicada": matricula_papel.strip(),
+                            },
                         )
                         guardar_datos()
                         st.success("La indicacion medica en papel quedo guardada y disponible en el historial.")
@@ -1407,13 +1455,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 horario_sel,
                                 "Realizada",
                             )
-                            registrar_auditoria_legal(
-                                "Medicacion",
+                            _auditar_recetas(
                                 paciente_sel,
+                                user,
                                 "Registro de administracion desde sabana 24 hs",
-                                user.get("nombre", ""),
-                                user.get("matricula", ""),
                                 f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                                referencia=nombre_med,
+                                criticidad="alta",
+                                extra={
+                                    "horario_programado": horario_sel or "A demanda",
+                                    "estado_administracion": "Realizada",
+                                    "origen_registro": "Sabana 24 hs",
+                                },
                             )
                             registros_guardados += 1
 
@@ -1524,13 +1577,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 horario_sel,
                                 "Realizada",
                             )
-                            registrar_auditoria_legal(
-                                "Medicacion",
+                            _auditar_recetas(
                                 paciente_sel,
+                                user,
                                 "Registro de administracion desde tabla de cortina",
-                                user.get("nombre", ""),
-                                user.get("matricula", ""),
                                 f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                                referencia=nombre_med,
+                                criticidad="alta",
+                                extra={
+                                    "horario_programado": horario_sel or "A demanda",
+                                    "estado_administracion": "Realizada",
+                                    "origen_registro": "Tabla de cortina",
+                                },
                             )
                             registros_guardados += 1
 
@@ -1598,13 +1656,19 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             estado_sel,
                             justificacion,
                         )
-                        registrar_auditoria_legal(
-                            "Medicacion",
+                        _auditar_recetas(
                             paciente_sel,
+                            user,
                             "Registro de administracion",
-                            user.get("nombre", ""),
-                            user.get("matricula", ""),
                             f"{nombre_med} | Horario: {hora_sel} | Estado: {estado_sel}",
+                            referencia=nombre_med,
+                            criticidad="alta",
+                            extra={
+                                "horario_programado": hora_sel,
+                                "estado_administracion": estado_sel,
+                                "justificacion": justificacion.strip(),
+                                "origen_registro": "Carga manual",
+                            },
                         )
                         guardar_datos()
                         st.success(f"Registro guardado para el horario {hora_sel}.")
@@ -1642,13 +1706,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 r["profesional_estado"] = user["nombre"]
                                 r["matricula_estado"] = user.get("matricula", "")
                                 r["motivo_estado"] = motivo_cambio.strip()
-                                registrar_auditoria_legal(
-                                    "Medicacion",
+                                _auditar_recetas(
                                     paciente_sel,
+                                    user,
                                     "Indicacion suspendida",
-                                    user.get("nombre", ""),
-                                    user.get("matricula", ""),
                                     f"{r.get('med', '')} | Motivo: {motivo_cambio.strip()}",
+                                    referencia=r.get("med", "")[:80],
+                                    criticidad="critica",
+                                    extra={
+                                        "motivo_estado": motivo_cambio.strip(),
+                                        "estado_nuevo": "Suspendida",
+                                        "origen_registro": r.get("origen_registro", ""),
+                                    },
                                 )
                             elif accion_receta == "Editar indicacion" and nuevo_texto_receta:
                                 r["estado_receta"] = "Modificada"
@@ -1688,13 +1757,19 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                         "empresa": r.get("empresa", mi_empresa),
                                     }
                                 )
-                                registrar_auditoria_legal(
-                                    "Medicacion",
+                                _auditar_recetas(
                                     paciente_sel,
+                                    user,
                                     "Indicacion modificada",
-                                    user.get("nombre", ""),
-                                    user.get("matricula", ""),
                                     f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta} | Motivo: {motivo_cambio.strip()}",
+                                    referencia=nuevo_texto_receta[:80],
+                                    criticidad="critica",
+                                    extra={
+                                        "medicacion_anterior": r.get("med", ""),
+                                        "medicacion_nueva": nuevo_texto_receta,
+                                        "motivo_estado": motivo_cambio.strip(),
+                                        "origen_registro": r.get("origen_registro", ""),
+                                    },
                                 )
                             break
                     guardar_datos()

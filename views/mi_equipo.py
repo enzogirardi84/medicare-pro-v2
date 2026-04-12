@@ -13,6 +13,23 @@ from core.utils import (
 )
 
 
+def _auditar_equipo(mi_empresa, user, accion, detalle, referencia="", criticidad="alta", extra=None):
+    registrar_auditoria_legal(
+        "Equipo",
+        "GLOBAL",
+        accion,
+        user.get("nombre", "Sistema"),
+        user.get("matricula", ""),
+        detalle,
+        referencia=referencia,
+        extra=extra or {},
+        empresa=mi_empresa,
+        usuario=user,
+        modulo="Mi Equipo",
+        criticidad=criticidad,
+    )
+
+
 def render_mi_equipo(mi_empresa, rol, user=None):
     user = user or {}
     rol_normalizado = str(rol or "").strip().lower()
@@ -96,14 +113,20 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         "pin": u_pin.strip(),
                     }
                     actualizar_password_usuario(st.session_state["usuarios_db"][u_id.strip().lower()], u_pw)
-                    registrar_auditoria_legal(
-                        "Equipo",
-                        "GLOBAL",
+                    _auditar_equipo(
+                        mi_empresa,
+                        user,
                         "Alta de usuario",
-                        user.get("nombre", "Sistema"),
-                        user.get("matricula", ""),
                         f"Se creo el usuario {u_id.strip().lower()} con rol {u_rl} para {u_emp.strip() if isinstance(u_emp, str) else mi_empresa}.",
                         referencia=u_id.strip().lower(),
+                        criticidad="alta",
+                        extra={
+                            "objetivo_login": u_id.strip().lower(),
+                            "objetivo_rol": u_rl,
+                            "objetivo_empresa": u_emp.strip() if isinstance(u_emp, str) else mi_empresa,
+                            "objetivo_perfil": u_pf,
+                            "objetivo_estado": "Activo",
+                        },
                     )
                     guardar_datos()
                     st.success(f"Usuario {u_id} habilitado correctamente.")
@@ -188,14 +211,20 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                                     st.error(motivo_click)
                                 else:
                                     st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
-                                    registrar_auditoria_legal(
-                                        "Equipo",
-                                        "GLOBAL",
+                                    _auditar_equipo(
+                                        mi_empresa,
+                                        user,
                                         "Suspension de usuario",
-                                        user.get("nombre", "Sistema"),
-                                        user.get("matricula", ""),
                                         f"Se suspendio el usuario {u}.",
                                         referencia=u,
+                                        criticidad="alta",
+                                        extra={
+                                            "objetivo_login": u,
+                                            "objetivo_rol": d.get("rol", ""),
+                                            "objetivo_empresa": d.get("empresa", ""),
+                                            "estado_previo": d.get("estado", "Activo"),
+                                            "estado_nuevo": "Bloqueado",
+                                        },
                                     )
                                     guardar_datos()
                                     st.rerun()
@@ -208,14 +237,20 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                                     st.error(motivo_click)
                                 else:
                                     st.session_state["usuarios_db"][u]["estado"] = "Activo"
-                                    registrar_auditoria_legal(
-                                        "Equipo",
-                                        "GLOBAL",
+                                    _auditar_equipo(
+                                        mi_empresa,
+                                        user,
                                         "Reactivacion de usuario",
-                                        user.get("nombre", "Sistema"),
-                                        user.get("matricula", ""),
                                         f"Se reactivo el usuario {u}.",
                                         referencia=u,
+                                        criticidad="media",
+                                        extra={
+                                            "objetivo_login": u,
+                                            "objetivo_rol": d.get("rol", ""),
+                                            "objetivo_empresa": d.get("empresa", ""),
+                                            "estado_previo": d.get("estado", "Bloqueado"),
+                                            "estado_nuevo": "Activo",
+                                        },
                                     )
                                     guardar_datos()
                                     st.rerun()
@@ -238,14 +273,19 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                             if not ok_gestionar_click:
                                 st.error(motivo_click)
                             else:
-                                registrar_auditoria_legal(
-                                    "Equipo",
-                                    "GLOBAL",
+                                _auditar_equipo(
+                                    mi_empresa,
+                                    user,
                                     "Eliminacion de usuario",
-                                    user.get("nombre", "Sistema"),
-                                    user.get("matricula", ""),
                                     f"Se elimino el usuario {u}.",
                                     referencia=u,
+                                    criticidad="critica",
+                                    extra={
+                                        "objetivo_login": u,
+                                        "objetivo_rol": d.get("rol", ""),
+                                        "objetivo_empresa": d.get("empresa", ""),
+                                        "estado_previo": d.get("estado", ""),
+                                    },
                                 )
                                 del st.session_state["usuarios_db"][u]
                                 guardar_datos()
