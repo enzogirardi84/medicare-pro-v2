@@ -13,6 +13,7 @@ from core.database import guardar_datos
 from core.utils import (
     ahora,
     contenedores_responsivos,
+    decodificar_base64_seguro,
     firma_a_base64,
     modo_celular_viejo_activo,
     obtener_config_firma,
@@ -280,6 +281,8 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
         )
         if mostrar_firma and ultimo.get("firma_b64"):
             try:
-                st.image(base64.b64decode(ultimo["firma_b64"]), caption="Firma paciente / familiar registrada", width=280)
+                firma_bytes = decodificar_base64_seguro(ultimo["firma_b64"])
+                if firma_bytes:
+                    st.image(firma_bytes, caption="Firma paciente / familiar registrada", width=280)
             except Exception:
                 pass

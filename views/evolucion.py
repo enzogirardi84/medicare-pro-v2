@@ -6,10 +6,13 @@ import streamlit as st
 from core.database import guardar_datos
 from core.utils import (
     ahora,
+    decodificar_base64_seguro,
     firma_a_base64,
+    limite_archivo_mb,
+    modo_celular_viejo_activo,
     obtener_config_firma,
-    optimizar_imagen_bytes,
     puede_accion,
+    preparar_imagen_clinica_bytes,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
@@ -44,6 +47,7 @@ def render_evolucion(paciente_sel, user, rol=None):
         return
 
     rol = rol or user.get("rol", "")
+    modo_liviano = modo_celular_viejo_activo()
     puede_registrar = puede_accion(rol, "evolucion_registrar")
     puede_borrar = puede_accion(rol, "evolucion_borrar")
 
@@ -145,6 +149,7 @@ def render_evolucion(paciente_sel, user, rol=None):
                 st.markdown("Foto de la herida")
                 usar_camara = st.checkbox("Encender camara")
                 foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if usar_camara else None
+                st.caption(f"Imagen sugerida hasta {limite_archivo_mb('imagen')} MB.")
 
             if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
                 if nota.strip():
@@ -158,8 +163,16 @@ def render_evolucion(paciente_sel, user, rol=None):
                     })
 
                     if foto_w is not None:
-                        foto_bytes, _ = optimizar_imagen_bytes(foto_w.getvalue(), max_size=(1280, 1280), quality=70)
-                        base64_foto = base64.b64encode(foto_bytes).decode("utf-8")
+                        foto_preparada = preparar_imagen_clinica_bytes(
+                            foto_w.getvalue(),
+                            nombre_archivo="camara_evolucion.jpg",
+                            max_size=(1280, 1280),
+                            quality=70,
+                        )
+                        if not foto_preparada["ok"]:
+                            st.error(foto_preparada["error"])
+                            return
+                        base64_foto = base64.b64encode(foto_preparada["bytes"]).decode("utf-8")
                         st.session_state["fotos_heridas_db"].append({
                             "paciente": paciente_sel,
                             "fecha": fecha_n,
@@ -245,13 +258,24 @@ def render_evolucion(paciente_sel, user, rol=None):
             default=12,
             opciones=(6, 12, 20, 30),
         )
+        mostrar_fotos = (not modo_liviano) or st.checkbox(
+            "Cargar fotos de heridas",
+            value=False,
+            key=f"mostrar_fotos_evolucion_{paciente_sel}",
+        )
         with st.container(height=520):
             for foto in reversed(fotos_heridas[-limite_fotos:]):
                 with st.container(border=True):
                     st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")
                     if foto.get("descripcion"):
                         st.caption(foto.get("descripcion"))
-                    try:
-                        st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
-                    except Exception:
-                        st.warning("No se pudo mostrar una foto registrada.")
+                    if mostrar_fotos:
+                        try:
+                            imagen_bytes = decodificar_base64_seguro(foto.get("base64_foto", ""))
+                            if not imagen_bytes:
+                                raise ValueError("Foto vacia o invalida")
+                            st.image(imagen_bytes, use_container_width=True)
+                        except Exception:
+                            st.warning("No se pudo mostrar una foto registrada.")
+                    elif modo_liviano:
+                        st.caption("Foto oculta para ahorrar memoria. Activa la carga solo si necesitas verla.")

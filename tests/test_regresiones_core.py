@@ -1,17 +1,22 @@
 from datetime import datetime
+from io import BytesIO
 
 from core import clinical_exports
 from core.utils import (
     ARG_TZ,
     construir_registro_auditoria_legal,
     generar_hash_password,
+    limite_archivo_mb,
     modo_celular_viejo_activo,
     normalizar_usuario_sistema,
     obtener_modulos_permitidos,
+    preparar_imagen_clinica_bytes,
     rol_ve_datos_todas_las_clinicas,
+    validar_archivo_bytes,
     validar_password_guardado,
     valor_por_modo_liviano,
 )
+from PIL import Image
 
 
 def test_password_hash_y_compatibilidad_legacy():
@@ -99,3 +104,27 @@ def test_modo_celular_viejo_y_valor_liviano():
     assert modo_celular_viejo_activo(session_state) is True
     assert valor_por_modo_liviano(80, 36, session_state) == 36
     assert valor_por_modo_liviano(80, 36, {"modo_celular_viejo": False}) == 80
+
+
+def test_validar_archivo_bytes_aplica_limite_pdf_liviano():
+    session_state = {"modo_celular_viejo": True}
+    limite_mb = limite_archivo_mb("pdf", session_state)
+    pdf_grande = b"x" * ((limite_mb * 1024 * 1024) + 1)
+
+    ok, error = validar_archivo_bytes(pdf_grande, tipo="pdf", nombre_archivo="archivo.pdf", session_state=session_state)
+
+    assert ok is False
+    assert str(limite_mb) in error
+
+
+def test_preparar_imagen_clinica_bytes_optimiza_y_devuelve_jpg():
+    img = Image.new("RGB", (1800, 1200), color=(120, 180, 200))
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+
+    preparado = preparar_imagen_clinica_bytes(buf.getvalue(), nombre_archivo="foto.png")
+
+    assert preparado["ok"] is True
+    assert preparado["extension"] == "jpg"
+    assert preparado["mime"] == "image/jpeg"
+    assert preparado["size_bytes"] > 0

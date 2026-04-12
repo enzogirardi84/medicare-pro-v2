@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytz
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Zona horaria fija para Argentina
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
@@ -24,6 +24,7 @@ PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
 PASSWORD_HASH_ITERATIONS = 390000
 PASSWORD_MIN_LENGTH = 8
 SESSION_KEY_MODO_LIVIANO = "modo_celular_viejo"
+MAX_RAW_IMAGE_UPLOAD_MB = 20
 LEGACY_ROLE_TO_PROFILE = {
     "medico": "Medico",
     "enfermeria": "Enfermeria",
@@ -993,6 +994,7 @@ def cargar_json_asset(nombre_archivo):
 def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
     try:
         with Image.open(BytesIO(image_bytes)) as img:
+            img = ImageOps.exif_transpose(img)
             if img.mode not in ("RGB", "L"):
                 img = img.convert("RGB")
             img.thumbnail(max_size)
@@ -1001,6 +1003,135 @@ def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
             return salida.getvalue(), "jpg"
     except Exception:
         return image_bytes, None
+
+
+def limite_archivo_mb(tipo="imagen", session_state=None):
+    tipo_normalizado = _texto_normalizado(tipo)
+    modo_liviano = modo_celular_viejo_activo(session_state)
+    limites = {
+        "imagen": 4 if modo_liviano else 8,
+        "pdf": 6 if modo_liviano else 12,
+        "firma": 2 if modo_liviano else 3,
+    }
+    return limites.get(tipo_normalizado, 4 if modo_liviano else 8)
+
+
+def _bytes_legibles(cantidad_bytes):
+    try:
+        cantidad = float(cantidad_bytes or 0)
+    except Exception:
+        cantidad = 0.0
+    if cantidad >= 1024 * 1024:
+        return f"{cantidad / (1024 * 1024):.1f} MB"
+    if cantidad >= 1024:
+        return f"{cantidad / 1024:.0f} KB"
+    return f"{int(cantidad)} B"
+
+
+def validar_archivo_bytes(file_bytes, tipo="imagen", nombre_archivo="archivo", session_state=None):
+    contenido = bytes(file_bytes or b"")
+    if not contenido:
+        return False, f"No se pudo leer {nombre_archivo}."
+
+    tipo_normalizado = _texto_normalizado(tipo)
+    if tipo_normalizado == "imagen":
+        max_raw_bytes = MAX_RAW_IMAGE_UPLOAD_MB * 1024 * 1024
+        if len(contenido) > max_raw_bytes:
+            return (
+                False,
+                f"{nombre_archivo} pesa {_bytes_legibles(len(contenido))}. Para evitar bloqueos, sube una imagen de hasta {MAX_RAW_IMAGE_UPLOAD_MB} MB.",
+            )
+
+    limite_mb = limite_archivo_mb(tipo_normalizado, session_state)
+    limite_bytes = limite_mb * 1024 * 1024
+    if len(contenido) > limite_bytes and tipo_normalizado != "imagen":
+        return (
+            False,
+            f"{nombre_archivo} pesa {_bytes_legibles(len(contenido))}. El limite para {tipo_normalizado} es {limite_mb} MB.",
+        )
+
+    return True, ""
+
+
+def preparar_archivo_clinico(uploaded_file, max_size=(1280, 1280), quality=75, session_state=None):
+    if uploaded_file is None:
+        return {"ok": False, "error": "No se recibio ningun archivo."}
+
+    nombre = getattr(uploaded_file, "name", "archivo") or "archivo"
+    extension = Path(nombre).suffix.lower().lstrip(".")
+    extension = "jpg" if extension == "jpeg" else extension
+    tipo_archivo = "pdf" if extension == "pdf" else "imagen"
+
+    try:
+        contenido = uploaded_file.getvalue()
+    except Exception:
+        return {"ok": False, "error": f"No se pudo leer {nombre}."}
+
+    ok, error = validar_archivo_bytes(contenido, tipo=tipo_archivo, nombre_archivo=nombre, session_state=session_state)
+    if not ok:
+        return {"ok": False, "error": error}
+
+    if tipo_archivo == "imagen":
+        modo_liviano = modo_celular_viejo_activo(session_state)
+        max_size_final = (960, 960) if modo_liviano else max_size
+        calidad_final = min(quality, 62) if modo_liviano else quality
+        contenido, extension_optimizada = optimizar_imagen_bytes(
+            contenido,
+            max_size=max_size_final,
+            quality=calidad_final,
+        )
+        extension = extension_optimizada or extension or "jpg"
+        ok, error = validar_archivo_bytes(contenido, tipo="imagen", nombre_archivo=nombre, session_state=session_state)
+        if not ok:
+            return {"ok": False, "error": error}
+
+    mime = (
+        "application/pdf"
+        if tipo_archivo == "pdf"
+        else ("image/jpeg" if extension in {"jpg", "jpeg"} else f"image/{extension or 'jpeg'}")
+    )
+    return {
+        "ok": True,
+        "bytes": contenido,
+        "extension": extension or ("pdf" if tipo_archivo == "pdf" else "jpg"),
+        "mime": mime,
+        "name": nombre,
+        "tipo_archivo": tipo_archivo,
+        "size_bytes": len(contenido),
+    }
+
+
+def preparar_imagen_clinica_bytes(image_bytes, nombre_archivo="imagen.jpg", max_size=(1280, 1280), quality=75, session_state=None):
+    ok, error = validar_archivo_bytes(image_bytes, tipo="imagen", nombre_archivo=nombre_archivo, session_state=session_state)
+    if not ok:
+        return {"ok": False, "error": error}
+
+    modo_liviano = modo_celular_viejo_activo(session_state)
+    max_size_final = (960, 960) if modo_liviano else max_size
+    calidad_final = min(quality, 62) if modo_liviano else quality
+    contenido, extension = optimizar_imagen_bytes(image_bytes, max_size=max_size_final, quality=calidad_final)
+    ok, error = validar_archivo_bytes(contenido, tipo="imagen", nombre_archivo=nombre_archivo, session_state=session_state)
+    if not ok:
+        return {"ok": False, "error": error}
+
+    return {
+        "ok": True,
+        "bytes": contenido,
+        "extension": extension or "jpg",
+        "mime": "image/jpeg",
+        "name": nombre_archivo,
+        "tipo_archivo": "imagen",
+        "size_bytes": len(contenido),
+    }
+
+
+def decodificar_base64_seguro(payload_b64):
+    if not payload_b64:
+        return b""
+    try:
+        return base64.b64decode(payload_b64)
+    except Exception:
+        return b""
 
 
 def obtener_config_firma(key_prefix, default_liviano=True):

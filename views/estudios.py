@@ -3,7 +3,16 @@ import base64
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, optimizar_imagen_bytes, puede_accion, registrar_auditoria_legal, seleccionar_limite_registros
+from core.utils import (
+    ahora,
+    decodificar_base64_seguro,
+    limite_archivo_mb,
+    puede_accion,
+    preparar_archivo_clinico,
+    preparar_imagen_clinica_bytes,
+    registrar_auditoria_legal,
+    seleccionar_limite_registros,
+)
 
 
 def _mismo_estudio(registro, objetivo):
@@ -54,6 +63,9 @@ def render_estudios(paciente_sel, user, rol=None):
 
             st.markdown("##### Adjuntar Documento (Opcional)")
             archivo_subido = st.file_uploader("Subir archivo, foto de galeria o PDF", type=["png", "jpg", "jpeg", "pdf"], key="uploader_estudio")
+            st.caption(
+                f"Limites sugeridos: imagen hasta {limite_archivo_mb('imagen')} MB y PDF hasta {limite_archivo_mb('pdf')} MB."
+            )
 
             mostrar_cam_estudio = st.checkbox(
                 "Mostrar opcion de tomar foto con la camara ahora",
@@ -69,17 +81,30 @@ def render_estudios(paciente_sel, user, rol=None):
             if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
                 img_b64 = ""
                 ext = ""
+                error_carga = ""
                 if archivo_subido is not None:
-                    raw_bytes = archivo_subido.getvalue()
-                    ext = archivo_subido.name.split('.')[-1].lower()
-                    if ext in ["png", "jpg", "jpeg"]:
-                        raw_bytes, ext_optimizada = optimizar_imagen_bytes(raw_bytes)
-                        ext = ext_optimizada or ext
-                    img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                    archivo_preparado = preparar_archivo_clinico(archivo_subido)
+                    if not archivo_preparado["ok"]:
+                        error_carga = archivo_preparado["error"]
+                    else:
+                        raw_bytes = archivo_preparado["bytes"]
+                        ext = archivo_preparado["extension"]
+                        img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                 elif foto_estudio is not None:
-                    raw_bytes, ext_optimizada = optimizar_imagen_bytes(foto_estudio.getvalue())
-                    img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-                    ext = ext_optimizada or "jpg"
+                    foto_preparada = preparar_imagen_clinica_bytes(
+                        foto_estudio.getvalue(),
+                        nombre_archivo="camara_estudio.jpg",
+                    )
+                    if not foto_preparada["ok"]:
+                        error_carga = foto_preparada["error"]
+                    else:
+                        raw_bytes = foto_preparada["bytes"]
+                        img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                        ext = foto_preparada["extension"] or "jpg"
+
+                if error_carga:
+                    st.error(error_carga)
+                    return
 
                 st.session_state["estudios_db"].append({
                     "paciente": paciente_sel,
@@ -210,7 +235,9 @@ def render_estudios(paciente_sel, user, rol=None):
 
                 if cargar_multimedia and est.get("imagen"):
                     try:
-                        img_bytes = base64.b64decode(est["imagen"])
+                        img_bytes = decodificar_base64_seguro(est["imagen"])
+                        if not img_bytes:
+                            raise ValueError("Adjunto vacio o invalido")
                         if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
                             nombre_arch = f"Estudio_{est['fecha'][:10].replace('/', '-')}.pdf"
                             st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", use_container_width=True)

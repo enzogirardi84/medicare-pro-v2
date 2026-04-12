@@ -10,7 +10,7 @@ from core.clinical_exports import (
     build_patient_excel_bytes,
     collect_patient_sections,
 )
-from core.utils import contenedores_responsivos, modo_celular_viejo_activo, mostrar_dataframe_con_scroll
+from core.utils import contenedores_responsivos, decodificar_base64_seguro, modo_celular_viejo_activo, mostrar_dataframe_con_scroll
 
 # --- Constantes ---
 LIMITES_REGISTROS = {
@@ -99,7 +99,10 @@ def _render_consentimientos(registros: List[Dict[str, Any]]) -> None:
                     st.write(observaciones)
                 if firma_b64 := reg.get("firma_b64"):
                     try:
-                        st.image(base64.b64decode(firma_b64), caption="Firma paciente / familiar", width=260)
+                        firma_bytes = decodificar_base64_seguro(firma_b64)
+                        if not firma_bytes:
+                            raise ValueError("Firma invalida")
+                        st.image(firma_bytes, caption="Firma paciente / familiar", width=260)
                     except Exception:
                         st.error("No se pudo leer la firma del consentimiento.")
 
@@ -116,7 +119,9 @@ def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None
                 
                 if mostrar_adjuntos and (imagen := est.get("imagen")):
                     try:
-                        archivo = base64.b64decode(imagen)
+                        archivo = decodificar_base64_seguro(imagen)
+                        if not archivo:
+                            raise ValueError("Adjunto invalido")
                         if archivo.startswith(b"%PDF") or est.get("extension") == "pdf":
                             st.download_button(
                                 "Descargar PDF adjunto",
@@ -143,7 +148,10 @@ def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
                 
                 if mostrar_fotos and (foto_b64 := fh.get("base64_foto")):
                     try:
-                        st.image(base64.b64decode(foto_b64), use_container_width=True)
+                        foto_bytes = decodificar_base64_seguro(foto_b64)
+                        if not foto_bytes:
+                            raise ValueError("Foto invalida")
+                        st.image(foto_bytes, use_container_width=True)
                     except Exception:
                         st.error("No se pudo leer la foto.")
 
@@ -189,7 +197,9 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any]) -> None:
         
     if firma_b64 := registro.get("firma_b64"):
         try:
-            st.image(base64.b64decode(firma_b64), caption="Firma médica", width=220)
+            firma_bytes = decodificar_base64_seguro(firma_b64)
+            if firma_bytes:
+                st.image(firma_bytes, caption="Firma médica", width=220)
         except Exception:
             pass
             
@@ -197,7 +207,7 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any]) -> None:
         try:
             st.download_button(
                 "Descargar orden médica adjunta",
-                data=base64.b64decode(adjunto_b64),
+                data=decodificar_base64_seguro(adjunto_b64),
                 file_name=registro.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                 mime=registro.get("adjunto_papel_tipo", "application/octet-stream"),
                 key=f"historial_adjunto_receta_{registro.get('fecha', 's_d')}_{registro.get('med', '')[:12]}",

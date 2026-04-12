@@ -13,15 +13,18 @@ from core.utils import (
     ahora,
     calcular_velocidad_ml_h,
     cargar_json_asset,
+    decodificar_base64_seguro,
     firma_a_base64,
     format_horarios_receta,
     generar_plan_escalonado_ml_h,
     horarios_programados_desde_frecuencia,
+    limite_archivo_mb,
     mostrar_dataframe_con_scroll,
     modo_celular_viejo_activo,
     obtener_config_firma,
     obtener_horarios_receta,
     puede_accion,
+    preparar_archivo_clinico,
     parse_horarios_programados,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
@@ -1115,6 +1118,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     type=["pdf", "png", "jpg", "jpeg"],
                     key="adjunto_papel_receta",
                 )
+                st.caption(
+                    f"Limites sugeridos: imagen hasta {limite_archivo_mb('imagen')} MB y PDF hasta {limite_archivo_mb('pdf')} MB."
+                )
                 if st.button("Guardar indicacion en papel", use_container_width=True, key="guardar_indicacion_papel"):
                     if not medico_papel.strip() or not matricula_papel.strip():
                         st.error("Debe completar medico y matricula para dejar respaldo legal.")
@@ -1123,7 +1129,17 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     elif adjunto_papel is None:
                         st.error("Debe adjuntar la orden medica escaneada o fotografiada.")
                     else:
-                        adjunto_b64, adjunto_nombre, adjunto_tipo = _archivo_a_base64(adjunto_papel)
+                        adjunto_preparado = preparar_archivo_clinico(
+                            adjunto_papel,
+                            max_size=(1600, 1600),
+                            quality=72,
+                        )
+                        if not adjunto_preparado["ok"]:
+                            st.error(adjunto_preparado["error"])
+                            return
+                        adjunto_b64 = base64.b64encode(adjunto_preparado["bytes"]).decode("utf-8")
+                        adjunto_nombre = adjunto_preparado["name"]
+                        adjunto_tipo = adjunto_preparado["mime"]
                         texto_guardado = _construir_texto_indicacion(
                             tipo_indicacion=tipo_indicacion_papel,
                             med_final=detalle_papel.strip(),
@@ -1848,14 +1864,16 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 c_info.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
                         if r.get("firma_b64"):
                             try:
-                                c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
+                                firma_bytes = decodificar_base64_seguro(r["firma_b64"])
+                                if firma_bytes:
+                                    c_info.image(firma_bytes, caption="Firma medica registrada", width=200)
                             except Exception:
                                 pass
                         if r.get("adjunto_papel_b64"):
                             try:
                                 c_btn.download_button(
                                     "Descargar orden adjunta",
-                                    data=base64.b64decode(r["adjunto_papel_b64"]),
+                                    data=decodificar_base64_seguro(r["adjunto_papel_b64"]),
                                     file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                                     mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
                                     key=f"adj_papel_btn_{idx}",
