@@ -10,7 +10,7 @@ from core.clinical_exports import (
     build_patient_excel_bytes,
     collect_patient_sections,
 )
-from core.utils import mostrar_dataframe_con_scroll
+from core.utils import contenedores_responsivos, modo_celular_viejo_activo, mostrar_dataframe_con_scroll
 
 # --- Constantes ---
 LIMITES_REGISTROS = {
@@ -212,6 +212,7 @@ def render_historial(paciente_sel: str) -> None:
     if not paciente_sel:
         return
 
+    modo_liviano = modo_celular_viejo_activo()
     detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     estado_badge = "[ARCHIVADO DE ALTA]" if detalles.get("estado") == "De Alta" else ""
     
@@ -231,55 +232,69 @@ def render_historial(paciente_sel: str) -> None:
     )
 
     st.markdown("##### Opciones de visualización")
-    col_filt1, col_filt2 = st.columns([1, 2])
+    if modo_liviano:
+        st.info("Modo celular viejo activo: se reducen exportaciones visibles y la cantidad de registros por pantalla.")
+    col_filt1, col_filt2 = contenedores_responsivos([1, 2], modo_liviano)
     opcion_limite = col_filt1.selectbox("Mostrar", list(LIMITES_REGISTROS.keys()))
     limite = LIMITES_REGISTROS.get(opcion_limite, 200)
     col_filt2.info(f"Estás viendo un máximo de {limite} registros por sección para cuidar el rendimiento.")
 
-    st.markdown("##### Exportación y resguardo")
-    col_exp1, col_exp2, col_exp3 = st.columns(3)
-    
-    _render_lazy_download(
-        col_exp1,
-        key_base=f"historial_pdf_{paciente_sel}",
-        prepare_label="Preparar historia completa PDF",
-        download_label="Descargar historia completa PDF",
-        build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
-        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-        unavailable_message="Historia clinica PDF no disponible en este equipo. Instala reportlab para habilitarla.",
-    )
-    _render_lazy_download(
-        col_exp2,
-        key_base=f"historial_excel_{paciente_sel}",
-        prepare_label="Preparar historia en Excel",
-        download_label="Descargar historia Excel",
-        build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
-        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        unavailable_message="Excel no disponible en este equipo.",
-    )
-    _render_lazy_download(
-        col_exp3,
-        key_base=f"historial_respaldo_{paciente_sel}",
-        prepare_label="Preparar respaldo PDF",
-        download_label="Descargar respaldo PDF",
-        build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
-        file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-    )
-    
-    st.divider()
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>Consulta por bloques</h4><p>Cada sección se abre por separado para evitar colapsos cuando la historia crece.</p></div>
-            <div class="mc-card"><h4>Exportación segura</h4><p>La historia completa y el respaldo se generan en PDF para archivo e impresión.</p></div>
-            <div class="mc-card"><h4>Adjuntos opcionales</h4><p>Las imágenes y PDFs clínicos solo se cargan si realmente los querés ver.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    mostrar_exportacion = True
+    if modo_liviano:
+        mostrar_exportacion = st.checkbox(
+            "Mostrar exportación y resguardo",
+            value=False,
+            key=f"historial_exportaciones_{paciente_sel}",
+        )
+
+    if mostrar_exportacion:
+        st.markdown("##### Exportación y resguardo")
+        col_exp1, col_exp2, col_exp3 = contenedores_responsivos(3, modo_liviano)
+
+        _render_lazy_download(
+            col_exp1,
+            key_base=f"historial_pdf_{paciente_sel}",
+            prepare_label="Preparar historia completa PDF",
+            download_label="Descargar historia completa PDF",
+            build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
+            file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+            unavailable_message="Historia clinica PDF no disponible en este equipo. Instala reportlab para habilitarla.",
+        )
+        _render_lazy_download(
+            col_exp2,
+            key_base=f"historial_excel_{paciente_sel}",
+            prepare_label="Preparar historia en Excel",
+            download_label="Descargar historia Excel",
+            build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
+            file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            unavailable_message="Excel no disponible en este equipo.",
+        )
+        _render_lazy_download(
+            col_exp3,
+            key_base=f"historial_respaldo_{paciente_sel}",
+            prepare_label="Preparar respaldo PDF",
+            download_label="Descargar respaldo PDF",
+            build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
+            file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+        )
+
+        st.divider()
+        if not modo_liviano:
+            st.markdown(
+                """
+                <div class="mc-grid-3">
+                    <div class="mc-card"><h4>Consulta por bloques</h4><p>Cada sección se abre por separado para evitar colapsos cuando la historia crece.</p></div>
+                    <div class="mc-card"><h4>Exportación segura</h4><p>La historia completa y el respaldo se generan en PDF para archivo e impresión.</p></div>
+                    <div class="mc-card"><h4>Adjuntos opcionales</h4><p>Las imágenes y PDFs clínicos solo se cargan si realmente los querés ver.</p></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    elif modo_liviano:
+        st.caption("Exportaciones ocultas para ahorrar memoria. Puedes activarlas solo cuando las necesites.")
 
     secciones = collect_patient_sections(st.session_state, paciente_sel)
     if not secciones:
@@ -287,7 +302,7 @@ def render_historial(paciente_sel: str) -> None:
         return
 
     st.markdown("##### Resumen clínico")
-    metric_cols = st.columns(5)
+    metric_cols = contenedores_responsivos(5, modo_liviano)
     resumen = list(secciones.items())
     
     for idx, (nombre, registros_sec) in enumerate(resumen[:5]):

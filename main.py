@@ -36,6 +36,7 @@ es_control_total = getattr(
 )
 inicializar_db_state = core_utils.inicializar_db_state
 obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
+modo_celular_viejo_activo = getattr(core_utils, "modo_celular_viejo_activo", lambda session_state=None: False)
 obtener_pacientes_visibles = getattr(
     core_utils,
     "obtener_pacientes_visibles",
@@ -52,6 +53,7 @@ descripcion_acceso_rol = getattr(
     ),
 )
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
+valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
 APP_BUILD_TAG = "Build 2026-04-10 20:00 ART"
 
@@ -514,6 +516,7 @@ user = st.session_state.get("u_actual")
 if not user:
     st.stop()
 
+st.session_state.setdefault("modo_celular_viejo", False)
 mi_empresa = user["empresa"]
 rol = user["rol"]
 logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
@@ -538,6 +541,13 @@ with st.sidebar:
         ),
         unsafe_allow_html=True,
     )
+    st.checkbox(
+        "Modo celular viejo",
+        key="modo_celular_viejo",
+        help="Reduce tablas anchas, cantidad de registros por pantalla y cargas pesadas para mejorar fluidez.",
+    )
+    if modo_celular_viejo_activo(st.session_state):
+        st.caption("Modo liviano activo: prioriza pantallas simples y menos datos visibles por vez.")
     st.divider()
 
     menu = resolve_menu_for_role(rol, user)
@@ -560,7 +570,7 @@ with st.sidebar:
         incluir_altas=ver_altas,
         busqueda=buscar,
     )
-    limite_pacientes = 80
+    limite_pacientes = valor_por_modo_liviano(80, 36, st.session_state)
     if not buscar and len(p_f) > limite_pacientes:
         st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
         p_f = p_f[:limite_pacientes]

@@ -2,10 +2,11 @@ import pandas as pd
 import streamlit as st
 
 from core.export_utils import dataframe_csv_bytes, sanitize_filename_component
-from core.utils import mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.utils import contenedores_responsivos, modo_celular_viejo_activo, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def render_auditoria_legal(mi_empresa, user):
+    modo_liviano = modo_celular_viejo_activo()
     st.markdown(
         """
         <div class="mc-hero">
@@ -27,6 +28,9 @@ def render_auditoria_legal(mi_empresa, user):
         st.info("Todavia no hay eventos legales registrados.")
         return
 
+    if modo_liviano:
+        st.info("Modo celular viejo activo: filtros y tabla en formato mas liviano para leer auditoria desde el telefono.")
+
     df = df.copy()
     if "fecha_iso" in df.columns:
         df["fecha_orden"] = pd.to_datetime(df["fecha_iso"], errors="coerce")
@@ -40,7 +44,7 @@ def render_auditoria_legal(mi_empresa, user):
         mask = df.astype(str).apply(lambda x: x.str.contains(filtro, case=False, na=False)).any(axis=1)
         df = df[mask]
 
-    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+    col_f1, col_f2, col_f3, col_f4 = contenedores_responsivos(4, modo_liviano)
     if "paciente" in df.columns:
         pacientes = ["Todos"] + sorted([x for x in df["paciente"].dropna().astype(str).unique().tolist() if x])
         paciente_sel = col_f1.selectbox("Paciente", pacientes)
@@ -65,7 +69,7 @@ def render_auditoria_legal(mi_empresa, user):
         if rol_sel != "Todos":
             df = df[df["actor_rol"] == rol_sel]
 
-    col_f5, col_f6 = st.columns(2)
+    col_f5, col_f6 = contenedores_responsivos(2, modo_liviano)
     if "actor_login" in df.columns:
         actores_login = ["Todos"] + sorted([x for x in df["actor_login"].dropna().astype(str).unique().tolist() if x])
         actor_login_sel = col_f5.selectbox("Login actor", actores_login)
@@ -81,7 +85,7 @@ def render_auditoria_legal(mi_empresa, user):
     if "fecha_orden" in df.columns:
         df = df.sort_values(["fecha_orden", "fecha"], ascending=[False, False], na_position="last")
 
-    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    col_m1, col_m2, col_m3, col_m4 = contenedores_responsivos(4, modo_liviano)
     col_m1.metric("Eventos filtrados", len(df))
     eventos_criticos = 0
     if "criticidad" in df.columns and not df.empty:

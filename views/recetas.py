@@ -18,6 +18,7 @@ from core.utils import (
     generar_plan_escalonado_ml_h,
     horarios_programados_desde_frecuencia,
     mostrar_dataframe_con_scroll,
+    modo_celular_viejo_activo,
     obtener_config_firma,
     obtener_horarios_receta,
     puede_accion,
@@ -671,6 +672,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         return
 
     rol = rol or user.get("rol", "")
+    modo_liviano = modo_celular_viejo_activo()
     puede_prescribir = puede_accion(rol, "recetas_prescribir")
     puede_cargar_papel = puede_accion(rol, "recetas_cargar_papel")
     puede_registrar_dosis = puede_accion(rol, "recetas_registrar_dosis")
@@ -691,6 +693,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         unsafe_allow_html=True,
     )
 
+    if modo_liviano:
+        st.info("Modo celular viejo activo: prioriza formularios simples, tarjetas y carga manual antes que tablas pesadas.")
+
     if rol in {"Operativo", "Enfermeria"}:
         st.info(
             "El personal asistencial puede ver indicaciones activas, registrar dosis y cargar una indicacion medica en papel o PDF "
@@ -702,16 +707,17 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     except Exception:
         vademecum_base = ["Medicamento 1", "Medicamento 2"]
 
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>Menos errores</h4><p>Elegir del catalogo evita cargar nombres mal escritos o presentaciones confusas.</p></div>
-            <div class="mc-card"><h4>Receta trazable</h4><p>La prescripcion queda con fecha, medico, matricula y firma digital cuando esta disponible.</p></div>
-            <div class="mc-card"><h4>Control diario</h4><p>La sabana muestra rapido si cada dosis fue realizada o quedo pendiente.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    if not modo_liviano:
+        st.markdown(
+            """
+            <div class="mc-grid-3">
+                <div class="mc-card"><h4>Menos errores</h4><p>Elegir del catalogo evita cargar nombres mal escritos o presentaciones confusas.</p></div>
+                <div class="mc-card"><h4>Receta trazable</h4><p>La prescripcion queda con fecha, medico, matricula y firma digital cuando esta disponible.</p></div>
+                <div class="mc-card"><h4>Control diario</h4><p>La sabana muestra rapido si cada dosis fue realizada o quedo pendiente.</p></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     if puede_prescribir:
         st.markdown("##### Nueva prescripcion medica")
@@ -1360,7 +1366,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 "estado": item.get("Estado", ""),
             }
 
-        if sabana_mar_rows:
+        mostrar_sabana_visual = True
+        if modo_liviano:
+            mostrar_sabana_visual = st.checkbox(
+                "Mostrar sabana visual 24 hs",
+                value=False,
+                key=f"mostrar_sabana_visual_{paciente_sel}_{fecha_hoy}",
+            )
+        if sabana_mar_rows and mostrar_sabana_visual:
             st.markdown("#### Prescripcion y sabana 24 hs")
             st.caption("Vista horizontal tipo enfermeria para leer rapido que esta indicado, que ya se administro y que sigue pendiente.")
             _render_sabana_prescripcion_visual(
@@ -1369,6 +1382,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key=f"mar_visual_{paciente_sel}",
                 hora_actual=f"{ahora().hour:02d}:00",
             )
+        elif sabana_mar_rows and modo_liviano:
+            st.caption("Sabana visual oculta para ahorrar memoria. Puedes abrirla solo si la necesitas.")
         else:
             st.info("No se pudo construir la sabana 24 hs con las indicaciones activas.")
 
@@ -1601,7 +1616,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             else:
                 st.caption("Todas las indicaciones de hoy ya figuran como realizadas.")
 
-        if plan_hidratacion_rows:
+        mostrar_plan_hidratacion = True
+        if modo_liviano and plan_hidratacion_rows:
+            mostrar_plan_hidratacion = st.checkbox(
+                "Mostrar plan de hidratacion parenteral",
+                value=False,
+                key=f"mostrar_hidratacion_{paciente_sel}_{fecha_hoy}",
+            )
+        if plan_hidratacion_rows and mostrar_plan_hidratacion:
             st.markdown("#### Plan de hidratacion parenteral")
             _render_tabla_clinica(
                 pd.DataFrame(plan_hidratacion_rows),
@@ -1609,6 +1631,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 max_height=320,
                 sticky_first_col=False,
             )
+        elif plan_hidratacion_rows and modo_liviano:
+            st.caption("Plan de hidratacion oculto en modo liviano. Activalo solo cuando necesites revisarlo.")
 
         if sabana_resumen:
             st.caption("Resumen operativo de indicaciones activas")

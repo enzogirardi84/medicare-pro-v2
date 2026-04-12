@@ -23,6 +23,7 @@ ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL = frozenset({"equipo_eliminar_usuario", "eq
 PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
 PASSWORD_HASH_ITERATIONS = 390000
 PASSWORD_MIN_LENGTH = 8
+SESSION_KEY_MODO_LIVIANO = "modo_celular_viejo"
 LEGACY_ROLE_TO_PROFILE = {
     "medico": "Medico",
     "enfermeria": "Enfermeria",
@@ -115,6 +116,27 @@ def _texto_normalizado(valor):
 
 def _password_normalizado(password):
     return str(password or "").strip()
+
+
+def modo_celular_viejo_activo(session_state=None):
+    state = session_state if session_state is not None else st.session_state
+    try:
+        return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
+    except Exception:
+        return False
+
+
+def valor_por_modo_liviano(valor_normal, valor_liviano, session_state=None):
+    return valor_liviano if modo_celular_viejo_activo(session_state) else valor_normal
+
+
+def contenedores_responsivos(spec, modo_liviano=None):
+    if modo_liviano is None:
+        modo_liviano = modo_celular_viejo_activo()
+    cantidad = spec if isinstance(spec, int) else len(spec)
+    if modo_liviano:
+        return [st.container() for _ in range(max(int(cantidad), 1))]
+    return list(st.columns(spec))
 
 
 def password_hash_formato_valido(valor):
@@ -982,6 +1004,7 @@ def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
 
 
 def obtener_config_firma(key_prefix, default_liviano=True):
+    default_liviano = bool(default_liviano or modo_celular_viejo_activo())
     modo_liviano = st.checkbox(
         "Modo firma liviana (recomendado en celulares viejos)",
         value=default_liviano,
@@ -1025,6 +1048,9 @@ def firma_a_base64(canvas_image_data=None, uploaded_file=None):
 def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20, 30, 50, 100, 200, 500)):
     if total <= 0:
         return 0
+    if modo_celular_viejo_activo():
+        default = min(default, 20)
+        opciones = tuple(valor for valor in opciones if valor <= 100) or (10, 20, 30, 50, 100)
     if total <= min(opciones):
         st.caption(f"Mostrando {total} registro(s).")
         return total
@@ -1042,6 +1068,8 @@ def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20
 
 
 def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
+    if modo_celular_viejo_activo():
+        height = min(height, 340)
     with st.container(height=height, border=border):
         st.dataframe(
             df,

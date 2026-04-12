@@ -5,10 +5,12 @@ from core.utils import (
     ARG_TZ,
     construir_registro_auditoria_legal,
     generar_hash_password,
+    modo_celular_viejo_activo,
     normalizar_usuario_sistema,
     obtener_modulos_permitidos,
     rol_ve_datos_todas_las_clinicas,
     validar_password_guardado,
+    valor_por_modo_liviano,
 )
 
 
@@ -89,3 +91,11 @@ def test_auditoria_legal_construye_metadata_trazable():
     assert registro["fecha_iso"] == "2026-04-12T09:45:30-03:00"
     assert registro["horario_programado"] == "08:00"
     assert registro["audit_id"].startswith("AUD-20260412094530-")
+
+
+def test_modo_celular_viejo_y_valor_liviano():
+    session_state = {"modo_celular_viejo": True}
+
+    assert modo_celular_viejo_activo(session_state) is True
+    assert valor_por_modo_liviano(80, 36, session_state) == 36
+    assert valor_por_modo_liviano(80, 36, {"modo_celular_viejo": False}) == 80
