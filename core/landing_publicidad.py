@@ -777,6 +777,29 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                 box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
               }
 
+              .mc-lp-incident {
+                margin: 18px auto 0;
+                max-width: 680px;
+                padding: 18px 20px;
+                border-radius: 20px;
+                border: 1px solid rgba(251, 191, 36, 0.28);
+                background: linear-gradient(180deg, rgba(74, 33, 6, 0.5), rgba(49, 22, 4, 0.42));
+                text-align: center;
+              }
+
+              .mc-lp-incident p {
+                margin: 0 0 14px;
+                color: #fde68a;
+                font-size: 0.9rem;
+                font-weight: 600;
+                line-height: 1.6;
+              }
+
+              .mc-lp-su {
+                background: linear-gradient(135deg, #ca8a04, #a16207);
+                box-shadow: 0 10px 24px rgba(202, 138, 4, 0.24);
+              }
+
               .mc-lp-cta-wrap {
                 padding: 28px 10px 8px;
                 text-align: center;
@@ -1126,6 +1149,13 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                         <a class="mc-lp-wa" href="https://wa.me/5493584201263" target="_blank" rel="noopener">WhatsApp</a>
                         <a class="mc-lp-em" href="mailto:dariolanfrancoruffener@gmail.com">Email</a>
                       </div>
+                    </div>
+                  </div>
+
+                  <div class="mc-lp-incident">
+                    <p>No carga la app o aparece un error raro: mandá captura y hora aproximada para acelerar el soporte.</p>
+                    <div class="mc-lp-btns">
+                      <a class="mc-lp-su" href="mailto:enzogirardi84@gmail.com?subject=MediCare%20Enterprise%20-%20Incidencia%20tecnica" rel="noopener">Abrir correo de incidencia</a>
                     </div>
                   </div>
                 </section>
