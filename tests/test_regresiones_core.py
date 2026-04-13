@@ -133,3 +133,16 @@ def test_preparar_imagen_clinica_bytes_optimiza_y_devuelve_jpg():
 
 def test_decodificar_base64_seguro_no_explota_con_payload_invalido():
     assert decodificar_base64_seguro("esto-no-es-base64") == b""
+
+
+def test_completar_claves_db_session_no_sobrescribe_datos_existentes(monkeypatch):
+    import streamlit as st
+    from core.database import completar_claves_db_session
+
+    fake_state = {"pacientes_db": [{"id": "p1", "nombre": "Demo"}], "u_actual": {"nombre": "x"}}
+    monkeypatch.setattr(st, "session_state", fake_state)
+    completar_claves_db_session()
+    assert fake_state["pacientes_db"] == [{"id": "p1", "nombre": "Demo"}]
+    assert "administracion_med_db" in fake_state
+    assert fake_state["administracion_med_db"] == []
+    assert "auditoria_legal_db" in fake_state

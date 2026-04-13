@@ -48,6 +48,7 @@ core_utils = import_module("core.utils")
 
 _core_database = import_module("core.database")
 obtener_estado_guardado = getattr(_core_database, "obtener_estado_guardado", lambda: {})
+completar_claves_db_session = getattr(_core_database, "completar_claves_db_session", lambda: None)
 
 _vr = import_module("core.view_roles")
 MODULO_ROLES_PERMITIDOS = _vr.MODULO_ROLES_PERMITIDOS
@@ -617,6 +618,9 @@ st.session_state["u_actual"] = _merged
 user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
+
+# Sesiones antiguas o JSON parcial: asegura colecciones nuevas sin borrar datos existentes.
+completar_claves_db_session()
 
 mi_empresa = str(user.get("empresa", "Clinica General") or "Clinica General")
 rol = str(user.get("rol", "Administrativo") or "Administrativo")
