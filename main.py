@@ -1,6 +1,7 @@
 import base64
 import sys
 import traceback
+from datetime import datetime
 from html import escape
 from importlib import import_module
 from pathlib import Path
@@ -373,6 +374,63 @@ def _sidebar_brand_card(mi_empresa, user, rol, descripcion, logo_sidebar_b64):
         f'<div class="mc-brand-copy">{escape(descripcion)}</div>'
         f"</div>"
     )
+
+
+def _parse_fecha_sidebar(fecha_txt):
+    s = str(fecha_txt or "").strip()
+    if not s:
+        return datetime.min
+    for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(s, fmt)
+        except Exception:
+            continue
+    return datetime.min
+
+
+def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
+    vistas_clinicas = {"Recetas", "Clinica", "Enfermeria", "Evolucion", "Emergencias y Ambulancia"}
+    if not paciente_sel or vista_actual not in vistas_clinicas:
+        return
+
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
+    alergias = str(detalles.get("alergias", "") or "").strip()
+    patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "") or "").strip()
+
+    vitales = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
+    vitales_orden = sorted(vitales, key=lambda x: _parse_fecha_sidebar(x.get("fecha", "")), reverse=True)[:3]
+
+    st.sidebar.divider()
+    st.sidebar.markdown(
+        """
+        <div class="mc-sidebar-section">
+            <div class="mc-sidebar-kicker">Contexto clínico</div>
+            <div class="mc-sidebar-title">Panel rápido del paciente</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if alergias:
+        st.sidebar.error(f"Alergias: {alergias}")
+    else:
+        st.sidebar.caption("Alergias: sin datos.")
+
+    st.sidebar.caption("Últimos signos vitales")
+    if vitales_orden:
+        for v in vitales_orden:
+            ta = str(v.get("TA", "S/D") or "S/D")
+            fc = str(v.get("FC", "S/D") or "S/D")
+            temp = str(v.get("Temp", "S/D") or "S/D")
+            fecha = str(v.get("fecha", "S/D") or "S/D")
+            st.sidebar.markdown(f"- `{fecha}` · TA `{ta}` · FC `{fc}` · Temp `{temp}`")
+    else:
+        st.sidebar.caption("Sin registros vitales recientes.")
+
+    st.sidebar.caption("Diagnósticos activos")
+    if patologias:
+        st.sidebar.markdown(f"- {escape(patologias)}")
+    else:
+        st.sidebar.caption("Sin diagnósticos cargados.")
 
 
 def render_module_nav(menu, vista_actual):
@@ -825,6 +883,7 @@ if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
 
+_render_sidebar_contexto_clinico(paciente_sel, vista_actual)
 render_panel_bienvenida(rol, menu, VIEW_NAV_LABELS)
 
 render_banner_alertas_criticas_si_aplica(mi_empresa)
