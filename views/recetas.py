@@ -315,7 +315,7 @@ def _registrar_administracion_dosis(
         modulo="Recetas / MAR",
         criticidad="alta",
     )
-    guardar_datos()
+    guardar_datos(spinner=True)
     return True
 
 
@@ -1382,7 +1382,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             medico_matricula.strip(),
                             texto_receta,
                         )
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         st.success(f"Prescripcion de {med_final} guardada con firma medica.")
                         st.rerun()
 
@@ -1562,7 +1562,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         user.get("matricula", ""),
                         f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success("La indicacion medica en papel quedo guardada y disponible en el historial.")
                     st.rerun()
 
@@ -1816,7 +1816,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     st.error("Para guardar celdas en rojo, completá el motivo clínico.")
                     return
                 if registros_guardados:
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success(f"Se guardaron {registros_guardados} cambios de estado en la cortina.")
                     st.rerun()
                 else:
@@ -2038,7 +2038,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         )
                         cambio_aplicado = True
                 if cambio_aplicado:
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.rerun()
         else:
             st.caption(

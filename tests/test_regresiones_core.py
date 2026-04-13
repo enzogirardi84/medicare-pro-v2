@@ -185,6 +185,7 @@ def test_feature_flags_exportan_claves_esperadas():
 
     assert hasattr(ff, "ALERTAS_APP_PACIENTE_VISIBLE")
     assert hasattr(ff, "GUARDAR_DATOS_SPINNER_DEFAULT")
+    assert hasattr(ff, "GUARDAR_DATOS_LOG_LENTO_SEGUNDOS")
 
 
 def test_user_feedback_importable():

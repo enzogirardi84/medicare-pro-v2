@@ -321,7 +321,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             "empresa": mi_empresa,
                         }
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success("Llegada registrada.")
                     st.rerun()
                 if col_out.button("Fichar SALIDA", use_container_width=True):
@@ -334,7 +334,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             "empresa": mi_empresa,
                         }
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success("Salida registrada.")
                     st.rerun()
             else:
@@ -456,7 +456,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             "creado_en": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                         }
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     tel_n = _normalizar_telefono_whatsapp(tel_paciente)
                     if ofrecer_wpp_tras_agendar and tel_n:
                         pls = _plantillas_whatsapp_para_empresa(mi_empresa)
@@ -505,7 +505,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                     "visita": str(tv).strip(),
                     "general": str(tg).strip(),
                 }
-                guardar_datos()
+                guardar_datos(spinner=True)
                 st.success("Plantillas guardadas.")
                 st.rerun()
     ahora_naive_wa = ahora().replace(tzinfo=None)
@@ -595,7 +595,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         ):
                             item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
                             break
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success("Agenda actualizada correctamente.")
                     st.rerun()
 

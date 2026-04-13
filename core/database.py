@@ -464,6 +464,23 @@ def guardar_datos(*, spinner: Optional[bool] = None):
 
 
 def _guardar_datos_ejecutar():
+    t0 = time.monotonic()
+    try:
+        return _guardar_datos_ejecutar_core()
+    finally:
+        try:
+            from core.feature_flags import GUARDAR_DATOS_LOG_LENTO_SEGUNDOS
+
+            um = float(GUARDAR_DATOS_LOG_LENTO_SEGUNDOS or 0)
+            if um > 0:
+                dt = time.monotonic() - t0
+                if dt >= um:
+                    log_event("db", f"guardar_lento:{dt:.2f}s")
+        except Exception:
+            pass
+
+
+def _guardar_datos_ejecutar_core():
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
     payload_serializado = json.dumps(data, sort_keys=True, default=str, ensure_ascii=False)

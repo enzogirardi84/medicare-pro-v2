@@ -143,7 +143,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
                     "firma_img": b64_firma,
                 })
-                guardar_datos()
+                guardar_datos(spinner=True)
                 st.success("Firma guardada correctamente.")
                 st.rerun()
             else:
@@ -228,7 +228,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         user.get("matricula", ""),
                         f"Se registro evolucion con plantilla {plantilla}.",
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success("Evolucion guardada correctamente.")
                     st.rerun()
                 else:
@@ -260,7 +260,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     user.get("matricula", ""),
                     f"Se elimino la evolucion del {ultima.get('fecha', 'S/D')}.",
                 )
-                guardar_datos()
+                guardar_datos(spinner=True)
                 st.rerun()
         else:
             st.caption("El borrado de evoluciones queda reservado a medico, coordinacion o administracion total.")

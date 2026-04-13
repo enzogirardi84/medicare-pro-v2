@@ -380,7 +380,7 @@ def render_admision(mi_empresa, rol):
                                 ),
                                 empresa=detalles_actualizados.get("empresa", mi_empresa),
                             )
-                            guardar_datos()
+                            guardar_datos(spinner=True)
                             st.success("Legajo actualizado correctamente.")
                             st.rerun()
 
@@ -426,7 +426,7 @@ def render_admision(mi_empresa, rol):
                     f"Paciente eliminado desde admision. {detalle_texto}",
                     empresa=detalle_empresa,
                 )
-                guardar_datos()
+                guardar_datos(spinner=True)
                 st.success("Paciente eliminado correctamente.")
                 st.rerun()
     else:
@@ -535,7 +535,7 @@ def render_admision(mi_empresa, rol):
                         "Alta inicial del legajo del paciente.",
                         empresa=emp_d.strip(),
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success(f"Paciente {n} dado de alta correctamente.")
                     st.rerun()
 

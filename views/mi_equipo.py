@@ -200,7 +200,7 @@ def _mi_equipo_bloque_principal(
                             f"Nueva clave asignada a {u}" + ("; PIN actualizado." if pin_l else "."),
                             referencia=u,
                         )
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         st.success("Contraseña actualizada.")
                         st.rerun()
                 else:
@@ -214,7 +214,7 @@ def _mi_equipo_bloque_principal(
                         f"PIN de recuperacion actualizado para {u}.",
                         referencia=u,
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     st.success("PIN actualizado.")
                     st.rerun()
     if puede_editar_mail_equipo and ok_gestionar:
@@ -253,7 +253,7 @@ def _mi_equipo_bloque_principal(
                             f"Se actualizo acceso del usuario {u}. Correo: {'si' if ne_l else 'no'} | PIN: {'si' if np_l else 'no'} | Clave: {'si' if nueva_pass.strip() else 'sin cambios'}.",
                             referencia=u,
                         )
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         st.rerun()
     elif puede_editar_mail_equipo and not ok_gestionar:
         st.caption(motivo_sin_gestion)
@@ -294,7 +294,7 @@ def _mi_equipo_bloque_suspender(
                                 f"Se suspendio el usuario {u}.",
                                 referencia=u,
                             )
-                            guardar_datos()
+                            guardar_datos(spinner=True)
                             st.rerun()
         else:
             if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
@@ -319,7 +319,7 @@ def _mi_equipo_bloque_suspender(
                                 f"Se reactivo el usuario {u}.",
                                 referencia=u,
                             )
-                            guardar_datos()
+                            guardar_datos(spinner=True)
                             st.rerun()
     elif tiene_rol_bajas and not ok_gestionar:
         st.caption("—")
@@ -370,7 +370,7 @@ def _mi_equipo_bloque_eliminar(
                             referencia=u,
                         )
                         del st.session_state["usuarios_db"][u]
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         st.toast(f"Usuario {u} eliminado.")
                         st.rerun()
     elif puede_eliminar and not ok_gestionar:
@@ -535,7 +535,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                             referencia=u_id.strip().lower(),
                         )
                         sincronizar_clinicas_desde_datos(st.session_state)
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         st.success(f"Usuario {u_id} habilitado correctamente.")
                         st.rerun()
     else:
