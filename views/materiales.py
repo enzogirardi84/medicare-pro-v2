@@ -91,7 +91,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                             "insumo": insumo_sel,
                             "cantidad": cant_usada,
                             "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-                            "firma": user["nombre"],
+                            "firma": user.get("nombre", "Sistema"),
                             "empresa": mi_empresa,
                         }
                     )

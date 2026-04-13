@@ -95,7 +95,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     "estado": estado,
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
                     "empresa": mi_empresa,
-                    "operador": user["nombre"],
+                    "operador": user.get("nombre", "Sistema"),
                     "operador_dni": user.get("dni", "S/D"),
                 })
                 guardar_datos()

@@ -457,22 +457,23 @@ verificar_clinica_sesion_activa()
 check_inactividad()
 
 user = st.session_state.get("u_actual")
-if not user:
+if not isinstance(user, dict) or not user:
     st.stop()
 
 st.session_state.setdefault("modo_celular_viejo", False)
-if isinstance(user, dict):
-    _canon = core_utils.normalizar_usuario_sistema(dict(user))
-    _merged = dict(user)
-    for _k in ("rol", "perfil_profesional"):
-        if _k in _canon and _canon.get(_k) != user.get(_k):
-            _merged[_k] = _canon[_k]
-    if _merged.get("rol") != user.get("rol") or _merged.get("perfil_profesional") != user.get("perfil_profesional"):
-        st.session_state["u_actual"] = _merged
-        user = _merged
+_canon = core_utils.normalizar_usuario_sistema(dict(user))
+_merged = dict(user)
+for _k in ("rol", "perfil_profesional", "empresa", "nombre", "email", "pin"):
+    if _k in _canon and _canon.get(_k) != user.get(_k):
+        _merged[_k] = _canon[_k]
+_merged.setdefault("nombre", "Usuario sin nombre")
+_merged.setdefault("empresa", "Clinica General")
+_merged.setdefault("rol", "Administrativo")
+st.session_state["u_actual"] = _merged
+user = _merged
 
-mi_empresa = user["empresa"]
-rol = user["rol"]
+mi_empresa = str(user.get("empresa", "Clinica General") or "Clinica General")
+rol = str(user.get("rol", "Administrativo") or "Administrativo")
 logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
 try:
     logo_sidebar_b64 = (

@@ -4,7 +4,6 @@ import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
 from core.database import guardar_datos
-from core.email_2fa import login_email_2fa_enabled, smtp_config_ok
 from core.input_validation import email_formato_aceptable
 from core.password_crypto import (
     bcrypt_rounds_config,
@@ -21,6 +20,9 @@ from core.utils import (
     mi_equipo_mostrar_ui_eliminar,
     mi_equipo_mostrar_ui_suspender,
     normalizar_usuario_sistema,
+    obtener_email_usuario,
+    obtener_password_usuario,
+    obtener_pin_usuario,
     puede_accion,
     puede_eliminar_cuenta_equipo,
     puede_suspender_reactivar_usuario_mi_equipo,
@@ -67,7 +69,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     )
     bloque_mc_grid_tarjetas(
         [
-            ("Alta", "Login, PIN, DNI, matricula y rol para nuevos accesos (segun permisos)."),
+            ("Alta", "Login, clave, correo de recuperacion y PIN opcional para nuevos accesos."),
             ("Control", "Busqueda y gestion por rol: SuperAdmin o Coordinador en su clinica, segun reglas."),
             ("Rol vs perfil", "Rol = permisos en el sistema; perfil = agenda y filtros asistenciales."),
         ]
@@ -91,7 +93,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             with col_pw:
                 u_pw = st.text_input("Clave de acceso", type="password")
                 st.caption(f"Mínimo {password_min_length()} caracteres (configurable en secrets).")
-            u_pin = col_pin.text_input("PIN (4 digitos)", max_chars=4, placeholder="1234")
+            u_pin = col_pin.text_input("PIN opcional", max_chars=4, placeholder="1234")
 
             u_nm = st.text_input("Nombre Completo del Profesional")
             col_dni, col_mt = st.columns(2)
@@ -136,21 +138,17 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 ),
             )
             st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
-            if login_email_2fa_enabled() and smtp_config_ok():
-                st.caption(
-                    "Con **verificación por correo** activa en el servidor, cada usuario debe tener un **email válido** "
-                    "(campo siguiente) para poder ingresar."
-                )
+            st.caption("El ingreso normal es con login + contrasena. El correo sirve para recuperar la clave y el PIN queda opcional como respaldo.")
             u_email = st.text_input(
-                "Email (opcional; obligatorio si hay 2FA por correo)",
+                "Correo de recuperacion",
                 placeholder="profesional@clinica.com",
             )
 
             if st.form_submit_button("Habilitar Acceso", use_container_width=True, type="primary"):
-                if not u_id or not u_pw or not u_pin or not u_dni:
+                if not u_id or not u_pw or not u_dni:
                     st.error("Todos los campos obligatorios deben completarse.")
-                elif len(u_pin) != 4 or not u_pin.isdigit():
-                    st.error("El PIN debe tener exactamente 4 digitos numericos.")
+                elif u_pin.strip() and (len(u_pin.strip()) != 4 or not u_pin.strip().isdigit()):
+                    st.error("Si cargas PIN, debe tener exactamente 4 digitos numericos.")
                 elif (pw_err := mensaje_password_no_cumple_politica(u_pw.strip())):
                     st.error(pw_err)
                 elif u_email.strip() and not email_formato_aceptable(u_email.strip()):
@@ -176,7 +174,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         rounds=bcrypt_rounds_config(),
                     )
                     if u_email.strip():
-                        st.session_state["usuarios_db"][uid]["email"] = u_email.strip()
+                        st.session_state["usuarios_db"][uid]["email"] = u_email.strip().lower()
                     registrar_auditoria_legal(
                         "Equipo",
                         "GLOBAL",
@@ -246,34 +244,56 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 mostrar_ui_eliminar = mi_equipo_mostrar_ui_eliminar(user, d, mi_empresa, ok_gestionar)
 
                 with col1:
-                    perfil_usuario = d.get("perfil_profesional", "") or inferir_perfil_profesional(d) or "Sin perfil"
+                    d_norm = normalizar_usuario_sistema(dict(d))
+                    perfil_usuario = d_norm.get("perfil_profesional", "") or inferir_perfil_profesional(d_norm) or "Sin perfil"
+                    email_actual = obtener_email_usuario(d_norm)
+                    pin_actual = obtener_pin_usuario(d_norm)
+                    clave_configurada = bool(d_norm.get("pass_hash") or obtener_password_usuario(d_norm))
                     st.markdown(f"**{d.get('nombre', 'Sin nombre')}**")
                     st.caption(
                         f"Empresa: {d.get('empresa', 'S/D')} | "
                         f"Login: {u} | Rol sistema: {d.get('rol', 'S/D')} | "
                         f"Perfil: {perfil_usuario} | Titulo: {d.get('titulo', 'S/D')} | DNI: {d.get('dni', 'S/D')}"
                     )
+                    st.caption(
+                        f"Acceso: login {u} | correo recuperacion: {email_actual or 'Sin correo'} | "
+                        f"PIN opcional: {pin_actual or 'No configurado'} | "
+                        f"Clave: {'Configurada' if clave_configurada else 'Pendiente'}"
+                    )
                     if puede_editar_mail_equipo and ok_gestionar:
-                        with st.expander("Correo para verificación (2FA)", expanded=False):
-                            em_actual = str(d.get("email") or "")
-                            ne = st.text_input("Email", value=em_actual, key=f"emp_mail_{u}")
-                            if st.button("Guardar correo", key=f"btn_mail_{u}"):
+                        with st.expander("Recuperacion y credenciales", expanded=False):
+                            ne = st.text_input("Correo de recuperacion", value=email_actual, key=f"emp_mail_new_{u}")
+                            np = st.text_input("PIN opcional", value=pin_actual, max_chars=4, key=f"emp_pin_{u}")
+                            nueva_pass = st.text_input("Nueva contrasena (opcional)", type="password", key=f"emp_pass_{u}")
+                            if st.button("Guardar acceso", key=f"btn_access_{u}"):
                                 ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
                                 if not ok_m:
                                     st.error(msg_m)
                                 else:
-                                    ne_l = ne.strip()
+                                    ne_l = ne.strip().lower()
+                                    np_l = np.strip()
                                     if ne_l and not email_formato_aceptable(ne_l):
-                                        st.error("El formato del correo electrónico no es válido.")
+                                        st.error("El formato del correo electronico no es valido.")
+                                    elif np_l and (len(np_l) != 4 or not np_l.isdigit()):
+                                        st.error("Si cargas PIN, debe tener exactamente 4 digitos numericos.")
+                                    elif nueva_pass.strip() and (pw_err := mensaje_password_no_cumple_politica(nueva_pass.strip())):
+                                        st.error(pw_err)
                                     else:
                                         st.session_state["usuarios_db"][u]["email"] = ne_l
+                                        st.session_state["usuarios_db"][u]["pin"] = np_l
+                                        if nueva_pass.strip():
+                                            establecer_password_nuevo(
+                                                st.session_state["usuarios_db"][u],
+                                                nueva_pass.strip(),
+                                                rounds=bcrypt_rounds_config(),
+                                            )
                                         registrar_auditoria_legal(
                                             "Equipo",
                                             "GLOBAL",
-                                            "Actualizacion email usuario",
+                                            "Actualizacion acceso usuario",
                                             user.get("nombre", "Sistema"),
                                             user.get("matricula", ""),
-                                            f"Se actualizo el email del usuario {u}.",
+                                            f"Se actualizo acceso del usuario {u}. Correo: {'si' if ne_l else 'no'} | PIN: {'si' if np_l else 'no'} | Clave: {'si' if nueva_pass.strip() else 'sin cambios'}.",
                                             referencia=u,
                                         )
                                         guardar_datos()

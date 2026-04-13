@@ -74,7 +74,7 @@ def render_balance(paciente_sel, user):
                     "egresos": egresos,
                     "balance": balance,
                     "fecha": fecha_str,
-                    "firma": user["nombre"],
+                    "firma": user.get("nombre", "Sistema"),
                 }
             )
             guardar_datos()

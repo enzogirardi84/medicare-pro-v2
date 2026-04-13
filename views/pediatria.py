@@ -9,10 +9,12 @@ from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scr
 
 
 def _parse_fecha_hora(fecha_str):
-    try:
-        return datetime.strptime(fecha_str, "%d/%m/%Y %H:%M:%S")
-    except Exception:
-        return datetime.min
+    for formato in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M"):
+        try:
+            return datetime.strptime(str(fecha_str or "").strip(), formato)
+        except Exception:
+            continue
+    return datetime.min
 
 
 def render_pediatria(paciente_sel, user):
@@ -51,7 +53,7 @@ def render_pediatria(paciente_sel, user):
     if pd.isna(f_n):
         f_n = datetime(2000, 1, 1)
 
-    ped = [x for x in st.session_state.get("pediatria_db", []) if x["paciente"] == paciente_sel]
+    ped = [x for x in st.session_state.get("pediatria_db", []) if x.get("paciente") == paciente_sel]
     if ped:
         ultimo_ped = sorted(ped, key=lambda x: _parse_fecha_hora(x.get("fecha", "")), reverse=True)[0]
         st.markdown("##### Resumen Actual")
@@ -116,7 +118,7 @@ def render_pediatria(paciente_sel, user):
                 "imc": imc,
                 "percentil_sug": percentil_sug,
                 "nota": desc,
-                "firma": user["nombre"],
+                "firma": user.get("nombre", "Sistema"),
             })
             guardar_datos()
             st.success("Guardado correctamente.")

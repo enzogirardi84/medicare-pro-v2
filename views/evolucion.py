@@ -200,7 +200,7 @@ def render_evolucion(paciente_sel, user, rol=None):
                         "paciente": paciente_sel,
                         "nota": nota.strip(),
                         "fecha": fecha_n,
-                        "firma": user["nombre"],
+                        "firma": user.get("nombre", "Sistema"),
                         "plantilla": plantilla,
                     })
 
@@ -212,7 +212,7 @@ def render_evolucion(paciente_sel, user, rol=None):
                             "fecha": fecha_n,
                             "descripcion": desc_w.strip(),
                             "base64_foto": base64_foto,
-                            "firma": user["nombre"],
+                            "firma": user.get("nombre", "Sistema"),
                         })
 
                     registrar_auditoria_legal(

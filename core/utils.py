@@ -197,6 +197,36 @@ def inferir_perfil_profesional(data):
     return ""
 
 
+def obtener_password_usuario(data):
+    if not isinstance(data, dict):
+        return ""
+    for clave in ("pass", "password", "clave", "contrasena", "contraseña"):
+        valor = str(data.get(clave, "") or "").strip()
+        if valor:
+            return valor
+    return ""
+
+
+def obtener_pin_usuario(data):
+    if not isinstance(data, dict):
+        return ""
+    for clave in ("pin", "ping", "codigo_pin", "codigo"):
+        valor = str(data.get(clave, "") or "").strip()
+        if valor:
+            return valor
+    return ""
+
+
+def obtener_email_usuario(data):
+    if not isinstance(data, dict):
+        return ""
+    for clave in ("email", "mail", "correo", "correo_verificacion", "correo_recuperacion"):
+        valor = str(data.get(clave, "") or "").strip().lower()
+        if valor:
+            return valor
+    return ""
+
+
 def normalizar_usuario_sistema(data):
     if not isinstance(data, dict):
         return {}
@@ -229,6 +259,21 @@ def normalizar_usuario_sistema(data):
             usuario["rol"] = "Administrativo"
     elif not str(usuario.get("rol", "") or "").strip():
         usuario["rol"] = "Administrativo"
+
+    usuario["pass"] = obtener_password_usuario(usuario)
+    pin_actual = obtener_pin_usuario(usuario)
+    if pin_actual:
+        usuario["pin"] = pin_actual
+    else:
+        usuario.setdefault("pin", "")
+    usuario["email"] = obtener_email_usuario(usuario)
+
+    for campo in ("nombre", "empresa", "matricula", "dni", "titulo", "estado"):
+        if campo in usuario:
+            usuario[campo] = str(usuario.get(campo, "") or "").strip()
+
+    if not usuario.get("estado"):
+        usuario["estado"] = "Activo"
 
     if perfil:
         usuario["perfil_profesional"] = perfil

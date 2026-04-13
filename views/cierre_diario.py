@@ -206,7 +206,7 @@ def render_cierre_diario(mi_empresa, user):
                 st.session_state["reportes_diarios_db"].append({
                     "fecha_reporte": fecha_str,
                     "fecha_generacion": ahora().strftime("%d/%m/%Y %H:%M"),
-                    "generado_por": user["nombre"],
+                    "generado_por": user.get("nombre", "Sistema"),
                     "empresa": mi_empresa,
                     "pdf_base64": b64_pdf,
                 })

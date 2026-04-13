@@ -1,4 +1,5 @@
 import base64
+from uuid import uuid4
 
 import streamlit as st
 
@@ -8,6 +9,8 @@ from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_
 
 
 def _mismo_estudio(registro, objetivo):
+    if registro.get("id") and objetivo.get("id"):
+        return registro.get("id") == objetivo.get("id")
     return (
         registro.get("paciente") == objetivo.get("paciente")
         and registro.get("fecha") == objetivo.get("fecha")
@@ -90,13 +93,14 @@ def render_estudios(paciente_sel, user, rol=None):
                     ext = ext_optimizada or "jpg"
 
                 st.session_state["estudios_db"].append({
+                    "id": str(uuid4()),
                     "paciente": paciente_sel,
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                     "tipo": tipo_estudio,
                     "detalle": detalle_estudio,
                     "imagen": img_b64,
                     "extension": ext,
-                    "firma": user["nombre"],
+                    "firma": user.get("nombre", "Sistema"),
                 })
                 guardar_datos()
                 st.success("Estudio guardado correctamente.")
@@ -104,7 +108,7 @@ def render_estudios(paciente_sel, user, rol=None):
     else:
         st.caption("La carga de estudios queda deshabilitada para este rol.")
 
-    estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e["paciente"] == paciente_sel]
+    estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e.get("paciente") == paciente_sel]
 
     if not estudios_pac:
         bloque_estado_vacio(

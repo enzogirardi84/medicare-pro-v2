@@ -226,6 +226,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         aviso_sin_paciente()
         return
 
+    nombre_usuario = user.get("nombre", "Profesional sin nombre")
+
     st.markdown(
         """
         <div class="mc-hero">
@@ -278,7 +280,11 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
 
     agenda_paciente = _enriquecer_agenda(_agenda_paciente(mi_empresa, paciente_sel, rol))
     resumen = _resumen_agenda(agenda_paciente)
-    carga_profesional = sum(1 for x in agenda_paciente if x.get("profesional") == user["nombre"] and x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})
+    carga_profesional = sum(
+        1
+        for x in agenda_paciente
+        if x.get("profesional") == nombre_usuario and x["estado_calc"] in {"Pendiente", "En curso", "Vencida"}
+    )
 
     col_r1, col_r2, col_r3, col_r4 = st.columns(4)
     col_r1.metric("Pendientes", resumen["pendientes"])
@@ -309,7 +315,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                     st.session_state["checkin_db"].append(
                         {
                             "paciente": paciente_sel,
-                            "profesional": user["nombre"],
+                            "profesional": nombre_usuario,
                             "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                             "tipo": f"LLEGADA en: {direccion_real} (Lat: {lat_str})",
                             "empresa": mi_empresa,
@@ -322,7 +328,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                     st.session_state["checkin_db"].append(
                         {
                             "paciente": paciente_sel,
-                            "profesional": user["nombre"],
+                            "profesional": nombre_usuario,
                             "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                             "tipo": f"SALIDA de: {direccion_real} (Lat: {lat_str})",
                             "empresa": mi_empresa,
@@ -342,7 +348,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     fichadas_hoy = [
         c
         for c in st.session_state.get("checkin_db", [])
-        if c.get("paciente") == paciente_sel and c.get("profesional") == user["nombre"] and c.get("fecha_hora", "").startswith(hoy_str)
+        if c.get("paciente") == paciente_sel and c.get("profesional") == nombre_usuario and c.get("fecha_hora", "").startswith(hoy_str)
     ]
     if fichadas_hoy:
         fichadas_hoy = sorted(fichadas_hoy, key=lambda x: pd.to_datetime(x["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce"))
@@ -390,7 +396,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         }
     )
     if not profesionales and user.get("nombre"):
-        profesionales = [user["nombre"]]
+        profesionales = [nombre_usuario]
 
     if not profesionales:
         bloque_estado_vacio(
@@ -412,7 +418,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                 value=ahora().replace(second=0, microsecond=0).time(),
                 step=300,
             )
-            idx_prof = profesionales.index(user["nombre"]) if user.get("nombre") in profesionales else 0
+            idx_prof = profesionales.index(nombre_usuario) if nombre_usuario in profesionales else 0
             prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
             if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
                 hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
