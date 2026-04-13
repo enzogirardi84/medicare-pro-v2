@@ -17,6 +17,18 @@ except ImportError:
     pass
 
 
+def _texto_busqueda_log(reg):
+    return " | ".join(
+        [
+            str(reg.get("usuario", reg.get("U", "")) or ""),
+            str(reg.get("accion", reg.get("A", "")) or ""),
+            str(reg.get("detalle", reg.get("D", "")) or ""),
+            str(reg.get("fecha", reg.get("F", "")) or ""),
+            str(reg.get("hora", reg.get("H", "")) or ""),
+        ]
+    ).lower()
+
+
 def render_auditoria(mi_empresa, user):
     emp_e = escape(str(mi_empresa or ""))
     st.markdown(
@@ -67,19 +79,24 @@ def render_auditoria(mi_empresa, user):
         buscar_log = st.text_input("Buscar en registros", key="buscar_log")
 
         col_fecha = "fecha" if "fecha" in df_logs.columns else "F" if "F" in df_logs.columns else None
-        df_filtrado = df_logs.copy()
-
+        registros_filtrados = list(logs)
         if col_fecha:
-            formato = "%d/%m/%Y" if col_fecha == "F" else None
-            df_filtrado["fecha_dt"] = pd.to_datetime(df_filtrado[col_fecha], format=formato, errors="coerce")
-            df_filtrado = df_filtrado[(df_filtrado["fecha_dt"].dt.date >= fecha_inicio) & (df_filtrado["fecha_dt"].dt.date <= fecha_fin)]
+            filtro_fechas = []
+            for r in registros_filtrados:
+                fecha_raw = str(r.get(col_fecha, "") or "").strip()
+                dt = pd.to_datetime(fecha_raw, format="%d/%m/%Y" if col_fecha == "F" else None, errors="coerce")
+                if pd.notna(dt) and fecha_inicio <= dt.date() <= fecha_fin:
+                    filtro_fechas.append(r)
+            registros_filtrados = filtro_fechas
 
         if usuario_filtro != "Todos" and col_usuario:
-            df_filtrado = df_filtrado[df_filtrado[col_usuario].astype(str) == usuario_filtro]
+            registros_filtrados = [r for r in registros_filtrados if str(r.get(col_usuario, "")) == usuario_filtro]
 
         if buscar_log:
-            mask = df_filtrado.astype(str).apply(lambda x: x.str.contains(buscar_log, case=False, na=False)).any(axis=1)
-            df_filtrado = df_filtrado[mask]
+            b = str(buscar_log).strip().lower()
+            registros_filtrados = [r for r in registros_filtrados if b in _texto_busqueda_log(r)]
+
+        df_filtrado = pd.DataFrame(registros_filtrados)
 
         col_m1, col_m2, col_m3 = st.columns(3)
         col_m1.metric("Total registros", len(df_filtrado))
@@ -87,22 +104,31 @@ def render_auditoria(mi_empresa, user):
         ultimo_valor = df_filtrado[col_fecha].iloc[-1] if col_fecha and not df_filtrado.empty else "-"
         col_m3.metric("Ultimo registro", ultimo_valor)
 
-        max_filas = min(1000, max(len(df_filtrado), 1))
-        if max_filas <= 50:
-            limite = max_filas
-            st.caption(f"Mostrando {limite} registros.")
-        else:
-            limite = st.slider("Filas a mostrar", min_value=50, max_value=max_filas, value=min(200, max_filas), step=50)
+        total = len(df_filtrado)
+        if total == 0:
+            st.info("Sin resultados para el filtro actual.")
+            return
+        limite = st.selectbox("Eventos por página", [50, 100, 200, 400], index=1, key="audit_log_limite")
+        paginas = max((total - 1) // limite + 1, 1)
+        pagina = st.number_input("Página logs", min_value=1, max_value=paginas, value=1, step=1)
+        inicio = (int(pagina) - 1) * limite
+        fin = inicio + limite
+        df_pagina = df_filtrado.iloc[::-1].iloc[inicio:fin]
+        st.caption(f"Mostrando {len(df_pagina)} de {total} registro(s) filtrado(s).")
         mostrar_dataframe_con_scroll(
-            df_filtrado.tail(limite).drop(columns=["fecha_dt"], errors="ignore").iloc[::-1],
+            df_pagina.drop(columns=["fecha_dt"], errors="ignore"),
             height=460,
         )
 
-        df_descarga = df_filtrado.drop(columns=["fecha_dt"], errors="ignore").copy()
-        rename_dict = {"U": "Usuario", "A": "Accion", "F": "Fecha", "H": "Hora", "E": "Empresa"}
-        df_descarga = df_descarga.rename(columns=rename_dict)
-        nombre_csv = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.csv"
-        st.download_button("Descargar auditoria CSV", data=dataframe_csv_bytes(df_descarga), file_name=nombre_csv, mime="text/csv", use_container_width=True)
+        csv_key = f"audit_logs_csv_{mi_empresa}_{user.get('nombre','')}_{usuario_filtro}_{str(buscar_log or '').strip().lower()}"
+        if st.button("Preparar auditoría CSV", use_container_width=True):
+            df_descarga = df_filtrado.drop(columns=["fecha_dt"], errors="ignore").copy()
+            rename_dict = {"U": "Usuario", "A": "Accion", "F": "Fecha", "H": "Hora", "E": "Empresa"}
+            df_descarga = df_descarga.rename(columns=rename_dict)
+            st.session_state[csv_key] = dataframe_csv_bytes(df_descarga)
+        if st.session_state.get(csv_key):
+            nombre_csv = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.csv"
+            st.download_button("Descargar auditoria CSV", data=st.session_state[csv_key], file_name=nombre_csv, mime="text/csv", use_container_width=True)
         return
 
     st.subheader("Auditoria de Asistencia por Profesional")
@@ -138,13 +164,16 @@ def render_auditoria(mi_empresa, user):
         )
 
     if chks_prof:
-        max_filas = min(500, max(len(chks_prof), 1))
-        if max_filas <= 20:
-            limite = max_filas
-            st.caption(f"Mostrando {limite} registros de asistencia.")
-        else:
-            limite = st.slider("Filas de asistencia", min_value=20, max_value=max_filas, value=min(120, max_filas), step=20)
-        mostrar_dataframe_con_scroll(pd.DataFrame(chks_prof[-limite:]).iloc[::-1], height=420)
+        df_chk = pd.DataFrame(chks_prof).iloc[::-1].reset_index(drop=True)
+        total_chk = len(df_chk)
+        limite = st.selectbox("Registros asistencia por página", [20, 40, 80, 120], index=1, key="audit_chk_limite")
+        paginas_chk = max((total_chk - 1) // limite + 1, 1)
+        pag_chk = st.number_input("Página asistencia", min_value=1, max_value=paginas_chk, value=1, step=1)
+        ini_chk = (int(pag_chk) - 1) * limite
+        fin_chk = ini_chk + limite
+        df_chk_page = df_chk.iloc[ini_chk:fin_chk]
+        st.caption(f"Mostrando {len(df_chk_page)} de {total_chk} fichada(s) en el período.")
+        mostrar_dataframe_con_scroll(df_chk_page, height=420)
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF de asistencia", value=False):
             pdf = FPDF()
