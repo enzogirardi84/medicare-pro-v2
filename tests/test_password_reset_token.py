@@ -45,3 +45,36 @@ def test_token_malicioso_falla(mock_st):
     assert ok is False
     assert info is None
     assert err
+
+
+@patch("core.password_reset_email.st")
+def test_extraer_token_desde_url_completa(mock_st):
+    mock_st.secrets.get = MagicMock(side_effect=_mock_secrets_get)
+    from core.password_reset_email import (
+        construir_url_restablecimiento,
+        crear_token_restablecimiento,
+        extraer_token_restablecimiento_desde_texto,
+    )
+
+    tok, _exp = crear_token_restablecimiento("admin", "admin", "Clinica Demo")
+    url = construir_url_restablecimiento(tok)
+
+    assert extraer_token_restablecimiento_desde_texto(url) == tok
+    assert extraer_token_restablecimiento_desde_texto(tok) == tok
+
+
+@patch("core.password_reset_email.log_event")
+@patch("core.password_reset_email.enviar_correo_smtp", return_value=(True, ""))
+@patch("core.password_reset_email.smtp_config_ok", return_value=True)
+def test_correo_confirmacion_password_usa_diseno_profesional(_smtp_ok, mock_send, _log_event):
+    from core.password_reset_email import enviar_correo_confirmacion_cambio_password
+
+    ok, err = enviar_correo_confirmacion_cambio_password("usuario@ejemplo.com", "Ana Perez")
+
+    assert ok is True
+    assert err == ""
+    asunto = mock_send.call_args.args[1]
+    html = mock_send.call_args.args[3]
+    assert "actualizada" in asunto.lower()
+    assert "Ana Perez" in html
+    assert "MediCare" in html

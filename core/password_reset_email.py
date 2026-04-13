@@ -15,16 +15,20 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
-import html as html_lib
 import json
 import secrets
 import time
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import streamlit as st
 
 from core.app_logging import log_event
 from core.email_2fa import enviar_correo_smtp, smtp_config_ok
+from core.email_templates_medicare import (
+    html_password_changed_body,
+    html_password_reset_body,
+    medicare_email_document,
+)
 from core.input_validation import email_formato_aceptable
 
 
@@ -127,62 +131,48 @@ def construir_url_restablecimiento(token: str) -> str:
     return f"{base}/?pwreset={enc}"
 
 
+def extraer_token_restablecimiento_desde_texto(texto: str) -> str:
+    raw = str(texto or "").strip()
+    if not raw:
+        return ""
+
+    candidato = raw
+    try:
+        parsed = urlparse(raw)
+        query_token = parse_qs(parsed.query or "").get("pwreset", [])
+        if query_token:
+            candidato = query_token[0]
+        elif "pwreset=" in raw:
+            candidato = raw.split("pwreset=", 1)[-1].split("&", 1)[0].split("#", 1)[0]
+    except Exception:
+        candidato = raw
+
+    try:
+        candidato = unquote(str(candidato or "").strip())
+    except Exception:
+        candidato = str(candidato or "").strip()
+    return candidato.replace("\n", "").replace("\r", "").strip()
+
+
 def _html_correo_profesional(nombre: str, url_reset: str, token: str, minutos: int) -> str:
-    nombre_e = html_lib.escape(nombre.strip() or "usuario")
-    token_e = html_lib.escape(token)
-    url_e = html_lib.escape(url_reset) if url_reset else ""
-    min_e = html_lib.escape(str(minutos))
-
-    boton = ""
-    if url_reset:
-        boton = (
-            f'<a href="{url_e}" style="display:inline-block;margin:20px 0;padding:14px 28px;'
-            "border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;color:#ffffff;"
-            "background:linear-gradient(135deg,#0d9488 0%,#2563eb 100%);"
-            'box-shadow:0 10px 28px rgba(37,99,235,0.25)">Restablecer contraseña</a>'
-        )
-
-    bloque_token = (
-        f"<p style='margin:16px 0 8px;color:#64748b;font-size:14px'>"
-        "Si el botón no funciona, copiá este token y pegalo en la app (Olvidé mi contraseña):</p>"
-        f"<pre style='margin:0;padding:14px 16px;background:#0f172a;color:#5eead4;border-radius:10px;"
-        f"font-size:12px;word-break:break-all;overflow-x:auto;border:1px solid rgba(94,234,212,0.25)'>"
-        f"{token_e}</pre>"
+    mins_s = str(minutos)
+    return medicare_email_document(
+        page_title="Recuperación MediCare",
+        preheader_plain=f"MediCare: restablecer contraseña (vence en {mins_s} min).",
+        heading_plain="Recuperación de acceso",
+        alert_plain="Mensaje confidencial. Si no solicitaste un cambio de clave, ignorá este correo.",
+        body_inner_html=html_password_reset_body(nombre, url_reset, token, minutos),
     )
 
-    return f"""<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#0f172a;font-family:'Segoe UI',system-ui,sans-serif;color:#e2e8f0;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0f172a;padding:32px 16px">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:520px;background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);
-        border-radius:20px;border:1px solid rgba(148,163,184,0.15);box-shadow:0 24px 60px rgba(0,0,0,0.35)">
-        <tr><td style="padding:28px 28px 8px">
-          <p style="margin:0;font-size:11px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#2dd4bf">
-            MediCare Enterprise PRO</p>
-          <h1 style="margin:12px 0 0;font-size:22px;font-weight:800;color:#f8fafc;letter-spacing:-0.02em">
-            Recuperación de acceso</h1>
-        </td></tr>
-        <tr><td style="padding:8px 28px 24px">
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#cbd5e1">
-            Hola <strong style="color:#f1f5f9">{nombre_e}</strong>, recibimos una solicitud para definir una
-            <strong>nueva contraseña</strong> en tu cuenta. Si no fuiste vos, ignorá este mensaje: tu clave actual no cambia.
-          </p>
-          <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">El enlace vence en <strong>{min_e} minutos</strong>.</p>
-          <div style="text-align:center">{boton}</div>
-          {bloque_token}
-          <p style="margin:24px 0 0;padding-top:20px;border-top:1px solid rgba(148,163,184,0.12);
-            font-size:12px;color:#64748b;line-height:1.5">
-            Mensaje automático de seguridad. No respondas a este correo.
-            Ante dudas, contactá al coordinador de tu institución o a soporte MediCare.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
+
+def _html_confirmacion_password_profesional(nombre: str, url_app: str) -> str:
+    return medicare_email_document(
+        page_title="Contraseña actualizada — MediCare",
+        preheader_plain="MediCare: tu contraseña se actualizó correctamente.",
+        heading_plain="Contraseña actualizada",
+        alert_plain="Aviso de seguridad. Si no reconocés este cambio, contactá de inmediato a coordinación o soporte.",
+        body_inner_html=html_password_changed_body(nombre, url_app),
+    )
 
 
 def enviar_correo_restablecimiento(destino: str, nombre_usuario: str, token: str) -> tuple[bool, str]:
@@ -198,18 +188,29 @@ def enviar_correo_restablecimiento(destino: str, nombre_usuario: str, token: str
         "",
         f"Hola {nombre_usuario or 'usuario'},",
         "",
-        "Recibimos una solicitud para definir una nueva contraseña. Si no fuiste vos, ignorá este mensaje.",
-        f"El enlace o token vence en {mins} minutos.",
+        "Recibimos una solicitud para definir una nueva contraseña. Tu clave actual no cambia hasta completar el proceso.",
+        "Si no fuiste vos, ignorá este mensaje.",
+        f"Enlace y token vencen en {mins} minutos.",
         "",
     ]
     if url:
-        txt_lines.append("Abrí este enlace en el navegador:")
-        txt_lines.append(url)
-        txt_lines.append("")
-    txt_lines.append("Si el enlace no funciona, en la app elegí «Olvidé mi contraseña» y pegá este token:")
-    txt_lines.append(token)
-    txt_lines.append("")
-    txt_lines.append("— Equipo MediCare (mensaje automático, no responder)")
+        txt_lines.extend(["1) Abrí este enlace en el navegador:", url, ""])
+    else:
+        txt_lines.extend(
+            [
+                "1) Abrí la app MediCare en el navegador.",
+                "2) Elegí «Olvidé mi contraseña».",
+                "",
+            ]
+        )
+    txt_lines.extend(
+        [
+            "Token (paso 2 en la app — definir nueva contraseña):",
+            token,
+            "",
+            "— MediCare · mensaje automático, no responder",
+        ]
+    )
     cuerpo_txt = "\n".join(txt_lines)
 
     html = _html_correo_profesional(nombre_usuario, url, token, mins)
@@ -223,4 +224,43 @@ def enviar_correo_restablecimiento(destino: str, nombre_usuario: str, token: str
         log_event("auth", "password_reset_email_enviado")
     else:
         log_event("auth", f"password_reset_email_smtp_fallo:{err[:80] if err else ''}")
+    return ok, err
+
+
+def enviar_correo_confirmacion_cambio_password(destino: str, nombre_usuario: str) -> tuple[bool, str]:
+    if not smtp_config_ok():
+        return False, "Falta configuración SMTP."
+    if not email_formato_aceptable(destino.strip()):
+        return False, "Correo de destino inválido."
+
+    url_app = _app_public_url()
+    txt_lines = [
+        "MediCare Enterprise PRO — Contraseña actualizada",
+        "",
+        f"Hola {nombre_usuario or 'usuario'},",
+        "",
+        "Tu contraseña se actualizó correctamente.",
+        "A partir de ahora debés ingresar con la clave nueva.",
+        "",
+    ]
+    if url_app:
+        txt_lines.append("Abrí MediCare desde este enlace:")
+        txt_lines.append(url_app)
+        txt_lines.append("")
+    txt_lines.append("Si no reconocés este cambio, avisá de inmediato a coordinación o soporte.")
+    txt_lines.append("")
+    txt_lines.append("— MediCare · mensaje automático, no responder")
+    cuerpo_txt = "\n".join(txt_lines)
+
+    html = _html_confirmacion_password_profesional(nombre_usuario, url_app)
+    ok, err = enviar_correo_smtp(
+        destino.strip(),
+        "Tu contraseña fue actualizada — MediCare Enterprise PRO",
+        cuerpo_txt,
+        html,
+    )
+    if ok:
+        log_event("auth", "password_reset_confirmacion_enviada")
+    else:
+        log_event("auth", f"password_reset_confirmacion_fallo:{err[:80] if err else ''}")
     return ok, err

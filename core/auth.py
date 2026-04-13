@@ -1,5 +1,4 @@
 import time
-from urllib.parse import unquote
 
 import streamlit as st
 
@@ -44,7 +43,9 @@ from core.email_2fa import (
 )
 from core.password_reset_email import (
     crear_token_restablecimiento,
+    enviar_correo_confirmacion_cambio_password,
     enviar_correo_restablecimiento,
+    extraer_token_restablecimiento_desde_texto,
     verificar_token_restablecimiento,
 )
 from core.utils import (
@@ -93,9 +94,19 @@ def _obtener_pwreset_desde_query() -> str:
             s = str(raw[0] or "").strip()
         else:
             s = str(raw).strip()
-        return unquote(s) if s else ""
+        return extraer_token_restablecimiento_desde_texto(s) if s else ""
     except Exception:
         return ""
+
+
+def _sincronizar_pwreset_desde_query() -> str:
+    token = _obtener_pwreset_desde_query()
+    if token and len(token) > 24:
+        st.session_state["mc_auth_mode_radio"] = "recover"
+        st.session_state["mc_pwreset_token"] = token
+        st.session_state["_mc_pwreset_link_detected"] = True
+        return token
+    return ""
 
 
 def _auth_strip_pwreset_query_param() -> None:
@@ -281,6 +292,7 @@ def render_login():
 
     if not st.session_state["logeado"]:
         _auth_strip_modulo_query_param()
+        _sincronizar_pwreset_desde_query()
         _, col, _ = st.columns([0.9, 1.35, 0.9])
         with col:
             st.markdown(
@@ -312,12 +324,14 @@ def render_login():
                 )
             modo_auth = st.radio(
                 "Acceso",
-                ["Iniciar sesión", "Olvidé mi contraseña"],
+                ["login", "recover"],
                 horizontal=True,
                 label_visibility="collapsed",
+                format_func=lambda m: "Iniciar sesión" if m == "login" else "Olvidé mi contraseña",
+                key="mc_auth_mode_radio",
             )
 
-            if modo_auth == "Iniciar sesión":
+            if modo_auth == "login":
                 st.session_state.pop(_SESSION_RECOVER_FLASH, None)
                 _sec_tip = texto_ayuda_proteccion()
                 if _sec_tip:
@@ -482,13 +496,15 @@ def render_login():
                 _rec_tip = texto_ayuda_proteccion()
                 if _rec_tip:
                     st.caption(_rec_tip)
-                _qtok = _obtener_pwreset_desde_query()
-                if _qtok and len(_qtok) > 24:
-                    st.session_state.setdefault("mc_pwreset_token", _qtok)
+                token_precargado = bool(str(st.session_state.get("mc_pwreset_token", "")).strip())
 
                 st.markdown(
                     f"**Recuperación por correo** · Contraseña nueva: mínimo **{password_min_length()}** caracteres."
                 )
+                if st.session_state.pop("_mc_pwreset_link_detected", False):
+                    st.success(
+                        "Detectamos el enlace de recuperación del correo. Ya podés definir la nueva contraseña."
+                    )
                 if not smtp_config_ok():
                     st.warning(
                         "El envío de correo no está configurado (SMTP en secretos). "
@@ -591,7 +607,12 @@ def render_login():
 
                 st.divider()
                 st.markdown("##### 2 · Definir nueva contraseña")
-                st.caption("Abrí el enlace del correo o pegá el token aquí, elegí una clave nueva y guardá.")
+                if token_precargado:
+                    st.caption(
+                        "Abriste el enlace del correo. El token ya está cargado: solo elegí la nueva contraseña y guardá."
+                    )
+                else:
+                    st.caption("Abrí el enlace del correo o pegá el token aquí, elegí una clave nueva y guardá.")
                 with st.form("recover_set_password", clear_on_submit=True):
                     rec_tok = st.text_input(
                         "Token de recuperación (o pegá el enlace completo y borrá lo demás)",
@@ -600,14 +621,7 @@ def render_login():
                     rec_pass_a = st.text_input("Nueva contraseña", type="password")
                     rec_pass_b = st.text_input("Repetir nueva contraseña", type="password")
                     if st.form_submit_button("Guardar nueva contraseña", use_container_width=True):
-                        tok_raw = (rec_tok or "").strip()
-                        if "pwreset=" in tok_raw:
-                            try:
-                                tok_raw = unquote(
-                                    tok_raw.split("pwreset=", 1)[-1].split("&")[0].split("#")[0]
-                                )
-                            except Exception:
-                                pass
+                        tok_raw = extraer_token_restablecimiento_desde_texto(rec_tok)
                         if not tok_raw:
                             st.warning("Pegá el token del correo o usá el enlace que te enviamos.")
                             st.stop()
@@ -665,6 +679,18 @@ def render_login():
                                                     )
                                                     guardar_datos()
                                                     log_event("auth", "password_reset_via_email_token_ok")
+                                                    email_confirmacion = obtener_email_usuario(user_data2)
+                                                    if email_confirmacion:
+                                                        ok_ping, _err_ping = (
+                                                            enviar_correo_confirmacion_cambio_password(
+                                                                str(email_confirmacion).strip(),
+                                                                str(user_data2.get("nombre") or uk),
+                                                            )
+                                                        )
+                                                        if ok_ping:
+                                                            st.info(
+                                                                "También te enviamos una confirmación de seguridad a tu correo."
+                                                            )
                                                     _auth_strip_pwreset_query_param()
                                                     st.session_state.pop("mc_pwreset_token", None)
                                                     st.success(
