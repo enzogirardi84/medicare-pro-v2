@@ -82,7 +82,8 @@ cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(
     core_utils,
     "es_control_total",
-    lambda rol: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"},
+    lambda rol, usuario_actual=None: str(rol or "").strip().lower()
+    in {"superadmin", "admin", "coordinador", "administrativo"},
 )
 inicializar_db_state = core_utils.inicializar_db_state
 mapa_detalles_pacientes = getattr(
@@ -751,7 +752,7 @@ for _k in ("rol", "perfil_profesional", "empresa", "nombre", "email", "pin"):
         _merged[_k] = _canon[_k]
 _merged.setdefault("nombre", "Usuario sin nombre")
 _merged.setdefault("empresa", "Clinica General")
-_merged.setdefault("rol", "Administrativo")
+_merged.setdefault("rol", "Operativo")
 st.session_state["u_actual"] = _merged
 user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
@@ -761,7 +762,7 @@ if not isinstance(user, dict) or not user:
 completar_claves_db_session()
 
 mi_empresa = str(user.get("empresa", "Clinica General") or "Clinica General")
-rol = str(user.get("rol", "Administrativo") or "Administrativo")
+rol = str(user.get("rol", "Operativo") or "Operativo")
 logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
 try:
     logo_sidebar_b64 = (

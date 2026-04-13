@@ -771,7 +771,7 @@ def verificar_clinica_sesion_activa():
         vaciar_datos_app_en_sesion()
         st.warning(
             "El acceso de tu clinica fue suspendido mientras tenias sesion abierta. "
-            "Coordinadores, operativos y administrativos no pueden usar la app hasta la reactivacion. "
+            "Coordinadores y operativos (incluye personal de gestion) no pueden usar la app hasta la reactivacion. "
             "Volvete a intentar cuando te confirmen que el servicio fue rehabilitado."
         )
         st.rerun()

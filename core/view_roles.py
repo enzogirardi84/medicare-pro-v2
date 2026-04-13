@@ -2,8 +2,7 @@
 Acceso por modulo (vista) alineado a la matriz de roles del documento de producto.
 
 Roles en codigo: SuperAdmin, Admin (se normaliza a SuperAdmin al cargar), Coordinador,
-Operativo, Medico, Enfermeria, Administrativo, Auditoria.
-La columna "Administrador" del documento = Administrativo aqui.
+Operativo (incluye la antigua cuenta Administrativo), Medico, Enfermeria, Auditoria.
 Medico y Enfermeria siguen la columna Operativo en modulos clinicos.
 """
 
@@ -15,23 +14,22 @@ COORD = "Coordinador"
 OPER = "Operativo"
 MED = "Medico"
 ENF = "Enfermeria"
-ADM = "Administrativo"
 AUD = "Auditoria"
 
 # Columna Operativo Si, Administrador No (clinica sin backoffice financiero en esa fila)
 _ROL_CLINICA: List[str] = [COORD, OPER, MED, ENF]
 
-# Las cuatro columnas con Si
-_ROL_TODOS: List[str] = [COORD, OPER, MED, ENF, ADM]
+# Coordinador + Operativo + equipo asistencial
+_ROL_TODOS: List[str] = [COORD, OPER, MED, ENF]
 
-# Coordinador + Administrador (Dashboard, cierre, RRHH, asistencia, inventario no)
-_ROL_COORD_ADM: List[str] = [COORD, ADM]
+# Coordinador + Operativo (Dashboard, cierre, RRHH, Mi Equipo, etc.)
+_ROL_COORD_OPER: List[str] = [COORD, OPER]
 
 # Solo Coordinador (gestion de equipo; SuperAdmin hace bypass aparte)
 _ROL_COORD: List[str] = [COORD]
 
-# Solo Administrativo (Inventario / Stock en el documento)
-_ROL_SOLO_ADM: List[str] = [ADM]
+# Inventario / stock: Operativo (antes rol Administrativo)
+_ROL_SOLO_OPER: List[str] = [OPER]
 
 # Auditoria + quienes llevan control clínico/ legal
 _ROL_AUDITORIA: List[str] = [COORD, AUD]
@@ -82,7 +80,7 @@ MODULO_ORDEN_MENU: tuple[str, ...] = (
 # Una entrada por cada clave en main.VIEW_CONFIG
 MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Visitas y Agenda": list(_ROL_TODOS),
-    "Dashboard": list(_ROL_COORD_ADM),
+    "Dashboard": list(_ROL_COORD_OPER),
     # Solo SuperAdmin / Admin (bypass en tiene_acceso_vista); lista vacia = nadie mas
     "Clinicas (panel global)": [],
     "Admision": list(_ROL_TODOS),
@@ -93,7 +91,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Materiales": list(_ROL_TODOS),
     "Recetas": list(_ROL_CLINICA),
     "Balance": list(_ROL_CLINICA),
-    "Inventario": list(_ROL_SOLO_ADM),
+    "Inventario": list(_ROL_SOLO_OPER),
     "Caja": list(_ROL_TODOS),
     "Emergencias y Ambulancia": list(_ROL_CLINICA),
     "Alertas app paciente": list(_ROL_CLINICA),
@@ -102,12 +100,12 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Historial": list(_ROL_CLINICA) + [AUD],
     "PDF": list(_ROL_TODOS) + [AUD],
     "Telemedicina": list(_ROL_CLINICA),
-    "Cierre Diario": list(_ROL_COORD_ADM),
-    # Coordinador + Administrativo: ver equipo; bajas/suspension solo segun listas blancas en Mi equipo (no Operativo).
-    "Mi Equipo": list(_ROL_COORD_ADM),
-    "Asistencia en Vivo": list(_ROL_COORD_ADM),
-    "RRHH y Fichajes": list(_ROL_COORD_ADM),
-    "Proyecto y Roadmap": list(_ROL_COORD_ADM),
+    "Cierre Diario": list(_ROL_COORD_OPER),
+    # Coordinador + Operativo: ver equipo; bajas/suspension solo segun listas blancas en Mi equipo.
+    "Mi Equipo": list(_ROL_COORD_OPER),
+    "Asistencia en Vivo": list(_ROL_COORD_OPER),
+    "RRHH y Fichajes": list(_ROL_COORD_OPER),
+    "Proyecto y Roadmap": list(_ROL_COORD_OPER),
     "Auditoria": list(_ROL_AUDITORIA),
     "Auditoria Legal": list(_ROL_AUDITORIA),
 }

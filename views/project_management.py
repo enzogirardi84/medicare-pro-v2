@@ -282,7 +282,7 @@ def render_project_management(mi_empresa, user=None, rol=None):
     with tab_roles:
         st.markdown("#### Roles dentro de MediCare Enterprise PRO")
         st.caption(
-            "Columna **Administrador** = rol `Administrativo` en codigo. "
+            "Columna **Administrador** = hoy unificada en rol **Operativo** (perfil de gestion en ficha). "
             "El menu y el acceso por modulo siguen `MODULO_ROLES_PERMITIDOS` en `core/view_roles.py` (alineado a esta matriz). "
             "El **plan de enfermeria** (UPP, caidas, incidentes) esta integrado en **Evolucion** como pestaña; no hay modulo separado en el menu. "
             "Acciones finas (recetas, PDF, etc.) en `ACTION_ROLE_RULES` en `core/utils.py`. "

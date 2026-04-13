@@ -39,11 +39,11 @@ def test_normalizar_usuario_recupera_rol_clinico_legacy():
     assert usuario["perfil_profesional"] == "Medico"
 
 
-def test_menu_operativo_legacy_no_hereda_modulos_administrativos():
+def test_menu_operativo_perfil_asistencial_no_hereda_modulos_gestion():
     menu = obtener_modulos_permitidos(
-        "Administrativo",
+        "Operativo",
         ["Visitas y Agenda", "Recetas", "Caja", "Dashboard"],
-        {"rol": "Administrativo", "perfil_profesional": "Operativo"},
+        {"rol": "Operativo", "perfil_profesional": "Operativo"},
     )
 
     assert "Visitas y Agenda" in menu
@@ -54,8 +54,13 @@ def test_menu_operativo_legacy_no_hereda_modulos_administrativos():
 
 def test_multiclinica_solo_para_roles_globales():
     assert rol_ve_datos_todas_las_clinicas("SuperAdmin") is True
-    assert rol_ve_datos_todas_las_clinicas("Administrativo") is False
+    assert rol_ve_datos_todas_las_clinicas("Operativo") is False
     assert rol_ve_datos_todas_las_clinicas("Coordinador") is False
+
+
+def test_normalizar_usuario_migra_administrativo_a_operativo():
+    u = normalizar_usuario_sistema({"rol": "Administrativo", "perfil_profesional": "Administrativo"})
+    assert u["rol"] == "Operativo"
 
 
 def test_historia_pdf_degrada_bien_sin_reportlab(monkeypatch):

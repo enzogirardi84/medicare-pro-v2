@@ -6,14 +6,17 @@ import streamlit as st
 
 
 def _tips_por_rol(rol: str) -> list[str]:
+    from core.utils import es_control_total
+
     r = str(rol or "").strip().lower()
+    user = st.session_state.get("u_actual")
     if r in {"superadmin", "admin"}:
         return [
             "Revisá el **Dashboard** y el panel **Clínicas** para el estado de la red.",
             "Altas y correcciones de legajos en **Admisión**; permisos del equipo en **Mi Equipo**.",
             "**Auditoría** y **Auditoría Legal** centralizan rastros para soporte y cumplimiento.",
         ]
-    if r in {"coordinador", "administrativo"}:
+    if r in {"coordinador", "administrativo"} or (r == "operativo" and es_control_total(rol, user)):
         return [
             "**Visitas y Agenda** + **Asistencia en vivo** para coordinar el día.",
             "**Admisión** para pacientes; **RRHH** para fichajes y reportes.",

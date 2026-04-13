@@ -486,9 +486,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 u_rl = st.selectbox(
                     "Rol en el sistema",
                     (
-                        ["Administrativo", "Coordinador", "SuperAdmin"]
+                        ["Operativo", "Coordinador", "SuperAdmin"]
                         if rol_normalizado == "superadmin"
-                        else ["Administrativo", "Coordinador"]
+                        else ["Operativo", "Coordinador"]
                     ),
                 )
                 st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")

@@ -107,7 +107,7 @@ def reactivar_clinica(session_state: dict, key_norm: str) -> None:
 
 
 def contar_usuarios_por_clinica(session_state: dict) -> Dict[str, Dict[str, Any]]:
-    """Devuelve mapa norm_key -> {total, coordinadores, operativos, administrativos, logins: [...]}."""
+    """Devuelve mapa norm_key -> {total, coordinadores, operativos, logins: [...]}."""
     out: Dict[str, Dict[str, Any]] = {}
     for login, u in (session_state.get("usuarios_db") or {}).items():
         if not isinstance(u, dict):
@@ -126,7 +126,6 @@ def contar_usuarios_por_clinica(session_state: dict) -> Dict[str, Dict[str, Any]
                 "total": 0,
                 "coordinadores": 0,
                 "operativos": 0,
-                "administrativos": 0,
                 "logins": [],
             }
         bucket = out[k]
@@ -134,9 +133,7 @@ def contar_usuarios_por_clinica(session_state: dict) -> Dict[str, Dict[str, Any]
         bucket["logins"].append(str(login))
         if rol == "coordinador":
             bucket["coordinadores"] += 1
-        elif rol == "administrativo":
-            bucket["administrativos"] += 1
-        elif rol in {"operativo", "medico", "enfermeria", "auditoria"}:
+        elif rol in {"operativo", "administrativo", "medico", "enfermeria", "auditoria"}:
             bucket["operativos"] += 1
         else:
             bucket["operativos"] += 1

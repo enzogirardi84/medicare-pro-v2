@@ -52,7 +52,7 @@ def render_auditoria(mi_empresa, user):
             ("CSV / PDF", "Descarga de logs en CSV; PDF opcional en asistencia."),
         ]
     )
-    st.info("Consulta completa de movimientos del sistema. Visible para SuperAdmin, Coordinador y Administrativo.")
+    st.info("Consulta completa de movimientos del sistema. Visible para SuperAdmin, Coordinador y perfiles con acceso de gestion.")
     st.caption(
         "Elegi la seccion abajo: **Logs** son eventos de login y uso; **Asistencia** cruza profesional con fichadas de **Visitas**."
     )

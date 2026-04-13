@@ -127,7 +127,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
             unavailable_message="Excel no disponible en este equipo.",
         )
     else:
-        col_d2.caption("Excel reservado a perfiles administrativos o de auditoria.")
+        col_d2.caption("Excel reservado a rol Operativo (gestion) o Auditoria.")
     if puede_exportar_respaldo:
         _render_lazy_download(
             col_d3,

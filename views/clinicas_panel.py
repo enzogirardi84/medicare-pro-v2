@@ -133,15 +133,14 @@ def render_clinicas_panel(mi_empresa, user, rol):
             continue
         nombre = str(reg.get("nombre_display") or key_norm).strip() or key_norm
         estado = str(reg.get("estado", "Activa") or "Activa")
-        c = conteos.get(key_norm, {"total": 0, "coordinadores": 0, "operativos": 0, "administrativos": 0})
+        c = conteos.get(key_norm, {"total": 0, "coordinadores": 0, "operativos": 0})
         filas_resumen.append(
             {
                 "Clinica": nombre,
                 "Estado": estado,
                 "Usuarios": c["total"],
                 "Coordinadores": c["coordinadores"],
-                "Operativos / clinica": c["operativos"],
-                "Administrativos": c["administrativos"],
+                "Operativos (clinica y gestion)": c["operativos"],
                 "Motivo baja": reg.get("motivo_baja", "") or "",
                 "Actualizado": reg.get("actualizado_en", "") or "",
                 "_key": key_norm,
@@ -246,7 +245,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
                 "Reactivacion de clinica",
                 nombre,
                 key_norm,
-                "Servicio habilitado nuevamente. Accesos restaurados para coordinadores, operativos y administrativos.",
+                "Servicio habilitado nuevamente. Accesos restaurados para coordinadores y operativos.",
             )
             guardar_datos()
             st.success(f"Clinica reactivada: {nombre}.")

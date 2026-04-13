@@ -17,7 +17,6 @@ from PIL import Image, ImageOps
 # Zona horaria fija para Argentina
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador", "administrativo"}
 SESSION_KEY_MODO_LIVIANO = "modo_celular_viejo"
 PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
 PASSWORD_HASH_ITERATIONS = 390000
@@ -79,11 +78,11 @@ ACTION_ROLE_RULES = {
     "recetas_cargar_papel": ["Operativo", "Enfermeria", "Medico"],
     "recetas_registrar_dosis": ["Operativo", "Enfermeria", "Medico"],
     "recetas_cambiar_estado": ["Medico"],
-    "pdf_exportar_historia": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
-    "pdf_exportar_excel": ["Administrativo", "Auditoria"],
-    "pdf_exportar_respaldo": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
+    "pdf_exportar_historia": ["Operativo", "Enfermeria", "Medico", "Auditoria"],
+    "pdf_exportar_excel": ["Operativo", "Auditoria"],
+    "pdf_exportar_respaldo": ["Operativo", "Enfermeria", "Medico", "Auditoria"],
     "pdf_guardar_consentimiento": ["Operativo", "Enfermeria", "Medico"],
-    "pdf_descargar_consentimiento": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
+    "pdf_descargar_consentimiento": ["Operativo", "Enfermeria", "Medico", "Auditoria"],
     "evolucion_registrar": ["Operativo", "Enfermeria", "Medico"],
     "evolucion_borrar": ["Medico"],
     "estudios_registrar": ["Operativo", "Enfermeria", "Medico"],
@@ -107,7 +106,24 @@ MODULO_ALIAS = {
 }
 
 PERMISOS_MODULOS = {
-    "administrativo": [
+    # Perfil asistencial (Medico, Enfermeria, Operativo): menu acotado a lo clinico.
+    "operativo_clinico": [
+        "Visitas",
+        "Clinica",
+        "Pediatria",
+        "Evolucion",
+        "Estudios",
+        "Materiales",
+        "Recetas",
+        "Emergencias",
+        "Escalas",
+        "Historial",
+        "PDF",
+        "Telemedicina",
+        "Cierre",
+    ],
+    # Perfil de gestion (Administrativo, Coordinacion, Direccion en ficha): backoffice + equipo.
+    "operativo_gestion": [
         "Dashboard",
         "Admision",
         "Materiales",
@@ -122,20 +138,21 @@ PERMISOS_MODULOS = {
         "RRHH",
         "Legal",
     ],
-    "operativo": [
-        "Visitas",
-        "Clinica",
-        "Pediatria",
-        "Evolucion",
-        "Estudios",
+    # Auditoria: mismo alcance de modulos que la antigua columna administrativa.
+    "auditoria": [
+        "Dashboard",
+        "Admision",
         "Materiales",
-        "Recetas",
-        "Emergencias",
-        "Escalas",
+        "Balance",
+        "Inventario",
+        "Caja",
+        "Red",
         "Historial",
         "PDF",
-        "Telemedicina",
-        "Cierre",
+        "Equipo",
+        "Asistencia",
+        "RRHH",
+        "Legal",
     ],
 }
 
@@ -253,12 +270,10 @@ def normalizar_usuario_sistema(data):
             usuario["rol"] = "Medico"
         elif perfil_normalizado == "enfermeria":
             usuario["rol"] = "Enfermeria"
-        elif perfil_normalizado == "operativo":
-            usuario["rol"] = "Operativo"
         else:
-            usuario["rol"] = "Administrativo"
+            usuario["rol"] = "Operativo"
     elif not str(usuario.get("rol", "") or "").strip():
-        usuario["rol"] = "Administrativo"
+        usuario["rol"] = "Operativo"
 
     usuario["pass"] = obtener_password_usuario(usuario)
     pin_actual = obtener_pin_usuario(usuario)
@@ -289,17 +304,17 @@ def clave_menu_usuario(rol_actual, usuario_actual=None):
     rol_normalizado = _texto_normalizado(rol_actual or (usuario_actual or {}).get("rol"))
     if rol_normalizado in {"superadmin", "admin", "coordinador"}:
         return rol_normalizado
-    if rol_normalizado in {"medico", "enfermeria", "operativo"}:
-        return "operativo"
     if rol_normalizado == "auditoria":
-        return "administrativo"
-
-    if rol_normalizado == "administrativo":
+        return "auditoria"
+    if rol_normalizado in {"medico", "enfermeria"}:
+        return "operativo_clinico"
+    if rol_normalizado in {"operativo", "administrativo"}:
         perfil_normalizado = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
         if not perfil_normalizado and isinstance(usuario_actual, dict):
             perfil_normalizado = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
         if perfil_normalizado in {"operativo", "medico", "enfermeria"}:
-            return "operativo"
+            return "operativo_clinico"
+        return "operativo_gestion"
 
     return rol_normalizado
 
@@ -375,20 +390,18 @@ def _permiso_estricto_lista_o_global(rol_actual, roles_permitidos):
     return _permiso_estricto_lista_roles(rol_actual, roles_permitidos)
 
 
-# Lista cerrada: ni Administrativo ni "Admin" legacy (solo SuperAdmin y Coordinador).
+# Lista cerrada: ni Operativo asistencial ni "Admin" legacy (solo SuperAdmin y Coordinador).
 ROLES_PUEDEN_ELIMINAR_USUARIO_MI_EQUIPO = frozenset({"superadmin", "coordinador"})
 # Suspender/reactivar usuario en Mi equipo: misma lista blanca que eliminar.
 ROLES_PUEDEN_SUSPENDER_REACTIVAR_MI_EQUIPO = frozenset({"superadmin", "coordinador"})
 # Quien puede intentar suspender/eliminar otro usuario (reglas de fila aparte en la misma funcion).
 ROLES_ACTOR_GESTION_BAJA_USUARIO_MI_EQUIPO = frozenset({"superadmin", "admin", "coordinador"})
 # Denegacion explicita ademas de la lista blanca (defensa ante datos o sesiones inconsistentes).
-ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO = frozenset(
-    {"administrativo", "operativo", "medico", "enfermeria", "auditoria"}
-)
+ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO = frozenset({"operativo", "medico", "enfermeria", "auditoria"})
 
 
 def puede_eliminar_cuenta_equipo(rol_actual) -> bool:
-    """Solo SuperAdmin y Coordinador. Administrativo, Operativo y cualquier ot rol: False (lista blanca, sin ambiguedad con 'Admin')."""
+    """Solo SuperAdmin y Coordinador. Operativo, Medico y demas: False (lista blanca, sin ambiguedad con 'Admin')."""
     r = _texto_normalizado(rol_actual)
     if r in ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO:
         return False
@@ -396,7 +409,7 @@ def puede_eliminar_cuenta_equipo(rol_actual) -> bool:
 
 
 def puede_suspender_reactivar_usuario_mi_equipo(rol_actual) -> bool:
-    """Solo SuperAdmin y Coordinador. Administrativo, Operativo, etc.: sin botones de suspension."""
+    """Solo SuperAdmin y Coordinador. Operativo y demas: sin botones de suspension."""
     r = _texto_normalizado(rol_actual)
     if r in ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO:
         return False
@@ -457,7 +470,7 @@ def actor_puede_modificar_usuario_equipo(rol_actor, empresa_actor, data_usuario_
     """
     - SuperAdmin/Admin global: suspender/eliminar según reglas de cuenta global (solo SuperAdmin toca otra global).
     - Coordinador: suspender/eliminar solo usuarios de su empresa, nunca cuentas globales.
-    - Cualquier otro rol (Administrativo, Operativo, variantes de texto, etc.): no suspender ni eliminar desde Mi equipo.
+    - Cualquier otro rol (Operativo, Medico, variantes de texto, etc.): no suspender ni eliminar desde Mi equipo.
     """
     r = _texto_normalizado(rol_actor)
     if not isinstance(data_usuario_objetivo, dict):
@@ -578,6 +591,33 @@ def decodificar_base64_seguro(raw):
         return b""
 
 
+def es_control_total(rol_actual, usuario_actual=None):
+    """
+    Multiclínica / altas / ciertos paneles: coordinacion y gestion.
+    Operativo con perfil asistencial (Medico, Enfermeria, Operativo) queda fuera.
+    """
+    if usuario_actual is None:
+        try:
+            usuario_actual = st.session_state.get("u_actual")
+        except Exception:
+            usuario_actual = None
+    r = str(rol_actual or "").strip().lower()
+    if r in {"superadmin", "admin", "coordinador"}:
+        return True
+    if r == "administrativo":
+        return True
+    if r == "operativo":
+        if not isinstance(usuario_actual, dict):
+            return False
+        p = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
+        if not p:
+            p = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
+        if p in {"medico", "enfermeria", "operativo"}:
+            return False
+        return True
+    return False
+
+
 def descripcion_acceso_rol(rol_actual, usuario_actual=None):
     rol_normalizado = str(rol_actual or "").strip().lower()
     if rol_normalizado in {"superadmin", "admin"}:
@@ -585,19 +625,17 @@ def descripcion_acceso_rol(rol_actual, usuario_actual=None):
     if rol_normalizado == "coordinador":
         return "Acceso total a la operacion, horarios, auditoria y control del equipo."
     if rol_normalizado == "administrativo":
-        return "Acceso total al sistema con foco administrativo, operativo y de control."
+        return "Acceso de gestion y operacion (rol historico; se muestra como Operativo en el sistema)."
+    if rol_normalizado == "operativo":
+        if es_control_total(rol_actual, usuario_actual):
+            return "Acceso de gestion, facturacion, equipo y operacion de la clinica."
+        return "Acceso asistencial: registro clinico del paciente y modulos segun tu perfil profesional."
     descripciones = {
         "medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
         "enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
-        "operativo": "Acceso asistencial limitado al registro clinico del paciente.",
-        "administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
         "auditoria": "Acceso de control, revision y trazabilidad legal.",
     }
     return descripciones.get(rol_normalizado, "Acceso configurado segun el rol asignado.")
-
-
-def es_control_total(rol_actual):
-    return str(rol_actual or "").strip().lower() in ROL_ADMIN_TOTAL
 
 
 def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None, usuario_actual=None):
