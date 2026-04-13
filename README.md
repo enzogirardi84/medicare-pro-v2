@@ -21,6 +21,17 @@ Instalar dependencias:
 pip install -r requirements.txt
 ```
 
+### Desarrollo y tests (opcional)
+
+Para ejecutar la suite de pruebas en local o alinear con GitHub Actions:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+En produccion (Streamlit Cloud, Render) solo se usa `requirements.txt`.
+
 ## Ejecucion local
 
 ```bash
@@ -57,6 +68,8 @@ con variables como:
 ```toml
 SUPABASE_URL="https://TU-PROYECTO.supabase.co"
 SUPABASE_KEY="TU_KEY"
+# URL publica HTTPS sin barra final (SEO, canonical, redireccion apex→www)
+SITE_URL="https://www.tu-dominio.com"
 ```
 
 Si Supabase no esta configurado, la app funciona en modo local.
