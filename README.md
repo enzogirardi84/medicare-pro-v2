@@ -5,11 +5,10 @@ Sistema de gestion clinica y domiciliaria en Streamlit.
 ## Modulos principales
 
 - Admision y pacientes
-- Clinica, evolucion y signos vitales
+- Clinica, evolucion y signos vitales (plan de enfermeria integrado en Evolucion)
 - Recetas con firma y trazabilidad legal
 - Estudios y adjuntos
 - Emergencias y ambulancia
-- Enfermeria y plan de cuidados
 - Escalas clinicas
 - PDF, consentimientos y respaldo clinico
 - RRHH, fichajes y auditoria

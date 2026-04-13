@@ -284,7 +284,7 @@ def render_project_management(mi_empresa, user=None, rol=None):
         st.caption(
             "Columna **Administrador** = rol `Administrativo` en codigo. "
             "El menu y el acceso por modulo siguen `MODULO_ROLES_PERMITIDOS` en `core/view_roles.py` (alineado a esta matriz). "
-            "La app incluye el modulo **Enfermeria y plan de cuidados** como clinica (misma logica que Signos vitales). "
+            "El **plan de enfermeria** (UPP, caidas, incidentes) esta integrado en **Evolucion** como pestaña; no hay modulo separado en el menu. "
             "Acciones finas (recetas, PDF, etc.) en `ACTION_ROLE_RULES` en `core/utils.py`. "
             "[Documento fuente](%s)."
             % DOC_URL

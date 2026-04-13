@@ -237,7 +237,7 @@ def _render_plan_cuidados_enfermeria_legacy(
         mostrar_dataframe_con_scroll(resumen_df, height=420)
 
 
-def render_enfermeria(paciente_sel, mi_empresa, user):
+def render_enfermeria(paciente_sel, mi_empresa, user, *, compact=False):
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -247,33 +247,47 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
     registros_ordenados = sorted(registros, key=lambda x: x.get("fecha", ""), reverse=True)
     ultimo_registro = registros_ordenados[0]["fecha"] if registros_ordenados else "Sin datos"
 
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Enfermería y documentación clínica</h2>
-            <p class="mc-hero-text">El registro narrativo de evolución, cambios del paciente y <strong>fotos de heridas o lesiones</strong> se carga en
-            <strong>Evolución</strong>, donde documentan todos los profesionales (médicos, enfermería, operativos). Este menú conserva solo un
-            <strong>plan de cuidados estructurado</strong> opcional (riesgo UPP, caídas, incidentes) si su institución lo separa del texto libre.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">→ Evolución: notas + fotos</span>
-                <span class="mc-chip">Opcional: plan UPP / caídas</span>
-                <span class="mc-chip">Historial PDF sin cambios</span>
+    if not compact:
+        st.markdown(
+            """
+            <div class="mc-hero">
+                <h2 class="mc-hero-title">Enfermería y documentación clínica</h2>
+                <p class="mc-hero-text">El registro narrativo de evolución, cambios del paciente y <strong>fotos de heridas o lesiones</strong> se carga en
+                <strong>Evolución</strong>, donde documentan todos los profesionales (médicos, enfermería, operativos). Este menú conserva solo un
+                <strong>plan de cuidados estructurado</strong> opcional (riesgo UPP, caídas, incidentes) si su institución lo separa del texto libre.</p>
+                <div class="mc-chip-row">
+                    <span class="mc-chip">→ Evolución: notas + fotos</span>
+                    <span class="mc-chip">Opcional: plan UPP / caídas</span>
+                    <span class="mc-chip">Historial PDF sin cambios</span>
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
-    st.info(
-        "**Usá el módulo Evolución** en el menú lateral para informar cambios clínicos, curaciones en texto y **fotografías** "
-        "(cámara o archivo). Elegí plantilla **Enfermería** o **Heridas**; la línea de tiempo de imágenes queda al final de esa pantalla.",
-        icon="📋",
-    )
+        st.info(
+            "**Usá la pestaña Evolución clínica** para notas, curaciones en texto y **fotografías** "
+            "(plantillas Enfermería o Heridas). Acá solo el **plan estructurado** (UPP, caídas, incidentes).",
+            icon="📋",
+        )
 
-    with st.expander(
-        "Plan de cuidados estructurado — opcional (UPP, caídas, incidentes, datos ya cargados en el sistema)",
-        expanded=bool(registros),
-    ):
+        with st.expander(
+            "Plan de cuidados estructurado — opcional (UPP, caídas, incidentes, datos ya cargados en el sistema)",
+            expanded=bool(registros),
+        ):
+            _render_plan_cuidados_enfermeria_legacy(
+                paciente_sel,
+                mi_empresa,
+                user,
+                registros,
+                registros_ordenados,
+                detalles,
+                ultimo_registro,
+            )
+    else:
+        st.caption(
+            "Plan estructurado opcional: UPP, caídas, incidentes. Las notas y fotos van en la pestaña **Evolución clínica**."
+        )
         _render_plan_cuidados_enfermeria_legacy(
             paciente_sel,
             mi_empresa,

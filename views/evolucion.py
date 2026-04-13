@@ -1,6 +1,5 @@
 import base64
 import html
-import io
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -72,15 +71,7 @@ def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_ifra
     components.html(doc, height=altura_iframe_px, scrolling=False)
 
 
-def render_evolucion(paciente_sel, user, rol=None):
-    if not paciente_sel:
-        aviso_sin_paciente()
-        return
-
-    rol = rol or user.get("rol", "")
-    puede_registrar = puede_accion(rol, "evolucion_registrar")
-    puede_borrar = puede_accion(rol, "evolucion_borrar")
-
+def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
     st.markdown(
         """
         <div class="mc-hero">
@@ -109,7 +100,6 @@ def render_evolucion(paciente_sel, user, rol=None):
         "Enfermería suele usar plantillas **Enfermería** o **Heridas**."
     )
 
-    firma_subida = None
     if CANVAS_DISPONIBLE:
         st.markdown("##### Firma Digital del Paciente / Familiar")
         firma_cfg = obtener_config_firma("evolucion")
@@ -160,7 +150,7 @@ def render_evolucion(paciente_sel, user, rol=None):
                 st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
     else:
         st.warning("Libreria de firma no disponible. Puedes subir una imagen de la firma.")
-        firma_subida = st.file_uploader(
+        st.file_uploader(
             "Subir imagen de la firma",
             type=["png", "jpg", "jpeg"],
             key="firma_upload_evolucion_sin_canvas",
@@ -309,6 +299,20 @@ def render_evolucion(paciente_sel, user, rol=None):
                     except Exception:
                         st.warning("No se pudo mostrar una foto registrada.")
 
-    st.divider()
-    with st.expander("Ventana de Enfermería (plan estructurado)", expanded=False):
-        render_enfermeria(paciente_sel, user.get("empresa", ""), user)
+
+def render_evolucion(paciente_sel, user, rol=None):
+    if not paciente_sel:
+        aviso_sin_paciente()
+        return
+
+    rol = rol or user.get("rol", "")
+    puede_registrar = puede_accion(rol, "evolucion_registrar")
+    puede_borrar = puede_accion(rol, "evolucion_borrar")
+
+    st.markdown("## Evolución y cuidados clínicos")
+    tab_clinica, tab_enfermeria = st.tabs(["Evolución clínica", "Plan de enfermería"])
+    with tab_clinica:
+        _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar)
+    with tab_enfermeria:
+        mi_empresa = str(user.get("empresa") or "").strip() or "Clinica General"
+        render_enfermeria(paciente_sel, mi_empresa, user, compact=True)
