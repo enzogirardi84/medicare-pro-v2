@@ -2,7 +2,9 @@ import copy
 import hashlib
 import json
 import time
+from contextlib import nullcontext
 from pathlib import Path
+from typing import Optional
 
 import streamlit as st
 
@@ -20,6 +22,9 @@ LOCAL_TENANTS_DIR = LOCAL_DB_DIR / "tenants"
 
 # Aviso si el JSON serializado supera esto (no corta el guardado; solo log + toast ocasional)
 PAYLOAD_ALERTA_BYTES = 9 * 1024 * 1024
+
+# Rendimiento multiclínica: con USE_TENANT_SHARDS en secrets, cada clínica tiene su fila/datos
+# en Supabase (o JSON local por tenant_key), reduciendo tamaño por request y riesgo de timeout.
 
 
 def modo_shard_activo() -> bool:
@@ -435,16 +440,27 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     return None
 
 
-def guardar_datos():
-    """Anticolapso: un fallo inesperado no debe dejar la app sin mensaje claro."""
+def guardar_datos(*, spinner: Optional[bool] = None):
+    """
+    Anticolapso: un fallo inesperado no debe dejar la app sin mensaje claro.
+
+    spinner: None = usar `GUARDAR_DATOS_SPINNER_DEFAULT` en feature_flags; False = sin spinner; True = forzar.
+    """
+    from core.feature_flags import GUARDAR_DATOS_SPINNER_DEFAULT
+
+    mostrar = GUARDAR_DATOS_SPINNER_DEFAULT if spinner is None else spinner
+    ctx = st.spinner("Guardando cambios...") if mostrar else nullcontext()
     try:
-        _guardar_datos_ejecutar()
+        with ctx:
+            _guardar_datos_ejecutar()
     except Exception as e:
         log_event("db", f"guardar_datos_fatal:{type(e).__name__}")
         st.error(
             "Error inesperado al guardar. Los datos en pantalla no se vaciaron: reintenta guardar, "
             "revisa la conexion y, si sigue igual, recarga la pagina y copia el detalle tecnico para soporte."
         )
+        with st.expander("Detalle tecnico (soporte)", expanded=False):
+            st.code(f"{type(e).__name__}: {e}", language="text")
 
 
 def _guardar_datos_ejecutar():

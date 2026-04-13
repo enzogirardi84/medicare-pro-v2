@@ -1,6 +1,5 @@
 import base64
 import sys
-import traceback
 from datetime import datetime
 from html import escape
 from importlib import import_module
@@ -37,6 +36,7 @@ REPO_ROOT = _insert_repo_root_on_path()
 import streamlit as st
 
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
+from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 
 from core.app_logging import configurar_logging_basico, log_event
 
@@ -266,8 +266,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     try:
         render_fn = getattr(import_module(module_name), function_name)
     except Exception as exc:
-        st.error(f"No se pudo cargar el modulo '{tab_name}'.")
-        st.caption(f"Detalle tecnico: {type(exc).__name__}: {exc}")
+        render_carga_modulo_fallo(tab_name, exc)
         return
 
     try:
@@ -327,17 +326,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
             render_fn(mi_empresa, user)
     except Exception as exc:
         log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
-        st.error(f"Fallo al abrir el modulo **{tab_name}**. El resto del sistema puede seguir en uso.")
-        st.markdown(
-            "**Sugerencias:** volver a elegir el modulo en la barra superior, recargar la pagina (**F5**), "
-            "o cambiar de paciente si el error solo ocurre con uno. Si reaparece, envia el detalle tecnico a soporte."
-        )
-        with st.expander("Detalle tecnico (soporte o desarrollo)", expanded=False):
-            st.code(f"{type(exc).__name__}: {exc}", language="text")
-            st.code(traceback.format_exc(), language="text")
-            st.caption(
-                "Si ves **ImportError**, suele faltar instalar una dependencia en el servidor (requirements.txt)."
-            )
+        render_modulo_fallo_ui(tab_name, exc)
 
 
 def resolve_current_view(menu):
@@ -788,6 +777,10 @@ if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
 with st.sidebar:
+    st.caption(
+        "Al **volver a la publicidad** o **cerrar sesión** se borran los datos clínicos en memoria "
+        "de este navegador (recomendado en equipos compartidos)."
+    )
     if st.button("Volver a la Publicidad", use_container_width=True):
         from core.database import vaciar_datos_app_en_sesion
         from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero

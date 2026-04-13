@@ -178,3 +178,16 @@ def test_normalizar_blob_datos():
     assert _normalizar_blob_datos('{"x": 2}') == {"x": 2}
     assert _normalizar_blob_datos("[]") is None
     assert _normalizar_blob_datos([1, 2]) is None
+
+
+def test_feature_flags_exportan_claves_esperadas():
+    import core.feature_flags as ff
+
+    assert hasattr(ff, "ALERTAS_APP_PACIENTE_VISIBLE")
+    assert hasattr(ff, "GUARDAR_DATOS_SPINNER_DEFAULT")
+
+
+def test_user_feedback_importable():
+    from core.user_feedback import render_modulo_fallo_ui
+
+    assert callable(render_modulo_fallo_ui)
