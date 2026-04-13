@@ -116,7 +116,7 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
-APP_BUILD_TAG = "Build 2026-04-13 landing_refinada + changelog"
+APP_BUILD_TAG = "Build 2026-04-14 landing st.html (evita bloque codigo Markdown)"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -478,7 +478,13 @@ if not st.session_state.entered_app:
         unsafe_allow_html=True,
     )
 
-    st.markdown(obtener_html_landing_publicidad(logo_html), unsafe_allow_html=True)
+    # st.markdown + HTML masivo puede mostrarse como bloque de codigo (GFM) en Streamlit 1.5x;
+    # st.html inserta el fragmento sin pasar por el parser Markdown.
+    _landing_html = obtener_html_landing_publicidad(logo_html)
+    if hasattr(st, "html"):
+        st.html(_landing_html, width="stretch")
+    else:
+        st.markdown(_landing_html, unsafe_allow_html=True)
     if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
