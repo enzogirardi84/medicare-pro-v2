@@ -338,8 +338,8 @@ def _guardar_administracion_medicacion(
 
 def _construir_matriz_registro_24h(plan_dia_df):
     """
-    Una fila por dosis planificada del día; columnas 00:00–23:00 y A demanda.
-    True = ya administrada, False = pendiente (tildable), pd.NA = no aplica.
+    Una fila por medicación; columnas 00:00–23:00 y A demanda.
+    Valores de celda: Pendiente / Realizada / No realizada / "" (no aplica).
     """
     horas_mar = [f"{h:02d}:00" for h in range(24)]
     if plan_dia_df.empty:
@@ -355,7 +355,13 @@ def _construir_matriz_registro_24h(plan_dia_df):
         freq = str(r.get("Frecuencia", "") or "").strip() or "S/D"
         detalle = str(r.get("Detalle / velocidad", "") or "").strip()
         hp = str(r.get("Hora programada", "") or "").strip()
-        estado_ok = str(r.get("Estado", "") or "").strip() == "Realizada"
+        estado_txt = str(r.get("Estado", "") or "").strip().lower()
+        if "realizada" in estado_txt and "no realizada" not in estado_txt:
+            estado_valor = "Realizada"
+        elif "no realizada" in estado_txt or "suspendida" in estado_txt:
+            estado_valor = "No realizada"
+        else:
+            estado_valor = "Pendiente"
 
         fila_key = (med, via, freq, detalle)
         if fila_key not in row_by_key:
@@ -366,8 +372,8 @@ def _construir_matriz_registro_24h(plan_dia_df):
                 "Detalle": detalle,
             }
             for h in horas_mar:
-                row_dict[h] = pd.NA
-            row_dict["A demanda"] = pd.NA
+                row_dict[h] = ""
+            row_dict["A demanda"] = ""
             row_by_key[fila_key] = len(matriz_registro_rows)
             matriz_registro_rows.append(row_dict)
 
@@ -378,14 +384,28 @@ def _construir_matriz_registro_24h(plan_dia_df):
         if hp.lower() == "a demanda":
             col = "A demanda"
             valor_actual = row_dict[col]
-            row_dict[col] = estado_ok if pd.isna(valor_actual) else bool(valor_actual) or estado_ok
+            if not valor_actual:
+                row_dict[col] = estado_valor
+            elif "Pendiente" in {valor_actual, estado_valor}:
+                row_dict[col] = "Pendiente"
+            elif "No realizada" in {valor_actual, estado_valor}:
+                row_dict[col] = "No realizada"
+            else:
+                row_dict[col] = "Realizada"
         else:
             partes = hp.split(":")
             if len(partes) >= 2 and str(partes[0]).strip().isdigit():
                 col = f"{int(str(partes[0]).strip()) % 24:02d}:00"
                 if col in row_dict:
                     valor_actual = row_dict[col]
-                    row_dict[col] = estado_ok if pd.isna(valor_actual) else bool(valor_actual) or estado_ok
+                    if not valor_actual:
+                        row_dict[col] = estado_valor
+                    elif "Pendiente" in {valor_actual, estado_valor}:
+                        row_dict[col] = "Pendiente"
+                    elif "No realizada" in {valor_actual, estado_valor}:
+                        row_dict[col] = "No realizada"
+                    else:
+                        row_dict[col] = "Realizada"
 
         if col:
             matriz_registro_map.setdefault((mat_idx, col), []).append(
@@ -1705,16 +1725,22 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             columnas_mar = ["Medicacion", "Via", "Frecuencia"] + horas_mar + ["A demanda"]
             matriz_registro_df = pd.DataFrame(matriz_registro_rows)
             matriz_registro_df = matriz_registro_df[columnas_mar]
-            for hora_col in horas_mar + ["A demanda"]:
-                matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
+            estado_celda_opciones = ["", "Pendiente", "Realizada", "No realizada"]
 
             column_config = {
                 "Medicacion": st.column_config.TextColumn("Medicacion", width="large"),
                 "Via": st.column_config.TextColumn("Via", width="small"),
                 "Frecuencia": st.column_config.TextColumn("Frecuencia", width="small"),
             }
+            # Referencia visual para carga rápida de enfermería.
+            st.markdown("🟩 **Realizada** · 🟥 **No realizada** (requiere motivo) · 🟨 **Pendiente**")
             for hora_col in horas_mar + ["A demanda"]:
-                column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
+                column_config[hora_col] = st.column_config.SelectboxColumn(
+                    hora_col,
+                    options=estado_celda_opciones,
+                    required=False,
+                    width="small",
+                )
 
             editor_mar_df = st.data_editor(
                 matriz_registro_df,
@@ -1724,23 +1750,26 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 column_config=column_config,
                 key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
             )
+            motivo_no_realizada = st.text_input(
+                "Motivo clínico para celdas en rojo (No realizada)",
+                placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica...",
+                key=f"motivo_no_realizada_mar_{paciente_sel}_{fecha_hoy}",
+            )
 
             if st.button(
-                "Guardar tildes de cortina",
+                "Guardar estados de cortina",
                 width="stretch",
                 key=f"guardar_mar_{paciente_sel}_{fecha_hoy}",
             ):
                 registros_guardados = 0
+                requiere_motivo = False
                 for row_idx in range(len(editor_mar_df)):
                     for hora_col in horas_mar + ["A demanda"]:
-                        original_valor = matriz_registro_df.at[row_idx, hora_col]
-                        nuevo_valor = editor_mar_df.at[row_idx, hora_col]
-
-                        if pd.isna(original_valor):
+                        original_valor = str(matriz_registro_df.at[row_idx, hora_col] or "").strip()
+                        nuevo_valor = str(editor_mar_df.at[row_idx, hora_col] or "").strip()
+                        if not original_valor and not nuevo_valor:
                             continue
-                        if bool(original_valor):
-                            continue
-                        if pd.isna(nuevo_valor) or not bool(nuevo_valor):
+                        if nuevo_valor == "" or nuevo_valor == original_valor:
                             continue
 
                         metas = matriz_registro_map.get((row_idx, hora_col), [])
@@ -1753,23 +1782,42 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             if not nombre_med:
                                 continue
 
-                            _guardar_administracion_medicacion(
-                                paciente_sel,
-                                mi_empresa,
-                                user,
-                                nombre_med,
-                                fecha_hoy,
-                                horario_sel,
-                                "Realizada",
-                            )
+                            if nuevo_valor == "Realizada":
+                                _guardar_administracion_medicacion(
+                                    paciente_sel,
+                                    mi_empresa,
+                                    user,
+                                    nombre_med,
+                                    fecha_hoy,
+                                    horario_sel,
+                                    "Realizada",
+                                )
+                            elif nuevo_valor == "No realizada":
+                                if not str(motivo_no_realizada or "").strip():
+                                    requiere_motivo = True
+                                    continue
+                                _registrar_administracion_dosis(
+                                    paciente_sel,
+                                    mi_empresa,
+                                    user,
+                                    fecha_hoy,
+                                    nombre_med,
+                                    horario_sel,
+                                    "No realizada / Suspendida",
+                                    str(motivo_no_realizada or "").strip(),
+                                    hora_real_admin=None,
+                                )
                             registros_guardados += 1
 
+                if requiere_motivo:
+                    st.error("Para guardar celdas en rojo, completá el motivo clínico.")
+                    return
                 if registros_guardados:
                     guardar_datos()
-                    st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina.")
+                    st.success(f"Se guardaron {registros_guardados} cambios de estado en la cortina.")
                     st.rerun()
                 else:
-                    st.info("No hay nuevos horarios tildados para guardar.")
+                    st.info("No hay cambios de estado para guardar.")
 
         if not plan_dia_df.empty:
             with st.expander("Ver tabla de referencia (opcional)", expanded=False):
