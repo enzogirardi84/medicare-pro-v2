@@ -40,6 +40,21 @@ def _widget_key_equipo(login: str, parte: str) -> str:
     return f"eq_{parte}_{slug}"
 
 
+def _validar_alta_usuario_equipo(u_id, u_pw, u_dni, u_pin, u_email) -> str | None:
+    """Validación del formulario de alta. Devuelve mensaje de error o None si puede continuar."""
+    if not u_id or not u_pw or not u_dni:
+        return "Todos los campos obligatorios deben completarse."
+    if u_pin.strip() and (len(u_pin.strip()) != 4 or not u_pin.strip().isdigit()):
+        return "Si cargas PIN, debe tener exactamente 4 digitos numericos."
+    if (pw_err := mensaje_password_no_cumple_politica(u_pw.strip())):
+        return pw_err
+    if u_email.strip() and not email_formato_aceptable(u_email.strip()):
+        return "El formato del correo electrónico no es válido."
+    if u_id.strip().lower() in st.session_state.get("usuarios_db", {}):
+        return "El usuario ya existe. Elija otro login."
+    return None
+
+
 def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> None:
     """
     Estado de clave, PIN (recuperación) y correo/2FA.
@@ -420,108 +435,105 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     tiene_rol_bajas = puede_suspender or puede_eliminar
 
     if puede_crear:
-        with st.form("equipo", clear_on_submit=True):
-            st.markdown("##### Habilitar Nuevo Usuario")
-            col_id, col_pw, col_pin = st.columns([2, 2, 1])
-            u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
-            with col_pw:
-                u_pw = st.text_input("Clave de acceso", type="password")
-                st.caption(f"Mínimo {password_min_length()} caracteres (configurable en secrets).")
-            u_pin = col_pin.text_input("PIN opcional", max_chars=4, placeholder="1234")
-
-            u_nm = st.text_input("Nombre Completo del Profesional")
-            col_dni, col_mt = st.columns(2)
-            u_dni = col_dni.text_input("DNI del Profesional")
-            u_mt = col_mt.text_input("Matricula / Matricula Profesional")
-
-            u_ti = st.selectbox(
-                "Titulo / Cargo",
-                [
-                    "Medico/a",
-                    "Lic. en Enfermeria",
-                    "Enfermero/a",
-                    "Kinesiologo/a",
-                    "Fonoaudiologo/a",
-                    "Nutricionista",
-                    "Psicologo/a",
-                    "Acompanante Terapeutico",
-                    "Trabajador/a Social",
-                    "Administrativo/a",
-                    "Otro",
-                ],
+        with st.expander("Habilitar nuevo usuario al equipo", expanded=False):
+            st.caption(
+                "Login, contraseña y DNI son obligatorios. PIN y correo opcionales según política de la clínica."
             )
-            u_pf = st.selectbox(
-                "Perfil profesional / area del equipo",
-                [
-                    "Medico",
-                    "Enfermeria",
-                    "Operativo",
-                    "Administrativo",
-                    "Coordinacion",
-                    "Direccion",
-                ],
-            )
+            with st.form("equipo", clear_on_submit=True):
+                st.markdown("##### Datos del nuevo acceso")
+                col_id, col_pw, col_pin = st.columns([2, 2, 1])
+                u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
+                with col_pw:
+                    u_pw = st.text_input("Clave de acceso", type="password")
+                    st.caption(f"Mínimo {password_min_length()} caracteres (configurable en secrets).")
+                u_pin = col_pin.text_input("PIN opcional", max_chars=4, placeholder="1234")
 
-            u_emp = st.text_input("Asignar a Clinica / Empresa", value=mi_empresa) if rol_normalizado == "superadmin" else mi_empresa
-            u_rl = st.selectbox(
-                "Rol en el sistema",
-                (
-                    ["Administrativo", "Coordinador", "SuperAdmin"]
-                    if rol_normalizado == "superadmin"
-                    else ["Administrativo", "Coordinador"]
-                ),
-            )
-            st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
-            st.caption("El ingreso normal es con login + contrasena. El correo sirve para recuperar la clave y el PIN queda opcional como respaldo.")
-            u_email = st.text_input(
-                "Correo de recuperacion",
-                placeholder="profesional@clinica.com",
-            )
+                u_nm = st.text_input("Nombre Completo del Profesional")
+                col_dni, col_mt = st.columns(2)
+                u_dni = col_dni.text_input("DNI del Profesional")
+                u_mt = col_mt.text_input("Matricula / Matricula Profesional")
 
-            if st.form_submit_button("Habilitar Acceso", use_container_width=True, type="primary"):
-                if not u_id or not u_pw or not u_dni:
-                    st.error("Todos los campos obligatorios deben completarse.")
-                elif u_pin.strip() and (len(u_pin.strip()) != 4 or not u_pin.strip().isdigit()):
-                    st.error("Si cargas PIN, debe tener exactamente 4 digitos numericos.")
-                elif (pw_err := mensaje_password_no_cumple_politica(u_pw.strip())):
-                    st.error(pw_err)
-                elif u_email.strip() and not email_formato_aceptable(u_email.strip()):
-                    st.error("El formato del correo electrónico no es válido.")
-                elif u_id.strip().lower() in st.session_state["usuarios_db"]:
-                    st.error("El usuario ya existe. Elija otro login.")
-                else:
-                    uid = u_id.strip().lower()
-                    st.session_state["usuarios_db"][uid] = {
-                        "nombre": u_nm.strip(),
-                        "rol": u_rl,
-                        "titulo": u_ti,
-                        "perfil_profesional": u_pf,
-                        "empresa": u_emp.strip() if isinstance(u_emp, str) else mi_empresa,
-                        "matricula": u_mt.strip(),
-                        "dni": u_dni.strip(),
-                        "estado": "Activo",
-                        "pin": u_pin.strip(),
-                    }
-                    establecer_password_nuevo(
-                        st.session_state["usuarios_db"][uid],
-                        u_pw.strip(),
-                        rounds=bcrypt_rounds_config(),
-                    )
-                    if u_email.strip():
-                        st.session_state["usuarios_db"][uid]["email"] = u_email.strip().lower()
-                    registrar_auditoria_legal(
-                        "Equipo",
-                        "GLOBAL",
-                        "Alta de usuario",
-                        user.get("nombre", "Sistema"),
-                        user.get("matricula", ""),
-                        f"Se creo el usuario {u_id.strip().lower()} con rol {u_rl} para {u_emp.strip() if isinstance(u_emp, str) else mi_empresa}.",
-                        referencia=u_id.strip().lower(),
-                    )
-                    sincronizar_clinicas_desde_datos(st.session_state)
-                    guardar_datos()
-                    st.success(f"Usuario {u_id} habilitado correctamente.")
-                    st.rerun()
+                u_ti = st.selectbox(
+                    "Titulo / Cargo",
+                    [
+                        "Medico/a",
+                        "Lic. en Enfermeria",
+                        "Enfermero/a",
+                        "Kinesiologo/a",
+                        "Fonoaudiologo/a",
+                        "Nutricionista",
+                        "Psicologo/a",
+                        "Acompanante Terapeutico",
+                        "Trabajador/a Social",
+                        "Administrativo/a",
+                        "Otro",
+                    ],
+                )
+                u_pf = st.selectbox(
+                    "Perfil profesional / area del equipo",
+                    [
+                        "Medico",
+                        "Enfermeria",
+                        "Operativo",
+                        "Administrativo",
+                        "Coordinacion",
+                        "Direccion",
+                    ],
+                )
+
+                u_emp = st.text_input("Asignar a Clinica / Empresa", value=mi_empresa) if rol_normalizado == "superadmin" else mi_empresa
+                u_rl = st.selectbox(
+                    "Rol en el sistema",
+                    (
+                        ["Administrativo", "Coordinador", "SuperAdmin"]
+                        if rol_normalizado == "superadmin"
+                        else ["Administrativo", "Coordinador"]
+                    ),
+                )
+                st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
+                st.caption("El ingreso normal es con login + contrasena. El correo sirve para recuperar la clave y el PIN queda opcional como respaldo.")
+                u_email = st.text_input(
+                    "Correo de recuperacion",
+                    placeholder="profesional@clinica.com",
+                )
+
+                if st.form_submit_button("Habilitar Acceso", use_container_width=True, type="primary"):
+                    err_alta = _validar_alta_usuario_equipo(u_id, u_pw, u_dni, u_pin, u_email)
+                    if err_alta:
+                        st.error(err_alta)
+                    else:
+                        uid = u_id.strip().lower()
+                        st.session_state["usuarios_db"][uid] = {
+                            "nombre": u_nm.strip(),
+                            "rol": u_rl,
+                            "titulo": u_ti,
+                            "perfil_profesional": u_pf,
+                            "empresa": u_emp.strip() if isinstance(u_emp, str) else mi_empresa,
+                            "matricula": u_mt.strip(),
+                            "dni": u_dni.strip(),
+                            "estado": "Activo",
+                            "pin": u_pin.strip(),
+                        }
+                        establecer_password_nuevo(
+                            st.session_state["usuarios_db"][uid],
+                            u_pw.strip(),
+                            rounds=bcrypt_rounds_config(),
+                        )
+                        if u_email.strip():
+                            st.session_state["usuarios_db"][uid]["email"] = u_email.strip().lower()
+                        registrar_auditoria_legal(
+                            "Equipo",
+                            "GLOBAL",
+                            "Alta de usuario",
+                            user.get("nombre", "Sistema"),
+                            user.get("matricula", ""),
+                            f"Se creo el usuario {u_id.strip().lower()} con rol {u_rl} para {u_emp.strip() if isinstance(u_emp, str) else mi_empresa}.",
+                            referencia=u_id.strip().lower(),
+                        )
+                        sincronizar_clinicas_desde_datos(st.session_state)
+                        guardar_datos()
+                        st.success(f"Usuario {u_id} habilitado correctamente.")
+                        st.rerun()
     else:
         st.info("La gestion de altas de usuarios queda reservada a coordinacion y administracion total.")
 
