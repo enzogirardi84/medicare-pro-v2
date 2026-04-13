@@ -33,8 +33,26 @@ html, body, .stApp {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
+/* Scroll global: contenido largo desplaza la página (evita sensación de “colapso” sin barra). */
+html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100%;
+}
+
+.stApp {
+    min-height: 100vh;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+}
+
 body {
     color: var(--text-main) !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100%;
 }
 
 .block-container {
@@ -56,6 +74,16 @@ body {
     background:
         linear-gradient(180deg, rgba(9, 14, 26, 0.99) 0%, rgba(7, 11, 22, 0.99) 100%) !important;
     border-right: 1px solid rgba(20, 184, 166, 0.12) !important;
+}
+
+/* Sidebar: scroll interno si el listado (pacientes, alertas) supera la altura de pantalla. */
+[data-testid="stSidebar"] > div:first-child {
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 [data-testid="stSidebar"] .block-container {
@@ -1509,8 +1537,18 @@ hr {
     --mc-safe-right: env(safe-area-inset-right, 0px);
 }
 
-html {
-    scroll-behavior: smooth;
+/* Contenedor principal Streamlit: no recortar altura; el scroll vertical lo lleva body/html. */
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+section.main,
+section.main > div {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    min-height: 0;
+}
+
+[data-testid="stTabs"] {
+    overflow: visible !important;
 }
 
 .block-container {
