@@ -555,8 +555,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     compacto_equipo = modo_celular_viejo_activo(st.session_state) or anticolapso_activo()
     if compacto_equipo:
         st.caption(
-            "Vista compacta (modo celular viejo o anticolapso): fichas apiladas y ventana de lista más baja. "
-            "En PC podés desactivar «Modo celular viejo» en la barra lateral para la grilla en columnas."
+            "Vista compacta (Versión Lite automática en móvil o equipo limitado): fichas apiladas y lista más baja."
         )
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 

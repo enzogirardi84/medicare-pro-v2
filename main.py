@@ -744,7 +744,6 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
-st.session_state.setdefault("modo_celular_viejo", False)
 _canon = core_utils.normalizar_usuario_sistema(dict(user))
 _merged = dict(user)
 for _k in ("rol", "perfil_profesional", "empresa", "nombre", "email", "pin"):
@@ -798,15 +797,6 @@ with st.sidebar:
         ),
         unsafe_allow_html=True,
     )
-    st.checkbox(
-        "Modo celular viejo",
-        key="modo_celular_viejo",
-        help="Reduce listas y tablas visibles por pantalla. Complementa el **Modo anticolapso** (sidebar abajo): ambos pueden estar activos a la vez.",
-    )
-    if modo_celular_viejo_activo(st.session_state):
-        st.caption("Modo celular viejo: menos datos por vista y listas de pacientes más cortas.")
-    if anticolapso_activo_fn() and modo_celular_viejo_activo(st.session_state):
-        st.caption("Anticolapso + celular viejo: máxima prioridad a estabilidad y memoria del navegador.")
     st.divider()
 
     render_estabilidad_anticolapso_sidebar()
@@ -844,15 +834,15 @@ with st.sidebar:
         _liv_labels,
         index=_idx_liv,
         key="mc_liviano_select_ui",
-        help="Automático: detecta Android antiguo, iOS ≤12, poca RAM, ahorro de datos y cabecera Save-Data. Modo liviano reduce sombras y animaciones. Con **anticolapso** activo, queda forzado en liviano.",
+        help="Automático: adapta sombras y animaciones según el equipo (navegador, RAM, Save-Data). En móviles viejos o con poco recurso se fuerza interfaz liviana.",
         label_visibility="collapsed",
     )
     st.session_state["mc_liviano_modo"] = _liv_vals[_liv_labels.index(_pick_liv)]
     # Tras el selectbox: si anticolapso está activo, volver a fijar liviano (evita un run con modo "off").
     aplicar_politicas_anticolapso_ui()
     if anticolapso_activo_fn():
-        st.caption("**Anticolapso:** interfaz liviana fijada por política de sesión o servidor (`MC_ANTICOLAPSO`).")
-    st.caption("Si el equipo es viejo, en «Automático» se activa solo un modo más liviano.")
+        st.caption("**Estabilidad:** listas acotadas e interfaz liviana (detección automática o `MC_ANTICOLAPSO` en el servidor).")
+    st.caption("En «Automático» el aspecto se ajusta al dispositivo sin controles extra en la barra lateral.")
 
     if st.button("Cerrar Sesion", use_container_width=True):
         limpiar_sesion_app()

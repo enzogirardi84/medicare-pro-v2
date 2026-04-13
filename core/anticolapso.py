@@ -2,15 +2,16 @@
 Modo anticolapso — prioriza estabilidad del navegador y la sesión Streamlit.
 
 - Secret opcional **MC_ANTICOLAPSO** (`true` / `1` / `on`): aplica a todo el despliegue.
-- Checkbox en sidebar: anticolapso solo para la sesión actual (no borra datos).
+- Automático: mismas señales que «equipo liviano» (UA antiguo, Save-Data, etc.) vía `headers_sugieren_equipo_liviano`.
 
-Efectos: menos filas en el selector de pacientes sin búsqueda, y **UI liviana** forzada
-(misma idea que «Modo liviano siempre» en Rendimiento).
+Efectos: menos filas en el selector de pacientes sin búsqueda, y **UI liviana** forzada.
 """
 
 from __future__ import annotations
 
 import streamlit as st
+
+from core.ui_liviano import headers_sugieren_equipo_liviano
 
 LIMITE_PACIENTES_SIDEBAR_NORMAL = 80
 LIMITE_PACIENTES_SIDEBAR_ANTICOLAPSO = 40
@@ -30,12 +31,8 @@ def anticolapso_por_secret() -> bool:
         return False
 
 
-def anticolapso_por_sesion() -> bool:
-    return bool(st.session_state.get("mc_anticolapso_sesion"))
-
-
 def anticolapso_activo() -> bool:
-    return anticolapso_por_secret() or anticolapso_por_sesion()
+    return anticolapso_por_secret() or headers_sugieren_equipo_liviano()
 
 
 def limite_pacientes_sidebar() -> int:
@@ -44,7 +41,7 @@ def limite_pacientes_sidebar() -> int:
 
 def aplicar_politicas_anticolapso_ui() -> None:
     """
-    Fuerza interfaz liviana cuando anticolapso está activo.
+    Fuerza interfaz liviana cuando anticolapso está activo (secret o detección automática).
 
     Llamar al inicio del sidebar **y de nuevo después** del `selectbox` de modo liviano,
     para que un intento de «modo completo» no deje `mc_liviano_modo` en `off` durante ese run.
@@ -54,27 +51,8 @@ def aplicar_politicas_anticolapso_ui() -> None:
 
 
 def render_estabilidad_anticolapso_sidebar() -> None:
-    st.markdown(
-        """
-        <div class="mc-sidebar-section">
-            <div class="mc-sidebar-kicker">Estabilidad</div>
-            <div class="mc-sidebar-title">Modo anticolapso</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """Sin UI manual: solo aviso si el despliegue fuerza anticolapso por secret."""
     if anticolapso_por_secret():
         st.caption(
-            "Anticolapso **fijado por el servidor** (secret `MC_ANTICOLAPSO`): "
-            f"hasta **{LIMITE_PACIENTES_SIDEBAR_ANTICOLAPSO}** pacientes sin busqueda e interfaz liviana."
+            "Estabilidad **forzada por servidor** (`MC_ANTICOLAPSO`): listas acotadas e interfaz liviana."
         )
-    else:
-        st.checkbox(
-            "Activar anticolapso esta sesion",
-            key="mc_anticolapso_sesion",
-            help="Reduce pacientes visibles sin filtro y fuerza interfaz liviana para equipos lentos o conexiones inestables.",
-        )
-        if anticolapso_por_sesion():
-            st.caption(
-                f"Activo en esta sesion: maximo **{LIMITE_PACIENTES_SIDEBAR_ANTICOLAPSO}** pacientes sin escribir en el buscador."
-            )

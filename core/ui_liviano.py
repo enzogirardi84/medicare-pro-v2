@@ -52,6 +52,17 @@ def user_agent_sugiere_equipo_liviano(user_agent: str) -> bool:
     return False
 
 
+def user_agent_desde_contexto() -> str:
+    try:
+        ctx = getattr(st, "context", None)
+        if ctx is None:
+            return ""
+        headers = getattr(ctx, "headers", None)
+        return _get_header(headers, "user-agent")
+    except Exception:
+        return ""
+
+
 def headers_sugieren_equipo_liviano() -> bool:
     try:
         ctx = getattr(st, "context", None)
@@ -67,6 +78,40 @@ def headers_sugieren_equipo_liviano() -> bool:
         return user_agent_sugiere_equipo_liviano(ua)
     except Exception:
         return False
+
+
+def user_agent_es_telefono_movil_probable(user_agent: str) -> bool:
+    """
+    PC de escritorio → False. Teléfonos (iPhone, Android típico) → True.
+    Tablets: heurística conservadora (muchas usan UA tipo desktop en iPadOS).
+    """
+    if not user_agent:
+        return False
+    u = user_agent.lower()
+    if "ipad" in u or "tablet" in u:
+        return False
+    if "iphone" in u or "ipod" in u:
+        return True
+    if "android" in u:
+        if "mobile" in u:
+            return True
+        # Tablets Android a veces sin "Mobile"; modelos comunes tablet en UA
+        if any(x in u for x in ("sm-t", "gt-p", "tab-", " lenovo tb-", " huawei mediapad")):
+            return False
+        return True
+    if "windows phone" in u or "blackberry" in u:
+        return True
+    return False
+
+
+def datos_compactos_por_cliente_sugerido() -> bool:
+    """
+    Sustituye el checkbox «Modo celular viejo»: listas/tablas más cortas en Python
+    cuando el cliente parece móvil o el servidor detecta equipo limitado (UA/Save-Data).
+    """
+    if headers_sugieren_equipo_liviano():
+        return True
+    return user_agent_es_telefono_movil_probable(user_agent_desde_contexto())
 
 
 def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:

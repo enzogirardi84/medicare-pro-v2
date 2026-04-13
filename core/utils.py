@@ -500,11 +500,22 @@ def bloqueo_autoservicio_suspension_baja(login_actor, login_objetivo, rol_actor)
 
 
 def modo_celular_viejo_activo(session_state=None):
+    """
+    Versión Lite (datos compactos en Python): automático por UA/cabeceras en sesión real.
+    Si se pasa un dict ajeno a st.session_state (p. ej. tests), se usa la clave legada `modo_celular_viejo`.
+    """
     state = session_state if session_state is not None else st.session_state
     try:
-        return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
+        if state is not st.session_state:
+            return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
+        from core.ui_liviano import datos_compactos_por_cliente_sugerido
+
+        return datos_compactos_por_cliente_sugerido()
     except Exception:
-        return False
+        try:
+            return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
+        except Exception:
+            return False
 
 
 def valor_por_modo_liviano(valor_normal, valor_liviano, session_state=None):
