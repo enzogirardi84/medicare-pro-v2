@@ -55,8 +55,10 @@ _DEBOUNCE_GUARDAR_LOGS_CLINICA_SEC = 60.0
 
 # Mensajes genéricos ante fallo (no distinguir usuario inexistente vs contraseña incorrecta).
 MSG_LOGIN_CREDENCIALES_FALLIDAS = (
-    "No pudimos validar el acceso. Revisá usuario, contraseña y empresa "
-    "(en modo multiclínica). Si olvidaste la clave, usá «Olvidé mi contraseña»."
+    "No pudimos validar el acceso. Revisá **usuario** y **contraseña** "
+    "(no el PIN de 4 dígitos ni el DNI, salvo que esa sea la clave que te asignaron). "
+    "En **multiclínica**, el nombre de **Empresa / Clínica** debe coincidir con Mi equipo. "
+    "Si olvidaste la clave, usá «Olvidé mi contraseña» con tu PIN."
 )
 MSG_RECOVER_DATOS_INVALIDOS = (
     "No pudimos validar los datos. Revisá usuario, empresa y correo registrado, e intentá de nuevo."
@@ -276,6 +278,11 @@ def render_login():
                 _sec_tip = texto_ayuda_proteccion()
                 if _sec_tip:
                     st.caption(_sec_tip)
+                st.caption(
+                    "En este paso usás **usuario + contraseña**. El **PIN** de 4 dígitos solo se usa en "
+                    "«Olvidé mi contraseña» para definir una clave nueva. La contraseña no es el DNI salvo que "
+                    "tu clínica te haya configurado la cuenta así."
+                )
                 with st.form("login", clear_on_submit=True):
                     if modo_shard_activo():
                         st.caption(
@@ -288,7 +295,11 @@ def render_login():
                     else:
                         empresa_login = ""
                     u = st.text_input("Usuario")
-                    p = st.text_input("Contrasena", type="password")
+                    p = st.text_input(
+                        "Contrasena",
+                        type="password",
+                        help="Clave de acceso asignada o definida por tu clínica; no el PIN de 4 dígitos ni el DNI, salvo que esa sea tu clave.",
+                    )
                     if st.form_submit_button("Ingresar al Sistema", use_container_width=True):
                         if not u.strip() or not p.strip():
                             _auth_set_flash(
@@ -357,12 +368,38 @@ def render_login():
                                                     "la gestion la hace MediCare desde el panel global de clinicas."
                                                 )
                                             else:
-                                                _completar_login_exitoso(
-                                                    user_data,
-                                                    u_limpio,
-                                                    "Login",
-                                                    "login_ok",
-                                                )
+                                                if requiere_2fa_correo(user_data):
+                                                    if migrar_hash:
+                                                        guardar_datos()
+                                                    ok_send, err_send = iniciar_desafio_login(
+                                                        str(user_data.get("email") or "").strip(),
+                                                        usuario_encontrado,
+                                                        u_limpio,
+                                                    )
+                                                    if ok_send:
+                                                        st.info(
+                                                            "Te enviamos un código de 6 dígitos. Revisá tu correo y completá el paso siguiente."
+                                                        )
+                                                        st.rerun()
+                                                    st.error(err_send)
+                                                else:
+                                                    # 2FA por correo solo si el usuario tiene email válido (requiere_2fa_correo).
+                                                    # Sin email en ficha el ingreso es con contraseña para no bloquear cuentas históricas.
+                                                    if (
+                                                        login_email_2fa_enabled()
+                                                        and smtp_config_ok()
+                                                        and not usuario_email_2fa_valido(user_data)
+                                                    ):
+                                                        log_event(
+                                                            "auth",
+                                                            "login_ok_2fa_omitido_sin_email_en_ficha",
+                                                        )
+                                                    _completar_login_exitoso(
+                                                        user_data,
+                                                        u_limpio,
+                                                        "Login",
+                                                        "login_ok",
+                                                    )
                                         else:
                                             if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
                                                 DEFAULT_ADMIN_USER["pass"]

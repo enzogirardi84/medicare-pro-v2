@@ -1,7 +1,7 @@
 name: medicare_paciente_alerta
 description: App paciente — alerta clinica con ubicacion para integrar con MediCare 2 Pro.
 publish_to: "none"
-version: 0.1.0+1
+version: 0.1.12+13
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -13,6 +13,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   geolocator: ^13.0.2
   http: ^1.2.2
+  package_info_plus: ^8.1.2
   shared_preferences: ^2.3.3
   url_launcher: ^6.3.1
   wakelock_plus: ^1.2.8

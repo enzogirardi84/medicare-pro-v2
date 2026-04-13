@@ -382,6 +382,54 @@ hr {
     color: #dcfce7;
 }
 
+/* Mi equipo: pings de seguridad por usuario (clave, PIN, 2FA) */
+.mc-ping-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.15rem;
+    align-items: center;
+}
+
+.mc-ping {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    cursor: default;
+    white-space: nowrap;
+}
+
+.mc-ping-ok {
+    background: rgba(22, 101, 52, 0.35);
+    border-color: rgba(74, 222, 128, 0.4);
+    color: #bbf7d0;
+}
+
+.mc-ping-warn {
+    background: rgba(133, 77, 14, 0.38);
+    border-color: rgba(250, 204, 21, 0.45);
+    color: #fef9c3;
+}
+
+.mc-ping-bad {
+    background: rgba(127, 29, 29, 0.42);
+    border-color: rgba(248, 113, 113, 0.45);
+    color: #fecaca;
+}
+
+.mc-ping-muted {
+    background: rgba(71, 85, 105, 0.25);
+    border-color: rgba(148, 163, 184, 0.25);
+    color: #cbd5e1;
+}
+
 .mc-grid-3 {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

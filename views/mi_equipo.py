@@ -1,9 +1,11 @@
+import re
 from html import escape
 
 import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
 from core.database import guardar_datos
+from core.email_2fa import login_email_2fa_enabled, smtp_config_ok, usuario_email_2fa_valido
 from core.input_validation import email_formato_aceptable
 from core.password_crypto import (
     bcrypt_rounds_config,
@@ -11,7 +13,6 @@ from core.password_crypto import (
     mensaje_password_no_cumple_politica,
     password_min_length,
 )
-from core.view_helpers import bloque_mc_grid_tarjetas
 from core.utils import (
     actor_puede_modificar_usuario_equipo,
     bloqueo_autoservicio_suspension_baja,
@@ -29,6 +30,73 @@ from core.utils import (
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
+from core.view_helpers import bloque_mc_grid_tarjetas
+
+
+def _widget_key_equipo(login: str, parte: str) -> str:
+    """Claves estables para widgets Streamlit (login puede tener espacios)."""
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", str(login or "").strip()).strip("_") or "user"
+    return f"eq_{parte}_{slug}"
+
+
+def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> None:
+    """
+    Estado de clave, PIN (recuperación) y correo/2FA. Sin HTML: en Cloud y dentro de
+    `st.container(height=...)` el markdown con `unsafe_allow_html` a veces no se ve bien.
+    El PIN en claro solo si quien mira puede gestionar ese usuario (SuperAdmin / Coordinador de la clínica).
+    """
+    ph = str(d.get("pass_hash") or "").strip()
+    pw = str(d.get("pass") or "").strip()
+    tiene_clave = bool(ph or pw)
+    pin = str(d.get("pin") or "").strip()
+    pin_ok = len(pin) == 4 and pin.isdigit()
+
+    st.caption(
+        "**Clave de acceso:** "
+        + ("asignada" if tiene_clave else "sin clave (alta o «Olvidé mi contraseña»)")
+    )
+
+    if puede_ver_pin:
+        if pin_ok:
+            st.info(
+                f"**PIN de recuperación (4 dígitos):** `{pin}`  \n"
+                "Compartilo con el usuario si olvidó la contraseña: en la pantalla de acceso debe elegir "
+                "**«Olvidé mi contraseña»**, ingresar **usuario**, **empresa** y este **PIN**, y definir una clave nueva."
+            )
+        elif not pin:
+            st.warning(
+                "**Sin PIN de recuperación.** El usuario no puede usar «Olvidé mi contraseña» hasta que definas "
+                "un PIN de 4 dígitos (alta de usuario o edición en ficha si agregás ese campo)."
+            )
+        else:
+            st.warning("**PIN inválido:** debe ser exactamente **4 dígitos numéricos**.")
+    else:
+        if pin_ok:
+            st.caption(
+                "**PIN:** configurado (oculto). Un **SuperAdmin** o **Coordinador** con permiso de gestión ve el valor aquí."
+            )
+        else:
+            st.caption("**PIN:** sin definir o inválido.")
+
+    if login_email_2fa_enabled() and smtp_config_ok():
+        if usuario_email_2fa_valido(d):
+            st.caption("**2FA correo:** listo (código al iniciar sesión).")
+        else:
+            em = str(d.get("email") or "").strip()
+            if em:
+                st.caption("**2FA correo:** correo cargado pero formato no válido para envío.")
+            else:
+                st.caption("**2FA correo:** sin correo — ingreso solo con contraseña hasta cargar email.")
+    else:
+        em_ok = bool(str(d.get("email") or "").strip()) and email_formato_aceptable(
+            str(d.get("email") or "").strip()
+        )
+        if em_ok:
+            st.caption("**Correo:** OK (verificación por correo desactivada en el servidor).")
+        elif str(d.get("email") or "").strip():
+            st.caption("**Correo:** formato no válido.")
+        else:
+            st.caption("**Correo:** sin cargar.")
 
 
 def render_mi_equipo(mi_empresa, rol, user=None):
@@ -195,6 +263,11 @@ def render_mi_equipo(mi_empresa, rol, user=None):
 
     st.subheader("Control de Accesos")
     st.caption(
+        "**Seguridad por usuario:** debajo de cada nombre, **SuperAdmin** y **Coordinador** (misma clínica) ven el "
+        "**PIN** en un recuadro azul y pueden abrir **Coordinación: nueva contraseña y/o PIN** para asignar clave "
+        "o actualizar el PIN. El PIN solo sirve en la pantalla de acceso, opción «Olvidé mi contraseña»."
+    )
+    st.caption(
         "**Suspender / Reactivar / Eliminar:** **SuperAdmin** o **Coordinador** en su clinica "
         "(sin cuentas globales). **Administrativo**, **Operativo** y roles clinicos: no ven suspension ni baja en esta grilla."
     )
@@ -255,11 +328,78 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         f"Login: {u} | Rol sistema: {d.get('rol', 'S/D')} | "
                         f"Perfil: {perfil_usuario} | Titulo: {d.get('titulo', 'S/D')} | DNI: {d.get('dni', 'S/D')}"
                     )
-                    st.caption(
-                        f"Acceso: login {u} | correo recuperacion: {email_actual or 'Sin correo'} | "
-                        f"PIN opcional: {pin_actual or 'No configurado'} | "
-                        f"Clave: {'Configurada' if clave_configurada else 'Pendiente'}"
-                    )
+                    _render_pings_seguridad_usuario(d, puede_ver_pin=ok_gestionar)
+                    if ok_gestionar:
+                        with st.expander("Coordinación: nueva contraseña y/o PIN", expanded=False):
+                            st.caption(
+                                "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos "
+                                "para que el usuario use «Olvidé mi contraseña» por su cuenta."
+                            )
+                            ch_pin = st.text_input(
+                                "PIN de recuperación (4 dígitos, opcional)",
+                                max_chars=4,
+                                key=_widget_key_equipo(u, "ch_pin"),
+                                placeholder="Ej. 4821",
+                            )
+                            ch_pw = st.text_input(
+                                "Nueva contraseña (opcional si solo actualizás PIN)",
+                                type="password",
+                                key=_widget_key_equipo(u, "ch_pw"),
+                            )
+                            ch_pw2 = st.text_input(
+                                "Repetir contraseña",
+                                type="password",
+                                key=_widget_key_equipo(u, "ch_pw2"),
+                            )
+                            if st.button("Guardar", key=_widget_key_equipo(u, "ch_btn"), use_container_width=True):
+                                pin_l = str(ch_pin).strip()
+                                pw_l = str(ch_pw).strip()
+                                pw2_l = str(ch_pw2).strip()
+                                if pin_l and (len(pin_l) != 4 or not pin_l.isdigit()):
+                                    st.error("El PIN debe ser exactamente 4 dígitos numéricos.")
+                                elif not pw_l and not pin_l:
+                                    st.error("Completá una nueva contraseña o un PIN para guardar.")
+                                elif pw_l and pw_l != pw2_l:
+                                    st.error("Las contraseñas no coinciden.")
+                                elif pw_l:
+                                    msg_pw = mensaje_password_no_cumple_politica(ch_pw)
+                                    if msg_pw:
+                                        st.error(msg_pw)
+                                    else:
+                                        if pin_l:
+                                            st.session_state["usuarios_db"][u]["pin"] = pin_l
+                                        establecer_password_nuevo(
+                                            st.session_state["usuarios_db"][u],
+                                            pw_l,
+                                            rounds=bcrypt_rounds_config(),
+                                        )
+                                        registrar_auditoria_legal(
+                                            "Equipo",
+                                            "GLOBAL",
+                                            "Cambio de contraseña por coordinacion",
+                                            user.get("nombre", "Sistema"),
+                                            user.get("matricula", ""),
+                                            f"Nueva clave asignada a {u}"
+                                            + ("; PIN actualizado." if pin_l else "."),
+                                            referencia=u,
+                                        )
+                                        guardar_datos()
+                                        st.success("Contraseña actualizada.")
+                                        st.rerun()
+                                else:
+                                    st.session_state["usuarios_db"][u]["pin"] = pin_l
+                                    registrar_auditoria_legal(
+                                        "Equipo",
+                                        "GLOBAL",
+                                        "Actualizacion PIN por coordinacion",
+                                        user.get("nombre", "Sistema"),
+                                        user.get("matricula", ""),
+                                        f"PIN de recuperacion actualizado para {u}.",
+                                        referencia=u,
+                                    )
+                                    guardar_datos()
+                                    st.success("PIN actualizado.")
+                                    st.rerun()
                     if puede_editar_mail_equipo and ok_gestionar:
                         with st.expander("Recuperacion y credenciales", expanded=False):
                             ne = st.text_input("Correo de recuperacion", value=email_actual, key=f"emp_mail_new_{u}")

@@ -115,7 +115,7 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
-APP_BUILD_TAG = "Build 2026-04-12 detalles_mapa + cierre_sesion + login_2fa_fix"
+APP_BUILD_TAG = "Build 2026-04-12 liviano_html + login_emergencia + changelog"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -457,6 +457,7 @@ verificar_clinica_sesion_activa()
 check_inactividad()
 
 user = st.session_state.get("u_actual")
+# Dict no vacío: sesiones viejas o corruptas pueden dejar None, {} o tipos inválidos.
 if not isinstance(user, dict) or not user:
     st.stop()
 
@@ -470,7 +471,9 @@ _merged.setdefault("nombre", "Usuario sin nombre")
 _merged.setdefault("empresa", "Clinica General")
 _merged.setdefault("rol", "Administrativo")
 st.session_state["u_actual"] = _merged
-user = _merged
+user = st.session_state.get("u_actual")
+if not isinstance(user, dict) or not user:
+    st.stop()
 
 mi_empresa = str(user.get("empresa", "Clinica General") or "Clinica General")
 rol = str(user.get("rol", "Administrativo") or "Administrativo")

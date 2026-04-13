@@ -7,6 +7,7 @@ from html import escape
 import pandas as pd
 import streamlit as st
 
+from core.anticolapso import anticolapso_activo
 from core.clinical_exports import build_prescription_pdf_bytes
 from core.database import guardar_datos
 from core.utils import (
@@ -977,6 +978,248 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 mostrar_dataframe_con_scroll(tabla_guardia_detallada_df, height=320)
             with st.expander("Ver resumen por indicacion"):
                 mostrar_dataframe_con_scroll(sabana_resumen_df, height=260)
+
+        if puede_registrar_dosis and matriz_registro_rows:
+            abrir_grilla_mar = st.checkbox(
+                "Mostrar grilla 24 h para marcar varias dosis (pesada en celulares; preferi el formulario abajo)",
+                value=False,
+                key=f"abrir_grilla_mar_{paciente_sel}_{fecha_hoy}",
+            )
+            if abrir_grilla_mar:
+                st.caption("Tildado rapido desde la sabana")
+                st.caption(
+                    "Marca solo los casilleros de la fila y la hora correspondiente. Al guardar se registra la hora real y el usuario."
+                )
+                columnas_mar = ["Prescripcion"] + horas_mar + ["A demanda"]
+                matriz_registro_df = pd.DataFrame(matriz_registro_rows)
+                matriz_registro_df["Prescripcion"] = matriz_registro_df.apply(
+                    lambda fila: "\n".join(
+                        [
+                            str(fila.get("Indicacion", "") or "").strip(),
+                            " | ".join(
+                                [
+                                    valor
+                                    for valor in [
+                                        str(fila.get("Via", "") or "").strip(),
+                                        str(fila.get("Frecuencia", "") or "").strip(),
+                                    ]
+                                    if valor
+                                ]
+                            ),
+                            str(fila.get("Detalle", "") or "").strip(),
+                        ]
+                    ).strip(),
+                    axis=1,
+                )
+                matriz_registro_df = matriz_registro_df[columnas_mar]
+                for hora_col in horas_mar + ["A demanda"]:
+                    matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
+
+                column_config = {
+                    "Prescripcion": st.column_config.TextColumn("Prescripcion", width="large"),
+                }
+                for hora_col in horas_mar + ["A demanda"]:
+                    column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
+
+                editor_mar_df = st.data_editor(
+                    matriz_registro_df,
+                    hide_index=True,
+                    use_container_width=True,
+                    disabled=["Prescripcion"],
+                    column_config=column_config,
+                    key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
+                )
+
+                if st.button("Guardar sabana tipo prescripcion", use_container_width=True, key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
+                    registros_guardados = 0
+                    for row_idx in range(len(editor_mar_df)):
+                        for hora_col in horas_mar + ["A demanda"]:
+                            original_valor = matriz_registro_df.at[row_idx, hora_col]
+                            nuevo_valor = editor_mar_df.at[row_idx, hora_col]
+
+                            if pd.isna(original_valor):
+                                continue
+                            if bool(original_valor):
+                                continue
+                            if pd.isna(nuevo_valor) or not bool(nuevo_valor):
+                                continue
+
+                            meta = matriz_registro_map.get((row_idx, hora_col))
+                            if not meta:
+                                continue
+
+                            nombre_med = str(meta.get("medicamento", "") or "").strip()
+                            horario_sel = str(meta.get("horario_programado", "") or "").strip()
+                            if not nombre_med:
+                                continue
+
+                            _guardar_administracion_medicacion(
+                                paciente_sel,
+                                mi_empresa,
+                                user,
+                                nombre_med,
+                                fecha_hoy,
+                                horario_sel,
+                                "Realizada",
+                            )
+                            registrar_auditoria_legal(
+                                "Medicacion",
+                                paciente_sel,
+                                "Registro de administracion desde sabana 24 hs",
+                                user.get("nombre", ""),
+                                user.get("matricula", ""),
+                                f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                            )
+                            registros_guardados += 1
+
+                    if registros_guardados:
+                        guardar_datos()
+                        st.success(f"Se guardaron {registros_guardados} administraciones desde la sabana 24 hs.")
+                        st.rerun()
+                    else:
+                        st.info("No hay nuevos horarios tildados para guardar.")
+
+        st.markdown("#### Tabla de medicacion indicada")
+        st.caption(
+            "En celular se muestran tarjetas por defecto, con **scroll interno** para no alargar toda la pagina. "
+            "La tabla ancha solo si la activas y deslizas horizontalmente."
+        )
+        if not plan_dia_df.empty:
+            df_plan_visible = pd.DataFrame(
+                {
+                    "Hora": plan_dia_df["Hora programada"],
+                    "Medicacion": plan_dia_df["Medicamento"],
+                    "Indicacion": plan_dia_df.apply(
+                        lambda fila: " | ".join(
+                            [
+                                str(fila.get("Solucion", "") or "").strip(),
+                                str(fila.get("ML/h", "") or "").strip(),
+                                str(fila.get("Detalle / velocidad", "") or "").strip(),
+                            ]
+                        ).strip(" |"),
+                        axis=1,
+                    ),
+                    "Via / Frecuencia": plan_dia_df.apply(
+                        lambda fila: " | ".join(
+                            [
+                                str(fila.get("Via", "") or "").strip(),
+                                str(fila.get("Frecuencia", "") or "").strip(),
+                            ]
+                        ).strip(" |"),
+                        axis=1,
+                    ),
+                    "Estado": plan_dia_df["Estado"],
+                    "Hora real": plan_dia_df["Hora realizada"],
+                    "Observacion": plan_dia_df["Observacion"],
+                    "Registrado por": plan_dia_df["Registrado por"],
+                }
+            )
+            mostrar_tabla_planilla = st.checkbox(
+                "Mostrar tabla ancha (deslizar horizontalmente; en iPhone suele ir mejor la vista tarjetas)",
+                value=False,
+                key=f"mostrar_tabla_plan_{paciente_sel}_{fecha_hoy}",
+            )
+            if mostrar_tabla_planilla:
+                _render_tabla_clinica(
+                    df_plan_visible,
+                    key=f"plan_{paciente_sel}",
+                    max_height=420 if not anticolapso_activo() else 320,
+                    sticky_first_col=False,
+                )
+            else:
+                _h_tarjetas_plan = 320 if anticolapso_activo() else 480
+                with st.container(height=_h_tarjetas_plan):
+                    _render_dataframe_filas_tarjetas(df_plan_visible)
+        else:
+            st.info("No hay medicacion activa cargada para mostrar en la tabla de hoy.")
+
+        if puede_registrar_dosis and not plan_dia_df.empty:
+            pendientes_df = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
+            if not pendientes_df.empty:
+                abrir_tabla_tildes = st.checkbox(
+                    "Mostrar tabla detallada para tildar dosis (muchas columnas; mejor en tablet o PC)",
+                    value=False,
+                    key=f"abrir_tabla_tildes_{paciente_sel}_{fecha_hoy}",
+                )
+                if abrir_tabla_tildes:
+                    st.caption("Tildar administracion desde la tabla")
+                    pendientes_df.insert(0, "Administrada", False)
+                    editor_columnas = ["Administrada"] + columnas_tabla
+                    editor_df = st.data_editor(
+                        pendientes_df[editor_columnas],
+                        hide_index=True,
+                        use_container_width=True,
+                        disabled=[col for col in editor_columnas if col != "Administrada"],
+                        column_config={
+                            "Administrada": st.column_config.CheckboxColumn(
+                                "Tildar",
+                                help="Marca la indicacion como realizada y guarda la hora real.",
+                                default=False,
+                            )
+                        },
+                        key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
+                    )
+
+                    if st.button(
+                        "Guardar tildes de la tabla",
+                        use_container_width=True,
+                        key=f"guardar_tildes_cortina_{paciente_sel}",
+                    ):
+                        registros_guardados = 0
+                        for idx, fila in editor_df.iterrows():
+                            if not bool(fila.get("Administrada")):
+                                continue
+
+                            horario_sel = str(fila.get("Hora programada", "") or "").strip()
+                            nombre_med = str(fila.get("Medicamento", "") or "").strip()
+                            if not nombre_med:
+                                continue
+
+                            _guardar_administracion_medicacion(
+                                paciente_sel,
+                                mi_empresa,
+                                user,
+                                nombre_med,
+                                fecha_hoy,
+                                horario_sel,
+                                "Realizada",
+                            )
+                            registrar_auditoria_legal(
+                                "Medicacion",
+                                paciente_sel,
+                                "Registro de administracion desde tabla de cortina",
+                                user.get("nombre", ""),
+                                user.get("matricula", ""),
+                                f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                            )
+                            registros_guardados += 1
+
+                        if registros_guardados:
+                            guardar_datos()
+                            st.success(f"Se guardaron {registros_guardados} administraciones desde la tabla.")
+                            st.rerun()
+                        else:
+                            st.info("Marca al menos una indicacion para guardar.")
+            else:
+                st.caption("Todas las indicaciones de hoy ya figuran como realizadas.")
+
+        if plan_hidratacion_rows:
+            st.markdown("#### Plan de hidratacion parenteral")
+            _render_tabla_clinica(
+                pd.DataFrame(plan_hidratacion_rows),
+                key=f"hidra_{paciente_sel}",
+                max_height=320,
+                sticky_first_col=False,
+            )
+
+        if sabana_resumen:
+            st.caption("Resumen operativo de indicaciones activas")
+            _render_tabla_clinica(
+                pd.DataFrame(sabana_resumen),
+                key=f"resumen_{paciente_sel}",
+                max_height=260,
+                sticky_first_col=False,
+            )
 
         if puede_registrar_dosis:
             if vista_guardia == "Compacta para celular":

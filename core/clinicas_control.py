@@ -6,11 +6,8 @@ from typing import Any, Dict, Optional
 
 import streamlit as st
 
+from core.norm_empresa import norm_empresa_key
 from core.utils import ahora, mapa_detalles_pacientes
-
-
-def norm_empresa_key(nombre: Optional[str]) -> str:
-    return str(nombre or "").strip().lower()
 
 
 def _registro_default(nombre_display: str) -> Dict[str, Any]:

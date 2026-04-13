@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
-from core.clinicas_control import norm_empresa_key
 from core.database import supabase
+from core.norm_empresa import norm_empresa_key
 from core.utils import es_control_total
 
 

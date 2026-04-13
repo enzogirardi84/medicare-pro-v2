@@ -24,7 +24,17 @@ class LocationService {
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 25),
+          timeLimit: Duration(seconds: 12),
+        ),
+      );
+    } catch (_) {
+      /* Segundo intento mas rapido y tolerante (interior / GPS debil). */
+    }
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 18),
         ),
       );
     } catch (_) {

@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 import pandas as pd
 import streamlit as st
 
-from core.clinicas_control import norm_empresa_key
+from core.norm_empresa import norm_empresa_key
 from core.database import supabase
 from core.utils import es_control_total
 

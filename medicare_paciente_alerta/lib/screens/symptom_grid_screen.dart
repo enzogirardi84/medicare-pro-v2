@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/triage_symptom.dart';
 import '../services/network_connectivity_service.dart';
 import 'countdown_send_screen.dart';
@@ -13,36 +14,59 @@ class SymptomGridScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Que sentis?'),
+        title: const Text(AppStrings.queSentis),
         leading: const BackButton(),
       ),
       body: CustomScrollView(
         slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                AppStrings.sintomasGuia,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white60),
+              ),
+            ),
+          ),
           for (final nivel in TriageNivel.values) ...[
+            if (nivel != TriageNivel.rojo)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+                  child: Divider(
+                    height: 1,
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+                  ),
+                ),
+              ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: nivel.color,
-                        borderRadius: BorderRadius.circular(3),
+                child: Semantics(
+                  header: true,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: nivel.color,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      nivel.tituloSeccion,
-                      style: TextStyle(
-                        color: nivel.color,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                        letterSpacing: 0.8,
+                      const SizedBox(width: 10),
+                      Text(
+                        nivel.tituloSeccion,
+                        style: TextStyle(
+                          color: nivel.color,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          letterSpacing: 0.8,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -57,12 +81,11 @@ class SymptomGridScreen extends StatelessWidget {
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (ctx, i) {
-                    final items = kSintomasTriage.where((s) => s.nivel == nivel).toList();
+                    final items = kSintomasPorNivel[nivel]!;
                     if (i >= items.length) return null;
-                    final s = items[i];
-                    return _SintomaCard(sintoma: s);
+                    return _SintomaCard(sintoma: items[i]);
                   },
-                  childCount: kSintomasTriage.where((s) => s.nivel == nivel).length,
+                  childCount: kSintomasPorNivel[nivel]!.length,
                 ),
               ),
             ),
@@ -81,13 +104,14 @@ class _SintomaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
     return Material(
-      color: const Color(0xFF1E293B),
+      color: surface,
       borderRadius: BorderRadius.circular(16),
       child: Semantics(
         button: true,
         label: sintoma.label,
-        hint: 'Triage ${sintoma.nivel.apiLabel}. Toca para confirmar envio',
+        hint: AppStrings.sintomaSemanticsHint(sintoma.nivel.apiLabel),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () async {
@@ -116,11 +140,10 @@ class _SintomaCard extends StatelessWidget {
                 Text(
                   sintoma.label,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    height: 1.2,
-                  ),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                      ),
                 ),
               ],
             ),

@@ -14,6 +14,8 @@ class AppSettings {
   static const _kIngestSecret = 'patient_alert_ingest_secret';
   static const _kEmpresaClave = 'empresa_clave';
   static const _kLargeText = 'large_text';
+  static const _kCountdownSec = 'countdown_seconds';
+  static const _kHighContrast = 'high_contrast';
 
   /// `api` = POST a tu servidor; `supabase` = Edge Function MediCare.
   static Future<String> getDeliveryMode() async {
@@ -185,6 +187,35 @@ class AppSettings {
   /// Factor para [MediaQuery.textScaler] (lectura comoda en adultos mayores).
   static Future<double> getTextScaleFactor() async {
     return (await getLargeText()) ? 1.22 : 1.0;
+  }
+
+  /// Segundos de cuenta regresiva antes de enviar (2-8).
+  static Future<int> getCountdownSeconds() async {
+    final p = await SharedPreferences.getInstance();
+    final v = p.getInt(_kCountdownSec);
+    if (v == null) {
+      return 3;
+    }
+    return v.clamp(2, 8);
+  }
+
+  static Future<void> setCountdownSeconds(int value) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(_kCountdownSec, value.clamp(2, 8));
+  }
+
+  static Future<bool> getHighContrast() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(_kHighContrast) ?? false;
+  }
+
+  static Future<void> setHighContrast(bool value) async {
+    final p = await SharedPreferences.getInstance();
+    if (value) {
+      await p.setBool(_kHighContrast, true);
+    } else {
+      await p.remove(_kHighContrast);
+    }
   }
 
   /// True si puede enviar alertas triage (Supabase Edge Function submit-alerta-paciente).

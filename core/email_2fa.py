@@ -262,6 +262,7 @@ def texto_ayuda_email_2fa_config() -> str | None:
             "(HOST, PASSWORD, FROM). Hasta completarlos el ingreso sigue solo con contraseña."
         )
     return (
-        "**Verificación en dos pasos** por correo: tras la contraseña te llegará un código de 6 dígitos "
-        "(tu usuario debe tener **email** cargado en Mi equipo)."
+        "**Verificación en dos pasos** por correo: si tu usuario tiene **email** cargado en Mi equipo, "
+        "tras la contraseña te pediremos un código de 6 dígitos. "
+        "Sin email en ficha, el ingreso sigue solo con contraseña hasta que coordinación cargue el correo."
     )

@@ -6,8 +6,13 @@ App **a prueba de panico** para pacientes: boton **NECESITO AYUDA**, cuadricula 
 
 1. **Inicio**: circulo rojo gigante **NECESITO AYUDA**.
 2. **Sintomas**: tarjetas por triage **Rojo / Amarillo / Verde** (riesgo de vida, urgencia, consulta).
-3. **Confirmacion**: 3…2…1…; cancelar con X o **Cancelar**.
-4. **Envio**: GPS + clasificacion a MediCare PRO.
+3. **Confirmacion**: cuenta regresiva **configurable (2–8 s)** en Ajustes; cancelar con X o **Cancelar**.
+4. **Envio**: GPS + clasificacion a MediCare PRO. Si falla la red o el servidor, la alerta queda en **cola local** (hasta 15) y se reenvia desde el inicio con **Enviar ahora**.
+
+## Accesibilidad y lectura
+
+- **Texto mas grande** y **alto contraste** en **Configuracion** (se aplican en toda la app).
+- Cola offline y cuenta regresiva se guardan en preferencias locales.
 
 ## Supabase
 
@@ -41,6 +46,10 @@ En la app (**Configuracion**): URL proyecto, clave **anon**, **secreto**, **clin
 ## PIN / login
 
 La identificacion es el **paciente_id** configurado (DNI o codigo de legajo). Un **PIN local** reforzado contra servidor puede agregarse en una siguiente iteracion.
+
+## Textos y errores de red
+
+Los mensajes que ve el paciente (sin conexion, 401, URL invalida, sintomas, etc.) estan centralizados en `lib/l10n/app_strings.dart`. Hay tests en `test/` para la cola offline, el procesador de cola, `app_settings`, `url_utils`, `format_utils`, triage, arranque de la app y la URL de Edge Function. Al enviar pendientes con exito, se actualiza **Ultima alerta** como en un envio en vivo. En inicio, el icono de ajustes muestra **badge** con la cantidad en cola. **Deslizar hacia abajo** en la pantalla principal actualiza pendientes y ultima alerta (`RefreshIndicator`). La version en ajustes se lee con **package_info_plus** desde `pubspec.yaml` al compilar (sin archivo duplicado). En escritorio/web el scroll de listas acepta arrastre con mouse gracias a `MedicareScrollBehavior`. En **Configuracion**, los campos van en un `AutofillGroup` (URL, clinica, DNI, nombre, telefono) y el teclado puede avanzar con **Siguiente** entre campos.
 
 ## Requisitos
 

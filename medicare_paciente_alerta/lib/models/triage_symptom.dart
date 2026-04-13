@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
+
 /// Nivel de triage que recibe MediCare (tabla alertas_pacientes).
 enum TriageNivel {
   rojo,
@@ -34,11 +36,11 @@ extension TriageNivelX on TriageNivel {
   String get tituloSeccion {
     switch (this) {
       case TriageNivel.rojo:
-        return 'RIESGO DE VIDA';
+        return AppStrings.triageSeccionRojo;
       case TriageNivel.amarillo:
-        return 'URGENCIA';
+        return AppStrings.triageSeccionAmarillo;
       case TriageNivel.verde:
-        return 'CONSULTA';
+        return AppStrings.triageSeccionVerde;
     }
   }
 }
@@ -57,21 +59,39 @@ class TriageSintoma {
   final IconData icon;
 }
 
+TriageNivel triageNivelDesdeEtiquetaApi(String? raw) {
+  switch ((raw ?? '').trim()) {
+    case 'Rojo':
+      return TriageNivel.rojo;
+    case 'Amarillo':
+      return TriageNivel.amarillo;
+    default:
+      return TriageNivel.verde;
+  }
+}
+
 /// Lista clinica alineada al triage de MediCare PRO.
 const List<TriageSintoma> kSintomasTriage = [
   // Rojo
-  TriageSintoma(id: 'disnea', label: 'Dificultad respiratoria', nivel: TriageNivel.rojo, icon: Icons.air),
-  TriageSintoma(id: 'dolor_pecho', label: 'Dolor de pecho', nivel: TriageNivel.rojo, icon: Icons.favorite_border),
-  TriageSintoma(id: 'perdida_conciencia', label: 'Perdida de conocimiento', nivel: TriageNivel.rojo, icon: Icons.bedtime_outlined),
-  TriageSintoma(id: 'convulsiones', label: 'Convulsiones', nivel: TriageNivel.rojo, icon: Icons.bolt),
-  TriageSintoma(id: 'anafilaxia', label: 'Reaccion alergica grave', nivel: TriageNivel.rojo, icon: Icons.warning_amber_rounded),
+  TriageSintoma(id: 'disnea', label: AppStrings.sintomaDisnea, nivel: TriageNivel.rojo, icon: Icons.air),
+  TriageSintoma(id: 'dolor_pecho', label: AppStrings.sintomaDolorPecho, nivel: TriageNivel.rojo, icon: Icons.favorite_border),
+  TriageSintoma(id: 'perdida_conciencia', label: AppStrings.sintomaPerdidaConciencia, nivel: TriageNivel.rojo, icon: Icons.bedtime_outlined),
+  TriageSintoma(id: 'convulsiones', label: AppStrings.sintomaConvulsiones, nivel: TriageNivel.rojo, icon: Icons.bolt),
+  TriageSintoma(id: 'anafilaxia', label: AppStrings.sintomaAnafilaxia, nivel: TriageNivel.rojo, icon: Icons.warning_amber_rounded),
   // Amarillo
-  TriageSintoma(id: 'caida', label: 'Caida de su altura', nivel: TriageNivel.amarillo, icon: Icons.accessible_forward),
-  TriageSintoma(id: 'herida_cortante', label: 'Herida cortante', nivel: TriageNivel.amarillo, icon: Icons.content_cut),
-  TriageSintoma(id: 'desmayo_ok', label: 'Desmayo (recuperado)', nivel: TriageNivel.amarillo, icon: Icons.self_improvement),
+  TriageSintoma(id: 'caida', label: AppStrings.sintomaCaida, nivel: TriageNivel.amarillo, icon: Icons.accessible_forward),
+  TriageSintoma(id: 'herida_cortante', label: AppStrings.sintomaHeridaCortante, nivel: TriageNivel.amarillo, icon: Icons.content_cut),
+  TriageSintoma(id: 'desmayo_ok', label: AppStrings.sintomaDesmayoOk, nivel: TriageNivel.amarillo, icon: Icons.self_improvement),
   // Verde
-  TriageSintoma(id: 'fiebre', label: 'Fiebre', nivel: TriageNivel.verde, icon: Icons.thermostat_outlined),
-  TriageSintoma(id: 'vomitos', label: 'Vomitos / nauseas', nivel: TriageNivel.verde, icon: Icons.sick_outlined),
-  TriageSintoma(id: 'dolor_general', label: 'Dolor generalizado', nivel: TriageNivel.verde, icon: Icons.healing_outlined),
-  TriageSintoma(id: 'debilidad', label: 'Debilidad generalizada', nivel: TriageNivel.verde, icon: Icons.accessibility_new),
+  TriageSintoma(id: 'fiebre', label: AppStrings.sintomaFiebre, nivel: TriageNivel.verde, icon: Icons.thermostat_outlined),
+  TriageSintoma(id: 'vomitos', label: AppStrings.sintomaVomitos, nivel: TriageNivel.verde, icon: Icons.sick_outlined),
+  TriageSintoma(id: 'dolor_general', label: AppStrings.sintomaDolorGeneral, nivel: TriageNivel.verde, icon: Icons.healing_outlined),
+  TriageSintoma(id: 'debilidad', label: AppStrings.sintomaDebilidad, nivel: TriageNivel.verde, icon: Icons.accessibility_new),
+  TriageSintoma(id: 'otro', label: AppStrings.otroSintoma, nivel: TriageNivel.verde, icon: Icons.more_horiz),
 ];
+
+/// Por nivel; se arma una sola vez al primer uso (evita `.where` en cada frame del grid).
+final Map<TriageNivel, List<TriageSintoma>> kSintomasPorNivel = {
+  for (final n in TriageNivel.values)
+    n: kSintomasTriage.where((s) => s.nivel == n).toList(growable: false),
+};

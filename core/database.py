@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from core.app_logging import log_event
-from core.clinicas_control import norm_empresa_key
+from core.norm_empresa import norm_empresa_key
 
 try:
     from supabase import create_client
