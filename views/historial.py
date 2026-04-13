@@ -26,6 +26,9 @@ LIMITES_REGISTROS = {
     "Modo liviano (200 máx)": 200,
 }
 
+# Panel con scroll interno (Streamlit): evita que Historial alargue toda la página.
+HISTORIAL_PANEL_SCROLL_PX = 680
+
 SECCIONES_TABLA = {
     "Auditoria de Presencia",
     "Visitas y Agenda",
@@ -608,214 +611,224 @@ def render_historial(paciente_sel: str) -> None:
         )
         return
 
-    total_registros = sum(len(v) for v in secciones.values())
-    ultimo = _ultimo_evento_global(secciones)
-
-    st.markdown("##### Panorama del paciente")
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Registros totales", total_registros)
-    m2.metric("Secciones con datos", len(secciones))
-    m3.metric("Último evento datado", ultimo.strftime("%d/%m/%Y %H:%M") if ultimo else "S/D")
-
-    df_cnt = pd.DataFrame([{"Sección": k, "Cantidad": len(v)} for k, v in sorted(secciones.items(), key=lambda x: -len(x[1]))])
-    st.caption("Volumen de registros por módulo")
-    st.bar_chart(df_cnt.set_index("Sección")["Cantidad"], use_container_width=True)
-
-    mostrar_tl = st.checkbox(
-        "Mostrar línea de tiempo global (mezcla de secciones)",
-        value=True,
-        key=f"hist_show_tl_{paciente_sel}",
-    )
-    if mostrar_tl:
-        filas_tl = _actividad_reciente_filas(secciones, limite_timeline)
-        if filas_tl:
-            df_tl = pd.DataFrame(filas_tl)
-            altura_tl = min(400, max(200, 40 + len(filas_tl) * 36))
-            mostrar_dataframe_con_scroll(df_tl, height=altura_tl)
-        else:
-            st.caption("No hay registros con fecha reconocible para armar la línea de tiempo.")
-
-    st.markdown("##### Búsqueda en toda la historia")
-    g_cols = st.columns([2, 1])
-    with g_cols[0]:
-        q_global = st.text_input(
-            "Texto en todas las secciones",
-            "",
-            key=f"hist_global_q_{paciente_sel}",
-            placeholder="Apellido, medicación, tipo de estudio, profesional…",
-        )
-    with g_cols[1]:
-        max_hits = st.selectbox("Máx. resultados", [20, 40, 80], index=0, key=f"hist_global_max_{paciente_sel}")
-
-    if q_global.strip():
-        hits = _busqueda_global_resultados(secciones, q_global.strip(), max_hits)
-        if not hits:
-            st.caption("No hay coincidencias en ninguna sección.")
-        else:
-            conteo_sec = Counter(h["seccion"] for h in hits)
-            top_sec, top_n = conteo_sec.most_common(1)[0]
-            st.success(
-                f"**{len(hits)}** coincidencia(s) en **{len(conteo_sec)}** sección(es). "
-                f"Mayor densidad: **{top_sec}** ({top_n})."
-            )
-            if len(conteo_sec) > 1:
-                df_dist = (
-                    pd.DataFrame(conteo_sec.most_common(), columns=["Sección", "Coincidencias"])
-                    .sort_values("Coincidencias", ascending=False)
-                    .set_index("Sección")
-                )
-                st.caption("Coincidencias por módulo")
-                st.bar_chart(df_dist, use_container_width=True, height=min(220, 40 + len(conteo_sec) * 28))
-
-            df_h = pd.DataFrame(hits).rename(
-                columns={"seccion": "Sección", "fecha": "Fecha", "resumen": "Resumen"}
-            )
-            altura_h = min(400, max(200, 40 + len(hits) * 36))
-            mostrar_dataframe_con_scroll(df_h, height=altura_h)
-            st.caption(
-                f"Tip: usá «Abrir sección» para ir a **{top_sec}** (más resultados) o elegí otra fila en el selector."
-            )
-            etiquetas = [f"{i + 1}. {h['seccion']} — {h['fecha']}" for i, h in enumerate(hits)]
-            sel_hit = st.selectbox(
-                "Ir a sección del resultado",
-                etiquetas,
-                key=f"hist_global_pick_{paciente_sel}",
-            )
-            if st.button("Abrir sección y filtrar con esta búsqueda", key=f"hist_global_go_{paciente_sel}", type="primary"):
-                idx = etiquetas.index(sel_hit)
-                destino = hits[idx]["seccion"]
-                st.session_state[f"hist_seccion_radio_{paciente_sel}"] = destino
-                st.session_state[f"hist_buscar_{paciente_sel}_{destino}"] = q_global.strip()
-                st.rerun()
-
-    st.divider()
-    st.markdown("##### Explorar por sección")
-    lista_secciones = list(secciones.keys())
-    seccion_actual = st.radio(
-        "Elegí una sección",
-        lista_secciones,
-        key=f"hist_seccion_radio_{paciente_sel}",
-        horizontal=False,
-    )
-    registros = secciones.get(seccion_actual, [])
-
-    if not registros:
-        bloque_estado_vacio(
-            "Sección vacía",
-            "Esta sección no tiene filas para mostrar.",
-            sugerencia="Elegí otra sección en el listado o verificá que existan cargas en ese módulo.",
-        )
-        return
-
-    c_opt1, c_opt2, c_opt3 = st.columns(3)
-    usar_fecha = c_opt1.checkbox(
-        "Filtrar esta sección por fechas de los registros",
-        value=False,
-        key=f"hist_use_fecha_{paciente_sel}",
-    )
-    incluir_sin_fecha = c_opt2.checkbox(
-        "Incluir registros sin fecha (si el filtro está activo)",
-        value=True,
-        key=f"hist_sin_fecha_{paciente_sel}",
-    )
-    orden_etiqueta = c_opt3.radio(
-        "Orden",
-        ["Más recientes primero", "Más antiguos primero"],
-        horizontal=True,
-        key=f"hist_orden_{paciente_sel}",
-    )
-    recientes_primero = orden_etiqueta.startswith("Más recientes")
-
-    hoy = ahora().date()
-    default_desde = hoy - timedelta(days=90)
-    if usar_fecha:
-        rango = st.date_input(
-            "Rango (fecha del registro)",
-            value=(default_desde, hoy),
-            key=f"hist_rango_fecha_{paciente_sel}_{seccion_actual}",
-        )
-        if isinstance(rango, tuple) and len(rango) == 2:
-            d_desde, d_hasta = rango[0], rango[1]
-        elif hasattr(rango, "year"):
-            d_desde = d_hasta = rango
-        else:
-            d_desde, d_hasta = default_desde, hoy
-        if d_desde > d_hasta:
-            d_desde, d_hasta = d_hasta, d_desde
-        registros_fecha = [
-            r
-            for r in registros
-            if _registro_en_rango_fechas(r, d_desde, d_hasta, incluir_sin_fecha=incluir_sin_fecha)
-        ]
-    else:
-        registros_fecha = list(registros)
-
-    buscar = st.text_input(
-        "Buscar texto en esta sección",
-        "",
-        key=f"hist_buscar_{paciente_sel}_{seccion_actual}",
-        placeholder="Profesional, medicación, detalle, estado…",
-    )
-    registros_filtrados = [r for r in registros_fecha if _registro_coincide_busqueda(r, buscar)]
-    if buscar.strip() and not registros_filtrados:
-        bloque_estado_vacio(
-            "Sin coincidencias",
-            "Ningún registro de esta sección coincide con el texto buscado.",
-            sugerencia="Probá otras palabras o limpiá el campo de búsqueda.",
-        )
-        return
-
-    registros_base = registros_filtrados if buscar.strip() else registros_fecha
-    if usar_fecha and not registros_base:
-        bloque_estado_vacio(
-            "Fuera de rango",
-            "Ningún registro cae en el rango de fechas indicado.",
-            sugerencia="Ampliá las fechas o activá «Incluir registros sin fecha» si corresponde.",
-        )
-        return
-
-    registros_ordenados = _sort_registros_por_fecha(registros_base, recientes_primero=recientes_primero)
-    total_registros_seccion = len(registros_ordenados)
-    limite_pagina = min(max(int(limite), 1), 500)
-    paginas = max((total_registros_seccion - 1) // limite_pagina + 1, 1)
-    col_pag1, col_pag2 = st.columns([2, 1])
-    col_pag1.caption(f"Tamaño de página: {limite_pagina} registro(s)")
-    pagina = col_pag2.number_input(
-        "Página de la sección",
-        min_value=1,
-        max_value=paginas,
-        value=1,
-        step=1,
-        key=f"hist_pag_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 24)}",
-    )
-    inicio = (int(pagina) - 1) * limite_pagina
-    fin = inicio + limite_pagina
-    registros_mostrar = registros_ordenados[inicio:fin]
-
     st.caption(
-        f"Mostrando {len(registros_mostrar)} de {len(registros_base)} registros en «{seccion_actual}»"
-        f" (página {int(pagina)}/{paginas})"
-        f"{f' (filtrados de {len(registros)})' if (buscar.strip() or usar_fecha) else ''}."
+        "Panel con desplazamiento vertical: panorámica, búsqueda global y detalle por sección (scroll interno)."
     )
+    with st.container(height=HISTORIAL_PANEL_SCROLL_PX, border=True):
+        total_registros = sum(len(v) for v in secciones.values())
+        ultimo = _ultimo_evento_global(secciones)
 
-    csv_bytes = _dataframe_seccion_a_csv(registros_mostrar)
-    if csv_bytes:
-        fn = f"Historia_{_nombre_archivo_seguro(paciente_sel.split('(')[0])}_{_nombre_archivo_seguro(seccion_actual, 40)}.csv"
-        st.download_button(
-            "Descargar esta vista en CSV",
-            csv_bytes,
-            file_name=fn,
-            mime="text/csv; charset=utf-8",
-            key=f"hist_csv_vista_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 30)}",
+        st.markdown("##### Panorama del paciente")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Registros totales", total_registros)
+        m2.metric("Secciones con datos", len(secciones))
+        m3.metric("Último evento datado", ultimo.strftime("%d/%m/%Y %H:%M") if ultimo else "S/D")
+    
+        df_cnt = pd.DataFrame([{"Sección": k, "Cantidad": len(v)} for k, v in sorted(secciones.items(), key=lambda x: -len(x[1]))])
+        st.caption("Volumen de registros por módulo")
+        _n_mod = len(df_cnt)
+        _h_bar = min(260, max(120, 32 * _n_mod + 72))
+        st.bar_chart(
+            df_cnt.set_index("Sección")["Cantidad"],
+            use_container_width=True,
+            height=_h_bar,
         )
+    
+        mostrar_tl = st.checkbox(
+            "Mostrar línea de tiempo global (mezcla de secciones)",
+            value=True,
+            key=f"hist_show_tl_{paciente_sel}",
+        )
+        if mostrar_tl:
+            filas_tl = _actividad_reciente_filas(secciones, limite_timeline)
+            if filas_tl:
+                df_tl = pd.DataFrame(filas_tl)
+                altura_tl = min(280, max(168, 36 + len(filas_tl) * 32))
+                mostrar_dataframe_con_scroll(df_tl, height=altura_tl)
+            else:
+                st.caption("No hay registros con fecha reconocible para armar la línea de tiempo.")
+    
+        st.markdown("##### Búsqueda en toda la historia")
+        g_cols = st.columns([2, 1])
+        with g_cols[0]:
+            q_global = st.text_input(
+                "Texto en todas las secciones",
+                "",
+                key=f"hist_global_q_{paciente_sel}",
+                placeholder="Apellido, medicación, tipo de estudio, profesional…",
+            )
+        with g_cols[1]:
+            max_hits = st.selectbox("Máx. resultados", [20, 40, 80], index=0, key=f"hist_global_max_{paciente_sel}")
+    
+        if q_global.strip():
+            hits = _busqueda_global_resultados(secciones, q_global.strip(), max_hits)
+            if not hits:
+                st.caption("No hay coincidencias en ninguna sección.")
+            else:
+                conteo_sec = Counter(h["seccion"] for h in hits)
+                top_sec, top_n = conteo_sec.most_common(1)[0]
+                st.success(
+                    f"**{len(hits)}** coincidencia(s) en **{len(conteo_sec)}** sección(es). "
+                    f"Mayor densidad: **{top_sec}** ({top_n})."
+                )
+                if len(conteo_sec) > 1:
+                    df_dist = (
+                        pd.DataFrame(conteo_sec.most_common(), columns=["Sección", "Coincidencias"])
+                        .sort_values("Coincidencias", ascending=False)
+                        .set_index("Sección")
+                    )
+                    st.caption("Coincidencias por módulo")
+                    st.bar_chart(df_dist, use_container_width=True, height=min(220, 40 + len(conteo_sec) * 28))
 
-    if seccion_actual in SECCIONES_TABLA:
-        _render_seccion_tabla(registros_mostrar, seccion_actual)
-    elif seccion_actual == "Consentimientos":
-        _render_consentimientos(registros_mostrar, paciente_sel)
-    elif seccion_actual == "Estudios Complementarios":
-        _render_estudios(registros_mostrar, paciente_sel)
-    elif seccion_actual == "Registro de Heridas":
-        _render_heridas(registros_mostrar, paciente_sel)
-    else:
-        _render_registros_genericos(registros_mostrar, seccion_actual, paciente_sel)
+                df_h = pd.DataFrame(hits).rename(
+                    columns={"seccion": "Sección", "fecha": "Fecha", "resumen": "Resumen"}
+                )
+                altura_h = min(280, max(168, 36 + len(hits) * 32))
+                mostrar_dataframe_con_scroll(df_h, height=altura_h)
+                st.caption(
+                    f"Tip: usá «Abrir sección» para ir a **{top_sec}** (más resultados) o elegí otra fila en el selector."
+                )
+                etiquetas = [f"{i + 1}. {h['seccion']} — {h['fecha']}" for i, h in enumerate(hits)]
+                sel_hit = st.selectbox(
+                    "Ir a sección del resultado",
+                    etiquetas,
+                    key=f"hist_global_pick_{paciente_sel}",
+                )
+                if st.button("Abrir sección y filtrar con esta búsqueda", key=f"hist_global_go_{paciente_sel}", type="primary"):
+                    idx = etiquetas.index(sel_hit)
+                    destino = hits[idx]["seccion"]
+                    st.session_state[f"hist_seccion_radio_{paciente_sel}"] = destino
+                    st.session_state[f"hist_buscar_{paciente_sel}_{destino}"] = q_global.strip()
+                    st.rerun()
+    
+        st.divider()
+        st.markdown("##### Explorar por sección")
+        lista_secciones = list(secciones.keys())
+        seccion_actual = st.radio(
+            "Elegí una sección",
+            lista_secciones,
+            key=f"hist_seccion_radio_{paciente_sel}",
+            horizontal=False,
+        )
+        registros = secciones.get(seccion_actual, [])
+    
+        if not registros:
+            bloque_estado_vacio(
+                "Sección vacía",
+                "Esta sección no tiene filas para mostrar.",
+                sugerencia="Elegí otra sección en el listado o verificá que existan cargas en ese módulo.",
+            )
+            return
+    
+        c_opt1, c_opt2, c_opt3 = st.columns(3)
+        usar_fecha = c_opt1.checkbox(
+            "Filtrar esta sección por fechas de los registros",
+            value=False,
+            key=f"hist_use_fecha_{paciente_sel}",
+        )
+        incluir_sin_fecha = c_opt2.checkbox(
+            "Incluir registros sin fecha (si el filtro está activo)",
+            value=True,
+            key=f"hist_sin_fecha_{paciente_sel}",
+        )
+        orden_etiqueta = c_opt3.radio(
+            "Orden",
+            ["Más recientes primero", "Más antiguos primero"],
+            horizontal=True,
+            key=f"hist_orden_{paciente_sel}",
+        )
+        recientes_primero = orden_etiqueta.startswith("Más recientes")
+    
+        hoy = ahora().date()
+        default_desde = hoy - timedelta(days=90)
+        if usar_fecha:
+            rango = st.date_input(
+                "Rango (fecha del registro)",
+                value=(default_desde, hoy),
+                key=f"hist_rango_fecha_{paciente_sel}_{seccion_actual}",
+            )
+            if isinstance(rango, tuple) and len(rango) == 2:
+                d_desde, d_hasta = rango[0], rango[1]
+            elif hasattr(rango, "year"):
+                d_desde = d_hasta = rango
+            else:
+                d_desde, d_hasta = default_desde, hoy
+            if d_desde > d_hasta:
+                d_desde, d_hasta = d_hasta, d_desde
+            registros_fecha = [
+                r
+                for r in registros
+                if _registro_en_rango_fechas(r, d_desde, d_hasta, incluir_sin_fecha=incluir_sin_fecha)
+            ]
+        else:
+            registros_fecha = list(registros)
+    
+        buscar = st.text_input(
+            "Buscar texto en esta sección",
+            "",
+            key=f"hist_buscar_{paciente_sel}_{seccion_actual}",
+            placeholder="Profesional, medicación, detalle, estado…",
+        )
+        registros_filtrados = [r for r in registros_fecha if _registro_coincide_busqueda(r, buscar)]
+        if buscar.strip() and not registros_filtrados:
+            bloque_estado_vacio(
+                "Sin coincidencias",
+                "Ningún registro de esta sección coincide con el texto buscado.",
+                sugerencia="Probá otras palabras o limpiá el campo de búsqueda.",
+            )
+            return
+    
+        registros_base = registros_filtrados if buscar.strip() else registros_fecha
+        if usar_fecha and not registros_base:
+            bloque_estado_vacio(
+                "Fuera de rango",
+                "Ningún registro cae en el rango de fechas indicado.",
+                sugerencia="Ampliá las fechas o activá «Incluir registros sin fecha» si corresponde.",
+            )
+            return
+    
+        registros_ordenados = _sort_registros_por_fecha(registros_base, recientes_primero=recientes_primero)
+        total_registros_seccion = len(registros_ordenados)
+        limite_pagina = min(max(int(limite), 1), 500)
+        paginas = max((total_registros_seccion - 1) // limite_pagina + 1, 1)
+        col_pag1, col_pag2 = st.columns([2, 1])
+        col_pag1.caption(f"Tamaño de página: {limite_pagina} registro(s)")
+        pagina = col_pag2.number_input(
+            "Página de la sección",
+            min_value=1,
+            max_value=paginas,
+            value=1,
+            step=1,
+            key=f"hist_pag_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 24)}",
+        )
+        inicio = (int(pagina) - 1) * limite_pagina
+        fin = inicio + limite_pagina
+        registros_mostrar = registros_ordenados[inicio:fin]
+    
+        st.caption(
+            f"Mostrando {len(registros_mostrar)} de {len(registros_base)} registros en «{seccion_actual}»"
+            f" (página {int(pagina)}/{paginas})"
+            f"{f' (filtrados de {len(registros)})' if (buscar.strip() or usar_fecha) else ''}."
+        )
+    
+        csv_bytes = _dataframe_seccion_a_csv(registros_mostrar)
+        if csv_bytes:
+            fn = f"Historia_{_nombre_archivo_seguro(paciente_sel.split('(')[0])}_{_nombre_archivo_seguro(seccion_actual, 40)}.csv"
+            st.download_button(
+                "Descargar esta vista en CSV",
+                csv_bytes,
+                file_name=fn,
+                mime="text/csv; charset=utf-8",
+                key=f"hist_csv_vista_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 30)}",
+            )
+    
+        if seccion_actual in SECCIONES_TABLA:
+            _render_seccion_tabla(registros_mostrar, seccion_actual)
+        elif seccion_actual == "Consentimientos":
+            _render_consentimientos(registros_mostrar, paciente_sel)
+        elif seccion_actual == "Estudios Complementarios":
+            _render_estudios(registros_mostrar, paciente_sel)
+        elif seccion_actual == "Registro de Heridas":
+            _render_heridas(registros_mostrar, paciente_sel)
+        else:
+            _render_registros_genericos(registros_mostrar, seccion_actual, paciente_sel)

@@ -13,3 +13,6 @@ services:
         value: "true"
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: "false"
+      # URL pública HTTPS sin barra final (canonical, Open Graph). Definir el valor en el panel de Render.
+      - key: SITE_URL
+        sync: false

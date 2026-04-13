@@ -8,8 +8,11 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
     parts = [
         dedent(
             """
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+            <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"></noscript>
             <style>
-              @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
               :root {
                 --lp-void: #050812;
@@ -591,6 +594,23 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                 margin: 0 0 52px;
               }
 
+              .mc-lp-stats-head {
+                text-align: center;
+                max-width: 42rem;
+                margin: 0 auto 22px;
+                padding: 0 8px;
+              }
+
+              .mc-lp-stats-h2 {
+                margin: 0;
+                font-family: 'Fraunces', Georgia, serif;
+                font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+                font-weight: 700;
+                letter-spacing: -0.03em;
+                line-height: 1.25;
+                color: #e8f0fa;
+              }
+
               .mc-lp-stat-grid {
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -637,7 +657,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                 min-width: 0;
               }
 
-              .mc-lp-stat-body h4 {
+              .mc-lp-stat-body h3 {
                 margin: 0 0 6px;
                 color: #edf5fd;
                 font-size: 0.92rem;
@@ -739,7 +759,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                 text-transform: uppercase;
               }
 
-              .mc-lp-cell h4 {
+              .mc-lp-cell h3 {
                 margin: 0 0 10px;
                 color: #ffffff;
                 font-size: 1.08rem;
@@ -1178,6 +1198,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                   </div>
                 </div>
 
+                <main class="mc-lp-main">
                 <section class="mc-lp-hero">
                   <div class="mc-lp-copy">
                     <div class="mc-lp-hero-badge">Enterprise · Implementación y acompañamiento</div>
@@ -1267,33 +1288,36 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                   </aside>
                 </section>
 
-                <section class="mc-lp-stats">
+                <section class="mc-lp-stats" aria-labelledby="mc-lp-stats-title">
+                  <header class="mc-lp-stats-head">
+                    <h2 id="mc-lp-stats-title" class="mc-lp-stats-h2">Un entorno integrado para clínica, operación y respaldo</h2>
+                  </header>
                   <div class="mc-lp-stat-grid">
                     <div class="mc-lp-stat-item">
                       <span class="mc-lp-stat-num">1</span>
                       <div class="mc-lp-stat-body">
-                        <h4>Núcleo operativo</h4>
+                        <h3>Núcleo operativo</h3>
                         <p>Una sola plataforma para clínica, coordinación, RRHH y documentación.</p>
                       </div>
                     </div>
                     <div class="mc-lp-stat-item">
                       <span class="mc-lp-stat-num">GPS</span>
                       <div class="mc-lp-stat-body">
-                        <h4>Fichadas verificables</h4>
+                        <h3>Fichadas verificables</h3>
                         <p>Llegada y salida con contexto operativo en cada visita.</p>
                       </div>
                     </div>
                     <div class="mc-lp-stat-item">
                       <span class="mc-lp-stat-num">PDF</span>
                       <div class="mc-lp-stat-body">
-                        <h4>Respaldo defendible</h4>
+                        <h3>Respaldo defendible</h3>
                         <p>Reportes, consentimientos y recetas con salida profesional.</p>
                       </div>
                     </div>
                     <div class="mc-lp-stat-item">
                       <span class="mc-lp-stat-num">Roles</span>
                       <div class="mc-lp-stat-body">
-                        <h4>Accesos por perfil</h4>
+                        <h3>Accesos por perfil</h3>
                         <p>Cada usuario entra con permisos alineados a su responsabilidad.</p>
                       </div>
                     </div>
@@ -1315,7 +1339,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                 <section id="mc-lp-modulos" class="mc-lp-bento">
                   <article class="mc-lp-cell mc-lp-cell-hero">
                     <span class="mc-lp-cell-eyebrow">Coordinación</span>
-                    <h4>Dirección con visibilidad: menos improvisación, más control</h4>
+                    <h3>Dirección con visibilidad: menos improvisación, más control</h3>
                     <p>
                       Agenda, recursos, pacientes y seguimiento en un solo lugar. La operación deja de depender de planillas
                       paralelas, capturas sueltas o acuerdos informales difíciles de auditar.
@@ -1329,7 +1353,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
 
                   <article class="mc-lp-cell mc-lp-cell-wide">
                     <span class="mc-lp-cell-eyebrow">Historia clínica</span>
-                    <h4>Registro clínico unificado, listo para el día a día</h4>
+                    <h3>Registro clínico unificado, listo para el día a día</h3>
                     <p>
                       Evolución, escalas, pediatría, estudios y medicación en el mismo recorrido. Menos saltos entre pantallas
                       para el equipo y una historia clínica continua para la institución.
@@ -1338,19 +1362,19 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
                     <span class="mc-lp-cell-eyebrow">Recetas</span>
-                    <h4>Firma y documentación</h4>
+                    <h3>Firma y documentación</h3>
                     <p>Recetas, consentimientos y PDFs con salida prolija para familia, auditoría o archivo.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
                     <span class="mc-lp-cell-eyebrow">Emergencias</span>
-                    <h4>Respuesta con contexto</h4>
+                    <h3>Respuesta con contexto</h3>
                     <p>Triage, traslado y antecedentes clínicos en un mismo flujo operativo.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
                     <span class="mc-lp-cell-eyebrow">RRHH</span>
-                    <h4>Presentismo y control</h4>
+                    <h3>Presentismo y control</h3>
                     <p>Fichajes, tiempos, asistencia y trazabilidad sin sumar herramientas paralelas.</p>
                   </article>
                 </section>
@@ -1442,6 +1466,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                   <h3>Ingresá a la demo operativa</h3>
                   <span>Explorá módulos, permisos y documentos en un entorno de prueba.</span>
                 </div>
+                </main>
               </div>
             </div>
             """

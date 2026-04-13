@@ -1,4 +1,5 @@
 streamlit>=1.36.0
+orjson>=3.9.10
 bcrypt>=4.1.0
 pandas>=2.0.0
 Pillow

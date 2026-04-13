@@ -17,6 +17,7 @@ from typing import Optional
 import streamlit as st
 
 from core.app_logging import log_event
+from core.db_serialize import loads_json_any
 
 
 def _secret_int(key: str, default: int) -> int:
@@ -92,7 +93,8 @@ def _file_load_all() -> dict:
     if not p.exists():
         return {}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        data = loads_json_any(p.read_bytes())
+        return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 

@@ -35,6 +35,21 @@ REPO_ROOT = _insert_repo_root_on_path()
 
 import streamlit as st
 
+from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
+from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_redirect_apex_si_configurado
+
+APP_BUILD_TAG = "Build 2026-04-13 fast-path landing (imports diferidos)"
+
+st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="collapsed")
+inyectar_redirect_apex_si_configurado()
+if not st.session_state.get("_mc_seo_head_inyectado"):
+    inyectar_head_seo()
+    st.session_state["_mc_seo_head_inyectado"] = True
+
+ensure_entered_app_default()
+if not st.session_state.get("entered_app"):
+    render_publicidad_y_detener()
+
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 
@@ -56,29 +71,6 @@ completar_claves_db_session = getattr(_core_database, "completar_claves_db_sessi
 _vr = import_module("core.view_roles")
 MODULO_ROLES_PERMITIDOS = _vr.MODULO_ROLES_PERMITIDOS
 tiene_acceso_vista = _vr.tiene_acceso_vista
-
-ui_liv = import_module("core.ui_liviano")
-headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
-render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
-
-_lpub = import_module("core.landing_publicidad")
-obtener_html_landing_publicidad = _lpub.obtener_html_landing_publicidad
-
-_onb = import_module("core.onboarding")
-render_panel_bienvenida = _onb.render_panel_bienvenida
-
-_ac = import_module("core.anticolapso")
-aplicar_politicas_anticolapso_ui = _ac.aplicar_politicas_anticolapso_ui
-anticolapso_activo_fn = _ac.anticolapso_activo
-limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
-render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
-
-_aa = import_module("core.alertas_app_paciente_ui")
-render_banner_alertas_criticas_si_aplica = _aa.render_banner_alertas_criticas_si_aplica
-render_sidebar_bloque_app_paciente = _aa.render_sidebar_bloque_app_paciente
-
-_rn = import_module("core.release_notes")
-MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
 
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(
@@ -111,10 +103,6 @@ descripcion_acceso_rol = getattr(
 )
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
-
-APP_BUILD_TAG = "Build 2026-04-14 landing st.html (evita bloque codigo Markdown)"
-
-st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
 try:
     st.markdown(f"<style>{cargar_texto_asset('style.css')}</style>", unsafe_allow_html=True)
@@ -200,6 +188,7 @@ CATEGORIAS_MODULOS = {
         "Evolucion",
         "Estudios",
         "Recetas",
+        "Balance",
         "Escalas Clinicas",
         "Historial",
         "Pediatria",
@@ -227,7 +216,6 @@ CATEGORIAS_MODULOS = {
         "Auditoria Legal",
         "Proyecto y Roadmap",
         "Mi Equipo",
-        "Balance",
     ],
 }
 
@@ -587,25 +575,6 @@ def resolve_menu_for_role(rol, user=None):
     return [modulo for modulo in menu_base if modulo in VIEW_CONFIG]
 
 
-def _query_flag(nombre):
-    qp = getattr(st, "query_params", None)
-    if qp is None:
-        return False
-    try:
-        valor = qp.get(nombre)
-        if isinstance(valor, list):
-            valor = valor[0] if valor else ""
-        return str(valor or "").strip().lower() in {"1", "true", "si", "yes", "on"}
-    except Exception:
-        return False
-
-
-if "entered_app" not in st.session_state:
-    # La publicidad vuelve a ser la portada por defecto.
-    # Solo permitimos saltearla con un flag explicito para pruebas o accesos directos.
-    st.session_state.entered_app = _query_flag("login") or _query_flag("directo")
-
-
 def limpiar_sesion_app():
     from core.database import vaciar_datos_app_en_sesion
     from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
@@ -626,117 +595,10 @@ def limpiar_sesion_app():
     st.session_state.pop("_db_monolito_sesion", None)
     st.session_state.pop("_mc_aviso_payload_grande", None)
     st.session_state.pop("mc_nav_filtro_cat", None)
+    st.session_state.pop("_mc_sidebar_logo_b64", None)
+    st.session_state.pop("_mc_anticolapso_secret_cached", None)
     st.session_state["entered_app"] = False
 
-
-def obtener_logo_landing():
-    posibles = [
-        Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg",
-        Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpg",
-        Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.png",
-        Path(__file__).resolve().parent / "logo_medicare_pro.jpeg",
-        Path(__file__).resolve().parent / "logo_medicare_pro.jpg",
-        Path(__file__).resolve().parent / "logo_medicare_pro.png",
-    ]
-    for ruta in posibles:
-        if ruta.exists():
-            mime = "image/png" if ruta.suffix.lower() == ".png" else "image/jpeg"
-            encoded = base64.b64encode(ruta.read_bytes()).decode()
-            return f"<img src='data:{mime};base64,{encoded}' style='height: 112px; border-radius: 22px; box-shadow: 0 15px 35px rgba(0,0,0,0.45), 0 0 24px rgba(20,184,166,0.22); display: block;'>"
-
-    svg = """
-    <svg xmlns='http://www.w3.org/2000/svg' width='320' height='160' viewBox='0 0 320 160'>
-      <defs>
-        <linearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'>
-          <stop offset='0%' stop-color='#14b8a6'/>
-          <stop offset='100%' stop-color='#3b82f6'/>
-        </linearGradient>
-      </defs>
-      <rect x='18' y='18' width='284' height='124' rx='28' fill='#08111f'/>
-      <rect x='26' y='26' width='268' height='108' rx='24' fill='url(#g1)' opacity='0.12'/>
-      <circle cx='84' cy='80' r='30' fill='url(#g1)'/>
-      <path d='M74 80h20M84 70v20' stroke='#fff' stroke-width='8' stroke-linecap='round'/>
-      <text x='128' y='72' fill='#f8fafc' font-size='26' font-family='Inter, Arial, sans-serif' font-weight='700'>MediCare</text>
-      <text x='128' y='102' fill='#94a3b8' font-size='18' font-family='Inter, Arial, sans-serif' font-weight='600'>Enterprise PRO</text>
-    </svg>
-    """
-    encoded = base64.b64encode(svg.encode("utf-8")).decode()
-    return f"<img src='data:image/svg+xml;base64,{encoded}' style='height: 112px; display: block;'>"
-
-
-if not st.session_state.entered_app:
-    logo_html = obtener_logo_landing()
-    st.markdown(
-        """
-        <style>
-            #MainMenu {visibility: hidden !important;}
-            header[data-testid="stHeader"],
-            [data-testid="stHeader"] {display: none !important;}
-            [data-testid="stToolbar"],
-            [data-testid="stDecoration"] {display: none !important;}
-            div[data-testid="stToolbarActions"] {display: none !important;}
-            .stDeployButton,
-            [class*="stDeployButton"] {display: none !important;}
-            footer,
-            footer[data-testid="stFooter"] {visibility: hidden !important; height: 0 !important; min-height: 0 !important; overflow: hidden !important;}
-            html, body, .stApp { overflow-x: hidden !important; }
-            .block-container {
-                padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
-                padding-bottom: 0rem !important;
-                max-width: 100% !important;
-                margin-top: 0 !important;
-                overflow: visible !important;
-            }
-            .stApp {
-                background-color: #03050a !important;
-                background-image:
-                    radial-gradient(ellipse 100% 50% at 50% -15%, rgba(45, 212, 191, 0.08), transparent 50%),
-                    radial-gradient(circle at 92% 8%, rgba(96, 165, 250, 0.1), transparent 40%),
-                    linear-gradient(168deg, #03050a 0%, #060d18 100%) !important;
-            }
-            div.stButton { display: flex; justify-content: center; margin-top: 18px; padding-bottom: 42px; }
-            div.stButton > button {
-                min-height: 60px !important;
-                min-width: 320px !important;
-                padding: 0 34px !important;
-                border-radius: 9999px !important;
-                border: 1px solid rgba(186, 230, 253, 0.24) !important;
-                background:
-                    linear-gradient(135deg, rgba(18, 184, 166, 0.98) 0%, rgba(37, 99, 235, 0.98) 58%, rgba(56, 189, 248, 0.96) 100%) !important;
-                color: white !important;
-                font-size: 1rem !important;
-                font-weight: 900 !important;
-                text-transform: uppercase;
-                letter-spacing: 0.18em;
-                box-shadow:
-                    0 18px 42px rgba(14, 165, 233, 0.22),
-                    0 0 0 1px rgba(255,255,255,0.06) inset !important;
-                transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease !important;
-                backdrop-filter: blur(12px);
-            }
-            div.stButton > button:hover {
-                transform: translateY(-3px) scale(1.01) !important;
-                filter: brightness(1.04) !important;
-                box-shadow:
-                    0 24px 54px rgba(56, 189, 248, 0.28),
-                    0 0 0 1px rgba(255,255,255,0.09) inset !important;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # st.markdown + HTML masivo puede mostrarse como bloque de codigo (GFM) en Streamlit 1.5x;
-    # st.html inserta el fragmento sin pasar por el parser Markdown.
-    _landing_html = obtener_html_landing_publicidad(logo_html)
-    if hasattr(st, "html"):
-        st.html(_landing_html, width="stretch")
-    else:
-        st.markdown(_landing_html, unsafe_allow_html=True)
-    if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
-        st.session_state.entered_app = True
-        st.rerun()
-    st.stop()
 
 render_login()
 verificar_clinica_sesion_activa()
@@ -760,18 +622,42 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
+# Imports de UI pesados solo con sesión válida (la pantalla de login no los necesita).
+_ac = import_module("core.anticolapso")
+aplicar_politicas_anticolapso_ui = _ac.aplicar_politicas_anticolapso_ui
+anticolapso_activo_fn = _ac.anticolapso_activo
+limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
+render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
+
+ui_liv = import_module("core.ui_liviano")
+headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
+render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
+
+_onb = import_module("core.onboarding")
+render_panel_bienvenida = _onb.render_panel_bienvenida
+
+_aa = import_module("core.alertas_app_paciente_ui")
+render_banner_alertas_criticas_si_aplica = _aa.render_banner_alertas_criticas_si_aplica
+render_sidebar_bloque_app_paciente = _aa.render_sidebar_bloque_app_paciente
+
+_rn = import_module("core.release_notes")
+MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
+
 # Sesiones antiguas o JSON parcial: asegura colecciones nuevas sin borrar datos existentes.
 completar_claves_db_session()
 
 mi_empresa = str(user.get("empresa", "Clinica General") or "Clinica General")
 rol = str(user.get("rol", "Operativo") or "Operativo")
-logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
-try:
-    logo_sidebar_b64 = (
-        base64.b64encode(logo_sidebar_path.read_bytes()).decode() if logo_sidebar_path.exists() else ""
-    )
-except OSError:
-    logo_sidebar_b64 = ""
+_logo_ck = "_mc_sidebar_logo_b64"
+if _logo_ck not in st.session_state:
+    logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
+    try:
+        st.session_state[_logo_ck] = (
+            base64.b64encode(logo_sidebar_path.read_bytes()).decode() if logo_sidebar_path.exists() else ""
+        )
+    except OSError:
+        st.session_state[_logo_ck] = ""
+logo_sidebar_b64 = st.session_state[_logo_ck]
 
 if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
@@ -858,9 +744,7 @@ with st.sidebar:
     estado_clave = str(estado_guardado.get("estado", "") or "").strip().lower()
     timestamp_guardado = estado_guardado.get("timestamp")
     if timestamp_guardado:
-        import datetime as _dt
-
-        hora_guardado = _dt.datetime.fromtimestamp(timestamp_guardado).strftime("%H:%M:%S")
+        hora_guardado = datetime.fromtimestamp(timestamp_guardado).strftime("%H:%M:%S")
         if estado_clave == "nube":
             st.caption(f"Guardado: nube {hora_guardado}")
         elif estado_clave == "local":

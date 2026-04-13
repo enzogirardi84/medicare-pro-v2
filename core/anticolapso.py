@@ -25,10 +25,16 @@ def _truthy_secret(val) -> bool:
 
 
 def anticolapso_por_secret() -> bool:
+    """El secret no cambia en caliente en una sesión típica; cacheamos lectura."""
+    ck = "_mc_anticolapso_secret_cached"
+    if ck in st.session_state:
+        return bool(st.session_state[ck])
     try:
-        return _truthy_secret(st.secrets.get("MC_ANTICOLAPSO", False))
+        out = _truthy_secret(st.secrets.get("MC_ANTICOLAPSO", False))
     except Exception:
-        return False
+        out = False
+    st.session_state[ck] = out
+    return out
 
 
 def anticolapso_activo() -> bool:

@@ -9,6 +9,7 @@ from typing import Optional
 import streamlit as st
 
 from core.app_logging import log_event
+from core.db_serialize import dumps_db_sorted, loads_db_payload, loads_json_any
 from core.norm_empresa import norm_empresa_key
 
 try:
@@ -100,7 +101,7 @@ def _normalizar_blob_datos(data):
         if not s:
             return None
         try:
-            parsed = json.loads(s)
+            parsed = loads_json_any(s)
         except Exception:
             log_event("db", "blob_datos_json_invalido")
             return None
@@ -153,15 +154,24 @@ def _estructura_vacia_por_clave():
     }
 
 
+def _coleccion_fresca_como(default):
+    """Plantilla solo usa dict/list vacíos; evita deepcopy en el camino caliente."""
+    if isinstance(default, dict):
+        return {}
+    if isinstance(default, list):
+        return []
+    return copy.deepcopy(default)
+
+
 def completar_claves_db_session():
     """Rellena colecciones faltantes y corrige tipos inválidos (shards viejos o JSON parcial por tenant)."""
     plantilla = _estructura_vacia_por_clave()
     for k, default in plantilla.items():
         if k not in st.session_state:
-            st.session_state[k] = copy.deepcopy(default)
+            st.session_state[k] = _coleccion_fresca_como(default)
             continue
         if not _coleccion_db_tipo_valido(k, st.session_state[k]):
-            st.session_state[k] = copy.deepcopy(default)
+            st.session_state[k] = _coleccion_fresca_como(default)
 
 
 def _registrar_estado_guardado(estado, detalle="", guardado_nube=False, guardado_local=False):
@@ -252,14 +262,23 @@ def init_supabase():
 supabase = init_supabase()
 
 
-def _payload_muy_grande(serializado: str) -> bool:
-    return len(serializado.encode("utf-8")) >= PAYLOAD_ALERTA_BYTES
+def _payload_muy_grande(serializado_o_bytes) -> bool:
+    if isinstance(serializado_o_bytes, bytes):
+        return len(serializado_o_bytes) >= PAYLOAD_ALERTA_BYTES
+    return len(serializado_o_bytes.encode("utf-8")) >= PAYLOAD_ALERTA_BYTES
 
 
-def _guardar_local(data):
+def _guardar_local(data, payload_bytes: bytes | None = None):
+    """
+    Backup local. Si se pasa payload_bytes (mismo JSON que va a nube/hash), un solo write compacto.
+    Si no, modo legacy: shards por clave + monolito (mas lento).
+    """
     try:
         LOCAL_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         LOCAL_DB_DIR.mkdir(parents=True, exist_ok=True)
+        if payload_bytes is not None:
+            LOCAL_DB_PATH.write_bytes(payload_bytes)
+            return True
         manifest = {
             "version": 2,
             "keys": sorted(list(data.keys())),
@@ -274,7 +293,10 @@ def _guardar_local(data):
             json.dumps(manifest, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        LOCAL_DB_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        LOCAL_DB_PATH.write_text(
+            json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
+            encoding="utf-8",
+        )
         return True
     except Exception:
         return False
@@ -282,18 +304,23 @@ def _guardar_local(data):
 
 def _cargar_local():
     try:
+        # Prioridad: monolito compacto (ultimo guardado rapido); si no, shards legacy.
+        if LOCAL_DB_PATH.exists():
+            raw = LOCAL_DB_PATH.read_bytes()
+            if raw.strip():
+                return loads_db_payload(raw)
         manifest_path = LOCAL_DB_DIR / "_manifest.json"
         if manifest_path.exists():
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest = loads_json_any(manifest_path.read_bytes())
+            if not isinstance(manifest, dict):
+                manifest = {}
             data = {}
             for key in manifest.get("keys", []):
                 shard_path = LOCAL_DB_DIR / f"{key}.json"
                 if shard_path.exists():
-                    data[key] = json.loads(shard_path.read_text(encoding="utf-8"))
+                    data[key] = loads_json_any(shard_path.read_bytes())
             if data:
                 return data
-        if LOCAL_DB_PATH.exists():
-            return json.loads(LOCAL_DB_PATH.read_text(encoding="utf-8"))
     except Exception:
         return None
     return None
@@ -303,17 +330,26 @@ def _cargar_local_tenant(tenant_key: str):
     try:
         p = LOCAL_TENANTS_DIR / f"{tenant_key}.json"
         if p.exists():
-            return json.loads(p.read_text(encoding="utf-8"))
+            raw = p.read_bytes()
+            if not raw.strip():
+                return None
+            return loads_db_payload(raw)
     except Exception:
         return None
     return None
 
 
-def _guardar_local_tenant(tenant_key: str, data: dict) -> bool:
+def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | None = None) -> bool:
     try:
         LOCAL_TENANTS_DIR.mkdir(parents=True, exist_ok=True)
         path = LOCAL_TENANTS_DIR / f"{tenant_key}.json"
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        if payload_bytes is not None:
+            path.write_bytes(payload_bytes)
+        else:
+            path.write_text(
+                json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
+                encoding="utf-8",
+            )
         return True
     except Exception:
         return False
@@ -355,6 +391,16 @@ def _upsert_supabase_tenant(tenant_key: str, data: dict):
         tbl.upsert({"tenant_key": tenant_key, "datos": data}).execute()
 
 
+def _fijar_cache_y_hash(data: dict) -> bytes | None:
+    """Sincroniza _db_cache y _db_cache_hash sin deepcopy (round-trip JSON estable)."""
+    if not isinstance(data, dict):
+        return None
+    pb, _ = dumps_db_sorted(data)
+    st.session_state["_db_cache"] = loads_db_payload(pb)
+    st.session_state["_db_cache_hash"] = hashlib.md5(pb).hexdigest()
+    return pb
+
+
 def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     """
     Modo clásico: un único JSON (id=1 / local_data). La app no precarga este JSON al arranque: se llama desde login/recuperación.
@@ -382,11 +428,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         else:
             data_local = _normalizar_blob_datos(_cargar_local())
         if data_local:
-            st.session_state[cache_key] = copy.deepcopy(data_local)
-            payload_serializado = json.dumps(data_local, sort_keys=True, default=str, ensure_ascii=False)
-            st.session_state["_db_cache_hash"] = hashlib.md5(payload_serializado.encode("utf-8")).hexdigest()
-            if _payload_muy_grande(payload_serializado):
-                log_event("db", f"payload_grande_local:{len(payload_serializado)}")
+            pb = _fijar_cache_y_hash(data_local)
+            if pb and _payload_muy_grande(pb):
+                log_event("db", f"payload_grande_local:{len(pb)}")
         return copy.deepcopy(data_local) if data_local else None
 
     try:
@@ -396,12 +440,10 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             data = _normalizar_blob_datos(_cargar_supabase_monolito())
 
         if data is not None:
-            st.session_state[cache_key] = copy.deepcopy(data)
-            payload_serializado = json.dumps(data, sort_keys=True, default=str, ensure_ascii=False)
-            st.session_state["_db_cache_hash"] = hashlib.md5(payload_serializado.encode("utf-8")).hexdigest()
+            pb = _fijar_cache_y_hash(data)
             st.session_state["_modo_offline"] = False
-            if _payload_muy_grande(payload_serializado):
-                log_event("db", f"payload_grande_nube:{len(payload_serializado)}")
+            if pb and _payload_muy_grande(pb):
+                log_event("db", f"payload_grande_nube:{len(pb)}")
             return copy.deepcopy(data)
 
         # Conexión OK pero sin fila en nube (tenant nuevo / vacío): reutilizar backup local si existe.
@@ -411,9 +453,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         if data_local is None:
             data_local = _normalizar_blob_datos(_cargar_local())
         if data_local:
-            st.session_state[cache_key] = copy.deepcopy(data_local)
-            payload_serializado = json.dumps(data_local, sort_keys=True, default=str, ensure_ascii=False)
-            st.session_state["_db_cache_hash"] = hashlib.md5(payload_serializado.encode("utf-8")).hexdigest()
+            _fijar_cache_y_hash(data_local)
             st.session_state["_modo_offline"] = True
             return copy.deepcopy(data_local)
     except Exception as e:
@@ -424,9 +464,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         if data_local is None:
             data_local = _normalizar_blob_datos(_cargar_local())
         if data_local:
-            st.session_state[cache_key] = copy.deepcopy(data_local)
-            payload_serializado = json.dumps(data_local, sort_keys=True, default=str, ensure_ascii=False)
-            st.session_state["_db_cache_hash"] = hashlib.md5(payload_serializado.encode("utf-8")).hexdigest()
+            _fijar_cache_y_hash(data_local)
         st.session_state["_modo_offline"] = True
         if not st.session_state.get("_aviso_offline_mostrado"):
             st.warning(
@@ -483,15 +521,15 @@ def _guardar_datos_ejecutar():
 def _guardar_datos_ejecutar_core():
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
-    payload_serializado = json.dumps(data, sort_keys=True, default=str, ensure_ascii=False)
-    payload_hash = hashlib.md5(payload_serializado.encode("utf-8")).hexdigest()
+    payload_bytes, _ = dumps_db_sorted(data)
+    payload_hash = hashlib.md5(payload_bytes).hexdigest()
 
     if st.session_state.get("_db_cache_hash") == payload_hash:
         _registrar_estado_guardado("sin_cambios", "No habia cambios pendientes.", guardado_nube=supabase is not None, guardado_local=True)
         return
 
-    if _payload_muy_grande(payload_serializado):
-        log_event("db", f"guardado_payload_grande:{len(payload_serializado)}")
+    if _payload_muy_grande(payload_bytes):
+        log_event("db", f"guardado_payload_grande:{len(payload_bytes)}")
         if not st.session_state.get("_mc_aviso_payload_grande"):
             st.session_state["_mc_aviso_payload_grande"] = True
             st.warning(
@@ -533,11 +571,11 @@ def _guardar_datos_ejecutar_core():
         u = st.session_state.get("u_actual") or {}
         tk = tenant_key_normalizado(str(u.get("empresa", "") or ""))
         if tk:
-            guardado_local = _guardar_local_tenant(tk, data)
+            guardado_local = _guardar_local_tenant(tk, data, payload_bytes)
     else:
-        guardado_local = _guardar_local(data)
+        guardado_local = _guardar_local(data, payload_bytes)
 
-    st.session_state["_db_cache"] = copy.deepcopy(data)
+    st.session_state["_db_cache"] = loads_db_payload(payload_bytes)
     st.session_state["_db_cache_hash"] = payload_hash
 
     if guardado_nube:

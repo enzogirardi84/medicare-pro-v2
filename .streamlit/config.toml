@@ -10,5 +10,9 @@ textColor = "#f1f5f9"
 headless = true
 enableStaticServing = false
 
+[runner]
+# Menos latencia al interactuar con widgets (Streamlit 1.33+).
+fastReruns = true
+
 [browser]
 gatherUsageStats = false

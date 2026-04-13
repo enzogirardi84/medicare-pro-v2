@@ -4,6 +4,7 @@ from io import BytesIO
 from core import clinical_exports
 from core.utils import (
     ARG_TZ,
+    clave_menu_usuario,
     construir_registro_auditoria_legal,
     decodificar_base64_seguro,
     generar_hash_password,
@@ -50,6 +51,36 @@ def test_menu_operativo_perfil_asistencial_no_hereda_modulos_gestion():
     assert "Recetas" in menu
     assert "Caja" not in menu
     assert "Dashboard" not in menu
+
+
+def test_rol_enfermeria_con_tilde_usa_menu_clinico_y_balance():
+    """Evita que «Enfermería» (tilde) caiga fuera de operativo_clinico y pierda módulos."""
+    assert clave_menu_usuario("Enfermería", {"rol": "Enfermería", "perfil_profesional": "Enfermería"}) == "operativo_clinico"
+    u = normalizar_usuario_sistema({"rol": "Enfermería", "perfil_profesional": "Enfermería"})
+    assert u["rol"] == "Enfermeria"
+    mods = ["Recetas", "Balance", "Emergencias y Ambulancia", "Dashboard"]
+    menu = obtener_modulos_permitidos(u["rol"], mods, u)
+    assert "Balance" in menu
+    assert "Dashboard" not in menu
+
+
+def test_menu_asistencial_incluye_balance_hidrico():
+    """Enfermería / operativo clínico necesitan balance hídrico (no solo perfil de gestión)."""
+    mods = ["Visitas y Agenda", "Balance", "Recetas", "Caja", "Dashboard"]
+    enf = obtener_modulos_permitidos(
+        "Enfermeria",
+        mods,
+        {"rol": "Enfermeria", "perfil_profesional": "Enfermeria"},
+    )
+    assert "Balance" in enf
+    assert "Caja" not in enf
+
+    op_clin = obtener_modulos_permitidos(
+        "Operativo",
+        mods,
+        {"rol": "Operativo", "perfil_profesional": "Enfermeria"},
+    )
+    assert "Balance" in op_clin
 
 
 def test_multiclinica_solo_para_roles_globales():

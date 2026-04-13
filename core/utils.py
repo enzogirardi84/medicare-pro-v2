@@ -115,6 +115,7 @@ PERMISOS_MODULOS = {
         "Estudios",
         "Materiales",
         "Recetas",
+        "Balance",
         "Emergencias",
         "Escalas",
         "Historial",
@@ -158,8 +159,13 @@ PERMISOS_MODULOS = {
 
 
 def _texto_normalizado(valor):
-    """Minusculas + strip + NFKC (evita homoglifos en el campo rol que rompen listas blancas)."""
-    return unicodedata.normalize("NFKC", str(valor or "").strip()).lower()
+    """
+    Minúsculas + strip + NFKC y sin marcas diacríticas (NFD), para que
+    «Enfermería» y «enfermeria» resuelvan igual en roles, perfiles y menú.
+    """
+    t = unicodedata.normalize("NFKC", str(valor or "").strip()).lower()
+    t = unicodedata.normalize("NFD", t)
+    return "".join(c for c in t if unicodedata.category(c) != "Mn")
 
 
 def _password_normalizado(password):

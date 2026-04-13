@@ -29,6 +29,17 @@ def _get_header(headers: Any, name: str) -> str:
     return ""
 
 
+def _ctx_headers() -> Any:
+    """Cabeceras HTTP del request (un solo acceso a st.context por uso)."""
+    try:
+        ctx = getattr(st, "context", None)
+        if ctx is None:
+            return None
+        return getattr(ctx, "headers", None)
+    except Exception:
+        return None
+
+
 def user_agent_sugiere_equipo_liviano(user_agent: str) -> bool:
     if not user_agent:
         return False
@@ -53,23 +64,14 @@ def user_agent_sugiere_equipo_liviano(user_agent: str) -> bool:
 
 
 def user_agent_desde_contexto() -> str:
-    try:
-        ctx = getattr(st, "context", None)
-        if ctx is None:
-            return ""
-        headers = getattr(ctx, "headers", None)
-        return _get_header(headers, "user-agent")
-    except Exception:
-        return ""
+    h = _ctx_headers()
+    return _get_header(h, "user-agent") if h else ""
 
 
 def headers_sugieren_equipo_liviano() -> bool:
     try:
-        ctx = getattr(st, "context", None)
-        if ctx is None:
-            return False
-        headers = getattr(ctx, "headers", None)
-        if headers is None:
+        headers = _ctx_headers()
+        if not headers:
             return False
         save = _get_header(headers, "save-data").strip().lower()
         if save == "on":
@@ -109,9 +111,19 @@ def datos_compactos_por_cliente_sugerido() -> bool:
     Sustituye el checkbox «Modo celular viejo»: listas/tablas más cortas en Python
     cuando el cliente parece móvil o el servidor detecta equipo limitado (UA/Save-Data).
     """
-    if headers_sugieren_equipo_liviano():
-        return True
-    return user_agent_es_telefono_movil_probable(user_agent_desde_contexto())
+    try:
+        headers = _ctx_headers()
+        if not headers:
+            return False
+        save = _get_header(headers, "save-data").strip().lower()
+        if save == "on":
+            return True
+        ua = _get_header(headers, "user-agent")
+        if user_agent_sugiere_equipo_liviano(ua):
+            return True
+        return user_agent_es_telefono_movil_probable(ua)
+    except Exception:
+        return False
 
 
 def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
