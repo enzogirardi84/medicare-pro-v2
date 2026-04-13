@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from features.balance import formato_shift_ml, totales_balance_hidrico_ml
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
@@ -57,9 +58,13 @@ def render_balance(paciente_sel, user):
         if st.form_submit_button("Guardar balance y calcular shift", use_container_width=True, type="primary"):
             hora_limpia = hora_bal_str.strip() if ":" in hora_bal_str else ahora().strftime("%H:%M")
             fecha_str = f"{fecha_bal.strftime('%d/%m/%Y')} {hora_limpia}"
-            ingresos = i_oral + i_par
-            egresos = e_orina + e_dren + e_perd
-            balance = ingresos - egresos
+            ingresos, egresos, balance = totales_balance_hidrico_ml(
+                i_oral=i_oral,
+                i_par=i_par,
+                e_orina=e_orina,
+                e_dren=e_dren,
+                e_perd=e_perd,
+            )
 
             st.session_state["balance_db"].append(
                 {
@@ -132,14 +137,7 @@ def render_balance(paciente_sel, user):
     df_bal["Ingresos"] = df_bal["ingresos"].astype(str) + " ml"
     df_bal["Egresos"] = df_bal["egresos"].astype(str) + " ml"
 
-    def formato_shift(val):
-        if val > 0:
-            return f"+{val} ml"
-        if val < 0:
-            return f"{val} ml"
-        return "0 ml"
-
-    df_bal["Shift (Resultado)"] = df_bal["balance"].apply(formato_shift)
+    df_bal["Shift (Resultado)"] = df_bal["balance"].apply(formato_shift_ml)
     df_mostrar = df_bal.rename(columns={"fecha": "Fecha y hora", "turno": "Turno", "firma": "Profesional"})
     limite = seleccionar_limite_registros(
         "Balances a mostrar",

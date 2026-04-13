@@ -2,6 +2,7 @@ from datetime import datetime
 from io import BytesIO
 
 from core import clinical_exports
+from core.module_catalog import ALERTAS_APP_PACIENTE_MODULO, categorias_navegacion_sidebar
 from core.utils import (
     ARG_TZ,
     clave_menu_usuario,
@@ -38,6 +39,13 @@ def test_normalizar_usuario_recupera_rol_clinico_legacy():
 
     assert usuario["rol"] == "Medico"
     assert usuario["perfil_profesional"] == "Medico"
+
+
+def test_categorias_navegacion_respeta_flag_alertas():
+    con = categorias_navegacion_sidebar(alertas_app_visible=True)
+    sin = categorias_navegacion_sidebar(alertas_app_visible=False)
+    assert ALERTAS_APP_PACIENTE_MODULO in con["Emergencias"]
+    assert ALERTAS_APP_PACIENTE_MODULO not in sin["Emergencias"]
 
 
 def test_menu_operativo_perfil_asistencial_no_hereda_modulos_gestion():

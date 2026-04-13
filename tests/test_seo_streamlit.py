@@ -37,7 +37,15 @@ def test_canonical_www_apex_hosts():
 
 
 def test_resolve_public_site_url_from_env(monkeypatch):
+    import streamlit as st
+
     monkeypatch.delenv("APP_CANONICAL_URL", raising=False)
     monkeypatch.delenv("PUBLIC_BASE_URL", raising=False)
     monkeypatch.setenv("SITE_URL", "https://app.ejemplo.com/")
+
+    class _EmptySecrets:
+        def get(self, _key, default=""):
+            return default
+
+    monkeypatch.setattr(st, "secrets", _EmptySecrets())
     assert resolve_public_site_url() == "https://app.ejemplo.com"

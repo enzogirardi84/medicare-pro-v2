@@ -11,6 +11,8 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Sequence
 
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
+from core.module_catalog import ALERTAS_APP_PACIENTE_MODULO
+from core.view_registry import VIEW_CONFIG_BASE
 
 COORD = "Coordinador"
 OPER = "Operativo"
@@ -48,38 +50,10 @@ def tiene_acceso_vista(rol_actual: Optional[str], roles_permitidos: Optional[Seq
     return r in permitidos
 
 
-# Orden del menu (mismo criterio que el listado administrativo historico)
-MODULO_ORDEN_MENU: tuple[str, ...] = (
-    "Visitas y Agenda",
-    "Dashboard",
-    "Clinicas (panel global)",
-    "Admision",
-    "Clinica",
-    "Pediatria",
-    "Evolucion",
-    "Estudios",
-    "Materiales",
-    "Recetas",
-    "Balance",
-    "Inventario",
-    "Caja",
-    "Emergencias y Ambulancia",
-    "Alertas app paciente",
-    "Red de Profesionales",
-    "Escalas Clinicas",
-    "Historial",
-    "PDF",
-    "Telemedicina",
-    "Cierre Diario",
-    "Mi Equipo",
-    "Asistencia en Vivo",
-    "RRHH y Fichajes",
-    "Proyecto y Roadmap",
-    "Auditoria",
-    "Auditoria Legal",
-)
+# Orden del menú = orden de registro en core.view_registry (una sola fuente de verdad)
+MODULO_ORDEN_MENU: tuple[str, ...] = tuple(VIEW_CONFIG_BASE.keys())
 
-# Una entrada por cada clave en main.VIEW_CONFIG
+# Una entrada por cada clave en VIEW_CONFIG_BASE / main.VIEW_CONFIG
 MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Visitas y Agenda": list(_ROL_TODOS),
     "Dashboard": list(_ROL_COORD_OPER),
@@ -116,7 +90,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
 def modulos_menu_para_rol(rol_actual: Optional[str]) -> List[str]:
     salida: List[str] = []
     for modulo in MODULO_ORDEN_MENU:
-        if modulo == "Alertas app paciente" and not ALERTAS_APP_PACIENTE_VISIBLE:
+        if modulo == ALERTAS_APP_PACIENTE_MODULO and not ALERTAS_APP_PACIENTE_VISIBLE:
             continue
         perms = MODULO_ROLES_PERMITIDOS.get(modulo)
         if perms and tiene_acceso_vista(rol_actual, perms):
