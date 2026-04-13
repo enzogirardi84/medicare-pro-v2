@@ -266,6 +266,14 @@ def render_login():
                 "Ingresa con el usuario (login) y contrasena que te asigno tu clinica. "
                 "Si la clinica fue suspendida por abono o decision administrativa, el sistema bloquea el acceso hasta la reactivacion: contacta a MediCare o a tu coordinador."
             )
+            with st.expander("Problemas para ingresar o fallas del sistema", expanded=False):
+                st.markdown(
+                    "- Confirmá **usuario**, **contraseña** y, en multiclínica, **empresa** exacta como en Mi equipo.\n"
+                    "- Varios intentos fallidos pueden activar **bloqueo temporal**: esperá unos minutos o pedí ayuda a coordinación.\n"
+                    "- Pantalla en blanco o *No se pudo cargar el modulo*: probá **F5**; si vuelve, abrí el expander "
+                    "**Detalle tecnico** en la app y enviá captura a soporte.\n"
+                    "- Si no hay conexión, la app puede usar **modo local** con datos ya descargados; revisá WiFi o datos móviles."
+                )
             modo_auth = st.radio(
                 "Acceso",
                 ["Iniciar sesion", "Olvide mi contrasena"],
