@@ -340,6 +340,132 @@ def _tabla_guardia_detallada(plan_dia_df):
     )
 
 
+def _render_bloque_cortina_medicacion(
+    plan_dia_df,
+    columnas_tabla,
+    paciente_sel,
+    mi_empresa,
+    user,
+    fecha_hoy,
+    puede_registrar_dosis,
+):
+    """
+    Cortina: referencia del turno (ya realizadas) + tabla de tildes para pendientes.
+    Va arriba del flujo para que no quede oculta al final de la página.
+    """
+    if not puede_registrar_dosis or plan_dia_df.empty:
+        return
+
+    pendientes_base = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
+    n_pend = len(pendientes_base)
+    n_ok = int((plan_dia_df["Estado"] == "Realizada").sum())
+
+    if n_pend:
+        st.info(
+            f"**Cortina de medicación:** desplegá el panel **«Cortina de medicación»** justo abajo para ver "
+            f"**{n_ok}** realizada(s) hoy (hora real / quién registró) y tildar **{n_pend}** pendiente(s).",
+            icon="📋",
+        )
+    else:
+        st.success(
+            "Todas las dosis de la sábana de hoy figuran como **Realizada**. "
+            "Podés abrir la cortina igualmente para revisar la referencia del turno.",
+            icon="✅",
+        )
+
+    with st.expander(
+        "**Cortina de medicación** · Turno anterior, hora real y tildes (tablet / PC)",
+        expanded=False,
+    ):
+        st.caption(
+            "Acá se ve **qué ya registró otro profesional** (hora real, nombre) y podés **marcar con tilde** lo que administrás ahora. "
+            "Si no se puede dar la medicación (estudio, procedimiento, intolerancia…), usá **Registro manual** más abajo → *No realizada* con justificación."
+        )
+        realizadas_hoy = plan_dia_df[plan_dia_df["Estado"] == "Realizada"].copy()
+        if not realizadas_hoy.empty:
+            st.markdown("##### Ya registradas hoy (referencia de turno)")
+            _cols_ref = [
+                c
+                for c in [
+                    "Hora programada",
+                    "Hora realizada",
+                    "Medicamento",
+                    "Via",
+                    "Frecuencia",
+                    "Registrado por",
+                    "Observacion",
+                ]
+                if c in realizadas_hoy.columns
+            ]
+            _h_ref = min(280, 56 + len(realizadas_hoy) * 26)
+            mostrar_dataframe_con_scroll(realizadas_hoy[_cols_ref], height=_h_ref)
+        else:
+            st.info("Todavía no hay dosis marcadas como **Realizada** hoy.")
+
+        if pendientes_base.empty:
+            st.caption("No hay filas pendientes para tildar en esta vista.")
+            return
+
+        st.markdown("##### Pendientes — tilde solo si administró esta dosis ahora")
+        pendientes_df = pendientes_base.copy()
+        pendientes_df.insert(0, "Administrada", False)
+        _cols_pend = [c for c in columnas_tabla if c in pendientes_df.columns]
+        editor_columnas = ["Administrada"] + _cols_pend
+        editor_df = st.data_editor(
+            pendientes_df[editor_columnas],
+            hide_index=True,
+            use_container_width=True,
+            disabled=[col for col in editor_columnas if col != "Administrada"],
+            column_config={
+                "Administrada": st.column_config.CheckboxColumn(
+                    "Administrada ahora",
+                    help="Solo si efectivamente administró esta dosis. Si no se pudo dar: Registro manual → No realizada.",
+                    default=False,
+                )
+            },
+            key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
+        )
+
+        if st.button(
+            "Guardar tildes de la cortina",
+            use_container_width=True,
+            key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}",
+        ):
+            registros_guardados = 0
+            for _idx, fila in editor_df.iterrows():
+                if not bool(fila.get("Administrada")):
+                    continue
+                horario_sel = str(fila.get("Hora programada", "") or "").strip()
+                nombre_med = str(fila.get("Medicamento", "") or "").strip()
+                if not nombre_med:
+                    continue
+                _guardar_administracion_medicacion(
+                    paciente_sel,
+                    mi_empresa,
+                    user,
+                    nombre_med,
+                    fecha_hoy,
+                    horario_sel,
+                    "Realizada",
+                )
+                registrar_auditoria_legal(
+                    "Medicacion",
+                    paciente_sel,
+                    "Registro de administración desde tabla cortina de medicación",
+                    user.get("nombre", ""),
+                    user.get("matricula", ""),
+                    f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
+                )
+                registros_guardados += 1
+
+            if registros_guardados:
+                guardar_datos()
+                st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina de medicación.")
+                st.rerun()
+            else:
+                st.info("Tildá al menos una dosis pendiente, o usá registro manual si fue no realizada.")
+
+
 def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis):
     if plan_dia_df.empty:
         st.info("No hay administraciones planificadas para hoy.")
@@ -936,6 +1062,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
 **Cuándo usar la cortina (tabla para tildar)**
 
+- Está **arriba de las tarjetas**: mensaje azul **«Cortina de medicación»** y el panel desplegable con el mismo nombre.
 - Para marcar rápido **lo que usted acaba de administrar** en tablet o PC.
 - La tabla de pendientes no reemplaza la lectura de la **tabla de medicación** ni las tarjetas: ahí se ve el detalle completo.
 
@@ -1077,6 +1204,17 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             index=0,
             key=f"recetas_vista_guardia_{paciente_sel}",
         )
+
+        _render_bloque_cortina_medicacion(
+            plan_dia_df,
+            columnas_tabla,
+            paciente_sel,
+            mi_empresa,
+            user,
+            fecha_hoy,
+            puede_registrar_dosis,
+        )
+
         if vista_guardia == "Compacta para celular":
             st.caption(
                 "Vista liviana para teléfonos viejos: lectura por tarjeta, menos columnas y acción rápida dentro de cada medicación."
@@ -1251,102 +1389,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     _render_dataframe_filas_tarjetas(df_plan_visible)
         else:
             st.info("No hay medicación activa cargada para mostrar en la tabla de hoy.")
-
-        if puede_registrar_dosis and not plan_dia_df.empty:
-            pendientes_df = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
-            if not pendientes_df.empty:
-                abrir_tabla_tildes = st.checkbox(
-                    "Mostrar cortina de medicación: tabla para tildar dosis (mejor en tablet o PC)",
-                    value=False,
-                    key=f"abrir_tabla_tildes_{paciente_sel}_{fecha_hoy}",
-                )
-                if abrir_tabla_tildes:
-                    st.caption(
-                        "La cortina sirve para **ver qué ya hizo el turno anterior (o el mismo día)** y **tildar solo lo que usted administra ahora**. "
-                        "Si no corresponde dar la medicación (estudio, procedimiento, intolerancia, etc.), use **Registro manual** con *No realizada* y justificación."
-                    )
-                    realizadas_hoy = plan_dia_df[plan_dia_df["Estado"] == "Realizada"].copy()
-                    if not realizadas_hoy.empty:
-                        st.markdown("##### Ya registradas hoy — referencia (hora real y quién cargó)")
-                        _cols_ref = [
-                            c
-                            for c in [
-                                "Hora programada",
-                                "Hora realizada",
-                                "Medicamento",
-                                "Via",
-                                "Frecuencia",
-                                "Registrado por",
-                                "Observacion",
-                            ]
-                            if c in realizadas_hoy.columns
-                        ]
-                        _h_ref = min(260, 56 + len(realizadas_hoy) * 26)
-                        mostrar_dataframe_con_scroll(realizadas_hoy[_cols_ref], height=_h_ref)
-                    else:
-                        st.info("Todavía no hay dosis marcadas como **Realizada** hoy; las que aparezcan abajo están todas pendientes.")
-
-                    st.markdown("##### Pendientes — tildar solo si administró esta dosis ahora")
-                    pendientes_df.insert(0, "Administrada", False)
-                    _cols_pend = [c for c in columnas_tabla if c in pendientes_df.columns]
-                    editor_columnas = ["Administrada"] + _cols_pend
-                    editor_df = st.data_editor(
-                        pendientes_df[editor_columnas],
-                        hide_index=True,
-                        use_container_width=True,
-                        disabled=[col for col in editor_columnas if col != "Administrada"],
-                        column_config={
-                            "Administrada": st.column_config.CheckboxColumn(
-                                "Administrada ahora",
-                                help="Solo si efectivamente administró esta dosis en este momento. Si no se pudo dar, use Registro manual → No realizada con justificación.",
-                                default=False,
-                            )
-                        },
-                        key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
-                    )
-
-                    if st.button(
-                        "Guardar tildes de la cortina",
-                        use_container_width=True,
-                        key=f"guardar_tildes_cortina_{paciente_sel}",
-                    ):
-                        registros_guardados = 0
-                        for idx, fila in editor_df.iterrows():
-                            if not bool(fila.get("Administrada")):
-                                continue
-
-                            horario_sel = str(fila.get("Hora programada", "") or "").strip()
-                            nombre_med = str(fila.get("Medicamento", "") or "").strip()
-                            if not nombre_med:
-                                continue
-
-                            _guardar_administracion_medicacion(
-                                paciente_sel,
-                                mi_empresa,
-                                user,
-                                nombre_med,
-                                fecha_hoy,
-                                horario_sel,
-                                "Realizada",
-                            )
-                            registrar_auditoria_legal(
-                                "Medicacion",
-                                paciente_sel,
-                                "Registro de administración desde tabla cortina de medicación",
-                                user.get("nombre", ""),
-                                user.get("matricula", ""),
-                                f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
-                            )
-                            registros_guardados += 1
-
-                        if registros_guardados:
-                            guardar_datos()
-                            st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina de medicación.")
-                            st.rerun()
-                        else:
-                            st.info("Tildá al menos una dosis pendiente para guardar, o usá el registro manual si fue no realizada.")
-            else:
-                st.caption("Todas las indicaciones de hoy ya figuran como realizadas.")
 
         if plan_hidratacion_rows:
             st.markdown("#### Plan de hidratacion parenteral")
