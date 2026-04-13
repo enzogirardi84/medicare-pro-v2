@@ -36,6 +36,8 @@ REPO_ROOT = _insert_repo_root_on_path()
 
 import streamlit as st
 
+from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
+
 from core.app_logging import configurar_logging_basico, log_event
 
 configurar_logging_basico()
@@ -184,6 +186,11 @@ VIEW_NAV_LABELS = {
     "Auditoria Legal": "\u2696\ufe0f Legal",
 }
 
+_MC_MOD_ALERTAS_APP = "Alertas app paciente"
+if not ALERTAS_APP_PACIENTE_VISIBLE:
+    VIEW_CONFIG.pop(_MC_MOD_ALERTAS_APP, None)
+    VIEW_NAV_LABELS.pop(_MC_MOD_ALERTAS_APP, None)
+
 # Cada módulo en una sola categoría. Si agregás una entrada en VIEW_CONFIG, sumala acá
 # (si no, el usuario solo la verá con el filtro «Todas las áreas»).
 CATEGORIAS_MODULOS = {
@@ -223,6 +230,12 @@ CATEGORIAS_MODULOS = {
         "Balance",
     ],
 }
+
+if not ALERTAS_APP_PACIENTE_VISIBLE:
+    try:
+        CATEGORIAS_MODULOS["Emergencias"].remove(_MC_MOD_ALERTAS_APP)
+    except (KeyError, ValueError):
+        pass
 
 CATEGORIAS_ORDEN = list(CATEGORIAS_MODULOS.keys())
 

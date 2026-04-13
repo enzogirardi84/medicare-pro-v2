@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
+from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.database import supabase
 from core.norm_empresa import norm_empresa_key
 from core.utils import es_control_total
@@ -66,6 +67,8 @@ def _throttle_fetch(empresa_key: str, fetch_fn):
 
 
 def obtener_alertas_rojas_pendientes(mi_empresa: str) -> List[Dict[str, Any]]:
+    if not ALERTAS_APP_PACIENTE_VISIBLE:
+        return []
     if supabase is None or not _poll_app_alertas_enabled():
         return []
     ek = _empresa_key(mi_empresa)
@@ -93,6 +96,8 @@ def obtener_alertas_rojas_pendientes(mi_empresa: str) -> List[Dict[str, Any]]:
 
 def render_sidebar_bloque_app_paciente(mi_empresa: str, rol: Optional[str]) -> None:
     """Bloque rojo en sidebar si hay triage ROJO pendiente (coordinacion / clinica)."""
+    if not ALERTAS_APP_PACIENTE_VISIBLE:
+        return
     if supabase is None:
         return
     rows = obtener_alertas_rojas_pendientes(mi_empresa)
@@ -133,6 +138,8 @@ def render_sidebar_bloque_app_paciente(mi_empresa: str, rol: Optional[str]) -> N
 
 def render_banner_alertas_criticas_si_aplica(mi_empresa: str) -> None:
     """Franja superior en area principal (solo ROJO pendiente)."""
+    if not ALERTAS_APP_PACIENTE_VISIBLE:
+        return
     if supabase is None:
         return
     rows = obtener_alertas_rojas_pendientes(mi_empresa)

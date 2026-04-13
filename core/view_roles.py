@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Sequence
 
+from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
+
 COORD = "Coordinador"
 OPER = "Operativo"
 MED = "Medico"
@@ -114,6 +116,8 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
 def modulos_menu_para_rol(rol_actual: Optional[str]) -> List[str]:
     salida: List[str] = []
     for modulo in MODULO_ORDEN_MENU:
+        if modulo == "Alertas app paciente" and not ALERTAS_APP_PACIENTE_VISIBLE:
+            continue
         perms = MODULO_ROLES_PERMITIDOS.get(modulo)
         if perms and tiene_acceso_vista(rol_actual, perms):
             salida.append(modulo)
