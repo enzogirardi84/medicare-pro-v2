@@ -32,6 +32,8 @@ pytest
 
 En produccion (Streamlit Cloud, Render) solo se usa `requirements.txt`.
 
+El archivo `.python-version` y `runtime.txt` indican Python 3.12.x para entornos locales y Render.
+
 ## Ejecucion local
 
 ```bash
