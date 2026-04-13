@@ -134,4 +134,4 @@ def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
 }})();
 </script>
 """
-    components.html(html, height=0, width=0, key=f"mc_liviano_det_{modo}_{int(server_hint)}")
+    components.html(html, height=0, width=0)
