@@ -478,8 +478,13 @@ def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
         else None
     )
     paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
+    paciente_prev = st.session_state.get("paciente_actual")
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
+        if paciente_sel != paciente_prev:
+            # Fuerza refresco consistente de vistas clínicas al cambiar paciente.
+            # Evita quedar con datos del paciente anterior cuando el sidebar corre fragmentado.
+            st.rerun()
         det_sidebar = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
         st.markdown(_sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
 
@@ -510,9 +515,8 @@ def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
     return paciente_sel
 
 
-_fragment_api = getattr(st, "fragment", None)
-if callable(_fragment_api):
-    _render_sidebar_pacientes_y_alertas = _fragment_api(_render_sidebar_pacientes_y_alertas)
+# Importante: no fragmentar este bloque porque puede desincronizar el paciente activo
+# con módulos clínicos que dependen de recarga completa de estado.
 
 
 def render_module_nav(menu, vista_actual):
