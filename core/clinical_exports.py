@@ -29,7 +29,7 @@ except ImportError:
     TableStyle = None
 
 from core.export_utils import pdf_output_bytes, safe_text
-from core.utils import decodificar_base64_seguro
+from core.utils import decodificar_base64_seguro, mapa_detalles_pacientes
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
@@ -69,6 +69,7 @@ def _order_attachment_note(record):
 def collect_patient_sections(session_state, paciente_sel):
     return {
         "Auditoria de Presencia": [x for x in session_state.get("checkin_db", []) if x.get("paciente") == paciente_sel],
+        "Visitas y Agenda": [x for x in session_state.get("agenda_db", []) if x.get("paciente") == paciente_sel],
         "Emergencias y Ambulancia": [x for x in session_state.get("emergencias_db", []) if x.get("paciente") == paciente_sel],
         "Enfermeria y Plan de Cuidados": [x for x in session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel],
         "Escalas Clinicas": [x for x in session_state.get("escalas_clinicas_db", []) if x.get("paciente") == paciente_sel],
@@ -86,7 +87,7 @@ def collect_patient_sections(session_state, paciente_sel):
 
 
 def build_patient_excel_bytes(session_state, paciente_sel):
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     sheets = {"Paciente": pd.DataFrame([{"paciente": paciente_sel, **detalles}])}
 
     for section_name, records in collect_patient_sections(session_state, paciente_sel).items():
@@ -118,13 +119,13 @@ def build_patient_excel_bytes(session_state, paciente_sel):
 def build_patient_json_bytes(session_state, paciente_sel):
     payload = {
         "paciente": paciente_sel,
-        "detalles": session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {}),
+        "detalles": mapa_detalles_pacientes(session_state).get(paciente_sel, {}),
         "secciones": collect_patient_sections(session_state, paciente_sel),
     }
     return json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8")
 
 
-def _insert_logo(pdf_obj):
+def _insert_logo(pdf_obj, y_offset: float = 8.0):
     posibles = [
         ASSETS_DIR / "logo_medicare_pro.jpeg",
         ASSETS_DIR / "logo_medicare_pro.jpg",
@@ -133,10 +134,32 @@ def _insert_logo(pdf_obj):
     for ruta in posibles:
         if ruta.exists():
             try:
-                pdf_obj.image(str(ruta), x=10, y=10, w=24)
+                pdf_obj.image(str(ruta), x=10, y=y_offset, w=26)
                 return
             except Exception:
                 pass
+
+
+class RespaldoClinicoPDF(FPDF):
+    """FPDF con pie de página: contexto del paciente y numeración."""
+
+    def __init__(self, empresa_footer: str, paciente_footer: str):
+        super().__init__(unit="mm", format="A4")
+        self._emp_f = (empresa_footer or "")[:72]
+        self._pac_f = (paciente_footer or "")[:48]
+
+    def footer(self):
+        self.set_y(-13)
+        self.set_font("Arial", "I", 7)
+        self.set_text_color(100, 116, 139)
+        usable = self.w - self.l_margin - self.r_margin
+        self.set_x(self.l_margin)
+        left = safe_text(f"MediCare · {self._emp_f} · {self._pac_f}")
+        if len(left) > 92:
+            left = left[:89] + "..."
+        self.cell(usable * 0.68, 4, left, align="L")
+        self.cell(usable * 0.32, 4, safe_text(f"Pag. {self.page_no()}/{{nb}}"), align="R", ln=True)
+        self.set_text_color(0, 0, 0)
 
 
 def _section_title(pdf, title):
@@ -188,6 +211,221 @@ def _write_pairs(pdf, pairs):
         pdf.ln(1)
 
 
+# --- Respaldo clínico (PDF): etiquetas legibles y diseño unificado ---
+
+_BACKUP_SKIP_KEYS = frozenset(
+    {
+        "paciente",
+        "empresa",
+        "imagen",
+        "base64_foto",
+        "firma_b64",
+        "firma_img",
+        "adjunto_papel_b64",
+        "adjunto_papel_tipo",
+        "contenido",
+    }
+)
+
+_BACKUP_MAX_VALUE_LEN = 480
+
+_BACKUP_FIELD_LABELS = {
+    "fecha": "Fecha",
+    "F": "Fecha",
+    "H": "Hora",
+    "fecha_evento": "Fecha del evento",
+    "hora_evento": "Hora del evento",
+    "tipo_evento": "Tipo de evento",
+    "categoria_evento": "Categoría",
+    "triage_grado": "Triage",
+    "prioridad": "Prioridad",
+    "motivo": "Motivo",
+    "profesional": "Profesional",
+    "firma": "Profesional / firma",
+    "matricula": "Matrícula",
+    "medico_nombre": "Médico",
+    "medico_matricula": "Matrícula médico",
+    "med": "Medicación / indicación",
+    "estado_receta": "Estado receta",
+    "estado_clinico": "Estado clínico",
+    "observaciones": "Observaciones",
+    "nota": "Nota",
+    "tipo_cuidado": "Tipo de cuidado",
+    "intervencion": "Intervención",
+    "turno": "Turno",
+    "escala": "Escala",
+    "puntaje": "Puntaje",
+    "interpretacion": "Interpretación",
+    "detalle": "Detalle",
+    "insumo": "Insumo / material",
+    "cantidad": "Cantidad",
+    "TA": "Tensión arterial",
+    "FC": "Frecuencia cardíaca",
+    "FR": "Frecuencia respiratoria",
+    "Sat": "Saturación O2",
+    "Temp": "Temperatura",
+    "HGT": "Glucemia",
+    "ingresos": "Ingresos",
+    "egresos": "Egresos",
+    "balance": "Balance",
+    "fecha_registro": "Fecha registro",
+    "accion": "Acción",
+    "detalle_aud": "Detalle",
+    "firmante": "Firmante",
+    "vinculo": "Vínculo",
+    "dni_firmante": "DNI firmante",
+    "telefono": "Teléfono",
+    "obra_social": "Obra social",
+    "direccion": "Domicilio",
+    "direccion_evento": "Domicilio del evento",
+}
+
+
+_BACKUP_PRIORITY_KEYS = [
+    "fecha",
+    "F",
+    "H",
+    "fecha_evento",
+    "hora_evento",
+    "categoria_evento",
+    "tipo_evento",
+    "triage_grado",
+    "prioridad",
+    "profesional",
+    "firma",
+    "medico_nombre",
+    "matricula",
+    "med",
+    "estado_receta",
+    "estado_clinico",
+    "tipo_cuidado",
+    "turno",
+    "escala",
+    "puntaje",
+    "motivo",
+    "observaciones",
+    "nota",
+    "detalle",
+    "tipo",
+    "insumo",
+    "cantidad",
+    "TA",
+    "FC",
+    "FR",
+    "Sat",
+    "Temp",
+    "HGT",
+    "ingresos",
+    "egresos",
+    "balance",
+    "accion",
+]
+
+
+def _backup_label_key(key: str) -> str:
+    if key in _BACKUP_FIELD_LABELS:
+        return _BACKUP_FIELD_LABELS[key]
+    return str(key).replace("_", " ").strip().title()
+
+
+def _backup_sort_key_record(rec: dict) -> str:
+    for k in ("fecha", "fecha_evento", "F", "fecha_registro", "fecha_suspension", "hora_evento"):
+        v = rec.get(k)
+        if v not in (None, ""):
+            return str(v)
+    return ""
+
+
+def _backup_sorted_records(records: list) -> list:
+    if not records:
+        return []
+    return sorted(records, key=_backup_sort_key_record)
+
+
+def _backup_latest_record(records: list) -> dict | None:
+    s = _backup_sorted_records(records)
+    return s[-1] if s else None
+
+
+def _backup_trim_value(val) -> str:
+    t = safe_text(val).strip()
+    if len(t) > _BACKUP_MAX_VALUE_LEN:
+        return t[: _BACKUP_MAX_VALUE_LEN - 3] + "..."
+    return t
+
+
+def _backup_rows_from_record(record: dict) -> list[tuple[str, str]]:
+    if not record:
+        return []
+    rows: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for pk in _BACKUP_PRIORITY_KEYS:
+        if pk in record and pk not in _BACKUP_SKIP_KEYS:
+            val = record.get(pk)
+            if val not in (None, ""):
+                rows.append((_backup_label_key(pk), _backup_trim_value(val)))
+                seen.add(pk)
+    for k, v in sorted(record.items()):
+        if k in seen or k in _BACKUP_SKIP_KEYS or v in (None, ""):
+            continue
+        rows.append((_backup_label_key(k), _backup_trim_value(v)))
+    return rows[:18]
+
+
+def _section_title_backup(pdf: FPDF, title: str) -> None:
+    if pdf.get_y() > 248:
+        pdf.add_page()
+    pdf.set_x(pdf.l_margin)
+    pdf.set_fill_color(236, 253, 245)
+    pdf.set_text_color(15, 118, 110)
+    pdf.set_draw_color(13, 148, 136)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, safe_text(title), ln=True, fill=True)
+    pdf.set_line_width(0.25)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+    pdf.ln(3)
+    pdf.set_text_color(0, 0, 0)
+
+
+def _backup_split_paciente_sel(paciente_sel: str) -> tuple[str, str]:
+    s = (paciente_sel or "").strip()
+    if " - " in s:
+        a, b = s.split(" - ", 1)
+        return a.strip(), b.strip()
+    return s, ""
+
+
+def _backup_draw_module_index(pdf: FPDF, session_state, paciente_sel: str) -> None:
+    sections = collect_patient_sections(session_state, paciente_sel)
+    usable = pdf.w - pdf.l_margin - pdf.r_margin
+    w_mod = usable * 0.71
+    w_cnt = usable - w_mod
+
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_fill_color(51, 65, 85)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(w_mod, 6, safe_text("Modulo"), border=1, fill=True, ln=0)
+    pdf.cell(w_cnt, 6, safe_text("Cantidad"), border=1, fill=True, ln=True, align="R")
+
+    pdf.set_text_color(30, 41, 59)
+    pdf.set_font("Arial", "", 8)
+    for i, (name, recs) in enumerate(sections.items()):
+        if pdf.get_y() > 268:
+            pdf.add_page()
+        n = len(recs)
+        if i % 2 == 0:
+            pdf.set_fill_color(248, 250, 252)
+        else:
+            pdf.set_fill_color(255, 255, 255)
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(w_mod, 5, safe_text(name)[:64], border=1, fill=True, ln=0)
+        pdf.set_font("Arial", "B" if n else "", 8)
+        pdf.cell(w_cnt, 5, safe_text(str(n)), border=1, fill=True, ln=True, align="R")
+        pdf.set_font("Arial", "", 8)
+    pdf.ln(4)
+
+
 # =====================================================================
 # MOTOR REPORTLAB: HISTORIA CLÍNICA INTEGRAL (CORREGIDA)
 # =====================================================================
@@ -223,7 +461,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         return t.replace("\n", "<br/>")
 
     # --- 1. Cabecera Institucional ---
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     nombre_empresa = detalles.get("empresa", mi_empresa)
     
     elements.append(Paragraph(f"<b>{_limpiar_texto(nombre_empresa).upper()}</b>", title_style))
@@ -363,87 +601,182 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 # EXPORTACIONES RESTANTES (MANTIENEN FPDF)
 # =====================================================================
 def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    from datetime import datetime
+
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
+    empresa = detalles.get("empresa", mi_empresa)
+    generado = datetime.now().strftime("%d/%m/%Y %H:%M")
+    nom_pac, dni_del_id = _backup_split_paciente_sel(paciente_sel)
+    dni_final = (detalles.get("dni") or dni_del_id or "").strip() or "S/D"
+    pie_paciente = f"{nom_pac} (DNI {dni_final})" if dni_final != "S/D" else nom_pac
+
+    pdf = RespaldoClinicoPDF(empresa, pie_paciente)
+    try:
+        pdf.alias_nb_pages()
+    except Exception:
+        pass
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_left_margin(14)
+    pdf.set_right_margin(14)
     pdf.add_page()
-    _insert_logo(pdf)
 
-    pdf.set_xy(40, 12)
-    pdf.set_font("Arial", "B", 15)
-    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
-    pdf.set_x(40)
+    band_h = 38.0
+    pdf.set_fill_color(240, 253, 250)
+    pdf.rect(0, 0, 210, band_h, "F")
+    pdf.set_draw_color(13, 148, 136)
+    pdf.set_line_width(0.55)
+    pdf.line(0, band_h, 210, band_h)
+
+    _insert_logo(pdf, 9.0)
+
+    pdf.set_xy(40, 6)
+    pdf.set_text_color(15, 23, 42)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, safe_text("Respaldo Clinico Imprimible del Paciente"), ln=True)
-    pdf.ln(10)
+    pdf.cell(0, 5, safe_text(empresa), ln=True)
+    pdf.set_x(40)
+    pdf.set_text_color(13, 148, 136)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 5, safe_text("Respaldo clinico del paciente"), ln=True)
+    pdf.set_x(40)
+    pdf.set_text_color(30, 41, 59)
+    pdf.set_font("Arial", "B", 10)
+    sub_nom = safe_text(nom_pac)
+    if dni_final != "S/D":
+        sub_nom += safe_text(f"  ·  DNI: {dni_final}")
+    pdf.cell(0, 5, sub_nom, ln=True)
+    pdf.set_x(40)
+    pdf.set_text_color(100, 116, 139)
+    pdf.set_font("Arial", "", 8)
+    pdf.cell(0, 4, safe_text(f"Generado: {generado}  ·  Documento para archivo, impresion o auditoria"), ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_y(band_h + 5)
 
-    _section_title(pdf, "Identificacion del paciente")
+    _section_title_backup(pdf, "1. Datos demograficos y alertas")
     _write_pairs(
         pdf,
         [
-            ("Paciente", paciente_sel),
-            ("DNI", detalles.get("dni", "S/D")),
+            ("Nombre (legajo)", nom_pac),
+            ("DNI", dni_final),
             ("Fecha de nacimiento", detalles.get("fnac", "S/D")),
+            ("Sexo", detalles.get("sexo", "S/D")),
             ("Domicilio", detalles.get("direccion", "S/D")),
             ("Obra social", detalles.get("obra_social", "S/D")),
             ("Telefono", detalles.get("telefono", "S/D")),
+            ("Estado del legajo", detalles.get("estado", "Activo")),
             ("Alergias", detalles.get("alergias", "Sin datos")),
-            ("Patologias / Riesgos", detalles.get("patologias", "Sin datos")),
+            ("Patologias / riesgos", detalles.get("patologias", "Sin datos")),
         ],
     )
 
-    _section_title(pdf, "Resumen de registros")
-    for section_name, records in collect_patient_sections(session_state, paciente_sel).items():
-        pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 7, safe_text(f"{section_name}: {len(records)} registro(s)"), ln=True)
-        if records:
-            ultimo = records[-1]
-            pdf.set_font("Arial", "", 9)
-            for key, value in ultimo.items():
-                if key in {
-                    "paciente",
-                    "imagen",
-                    "base64_foto",
-                    "firma_b64",
-                    "firma_img",
-                    "adjunto_papel_b64",
-                    "adjunto_papel_tipo",
-                } or value in [None, ""]:
-                    continue
-                _write_pairs(pdf, [(key, value)])
-            nota_adjunto = _order_attachment_note(ultimo)
-            if nota_adjunto:
-                _write_pairs(pdf, [("Adjunto legal", nota_adjunto)])
-            pdf.ln(1)
-
-    pdf.ln(8)
-    pdf.set_font("Arial", "B", 10)
+    _section_title_backup(pdf, "2. Indice de actividad por modulo")
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(71, 85, 105)
     _write_multiline_text(
         pdf,
-        (
-            "Este respaldo resume la informacion clinica y administrativa registrada en el sistema para su archivo, "
-            "impresion y presentacion institucional cuando resulte necesario."
-        ),
-        line_height=6,
+        "Vista rapida del volumen de informacion cargada. Los modulos sin registros no se repiten en el detalle (seccion 3).",
+        line_height=4,
     )
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(1)
+    _backup_draw_module_index(pdf, session_state, paciente_sel)
 
-    y_base = max(pdf.get_y() + 16, 240)
-    if y_base > 262:
+    _section_title_backup(pdf, "3. Detalle por modulo (ultimo registro por fecha)")
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(71, 85, 105)
+    _write_multiline_text(
+        pdf,
+        "Solo modulos con al menos un registro. Se muestran campos del movimiento mas reciente (orden por fecha cuando existe).",
+        line_height=4,
+    )
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(2)
+
+    for section_name, records in collect_patient_sections(session_state, paciente_sel).items():
+        if not records:
+            continue
+
+        if pdf.get_y() > 250:
+            pdf.add_page()
+
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_text_color(15, 118, 110)
+        pdf.cell(0, 6, safe_text(section_name), ln=True)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(71, 85, 105)
+        pdf.cell(0, 5, safe_text(f"{len(records)} registro(s) en este modulo"), ln=True)
+        pdf.set_text_color(0, 0, 0)
+
+        ultimo = _backup_latest_record(records)
+        if not ultimo:
+            pdf.ln(2)
+            continue
+
+        ref_fecha = ""
+        for fk in ("fecha", "fecha_evento", "F"):
+            if ultimo.get(fk) not in (None, ""):
+                ref_fecha = str(ultimo.get(fk))
+                break
+        if ref_fecha:
+            pdf.set_font("Arial", "I", 8)
+            pdf.set_text_color(100, 116, 139)
+            pdf.cell(0, 4, safe_text(f"Ultimo registro (referencia temporal): {ref_fecha}"), ln=True)
+            pdf.set_text_color(0, 0, 0)
+
+        filas = _backup_rows_from_record(ultimo)
+        pdf.set_font("Arial", "", 9)
+        _write_pairs(pdf, filas)
+
+        nota_adjunto = _order_attachment_note(ultimo)
+        if nota_adjunto:
+            pdf.set_font("Arial", "I", 8)
+            _write_pairs(pdf, [("Adjunto en sistema", nota_adjunto)])
+
+        pdf.ln(2)
+        pdf.set_draw_color(226, 232, 240)
+        y_sep = pdf.get_y()
+        pdf.line(pdf.l_margin, y_sep, pdf.w - pdf.r_margin, y_sep)
+        pdf.ln(5)
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "I", 8)
+    pdf.set_text_color(71, 85, 105)
+    _write_multiline_text(
+        pdf,
+        "Resumen operativo MediCare: no sustituye la exportacion Historia clinica integral (PDF) cuando se requiere el detalle completo de todos los eventos.",
+        line_height=4,
+    )
+    pdf.set_text_color(0, 0, 0)
+
+    y_base = max(pdf.get_y() + 8, 232)
+    if y_base > 255:
         pdf.add_page()
-        y_base = 240
+        y_base = 235
 
-    pdf.line(15, y_base, 85, y_base)
-    pdf.set_xy(15, y_base + 2)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, safe_text(f"Profesional: {(profesional or {}).get('nombre', 'S/D')}"), ln=True)
-    pdf.set_x(15)
-    pdf.cell(70, 5, safe_text(f"Matricula: {(profesional or {}).get('matricula', 'S/D')}"), ln=True)
+    lm = pdf.l_margin
+    rm = pdf.w - pdf.r_margin
+    mid = lm + (rm - lm) / 2
 
-    pdf.line(120, y_base, 190, y_base)
-    pdf.set_xy(120, y_base + 2)
-    pdf.cell(70, 5, safe_text("Paciente / Familiar"), ln=True)
-    pdf.set_x(120)
-    pdf.cell(70, 5, safe_text(f"Aclaracion: {paciente_sel.split(' - ')[0]}"), ln=True)
+    pdf.set_draw_color(100, 116, 139)
+    pdf.line(lm, y_base, mid - 4, y_base)
+    pdf.line(mid + 4, y_base, rm, y_base)
+
+    pdf.set_xy(lm, y_base + 2)
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(mid - lm - 4, 4, safe_text("Profesional (genera / valida)"), ln=True, align="C")
+    pdf.set_x(lm)
+    pdf.set_font("Arial", "", 8)
+    pdf.cell(mid - lm - 4, 4, safe_text((profesional or {}).get("nombre", "S/D")), ln=True, align="C")
+    pdf.set_x(lm)
+    pdf.cell(mid - lm - 4, 4, safe_text(f"Mat.: {(profesional or {}).get('matricula', 'S/D')}"), ln=True, align="C")
+
+    pdf.set_xy(mid + 4, y_base + 2)
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(rm - mid - 4, 4, safe_text("Paciente / familiar"), ln=True, align="C")
+    pdf.set_x(mid + 4)
+    pdf.set_font("Arial", "", 8)
+    pdf.cell(rm - mid - 4, 4, safe_text(nom_pac), ln=True, align="C")
+    pdf.set_x(mid + 4)
+    pdf.cell(rm - mid - 4, 4, safe_text("Firma y aclaracion"), ln=True, align="C")
 
     return pdf_output_bytes(pdf)
 
@@ -454,7 +787,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         return None
 
     consentimiento = consentimientos[-1]
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -549,7 +882,7 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 
 
 def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     estado_actual = record.get("estado_receta") or record.get("estado_clinico") or "Activa"
     medico_indicante = record.get("medico_nombre") or (profesional or {}).get("nombre", "S/D")
     matricula_indicante = record.get("medico_matricula") or (profesional or {}).get("matricula", "S/D")
@@ -687,7 +1020,7 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
 
 
 def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     firma_b64 = record.get("firma_b64", "")
     firma_bytes = None
     if firma_b64:

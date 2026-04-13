@@ -1,12 +1,14 @@
 import io
 from datetime import datetime, timedelta
+from html import escape
 
 import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import ahora, mostrar_dataframe_con_scroll, rol_ve_datos_todas_las_clinicas, seleccionar_limite_registros
+from core.view_helpers import bloque_mc_grid_tarjetas
+from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -28,13 +30,41 @@ def _obtener_dt(fecha_hora):
 
 def render_rrhh(mi_empresa, rol, user):
     rol_normalizado = str(rol or "").strip().lower()
-    acceso_total = rol_ve_datos_todas_las_clinicas(rol_normalizado)
-    st.subheader("Control de RRHH y Fichaje Historico")
+    acceso_total = es_control_total(rol_normalizado)
+    emp_e = escape(str(mi_empresa or ""))
+    st.markdown(
+        f"""
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">RRHH y fichajes</h2>
+            <p class="mc-hero-text">Presentismo y duracion de visitas desde check-in para {emp_e}. Rangos de fecha y limites de filas para equipos lentos.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Fichajes</span>
+                <span class="mc-chip">Duraciones</span>
+                <span class="mc-chip">Exportar</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Historico", "Fichajes filtrados por fechas con CSV y PDF opcional."),
+            ("Resumen", "Horas y visitas agrupadas por profesional."),
+            ("Gestion", "Correccion puntual: borrar un fichaje mal cargado."),
+        ]
+    )
     st.info("Genera reportes de presentismo, horas trabajadas y movimientos GPS sin cargar tablas gigantes por defecto.")
+    st.caption(
+        "Ajusta **Desde** / **Hasta** primero; si no hay datos, amplia el rango o confirma que existan LLEGADA/SALIDA en check-in. "
+        "Las horas se estiman al cerrar cada visita con EGRESO."
+    )
 
     col_f1, col_f2 = st.columns(2)
     fecha_inicio = col_f1.date_input("Desde fecha", value=ahora().date() - timedelta(days=30), key="fichajes_desde")
     fecha_fin = col_f2.date_input("Hasta fecha", value=ahora().date(), key="fichajes_hasta")
+    st.caption(
+        "El rango **Desde / Hasta** se mantiene mientras la sesión siga abierta (hasta Cerrar sesión)."
+    )
 
     fichajes_lista = []
     rastreador_ingresos = {}
@@ -86,7 +116,9 @@ def render_rrhh(mi_empresa, rol, user):
             })
 
     if not fichajes_lista:
-        st.info("Aun no hay registros de fichajes en ese periodo.")
+        st.warning(
+            "No hay fichajes en el periodo elegido para esta clinica (o sin datos aun). Proba ampliar las fechas o revisar que el equipo registre llegadas y salidas en **Visitas**."
+        )
         return
 
     df_fichajes = pd.DataFrame(fichajes_lista)
@@ -105,6 +137,7 @@ def render_rrhh(mi_empresa, rol, user):
     col_m4.metric("Visitas Completadas", len(df_egresos))
 
     seccion = st.radio("Vista", ["Historico", "Resumen", "Gestion"], horizontal=False, label_visibility="collapsed")
+    st.caption("Historico: fila a fila. Resumen: totales por profesional. Gestion: solo para corregir errores de carga.")
 
     if seccion == "Historico":
         prof_filtrar = st.selectbox("Filtrar por Profesional", ["Todos"] + sorted(df_fichajes["Profesional"].unique().tolist()))

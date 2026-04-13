@@ -5,11 +5,13 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio
 from core.utils import (
     ahora,
     calcular_estado_agenda,
     es_control_total,
     filtrar_registros_empresa,
+    mapa_detalles_pacientes,
     normalizar_hora_texto,
     obtener_profesionales_visibles,
     mostrar_dataframe_con_scroll,
@@ -25,6 +27,153 @@ try:
     GEO_DISPONIBLE = True
 except ImportError:
     GEO_DISPONIBLE = False
+
+
+def _normalizar_telefono_whatsapp(raw):
+    tel_limpio = "".join(ch for ch in str(raw or "") if ch.isdigit())
+    if not tel_limpio:
+        return ""
+    if tel_limpio.startswith("0"):
+        tel_limpio = tel_limpio.lstrip("0") or tel_limpio
+    if not tel_limpio.startswith("54"):
+        tel_limpio = "549" + tel_limpio
+    return tel_limpio
+
+
+def _matricula_profesional_por_nombre(nombre_prof):
+    if not nombre_prof:
+        return ""
+    target = str(nombre_prof).strip().lower()
+    for u in st.session_state.get("usuarios_db", {}).values():
+        if str(u.get("nombre", "")).strip().lower() == target:
+            return str(u.get("matricula", "")).strip()
+    return ""
+
+
+def _visitas_para_aviso_whatsapp(agenda_paciente, now_naive):
+    activas = [
+        x
+        for x in agenda_paciente
+        if x.get("estado_calc") in {"Pendiente", "En curso", "Vencida"} and x["_fecha_dt"] != datetime.min
+    ]
+    futuro = [x for x in activas if x["_fecha_dt"] >= now_naive]
+    resto = [x for x in activas if x["_fecha_dt"] < now_naive]
+    futuro.sort(key=lambda x: x["_fecha_dt"])
+    resto.sort(key=lambda x: x["_fecha_dt"], reverse=True)
+    return futuro + resto
+
+
+def _etiqueta_visita_whatsapp(item):
+    fh = item["_fecha_dt"].strftime("%d/%m/%Y %H:%M") if item["_fecha_dt"].year > 1900 else "Sin fecha"
+    prof = item.get("profesional") or "Sin profesional"
+    return f"{fh} — {prof} ({item.get('estado_calc', '')})"
+
+
+def _plantillas_whatsapp_store():
+    return st.session_state.setdefault("plantillas_whatsapp_db", {})
+
+
+def _plantillas_whatsapp_para_empresa(mi_empresa):
+    store = _plantillas_whatsapp_store()
+    key = str(mi_empresa or "").strip() or "_default"
+    if key not in store or not isinstance(store[key], dict):
+        store[key] = {"visita": "", "general": ""}
+    return store[key]
+
+
+def _valores_placeholders_whatsapp(mi_empresa, user, visita_dict, nombre_corto, dire_paciente):
+    quien = str(user.get("nombre", "")).strip()
+    mat_quien = str(user.get("matricula", "")).strip()
+    rol = str(user.get("rol", "")).strip()
+    if visita_dict:
+        prof = str(visita_dict.get("profesional", "")).strip() or "su equipo de salud"
+        fecha = str(visita_dict.get("fecha", "")).strip()
+        hora = normalizar_hora_texto(visita_dict.get("hora", ""), default="")
+        mat_asign = _matricula_profesional_por_nombre(prof)
+    else:
+        prof = ""
+        fecha = ""
+        hora = ""
+        mat_asign = ""
+    dom = ""
+    if dire_paciente and str(dire_paciente).strip() not in ("", "No registrada"):
+        dom = str(dire_paciente).strip()
+    return {
+        "paciente": nombre_corto,
+        "empresa": str(mi_empresa or "").strip(),
+        "fecha": fecha,
+        "hora": hora,
+        "profesional": prof,
+        "mat_profesional": mat_asign,
+        "domicilio": dom,
+        "contacto": quien,
+        "rol_contacto": rol,
+        "mat_contacto": mat_quien,
+    }
+
+
+def _aplicar_plantilla_whatsapp(plantilla, valores):
+    if not plantilla or not str(plantilla).strip():
+        return None
+    out = str(plantilla)
+    for k, v in valores.items():
+        out = out.replace("{" + k + "}", str(v) if v is not None else "")
+    return out
+
+
+def _armar_mensaje_whatsapp_visita(paciente_sel, mi_empresa, user, visita_dict, nombre_corto, dire_paciente, plantillas_empresa=None):
+    plantillas_empresa = plantillas_empresa or _plantillas_whatsapp_para_empresa(mi_empresa)
+    vals = _valores_placeholders_whatsapp(mi_empresa, user, visita_dict, nombre_corto, dire_paciente)
+    if visita_dict:
+        tpl = str(plantillas_empresa.get("visita", "")).strip()
+    else:
+        tpl = str(plantillas_empresa.get("general", "")).strip()
+    armado = _aplicar_plantilla_whatsapp(tpl, vals)
+    if armado is not None:
+        return armado
+
+    quien = vals["contacto"]
+    mat_quien = vals["mat_contacto"]
+    rol = vals["rol_contacto"]
+
+    if visita_dict:
+        prof = vals["profesional"]
+        fecha = vals["fecha"]
+        hora = vals["hora"]
+        mat_asign = vals["mat_profesional"]
+        lineas = [
+            f"Hola {nombre_corto},",
+            f"Le escribimos desde {mi_empresa} para confirmarle la visita domiciliaria programada.",
+            f"Fecha: {fecha}",
+            f"Hora aproximada: {hora} hs.",
+            f"Profesional asignado: {prof}",
+        ]
+        if mat_asign:
+            lineas.append(f"Matricula del profesional asignado: {mat_asign}")
+        if vals["domicilio"]:
+            lineas.append(f"Domicilio registrado: {vals['domicilio']}")
+        lineas.append("")
+        lineas.append("Ante cualquier cambio o consulta puede responder por este mismo chat.")
+        firma = f"Saludos cordiales — {quien}" if quien else "Saludos cordiales"
+        if rol:
+            firma += f" ({rol})"
+        lineas.append(firma)
+        if mat_quien:
+            lineas.append(f"Mat. quien envia el aviso: {mat_quien}")
+        return "\n".join(lineas)
+
+    lineas = [
+        f"Hola {nombre_corto},",
+        f"Nos comunicamos desde {mi_empresa} en relacion con su internacion domiciliaria.",
+        "En breve coordinamos fecha y hora de la proxima visita con el equipo asignado.",
+        "",
+        "Ante cualquier urgencia puede responder por este mismo chat.",
+    ]
+    if quien:
+        lineas.append(f"Contacto operativo: {quien}" + (f" ({rol})" if rol else ""))
+    if mat_quien:
+        lineas.append(f"Mat.: {mat_quien}")
+    return "\n".join(lineas)
 
 
 def _agenda_empresa(mi_empresa, rol):
@@ -74,32 +223,58 @@ def _zona_corta(direccion):
 
 def render_visitas(paciente_sel, mi_empresa, user, rol):
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral para gestionar sus visitas y turnos.")
+        aviso_sin_paciente()
         return
 
     st.markdown(
         """
         <div class="mc-hero">
             <h2 class="mc-hero-title">Visitas y agenda del paciente</h2>
-            <p class="mc-hero-text">Desde esta pantalla podes fichar llegada o salida con GPS, controlar la guardia del dia y manejar una agenda operativa sin cargar historiales infinitos.</p>
+            <p class="mc-hero-text">Fichada con GPS (si esta disponible), control de horas de guardia del dia y alta de proximas visitas con aviso opcional por WhatsApp.</p>
             <div class="mc-chip-row">
                 <span class="mc-chip">Fichaje GPS</span>
-                <span class="mc-chip">Agenda inteligente</span>
-                <span class="mc-chip">Acciones rapidas</span>
+                <span class="mc-chip">Guardia hoy</span>
+                <span class="mc-chip">Agendar y avisar</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    estado_pac = st.session_state["detalles_pacientes_db"].get(paciente_sel, {}).get("estado", "Activo")
+    st.markdown(
+        """
+        <div class="mc-grid-3">
+            <div class="mc-card"><h4>Fichada legal</h4><p>Activa el GPS solo al fichar. Queda registro de llegada o salida con ubicacion aproximada.</p></div>
+            <div class="mc-card"><h4>Metricas de agenda</h4><p>Los numeros de arriba resumen pendientes, vencidas, proximas 48 h y tu carga asignada.</p></div>
+            <div class="mc-card"><h4>Proxima visita</h4><p>Completa fecha, hora y profesional; si queres, se ofrece el enlace de WhatsApp al paciente.</p></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    _det_map = mapa_detalles_pacientes(st.session_state)
+    estado_pac = _det_map.get(paciente_sel, {}).get("estado", "Activo")
     if estado_pac == "De Alta":
         st.error("Este paciente se encuentra de alta.")
         return
 
-    det = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
+    det = _det_map.get(paciente_sel, {})
     dire_paciente = det.get("direccion", "No registrada")
     tel_paciente = det.get("telefono", "")
+    nombre_corto_pac = paciente_sel.split(" (")[0]
+
+    rec_wpp = st.session_state.pop("_wpp_recordatorio_visita", None)
+    if rec_wpp and rec_wpp.get("paciente") == paciente_sel:
+        st.success("Visita agendada.")
+        if rec_wpp.get("tel") and rec_wpp.get("texto"):
+            st.link_button(
+                "WhatsApp: avisar al paciente sobre esta visita",
+                f"https://wa.me/{rec_wpp['tel']}?text={urllib.parse.quote(rec_wpp['texto'])}",
+                use_container_width=True,
+                type="primary",
+            )
+        elif not str(tel_paciente or "").strip():
+            st.info("Para avisar por WhatsApp, carga el telefono del paciente en Admision.")
 
     agenda_paciente = _enriquecer_agenda(_agenda_paciente(mi_empresa, paciente_sel, rol))
     resumen = _resumen_agenda(agenda_paciente)
@@ -110,6 +285,11 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     col_r2.metric("Vencidas", resumen["vencidas"])
     col_r3.metric("Proximas 48h", resumen["proximas"])
     col_r4.metric("Carga de tu agenda", carga_profesional)
+
+    st.caption(
+        "Pendientes / vencidas: turnos activos segun fecha y estado. Proximas 48h: ventana corta para coordinar. "
+        "Carga de tu agenda: visitas donde sos el profesional asignado y aun no estan cerradas."
+    )
 
     st.subheader("Fichada Legal de Visita (GPS Real)")
     if GEO_DISPONIBLE:
@@ -189,7 +369,11 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             minutos, _ = divmod(rem, 60)
             st.warning(f"Guardia en curso desde las {llegada_time.strftime('%H:%M')} -> {horas}h {minutos}m")
     else:
-        st.info("Aun no tienes fichadas hoy para este paciente.")
+        bloque_estado_vacio(
+            "Sin fichadas hoy",
+            "Todavía no hay llegadas ni salidas registradas hoy para este paciente.",
+            sugerencia="Usá Fichar LLEGADA/SALIDA cuando corresponda (con ubicación si aplica).",
+        )
 
     st.divider()
     st.subheader("Agendar Proxima Visita")
@@ -209,8 +393,17 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         profesionales = [user["nombre"]]
 
     if not profesionales:
-        st.warning("No hay profesionales visibles para asignar visitas. Revisa el equipo cargado o los permisos del usuario.")
+        bloque_estado_vacio(
+            "Sin profesionales para asignar",
+            "No hay profesionales visibles con permisos para visitas.",
+            sugerencia="Revisá Mi Equipo y roles (Operativo, Enfermería, Médico, Coordinador).",
+        )
     else:
+        ofrecer_wpp_tras_agendar = st.checkbox(
+            "Al agendar una visita nueva, ofrecer recordatorio para WhatsApp",
+            value=True,
+            key=f"wpp_tras_agendar_{paciente_sel}",
+        )
         with st.form("agenda_form", clear_on_submit=True):
             c1_ag, c2_ag = st.columns(2)
             fecha_ag = c1_ag.date_input("Fecha programada", value=ahora().date())
@@ -258,8 +451,87 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         }
                     )
                     guardar_datos()
+                    tel_n = _normalizar_telefono_whatsapp(tel_paciente)
+                    if ofrecer_wpp_tras_agendar and tel_n:
+                        pls = _plantillas_whatsapp_para_empresa(mi_empresa)
+                        nueva = {"fecha": fecha_ag_str, "hora": hora_limpia, "profesional": prof_ag}
+                        txt = _armar_mensaje_whatsapp_visita(
+                            paciente_sel, mi_empresa, user, nueva, nombre_corto_pac, dire_paciente, plantillas_empresa=pls
+                        )
+                        st.session_state["_wpp_recordatorio_visita"] = {
+                            "paciente": paciente_sel,
+                            "tel": tel_n,
+                            "texto": txt,
+                        }
+                        st.rerun()
                     st.success(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
                     st.rerun()
+
+    st.divider()
+    st.subheader("Aviso de visita por WhatsApp")
+    st.caption("Elegi la visita a informar, revisa o edita el texto y abri WhatsApp con el mensaje listo para enviar.")
+    if es_control_total(rol):
+        gestionar_tpl = st.checkbox(
+            "Gestionar plantillas de mensaje para esta clinica (opcional)",
+            value=False,
+            key=f"wpp_gestion_tpl_{mi_empresa}",
+        )
+        if gestionar_tpl:
+            emp_tpl = _plantillas_whatsapp_para_empresa(mi_empresa)
+            st.caption(
+                "Placeholders: {paciente} {empresa} {fecha} {hora} {profesional} {mat_profesional} "
+                "{domicilio} {contacto} {rol_contacto} {mat_contacto}. Si dejas vacio, se usa el texto automatico."
+            )
+            tv = st.text_area(
+                "Plantilla con visita concreta (fecha y hora)",
+                value=emp_tpl.get("visita", ""),
+                height=140,
+                key=f"wpp_tpl_visita_edit_{mi_empresa}",
+            )
+            tg = st.text_area(
+                "Plantilla sin fecha puntual (coordinacion general)",
+                value=emp_tpl.get("general", ""),
+                height=120,
+                key=f"wpp_tpl_general_edit_{mi_empresa}",
+            )
+            if st.button("Guardar plantillas en la clinica", key=f"wpp_tpl_save_{mi_empresa}", type="primary"):
+                _plantillas_whatsapp_store()[str(mi_empresa or "").strip() or "_default"] = {
+                    "visita": str(tv).strip(),
+                    "general": str(tg).strip(),
+                }
+                guardar_datos()
+                st.success("Plantillas guardadas.")
+                st.rerun()
+    ahora_naive_wa = ahora().replace(tzinfo=None)
+    visitas_wa = _visitas_para_aviso_whatsapp(agenda_paciente, ahora_naive_wa)
+    etiquetas_wa = [_etiqueta_visita_whatsapp(v) for v in visitas_wa] + ["Coordinacion general (sin visita puntual)"]
+    sel_key = f"wpp_visita_pick_{paciente_sel}"
+    prev_key = f"_wpp_visita_prev_{paciente_sel}"
+    msg_key = f"wpp_visita_text_{paciente_sel}"
+    if prev_key not in st.session_state:
+        st.session_state[prev_key] = None
+    if msg_key not in st.session_state:
+        st.session_state[msg_key] = ""
+
+    pick_wa = st.selectbox("Visita a comunicar al paciente", range(len(etiquetas_wa)), format_func=lambda i: etiquetas_wa[i], key=sel_key)
+    visita_elegida = visitas_wa[pick_wa] if pick_wa < len(visitas_wa) else None
+    pls_msg = _plantillas_whatsapp_para_empresa(mi_empresa)
+    if st.session_state[prev_key] != pick_wa:
+        st.session_state[msg_key] = _armar_mensaje_whatsapp_visita(
+            paciente_sel, mi_empresa, user, visita_elegida, nombre_corto_pac, dire_paciente, plantillas_empresa=pls_msg
+        )
+        st.session_state[prev_key] = pick_wa
+
+    st.text_area("Texto del mensaje", key=msg_key, height=200)
+    texto_final_wa = st.session_state.get(msg_key, "").strip()
+    tel_wa = _normalizar_telefono_whatsapp(tel_paciente)
+    if tel_wa and texto_final_wa:
+        link_wpp = f"https://wa.me/{tel_wa}?text={urllib.parse.quote(texto_final_wa)}"
+        st.link_button("Abrir WhatsApp con este mensaje", link_wpp, use_container_width=True, type="primary")
+    elif not tel_paciente:
+        st.warning("Este paciente no tiene telefono registrado. Cargalo en Admision para poder avisar por WhatsApp.")
+    else:
+        st.warning("Completa el mensaje antes de abrir WhatsApp.")
 
     if agenda_paciente:
         st.divider()
@@ -377,7 +649,11 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             )
             mostrar_dataframe_con_scroll(df_semana.head(limite_semana), height=300)
         else:
-            st.info("No hay visitas cargadas para la semana seleccionada.")
+            bloque_estado_vacio(
+                "Semana sin visitas en agenda",
+                "No hay turnos en la semana elegida para este paciente.",
+                sugerencia="Cambiá la fecha de referencia de la semana o agendá una visita nueva.",
+            )
 
         limite = seleccionar_limite_registros(
             "Visitas a mostrar",
@@ -391,36 +667,16 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         mostrar_dataframe_con_scroll(df_render.head(limite), height=360)
 
     st.divider()
-    st.subheader("Contacto y Ubicacion")
+    st.subheader("Contacto y ubicacion")
     st.markdown(
         """
         <div class="mc-grid-3">
             <div class="mc-card"><h4>GPS legal</h4><p>El fichaje queda asociado a la direccion detectada para mejorar trazabilidad y auditoria.</p></div>
             <div class="mc-card"><h4>Agenda inteligente</h4><p>El sistema remarca pendientes, en curso y vencidas sin expandir listas enormes.</p></div>
-            <div class="mc-card"><h4>Contacto rapido</h4><p>El acceso a WhatsApp usa un mensaje prearmado para ahorrar tiempo operativo.</p></div>
+            <div class="mc-card"><h4>WhatsApp</h4><p>El aviso con fecha, hora y datos del profesional se arma en la seccion superior de esta misma pantalla.</p></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
     if dire_paciente and dire_paciente != "No registrada":
         st.info(f"Domicilio: {dire_paciente}")
-
-    if tel_paciente:
-        nombre_corto = paciente_sel.split(" (")[0]
-        tel_limpio = "".join(filter(str.isdigit, str(tel_paciente)))
-        if tel_limpio and not tel_limpio.startswith("54"):
-            tel_limpio = "549" + tel_limpio
-        if agenda_paciente:
-            agenda_ordenada = sorted(agenda_paciente, key=lambda x: x["_fecha_dt"], reverse=True)
-            ultima_visita = agenda_ordenada[0]
-            mensaje_base = (
-                f"Hola {nombre_corto}, me comunico desde {mi_empresa} para confirmarte que el dia "
-                f"{ultima_visita.get('fecha', '')} a las {ultima_visita.get('hora', '')} hs estare pasando por tu domicilio "
-                "para realizar la visita correspondiente. Saludos."
-            )
-        else:
-            mensaje_base = f"Hola {nombre_corto}, me comunico desde {mi_empresa} para coordinar tu proxima visita de internacion domiciliaria."
-        link_wpp = f"https://api.whatsapp.com/send?phone={tel_limpio}&text={urllib.parse.quote(mensaje_base)}"
-        st.link_button("Enviar mensaje por WhatsApp", link_wpp, use_container_width=True)
-    else:
-        st.warning("Este paciente no tiene un numero de telefono registrado.")

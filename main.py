@@ -10,24 +10,79 @@ if str(ROOT_DIR) not in sys.path:
 
 import streamlit as st
 
+from core.app_logging import configurar_logging_basico
+
+configurar_logging_basico()
+
 try:
-    from core.auth import check_inactividad, render_login
+    from core.auth import check_inactividad, render_login, verificar_clinica_sesion_activa
 except ImportError:
     core_auth = import_module("core.auth")
     check_inactividad = core_auth.check_inactividad
     render_login = core_auth.render_login
+    verificar_clinica_sesion_activa = getattr(core_auth, "verificar_clinica_sesion_activa", lambda: None)
 
 try:
     from core import utils as core_utils
 except ImportError:
     core_utils = import_module("core.utils")
 
+_core_database = import_module("core.database")
+obtener_estado_guardado = getattr(_core_database, "obtener_estado_guardado", lambda: {})
+
 try:
-    from core.database import cargar_datos
+    from core.view_roles import MODULO_ROLES_PERMITIDOS, tiene_acceso_vista
 except ImportError:
-    core_database = import_module("core.database")
-    cargar_datos = core_database.cargar_datos
-obtener_estado_guardado = getattr(core_database if "core_database" in locals() else import_module("core.database"), "obtener_estado_guardado", lambda: {})
+    _vr = import_module("core.view_roles")
+    MODULO_ROLES_PERMITIDOS = _vr.MODULO_ROLES_PERMITIDOS
+    tiene_acceso_vista = _vr.tiene_acceso_vista
+
+try:
+    from core.ui_liviano import headers_sugieren_equipo_liviano, render_mc_liviano_cliente
+except ImportError:
+    ui_liv = import_module("core.ui_liviano")
+    headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
+    render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
+
+try:
+    from core.landing_publicidad import obtener_html_landing_publicidad
+except ImportError:
+    _lpub = import_module("core.landing_publicidad")
+    obtener_html_landing_publicidad = _lpub.obtener_html_landing_publicidad
+
+try:
+    from core.onboarding import render_panel_bienvenida
+except ImportError:
+    _onb = import_module("core.onboarding")
+    render_panel_bienvenida = _onb.render_panel_bienvenida
+
+try:
+    from core.anticolapso import (
+        aplicar_politicas_anticolapso_ui,
+        limite_pacientes_sidebar,
+        render_estabilidad_anticolapso_sidebar,
+    )
+except ImportError:
+    _ac = import_module("core.anticolapso")
+    aplicar_politicas_anticolapso_ui = _ac.aplicar_politicas_anticolapso_ui
+    limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
+    render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
+
+try:
+    from core.alertas_app_paciente_ui import (
+        render_banner_alertas_criticas_si_aplica,
+        render_sidebar_bloque_app_paciente,
+    )
+except ImportError:
+    _aa = import_module("core.alertas_app_paciente_ui")
+    render_banner_alertas_criticas_si_aplica = _aa.render_banner_alertas_criticas_si_aplica
+    render_sidebar_bloque_app_paciente = _aa.render_sidebar_bloque_app_paciente
+
+try:
+    from core.release_notes import MC_APP_CHANGELOG
+except ImportError:
+    _rn = import_module("core.release_notes")
+    MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
 
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(
@@ -36,6 +91,11 @@ es_control_total = getattr(
     lambda rol: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"},
 )
 inicializar_db_state = core_utils.inicializar_db_state
+mapa_detalles_pacientes = getattr(
+    core_utils,
+    "mapa_detalles_pacientes",
+    lambda ss: ss.get("detalles_pacientes_db") if isinstance(ss.get("detalles_pacientes_db"), dict) else {},
+)
 obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
 modo_celular_viejo_activo = getattr(core_utils, "modo_celular_viejo_activo", lambda session_state=None: False)
 obtener_pacientes_visibles = getattr(
@@ -43,7 +103,6 @@ obtener_pacientes_visibles = getattr(
     "obtener_pacientes_visibles",
     lambda session_state, mi_empresa, rol, incluir_altas=False, busqueda="": [],
 )
-tiene_permiso = core_utils.tiene_permiso
 descripcion_acceso_rol = getattr(
     core_utils,
     "descripcion_acceso_rol",
@@ -56,7 +115,7 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
-APP_BUILD_TAG = "Build 2026-04-10 20:00 ART"
+APP_BUILD_TAG = "Build 2026-04-12 detalles_mapa + cierre_sesion + login_2fa_fix"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -66,19 +125,17 @@ except Exception:
     pass
 
 if "_db_bootstrapped" not in st.session_state:
-    data_inicial = None
-    try:
-        data_inicial = cargar_datos()
-    except Exception:
-        data_inicial = None
-    inicializar_db_state(data_inicial)
+    # Sin precarga de PHI: monolito y multiclínica cargan la base en login / recuperación / tenant.
+    inicializar_db_state(None, precargar_usuario_admin_emergencia=False)
     st.session_state["_db_bootstrapped"] = True
 
 VIEW_CONFIG = {
     "Visitas y Agenda": ("views.visitas", "render_visitas"),
     "Dashboard": ("views.dashboard", "render_dashboard"),
+    "Clinicas (panel global)": ("views.clinicas_panel", "render_clinicas_panel"),
     "Admision": ("views.admision", "render_admision"),
     "Clinica": ("views.clinica", "render_clinica"),
+    "Enfermeria": ("views.enfermeria", "render_enfermeria"),
     "Pediatria": ("views.pediatria", "render_pediatria"),
     "Evolucion": ("views.evolucion", "render_evolucion"),
     "Estudios": ("views.estudios", "render_estudios"),
@@ -88,6 +145,7 @@ VIEW_CONFIG = {
     "Inventario": ("views.inventario", "render_inventario"),
     "Caja": ("views.caja", "render_caja"),
     "Emergencias y Ambulancia": ("views.emergencias", "render_emergencias"),
+    "Alertas app paciente": ("views.alertas_paciente_app", "render_alertas_paciente_app"),
     "Red de Profesionales": ("views.red_profesionales", "render_red_profesionales"),
     "Escalas Clinicas": ("views.escalas_clinicas", "render_escalas_clinicas"),
     "Historial": ("views.historial", "render_historial"),
@@ -102,13 +160,13 @@ VIEW_CONFIG = {
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
 }
 
-VIEW_ROLE_RULES = {vista: ["Administrativo", "Coordinador", "SuperAdmin", "Admin"] for vista in VIEW_CONFIG}
-
 VIEW_NAV_LABELS = {
     "Visitas y Agenda": "\U0001F4CD Visitas",
     "Dashboard": "\U0001F4CA Dashboard",
+    "Clinicas (panel global)": "\U0001F3E5 Clinicas",
     "Admision": "\U0001FA7E Admision",
     "Clinica": "\U0001FA7A Clinica",
+    "Enfermeria": "\U0001F469\U0000200D\U00002695\U0000FE0F Enfermeria",
     "Pediatria": "\U0001F476 Pediatria",
     "Evolucion": "\u270D\ufe0f Evolucion",
     "Estudios": "\U0001F9EA Estudios",
@@ -118,6 +176,7 @@ VIEW_NAV_LABELS = {
     "Inventario": "\U0001F3E5 Inventario",
     "Caja": "\U0001F4B5 Caja",
     "Emergencias y Ambulancia": "\U0001F691 Emergencias",
+    "Alertas app paciente": "\U0001F4F1 Alertas app",
     "Red de Profesionales": "\U0001F91D Red",
     "Escalas Clinicas": "\U0001F4CF Escalas",
     "Historial": "\U0001F5C2\ufe0f Historial",
@@ -147,10 +206,14 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     try:
         if tab_name == "Visitas y Agenda":
             render_fn(paciente_sel, mi_empresa, user, rol)
+        elif tab_name == "Clinicas (panel global)":
+            render_fn(mi_empresa, user, rol)
         elif tab_name == "Admision":
             render_fn(mi_empresa, rol)
         elif tab_name == "Clinica":
-            render_fn(paciente_sel)
+            render_fn(paciente_sel, user)
+        elif tab_name == "Enfermeria":
+            render_fn(paciente_sel, mi_empresa, user)
         elif tab_name == "Pediatria":
             render_fn(paciente_sel, user)
         elif tab_name == "Evolucion":
@@ -169,6 +232,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
             render_fn(paciente_sel, mi_empresa, user, rol)
         elif tab_name == "Emergencias y Ambulancia":
             render_fn(paciente_sel, mi_empresa, user)
+        elif tab_name == "Alertas app paciente":
+            render_fn(mi_empresa, user, rol)
         elif tab_name == "Red de Profesionales":
             render_fn(mi_empresa, user, rol)
         elif tab_name == "Escalas Clinicas":
@@ -196,8 +261,15 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
         elif tab_name == "Auditoria Legal":
             render_fn(mi_empresa, user)
     except Exception as exc:
-        st.error(f"El modulo '{tab_name}' encontro un problema al ejecutarse.")
-        st.caption(f"Detalle tecnico: {type(exc).__name__}: {exc}")
+        st.error(
+            f"No se pudo cargar el modulo **{tab_name}**. "
+            "Probá volver a elegirlo en la barra superior, refrescar la pagina (F5) o cambiar de paciente si el error persiste."
+        )
+        with st.expander("Detalle para soporte o desarrollo", expanded=False):
+            st.code(f"{type(exc).__name__}: {exc}", language="text")
+            st.caption(
+                "Si el mensaje menciona un paquete faltante (ImportError), puede faltar instalar una dependencia en el servidor."
+            )
 
 
 def resolve_current_view(menu):
@@ -269,6 +341,7 @@ def render_module_nav(menu, vista_actual):
         key="module_nav_pills",
     )
     if selected and selected != vista_actual:
+        st.session_state["modulo_anterior"] = vista_actual
         st.session_state["modulo_actual"] = selected
         return selected
     return selected or vista_actual
@@ -287,6 +360,9 @@ if "entered_app" not in st.session_state:
 
 
 def limpiar_sesion_app():
+    from core.database import vaciar_datos_app_en_sesion
+    from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
+
     claves = [
         "logeado",
         "u_actual",
@@ -297,6 +373,11 @@ def limpiar_sesion_app():
     ]
     for clave in claves:
         st.session_state.pop(clave, None)
+    limpiar_estado_sesion_login_efimero()
+    vaciar_datos_app_en_sesion()
+    st.session_state.pop("_mc_onboarding_oculto", None)
+    st.session_state.pop("_db_monolito_sesion", None)
+    st.session_state.pop("_mc_aviso_payload_grande", None)
     st.session_state["entered_app"] = False
 
 
@@ -313,14 +394,14 @@ def obtener_logo_landing():
         if ruta.exists():
             mime = "image/png" if ruta.suffix.lower() == ".png" else "image/jpeg"
             encoded = base64.b64encode(ruta.read_bytes()).decode()
-            return f"<img src='data:{mime};base64,{encoded}' style='height: 112px; border-radius: 22px; box-shadow: 0 15px 35px rgba(0,0,0,0.45), 0 0 24px rgba(56,189,248,0.25); margin-bottom: 24px;'>"
+            return f"<img src='data:{mime};base64,{encoded}' style='height: 112px; border-radius: 22px; box-shadow: 0 15px 35px rgba(0,0,0,0.45), 0 0 24px rgba(20,184,166,0.22); display: block;'>"
 
     svg = """
     <svg xmlns='http://www.w3.org/2000/svg' width='320' height='160' viewBox='0 0 320 160'>
       <defs>
         <linearGradient id='g1' x1='0%' y1='0%' x2='100%' y2='100%'>
-          <stop offset='0%' stop-color='#38bdf8'/>
-          <stop offset='100%' stop-color='#2563eb'/>
+          <stop offset='0%' stop-color='#14b8a6'/>
+          <stop offset='100%' stop-color='#3b82f6'/>
         </linearGradient>
       </defs>
       <rect x='18' y='18' width='284' height='124' rx='28' fill='#08111f'/>
@@ -332,7 +413,7 @@ def obtener_logo_landing():
     </svg>
     """
     encoded = base64.b64encode(svg.encode("utf-8")).decode()
-    return f"<img src='data:image/svg+xml;base64,{encoded}' style='height: 112px; margin-bottom: 24px;'>"
+    return f"<img src='data:image/svg+xml;base64,{encoded}' style='height: 112px; display: block;'>"
 
 
 if not st.session_state.entered_app:
@@ -345,10 +426,10 @@ if not st.session_state.entered_app:
             footer {visibility: hidden;}
             html, body, .stApp { overflow-x: hidden !important; }
             .block-container { padding-top: 0rem !important; padding-bottom: 0rem !important; max-width: 100% !important; margin-top: 0 !important; overflow: visible !important; }
-            .stApp { background-color: #020617 !important; background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 80%) !important; }
+            .stApp { background-color: #04070d !important; background-image: radial-gradient(circle at top right, rgba(20,184,166,0.1) 0%, #04070d 75%) !important; }
             div.stButton { display: flex; justify-content: center; margin-top: 26px; padding-bottom: 50px; }
             div.stButton > button {
-                background: linear-gradient(135deg, #0ea5e9 0%, #4f46e5 100%) !important;
+                background: linear-gradient(135deg, #0d9488 0%, #2563eb 100%) !important;
                 color: white !important; font-size: 1.2rem !important; font-weight: 900 !important;
                 padding: 16px 55px !important; border-radius: 9999px !important;
                 border: 1px solid rgba(255,255,255,0.28) !important;
@@ -358,159 +439,21 @@ if not st.session_state.entered_app:
             div.stButton > button:hover {
                 transform: translateY(-4px) !important;
                 box-shadow: 0 15px 40px rgba(99, 102, 241, 0.65) !important;
-                background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%) !important;
+                background: linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%) !important;
             }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    html_lines = [
-        "<style>",
-        "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');",
-        ".landing-page { font-family: 'Inter', sans-serif; color: #f8fafc; display: flex; flex-direction: column; align-items: center; padding: 58px 20px 46px; position: relative; isolation: isolate; }",
-        ".landing-page::before { content: ''; position: absolute; width: 380px; height: 380px; top: 20px; left: 6%; background: radial-gradient(circle, rgba(14,165,233,0.22) 0%, rgba(14,165,233,0) 70%); filter: blur(16px); z-index: -1; }",
-        ".landing-page::after { content: ''; position: absolute; width: 420px; height: 420px; top: 120px; right: 4%; background: radial-gradient(circle, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0) 70%); filter: blur(18px); z-index: -1; }",
-        ".logo-shell { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241,245,249,0.94)); padding: 18px 20px; border-radius: 30px; box-shadow: 0 18px 46px rgba(14,165,233,0.20), 0 0 0 1px rgba(255,255,255,0.45) inset; margin-bottom: 28px; }",
-        ".title { font-size: clamp(2.5rem, 6vw, 4.2rem); font-weight: 900; line-height: 1.03; margin: 0 0 18px; text-align: center; letter-spacing: -1.4px; text-shadow: 0 10px 30px rgba(2,6,23,0.18); }",
-        ".title-glow { background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }",
-        ".subtitle { font-size: 1.18rem; color: #cbd5e1; font-weight: 400; margin: 0 0 38px; max-width: 820px; text-align: center; line-height: 1.78; }",
-        ".grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; max-width: 1220px; width: 100%; margin-bottom: 72px; }",
-        ".glass-card-pro { background: linear-gradient(145deg, rgba(24, 36, 61, 0.52) 0%, rgba(15, 23, 42, 0.94) 100%); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 28px; padding: 40px 30px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.22); min-height: 238px; }",
-        ".glass-card-pro:hover { transform: translateY(-8px); border-color: rgba(56, 189, 248, 0.45); box-shadow: 0 20px 40px rgba(0,0,0,0.35), 0 0 25px rgba(56,189,248,0.12); }",
-        ".icon-box-pro { font-size: 2.35rem; margin-bottom: 22px; background: linear-gradient(135deg, rgba(56,189,248,0.14), rgba(14,165,233,0.05)); width: 82px; height: 82px; display: flex; align-items: center; justify-content: center; border-radius: 22px; border: 1px solid rgba(56,189,248,0.23); }",
-        ".card-title-pro { font-size: 1.38rem; font-weight: 800; margin-bottom: 14px; color: #ffffff; letter-spacing: -0.5px; }",
-        ".card-text-pro { color: #cbd5e1; font-size: 0.98rem; line-height: 1.7; margin: 0; font-weight: 400; }",
-        ".contact-section-pro { max-width: 1040px; width: 100%; text-align: center; background: linear-gradient(145deg, rgba(13, 21, 44, 0.92), rgba(2, 6, 23, 0.99)); border: 1px solid rgba(56, 189, 248, 0.24); border-radius: 40px; padding: 56px 36px; box-shadow: 0 24px 52px rgba(0,0,0,0.28); position: relative; overflow: hidden; }",
-        ".contact-section-pro::before { content: ''; position: absolute; width: 280px; height: 280px; right: -80px; top: -60px; background: radial-gradient(circle, rgba(56,189,248,0.15) 0%, rgba(56,189,248,0) 72%); pointer-events: none; }",
-        ".contact-grid-pro { display: flex; flex-wrap: wrap; justify-content: center; gap: 36px; margin-top: 34px; }",
-        ".contact-profile-pro { flex: 1; min-width: 280px; max-width: 420px; background: linear-gradient(145deg, rgba(24, 36, 61, 0.58), rgba(15, 23, 42, 0.8)); padding: 36px 26px; border-radius: 26px; border: 1px solid rgba(255, 255, 255, 0.06); transition: 0.3s; box-shadow: inset 0 0 0 1px rgba(56,189,248,0.06), 0 12px 28px rgba(0,0,0,0.16); }",
-        ".contact-profile-pro:hover { background: linear-gradient(145deg, rgba(30, 41, 59, 0.68), rgba(15, 23, 42, 0.9)); border-color: rgba(56, 189, 248, 0.34); transform: translateY(-4px); }",
-        ".p-name { font-size: 1.46rem; font-weight: 700; color: #ffffff; margin: 0 0 8px; }",
-        ".p-role { font-size: 0.82rem; color: #38bdf8; text-transform: uppercase; letter-spacing: 1.6px; font-weight: 800; margin: 0 0 28px; line-height: 1.45; }",
-        ".btn-flex-pro { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }",
-        ".btn-link-pro { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 24px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 0.95rem; transition: all 0.3s; min-width: 166px; color: white !important; }",
-        ".wpp-pro { background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 0 4px 15px rgba(34,197,94,0.28); }",
-        ".wpp-pro:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(34,197,94,0.42); filter: brightness(1.08); }",
-        ".mail-pro { background: linear-gradient(135deg, #3b82f6, #2563eb); box-shadow: 0 4px 15px rgba(59,130,246,0.28); }",
-        ".mail-pro:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59,130,246,0.42); filter: brightness(1.08); }",
-        ".trust-strip { max-width: 1180px; width: 100%; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin: 0 0 36px; }",
-        ".trust-pill { padding: 12px 18px; border-radius: 999px; background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.82)); border: 1px solid rgba(148, 163, 184, 0.16); color: #f8fafc; font-size: 0.92rem; font-weight: 700; box-shadow: 0 10px 22px rgba(2,6,23,0.18), inset 0 1px 0 rgba(255,255,255,0.06); }",
-        ".spotlight-grid { max-width: 1180px; width: 100%; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px; margin: 0 0 32px; }",
-        ".spotlight-card { background: linear-gradient(145deg, rgba(15, 23, 42, 0.94), rgba(11, 18, 32, 0.98)); border: 1px solid rgba(56, 189, 248, 0.18); border-radius: 32px; padding: 32px 32px 30px; box-shadow: 0 24px 50px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.04); position: relative; overflow: hidden; }",
-        ".spotlight-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(56,189,248,0.06), rgba(99,102,241,0.02) 45%, rgba(0,0,0,0) 70%); pointer-events: none; }",
-        ".spotlight-kicker { color: #38bdf8; font-size: 0.78rem; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; margin: 0 0 14px; }",
-        ".spotlight-title { color: #ffffff; font-size: 2rem; font-weight: 900; line-height: 1.15; margin: 0 0 14px; }",
-        ".spotlight-text { color: #cbd5e1; font-size: 1rem; line-height: 1.8; margin: 0; }",
-        ".check-list { display: grid; gap: 12px; margin-top: 22px; }",
-        ".check-item { color: #e2e8f0; font-size: 0.96rem; line-height: 1.6; padding: 13px 15px; border-radius: 18px; background: linear-gradient(145deg, rgba(30, 41, 59, 0.56), rgba(15, 23, 42, 0.66)); border: 1px solid rgba(56, 189, 248, 0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }",
-        ".benefit-band { max-width: 1180px; width: 100%; background: linear-gradient(145deg, rgba(10, 16, 30, 0.98), rgba(15, 23, 42, 0.99)); border-radius: 34px; border: 1px solid rgba(148, 163, 184, 0.12); padding: 36px 32px; margin: 0 0 54px; box-shadow: 0 24px 48px rgba(0,0,0,0.22); }",
-        ".benefit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }",
-        ".benefit-card { padding: 22px 20px; border-radius: 24px; background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.72)); border: 1px solid rgba(56, 189, 248, 0.10); box-shadow: 0 10px 24px rgba(0,0,0,0.14); }",
-        ".benefit-card h5 { margin: 0 0 8px; color: #ffffff; font-size: 1rem; font-weight: 800; }",
-        ".benefit-card p { margin: 0; color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; }",
-        ".segment-grid { max-width: 1180px; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin: 0 0 48px; }",
-        ".segment-card { padding: 28px 24px; border-radius: 28px; background: linear-gradient(145deg, rgba(22, 32, 55, 0.84), rgba(8, 15, 30, 0.98)); border: 1px solid rgba(56, 189, 248, 0.12); box-shadow: 0 16px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.03); }",
-        ".segment-card h4 { margin: 0 0 12px; color: #ffffff; font-size: 1.15rem; font-weight: 800; }",
-        ".segment-card p { margin: 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.7; }",
-        ".closing-banner { max-width: 1180px; width: 100%; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin: 0 0 42px; }",
-        ".closing-panel { padding: 32px 30px; border-radius: 32px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(79, 70, 229, 0.22)); border: 1px solid rgba(99, 102, 241, 0.24); box-shadow: 0 20px 44px rgba(0,0,0,0.2); }",
-        ".closing-panel h3 { margin: 0 0 12px; color: #ffffff; font-size: 1.75rem; font-weight: 900; }",
-        ".closing-panel p { margin: 0; color: #dbeafe; font-size: 1rem; line-height: 1.8; }",
-        "@media (max-width: 900px) { .spotlight-grid, .closing-banner { grid-template-columns: 1fr; } }",
-        "@media (max-width: 768px) { .landing-page { padding: 42px 18px 28px; } .landing-page::before, .landing-page::after { width: 220px; height: 220px; } .trust-strip { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; } .trust-pill { flex: 0 0 auto; } .grid-cards, .benefit-grid, .segment-grid { display: flex; overflow-x: auto; gap: 16px; padding: 0 2px 10px; margin-bottom: 30px; scroll-snap-type: x proximity; } .glass-card-pro, .benefit-card, .segment-card { flex: 0 0 82%; min-width: 260px; scroll-snap-align: start; } .glass-card-pro { padding: 28px 22px; min-height: auto; } .contact-section-pro { padding: 38px 18px; border-radius: 28px; } .contact-grid-pro { gap: 20px; } .benefit-band { padding: 28px 20px; margin-bottom: 34px; } .spotlight-card, .segment-card, .closing-panel { padding: 24px 20px; } .spotlight-title { font-size: 1.75rem; } .closing-banner { gap: 16px; margin-bottom: 30px; } .contact-profile-pro { min-width: unset; } }",
-        "</style>",
-        "<div class='landing-page'>",
-        f"<div class='logo-shell'>{logo_html}</div>",
-        "<h1 class='title'>Gestion clinica, operativa y legal <br><span class='title-glow'>en una sola plataforma</span></h1>",
-        "<p class='subtitle'>MediCare Enterprise PRO ordena pacientes, visitas, evoluciones, recetas, firmas, emergencias, auditoria y personal en una app pensada para empresas, coordinacion y profesionales de salud.</p>",
-        "<div class='trust-strip'>",
-        "<div class='trust-pill'>Historia clinica digital</div>",
-        "<div class='trust-pill'>Fichada GPS</div>",
-        "<div class='trust-pill'>Recetas y consentimientos con firma</div>",
-        "<div class='trust-pill'>Auditoria legal</div>",
-        "<div class='trust-pill'>Emergencias y ambulancia</div>",
-        "<div class='trust-pill'>Roles por usuario</div>",
-        "</div>",
-        "<div class='spotlight-grid'>",
-        "<div class='spotlight-card'>",
-        "<p class='spotlight-kicker'>Pensado para salud real</p>",
-        "<h3 class='spotlight-title'>Si hoy trabajas entre papel, WhatsApp y planillas, estas perdiendo control y respaldo</h3>",
-        "<p class='spotlight-text'>Cuando la informacion queda dispersa aumentan los errores, se complica la coordinacion y se debilita el soporte frente a auditorias, familiares o instituciones. MediCare Enterprise PRO centraliza el trabajo clinico y operativo para que todo quede registrado, ordenado y listo para mostrar.</p>",
-        "</div>",
-        "<div class='spotlight-card'>",
-        "<p class='spotlight-kicker'>Diferencial comercial</p>",
-        "<h3 class='spotlight-title'>Todo lo que necesita tu operacion de salud en una sola app</h3>",
-        "<div class='check-list'>",
-        "<div class='check-item'>Visitas, agenda y trazabilidad diaria para equipos en calle.</div>",
-        "<div class='check-item'>Historia clinica, signos vitales, estudios y escalas en tiempo real.</div>",
-        "<div class='check-item'>Recetas, consentimientos y respaldo documental con enfoque legal.</div>",
-        "<div class='check-item'>Control de personal, coordinacion, auditoria y RRHH.</div>",
-        "</div>",
-        "</div>",
-        "</div>",
-        "<div class='grid-cards'>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F4CD</div><h4 class='card-title-pro'>Fichaje GPS</h4><p class='card-text-pro'>Control de asistencia verificado por coordenadas exactas del domicilio del paciente.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F4C4</div><h4 class='card-title-pro'>Evolucion Medica</h4><p class='card-text-pro'>Carga digital al instante de signos vitales, parametros y fotografias clinicas.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F48A</div><h4 class='card-title-pro'>Stock Inteligente</h4><p class='card-text-pro'>Gestion de inventario en tiempo real con descuento automatico por cada practica.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\u270D\ufe0f</div><h4 class='card-title-pro'>Firma Digital</h4><p class='card-text-pro'>Recetas y consentimientos validados con firma biometrica directamente en pantalla.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F4F9</div><h4 class='card-title-pro'>Telemedicina</h4><p class='card-text-pro'>Videollamadas P2P seguras, integradas nativamente al historial del paciente.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F476</div><h4 class='card-title-pro'>Pediatria</h4><p class='card-text-pro'>Control de crecimiento exhaustivo y graficas de percentiles 100% automatizadas.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F4A7</div><h4 class='card-title-pro'>Balance Hidrico</h4><p class='card-text-pro'>Calculo estricto de ingresos y egresos con alertas preventivas por retencion.</p></div>",
-        "<div class='glass-card-pro'><div class='icon-box-pro'>\U0001F4CB</div><h4 class='card-title-pro'>Auditoria RRHH</h4><p class='card-text-pro'>Cierres diarios detallados, reportes de desempeno y liquidacion de servicios.</p></div>",
-        "</div>",
-        "<div class='benefit-band'>",
-        "<p class='spotlight-kicker'>Por que elegir MediCare Enterprise PRO</p>",
-        "<h3 class='spotlight-title' style='font-size: 1.9rem;'>Una plataforma pensada para trabajar mejor y vender un servicio mas profesional</h3>",
-        "<div class='benefit-grid'>",
-        "<div class='benefit-card'><h5>Menos errores</h5><p>Reduce fallas de carga, medicacion y seguimiento con informacion mas clara y centralizada.</p></div>",
-        "<div class='benefit-card'><h5>Mas control</h5><p>Coordina visitas, fichadas, urgencias, personal y documentacion desde un solo lugar.</p></div>",
-        "<div class='benefit-card'><h5>Mas respaldo</h5><p>Deja cada accion registrada con firmas, auditoria y documentacion lista para presentar.</p></div>",
-        "<div class='benefit-card'><h5>Mas escalable</h5><p>Sirve para profesionales independientes, empresas, coordinacion y redes de atencion.</p></div>",
-        "</div>",
-        "</div>",
-        "<div class='segment-grid'>",
-        "<div class='segment-card'><h4>Empresas de salud</h4><p>Coordina pacientes, personal, visitas, auditorias, alertas y documentacion sin depender de planillas sueltas.</p></div>",
-        "<div class='segment-card'><h4>Profesionales de salud</h4><p>Registran atencion, signos, estudios e indicaciones desde el celular, con menos pasos y mejor respaldo.</p></div>",
-        "<div class='segment-card'><h4>Coordinacion y administracion</h4><p>Visualizan agenda, carga operativa, equipo, RRHH y auditoria para tomar decisiones rapidas.</p></div>",
-        "<div class='segment-card'><h4>Ambulancias y emergencias</h4><p>Dejan trazado el evento, el triage, el traslado y la atencion realizada dentro del mismo sistema.</p></div>",
-        "</div>",
-        "<div class='closing-banner'>",
-        "<div class='closing-panel'><h3>Una presentacion fuerte para vender mejor</h3><p>Mostra una plataforma moderna, usable en celular y PC, con enfoque clinico, operativo y legal. Ideal para demos comerciales, reuniones con prestadores y propuestas para empresas de salud.</p></div>",
-        "<div class='closing-panel'><h3>Listo para demo</h3><p>Podes presentar modulos, flujos por rol, documentos descargables y una experiencia real de trabajo en domicilio desde la primera reunion comercial.</p></div>",
-        "</div>",
-        "<div class='contact-section-pro'>",
-        "<h3 style='color: white; margin: 0 0 10px; font-size: 2.2rem; font-weight: 900; letter-spacing: -1px;'>Necesitas soporte o implementacion?</h3>",
-        "<p style='color: #cbd5e1; margin: 0 0 12px; font-size: 1.15rem;'>Comunicate directamente con nuestro equipo de especialistas.</p>",
-        "<div class='contact-grid-pro'>",
-        "<div class='contact-profile-pro'>",
-        "<h4 class='p-name'>Enzo N. Girardi</h4>",
-        "<p class='p-role'>Desarrollo y Soporte Tecnico</p>",
-        "<div class='btn-flex-pro'>",
-        "<a href='https://wa.me/5493584302024' target='_blank' class='btn-link-pro wpp-pro'>WhatsApp</a>",
-        "<a href='mailto:enzogirardi84@gmail.com' class='btn-link-pro mail-pro'>Email</a>",
-        "</div>",
-        "</div>",
-        "<div class='contact-profile-pro'>",
-        "<h4 class='p-name'>Dario Lanfranco</h4>",
-        "<p class='p-role'>Implementacion y Contratos</p>",
-        "<div class='btn-flex-pro'>",
-        "<a href='https://wa.me/5493584201263' target='_blank' class='btn-link-pro wpp-pro'>WhatsApp</a>",
-        "<a href='mailto:dariolanfrancoruffener@gmail.com' class='btn-link-pro mail-pro'>Email</a>",
-        "</div>",
-        "</div>",
-        "</div>",
-        "</div>",
-        "</div>",
-    ]
-    landing_html = "".join(html_lines)
-    st.markdown(landing_html, unsafe_allow_html=True)
+    st.markdown(obtener_html_landing_publicidad(logo_html), unsafe_allow_html=True)
     if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
         st.session_state.entered_app = True
         st.rerun()
     st.stop()
 
 render_login()
+verificar_clinica_sesion_activa()
 check_inactividad()
 
 user = st.session_state.get("u_actual")
@@ -518,17 +461,40 @@ if not user:
     st.stop()
 
 st.session_state.setdefault("modo_celular_viejo", False)
+if isinstance(user, dict):
+    _canon = core_utils.normalizar_usuario_sistema(dict(user))
+    _merged = dict(user)
+    for _k in ("rol", "perfil_profesional"):
+        if _k in _canon and _canon.get(_k) != user.get(_k):
+            _merged[_k] = _canon[_k]
+    if _merged.get("rol") != user.get("rol") or _merged.get("perfil_profesional") != user.get("perfil_profesional"):
+        st.session_state["u_actual"] = _merged
+        user = _merged
+
 mi_empresa = user["empresa"]
 rol = user["rol"]
 logo_sidebar_path = Path(__file__).resolve().parent / "assets" / "logo_medicare_pro.jpeg"
-logo_sidebar_b64 = base64.b64encode(logo_sidebar_path.read_bytes()).decode() if logo_sidebar_path.exists() else ""
+try:
+    logo_sidebar_b64 = (
+        base64.b64encode(logo_sidebar_path.read_bytes()).decode() if logo_sidebar_path.exists() else ""
+    )
+except OSError:
+    logo_sidebar_b64 = ""
 
 if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
 with st.sidebar:
     if st.button("Volver a la Publicidad", use_container_width=True):
+        from core.database import vaciar_datos_app_en_sesion
+        from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
+
         st.session_state.entered_app = False
+        st.session_state["logeado"] = False
+        for _k in ("u_actual", "paciente_actual", "modulo_actual", "modulo_anterior", "ultima_actividad"):
+            st.session_state.pop(_k, None)
+        limpiar_estado_sesion_login_efimero()
+        vaciar_datos_app_en_sesion()
         st.rerun()
     st.divider()
 
@@ -551,6 +517,10 @@ with st.sidebar:
         st.caption("Modo liviano activo: prioriza pantallas simples y menos datos visibles por vez.")
     st.divider()
 
+    render_estabilidad_anticolapso_sidebar()
+    aplicar_politicas_anticolapso_ui()
+    st.divider()
+
     menu = resolve_menu_for_role(rol, user)
     st.markdown(
         """
@@ -571,7 +541,7 @@ with st.sidebar:
         incluir_altas=ver_altas,
         busqueda=buscar,
     )
-    limite_pacientes = valor_por_modo_liviano(80, 36, st.session_state)
+    limite_pacientes = valor_por_modo_liviano(limite_pacientes_sidebar(), 36, st.session_state)
     if not buscar and len(p_f) > limite_pacientes:
         st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
         p_f = p_f[:limite_pacientes]
@@ -598,7 +568,7 @@ with st.sidebar:
     paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
-        det_sidebar = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
+        det_sidebar = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
         st.markdown(_sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
 
     if paciente_sel:
@@ -625,6 +595,41 @@ with st.sidebar:
                 + "</div>",
                 unsafe_allow_html=True,
             )
+
+    render_sidebar_bloque_app_paciente(mi_empresa, rol)
+
+    st.divider()
+    aplicar_politicas_anticolapso_ui()
+    st.markdown(
+        """
+        <div class="mc-sidebar-section">
+            <div class="mc-sidebar-kicker">Rendimiento</div>
+            <div class="mc-sidebar-title">Equipos viejos o lentos</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    _liv_opts = [
+        ("Automático (detectar)", "auto"),
+        ("Modo liviano siempre", "on"),
+        ("Modo completo siempre", "off"),
+    ]
+    _liv_labels = [x[0] for x in _liv_opts]
+    _liv_vals = [x[1] for x in _liv_opts]
+    st.session_state.setdefault("mc_liviano_modo", "auto")
+    _cur_liv = st.session_state["mc_liviano_modo"]
+    _idx_liv = _liv_vals.index(_cur_liv) if _cur_liv in _liv_vals else 0
+    _pick_liv = st.selectbox(
+        "Modo interfaz",
+        _liv_labels,
+        index=_idx_liv,
+        key="mc_liviano_select_ui",
+        help="Automático: detecta Android antiguo, iOS ≤12, poca RAM, ahorro de datos y cabecera Save-Data. Modo liviano reduce sombras y animaciones. Con **anticolapso** activo, queda forzado en liviano.",
+        label_visibility="collapsed",
+    )
+    st.session_state["mc_liviano_modo"] = _liv_vals[_liv_labels.index(_pick_liv)]
+    st.caption("Si el equipo es viejo, en «Automático» se activa solo un modo más liviano.")
+
     if st.button("Cerrar Sesion", use_container_width=True):
         limpiar_sesion_app()
         st.rerun()
@@ -647,6 +652,12 @@ with st.sidebar:
     if detalle_guardado and estado_clave in {"local", "error"}:
         st.caption(detalle_guardado)
     st.caption(APP_BUILD_TAG)
+    if es_control_total(rol):
+        with st.expander("Notas de version (admin)", expanded=False):
+            st.markdown(MC_APP_CHANGELOG)
+
+_mc_srv_liviano = headers_sugieren_equipo_liviano()
+render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
 
 vista_actual = resolve_current_view(menu)
 if not vista_actual:
@@ -657,17 +668,61 @@ if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
 
-if paciente_sel:
-    det_actual = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
-    st.markdown(
-        f"""
-        <div class="mc-callout">
-            <strong>Paciente activo:</strong> {escape(paciente_sel)}<br>
-            Empresa: {escape(det_actual.get('empresa', mi_empresa))} | DNI: {escape(det_actual.get('dni', 'S/D'))} | Estado: {escape(det_actual.get('estado', 'Activo'))}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+render_panel_bienvenida(rol, menu, VIEW_NAV_LABELS)
+
+render_banner_alertas_criticas_si_aplica(mi_empresa)
+
+modulo_anterior = st.session_state.get("modulo_anterior")
+mostrar_atajo = modulo_anterior and modulo_anterior in menu and modulo_anterior != vista_actual
+
+if mostrar_atajo or paciente_sel:
+    if mostrar_atajo and paciente_sel:
+        col_nav, col_call = st.columns([1, 4])
+        with col_nav:
+            etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
+            if st.button(
+                "← Anterior",
+                help=f"Volver a: {etiqueta_ant}",
+                use_container_width=True,
+                key="mc_atajo_modulo_anterior",
+            ):
+                cur = vista_actual
+                st.session_state["modulo_actual"] = modulo_anterior
+                st.session_state["modulo_anterior"] = cur
+                st.rerun()
+        with col_call:
+            det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+            st.markdown(
+                f"""
+                <div class="mc-callout">
+                    <strong>Paciente activo:</strong> {escape(paciente_sel)}<br>
+                    Empresa: {escape(det_actual.get('empresa', mi_empresa))} | DNI: {escape(det_actual.get('dni', 'S/D'))} | Estado: {escape(det_actual.get('estado', 'Activo'))}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    elif mostrar_atajo:
+        etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
+        if st.button(
+            f"← Volver a {etiqueta_ant}",
+            use_container_width=False,
+            key="mc_atajo_modulo_anterior_solo",
+        ):
+            cur = vista_actual
+            st.session_state["modulo_actual"] = modulo_anterior
+            st.session_state["modulo_anterior"] = cur
+            st.rerun()
+    elif paciente_sel:
+        det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+        st.markdown(
+            f"""
+            <div class="mc-callout">
+                <strong>Paciente activo:</strong> {escape(paciente_sel)}<br>
+                Empresa: {escape(det_actual.get('empresa', mi_empresa))} | DNI: {escape(det_actual.get('dni', 'S/D'))} | Estado: {escape(det_actual.get('estado', 'Activo'))}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol)
 

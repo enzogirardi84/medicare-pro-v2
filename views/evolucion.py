@@ -1,22 +1,20 @@
 import base64
+import html
 import io
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import (
     ahora,
-    contenedores_responsivos,
-    decodificar_base64_seguro,
     firma_a_base64,
-    limite_archivo_mb,
-    modo_celular_viejo_activo,
     obtener_config_firma,
+    optimizar_imagen_bytes,
     puede_accion,
-    preparar_imagen_clinica_bytes,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
-    valor_por_modo_liviano,
 )
 
 CANVAS_DISPONIBLE = False
@@ -27,53 +25,90 @@ except ImportError:
     pass
 
 
-def _auditar_evolucion(paciente_sel, user, accion, detalle, criticidad="media", referencia="", extra=None):
-    registrar_auditoria_legal(
-        "Evolucion Clinica",
-        paciente_sel,
-        accion,
-        user.get("nombre", "Sistema"),
-        user.get("matricula", ""),
-        detalle,
-        referencia=referencia,
-        extra=extra or {},
-        usuario=user,
-        modulo="Evolucion",
-        criticidad=criticidad,
-    )
+def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_iframe_px: int = 520):
+    """
+    Historial en iframe con altura fija: el scroll vive adentro (Streamlit suele romper overflow en st.markdown).
+    """
+    bloques = []
+    for i, ev in enumerate(evs_mas_recientes_primero):
+        fecha = html.escape(str(ev.get("fecha", "")))
+        firma = html.escape(str(ev.get("firma", "")))
+        nota = html.escape(str(ev.get("nota", "")))
+        plantilla = ev.get("plantilla")
+        margen = "0" if i == len(evs_mas_recientes_primero) - 1 else "0 0 12px 0"
+        bloques.append(
+            f'<div class="mc-evol-card" style="margin:{margen};">'
+            f'<div class="mc-evol-meta"><b>{fecha}</b> | <b>{firma}</b></div>'
+        )
+        if plantilla:
+            bloques.append(
+                f'<div class="mc-evol-plant">Plantilla: {html.escape(str(plantilla))}</div>'
+            )
+        bloques.append(f'<div class="mc-evol-body">{nota}</div></div>')
+    cards_html = "".join(bloques)
+
+    doc = f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"/>
+<style>
+  html, body {{ margin:0; height:100%; background:#0f172a; font-family:system-ui,-apple-system,sans-serif; }}
+  .mc-evol-scroll {{
+    height:100%; box-sizing:border-box; overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+    padding:14px 16px; border:1px solid rgba(148,163,184,0.4); border-radius:10px;
+    background:rgba(30,41,59,0.5); scrollbar-gutter:stable;
+  }}
+  .mc-evol-card {{
+    border:1px solid rgba(148,163,184,0.28); border-radius:8px; padding:12px 14px;
+    background:rgba(15,23,42,0.65);
+  }}
+  .mc-evol-meta {{ color:#e2e8f0; font-size:14px; }}
+  .mc-evol-plant {{ font-size:12px; color:#94a3b8; margin-top:6px; }}
+  .mc-evol-body {{ color:#cbd5e1; font-size:14px; margin-top:10px; white-space:pre-wrap; word-break:break-word; }}
+</style></head><body>
+<div class="mc-evol-scroll">{cards_html}</div>
+</body></html>"""
+
+    components.html(doc, height=altura_iframe_px, scrolling=False)
 
 
 def render_evolucion(paciente_sel, user, rol=None):
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral.")
+        aviso_sin_paciente()
         return
 
     rol = rol or user.get("rol", "")
-    modo_liviano = modo_celular_viejo_activo()
     puede_registrar = puede_accion(rol, "evolucion_registrar")
     puede_borrar = puede_accion(rol, "evolucion_borrar")
-    evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
-    fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
 
-    st.subheader("Evolucion Medica y Firma Digital")
-    if modo_liviano:
-        st.caption("Modo celular viejo activo: la carga se simplifica, los adjuntos son opcionales y el historial usa menos memoria.")
-
-    m1, m2, m3 = contenedores_responsivos(3, modo_liviano)
-    m1.metric("Evoluciones", len(evs_paciente))
-    m2.metric("Fotos clinicas", len(fotos_heridas))
-    m3.metric("Ultimo registro", evs_paciente[-1]["fecha"] if evs_paciente else "Sin evoluciones")
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Evolucion medica</h2>
+            <p class="mc-hero-text">Notas clinicas con firma del paciente o familiar y adjuntos. En celulares viejos preferi subir foto de firma antes que el lienzo tactil.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Firma digital</span>
+                <span class="mc-chip">Historia</span>
+                <span class="mc-chip">Auditoria legal</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Notas", "Registra evolucion con plantillas segun rol."),
+            ("Firma", "En celulares lentos conviene foto de firma antes que el lienzo."),
+            ("Auditoria", "Las altas quedan con trazabilidad legal."),
+        ]
+    )
+    st.caption(
+        "Primero podes registrar la firma del paciente o familiar (opcional). Debajo, la nota de evolucion con plantilla, foto de herida opcional y el historial al final."
+    )
 
     firma_subida = None
-    canvas_result = None
-    abrir_firma = st.checkbox(
-        "Mostrar registro de firma del paciente / familiar",
-        value=not modo_liviano,
-        key="abrir_firma_evolucion",
-    )
-    if abrir_firma and CANVAS_DISPONIBLE:
+    if CANVAS_DISPONIBLE:
         st.markdown("##### Firma Digital del Paciente / Familiar")
-        firma_cfg = obtener_config_firma("evolucion", default_liviano=modo_liviano)
+        firma_cfg = obtener_config_firma("evolucion")
         metodo_firma = st.radio(
             "Metodo de firma",
             ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
@@ -81,6 +116,7 @@ def render_evolucion(paciente_sel, user, rol=None):
             key="metodo_firma_evolucion",
         )
         firma_subida = None
+        canvas_result = None
         if metodo_firma.startswith("Subir"):
             firma_subida = st.file_uploader(
                 "Subir imagen de la firma",
@@ -100,40 +136,31 @@ def render_evolucion(paciente_sel, user, rol=None):
                 display_toolbar=firma_cfg["display_toolbar"],
                 key="canvas_firma_evolucion",
             )
-    elif abrir_firma:
+
+        if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
+            b64_firma = firma_a_base64(
+                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
+                uploaded_file=firma_subida,
+            )
+
+            if b64_firma:
+                st.session_state["firmas_tactiles_db"].append({
+                    "paciente": paciente_sel,
+                    "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                    "firma_img": b64_firma,
+                })
+                guardar_datos()
+                st.success("Firma guardada correctamente.")
+                st.rerun()
+            else:
+                st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
+    else:
         st.warning("Libreria de firma no disponible. Puedes subir una imagen de la firma.")
         firma_subida = st.file_uploader(
             "Subir imagen de la firma",
             type=["png", "jpg", "jpeg"],
             key="firma_upload_evolucion_sin_canvas",
         )
-
-    if abrir_firma and st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
-        b64_firma = firma_a_base64(
-            canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
-            uploaded_file=firma_subida,
-        )
-
-        if b64_firma:
-            st.session_state["firmas_tactiles_db"].append({
-                "paciente": paciente_sel,
-                "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-                "firma_img": b64_firma,
-            })
-            _auditar_evolucion(
-                paciente_sel,
-                user,
-                "Firma del paciente / familiar registrada",
-                "Se registro una firma tactil o subida de imagen para dejar soporte documental de evolucion.",
-                criticidad="alta",
-                referencia="firma_evolucion",
-                extra={"origen_firma": "canvas" if canvas_result is not None and firma_subida is None else "archivo"},
-            )
-            guardar_datos()
-            st.success("Firma guardada correctamente.")
-            st.rerun()
-        else:
-            st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
 
     st.divider()
 
@@ -158,59 +185,28 @@ def render_evolucion(paciente_sel, user, rol=None):
                 height=220,
                 placeholder="Escribir aqui la evolucion...",
             )
-            col_foto1, col_foto2 = contenedores_responsivos([3, 1], modo_liviano)
+            col_foto1, col_foto2 = st.columns([3, 1])
             desc_w = col_foto1.text_input("Descripcion de la herida / lesion (opcional)")
 
             with col_foto2:
-                st.markdown("Adjunto clinico")
-                origen_foto = st.radio(
-                    "Foto de herida / lesion",
-                    ["No adjuntar", "Camara", "Subir archivo"],
-                    horizontal=False,
-                    key="origen_foto_evolucion",
-                )
-                foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if origen_foto == "Camara" else None
-                foto_subida = (
-                    st.file_uploader(
-                        "Subir foto existente",
-                        type=["png", "jpg", "jpeg"],
-                        key="upload_foto_evolucion",
-                    )
-                    if origen_foto == "Subir archivo"
-                    else None
-                )
-                st.caption(f"Imagen sugerida hasta {limite_archivo_mb('imagen')} MB.")
+                st.markdown("Foto de la herida")
+                usar_camara = st.checkbox("Encender camara")
+                foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if usar_camara else None
 
             if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
                 if nota.strip():
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
-                    foto_preparada = None
-                    origen_foto_guardado = ""
-                    if foto_w is not None or foto_subida is not None:
-                        bytes_foto = foto_w.getvalue() if foto_w is not None else foto_subida.getvalue()
-                        nombre_foto = "camara_evolucion.jpg" if foto_w is not None else (foto_subida.name or "foto_evolucion.jpg")
-                        origen_foto_guardado = "camara" if foto_w is not None else "archivo"
-                        foto_preparada = preparar_imagen_clinica_bytes(
-                            bytes_foto,
-                            nombre_archivo=nombre_foto,
-                            max_size=(1280, 1280),
-                            quality=70,
-                        )
-                        if not foto_preparada["ok"]:
-                            st.error(foto_preparada["error"])
-                            return
-
-                    registro_evolucion = {
+                    st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
                         "nota": nota.strip(),
                         "fecha": fecha_n,
                         "firma": user["nombre"],
                         "plantilla": plantilla,
-                    }
+                    })
 
-                    st.session_state["evoluciones_db"].append(registro_evolucion)
-                    if foto_preparada is not None:
-                        base64_foto = base64.b64encode(foto_preparada["bytes"]).decode("utf-8")
+                    if foto_w is not None:
+                        foto_bytes, _ = optimizar_imagen_bytes(foto_w.getvalue(), max_size=(1280, 1280), quality=70)
+                        base64_foto = base64.b64encode(foto_bytes).decode("utf-8")
                         st.session_state["fotos_heridas_db"].append({
                             "paciente": paciente_sel,
                             "fecha": fecha_n,
@@ -219,19 +215,13 @@ def render_evolucion(paciente_sel, user, rol=None):
                             "firma": user["nombre"],
                         })
 
-                    _auditar_evolucion(
+                    registrar_auditoria_legal(
+                        "Evolucion Clinica",
                         paciente_sel,
-                        user,
                         "Nueva evolucion",
+                        user.get("nombre", ""),
+                        user.get("matricula", ""),
                         f"Se registro evolucion con plantilla {plantilla}.",
-                        criticidad="media",
-                        referencia=plantilla,
-                        extra={
-                            "plantilla": plantilla,
-                            "adjunta_foto": foto_preparada is not None,
-                            "origen_foto": origen_foto_guardado,
-                            "longitud_nota": len(nota.strip()),
-                        },
                     )
                     guardar_datos()
                     st.success("Evolucion guardada correctamente.")
@@ -241,6 +231,7 @@ def render_evolucion(paciente_sel, user, rol=None):
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
 
+    evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
     if evs_paciente:
         st.divider()
         st.markdown("#### Historial de Evoluciones Clinicas")
@@ -248,43 +239,40 @@ def render_evolucion(paciente_sel, user, rol=None):
             "Evoluciones a mostrar",
             len(evs_paciente),
             key=f"limite_evol_{paciente_sel}",
-            default=valor_por_modo_liviano(20, 10),
+            default=20,
         )
         if puede_borrar:
-            col_chk, col_btn = contenedores_responsivos([1.2, 2.8], modo_liviano)
+            col_chk, col_btn = st.columns([1.2, 2.8])
             confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_evol")
             if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
                 ultima = evs_paciente[-1]
                 st.session_state["evoluciones_db"].remove(evs_paciente[-1])
-                _auditar_evolucion(
+                registrar_auditoria_legal(
+                    "Evolucion Clinica",
                     paciente_sel,
-                    user,
                     "Borrado de evolucion",
+                    user.get("nombre", ""),
+                    user.get("matricula", ""),
                     f"Se elimino la evolucion del {ultima.get('fecha', 'S/D')}.",
-                    criticidad="alta",
-                    referencia=ultima.get("fecha", ""),
-                    extra={
-                        "plantilla": ultima.get("plantilla", ""),
-                        "firma_registro": ultima.get("firma", ""),
-                    },
                 )
                 guardar_datos()
                 st.rerun()
         else:
             st.caption("El borrado de evoluciones queda reservado a medico, coordinacion o administracion total.")
 
-        st.caption(f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones registradas.")
-        with st.container(height=valor_por_modo_liviano(560, 420)):
-            for ev in reversed(evs_paciente[-limite_evol:]):
-                with st.container(border=True):
-                    st.markdown(f"**{ev['fecha']}** | **{ev['firma']}**")
-                    if ev.get("plantilla"):
-                        st.caption(f"Plantilla: {ev['plantilla']}")
-                    st.write(ev["nota"])
-                    st.caption("-" * 40)
+        st.caption(
+            f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones registradas. "
+            "El panel gris tiene altura fija: con muchas notas el desplazamiento es dentro de ese panel (barra a la derecha del recuadro)."
+        )
+        _historial_evoluciones_scroll_interno(list(reversed(evs_paciente[-limite_evol:])))
     else:
-        st.info("Aun no hay evoluciones registradas para este paciente.")
+        bloque_estado_vacio(
+            "Sin evoluciones todavía",
+            "Este paciente no tiene evoluciones médicas registradas.",
+            sugerencia="Usá el formulario de arriba para cargar la primera evolución con firma.",
+        )
 
+    fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
     if fotos_heridas:
         st.divider()
         st.markdown("#### Linea de tiempo de heridas y lesiones")
@@ -292,27 +280,16 @@ def render_evolucion(paciente_sel, user, rol=None):
             "Fotos a mostrar",
             len(fotos_heridas),
             key=f"limite_fotos_heridas_{paciente_sel}",
-            default=valor_por_modo_liviano(12, 6),
+            default=12,
             opciones=(6, 12, 20, 30),
         )
-        mostrar_fotos = (not modo_liviano) or st.checkbox(
-            "Cargar fotos de heridas",
-            value=False,
-            key=f"mostrar_fotos_evolucion_{paciente_sel}",
-        )
-        with st.container(height=valor_por_modo_liviano(520, 380)):
+        with st.container(height=520):
             for foto in reversed(fotos_heridas[-limite_fotos:]):
                 with st.container(border=True):
                     st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")
                     if foto.get("descripcion"):
                         st.caption(foto.get("descripcion"))
-                    if mostrar_fotos:
-                        try:
-                            imagen_bytes = decodificar_base64_seguro(foto.get("base64_foto", ""))
-                            if not imagen_bytes:
-                                raise ValueError("Foto vacia o invalida")
-                            st.image(imagen_bytes, use_container_width=True)
-                        except Exception:
-                            st.warning("No se pudo mostrar una foto registrada.")
-                    elif modo_liviano:
-                        st.caption("Foto oculta para ahorrar memoria. Activa la carga solo si necesitas verla.")
+                    try:
+                        st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
+                    except Exception:
+                        st.warning("No se pudo mostrar una foto registrada.")

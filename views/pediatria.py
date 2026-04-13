@@ -4,7 +4,8 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
+from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def _parse_fecha_hora(fecha_str):
@@ -16,11 +17,34 @@ def _parse_fecha_hora(fecha_str):
 
 def render_pediatria(paciente_sel, user):
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral.")
+        aviso_sin_paciente()
         return
 
-    st.subheader("Control Pediatrico y Curvas de Crecimiento")
-    det = st.session_state["detalles_pacientes_db"].get(paciente_sel, {})
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Control pediatrico y curvas</h2>
+            <p class="mc-hero-text">Peso, talla, IMC y percentiles con graficos de tendencia. Los datos se toman del legajo (sexo y fecha de nacimiento) y del historial pediatrico.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Curvas</span>
+                <span class="mc-chip">Percentiles</span>
+                <span class="mc-chip">Historial</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Curvas", "Peso, talla e IMC con tendencia en el tiempo."),
+            ("Percentiles", "Se calculan con sexo y fecha de nacimiento del legajo."),
+            ("Historial", "Cada control queda disponible para revision."),
+        ]
+    )
+    st.caption(
+        "Los percentiles aproximados usan sexo y fecha de nacimiento del legajo en **Admision**. Si no hay controles previos, el resumen aparece despues del primer guardado; el formulario de nuevo control esta mas abajo."
+    )
+    det = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
     se = det.get("sexo", "F")
     f_n_str = det.get("fnac", "01/01/2000")
     f_n = pd.to_datetime(f_n_str, format="%d/%m/%Y", errors="coerce")

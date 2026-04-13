@@ -1,10 +1,12 @@
 import base64
 import io
+from html import escape
 
 import pandas as pd
 import streamlit as st
 
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
+from core.view_helpers import bloque_mc_grid_tarjetas
 from core.utils import ahora, mostrar_dataframe_con_scroll
 
 FPDF_DISPONIBLE = False
@@ -16,15 +18,41 @@ except ImportError:
 
 
 def render_auditoria(mi_empresa, user):
-    st.subheader("Auditoria General de Movimientos")
+    emp_e = escape(str(mi_empresa or ""))
+    st.markdown(
+        f"""
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Auditoria de movimientos</h2>
+            <p class="mc-hero-text">Logs del sistema y asistencia por profesional para {emp_e}. Filtros por fecha, usuario y texto; descarga CSV cuando haga falta.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Logs</span>
+                <span class="mc-chip">Asistencia</span>
+                <span class="mc-chip">Exportacion</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Logs", "Accesos y acciones del sistema con filtro por fecha y usuario."),
+            ("Asistencia", "Fichadas del check-in por profesional y periodo."),
+            ("CSV / PDF", "Descarga de logs en CSV; PDF opcional en asistencia."),
+        ]
+    )
     st.info("Consulta completa de movimientos del sistema. Visible para SuperAdmin, Coordinador y Administrativo.")
+    st.caption(
+        "Elegi la seccion abajo: **Logs** son eventos de login y uso; **Asistencia** cruza profesional con fichadas de **Visitas**."
+    )
 
     seccion = st.radio("Seccion", ["Logs del sistema", "Asistencia por profesional"], horizontal=False, label_visibility="collapsed")
 
     if seccion == "Logs del sistema":
         logs = st.session_state.get("logs_db", [])
         if not logs:
-            st.info("Aun no hay registros de auditoria.")
+            st.warning(
+                "Todavia no hay registros en **logs_db** (logins y acciones). Los eventos aparecen cuando el equipo usa el sistema con normalidad."
+            )
             return
 
         df_logs = pd.DataFrame(logs)
@@ -83,7 +111,7 @@ def render_auditoria(mi_empresa, user):
     profesionales_lista = sorted([p for p in set(profesionales_lista + profesionales_historicos) if p])
 
     if not profesionales_lista:
-        st.info("No hay profesionales registrados aun.")
+        st.warning("No hay nombres de profesionales en usuarios ni en fichadas de check-in todavia.")
         return
 
     prof_sel = st.selectbox("Seleccionar Profesional", profesionales_lista, key="prof_rrhh_audit")
@@ -102,7 +130,12 @@ def render_auditoria(mi_empresa, user):
         if pd.notna(fecha_dt) and fecha_rrhh_desde <= fecha_dt.date() <= fecha_rrhh_hasta:
             chks_prof.append(c)
 
-    st.success(f"{len(chks_prof)} registros de asistencia para {prof_sel} en el periodo seleccionado")
+    if chks_prof:
+        st.success(f"{len(chks_prof)} registros de asistencia para {prof_sel} en el periodo seleccionado")
+    else:
+        st.warning(
+            f"Sin fichadas para **{prof_sel}** en ese periodo. Amplia fechas o verifica que existan LLEGADA/SALIDA en **Visitas**."
+        )
 
     if chks_prof:
         max_filas = min(500, max(len(chks_prof), 1))

@@ -6,10 +6,12 @@ import streamlit as st
 from core.database import guardar_datos
 from core.utils import (
     ahora,
+    asegurar_detalles_pacientes_en_sesion,
+    es_control_total,
+    mapa_detalles_pacientes,
     mostrar_dataframe_con_scroll,
     obtener_pacientes_visibles,
     registrar_auditoria_legal,
-    rol_ve_datos_todas_las_clinicas,
     seleccionar_limite_registros,
 )
 
@@ -32,6 +34,7 @@ DB_LABELS = {
     "auditoria_legal_db": "Auditoria legal",
     "facturacion_db": "Caja y facturacion",
     "firmas_tactiles_db": "Firmas",
+    "plantillas_whatsapp_db": "Plantillas WhatsApp",
 }
 NON_PATIENT_DB_KEYS = {
     "usuarios_db",
@@ -43,6 +46,7 @@ NON_PATIENT_DB_KEYS = {
     "reportes_diarios_db",
     "profesionales_red_db",
     "solicitudes_servicios_db",
+    "plantillas_whatsapp_db",
 }
 
 
@@ -66,7 +70,7 @@ def _parsear_fecha_guardada(valor):
 
 def _dni_duplicado(dni, excluir_paciente=None):
     dni_limpio = str(dni or "").strip()
-    for paciente_id, detalles in st.session_state.get("detalles_pacientes_db", {}).items():
+    for paciente_id, detalles in mapa_detalles_pacientes(st.session_state).items():
         if excluir_paciente and paciente_id == excluir_paciente:
             continue
         if str(detalles.get("dni", "") or "").strip() == dni_limpio:
@@ -141,7 +145,7 @@ def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False,
     ):
         if empresa_filtro and empresa != empresa_filtro:
             continue
-        detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_id, {})
+        detalles = mapa_detalles_pacientes(st.session_state).get(paciente_id, {})
         pacientes.append(
             {
                 "id": paciente_id,
@@ -176,41 +180,33 @@ def _dataframe_pacientes(registros):
 
 def render_admision(mi_empresa, rol):
     rol_normalizado = str(rol or "").strip().lower()
-    admin_total = rol_ve_datos_todas_las_clinicas(rol)
+    admin_total = es_control_total(rol)
 
     st.markdown(
         """
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Admision de nuevo paciente</h2>
-            <p class="mc-hero-text">Carga, corrige y administra legajos completos. Desde esta vista puedes buscar pacientes por clinica, editar datos errados y eliminar registros con limpieza segura de los modulos asociados.</p>
+            <h2 class="mc-hero-title">Admision de pacientes</h2>
+            <p class="mc-hero-text">En esta misma pantalla, justo debajo: primero correccion y borrado seguro del legajo; mas abajo, el alta de pacientes nuevos. No hay pestañas ocultas.</p>
             <div class="mc-chip-row">
-                <span class="mc-chip">1. Buscar si ya existe</span>
-                <span class="mc-chip">2. Completar datos obligatorios</span>
-                <span class="mc-chip">3. Guardar, corregir o depurar</span>
+                <span class="mc-chip">Corregir legajo</span>
+                <span class="mc-chip">Eliminar si hubo error</span>
+                <span class="mc-chip">Alta nueva</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown("##### Buscar paciente existente")
-    buscar_adm = st.text_input("Nombre, DNI o apellido", placeholder="Ej: Juan Perez o 35123456")
+    st.markdown("## Corregir o eliminar legajo")
+    st.caption(
+        "Esta seccion esta arriba a la vista: busca el paciente, edita el legajo o eliminalo (con limpieza del historial vinculado). El alta de pacientes nuevos esta mas abajo."
+    )
 
-    if buscar_adm:
-        coincidencias = [
-            p
-            for p in st.session_state["pacientes_db"]
-            if buscar_adm.lower() in p.lower()
-            or (buscar_adm.isdigit() and buscar_adm in st.session_state["detalles_pacientes_db"].get(p, {}).get("dni", ""))
-        ]
-        if coincidencias:
-            st.warning(f"Se encontraron {len(coincidencias)} pacientes similares.")
-            for p in coincidencias[:5]:
-                det = st.session_state["detalles_pacientes_db"].get(p, {})
-                st.caption(f"{p} | DNI: {det.get('dni', 'S/D')} | Empresa: {det.get('empresa', 'S/D')}")
-        else:
-            st.success("No hay pacientes con ese nombre o DNI.")
-
+    st.info(
+        "Corregi un typo en el nombre, el DNI mal cargado, telefono u obra social, o **elimina** el legajo si se creo por error. "
+        "Al guardar cambios de nombre/DNI, el sistema actualiza las referencias en agenda, visitas, historia, etc. "
+        "Al eliminar, se borra el legajo y los registros vinculados (accion irreversible)."
+    )
     st.markdown("##### Gestion de pacientes por clinica")
     col_f1, col_f2 = st.columns([2.2, 1])
     buscar_gestion = col_f1.text_input(
@@ -225,7 +221,7 @@ def render_admision(mi_empresa, rol):
         empresas_disponibles = sorted(
             {
                 str(det.get("empresa", "") or "").strip()
-                for det in st.session_state.get("detalles_pacientes_db", {}).values()
+                for det in mapa_detalles_pacientes(st.session_state).values()
                 if str(det.get("empresa", "") or "").strip()
             }
         )
@@ -258,18 +254,19 @@ def render_admision(mi_empresa, rol):
         mostrar_dataframe_con_scroll(_dataframe_pacientes(pacientes_gestion[:limite]), height=420)
 
         opciones_pacientes = [item["id"] for item in pacientes_gestion]
+        _dm_edicion = mapa_detalles_pacientes(st.session_state)
         paciente_sel_admin = st.selectbox(
             "Seleccionar paciente para editar o eliminar",
             opciones_pacientes,
-            format_func=lambda item: (
-                f"{_nombre_legible(item)} | DNI {st.session_state['detalles_pacientes_db'].get(item, {}).get('dni', 'S/D')} | "
-                f"{st.session_state['detalles_pacientes_db'].get(item, {}).get('empresa', 'S/D')} | "
-                f"{st.session_state['detalles_pacientes_db'].get(item, {}).get('estado', 'Activo')}"
+            format_func=lambda item, dm=_dm_edicion: (
+                f"{_nombre_legible(item)} | DNI {dm.get(item, {}).get('dni', 'S/D')} | "
+                f"{dm.get(item, {}).get('empresa', 'S/D')} | "
+                f"{dm.get(item, {}).get('estado', 'Activo')}"
             ),
             key="adm_paciente_edicion",
         )
 
-        detalle_sel = dict(st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel_admin, {}))
+        detalle_sel = dict(mapa_detalles_pacientes(st.session_state).get(paciente_sel_admin, {}))
         impacto_actual = _resumen_impacto_paciente(paciente_sel_admin)
         total_impacto = sum(impacto_actual.values())
 
@@ -334,7 +331,9 @@ def render_admision(mi_empresa, rol):
                         st.error("Ya existe otro paciente con ese DNI.")
                     else:
                         paciente_nuevo = _paciente_id(nombre_edit, dni_edit)
-                        if paciente_nuevo != paciente_sel_admin and paciente_nuevo in st.session_state["detalles_pacientes_db"]:
+                        if paciente_nuevo != paciente_sel_admin and paciente_nuevo in mapa_detalles_pacientes(
+                            st.session_state
+                        ):
                             st.error("Ya existe un legajo con ese nombre y DNI.")
                         else:
                             detalles_actualizados = dict(detalle_sel)
@@ -361,8 +360,9 @@ def render_admision(mi_empresa, rol):
                                 pacientes_db.append(paciente_nuevo)
                             st.session_state["pacientes_db"] = list(dict.fromkeys(pacientes_db))
 
-                            st.session_state["detalles_pacientes_db"].pop(paciente_sel_admin, None)
-                            st.session_state["detalles_pacientes_db"][paciente_nuevo] = detalles_actualizados
+                            _det_mut = asegurar_detalles_pacientes_en_sesion(st.session_state)
+                            _det_mut.pop(paciente_sel_admin, None)
+                            _det_mut[paciente_nuevo] = detalles_actualizados
 
                             registros_actualizados = 0
                             if paciente_nuevo != paciente_sel_admin:
@@ -407,7 +407,7 @@ def render_admision(mi_empresa, rol):
                 type="primary" if confirmar_borrado else "secondary",
             ):
                 resumen_eliminado = _eliminar_referencias_paciente(paciente_sel_admin)
-                st.session_state["detalles_pacientes_db"].pop(paciente_sel_admin, None)
+                asegurar_detalles_pacientes_en_sesion(st.session_state).pop(paciente_sel_admin, None)
                 st.session_state["pacientes_db"] = [
                     item for item in st.session_state.get("pacientes_db", []) if item != paciente_sel_admin
                 ]
@@ -430,7 +430,37 @@ def render_admision(mi_empresa, rol):
                 st.success("Paciente eliminado correctamente.")
                 st.rerun()
     else:
-        st.info("No hay pacientes cargados con los filtros actuales.")
+        st.warning(
+            "No aparece ningun paciente en la lista con los filtros actuales. "
+            "Proba limpiar la busqueda, marcar **Incluir altas** o, si sos administrador, elegir otra clinica en el filtro. "
+            "Cuando haya al menos un legajo visible, vas a ver la tabla, el selector y los botones de editar / eliminar."
+        )
+
+    st.divider()
+
+    st.markdown("## Alta de paciente nuevo")
+
+    st.markdown("##### Antes de dar el alta: buscar si ya existe")
+    buscar_adm = st.text_input("Nombre, DNI o apellido", placeholder="Ej: Juan Perez o 35123456", key="adm_buscar_duplicado")
+
+    if buscar_adm:
+        _dm = mapa_detalles_pacientes(st.session_state)
+        coincidencias = [
+            p
+            for p in st.session_state.get("pacientes_db", [])
+            if buscar_adm.lower() in p.lower()
+            or (buscar_adm.isdigit() and buscar_adm in _dm.get(p, {}).get("dni", ""))
+        ]
+        if coincidencias:
+            st.warning(
+                f"Se encontraron {len(coincidencias)} pacientes similares. Si es el mismo caso, no cargues de nuevo: "
+                "subi a la seccion **Corregir o eliminar legajo** (arriba en esta misma pagina)."
+            )
+            for p in coincidencias[:5]:
+                det = _dm.get(p, {})
+                st.caption(f"{p} | DNI: {det.get('dni', 'S/D')} | Empresa: {det.get('empresa', 'S/D')}")
+        else:
+            st.success("No hay pacientes con ese nombre o DNI. Podes continuar con el alta.")
 
     st.markdown(
         """
@@ -483,8 +513,8 @@ def render_admision(mi_empresa, rol):
                     st.error("Ya existe un paciente con ese DNI.")
                 else:
                     id_p = _paciente_id(n, d)
-                    st.session_state["pacientes_db"].append(id_p)
-                    st.session_state["detalles_pacientes_db"][id_p] = {
+                    st.session_state.setdefault("pacientes_db", []).append(id_p)
+                    asegurar_detalles_pacientes_en_sesion(st.session_state)[id_p] = {
                         "dni": d.strip(),
                         "fnac": f_nac.strftime("%d/%m/%Y"),
                         "sexo": se,

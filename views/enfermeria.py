@@ -1,8 +1,17 @@
+from html import escape
+
 import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.utils import (
+    ahora,
+    mapa_detalles_pacientes,
+    mostrar_dataframe_con_scroll,
+    registrar_auditoria_legal,
+    seleccionar_limite_registros,
+)
 
 
 TIPOS_CUIDADO = [
@@ -21,11 +30,11 @@ TIPOS_CUIDADO = [
 
 def render_enfermeria(paciente_sel, mi_empresa, user):
     if not paciente_sel:
-        st.info("Selecciona un paciente para registrar cuidados de enfermeria.")
+        aviso_sin_paciente()
         return
 
     registros = [x for x in st.session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel]
-    detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
     registros_ordenados = sorted(registros, key=lambda x: x.get("fecha", ""), reverse=True)
     ultimo_registro = registros_ordenados[0]["fecha"] if registros_ordenados else "Sin datos"
 
@@ -44,6 +53,13 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
         """,
         unsafe_allow_html=True,
     )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Registro", "Curaciones, riesgos y observaciones por turno."),
+            ("Plan actual", "Resumen de prioridad y ultimo plan de cuidados."),
+            ("Historial", "Filtra por turno o tipo de cuidado."),
+        ]
+    )
 
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Registros", len(registros))
@@ -51,13 +67,18 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
     m3.metric("Incidentes", sum(1 for x in registros if x.get("incidente")))
     m4.metric("Último registro", ultimo_registro)
 
+    st.caption(
+        "Elegi abajo **Nuevo registro** para cargar el turno, **Plan actual** para ver el resumen vigente o **Historial** para filtrar lo anterior. "
+        "Incidentes cuenta registros marcados como evento adverso."
+    )
+
     st.markdown(
         f"""
         <div class="mc-callout">
-            <strong>Paciente activo:</strong> {paciente_sel}<br>
-            <strong>Obra social:</strong> {detalles.get('obra_social', 'S/D')}<br>
-            <strong>Alergias:</strong> {detalles.get('alergias', 'Sin datos')}<br>
-            <strong>Patologías:</strong> {detalles.get('patologias', 'Sin datos')}
+            <strong>Paciente activo:</strong> {escape(str(paciente_sel))}<br>
+            <strong>Obra social:</strong> {escape(str(detalles.get('obra_social', 'S/D')))}<br>
+            <strong>Alergias:</strong> {escape(str(detalles.get('alergias', 'Sin datos')))}<br>
+            <strong>Patologías:</strong> {escape(str(detalles.get('patologias', 'Sin datos')))}
         </div>
         """,
         unsafe_allow_html=True,
@@ -148,7 +169,11 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
     elif vista == "Plan actual":
         st.markdown("### Resumen operativo del cuidado")
         if not registros_ordenados:
-            st.info("Todavía no hay registros de enfermería para este paciente.")
+            bloque_estado_vacio(
+                "Sin plan de enfermería",
+                "Todavía no hay registros de enfermería para este paciente.",
+                sugerencia="En la pestaña Registro cargá el primer plan o control.",
+            )
             return
 
         ultimo = registros_ordenados[0]
@@ -185,7 +210,11 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
     else:
         st.markdown("### Historial de cuidados")
         if not registros_ordenados:
-            st.info("Todavía no hay registros de enfermería para este paciente.")
+            bloque_estado_vacio(
+                "Sin historial de enfermería",
+                "No hay registros previos para listar.",
+                sugerencia="Usá la pestaña Registro para cargar cuidados y observaciones.",
+            )
             return
 
         col_f1, col_f2 = st.columns(2)
@@ -199,7 +228,11 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
             registros_filtrados = [x for x in registros_filtrados if x.get("tipo_cuidado") == tipo_filtro]
 
         if not registros_filtrados:
-            st.info("No hay registros que coincidan con el filtro.")
+            bloque_estado_vacio(
+                "Sin resultados con este filtro",
+                "No hay registros que coincidan con turno o tipo elegidos.",
+                sugerencia="Probá «Todos» en los filtros o ampliá el historial.",
+            )
             return
 
         limite = seleccionar_limite_registros(

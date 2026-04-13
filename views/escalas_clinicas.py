@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
 from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 
@@ -57,7 +58,7 @@ def _interpretacion_visual(escala, puntaje, resumen):
 
 def render_escalas_clinicas(paciente_sel, user):
     if not paciente_sel:
-        st.info("Selecciona un paciente para registrar escalas clinicas.")
+        aviso_sin_paciente()
         return
 
     registros = [x for x in st.session_state.get("escalas_clinicas_db", []) if x.get("paciente") == paciente_sel]
@@ -76,6 +77,16 @@ def render_escalas_clinicas(paciente_sel, user):
         </div>
         """,
         unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Glasgow / Braden", "Neurologia y riesgo de UPP con lectura automatica."),
+            ("Barthel / EVA", "Dependencia funcional y escala de dolor."),
+            ("Historial", "Cada registro queda vinculado al paciente."),
+        ]
+    )
+    st.caption(
+        "Elegi la escala en el selector; el bloque de abajo cambia los campos. Al guardar, el puntaje y la lectura sugerida quedan en el historial del paciente."
     )
 
     escala = st.radio("Escala", ["Glasgow", "Braden", "Barthel", "EVA"], horizontal=False)

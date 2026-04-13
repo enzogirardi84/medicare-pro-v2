@@ -23,6 +23,22 @@ SUPABASE_KEY="TU_SERVICE_OR_ANON_KEY"
 
 Si no completas esas variables, la app puede arrancar en modo local, pero en Streamlit Cloud no conviene depender de almacenamiento local para produccion.
 
+### Jira (opcional)
+
+Para la pestaña **Jira** en `Proyecto y Roadmap`, agrega en los mismos secrets:
+
+```toml
+[jira]
+base_url = "https://tu-empresa.atlassian.net"
+email = "tu@correo.com"
+api_token = "TOKEN_API_ATLASSIAN"
+jql = "project = CLAVE ORDER BY updated DESC"
+board_url = "https://tu-empresa.atlassian.net/jira/software/c/projects/CLAVE/boards/1"
+max_issues = 25
+```
+
+Si omitis este bloque, la pestaña muestra instrucciones y la app sigue funcionando igual.
+
 ## Opcion 2: Supabase
 
 En la carpeta `supabase/` quedan archivos listos para usar:

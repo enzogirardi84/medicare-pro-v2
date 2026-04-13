@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -18,7 +19,7 @@ def _restaurar_stock(mi_empresa, insumo, cantidad):
 
 def render_materiales(paciente_sel, mi_empresa, user):
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral.")
+        aviso_sin_paciente()
         return
 
     st.markdown(
@@ -35,6 +36,16 @@ def render_materiales(paciente_sel, mi_empresa, user):
         """,
         unsafe_allow_html=True,
     )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Insumo", "Elegi del inventario de la empresa."),
+            ("Stock", "El descuento actualiza existencias al instante."),
+            ("Historia", "El consumo queda en el legajo del paciente."),
+        ]
+    )
+    st.caption(
+        "El consumo se registra por paciente y descuenta del inventario de tu clinica. Si no hay stock cargado, entra antes a **Inventario**."
+    )
 
     inv_mi_empresa = sorted(
         [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa],
@@ -42,7 +53,11 @@ def render_materiales(paciente_sel, mi_empresa, user):
     )
 
     if not inv_mi_empresa:
-        st.warning("No hay insumos cargados en el inventario. Ve a Inventario primero.")
+        bloque_estado_vacio(
+            "Sin stock en inventario",
+            "No hay insumos cargados para tu clínica.",
+            sugerencia="Entrá al módulo Inventario y cargá mercadería antes de registrar consumos.",
+        )
     else:
         st.markdown(
             """
@@ -121,4 +136,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(df_cons, height=380)
     else:
-        st.info("Aun no se han registrado consumos de materiales para este paciente.")
+        bloque_estado_vacio(
+            "Sin consumos registrados",
+            "Todavía no hay materiales descartables cargados para este paciente.",
+            sugerencia="Cuando haya inventario, usá el formulario de arriba para descontar y dejar traza.",
+        )

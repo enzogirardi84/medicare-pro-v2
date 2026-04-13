@@ -1,17 +1,43 @@
 from datetime import datetime
+from html import escape
 
 import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import bloque_mc_grid_tarjetas
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def render_asistencia(mi_empresa, user):
-    st.subheader("Panel de Control de Asistencias en Vivo")
+    emp_e = escape(str(mi_empresa or ""))
+    st.markdown(
+        f"""
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Asistencia en vivo</h2>
+            <p class="mc-hero-text">Quien esta en domicilio hoy segun fichadas GPS para {emp_e}. Listado liviano sin historiales infinitos.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Fichadas del dia</span>
+                <span class="mc-chip">Guardia activa</span>
+                <span class="mc-chip">Forzar salida</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Hoy", "Solo fichadas del dia actual de tu clinica."),
+            ("Guardia abierta", "Ultima LLEGADA sin SALIDA: se muestra como en domicilio."),
+            ("Auditoria", "Tabla liviana de movimientos con limite de filas."),
+        ]
+    )
     st.info(
         "Monitorea en tiempo real a los profesionales que se encuentran trabajando en domicilio "
         "sin cargar historiales enormes de una sola vez."
+    )
+    st.caption(
+        "**Forzar salida** cierra la guardia si olvidaron fichar salida en **Visitas**. La lista inferior es la pista de auditoria del dia."
     )
 
     hoy_str = ahora().strftime("%d/%m/%Y")
@@ -89,4 +115,6 @@ def render_asistencia(mi_empresa, user):
         )
         mostrar_dataframe_con_scroll(df_chks.tail(limite).iloc[::-1], height=420)
     else:
-        st.write("Sin movimientos en la fecha actual.")
+        st.warning(
+            "No hay fichadas registradas hoy para esta clinica. Los movimientos aparecen cuando el equipo usa **Fichar LLEGADA/SALIDA** en Visitas con GPS o registro equivalente."
+        )

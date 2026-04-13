@@ -1,50 +1,96 @@
+from html import escape
+
 import streamlit as st
 
+from core.clinicas_control import sincronizar_clinicas_desde_datos
 from core.database import guardar_datos
+from core.email_2fa import login_email_2fa_enabled, smtp_config_ok
+from core.input_validation import email_formato_aceptable
+from core.password_crypto import (
+    bcrypt_rounds_config,
+    establecer_password_nuevo,
+    mensaje_password_no_cumple_politica,
+    password_min_length,
+)
+from core.view_helpers import bloque_mc_grid_tarjetas
 from core.utils import (
-    PASSWORD_MIN_LENGTH,
-    actualizar_password_usuario,
+    actor_puede_modificar_usuario_equipo,
+    bloqueo_autoservicio_suspension_baja,
     filtrar_registros_empresa,
     inferir_perfil_profesional,
+    mi_equipo_mostrar_ui_eliminar,
+    mi_equipo_mostrar_ui_suspender,
+    normalizar_usuario_sistema,
     puede_accion,
-    puede_gestionar_usuario_mi_equipo,
+    puede_eliminar_cuenta_equipo,
+    puede_suspender_reactivar_usuario_mi_equipo,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
 
 
-def _auditar_equipo(mi_empresa, user, accion, detalle, referencia="", criticidad="alta", extra=None):
-    registrar_auditoria_legal(
-        "Equipo",
-        "GLOBAL",
-        accion,
-        user.get("nombre", "Sistema"),
-        user.get("matricula", ""),
-        detalle,
-        referencia=referencia,
-        extra=extra or {},
-        empresa=mi_empresa,
-        usuario=user,
-        modulo="Mi Equipo",
-        criticidad=criticidad,
-    )
-
-
 def render_mi_equipo(mi_empresa, rol, user=None):
-    user = user or {}
+    # Siempre el rol canonico desde la sesion (evita desalineacion argumento vs u_actual y sesiones previas al login normalizado).
+    raw_u = st.session_state.get("u_actual")
+    if isinstance(raw_u, dict):
+        canon = normalizar_usuario_sistema(dict(raw_u))
+        merged = dict(raw_u)
+        _cambio = False
+        for _k in ("rol", "perfil_profesional"):
+            if _k in canon and canon.get(_k) != raw_u.get(_k):
+                merged[_k] = canon[_k]
+                _cambio = True
+        if _cambio:
+            st.session_state["u_actual"] = merged
+        user = st.session_state["u_actual"]
+        rol = user.get("rol") or rol
+    else:
+        user = dict(user or {})
+        user = normalizar_usuario_sistema(user)
+        rol = user.get("rol") or rol
+
     rol_normalizado = str(rol or "").strip().lower()
-    st.subheader(f"Gestion de Personal - {mi_empresa}")
+    emp_e = escape(str(mi_empresa or ""))
+    st.markdown(
+        f"""
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Mi equipo y usuarios</h2>
+            <p class="mc-hero-text">Alta de logins, roles, matriculas y perfiles para {emp_e}. Las acciones sensibles quedan sujetas a permisos y auditoria legal.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Usuarios</span>
+                <span class="mc-chip">Roles</span>
+                <span class="mc-chip">Matricula</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Alta", "Login, PIN, DNI, matricula y rol para nuevos accesos (segun permisos)."),
+            ("Control", "Busqueda y gestion por rol: SuperAdmin o Coordinador en su clinica, segun reglas."),
+            ("Rol vs perfil", "Rol = permisos en el sistema; perfil = agenda y filtros asistenciales."),
+        ]
+    )
+    st.caption(
+        "El listado de abajo muestra solo usuarios de **tu clinica** (salvo administradores globales). "
+        "El login **admin** de emergencia no aparece en la grilla."
+    )
     puede_crear = puede_accion(rol, "equipo_crear_usuario")
-    puede_cambiar_estado = puede_accion(rol, "equipo_cambiar_estado")
-    puede_eliminar = puede_accion(rol, "equipo_eliminar_usuario")
+    puede_editar_mail_equipo = puede_accion(rol, "equipo_editar_email_usuario")
+    # Capacidad por rol (para leyendas); los botones usan mi_equipo_mostrar_ui_* fila a fila.
+    puede_suspender = puede_suspender_reactivar_usuario_mi_equipo(rol)
+    puede_eliminar = puede_eliminar_cuenta_equipo(rol)
+    tiene_rol_bajas = puede_suspender or puede_eliminar
 
     if puede_crear:
         with st.form("equipo", clear_on_submit=True):
             st.markdown("##### Habilitar Nuevo Usuario")
             col_id, col_pw, col_pin = st.columns([2, 2, 1])
             u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
-            u_pw = col_pw.text_input("Clave de acceso", type="password")
-            col_pw.caption(f"Minimo {PASSWORD_MIN_LENGTH} caracteres.")
+            with col_pw:
+                u_pw = st.text_input("Clave de acceso", type="password")
+                st.caption(f"Mínimo {password_min_length()} caracteres (configurable en secrets).")
             u_pin = col_pin.text_input("PIN (4 digitos)", max_chars=4, placeholder="1234")
 
             u_nm = st.text_input("Nombre Completo del Profesional")
@@ -84,24 +130,36 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             u_rl = st.selectbox(
                 "Rol en el sistema",
                 (
-                    ["Administrativo", "Operativo", "Medico", "Enfermeria", "Auditoria", "Coordinador", "SuperAdmin"]
+                    ["Administrativo", "Coordinador", "SuperAdmin"]
                     if rol_normalizado == "superadmin"
-                    else ["Administrativo", "Operativo", "Medico", "Enfermeria", "Auditoria", "Coordinador"]
+                    else ["Administrativo", "Coordinador"]
                 ),
             )
             st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
+            if login_email_2fa_enabled() and smtp_config_ok():
+                st.caption(
+                    "Con **verificación por correo** activa en el servidor, cada usuario debe tener un **email válido** "
+                    "(campo siguiente) para poder ingresar."
+                )
+            u_email = st.text_input(
+                "Email (opcional; obligatorio si hay 2FA por correo)",
+                placeholder="profesional@clinica.com",
+            )
 
             if st.form_submit_button("Habilitar Acceso", use_container_width=True, type="primary"):
                 if not u_id or not u_pw or not u_pin or not u_dni:
                     st.error("Todos los campos obligatorios deben completarse.")
                 elif len(u_pin) != 4 or not u_pin.isdigit():
                     st.error("El PIN debe tener exactamente 4 digitos numericos.")
-                elif len(u_pw.strip()) < PASSWORD_MIN_LENGTH:
-                    st.error(f"La clave de acceso debe tener al menos {PASSWORD_MIN_LENGTH} caracteres.")
+                elif (pw_err := mensaje_password_no_cumple_politica(u_pw.strip())):
+                    st.error(pw_err)
+                elif u_email.strip() and not email_formato_aceptable(u_email.strip()):
+                    st.error("El formato del correo electrónico no es válido.")
                 elif u_id.strip().lower() in st.session_state["usuarios_db"]:
                     st.error("El usuario ya existe. Elija otro login.")
                 else:
-                    st.session_state["usuarios_db"][u_id.strip().lower()] = {
+                    uid = u_id.strip().lower()
+                    st.session_state["usuarios_db"][uid] = {
                         "nombre": u_nm.strip(),
                         "rol": u_rl,
                         "titulo": u_ti,
@@ -112,22 +170,23 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         "estado": "Activo",
                         "pin": u_pin.strip(),
                     }
-                    actualizar_password_usuario(st.session_state["usuarios_db"][u_id.strip().lower()], u_pw)
-                    _auditar_equipo(
-                        mi_empresa,
-                        user,
+                    establecer_password_nuevo(
+                        st.session_state["usuarios_db"][uid],
+                        u_pw.strip(),
+                        rounds=bcrypt_rounds_config(),
+                    )
+                    if u_email.strip():
+                        st.session_state["usuarios_db"][uid]["email"] = u_email.strip()
+                    registrar_auditoria_legal(
+                        "Equipo",
+                        "GLOBAL",
                         "Alta de usuario",
+                        user.get("nombre", "Sistema"),
+                        user.get("matricula", ""),
                         f"Se creo el usuario {u_id.strip().lower()} con rol {u_rl} para {u_emp.strip() if isinstance(u_emp, str) else mi_empresa}.",
                         referencia=u_id.strip().lower(),
-                        criticidad="alta",
-                        extra={
-                            "objetivo_login": u_id.strip().lower(),
-                            "objetivo_rol": u_rl,
-                            "objetivo_empresa": u_emp.strip() if isinstance(u_emp, str) else mi_empresa,
-                            "objetivo_perfil": u_pf,
-                            "objetivo_estado": "Activo",
-                        },
                     )
+                    sincronizar_clinicas_desde_datos(st.session_state)
                     guardar_datos()
                     st.success(f"Usuario {u_id} habilitado correctamente.")
                     st.rerun()
@@ -138,8 +197,8 @@ def render_mi_equipo(mi_empresa, rol, user=None):
 
     st.subheader("Control de Accesos")
     st.caption(
-        "**Suspender / Reactivar / Eliminar:** **SuperAdmin** o **Coordinador** de la misma clinica "
-        "(sin cuentas globales). **Administrativo** no puede ejecutar estas acciones."
+        "**Suspender / Reactivar / Eliminar:** **SuperAdmin** o **Coordinador** en su clinica "
+        "(sin cuentas globales). **Administrativo**, **Operativo** y roles clinicos: no ven suspension ni baja en esta grilla."
     )
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 
@@ -161,7 +220,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     }
 
     if not usuarios_filtrados:
-        st.info("No se encontraron usuarios con ese criterio.")
+        st.warning(
+            "No hay usuarios que coincidan con la busqueda o con el filtro de clinica. Limpiá el texto o verifica que el equipo este dado de alta."
+        )
         return
 
     st.caption(f"Mostrando {len(usuarios_filtrados)} usuarios")
@@ -180,11 +241,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             with st.container(border=True):
                 col1, col2, col3, col4 = st.columns([3.5, 1, 1.2, 1.2])
                 estado_color = "Activo" if d.get("estado", "Activo") == "Activo" else "Bloqueado"
-                puede_gestionar_objetivo, motivo_gestion = puede_gestionar_usuario_mi_equipo(
-                    rol, mi_empresa, user, u, d
-                )
-                mostrar_ui_suspender = puede_cambiar_estado and puede_gestionar_objetivo
-                mostrar_ui_eliminar = puede_eliminar and puede_gestionar_objetivo
+                ok_gestionar, motivo_sin_gestion = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                mostrar_ui_suspender = mi_equipo_mostrar_ui_suspender(user, ok_gestionar)
+                mostrar_ui_eliminar = mi_equipo_mostrar_ui_eliminar(user, d, mi_empresa, ok_gestionar)
 
                 with col1:
                     perfil_usuario = d.get("perfil_profesional", "") or inferir_perfil_profesional(d) or "Sin perfil"
@@ -194,8 +253,33 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         f"Login: {u} | Rol sistema: {d.get('rol', 'S/D')} | "
                         f"Perfil: {perfil_usuario} | Titulo: {d.get('titulo', 'S/D')} | DNI: {d.get('dni', 'S/D')}"
                     )
-                    if motivo_gestion and str(rol or "").strip().lower() in {"superadmin", "coordinador"}:
-                        st.caption(f"Acciones restringidas: {motivo_gestion}")
+                    if puede_editar_mail_equipo and ok_gestionar:
+                        with st.expander("Correo para verificación (2FA)", expanded=False):
+                            em_actual = str(d.get("email") or "")
+                            ne = st.text_input("Email", value=em_actual, key=f"emp_mail_{u}")
+                            if st.button("Guardar correo", key=f"btn_mail_{u}"):
+                                ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                                if not ok_m:
+                                    st.error(msg_m)
+                                else:
+                                    ne_l = ne.strip()
+                                    if ne_l and not email_formato_aceptable(ne_l):
+                                        st.error("El formato del correo electrónico no es válido.")
+                                    else:
+                                        st.session_state["usuarios_db"][u]["email"] = ne_l
+                                        registrar_auditoria_legal(
+                                            "Equipo",
+                                            "GLOBAL",
+                                            "Actualizacion email usuario",
+                                            user.get("nombre", "Sistema"),
+                                            user.get("matricula", ""),
+                                            f"Se actualizo el email del usuario {u}.",
+                                            referencia=u,
+                                        )
+                                        guardar_datos()
+                                        st.rerun()
+                    elif puede_editar_mail_equipo and not ok_gestionar:
+                        st.caption(motivo_sin_gestion)
 
                 with col2:
                     st.markdown(f"**{estado_color}**")
@@ -204,95 +288,108 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                     if mostrar_ui_suspender:
                         if d.get("estado", "Activo") == "Activo":
                             if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
-                                ok_gestionar_click, motivo_click = puede_gestionar_usuario_mi_equipo(
-                                    rol, mi_empresa, user, u, d
-                                )
-                                if not ok_gestionar_click:
-                                    st.error(motivo_click)
+                                if not puede_suspender_reactivar_usuario_mi_equipo(rol):
+                                    st.error("Tu rol no puede suspender usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                                 else:
-                                    st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
-                                    _auditar_equipo(
-                                        mi_empresa,
-                                        user,
-                                        "Suspension de usuario",
-                                        f"Se suspendio el usuario {u}.",
-                                        referencia=u,
-                                        criticidad="alta",
-                                        extra={
-                                            "objetivo_login": u,
-                                            "objetivo_rol": d.get("rol", ""),
-                                            "objetivo_empresa": d.get("empresa", ""),
-                                            "estado_previo": d.get("estado", "Activo"),
-                                            "estado_nuevo": "Bloqueado",
-                                        },
+                                    blk, msg_blk = bloqueo_autoservicio_suspension_baja(
+                                        user.get("usuario_login"), u, rol
                                     )
-                                    guardar_datos()
-                                    st.rerun()
+                                    if blk:
+                                        st.error(msg_blk)
+                                    else:
+                                        ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                                        if not ok_m:
+                                            st.error(msg_m)
+                                        else:
+                                            st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
+                                            registrar_auditoria_legal(
+                                                "Equipo",
+                                                "GLOBAL",
+                                                "Suspension de usuario",
+                                                user.get("nombre", "Sistema"),
+                                                user.get("matricula", ""),
+                                                f"Se suspendio el usuario {u}.",
+                                                referencia=u,
+                                            )
+                                            guardar_datos()
+                                            st.rerun()
                         else:
                             if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
-                                ok_gestionar_click, motivo_click = puede_gestionar_usuario_mi_equipo(
-                                    rol, mi_empresa, user, u, d
-                                )
-                                if not ok_gestionar_click:
-                                    st.error(motivo_click)
+                                if not puede_suspender_reactivar_usuario_mi_equipo(rol):
+                                    st.error("Tu rol no puede reactivar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                                 else:
-                                    st.session_state["usuarios_db"][u]["estado"] = "Activo"
-                                    _auditar_equipo(
-                                        mi_empresa,
-                                        user,
-                                        "Reactivacion de usuario",
-                                        f"Se reactivo el usuario {u}.",
-                                        referencia=u,
-                                        criticidad="media",
-                                        extra={
-                                            "objetivo_login": u,
-                                            "objetivo_rol": d.get("rol", ""),
-                                            "objetivo_empresa": d.get("empresa", ""),
-                                            "estado_previo": d.get("estado", "Bloqueado"),
-                                            "estado_nuevo": "Activo",
-                                        },
+                                    blk, msg_blk = bloqueo_autoservicio_suspension_baja(
+                                        user.get("usuario_login"), u, rol
                                     )
-                                    guardar_datos()
-                                    st.rerun()
-                    elif puede_cambiar_estado:
+                                    if blk:
+                                        st.error(msg_blk)
+                                    else:
+                                        ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                                        if not ok_m:
+                                            st.error(msg_m)
+                                        else:
+                                            st.session_state["usuarios_db"][u]["estado"] = "Activo"
+                                            registrar_auditoria_legal(
+                                                "Equipo",
+                                                "GLOBAL",
+                                                "Reactivacion de usuario",
+                                                user.get("nombre", "Sistema"),
+                                                user.get("matricula", ""),
+                                                f"Se reactivo el usuario {u}.",
+                                                referencia=u,
+                                            )
+                                            guardar_datos()
+                                            st.rerun()
+                    elif tiene_rol_bajas and not ok_gestionar:
+                        st.caption("—")
+                    elif not tiene_rol_bajas:
+                        pass
+                    else:
                         st.caption("—")
 
                 with col4:
                     if mostrar_ui_eliminar:
                         seguro = st.checkbox("Confirmar baja", key=f"chk_del_{u}")
+                        st.caption("La eliminación es permanente y quita el usuario del sistema.")
                         if st.button(
                             "Eliminar",
                             key=f"del_{u}",
                             use_container_width=True,
                             disabled=not seguro,
-                            type="primary" if seguro else "secondary",
+                            type="secondary",
                         ):
-                            ok_gestionar_click, motivo_click = puede_gestionar_usuario_mi_equipo(
-                                rol, mi_empresa, user, u, d
-                            )
-                            if not ok_gestionar_click:
-                                st.error(motivo_click)
+                            if not puede_eliminar_cuenta_equipo(rol):
+                                st.error("Tu rol no puede eliminar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                             else:
-                                _auditar_equipo(
-                                    mi_empresa,
-                                    user,
-                                    "Eliminacion de usuario",
-                                    f"Se elimino el usuario {u}.",
-                                    referencia=u,
-                                    criticidad="critica",
-                                    extra={
-                                        "objetivo_login": u,
-                                        "objetivo_rol": d.get("rol", ""),
-                                        "objetivo_empresa": d.get("empresa", ""),
-                                        "estado_previo": d.get("estado", ""),
-                                    },
+                                blk, msg_blk = bloqueo_autoservicio_suspension_baja(
+                                    user.get("usuario_login"), u, rol
                                 )
-                                del st.session_state["usuarios_db"][u]
-                                guardar_datos()
-                                st.toast(f"Usuario {u} eliminado.")
-                                st.rerun()
-                    elif puede_eliminar:
+                                if blk:
+                                    st.error(msg_blk)
+                                else:
+                                    ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                                    if not ok_m:
+                                        st.error(msg_m)
+                                    else:
+                                        registrar_auditoria_legal(
+                                            "Equipo",
+                                            "GLOBAL",
+                                            "Eliminacion de usuario",
+                                            user.get("nombre", "Sistema"),
+                                            user.get("matricula", ""),
+                                            f"Se elimino el usuario {u}.",
+                                            referencia=u,
+                                        )
+                                        del st.session_state["usuarios_db"][u]
+                                        guardar_datos()
+                                        st.toast(f"Usuario {u} eliminado.")
+                                        st.rerun()
+                    elif puede_eliminar and not ok_gestionar:
                         st.caption("—")
+                    elif not puede_eliminar:
+                        pass
 
         if not mostro_usuario:
-            st.info("No hay otros usuarios cargados aparte del administrador principal.")
+            st.warning(
+                "No hay usuarios para mostrar en este rango (solo queda **admin** o el limite oculta filas). Aumenta **Usuarios a mostrar** o da de alta personal con el formulario de arriba."
+            )

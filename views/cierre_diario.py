@@ -1,20 +1,14 @@
 import base64
 from datetime import date
+from html import escape
 
 import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
-from core.utils import (
-    ahora,
-    contenedores_responsivos,
-    decodificar_base64_seguro,
-    modo_celular_viejo_activo,
-    mostrar_dataframe_con_scroll,
-    seleccionar_limite_registros,
-    valor_por_modo_liviano,
-)
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 FPDF_DISPONIBLE = False
 try:
@@ -25,15 +19,36 @@ except ImportError:
 
 
 def render_cierre_diario(mi_empresa, user):
-    modo_liviano = modo_celular_viejo_activo()
-    st.subheader("Conciliacion y Cierre Diario de Operaciones")
+    emp_e = escape(str(mi_empresa or ""))
+    st.markdown(
+        f"""
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Cierre diario de operaciones</h2>
+            <p class="mc-hero-text">Conciliacion por fecha para {emp_e}: insumos del dia, facturacion, stock y archivo de cierres. Tablas con limites para no colapsar el navegador.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Insumos</span>
+                <span class="mc-chip">Facturacion</span>
+                <span class="mc-chip">Stock</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Dia", "Elegi la fecha del cierre; las metricas son de ese dia."),
+            ("Vistas", "Resumen, insumos, facturacion, stock o archivo de cierres guardados."),
+            ("Limites", "Cada tabla se acota con selectores para no saturar el navegador."),
+        ]
+    )
     st.info("Selecciona un dia para auditar insumos, facturacion y stock sin cargar reportes pesados por defecto.")
-    if modo_liviano:
-        st.caption("Modo celular viejo activo: el cierre se apila en vertical y el PDF queda a pedido.")
+    st.caption(
+        "Las metricas superiores (insumos del dia, facturado, stock critico) dependen de **Materiales**, **Caja** e **Inventario**. "
+        "El radio de abajo cambia el detalle sin perder la fecha."
+    )
 
-    c1_rep, c2_rep = contenedores_responsivos([1, 2], modo_liviano)
+    c1_rep, _ = st.columns([1, 2])
     fecha_reporte = c1_rep.date_input("Filtrar por Fecha", value=ahora().date())
-    c2_rep.caption("Usa una fecha por vez para abrir mas rapido el resumen del dia.")
     fecha_str = fecha_reporte.strftime("%d/%m/%Y")
 
     consumos_dia = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str) and c.get("empresa") == mi_empresa]
@@ -44,7 +59,7 @@ def render_cierre_diario(mi_empresa, user):
     total_facturado = sum(f.get("monto", 0) for f in facturacion_dia)
     stock_critico = len([s for s in stock_actual if s.get("stock", 0) <= 10])
 
-    col_m1, col_m2, col_m3 = contenedores_responsivos(3, modo_liviano)
+    col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("Insumos Consumidos", f"{total_insumos} unidades")
     col_m2.metric("Facturado del Dia", f"${total_facturado:,.2f}")
     col_m3.metric("Stock Critico", f"{stock_critico} insumos")
@@ -60,7 +75,7 @@ def render_cierre_diario(mi_empresa, user):
     )
 
     if vista == "Resumen del Dia":
-        col_r1, col_r2 = contenedores_responsivos(2, modo_liviano)
+        col_r1, col_r2 = st.columns(2)
         with col_r1.container(border=True):
             st.markdown("#### Insumos del dia")
             if consumos_dia:
@@ -74,7 +89,7 @@ def render_cierre_diario(mi_empresa, user):
                 st.caption(f"Se registraron {len(consumos_dia)} movimientos de insumos.")
                 mostrar_dataframe_con_scroll(
                     pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(limite_insumos).iloc[::-1],
-                    height=valor_por_modo_liviano(340, 250),
+                    height=340,
                 )
             else:
                 st.info("No hubo registro de uso de insumos en este dia.")
@@ -91,7 +106,7 @@ def render_cierre_diario(mi_empresa, user):
                 st.success(f"Total facturado: ${total_facturado:,.2f}")
                 mostrar_dataframe_con_scroll(
                     pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(limite_fact).iloc[::-1],
-                    height=valor_por_modo_liviano(340, 250),
+                    height=340,
                 )
             else:
                 st.info("No hubo facturacion registrada en este dia.")
@@ -108,7 +123,7 @@ def render_cierre_diario(mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(
                 pd.DataFrame(consumos_dia).drop(columns="empresa", errors="ignore").tail(limite).iloc[::-1],
-                height=valor_por_modo_liviano(460, 320),
+                height=460,
             )
         else:
             st.info("No hubo registro de uso de insumos en este dia.")
@@ -126,7 +141,7 @@ def render_cierre_diario(mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(
                 pd.DataFrame(facturacion_dia).drop(columns="empresa", errors="ignore").tail(limite).iloc[::-1],
-                height=valor_por_modo_liviano(460, 320),
+                height=460,
             )
         else:
             st.info("No hubo facturacion registrada en este dia.")
@@ -143,10 +158,14 @@ def render_cierre_diario(mi_empresa, user):
             )
             mostrar_dataframe_con_scroll(
                 pd.DataFrame(stock_actual).drop(columns="empresa", errors="ignore").head(limite),
-                height=valor_por_modo_liviano(460, 320),
+                height=460,
             )
         else:
-            st.info("No hay stock cargado.")
+            bloque_estado_vacio(
+                "Sin stock",
+                "No hay ítems de inventario cargados para esta clínica.",
+                sugerencia="Cargá insumos en Inventario para ver el estado acá.",
+            )
 
     st.divider()
     if FPDF_DISPONIBLE:
@@ -179,15 +198,7 @@ def render_cierre_diario(mi_empresa, user):
             pdf.cell(0, 10, safe_text(f"TOTAL FACTURADO DEL DIA: ${total_facturado_pdf:,.2f}"), ln=True)
             return pdf_output_bytes(pdf)
 
-        habilitar_pdf = st.checkbox(
-            "Preparar y guardar cierre en PDF" if not modo_liviano else "Mostrar herramientas PDF del cierre",
-            value=False,
-            key="cierre_pdf_toggle",
-        )
-        if modo_liviano and not habilitar_pdf:
-            st.caption("En modo celular viejo el PDF se genera solo cuando lo pedis para evitar carga innecesaria.")
-
-        if habilitar_pdf:
+        if st.checkbox("Preparar y guardar cierre en PDF", value=False):
             pdf_bytes = generar_pdf_cierre()
             st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
             if st.button("Guardar cierre en historial", use_container_width=True, type="primary"):
@@ -212,26 +223,27 @@ def render_cierre_diario(mi_empresa, user):
                 "Cierres a mostrar",
                 len(reportes_mios),
                 key="cierre_archivo_limite",
-                default=valor_por_modo_liviano(20, 10),
+                default=20,
                 opciones=(10, 20, 30, 50, 100),
             )
-            with st.container(height=valor_por_modo_liviano(460, 360)):
+            with st.container(height=460):
                 for i, r in enumerate(reportes_mios[:limite_archivo]):
                     with st.container(border=True):
-                        c1_hist, c2_hist = contenedores_responsivos([4, 1], modo_liviano)
+                        c1_hist, c2_hist = st.columns([4, 1])
                         c1_hist.markdown(f"**Cierre del dia {r['fecha_reporte']}**")
                         c1_hist.caption(f"Generado el {r['fecha_generacion']} por {r['generado_por']}")
-                        pdf_bytes = decodificar_base64_seguro(r['pdf_base64'])
-                        if pdf_bytes:
-                            c2_hist.download_button(
-                                "Descargar PDF",
-                                data=pdf_bytes,
-                                file_name=f"Cierre_Diario_{sanitize_filename_component(r['fecha_reporte'].replace('/','-'), 'fecha')}.pdf",
-                                mime="application/pdf",
-                                key=f"cierre_pdf_{i}",
-                                use_container_width=True,
-                            )
-                        else:
-                            c2_hist.caption("PDF dañado")
+                        pdf_bytes = base64.b64decode(r['pdf_base64'])
+                        c2_hist.download_button(
+                            "Descargar PDF",
+                            data=pdf_bytes,
+                            file_name=f"Cierre_Diario_{sanitize_filename_component(r['fecha_reporte'].replace('/','-'), 'fecha')}.pdf",
+                            mime="application/pdf",
+                            key=f"cierre_pdf_{i}",
+                            use_container_width=True,
+                        )
         else:
-            st.info("Aun no hay reportes de cierre diario guardados.")
+            bloque_estado_vacio(
+                "Sin cierres archivados",
+                "Todavía no hay PDF de cierre diario guardados en el historial.",
+                sugerencia="En la vista de auditoría del día, generá y guardá un cierre en PDF.",
+            )

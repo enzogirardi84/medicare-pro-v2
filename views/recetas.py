@@ -9,27 +9,22 @@ import streamlit as st
 
 from core.clinical_exports import build_prescription_pdf_bytes
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio
 from core.utils import (
     ahora,
     calcular_velocidad_ml_h,
     cargar_json_asset,
-    contenedores_responsivos,
-    decodificar_base64_seguro,
     firma_a_base64,
     format_horarios_receta,
     generar_plan_escalonado_ml_h,
     horarios_programados_desde_frecuencia,
-    limite_archivo_mb,
     mostrar_dataframe_con_scroll,
-    modo_celular_viejo_activo,
     obtener_config_firma,
     obtener_horarios_receta,
     puede_accion,
-    preparar_archivo_clinico,
     parse_horarios_programados,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
-    valor_por_modo_liviano,
 )
 
 FPDF_DISPONIBLE = False
@@ -564,7 +559,6 @@ def _guardar_administracion_medicacion(
 ):
     hora_real = ahora().strftime("%H:%M")
     estado_guardado = "Realizada" if str(estado).strip().lower() == "realizada" else "No realizada"
-    usuario_login = str(user.get("usuario_login", "") or "").strip().lower()
 
     st.session_state["administracion_med_db"] = [
         a
@@ -588,41 +582,11 @@ def _guardar_administracion_medicacion(
             "estado": estado_guardado,
             "motivo": motivo.strip() if estado_guardado != "Realizada" else "",
             "firma": user["nombre"],
-            "actor_login": usuario_login,
-            "actor_rol": user.get("rol", ""),
-            "actor_perfil": user.get("perfil_profesional", ""),
             "empresa": mi_empresa,
-            "modulo_origen": "Recetas",
             "fecha_hora_registro": ahora().strftime("%d/%m/%Y %H:%M:%S"),
         }
     )
     return estado_guardado, hora_real
-
-
-def _auditar_recetas(
-    paciente_sel,
-    user,
-    accion,
-    detalle,
-    referencia="",
-    criticidad="media",
-    extra=None,
-    actor=None,
-    matricula=None,
-):
-    registrar_auditoria_legal(
-        "Medicacion",
-        paciente_sel,
-        accion,
-        actor or user.get("nombre", "Sistema"),
-        matricula if matricula is not None else user.get("matricula", ""),
-        detalle,
-        referencia=referencia,
-        extra=extra or {},
-        usuario=user,
-        modulo="Recetas",
-        criticidad=criticidad,
-    )
 
 
 def _construir_texto_indicacion(
@@ -673,34 +637,29 @@ def _construir_texto_indicacion(
 
 def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral.")
+        aviso_sin_paciente()
         return
 
     rol = rol or user.get("rol", "")
-    modo_liviano = modo_celular_viejo_activo()
     puede_prescribir = puede_accion(rol, "recetas_prescribir")
     puede_cargar_papel = puede_accion(rol, "recetas_cargar_papel")
     puede_registrar_dosis = puede_accion(rol, "recetas_registrar_dosis")
     puede_cambiar_estado = puede_accion(rol, "recetas_cambiar_estado")
 
-    if modo_liviano:
-        st.subheader("Prescripcion y administracion de medicamentos")
-        st.info("Modo celular viejo activo: prioriza formularios simples, tarjetas y carga manual antes que tablas pesadas.")
-    else:
-        st.markdown(
-            """
-            <div class="mc-hero">
-                <h2 class="mc-hero-title">Prescripcion y administracion de medicamentos</h2>
-                <p class="mc-hero-text">La vista combina catalogo guiado, firma profesional y seguimiento de dosis para reducir errores de medicacion y dejar trazabilidad completa.</p>
-                <div class="mc-chip-row">
-                    <span class="mc-chip">Catalogo de medicamentos</span>
-                    <span class="mc-chip">Firma medica</span>
-                    <span class="mc-chip">Registro de dosis</span>
-                </div>
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Prescripcion y administracion de medicamentos</h2>
+            <p class="mc-hero-text">Catalogo guiado, firma profesional y seguimiento de dosis. En pantallas chicas, la sabana y las tablas se pueden desplazar en horizontal para ver todas las columnas.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Catalogo de medicamentos</span>
+                <span class="mc-chip">Firma medica</span>
+                <span class="mc-chip">Registro de dosis</span>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if rol in {"Operativo", "Enfermeria"}:
         st.info(
@@ -713,17 +672,16 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     except Exception:
         vademecum_base = ["Medicamento 1", "Medicamento 2"]
 
-    if not modo_liviano:
-        st.markdown(
-            """
-            <div class="mc-grid-3">
-                <div class="mc-card"><h4>Menos errores</h4><p>Elegir del catalogo evita cargar nombres mal escritos o presentaciones confusas.</p></div>
-                <div class="mc-card"><h4>Receta trazable</h4><p>La prescripcion queda con fecha, medico, matricula y firma digital cuando esta disponible.</p></div>
-                <div class="mc-card"><h4>Control diario</h4><p>La sabana muestra rapido si cada dosis fue realizada o quedo pendiente.</p></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        """
+        <div class="mc-grid-3">
+            <div class="mc-card"><h4>Menos errores</h4><p>Elegir del catalogo evita cargar nombres mal escritos o presentaciones confusas.</p></div>
+            <div class="mc-card"><h4>Receta trazable</h4><p>La prescripcion queda con fecha, medico, matricula y firma digital cuando esta disponible.</p></div>
+            <div class="mc-card"><h4>Control diario</h4><p>La sabana muestra rapido si cada dosis fue realizada o quedo pendiente.</p></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if puede_prescribir:
         st.markdown("##### Nueva prescripcion medica")
@@ -746,10 +704,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             frecuencia = ""
 
             if tipo_indicacion == "Medicacion":
-                c1, c2 = contenedores_responsivos([3, 1], modo_liviano)
+                c1, c2 = st.columns([3, 1])
                 med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
                 med_manual = c2.text_input("O escribir manualmente")
-                col3, col4, col5 = contenedores_responsivos([2, 2, 1], modo_liviano)
+                col3, col4, col5 = st.columns([2, 2, 1])
                 via = col3.selectbox(
                     "Via de administracion",
                     ["Via Oral", "Via Endovenosa", "Via Intramuscular", "Via Subcutanea", "Via Topica", "Via Inhalatoria", "Otra"],
@@ -791,7 +749,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             else:
                 via = "Via Endovenosa"
                 frecuencia = "Infusion continua"
-                c1, c2, c3 = contenedores_responsivos([2, 1, 1], modo_liviano)
+                c1, c2, c3 = st.columns([2, 1, 1])
                 solucion = c1.selectbox(
                     "Solucion principal",
                     [
@@ -806,7 +764,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
                 dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
 
-                c4, c5, c6 = contenedores_responsivos([1, 1, 1], modo_liviano)
+                c4, c5, c6 = st.columns([1, 1, 1])
                 velocidad_ml_h = c4.number_input(
                     "Velocidad (ml/h)",
                     min_value=0.0,
@@ -853,7 +811,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     key="usar_plan_escalonado_receta",
                 )
                 if usar_plan_escalonado:
-                    c7, c8, c9, c10 = contenedores_responsivos(4, modo_liviano)
+                    c7, c8, c9, c10 = st.columns(4)
                     inicio_ml_h = c7.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_ml_h_receta")
                     maximo_ml_h = c8.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_ml_h_receta")
                     incremento_ml_h = c9.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_ml_h_receta")
@@ -873,7 +831,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     )
                     if plan_hidratacion:
                         st.caption("Vista previa del plan de infusion / hidratacion")
-                        mostrar_dataframe_con_scroll(pd.DataFrame(plan_hidratacion), height=valor_por_modo_liviano(220, 180))
+                        mostrar_dataframe_con_scroll(pd.DataFrame(plan_hidratacion), height=220)
                         horarios_sugeridos = [item["Hora sugerida"] for item in plan_hidratacion]
                     else:
                         horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
@@ -895,14 +853,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 else:
                     st.caption(" ".join(horarios_sugeridos))
 
-            col_m1, col_m2 = contenedores_responsivos(2, modo_liviano)
+            col_m1, col_m2 = st.columns(2)
             medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
             medico_matricula = col_m2.text_input("Matricula profesional")
 
             firma_canvas = None
             firma_subida = None
             if CANVAS_DISPONIBLE and st.checkbox("Cargar firma digital", value=False):
-                firma_cfg = obtener_config_firma("receta", default_liviano=modo_liviano)
+                firma_cfg = obtener_config_firma("receta")
                 metodo_firma = st.radio(
                     "Metodo de firma medica",
                     ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
@@ -990,22 +948,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 "empresa": mi_empresa,
                             }
                         )
-                        _auditar_recetas(
+                        registrar_auditoria_legal(
+                            "Medicacion",
                             paciente_sel,
-                            user,
                             "Indicacion medica registrada",
+                            medico_nombre.strip() or user.get("nombre", ""),
+                            medico_matricula.strip(),
                             texto_receta,
-                            referencia=texto_receta[:80],
-                            criticidad="alta",
-                            extra={
-                                "tipo_indicacion": tipo_indicacion,
-                                "frecuencia": frecuencia,
-                                "horarios_programados": " | ".join(horarios_sugeridos),
-                                "origen_registro": "Prescripcion digital",
-                                "firma_digital": bool(firma_b64),
-                            },
-                            actor=medico_nombre.strip() or user.get("nombre", ""),
-                            matricula=medico_matricula.strip(),
                         )
                         guardar_datos()
                         st.success(f"Prescripcion de {descripcion_guardada} guardada con firma medica.")
@@ -1028,19 +977,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     horizontal=False,
                     key="tipo_indicacion_papel_receta",
                 )
-                c_p1, c_p2 = contenedores_responsivos(2, modo_liviano)
+                c_p1, c_p2 = st.columns(2)
                 medico_papel = c_p1.text_input(
                     "Medico que indica",
                     key="medico_papel_nombre",
                     value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
                 )
                 matricula_papel = c_p2.text_input("Matricula del medico", key="medico_papel_matricula")
-                c_p3, c_p4 = contenedores_responsivos([1, 2], modo_liviano)
+                c_p3, c_p4 = st.columns([1, 2])
                 dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
                 hora_papel = c_p4.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
 
                 horarios_papel = []
-                frecuencia_papel = "Indicacion en papel"
                 detalle_papel = ""
                 solucion_papel = ""
                 volumen_papel = 0
@@ -1060,12 +1008,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         placeholder="Ej: 08:00 | 16:00 | 22:00",
                     )
                     horarios_papel = parse_horarios_programados(horarios_papel_txt)
-                    frecuencia_papel = "Horarios cargados manualmente" if horarios_papel else "Indicacion en papel"
                     if horarios_papel:
                         st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
                 else:
-                    frecuencia_papel = "Infusion continua"
-                    c_inf_p1, c_inf_p2, c_inf_p3 = contenedores_responsivos(3, modo_liviano)
+                    c_inf_p1, c_inf_p2, c_inf_p3 = st.columns(3)
                     solucion_papel = c_inf_p1.selectbox(
                         "Solucion principal",
                         ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
@@ -1101,7 +1047,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         key="usar_plan_papel_receta",
                     )
                     if usar_plan_papel:
-                        c_inf_p4, c_inf_p5, c_inf_p6, c_inf_p7 = contenedores_responsivos(4, modo_liviano)
+                        c_inf_p4, c_inf_p5, c_inf_p6, c_inf_p7 = st.columns(4)
                         inicio_papel = c_inf_p4.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_papel_receta")
                         maximo_papel = c_inf_p5.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_papel_receta")
                         incremento_papel = c_inf_p6.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_papel_receta")
@@ -1114,7 +1060,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             intervalo_papel,
                         )
                         if plan_papel:
-                            mostrar_dataframe_con_scroll(pd.DataFrame(plan_papel), height=valor_por_modo_liviano(220, 180))
+                            mostrar_dataframe_con_scroll(pd.DataFrame(plan_papel), height=220)
                             horarios_papel = [item["Hora sugerida"] for item in plan_papel]
                     if not horarios_papel:
                         horarios_papel = [hora_papel.strftime("%H:%M")]
@@ -1124,9 +1070,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     type=["pdf", "png", "jpg", "jpeg"],
                     key="adjunto_papel_receta",
                 )
-                st.caption(
-                    f"Limites sugeridos: imagen hasta {limite_archivo_mb('imagen')} MB y PDF hasta {limite_archivo_mb('pdf')} MB."
-                )
                 if st.button("Guardar indicacion en papel", use_container_width=True, key="guardar_indicacion_papel"):
                     if not medico_papel.strip() or not matricula_papel.strip():
                         st.error("Debe completar medico y matricula para dejar respaldo legal.")
@@ -1135,17 +1078,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     elif adjunto_papel is None:
                         st.error("Debe adjuntar la orden medica escaneada o fotografiada.")
                     else:
-                        adjunto_preparado = preparar_archivo_clinico(
-                            adjunto_papel,
-                            max_size=(1600, 1600),
-                            quality=72,
-                        )
-                        if not adjunto_preparado["ok"]:
-                            st.error(adjunto_preparado["error"])
-                            return
-                        adjunto_b64 = base64.b64encode(adjunto_preparado["bytes"]).decode("utf-8")
-                        adjunto_nombre = adjunto_preparado["name"]
-                        adjunto_tipo = adjunto_preparado["mime"]
+                        adjunto_b64, adjunto_nombre, adjunto_tipo = _archivo_a_base64(adjunto_papel)
                         texto_guardado = _construir_texto_indicacion(
                             tipo_indicacion=tipo_indicacion_papel,
                             med_final=detalle_papel.strip(),
@@ -1170,7 +1103,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "firmado_por": user["nombre"],
                             "estado_clinico": "Activa",
                             "estado_receta": "Activa",
-                            "frecuencia": frecuencia_papel,
+                            "frecuencia": "Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
                             "hora_inicio": horarios_papel[0] if horarios_papel else hora_papel.strftime("%H:%M"),
                             "horarios_programados": horarios_papel,
                             "tipo_indicacion": tipo_indicacion_papel,
@@ -1190,21 +1123,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "empresa": mi_empresa,
                         }
                         st.session_state["indicaciones_db"].append(registro)
-                        _auditar_recetas(
+                        registrar_auditoria_legal(
+                            "Medicacion",
                             paciente_sel,
-                            user,
                             "Indicacion medica en papel cargada",
+                            user.get("nombre", ""),
+                            user.get("matricula", ""),
                             f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
-                            referencia=detalle_papel.strip()[:80],
-                            criticidad="alta",
-                            extra={
-                                "tipo_indicacion": tipo_indicacion_papel,
-                                "frecuencia": frecuencia_papel,
-                                "origen_registro": "Indicacion medica en papel",
-                                "adjunto_respaldo": bool(adjunto_b64),
-                                "medico_indicado": medico_papel.strip(),
-                                "matricula_indicada": matricula_papel.strip(),
-                            },
                         )
                         guardar_datos()
                         st.success("La indicacion medica en papel quedo guardada y disponible en el historial.")
@@ -1302,7 +1227,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             plan_dia_df["_orden"] = plan_dia_df["Hora programada"].apply(_hora_a_minutos)
             plan_dia_df = plan_dia_df.sort_values(by=["_orden", "Medicamento"]).drop(columns=["_orden"])
 
-        c_res1, c_res2, c_res3 = contenedores_responsivos(3, modo_liviano)
+        c_res1, c_res2, c_res3 = st.columns(3)
         c_res1.metric("Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
         c_res2.metric("No realizadas", int((plan_dia_df.get("Estado") == "No realizada").sum()) if not plan_dia_df.empty else 0)
         c_res3.metric("Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
@@ -1388,14 +1313,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 "estado": item.get("Estado", ""),
             }
 
-        mostrar_sabana_visual = True
-        if modo_liviano:
-            mostrar_sabana_visual = st.checkbox(
-                "Mostrar sabana visual 24 hs",
-                value=False,
-                key=f"mostrar_sabana_visual_{paciente_sel}_{fecha_hoy}",
-            )
-        if sabana_mar_rows and mostrar_sabana_visual:
+        if sabana_mar_rows:
             st.markdown("#### Prescripcion y sabana 24 hs")
             st.caption("Vista horizontal tipo enfermeria para leer rapido que esta indicado, que ya se administro y que sigue pendiente.")
             _render_sabana_prescripcion_visual(
@@ -1404,8 +1322,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key=f"mar_visual_{paciente_sel}",
                 hora_actual=f"{ahora().hour:02d}:00",
             )
-        elif sabana_mar_rows and modo_liviano:
-            st.caption("Sabana visual oculta para ahorrar memoria. Puedes abrirla solo si la necesitas.")
         else:
             st.info("No se pudo construir la sabana 24 hs con las indicaciones activas.")
 
@@ -1492,18 +1408,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 horario_sel,
                                 "Realizada",
                             )
-                            _auditar_recetas(
+                            registrar_auditoria_legal(
+                                "Medicacion",
                                 paciente_sel,
-                                user,
                                 "Registro de administracion desde sabana 24 hs",
+                                user.get("nombre", ""),
+                                user.get("matricula", ""),
                                 f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
-                                referencia=nombre_med,
-                                criticidad="alta",
-                                extra={
-                                    "horario_programado": horario_sel or "A demanda",
-                                    "estado_administracion": "Realizada",
-                                    "origen_registro": "Sabana 24 hs",
-                                },
                             )
                             registros_guardados += 1
 
@@ -1555,7 +1466,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 _render_tabla_clinica(
                     df_plan_visible,
                     key=f"plan_{paciente_sel}",
-                    max_height=valor_por_modo_liviano(420, 320),
+                    max_height=420,
                     sticky_first_col=False,
                 )
             else:
@@ -1614,18 +1525,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 horario_sel,
                                 "Realizada",
                             )
-                            _auditar_recetas(
+                            registrar_auditoria_legal(
+                                "Medicacion",
                                 paciente_sel,
-                                user,
                                 "Registro de administracion desde tabla de cortina",
+                                user.get("nombre", ""),
+                                user.get("matricula", ""),
                                 f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
-                                referencia=nombre_med,
-                                criticidad="alta",
-                                extra={
-                                    "horario_programado": horario_sel or "A demanda",
-                                    "estado_administracion": "Realizada",
-                                    "origen_registro": "Tabla de cortina",
-                                },
                             )
                             registros_guardados += 1
 
@@ -1638,41 +1544,23 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             else:
                 st.caption("Todas las indicaciones de hoy ya figuran como realizadas.")
 
-        mostrar_plan_hidratacion = True
-        if modo_liviano and plan_hidratacion_rows:
-            mostrar_plan_hidratacion = st.checkbox(
-                "Mostrar plan de hidratacion parenteral",
-                value=False,
-                key=f"mostrar_hidratacion_{paciente_sel}_{fecha_hoy}",
-            )
-        if plan_hidratacion_rows and mostrar_plan_hidratacion:
+        if plan_hidratacion_rows:
             st.markdown("#### Plan de hidratacion parenteral")
             _render_tabla_clinica(
                 pd.DataFrame(plan_hidratacion_rows),
                 key=f"hidra_{paciente_sel}",
-                max_height=valor_por_modo_liviano(320, 240),
+                max_height=320,
                 sticky_first_col=False,
             )
-        elif plan_hidratacion_rows and modo_liviano:
-            st.caption("Plan de hidratacion oculto en modo liviano. Activalo solo cuando necesites revisarlo.")
 
-        mostrar_resumen_operativo = True
-        if modo_liviano and sabana_resumen:
-            mostrar_resumen_operativo = st.checkbox(
-                "Mostrar resumen operativo de indicaciones",
-                value=False,
-                key=f"mostrar_resumen_operativo_{paciente_sel}_{fecha_hoy}",
-            )
-        if sabana_resumen and mostrar_resumen_operativo:
+        if sabana_resumen:
             st.caption("Resumen operativo de indicaciones activas")
             _render_tabla_clinica(
                 pd.DataFrame(sabana_resumen),
                 key=f"resumen_{paciente_sel}",
-                max_height=valor_por_modo_liviano(260, 220),
+                max_height=260,
                 sticky_first_col=False,
             )
-        elif sabana_resumen and modo_liviano:
-            st.caption("Resumen operativo oculto en modo liviano. Puedes abrirlo cuando necesites repasar indicaciones activas.")
 
         if puede_registrar_dosis:
             with st.form("form_registro_dosis", clear_on_submit=True):
@@ -1680,7 +1568,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     f"{r['med'].split(' |')[0].strip()} | {format_horarios_receta(r)}": r
                     for r in recs_activas
                 }
-                c_med, c_hora = contenedores_responsivos([2, 1], modo_liviano)
+                c_med, c_hora = st.columns([2, 1])
                 receta_label = c_med.selectbox("Medicacion a registrar", list(recetas_map.keys()))
                 receta_actual = recetas_map[receta_label]
                 horarios_receta = obtener_horarios_receta(receta_actual)
@@ -1711,19 +1599,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             estado_sel,
                             justificacion,
                         )
-                        _auditar_recetas(
+                        registrar_auditoria_legal(
+                            "Medicacion",
                             paciente_sel,
-                            user,
                             "Registro de administracion",
+                            user.get("nombre", ""),
+                            user.get("matricula", ""),
                             f"{nombre_med} | Horario: {hora_sel} | Estado: {estado_sel}",
-                            referencia=nombre_med,
-                            criticidad="alta",
-                            extra={
-                                "horario_programado": hora_sel,
-                                "estado_administracion": estado_sel,
-                                "justificacion": justificacion.strip(),
-                                "origen_registro": "Carga manual",
-                            },
                         )
                         guardar_datos()
                         st.success(f"Registro guardado para el horario {hora_sel}.")
@@ -1739,7 +1621,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key=f"abrir_gestion_receta_{paciente_sel}",
             )
             if abrir_gestion_receta:
-                c_ed1, c_ed2 = contenedores_responsivos([3, 2], modo_liviano)
+                c_ed1, c_ed2 = st.columns([3, 2])
                 opciones_recetas = [f"[{r.get('fecha', '')}] {r.get('med', '')}" for r in recs_activas]
                 receta_seleccionada = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas)
                 accion_receta = c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
@@ -1761,18 +1643,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 r["profesional_estado"] = user["nombre"]
                                 r["matricula_estado"] = user.get("matricula", "")
                                 r["motivo_estado"] = motivo_cambio.strip()
-                                _auditar_recetas(
+                                registrar_auditoria_legal(
+                                    "Medicacion",
                                     paciente_sel,
-                                    user,
                                     "Indicacion suspendida",
+                                    user.get("nombre", ""),
+                                    user.get("matricula", ""),
                                     f"{r.get('med', '')} | Motivo: {motivo_cambio.strip()}",
-                                    referencia=r.get("med", "")[:80],
-                                    criticidad="critica",
-                                    extra={
-                                        "motivo_estado": motivo_cambio.strip(),
-                                        "estado_nuevo": "Suspendida",
-                                        "origen_registro": r.get("origen_registro", ""),
-                                    },
                                 )
                             elif accion_receta == "Editar indicacion" and nuevo_texto_receta:
                                 r["estado_receta"] = "Modificada"
@@ -1812,19 +1689,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                         "empresa": r.get("empresa", mi_empresa),
                                     }
                                 )
-                                _auditar_recetas(
+                                registrar_auditoria_legal(
+                                    "Medicacion",
                                     paciente_sel,
-                                    user,
                                     "Indicacion modificada",
+                                    user.get("nombre", ""),
+                                    user.get("matricula", ""),
                                     f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta} | Motivo: {motivo_cambio.strip()}",
-                                    referencia=nuevo_texto_receta[:80],
-                                    criticidad="critica",
-                                    extra={
-                                        "medicacion_anterior": r.get("med", ""),
-                                        "medicacion_nueva": nuevo_texto_receta,
-                                        "motivo_estado": motivo_cambio.strip(),
-                                        "origen_registro": r.get("origen_registro", ""),
-                                    },
                                 )
                             break
                     guardar_datos()
@@ -1834,7 +1705,11 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 "La suspension o modificacion de indicaciones queda reservada a medico, coordinacion o administracion con acceso total."
             )
     else:
-        st.info("Aun no hay medicacion activa para este paciente.")
+        bloque_estado_vacio(
+            "Sin medicación activa",
+            "Este paciente no tiene prescripciones activas en este momento.",
+            sugerencia="Las recetas nuevas se cargan en el formulario de prescripción de esta misma vista.",
+        )
 
     st.divider()
     if recs_todas:
@@ -1849,13 +1724,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 "Prescripciones a mostrar",
                 len(recs_todas),
                 key=f"limite_recetas_hist_{paciente_sel}",
-                default=valor_por_modo_liviano(30, 15),
+                default=30,
             )
 
-            with st.container(height=valor_por_modo_liviano(400, 320)):
+            with st.container(height=400):
                 for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
                     with st.container(border=True):
-                        c_info, c_btn = contenedores_responsivos([3, 1], modo_liviano)
+                        c_info, c_btn = st.columns([3, 1])
                         estado_actual = r.get("estado_receta", "Activa")
                         c_info.markdown(f"**{r.get('fecha', '-')}**")
                         c_info.markdown(
@@ -1879,16 +1754,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 c_info.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
                         if r.get("firma_b64"):
                             try:
-                                firma_bytes = decodificar_base64_seguro(r["firma_b64"])
-                                if firma_bytes:
-                                    c_info.image(firma_bytes, caption="Firma medica registrada", width=200)
+                                c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
                             except Exception:
                                 pass
                         if r.get("adjunto_papel_b64"):
                             try:
                                 c_btn.download_button(
                                     "Descargar orden adjunta",
-                                    data=decodificar_base64_seguro(r["adjunto_papel_b64"]),
+                                    data=base64.b64decode(r["adjunto_papel_b64"]),
                                     file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                                     mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
                                     key=f"adj_papel_btn_{idx}",

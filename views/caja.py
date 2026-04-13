@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
@@ -18,10 +19,34 @@ except ImportError:
 def render_caja(paciente_sel, mi_empresa, user, rol):
     rol_normalizado = str(rol or "").strip().lower()
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral para ver su cuenta corriente.")
+        aviso_sin_paciente()
         return
 
-    st.subheader("Facturacion y Caja Diaria")
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Facturacion y caja</h2>
+            <p class="mc-hero-text">Cuenta corriente del paciente: practicas, montos, metodo de pago y estado. Exporta CSV o PDF cuando lo necesites.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Nomenclador</span>
+                <span class="mc-chip">Cobrado / pendiente</span>
+                <span class="mc-chip">Exportacion</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Practicas", "Registra nomenclador, monto y estado de cobro."),
+            ("Resumen", "Metricas de cobrado y pendiente por paciente."),
+            ("Exportar", "Genera CSV o PDF cuando lo necesites."),
+        ]
+    )
+    st.caption(
+        "Las metricas usan solo movimientos de este paciente en tu clinica. Registra cada practica con monto y estado; el historial permite PDF por movimiento. "
+        "Coordinacion ve abajo la auditoria general de caja."
+    )
 
     fact_paciente = [
         f for f in st.session_state.get("facturacion_db", [])
@@ -126,11 +151,14 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             pdf_bytes = generar_recibo_pdf(mov)
                             st.download_button("Descargar PDF", data=pdf_bytes, file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf", mime="application/pdf", key=f"pdf_btn_{i}", use_container_width=True)
     else:
-        st.info("No hay movimientos registrados para este paciente aun.")
+        st.warning(
+            "No hay movimientos de facturacion para este paciente en esta clinica. Usa el formulario **Registrar Nuevo Movimiento** de arriba (servicio, monto y estado de cobro)."
+        )
 
     if es_control_total(rol_normalizado):
         st.divider()
         st.markdown("#### Auditoria de Facturacion General")
+        st.caption("Vista global de la empresa: busca por texto, acota filas y exporta CSV. No reemplaza el detalle por paciente de la seccion anterior.")
         df_caja = pd.DataFrame([f for f in st.session_state.get("facturacion_db", []) if f.get("empresa") == mi_empresa])
         if not df_caja.empty:
             filtro_caja = st.text_input("Buscar por paciente, practica, fecha o estado", "")
@@ -155,4 +183,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             csv_data = dataframe_csv_bytes(df_mostrar)
             st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
         else:
-            st.info("No hay registros de facturacion aun.")
+            bloque_estado_vacio(
+                "Caja sin movimientos",
+                "No hay registros de facturación para esta clínica todavía.",
+                sugerencia="Los movimientos del paciente se cargan arriba; el listado general aparece cuando existan datos.",
+            )

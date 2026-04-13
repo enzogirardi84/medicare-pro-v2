@@ -2,15 +2,39 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 def render_balance(paciente_sel, user):
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral.")
+        aviso_sin_paciente()
         return
 
-    st.subheader("Balance Hidrico Estricto")
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Balance hidrico</h2>
+            <p class="mc-hero-text">Ingresos y egresos en ml por turno de guardia, con balance calculado y tabla historica acotada para no saturar el celular.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Turnos</span>
+                <span class="mc-chip">Ingresos / egresos</span>
+                <span class="mc-chip">Shift en ml</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Turno", "Agrupa ingresos y egresos por franja de guardia."),
+            ("Balance", "El total neto se calcula al guardar cada registro."),
+            ("Historial", "Consulta controles previos sin saturar la pantalla."),
+        ]
+    )
+    st.caption(
+        "Completa fecha, hora y turno; suma todos los ingresos y egresos del control y guarda. El shift en ml aparece abajo junto al historial y metricas de tendencia."
+    )
 
     with st.form("bal", clear_on_submit=True):
         col_meta1, col_meta2, col_meta3 = st.columns(3)
@@ -60,7 +84,11 @@ def render_balance(paciente_sel, user):
     blp = [x for x in st.session_state.get("balance_db", []) if x.get("paciente") == paciente_sel]
 
     if not blp:
-        st.info("Aun no hay balances hidricos registrados para este paciente.")
+        bloque_estado_vacio(
+            "Sin balances hidricos",
+            "Todavía no hay registros de balance para este paciente.",
+            sugerencia="Usá el formulario de arriba: ingresos y egresos en ml, turno y Guardar.",
+        )
         return
 
     st.divider()

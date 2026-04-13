@@ -4,6 +4,7 @@ import hmac
 import json
 import re
 import secrets
+import unicodedata
 import urllib.request
 from datetime import datetime
 from io import BytesIO
@@ -17,14 +18,17 @@ from PIL import Image, ImageOps
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador", "administrativo"}
-ROLES_BYPASS_PERMISOS = frozenset({"superadmin", "admin", "coordinador"})
-ROLES_GLOBAL_DATOS_MULTICLINICA = frozenset({"superadmin", "admin"})
-ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL = frozenset({"equipo_eliminar_usuario", "equipo_cambiar_estado"})
+SESSION_KEY_MODO_LIVIANO = "modo_celular_viejo"
 PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
 PASSWORD_HASH_ITERATIONS = 390000
-PASSWORD_MIN_LENGTH = 8
-SESSION_KEY_MODO_LIVIANO = "modo_celular_viejo"
 MAX_RAW_IMAGE_UPLOAD_MB = 20
+ROLES_BYPASS_PERMISOS = frozenset({"superadmin", "admin", "coordinador"})
+# Solo estos roles omiten el filtro por empresa en listados (multiclínica real).
+ROLES_GLOBAL_DATOS_MULTICLINICA = frozenset({"superadmin", "admin"})
+# Eliminar / suspender usuario: lista estricta sin bypass global (Admin legacy no hereda suspender).
+ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL = frozenset({"equipo_eliminar_usuario", "equipo_cambiar_estado"})
+# Alta y edicion de mail: SuperAdmin/Admin global o Coordinador en lista.
+ACCIONES_PERMISO_ESTRICTO_LISTA_O_GLOBAL = frozenset({"equipo_crear_usuario", "equipo_editar_email_usuario"})
 LEGACY_ROLE_TO_PROFILE = {
     "medico": "Medico",
     "enfermeria": "Enfermeria",
@@ -61,7 +65,8 @@ ACTION_ROLE_RULES = {
     "estudios_registrar": ["Operativo", "Enfermeria", "Medico"],
     "estudios_borrar": ["Medico"],
     "equipo_crear_usuario": ["Coordinador"],
-    "equipo_cambiar_estado": ["SuperAdmin", "Coordinador"],
+    "equipo_cambiar_estado": ["SuperAdmin"],
+    "equipo_editar_email_usuario": ["Coordinador"],
     "equipo_eliminar_usuario": ["SuperAdmin", "Coordinador"],
 }
 
@@ -112,103 +117,12 @@ PERMISOS_MODULOS = {
 
 
 def _texto_normalizado(valor):
-    return str(valor or "").strip().lower()
+    """Minusculas + strip + NFKC (evita homoglifos en el campo rol que rompen listas blancas)."""
+    return unicodedata.normalize("NFKC", str(valor or "").strip()).lower()
 
 
 def _password_normalizado(password):
     return str(password or "").strip()
-
-
-def modo_celular_viejo_activo(session_state=None):
-    state = session_state if session_state is not None else st.session_state
-    try:
-        return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
-    except Exception:
-        return False
-
-
-def valor_por_modo_liviano(valor_normal, valor_liviano, session_state=None):
-    return valor_liviano if modo_celular_viejo_activo(session_state) else valor_normal
-
-
-def contenedores_responsivos(spec, modo_liviano=None):
-    if modo_liviano is None:
-        modo_liviano = modo_celular_viejo_activo()
-    cantidad = spec if isinstance(spec, int) else len(spec)
-    if modo_liviano:
-        return [st.container() for _ in range(max(int(cantidad), 1))]
-    return list(st.columns(spec))
-
-
-def password_hash_formato_valido(valor):
-    return str(valor or "").startswith(f"{PASSWORD_HASH_PREFIX}$")
-
-
-def generar_hash_password(password, salt=None, iterations=PASSWORD_HASH_ITERATIONS):
-    password_limpio = _password_normalizado(password)
-    salt_hex = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256",
-        password_limpio.encode("utf-8"),
-        salt_hex.encode("utf-8"),
-        int(iterations),
-    ).hex()
-    return f"{PASSWORD_HASH_PREFIX}${int(iterations)}${salt_hex}${digest}"
-
-
-def validar_password_guardado(valor_guardado, password_ingresado):
-    password_limpio = _password_normalizado(password_ingresado)
-    if not password_limpio:
-        return False
-
-    stored = str(valor_guardado or "")
-    if password_hash_formato_valido(stored):
-        try:
-            _, iterations_str, salt_hex, expected = stored.split("$", 3)
-            calculado = hashlib.pbkdf2_hmac(
-                "sha256",
-                password_limpio.encode("utf-8"),
-                salt_hex.encode("utf-8"),
-                int(iterations_str),
-            ).hex()
-            return hmac.compare_digest(calculado, expected)
-        except Exception:
-            return False
-    return stored.strip() == password_limpio
-
-
-def actualizar_password_usuario(usuario_data, password_plano):
-    if isinstance(usuario_data, dict):
-        usuario_data["pass"] = generar_hash_password(password_plano)
-
-
-def password_requiere_migracion(valor_guardado):
-    valor = str(valor_guardado or "").strip()
-    return bool(valor) and not password_hash_formato_valido(valor)
-
-
-def _modulo_canonico(nombre_modulo):
-    nombre = str(nombre_modulo or "").strip()
-    return MODULO_ALIAS.get(nombre, nombre)
-
-
-def clave_menu_usuario(rol_actual, usuario_actual=None):
-    rol_normalizado = _texto_normalizado(rol_actual or (usuario_actual or {}).get("rol"))
-    if rol_normalizado in {"superadmin", "admin", "coordinador"}:
-        return rol_normalizado
-    if rol_normalizado in {"medico", "enfermeria", "operativo"}:
-        return "operativo"
-    if rol_normalizado == "auditoria":
-        return "administrativo"
-
-    if rol_normalizado == "administrativo":
-        perfil_normalizado = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
-        if not perfil_normalizado and isinstance(usuario_actual, dict):
-            perfil_normalizado = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
-        if perfil_normalizado in {"operativo", "medico", "enfermeria"}:
-            return "operativo"
-
-    return rol_normalizado
 
 
 def inferir_perfil_profesional(data):
@@ -280,7 +194,7 @@ def normalizar_usuario_sistema(data):
         usuario["rol"] = "Operativo"
     elif rol_normalizado == "auditoria":
         usuario["rol"] = "Auditoria"
-    elif rol_normalizado == "administrativo":
+    elif rol_normalizado in {"administrativo", "administrador"}:
         if perfil_normalizado == "medico":
             usuario["rol"] = "Medico"
         elif perfil_normalizado == "enfermeria":
@@ -295,6 +209,30 @@ def normalizar_usuario_sistema(data):
     if perfil:
         usuario["perfil_profesional"] = perfil
     return usuario
+
+
+def _modulo_canonico(nombre_modulo):
+    nombre = str(nombre_modulo or "").strip()
+    return MODULO_ALIAS.get(nombre, nombre)
+
+
+def clave_menu_usuario(rol_actual, usuario_actual=None):
+    rol_normalizado = _texto_normalizado(rol_actual or (usuario_actual or {}).get("rol"))
+    if rol_normalizado in {"superadmin", "admin", "coordinador"}:
+        return rol_normalizado
+    if rol_normalizado in {"medico", "enfermeria", "operativo"}:
+        return "operativo"
+    if rol_normalizado == "auditoria":
+        return "administrativo"
+
+    if rol_normalizado == "administrativo":
+        perfil_normalizado = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
+        if not perfil_normalizado and isinstance(usuario_actual, dict):
+            perfil_normalizado = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
+        if perfil_normalizado in {"operativo", "medico", "enfermeria"}:
+            return "operativo"
+
+    return rol_normalizado
 
 
 def _roles_usuario_para_filtrado(data):
@@ -351,12 +289,84 @@ def tiene_permiso(rol_actual, roles_permitidos=None):
     return rol_normalizado in roles_normalizados
 
 
-def _permiso_estricto_lista_roles(rol_actual, roles_permitidos=None):
+def _permiso_estricto_lista_roles(rol_actual, roles_permitidos):
+    """Sin bypass: solo coincide si el rol está en la lista explícita."""
     rol_normalizado = str(rol_actual or "").strip().lower()
     if not roles_permitidos:
         return False
     roles_normalizados = {str(rol).strip().lower() for rol in roles_permitidos if rol}
     return rol_normalizado in roles_normalizados
+
+
+def _permiso_estricto_lista_o_global(rol_actual, roles_permitidos):
+    """SuperAdmin/Admin global, o rol incluido en la lista (p. ej. Coordinador)."""
+    r = str(rol_actual or "").strip().lower()
+    if r in ROLES_GLOBAL_DATOS_MULTICLINICA:
+        return True
+    return _permiso_estricto_lista_roles(rol_actual, roles_permitidos)
+
+
+# Lista cerrada: ni Administrativo ni "Admin" legacy (solo SuperAdmin y Coordinador).
+ROLES_PUEDEN_ELIMINAR_USUARIO_MI_EQUIPO = frozenset({"superadmin", "coordinador"})
+# Suspender/reactivar usuario en Mi equipo: misma lista blanca que eliminar.
+ROLES_PUEDEN_SUSPENDER_REACTIVAR_MI_EQUIPO = frozenset({"superadmin", "coordinador"})
+# Quien puede intentar suspender/eliminar otro usuario (reglas de fila aparte en la misma funcion).
+ROLES_ACTOR_GESTION_BAJA_USUARIO_MI_EQUIPO = frozenset({"superadmin", "admin", "coordinador"})
+# Denegacion explicita ademas de la lista blanca (defensa ante datos o sesiones inconsistentes).
+ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO = frozenset(
+    {"administrativo", "operativo", "medico", "enfermeria", "auditoria"}
+)
+
+
+def puede_eliminar_cuenta_equipo(rol_actual) -> bool:
+    """Solo SuperAdmin y Coordinador. Administrativo, Operativo y cualquier ot rol: False (lista blanca, sin ambiguedad con 'Admin')."""
+    r = _texto_normalizado(rol_actual)
+    if r in ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO:
+        return False
+    return r in ROLES_PUEDEN_ELIMINAR_USUARIO_MI_EQUIPO
+
+
+def puede_suspender_reactivar_usuario_mi_equipo(rol_actual) -> bool:
+    """Solo SuperAdmin y Coordinador. Administrativo, Operativo, etc.: sin botones de suspension."""
+    r = _texto_normalizado(rol_actual)
+    if r in ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO:
+        return False
+    return r in ROLES_PUEDEN_SUSPENDER_REACTIVAR_MI_EQUIPO
+
+
+def mi_equipo_actor_es_superadmin(usuario_actual) -> bool:
+    """Equivale a usuario_actual.rol == 'SuperAdmin' (tras NFKC / normalizacion de sesion)."""
+    return _texto_normalizado((usuario_actual or {}).get("rol")) == "superadmin"
+
+
+def mi_equipo_coordinador_puede_eliminar_objetivo(usuario_actual, usuario_objetivo, empresa_actor) -> bool:
+    """
+    Coordinador valido: misma clinica que el objetivo y el objetivo no es cuenta global (SuperAdmin/Admin).
+    """
+    if _texto_normalizado((usuario_actual or {}).get("rol")) != "coordinador":
+        return False
+    if not isinstance(usuario_objetivo, dict):
+        return False
+    emp_a = _texto_normalizado(empresa_actor)
+    emp_t = _texto_normalizado(usuario_objetivo.get("empresa"))
+    if emp_t != emp_a:
+        return False
+    rol_obj = _texto_normalizado(usuario_objetivo.get("rol"))
+    return rol_obj not in {"superadmin", "admin"}
+
+
+def mi_equipo_mostrar_ui_suspender(usuario_actual, ok_gestionar_fila: bool) -> bool:
+    """Suspender/reactivar: misma regla de negocio que eliminar, con fila habilitada."""
+    return bool(ok_gestionar_fila) and puede_suspender_reactivar_usuario_mi_equipo(
+        (usuario_actual or {}).get("rol")
+    )
+
+
+def mi_equipo_mostrar_ui_eliminar(usuario_actual, usuario_objetivo, empresa_actor, ok_gestionar_fila: bool) -> bool:
+    """
+    Eliminar: solo si la fila ya cumple reglas de empresa/cuenta global y el rol puede dar de baja.
+    """
+    return bool(ok_gestionar_fila) and puede_eliminar_cuenta_equipo((usuario_actual or {}).get("rol"))
 
 
 def puede_accion(rol_actual, accion, roles_extra=None):
@@ -365,17 +375,137 @@ def puede_accion(rol_actual, accion, roles_extra=None):
         roles_base.extend(roles_extra)
     if accion in ACCIONES_PERMISO_ESTRICTO_SIN_GLOBAL:
         return _permiso_estricto_lista_roles(rol_actual, roles_base)
+    if accion in ACCIONES_PERMISO_ESTRICTO_LISTA_O_GLOBAL:
+        return _permiso_estricto_lista_o_global(rol_actual, roles_base)
     return tiene_permiso(rol_actual, roles_base)
 
 
+def rol_ve_datos_todas_las_clinicas(rol_actual) -> bool:
+    return str(rol_actual or "").strip().lower() in ROLES_GLOBAL_DATOS_MULTICLINICA
+
+
+def actor_puede_modificar_usuario_equipo(rol_actor, empresa_actor, data_usuario_objetivo):
+    """
+    - SuperAdmin/Admin global: suspender/eliminar según reglas de cuenta global (solo SuperAdmin toca otra global).
+    - Coordinador: suspender/eliminar solo usuarios de su empresa, nunca cuentas globales.
+    - Cualquier otro rol (Administrativo, Operativo, variantes de texto, etc.): no suspender ni eliminar desde Mi equipo.
+    """
+    r = _texto_normalizado(rol_actor)
+    if not isinstance(data_usuario_objetivo, dict):
+        return False, "Datos de usuario invalidos."
+    if r not in ROLES_ACTOR_GESTION_BAJA_USUARIO_MI_EQUIPO:
+        return (
+            False,
+            "Tu rol no puede suspender ni eliminar usuarios en Mi equipo. Solo **SuperAdmin** o **Coordinador** de la misma clinica pueden hacerlo, segun reglas.",
+        )
+    rol_t = _texto_normalizado(data_usuario_objetivo.get("rol"))
+    cuenta_global = rol_t in {"superadmin", "admin"}
+
+    if r in ROLES_GLOBAL_DATOS_MULTICLINICA:
+        if cuenta_global and r != "superadmin":
+            return (
+                False,
+                "Solo un usuario **SuperAdmin** puede dar de baja o suspender otra cuenta SuperAdmin o Admin global.",
+            )
+        return True, ""
+
+    emp_a = str(empresa_actor or "").strip().lower()
+    emp_t = str(data_usuario_objetivo.get("empresa") or "").strip().lower()
+    if emp_t != emp_a:
+        return False, "Solo podes gestionar usuarios de tu clinica."
+    if cuenta_global:
+        return False, "Las cuentas de nivel global solo las gestiona un administrador del sistema."
+    return True, ""
+
+
+def bloqueo_autoservicio_suspension_baja(login_actor, login_objetivo, rol_actor):
+    """True si no debe ejecutarse suspender/eliminar (misma cuenta, sin rol global)."""
+    r = _texto_normalizado(rol_actor)
+    if r in ROLES_GLOBAL_DATOS_MULTICLINICA:
+        return False, ""
+    la = str(login_actor or "").strip().lower()
+    lo = str(login_objetivo or "").strip().lower()
+    if la and lo and la == lo:
+        return True, "No podes suspender ni eliminar tu propio usuario desde esta pantalla."
+    return False, ""
+
+
+def modo_celular_viejo_activo(session_state=None):
+    state = session_state if session_state is not None else st.session_state
+    try:
+        return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
+    except Exception:
+        return False
+
+
+def valor_por_modo_liviano(valor_normal, valor_liviano, session_state=None):
+    return valor_liviano if modo_celular_viejo_activo(session_state) else valor_normal
+
+
+def password_hash_formato_valido(valor):
+    return str(valor or "").startswith(f"{PASSWORD_HASH_PREFIX}$")
+
+
+def generar_hash_password(password, salt=None, iterations=PASSWORD_HASH_ITERATIONS):
+    password_limpio = _password_normalizado(password)
+    salt_hex = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password_limpio.encode("utf-8"),
+        salt_hex.encode("utf-8"),
+        int(iterations),
+    ).hex()
+    return f"{PASSWORD_HASH_PREFIX}${int(iterations)}${salt_hex}${digest}"
+
+
+def validar_password_guardado(valor_guardado, password_ingresado):
+    password_limpio = _password_normalizado(password_ingresado)
+    if not password_limpio:
+        return False
+
+    stored = str(valor_guardado or "")
+    if password_hash_formato_valido(stored):
+        try:
+            _, iterations_str, salt_hex, expected = stored.split("$", 3)
+            calculado = hashlib.pbkdf2_hmac(
+                "sha256",
+                password_limpio.encode("utf-8"),
+                salt_hex.encode("utf-8"),
+                int(iterations_str),
+            ).hex()
+            return hmac.compare_digest(calculado, expected)
+        except Exception:
+            return False
+    return stored.strip() == password_limpio
+
+
+def actualizar_password_usuario(usuario_data, password_plano):
+    if isinstance(usuario_data, dict):
+        usuario_data["pass"] = generar_hash_password(password_plano)
+
+
+def password_requiere_migracion(valor_guardado):
+    valor = str(valor_guardado or "").strip()
+    return bool(valor) and not password_hash_formato_valido(valor)
+
+
+def decodificar_base64_seguro(raw):
+    if not raw:
+        return b""
+    try:
+        return base64.b64decode(raw)
+    except Exception:
+        return b""
+
+
 def descripcion_acceso_rol(rol_actual, usuario_actual=None):
-    clave_menu = clave_menu_usuario(rol_actual, usuario_actual)
-    if clave_menu in {"superadmin", "admin"}:
+    rol_normalizado = str(rol_actual or "").strip().lower()
+    if rol_normalizado in {"superadmin", "admin"}:
         return "Acceso de gestion, control y trazabilidad completa."
-    if clave_menu == "coordinador":
+    if rol_normalizado == "coordinador":
         return "Acceso total a la operacion, horarios, auditoria y control del equipo."
-    if clave_menu == "administrativo":
-        return "Acceso administrativo a modulos de gestion, soporte y control."
+    if rol_normalizado == "administrativo":
+        return "Acceso total al sistema con foco administrativo, operativo y de control."
     descripciones = {
         "medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
         "enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
@@ -383,7 +513,7 @@ def descripcion_acceso_rol(rol_actual, usuario_actual=None):
         "administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
         "auditoria": "Acceso de control, revision y trazabilidad legal.",
     }
-    return descripciones.get(clave_menu, "Acceso configurado segun el rol asignado.")
+    return descripciones.get(rol_normalizado, "Acceso configurado segun el rol asignado.")
 
 
 def es_control_total(rol_actual):
@@ -391,71 +521,23 @@ def es_control_total(rol_actual):
 
 
 def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None, usuario_actual=None):
-    menu_base = list(todos_los_modulos or [
-        "Visitas y Agenda",
-        "Dashboard",
-        "Admision",
-        "Clinica",
-        "Pediatria",
-        "Evolucion",
-        "Estudios",
-        "Materiales",
-        "Recetas",
-        "Balance",
-        "Inventario",
-        "Caja",
-        "Red de Profesionales",
-        "Emergencias y Ambulancia",
-        "Escalas Clinicas",
-        "Historial",
-        "PDF",
-        "Telemedicina",
-        "Cierre Diario",
-        "Mi Equipo",
-        "Asistencia en Vivo",
-        "RRHH y Fichajes",
-        "Proyecto y Roadmap",
-        "Auditoria",
-        "Auditoria Legal",
-    ])
-    clave_menu = clave_menu_usuario(rol_actual, usuario_actual)
-    if clave_menu in {"superadmin", "admin", "coordinador"}:
-        return menu_base
+    from core.view_roles import modulos_menu_para_rol
 
-    modulos_autorizados = {
-        _modulo_canonico(modulo)
-        for modulo in PERMISOS_MODULOS.get(clave_menu, [])
-    }
-    return [modulo for modulo in menu_base if modulo in modulos_autorizados]
-
-
-def rol_ve_datos_todas_las_clinicas(rol_actual):
-    return str(rol_actual or "").strip().lower() in ROLES_GLOBAL_DATOS_MULTICLINICA
-
-
-def puede_gestionar_usuario_mi_equipo(rol_actual, empresa_actor, usuario_actual, login_objetivo, usuario_objetivo):
-    rol_actor = str(rol_actual or "").strip().lower()
-    if rol_actor not in {"superadmin", "coordinador"}:
-        return False, "Sin permisos para gestionar usuarios."
-
-    login_actor = str((usuario_actual or {}).get("usuario_login", "") or "").strip().lower()
-    login_obj = str(login_objetivo or "").strip().lower()
-    if login_actor and login_obj and login_actor == login_obj:
-        return False, "Tu propio usuario no se puede suspender ni eliminar desde esta pantalla."
-
-    if rol_actor == "superadmin":
-        return True, ""
-
-    empresa_actor_norm = str(empresa_actor or "").strip().lower()
-    empresa_objetivo_norm = str((usuario_objetivo or {}).get("empresa", "") or "").strip().lower()
-    if empresa_objetivo_norm != empresa_actor_norm:
-        return False, "Solo podes gestionar usuarios de tu misma clinica."
-
-    rol_objetivo_norm = str((usuario_objetivo or {}).get("rol", "") or "").strip().lower()
-    if rol_objetivo_norm in {"superadmin", "admin"}:
-        return False, "Las cuentas globales solo las gestiona un SuperAdmin."
-
-    return True, ""
+    menu_base = (
+        list(todos_los_modulos)
+        if todos_los_modulos is not None
+        else modulos_menu_para_rol(rol_actual)
+    )
+    if usuario_actual is not None:
+        clave_menu = clave_menu_usuario(rol_actual, usuario_actual)
+        if clave_menu in {"superadmin", "admin", "coordinador"}:
+            return menu_base
+        modulos_autorizados = {_modulo_canonico(m) for m in PERMISOS_MODULOS.get(clave_menu, [])}
+        return [modulo for modulo in menu_base if modulo in modulos_autorizados]
+    if todos_los_modulos is not None:
+        allow = set(todos_los_modulos)
+        return [m for m in modulos_menu_para_rol(rol_actual) if m in allow]
+    return menu_base
 
 
 def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empresa"):
@@ -482,14 +564,29 @@ def compactar_etiqueta_paciente(nombre, estado):
     return f"{nombre}{sufijo}"
 
 
+def mapa_detalles_pacientes(session_state) -> dict:
+    """Lectura segura del mapa id -> detalle (evita KeyError si la clave falta o no es dict)."""
+    m = session_state.get("detalles_pacientes_db")
+    return m if isinstance(m, dict) else {}
+
+
+def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
+    """Garantiza un dict mutable en session_state para altas/ediciones en Admisión y similares."""
+    m = session_state.get("detalles_pacientes_db")
+    if not isinstance(m, dict):
+        m = {}
+        session_state["detalles_pacientes_db"] = m
+    return m
+
+
 def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
     busqueda_norm = str(busqueda or "").strip().lower()
-    detalles_db = session_state.get("detalles_pacientes_db", {})
+    detalles_db = mapa_detalles_pacientes(session_state)
     pacientes_visibles = []
 
     for paciente in session_state.get("pacientes_db", []):
         detalles = detalles_db.get(paciente, {})
-        if not rol_ve_datos_todas_las_clinicas(rol_actual):
+        if not es_control_total(rol_actual):
             empresa_paciente = str(detalles.get("empresa", "") or "").strip().lower()
             empresa_actual = str(mi_empresa or "").strip().lower()
             if empresa_paciente != empresa_actual:
@@ -609,7 +706,7 @@ def registrar_auditoria_legal(
     extra = dict(extra or {})
     usuario_ctx = usuario if isinstance(usuario, dict) else st.session_state.get("user", {})
     if empresa is None:
-        detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente, {})
+        detalles = mapa_detalles_pacientes(st.session_state).get(paciente, {})
         empresa = detalles.get("empresa") or usuario_ctx.get("empresa", "")
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append(
@@ -622,7 +719,7 @@ def registrar_auditoria_legal(
             detalle=detalle,
             referencia=referencia,
             extra=extra,
-            empresa=empresa,
+            empresa=empresa or "",
             usuario=usuario_ctx,
             modulo=modulo,
             criticidad=criticidad,
@@ -630,16 +727,18 @@ def registrar_auditoria_legal(
     )
 
 
-def asegurar_usuarios_base():
+def asegurar_usuarios_base(solo_normalizar: bool = False):
+    """
+    solo_normalizar=True: solo renormaliza usuarios existentes (modo shard / sin inyectar admin de emergencia).
+    """
     st.session_state.setdefault("usuarios_db", {})
-    if "admin" not in st.session_state["usuarios_db"]:
-        st.session_state["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
-    else:
-        combinado = DEFAULT_ADMIN_USER.copy()
-        combinado.update(st.session_state["usuarios_db"]["admin"])
-        st.session_state["usuarios_db"]["admin"] = combinado
-    if password_requiere_migracion(st.session_state["usuarios_db"]["admin"].get("pass")):
-        actualizar_password_usuario(st.session_state["usuarios_db"]["admin"], st.session_state["usuarios_db"]["admin"].get("pass"))
+    if not solo_normalizar:
+        if "admin" not in st.session_state["usuarios_db"]:
+            st.session_state["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
+        else:
+            combinado = DEFAULT_ADMIN_USER.copy()
+            combinado.update(st.session_state["usuarios_db"]["admin"])
+            st.session_state["usuarios_db"]["admin"] = combinado
     for login, datos in list(st.session_state["usuarios_db"].items()):
         if not isinstance(datos, dict):
             continue
@@ -654,7 +753,7 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
     if not paciente_sel:
         return []
 
-    detalles = session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     alertas = []
 
     alergias = str(detalles.get("alergias", "") or "").strip()
@@ -1005,17 +1104,6 @@ def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
         return image_bytes, None
 
 
-def limite_archivo_mb(tipo="imagen", session_state=None):
-    tipo_normalizado = _texto_normalizado(tipo)
-    modo_liviano = modo_celular_viejo_activo(session_state)
-    limites = {
-        "imagen": 4 if modo_liviano else 8,
-        "pdf": 6 if modo_liviano else 12,
-        "firma": 2 if modo_liviano else 3,
-    }
-    return limites.get(tipo_normalizado, 4 if modo_liviano else 8)
-
-
 def _bytes_legibles(cantidad_bytes):
     try:
         cantidad = float(cantidad_bytes or 0)
@@ -1026,6 +1114,17 @@ def _bytes_legibles(cantidad_bytes):
     if cantidad >= 1024:
         return f"{cantidad / 1024:.0f} KB"
     return f"{int(cantidad)} B"
+
+
+def limite_archivo_mb(tipo="imagen", session_state=None):
+    tipo_normalizado = _texto_normalizado(tipo)
+    modo_liviano = modo_celular_viejo_activo(session_state)
+    limites = {
+        "imagen": 4 if modo_liviano else 8,
+        "pdf": 6 if modo_liviano else 12,
+        "firma": 2 if modo_liviano else 3,
+    }
+    return limites.get(tipo_normalizado, 4 if modo_liviano else 8)
 
 
 def validar_archivo_bytes(file_bytes, tipo="imagen", nombre_archivo="archivo", session_state=None):
@@ -1053,55 +1152,9 @@ def validar_archivo_bytes(file_bytes, tipo="imagen", nombre_archivo="archivo", s
     return True, ""
 
 
-def preparar_archivo_clinico(uploaded_file, max_size=(1280, 1280), quality=75, session_state=None):
-    if uploaded_file is None:
-        return {"ok": False, "error": "No se recibio ningun archivo."}
-
-    nombre = getattr(uploaded_file, "name", "archivo") or "archivo"
-    extension = Path(nombre).suffix.lower().lstrip(".")
-    extension = "jpg" if extension == "jpeg" else extension
-    tipo_archivo = "pdf" if extension == "pdf" else "imagen"
-
-    try:
-        contenido = uploaded_file.getvalue()
-    except Exception:
-        return {"ok": False, "error": f"No se pudo leer {nombre}."}
-
-    ok, error = validar_archivo_bytes(contenido, tipo=tipo_archivo, nombre_archivo=nombre, session_state=session_state)
-    if not ok:
-        return {"ok": False, "error": error}
-
-    if tipo_archivo == "imagen":
-        modo_liviano = modo_celular_viejo_activo(session_state)
-        max_size_final = (960, 960) if modo_liviano else max_size
-        calidad_final = min(quality, 62) if modo_liviano else quality
-        contenido, extension_optimizada = optimizar_imagen_bytes(
-            contenido,
-            max_size=max_size_final,
-            quality=calidad_final,
-        )
-        extension = extension_optimizada or extension or "jpg"
-        ok, error = validar_archivo_bytes(contenido, tipo="imagen", nombre_archivo=nombre, session_state=session_state)
-        if not ok:
-            return {"ok": False, "error": error}
-
-    mime = (
-        "application/pdf"
-        if tipo_archivo == "pdf"
-        else ("image/jpeg" if extension in {"jpg", "jpeg"} else f"image/{extension or 'jpeg'}")
-    )
-    return {
-        "ok": True,
-        "bytes": contenido,
-        "extension": extension or ("pdf" if tipo_archivo == "pdf" else "jpg"),
-        "mime": mime,
-        "name": nombre,
-        "tipo_archivo": tipo_archivo,
-        "size_bytes": len(contenido),
-    }
-
-
-def preparar_imagen_clinica_bytes(image_bytes, nombre_archivo="imagen.jpg", max_size=(1280, 1280), quality=75, session_state=None):
+def preparar_imagen_clinica_bytes(
+    image_bytes, nombre_archivo="imagen.jpg", max_size=(1280, 1280), quality=75, session_state=None
+):
     ok, error = validar_archivo_bytes(image_bytes, tipo="imagen", nombre_archivo=nombre_archivo, session_state=session_state)
     if not ok:
         return {"ok": False, "error": error}
@@ -1125,17 +1178,7 @@ def preparar_imagen_clinica_bytes(image_bytes, nombre_archivo="imagen.jpg", max_
     }
 
 
-def decodificar_base64_seguro(payload_b64):
-    if not payload_b64:
-        return b""
-    try:
-        return base64.b64decode(payload_b64)
-    except Exception:
-        return b""
-
-
 def obtener_config_firma(key_prefix, default_liviano=True):
-    default_liviano = bool(default_liviano or modo_celular_viejo_activo())
     modo_liviano = st.checkbox(
         "Modo firma liviana (recomendado en celulares viejos)",
         value=default_liviano,
@@ -1179,9 +1222,6 @@ def firma_a_base64(canvas_image_data=None, uploaded_file=None):
 def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20, 30, 50, 100, 200, 500)):
     if total <= 0:
         return 0
-    if modo_celular_viejo_activo():
-        default = min(default, 20)
-        opciones = tuple(valor for valor in opciones if valor <= 100) or (10, 20, 30, 50, 100)
     if total <= min(opciones):
         st.caption(f"Mostrando {total} registro(s).")
         return total
@@ -1199,8 +1239,6 @@ def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20
 
 
 def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
-    if modo_celular_viejo_activo():
-        height = min(height, 340)
     with st.container(height=height, border=border):
         st.dataframe(
             df,
@@ -1225,7 +1263,7 @@ def obtener_direccion_real(lat, lon):
         return "Direccion exacta no disponible (solo coordenadas)"
 
 
-def inicializar_db_state(db):
+def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
     if "db_inicializada" not in st.session_state:
         claves_base = {
             "usuarios_db": {"admin": DEFAULT_ADMIN_USER.copy()},
@@ -1256,8 +1294,10 @@ def inicializar_db_state(db):
             "auditoria_legal_db": [],
             "profesionales_red_db": [],
             "solicitudes_servicios_db": [],
+            "plantillas_whatsapp_db": {},
+            "clinicas_db": {},
         }
-        if db:
+        if db is not None:
             for k, v in db.items():
                 st.session_state[k] = v
             for k, v in claves_base.items():
@@ -1266,5 +1306,16 @@ def inicializar_db_state(db):
         else:
             for k, v in claves_base.items():
                 st.session_state[k] = v
-        asegurar_usuarios_base()
+            if not precargar_usuario_admin_emergencia:
+                st.session_state["usuarios_db"] = {}
+        if precargar_usuario_admin_emergencia:
+            asegurar_usuarios_base()
+        else:
+            asegurar_usuarios_base(solo_normalizar=True)
+        try:
+            from core.clinicas_control import sincronizar_clinicas_desde_datos
+
+            sincronizar_clinicas_desde_datos(st.session_state)
+        except Exception:
+            pass
         st.session_state["db_inicializada"] = True

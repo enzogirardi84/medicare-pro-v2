@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.view_helpers import bloque_estado_vacio
 from core.utils import cargar_json_asset, seleccionar_limite_registros
 
 
@@ -44,6 +45,9 @@ def render_inventario(mi_empresa):
         </div>
         """,
         unsafe_allow_html=True,
+    )
+    st.caption(
+        "Stock critico (≤10) se lista arriba en rojo. El formulario suma mercaderia; mas abajo el stock completo y la seccion para corregir o eliminar insumos."
     )
 
     with st.form("form_inv", clear_on_submit=True):
@@ -101,7 +105,11 @@ def render_inventario(mi_empresa):
         with st.container(height=520, border=True):
             st.dataframe(styled, use_container_width=True, hide_index=True, height=496)
     else:
-        st.info("Aun no hay insumos cargados en el inventario.")
+        bloque_estado_vacio(
+            "Inventario vacío",
+            "No hay insumos cargados para esta clínica.",
+            sugerencia="Usá Ingreso de mercadería arriba: catálogo o insumo nuevo y cantidad.",
+        )
 
     st.divider()
 

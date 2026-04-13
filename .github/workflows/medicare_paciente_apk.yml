@@ -1,0 +1,32 @@
+# Compila la APK de la app paciente. Descarga el artefacto desde la pestaña Actions del repositorio.
+name: MediCare paciente — APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: medicare_paciente_alerta
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Plataformas nativas (si faltan android/ios)
+        run: flutter create . --org com.medicare
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: medicare-paciente-release-apk
+          path: medicare_paciente_alerta/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

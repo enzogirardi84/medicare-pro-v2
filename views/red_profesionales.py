@@ -2,7 +2,8 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.utils import ahora, mostrar_dataframe_con_scroll, rol_ve_datos_todas_las_clinicas, seleccionar_limite_registros
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
 TIPOS_PERFIL = [
@@ -155,7 +156,7 @@ def _obtener_profesional_actual(user, mi_empresa):
 
 def render_red_profesionales(mi_empresa, user, rol):
     rol_normalizado = str(rol or "").strip().lower()
-    acceso_total = rol_ve_datos_todas_las_clinicas(rol_normalizado)
+    acceso_total = es_control_total(rol_normalizado)
     usuario_login = _identificador_profesional(user)
     st.markdown(
         """
@@ -171,6 +172,16 @@ def render_red_profesionales(mi_empresa, user, rol):
         </div>
         """,
         unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Mi perfil", "Datos publicos, servicios y contacto para derivaciones."),
+            ("Buscador", "Filtra perfiles de la red por tipo, zona o servicio."),
+            ("Solicitudes", "Pedidos de pacientes o familias hacia profesionales o instituciones."),
+        ]
+    )
+    st.caption(
+        "Las tres pestañas son independientes: primero completa tu ficha, luego busca colegas o revisa solicitudes entrantes."
     )
 
     tab_perfil, tab_busqueda, tab_solicitudes = st.tabs(
@@ -295,7 +306,11 @@ def render_red_profesionales(mi_empresa, user, rol):
         st.markdown("### Profesionales y organizaciones disponibles")
         registros = pd.DataFrame(st.session_state.get("profesionales_red_db", []))
         if registros.empty:
-            st.info("Todavia no hay perfiles cargados.")
+            bloque_estado_vacio(
+                "Red sin perfiles",
+                "Todavía no hay profesionales u organizaciones cargados en la red.",
+                sugerencia="Usá la pestaña de alta para agregar el primer perfil visible.",
+            )
         else:
             colf1, colf2, colf3 = st.columns(3)
             tipo_filtro = colf1.selectbox("Tipo", ["Todos"] + TIPOS_PERFIL)
@@ -314,7 +329,11 @@ def render_red_profesionales(mi_empresa, user, rol):
                 df = df[df["organizacion"].astype(str).str.contains(organizacion_filtro.strip(), case=False, na=False)]
 
             if df.empty:
-                st.warning("No hay perfiles que coincidan con ese filtro.")
+                bloque_estado_vacio(
+                    "Sin coincidencias",
+                    "Ningún perfil coincide con tipo, servicio, zona u organización indicados.",
+                    sugerencia="Probá «Todos» en los filtros o limpiá el texto de zona/organización.",
+                )
             else:
                 limite = seleccionar_limite_registros(
                     "Perfiles a mostrar",
@@ -390,7 +409,11 @@ def render_red_profesionales(mi_empresa, user, rol):
             if x.get("empresa") == mi_empresa or acceso_total
         ]
         if not solicitudes:
-            st.info("Todavia no hay solicitudes cargadas.")
+            bloque_estado_vacio(
+                "Sin solicitudes",
+                "Todavía no hay pedidos de servicios guardados para esta clínica.",
+                sugerencia="Completá el formulario de arriba para registrar la primera solicitud.",
+            )
         else:
             df_sol = pd.DataFrame(solicitudes)
             limite = seleccionar_limite_registros(

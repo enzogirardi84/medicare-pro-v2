@@ -1,12 +1,16 @@
 from datetime import datetime, timedelta
+from html import escape
 
 import pandas as pd
 import streamlit as st
 
+from core.clinicas_control import sincronizar_clinicas_desde_datos
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import (
     ahora,
     calcular_estado_agenda,
     filtrar_registros_empresa,
+    mapa_detalles_pacientes,
     mostrar_dataframe_con_scroll,
     parse_agenda_datetime,
     parse_fecha_hora,
@@ -35,7 +39,7 @@ def render_dashboard(mi_empresa, rol):
         f"""
         <div class="mc-hero">
             <h2 class="mc-hero-title">Dashboard ejecutivo</h2>
-            <p class="mc-hero-text">Lectura rapida del servicio, agenda, actividad operativa y alertas clinicas para {mi_empresa}.</p>
+            <p class="mc-hero-text">Lectura rapida para {escape(str(mi_empresa))}: pacientes, agenda, visitas del dia, urgencias recientes y cambios de medicacion. Abajo, graficos y listados para priorizar acciones.</p>
             <div class="mc-chip-row">
                 <span class="mc-chip">Pacientes activos</span>
                 <span class="mc-chip">Agenda y urgencias</span>
@@ -45,12 +49,47 @@ def render_dashboard(mi_empresa, rol):
         """,
         unsafe_allow_html=True,
     )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Agenda", "Turnos por estado y lista prioritaria: quien viene y cuando."),
+            ("Operacion", "Conteo de activos, altas y visitas fichadas hoy."),
+            ("Alertas", "Urgencias ultimos 30 dias, medicacion suspendida/modificada y balance."),
+        ]
+    )
+    st.caption(
+        "Las metricas de la primera fila son conteos del momento; la segunda fila mezcla ventana de 48 h, 30 dias y senales clinicas. Los listados al final se pueden acotar con el selector de cantidad."
+    )
 
+    rol_n = str(rol or "").strip().lower()
+    if rol_n in {"superadmin", "admin"}:
+        sincronizar_clinicas_desde_datos(st.session_state)
+        db_cl = st.session_state.get("clinicas_db") or {}
+        if not isinstance(db_cl, dict):
+            db_cl = {}
+        n_clin = 0
+        n_susp = 0
+        for _k, reg in db_cl.items():
+            if not isinstance(reg, dict):
+                continue
+            n_clin += 1
+            if str(reg.get("estado", "Activa")).strip().lower() == "suspendida":
+                n_susp += 1
+        n_act = n_clin - n_susp
+        st.markdown("##### Red de clinicas (panel global)")
+        dc1, dc2, dc3, dc4 = st.columns(4)
+        dc1.metric("Clinicas registradas", n_clin)
+        dc2.metric("Activas", n_act)
+        dc3.metric("Suspendidas", n_susp)
+        with dc4:
+            st.caption("Gestion detallada, suspension logica y CSV en el modulo **Clinicas (panel global)**.")
+        st.divider()
+
+    _dm_dash = mapa_detalles_pacientes(st.session_state)
     pacientes = filtrar_registros_empresa(
         [
             {
                 "paciente": p,
-                **st.session_state.get("detalles_pacientes_db", {}).get(p, {}),
+                **_dm_dash.get(p, {}),
             }
             for p in st.session_state.get("pacientes_db", [])
         ],
@@ -58,7 +97,11 @@ def render_dashboard(mi_empresa, rol):
         rol,
     )
     if not pacientes:
-        st.warning("No hay pacientes cargados para esta empresa.")
+        bloque_estado_vacio(
+            "Sin pacientes visibles",
+            "No hay pacientes que coincidan con tu empresa y rol en este momento.",
+            sugerencia="Revisá Admisión para altas o pedí a un coordinador que confirme la clínica del paciente.",
+        )
         return
 
     agenda = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
@@ -159,13 +202,21 @@ def render_dashboard(mi_empresa, rol):
         if not agenda_estado.empty:
             st.bar_chart(agenda_estado.set_index("Estado")["Cantidad"], use_container_width=True)
         else:
-            st.info("Todavia no hay agenda cargada.")
+            bloque_estado_vacio(
+                "Gráfico sin datos",
+                "Todavía no hay turnos en agenda para armar el gráfico por estado.",
+                sugerencia="Agendá visitas en Visitas y Agenda o revisá filtros de empresa/rol.",
+            )
     with col_g2:
         st.caption("Visitas del dia por profesional")
         if not visitas_prof.empty:
             st.bar_chart(visitas_prof.set_index("Profesional")["Visitas"], use_container_width=True)
         else:
-            st.info("Todavia no hay visitas registradas hoy.")
+            bloque_estado_vacio(
+                "Sin visitas hoy",
+                "No hay fichadas o visitas del día con profesional asignado.",
+                sugerencia="El equipo puede registrar llegada/salida en Visitas para ver barras acá.",
+            )
 
     if not urg_chart.empty:
         st.caption("Urgencias por triage (ultimos 30 dias)")
@@ -191,7 +242,11 @@ def render_dashboard(mi_empresa, rol):
             )
             mostrar_dataframe_con_scroll(df_ag.head(limite_ag), height=340)
         else:
-            st.info("No hay agenda disponible.")
+            bloque_estado_vacio(
+                "Lista de agenda vacía",
+                "No hay turnos próximos para mostrar en la agenda prioritaria.",
+                sugerencia="Revisá pacientes activos y la carga de agenda en el módulo de visitas.",
+            )
 
     with col_l2:
         st.caption("Cambios recientes de medicacion")

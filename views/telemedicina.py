@@ -1,13 +1,39 @@
 import streamlit as st
+
 from core.utils import ahora
+from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
 
 
 def render_telemedicina(paciente_sel):
     if not paciente_sel:
-        st.info("Seleccione un paciente en el panel lateral para iniciar una teleconsulta.")
+        aviso_sin_paciente()
         return
 
-    st.subheader("Teleconsulta en Vivo")
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Teleconsulta en vivo</h2>
+            <p class="mc-hero-text">Sala Jitsi por paciente y dia. En celulares viejos o lentos abri siempre el enlace en pantalla completa; la vista embebida solo en PC fluidas.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">Jitsi Meet</span>
+                <span class="mc-chip">Pantalla completa</span>
+                <span class="mc-chip">Camara / microfono</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    bloque_mc_grid_tarjetas(
+        [
+            ("Sala unica", "El enlace incluye paciente y fecha para evitar confusiones."),
+            ("Celulares", "Preferi abrir Jitsi en pantalla completa desde el boton."),
+            ("Integrada", "La vista embebida solo en PC o equipos fluidos."),
+        ]
+    )
+    st.caption(
+        "Comparti el enlace de la derecha con el paciente o familiar. La sala cambia cada dia (misma sala si todos entran el mismo dia). "
+        "Permite camara y microfono cuando el navegador lo pida."
+    )
     st.info("En celulares o equipos lentos conviene usar el boton de pantalla completa. La vista integrada queda como opcion.")
 
     nombre_limpio = "".join(e for e in paciente_sel if e.isalnum())
@@ -62,4 +88,6 @@ def render_telemedicina(paciente_sel):
                         st.metric(label=nombre_formateado, value=valor)
                     i += 1
         else:
-            st.warning("Aun no hay signos vitales registrados para este paciente.")
+            st.warning(
+                "No hay signos vitales cargados para este paciente. Para ver datos aca, registra un control en **Clinica (signos vitales)** antes o durante la teleconsulta."
+            )
