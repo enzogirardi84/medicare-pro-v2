@@ -438,7 +438,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             st.caption(
                 "Login, contraseña y DNI son obligatorios. PIN y correo opcionales según política de la clínica."
             )
-            with st.form("equipo", clear_on_submit=True):
+            # clear_on_submit=False: si falla la validación (p. ej. contraseña corta), los datos siguen cargados;
+            # al guardar OK hacemos st.rerun() y el formulario vuelve vacío.
+            with st.form("equipo_alta_usuario", clear_on_submit=False):
                 st.markdown("##### Datos del nuevo acceso")
                 col_id, col_pw, col_pin = st.columns([2, 2, 1])
                 u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
