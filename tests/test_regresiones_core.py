@@ -146,3 +146,30 @@ def test_completar_claves_db_session_no_sobrescribe_datos_existentes(monkeypatch
     assert "administracion_med_db" in fake_state
     assert fake_state["administracion_med_db"] == []
     assert "auditoria_legal_db" in fake_state
+
+
+def test_completar_claves_db_session_repara_tipos_invalidos(monkeypatch):
+    import streamlit as st
+    from core.database import completar_claves_db_session
+
+    fake_state = {
+        "usuarios_db": None,
+        "pacientes_db": "no-es-lista",
+        "detalles_pacientes_db": [],
+        "u_actual": {"nombre": "x"},
+    }
+    monkeypatch.setattr(st, "session_state", fake_state)
+    completar_claves_db_session()
+    assert isinstance(fake_state["usuarios_db"], dict)
+    assert fake_state["pacientes_db"] == []
+    assert isinstance(fake_state["detalles_pacientes_db"], dict)
+
+
+def test_normalizar_blob_datos():
+    from core.database import _normalizar_blob_datos
+
+    assert _normalizar_blob_datos(None) is None
+    assert _normalizar_blob_datos({"a": 1}) == {"a": 1}
+    assert _normalizar_blob_datos('{"x": 2}') == {"x": 2}
+    assert _normalizar_blob_datos("[]") is None
+    assert _normalizar_blob_datos([1, 2]) is None

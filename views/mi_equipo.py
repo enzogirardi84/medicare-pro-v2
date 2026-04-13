@@ -331,7 +331,7 @@ def _mi_equipo_bloque_suspender(
 
 def _mi_equipo_bloque_eliminar(
     u: str,
-    _d: dict,
+    d: dict,
     *,
     user: dict,
     rol: str,
@@ -348,7 +348,6 @@ def _mi_equipo_bloque_eliminar(
             key=f"del_{u}",
             use_container_width=True,
             disabled=not seguro,
-            type="secondary",
         ):
             if not puede_eliminar_cuenta_equipo(rol):
                 st.error("Tu rol no puede eliminar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")

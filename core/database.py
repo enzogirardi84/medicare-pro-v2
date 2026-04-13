@@ -75,6 +75,44 @@ def sesion_usa_monolito_legacy() -> bool:
     return bool(st.session_state.get("_db_monolito_sesion"))
 
 
+# Colecciones que deben ser dict en sesión (el resto, list).
+_DB_KEYS_DICT = frozenset(
+    {"usuarios_db", "detalles_pacientes_db", "plantillas_whatsapp_db", "clinicas_db"}
+)
+
+
+def _normalizar_blob_datos(data):
+    """
+    Supabase / backup local pueden devolver None, dict, o en casos raros string JSON.
+    Cualquier otro tipo (lista vacía como raíz, número) se trata como inválido para no tumbar la app.
+    """
+    if data is None:
+        return None
+    if isinstance(data, dict):
+        return data
+    if isinstance(data, str):
+        s = data.strip()
+        if not s:
+            return None
+        try:
+            parsed = json.loads(s)
+        except Exception:
+            log_event("db", "blob_datos_json_invalido")
+            return None
+        if isinstance(parsed, dict):
+            return parsed
+        log_event("db", f"blob_datos_raiz_no_dict:{type(parsed).__name__}")
+        return None
+    log_event("db", f"blob_datos_tipo_inesperado:{type(data).__name__}")
+    return None
+
+
+def _coleccion_db_tipo_valido(key: str, value) -> bool:
+    if key in _DB_KEYS_DICT:
+        return isinstance(value, dict)
+    return isinstance(value, list)
+
+
 def _estructura_vacia_por_clave():
     return {
         "usuarios_db": {},
@@ -111,10 +149,13 @@ def _estructura_vacia_por_clave():
 
 
 def completar_claves_db_session():
-    """Rellena colecciones faltantes (shards viejos o migraciones parciales)."""
+    """Rellena colecciones faltantes y corrige tipos inválidos (shards viejos o JSON parcial por tenant)."""
     plantilla = _estructura_vacia_por_clave()
     for k, default in plantilla.items():
         if k not in st.session_state:
+            st.session_state[k] = copy.deepcopy(default)
+            continue
+        if not _coleccion_db_tipo_valido(k, st.session_state[k]):
             st.session_state[k] = copy.deepcopy(default)
 
 
@@ -332,9 +373,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     if supabase is None:
         st.session_state["_modo_offline"] = True
         if shard and tk and not monolito_legacy:
-            data_local = _cargar_local_tenant(tk)
+            data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
         else:
-            data_local = _cargar_local()
+            data_local = _normalizar_blob_datos(_cargar_local())
         if data_local:
             st.session_state[cache_key] = copy.deepcopy(data_local)
             payload_serializado = json.dumps(data_local, sort_keys=True, default=str, ensure_ascii=False)
@@ -345,9 +386,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
 
     try:
         if shard and tk and not monolito_legacy:
-            data = _cargar_supabase_tenant(tk)
+            data = _normalizar_blob_datos(_cargar_supabase_tenant(tk))
         else:
-            data = _cargar_supabase_monolito()
+            data = _normalizar_blob_datos(_cargar_supabase_monolito())
 
         if data is not None:
             st.session_state[cache_key] = copy.deepcopy(data)
@@ -361,9 +402,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         # Conexión OK pero sin fila en nube (tenant nuevo / vacío): reutilizar backup local si existe.
         data_local = None
         if shard and tk and not monolito_legacy:
-            data_local = _cargar_local_tenant(tk)
+            data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
         if data_local is None:
-            data_local = _cargar_local()
+            data_local = _normalizar_blob_datos(_cargar_local())
         if data_local:
             st.session_state[cache_key] = copy.deepcopy(data_local)
             payload_serializado = json.dumps(data_local, sort_keys=True, default=str, ensure_ascii=False)
@@ -374,9 +415,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         log_event("db", f"supabase_unavailable:{type(e).__name__}")
         data_local = None
         if shard and tk and not monolito_legacy:
-            data_local = _cargar_local_tenant(tk)
+            data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
         if data_local is None:
-            data_local = _cargar_local()
+            data_local = _normalizar_blob_datos(_cargar_local())
         if data_local:
             st.session_state[cache_key] = copy.deepcopy(data_local)
             payload_serializado = json.dumps(data_local, sort_keys=True, default=str, ensure_ascii=False)
