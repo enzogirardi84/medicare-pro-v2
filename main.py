@@ -115,7 +115,7 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
-APP_BUILD_TAG = "Build 2026-04-12 liviano_html + login_emergencia + changelog"
+APP_BUILD_TAG = "Build 2026-04-13 acceso_directo_login + changelog"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -355,8 +355,21 @@ def resolve_menu_for_role(rol, user=None):
     return [modulo for modulo in menu_base if modulo in VIEW_CONFIG]
 
 
+def _query_flag(nombre):
+    qp = getattr(st, "query_params", None)
+    if qp is None:
+        return False
+    try:
+        valor = qp.get(nombre)
+        if isinstance(valor, list):
+            valor = valor[0] if valor else ""
+        return str(valor or "").strip().lower() in {"1", "true", "si", "yes", "on"}
+    except Exception:
+        return False
+
+
 if "entered_app" not in st.session_state:
-    st.session_state.entered_app = False
+    st.session_state.entered_app = not _query_flag("publicidad")
 
 
 def limpiar_sesion_app():
