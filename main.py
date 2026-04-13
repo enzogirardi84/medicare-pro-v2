@@ -115,7 +115,7 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
-APP_BUILD_TAG = "Build 2026-04-13 acceso_directo_login + changelog"
+APP_BUILD_TAG = "Build 2026-04-13 publicidad_restaurada + changelog"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -369,7 +369,9 @@ def _query_flag(nombre):
 
 
 if "entered_app" not in st.session_state:
-    st.session_state.entered_app = not _query_flag("publicidad")
+    # La publicidad vuelve a ser la portada por defecto.
+    # Solo permitimos saltearla con un flag explicito para pruebas o accesos directos.
+    st.session_state.entered_app = _query_flag("login") or _query_flag("directo")
 
 
 def limpiar_sesion_app():
