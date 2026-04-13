@@ -1725,7 +1725,20 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             columnas_mar = ["Medicacion", "Via", "Frecuencia"] + horas_mar + ["A demanda"]
             matriz_registro_df = pd.DataFrame(matriz_registro_rows)
             matriz_registro_df = matriz_registro_df[columnas_mar]
-            estado_celda_opciones = ["", "Pendiente", "Realizada", "No realizada"]
+            estado_celda_opciones = ["—", "🟨 Pendiente", "🟩 Realizada", "🟥 No realizada"]
+            for hora_col in horas_mar + ["A demanda"]:
+                matriz_registro_df[hora_col] = (
+                    matriz_registro_df[hora_col]
+                    .astype(str)
+                    .replace(
+                        {
+                            "": "—",
+                            "Pendiente": "🟨 Pendiente",
+                            "Realizada": "🟩 Realizada",
+                            "No realizada": "🟥 No realizada",
+                        }
+                    )
+                )
 
             column_config = {
                 "Medicacion": st.column_config.TextColumn("Medicacion", width="large"),
@@ -1769,7 +1782,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         nuevo_valor = str(editor_mar_df.at[row_idx, hora_col] or "").strip()
                         if not original_valor and not nuevo_valor:
                             continue
-                        if nuevo_valor == "" or nuevo_valor == original_valor:
+                        if nuevo_valor in {"", "—"} or nuevo_valor == original_valor:
                             continue
 
                         metas = matriz_registro_map.get((row_idx, hora_col), [])
@@ -1782,7 +1795,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             if not nombre_med:
                                 continue
 
-                            if nuevo_valor == "Realizada":
+                            if nuevo_valor == "🟩 Realizada":
                                 _guardar_administracion_medicacion(
                                     paciente_sel,
                                     mi_empresa,
@@ -1792,7 +1805,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                     horario_sel,
                                     "Realizada",
                                 )
-                            elif nuevo_valor == "No realizada":
+                            elif nuevo_valor == "🟥 No realizada":
                                 if not str(motivo_no_realizada or "").strip():
                                     requiere_motivo = True
                                     continue
@@ -1807,6 +1820,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                     str(motivo_no_realizada or "").strip(),
                                     hora_real_admin=None,
                                 )
+                            elif nuevo_valor == "🟨 Pendiente":
+                                continue
                             registros_guardados += 1
 
                 if requiere_motivo:
