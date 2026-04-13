@@ -1,6 +1,7 @@
 """Comprueba que cada entrada de VIEW_CONFIG apunta a un archivo views/*.py existente."""
 
 import ast
+import importlib.util
 from pathlib import Path
 
 from core.view_registry import VIEW_CONFIG_BASE
@@ -32,3 +33,11 @@ def test_cada_vista_declara_funcion_render_en_modulo():
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
         assert fn in toplevel, f"{path}: falta «def {fn}» registrado para «{titulo}»"
+
+
+def test_cada_paquete_views_resoluble_sin_ejecutar_modulo():
+    """importlib encuentra el spec del submodulo (no importa el .py completo)."""
+    for titulo, (package, _fn) in VIEW_CONFIG_BASE.items():
+        spec = importlib.util.find_spec(package)
+        assert spec is not None, f"«{titulo}»: find_spec({package!r})"
+        assert spec.origin and spec.origin.endswith(".py"), titulo

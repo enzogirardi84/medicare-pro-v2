@@ -38,3 +38,15 @@ def test_view_config_base_tuplas_modulo_y_render():
         assert isinstance(mod, str) and mod.startswith("views."), titulo
         assert isinstance(fn, str) and fn.startswith("render_"), titulo
         assert "." not in fn, titulo
+
+
+def test_etiquetas_navegacion_no_vacias():
+    for titulo, etiqueta in VIEW_NAV_LABELS_BASE.items():
+        assert isinstance(etiqueta, str) and etiqueta.strip(), titulo
+
+
+def test_build_view_maps_no_modifica_registros_base():
+    ref_bal = VIEW_CONFIG_BASE["Balance"]
+    vc, _vn = build_view_maps(alertas_app_visible=True)
+    vc["Balance"] = ("views.x", "render_x")
+    assert VIEW_CONFIG_BASE["Balance"] == ref_bal
