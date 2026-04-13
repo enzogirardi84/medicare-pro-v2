@@ -65,6 +65,7 @@ render_panel_bienvenida = _onb.render_panel_bienvenida
 
 _ac = import_module("core.anticolapso")
 aplicar_politicas_anticolapso_ui = _ac.aplicar_politicas_anticolapso_ui
+anticolapso_activo_fn = _ac.anticolapso_activo
 limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
 render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
 
@@ -657,10 +658,12 @@ with st.sidebar:
     st.checkbox(
         "Modo celular viejo",
         key="modo_celular_viejo",
-        help="Reduce tablas anchas, cantidad de registros por pantalla y cargas pesadas para mejorar fluidez.",
+        help="Reduce listas y tablas visibles por pantalla. Complementa el **Modo anticolapso** (sidebar abajo): ambos pueden estar activos a la vez.",
     )
     if modo_celular_viejo_activo(st.session_state):
-        st.caption("Modo liviano activo: prioriza pantallas simples y menos datos visibles por vez.")
+        st.caption("Modo celular viejo: menos datos por vista y listas de pacientes más cortas.")
+    if anticolapso_activo_fn() and modo_celular_viejo_activo(st.session_state):
+        st.caption("Anticolapso + celular viejo: máxima prioridad a estabilidad y memoria del navegador.")
     st.divider()
 
     render_estabilidad_anticolapso_sidebar()
@@ -774,6 +777,10 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.session_state["mc_liviano_modo"] = _liv_vals[_liv_labels.index(_pick_liv)]
+    # Tras el selectbox: si anticolapso está activo, volver a fijar liviano (evita un run con modo "off").
+    aplicar_politicas_anticolapso_ui()
+    if anticolapso_activo_fn():
+        st.caption("**Anticolapso:** interfaz liviana fijada por política de sesión o servidor (`MC_ANTICOLAPSO`).")
     st.caption("Si el equipo es viejo, en «Automático» se activa solo un modo más liviano.")
 
     if st.button("Cerrar Sesion", use_container_width=True):

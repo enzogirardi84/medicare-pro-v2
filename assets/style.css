@@ -1514,9 +1514,23 @@ html {
 }
 
 .block-container {
+    padding-top: max(1.2rem, var(--mc-safe-top)) !important;
     padding-left: max(1rem, var(--mc-safe-left)) !important;
     padding-right: max(1rem, var(--mc-safe-right)) !important;
     padding-bottom: max(1.25rem, var(--mc-safe-bottom)) !important;
+}
+
+/* Equipos o SO con “reducir movimiento”: menos animaciones (accesibilidad y tablets lentas) */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto !important;
+    }
+
+    .stApp * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 @media (min-width: 1400px) {

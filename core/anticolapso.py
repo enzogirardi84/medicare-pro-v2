@@ -43,7 +43,12 @@ def limite_pacientes_sidebar() -> int:
 
 
 def aplicar_politicas_anticolapso_ui() -> None:
-    """Debe ejecutarse antes del selectbox de modo liviano en el mismo run."""
+    """
+    Fuerza interfaz liviana cuando anticolapso está activo.
+
+    Llamar al inicio del sidebar **y de nuevo después** del `selectbox` de modo liviano,
+    para que un intento de «modo completo» no deje `mc_liviano_modo` en `off` durante ese run.
+    """
     if anticolapso_activo():
         st.session_state["mc_liviano_modo"] = "on"
 
