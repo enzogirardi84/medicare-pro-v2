@@ -430,6 +430,62 @@ hr {
     color: #cbd5e1;
 }
 
+/* Mi equipo: PIN y avisos compactos (menos altura que st.info / st.warning) */
+.mc-mi-equipo-pin-ok,
+.mc-mi-equipo-pin-warn {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    padding: 0.45rem 0.6rem;
+    border-radius: 10px;
+    margin: 0.25rem 0 0.4rem 0;
+    text-align: left;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.mc-mi-equipo-pin-ok {
+    background: rgba(30, 58, 138, 0.42);
+    border: 1px solid rgba(96, 165, 250, 0.38);
+    color: #dbeafe;
+}
+
+.mc-mi-equipo-pin-warn {
+    background: rgba(120, 53, 15, 0.4);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    color: #fef3c7;
+}
+
+.mc-mi-equipo-pin-label {
+    font-weight: 800;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #93c5fd;
+    margin-right: 0.35rem;
+}
+
+.mc-mi-equipo-pin-warn .mc-mi-equipo-pin-label,
+.mc-mi-equipo-pin-warn strong {
+    color: #fde68a;
+}
+
+.mc-mi-equipo-pin-code {
+    font-family: ui-monospace, monospace;
+    font-weight: 800;
+    font-size: 0.95rem;
+    padding: 0.12rem 0.35rem;
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.55);
+    color: #f8fafc;
+}
+
+.mc-mi-equipo-pin-hint {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #bfdbfe;
+    display: inline;
+}
+
 .mc-grid-3 {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

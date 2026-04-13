@@ -3,6 +3,7 @@ from html import escape
 
 import streamlit as st
 
+from core.anticolapso import anticolapso_activo
 from core.clinicas_control import sincronizar_clinicas_desde_datos
 from core.database import guardar_datos
 from core.email_2fa import login_email_2fa_enabled, smtp_config_ok, usuario_email_2fa_valido
@@ -20,9 +21,9 @@ from core.utils import (
     inferir_perfil_profesional,
     mi_equipo_mostrar_ui_eliminar,
     mi_equipo_mostrar_ui_suspender,
+    modo_celular_viejo_activo,
     normalizar_usuario_sistema,
     obtener_email_usuario,
-    obtener_password_usuario,
     obtener_pin_usuario,
     puede_accion,
     puede_eliminar_cuenta_equipo,
@@ -41,9 +42,8 @@ def _widget_key_equipo(login: str, parte: str) -> str:
 
 def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> None:
     """
-    Estado de clave, PIN (recuperación) y correo/2FA. Sin HTML: en Cloud y dentro de
-    `st.container(height=...)` el markdown con `unsafe_allow_html` a veces no se ve bien.
-    El PIN en claro solo si quien mira puede gestionar ese usuario (SuperAdmin / Coordinador de la clínica).
+    Estado de clave, PIN (recuperación) y correo/2FA.
+    El PIN en claro va en un bloque HTML compacto (`.mc-mi-equipo-pin-*`) si puede_ver_pin.
     """
     ph = str(d.get("pass_hash") or "").strip()
     pw = str(d.get("pass") or "").strip()
@@ -58,18 +58,27 @@ def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> 
 
     if puede_ver_pin:
         if pin_ok:
-            st.info(
-                f"**PIN de recuperación (4 dígitos):** `{pin}`  \n"
-                "Compartilo con el usuario si olvidó la contraseña: en la pantalla de acceso debe elegir "
-                "**«Olvidé mi contraseña»**, ingresar **usuario**, **empresa** y este **PIN**, y definir una clave nueva."
+            st.markdown(
+                "<div class='mc-mi-equipo-pin-ok' role='status'>"
+                "<span class='mc-mi-equipo-pin-label'>PIN recuperación</span> "
+                f"<code class='mc-mi-equipo-pin-code'>{escape(pin)}</code>"
+                "<span class='mc-mi-equipo-pin-hint'> Pantalla de acceso → «Olvidé mi contraseña» (usuario, empresa, PIN).</span>"
+                "</div>",
+                unsafe_allow_html=True,
             )
         elif not pin:
-            st.warning(
-                "**Sin PIN de recuperación.** El usuario no puede usar «Olvidé mi contraseña» hasta que definas "
-                "un PIN de 4 dígitos (alta de usuario o edición en ficha si agregás ese campo)."
+            st.markdown(
+                "<div class='mc-mi-equipo-pin-warn' role='alert'>"
+                "<strong>Sin PIN de recuperación.</strong> No puede usar «Olvidé mi contraseña» hasta definir 4 dígitos "
+                "(alta o edición en ficha).</div>",
+                unsafe_allow_html=True,
             )
         else:
-            st.warning("**PIN inválido:** debe ser exactamente **4 dígitos numéricos**.")
+            st.markdown(
+                "<div class='mc-mi-equipo-pin-warn' role='alert'>"
+                "<strong>PIN inválido:</strong> deben ser exactamente 4 dígitos numéricos.</div>",
+                unsafe_allow_html=True,
+            )
     else:
         if pin_ok:
             st.caption(
@@ -97,6 +106,263 @@ def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> 
             st.caption("**Correo:** formato no válido.")
         else:
             st.caption("**Correo:** sin cargar.")
+
+
+def _mi_equipo_bloque_principal(
+    u: str,
+    d: dict,
+    *,
+    user: dict,
+    rol: str,
+    mi_empresa: str,
+    ok_gestionar: bool,
+    puede_editar_mail_equipo: bool,
+    motivo_sin_gestion: str,
+    omitir_titulo: bool,
+) -> None:
+    if not omitir_titulo:
+        st.markdown(f"**{d.get('nombre', 'Sin nombre')}**")
+    d_norm = normalizar_usuario_sistema(dict(d))
+    perfil_usuario = d_norm.get("perfil_profesional", "") or inferir_perfil_profesional(d_norm) or "Sin perfil"
+    email_actual = obtener_email_usuario(d_norm)
+    pin_actual = obtener_pin_usuario(d_norm)
+    st.caption(
+        f"Empresa: {d.get('empresa', 'S/D')} · Login: {u} · Rol: {d.get('rol', 'S/D')} · "
+        f"Perfil: {perfil_usuario}"
+    )
+    st.caption(f"Título: {d.get('titulo', 'S/D')} · DNI: {d.get('dni', 'S/D')}")
+    _render_pings_seguridad_usuario(d, puede_ver_pin=ok_gestionar)
+    if ok_gestionar:
+        with st.expander("Coordinación: nueva contraseña y/o PIN", expanded=False):
+            st.caption(
+                "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos "
+                "para que el usuario use «Olvidé mi contraseña» por su cuenta."
+            )
+            ch_pin = st.text_input(
+                "PIN de recuperación (4 dígitos, opcional)",
+                max_chars=4,
+                key=_widget_key_equipo(u, "ch_pin"),
+                placeholder="Ej. 4821",
+            )
+            ch_pw = st.text_input(
+                "Nueva contraseña (opcional si solo actualizás PIN)",
+                type="password",
+                key=_widget_key_equipo(u, "ch_pw"),
+            )
+            ch_pw2 = st.text_input(
+                "Repetir contraseña",
+                type="password",
+                key=_widget_key_equipo(u, "ch_pw2"),
+            )
+            if st.button("Guardar", key=_widget_key_equipo(u, "ch_btn"), use_container_width=True):
+                pin_l = str(ch_pin).strip()
+                pw_l = str(ch_pw).strip()
+                pw2_l = str(ch_pw2).strip()
+                if pin_l and (len(pin_l) != 4 or not pin_l.isdigit()):
+                    st.error("El PIN debe ser exactamente 4 dígitos numéricos.")
+                elif not pw_l and not pin_l:
+                    st.error("Completá una nueva contraseña o un PIN para guardar.")
+                elif pw_l and pw_l != pw2_l:
+                    st.error("Las contraseñas no coinciden.")
+                elif pw_l:
+                    msg_pw = mensaje_password_no_cumple_politica(ch_pw)
+                    if msg_pw:
+                        st.error(msg_pw)
+                    else:
+                        if pin_l:
+                            st.session_state["usuarios_db"][u]["pin"] = pin_l
+                        establecer_password_nuevo(
+                            st.session_state["usuarios_db"][u],
+                            pw_l,
+                            rounds=bcrypt_rounds_config(),
+                        )
+                        registrar_auditoria_legal(
+                            "Equipo",
+                            "GLOBAL",
+                            "Cambio de contraseña por coordinacion",
+                            user.get("nombre", "Sistema"),
+                            user.get("matricula", ""),
+                            f"Nueva clave asignada a {u}" + ("; PIN actualizado." if pin_l else "."),
+                            referencia=u,
+                        )
+                        guardar_datos()
+                        st.success("Contraseña actualizada.")
+                        st.rerun()
+                else:
+                    st.session_state["usuarios_db"][u]["pin"] = pin_l
+                    registrar_auditoria_legal(
+                        "Equipo",
+                        "GLOBAL",
+                        "Actualizacion PIN por coordinacion",
+                        user.get("nombre", "Sistema"),
+                        user.get("matricula", ""),
+                        f"PIN de recuperacion actualizado para {u}.",
+                        referencia=u,
+                    )
+                    guardar_datos()
+                    st.success("PIN actualizado.")
+                    st.rerun()
+    if puede_editar_mail_equipo and ok_gestionar:
+        with st.expander("Recuperacion y credenciales", expanded=False):
+            ne = st.text_input("Correo de recuperacion", value=email_actual, key=f"emp_mail_new_{u}")
+            np = st.text_input("PIN opcional", value=pin_actual, max_chars=4, key=f"emp_pin_{u}")
+            nueva_pass = st.text_input("Nueva contrasena (opcional)", type="password", key=f"emp_pass_{u}")
+            if st.button("Guardar acceso", key=f"btn_access_{u}"):
+                ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                if not ok_m:
+                    st.error(msg_m)
+                else:
+                    ne_l = ne.strip().lower()
+                    np_l = np.strip()
+                    if ne_l and not email_formato_aceptable(ne_l):
+                        st.error("El formato del correo electronico no es valido.")
+                    elif np_l and (len(np_l) != 4 or not np_l.isdigit()):
+                        st.error("Si cargas PIN, debe tener exactamente 4 digitos numericos.")
+                    elif nueva_pass.strip() and (pw_err := mensaje_password_no_cumple_politica(nueva_pass.strip())):
+                        st.error(pw_err)
+                    else:
+                        st.session_state["usuarios_db"][u]["email"] = ne_l
+                        st.session_state["usuarios_db"][u]["pin"] = np_l
+                        if nueva_pass.strip():
+                            establecer_password_nuevo(
+                                st.session_state["usuarios_db"][u],
+                                nueva_pass.strip(),
+                                rounds=bcrypt_rounds_config(),
+                            )
+                        registrar_auditoria_legal(
+                            "Equipo",
+                            "GLOBAL",
+                            "Actualizacion acceso usuario",
+                            user.get("nombre", "Sistema"),
+                            user.get("matricula", ""),
+                            f"Se actualizo acceso del usuario {u}. Correo: {'si' if ne_l else 'no'} | PIN: {'si' if np_l else 'no'} | Clave: {'si' if nueva_pass.strip() else 'sin cambios'}.",
+                            referencia=u,
+                        )
+                        guardar_datos()
+                        st.rerun()
+    elif puede_editar_mail_equipo and not ok_gestionar:
+        st.caption(motivo_sin_gestion)
+
+
+def _mi_equipo_bloque_suspender(
+    u: str,
+    d: dict,
+    *,
+    user: dict,
+    rol: str,
+    mi_empresa: str,
+    mostrar_ui_suspender: bool,
+    ok_gestionar: bool,
+    tiene_rol_bajas: bool,
+) -> None:
+    if mostrar_ui_suspender:
+        if d.get("estado", "Activo") == "Activo":
+            if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
+                if not puede_suspender_reactivar_usuario_mi_equipo(rol):
+                    st.error("Tu rol no puede suspender usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
+                else:
+                    blk, msg_blk = bloqueo_autoservicio_suspension_baja(user.get("usuario_login"), u, rol)
+                    if blk:
+                        st.error(msg_blk)
+                    else:
+                        ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                        if not ok_m:
+                            st.error(msg_m)
+                        else:
+                            st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
+                            registrar_auditoria_legal(
+                                "Equipo",
+                                "GLOBAL",
+                                "Suspension de usuario",
+                                user.get("nombre", "Sistema"),
+                                user.get("matricula", ""),
+                                f"Se suspendio el usuario {u}.",
+                                referencia=u,
+                            )
+                            guardar_datos()
+                            st.rerun()
+        else:
+            if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
+                if not puede_suspender_reactivar_usuario_mi_equipo(rol):
+                    st.error("Tu rol no puede reactivar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
+                else:
+                    blk, msg_blk = bloqueo_autoservicio_suspension_baja(user.get("usuario_login"), u, rol)
+                    if blk:
+                        st.error(msg_blk)
+                    else:
+                        ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                        if not ok_m:
+                            st.error(msg_m)
+                        else:
+                            st.session_state["usuarios_db"][u]["estado"] = "Activo"
+                            registrar_auditoria_legal(
+                                "Equipo",
+                                "GLOBAL",
+                                "Reactivacion de usuario",
+                                user.get("nombre", "Sistema"),
+                                user.get("matricula", ""),
+                                f"Se reactivo el usuario {u}.",
+                                referencia=u,
+                            )
+                            guardar_datos()
+                            st.rerun()
+    elif tiene_rol_bajas and not ok_gestionar:
+        st.caption("—")
+    elif not tiene_rol_bajas:
+        pass
+    else:
+        st.caption("—")
+
+
+def _mi_equipo_bloque_eliminar(
+    u: str,
+    _d: dict,
+    *,
+    user: dict,
+    rol: str,
+    mi_empresa: str,
+    mostrar_ui_eliminar: bool,
+    ok_gestionar: bool,
+    puede_eliminar: bool,
+) -> None:
+    if mostrar_ui_eliminar:
+        seguro = st.checkbox("Confirmar baja", key=f"chk_del_{u}")
+        st.caption("La eliminación es permanente y quita el usuario del sistema.")
+        if st.button(
+            "Eliminar",
+            key=f"del_{u}",
+            use_container_width=True,
+            disabled=not seguro,
+            type="secondary",
+        ):
+            if not puede_eliminar_cuenta_equipo(rol):
+                st.error("Tu rol no puede eliminar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
+            else:
+                blk, msg_blk = bloqueo_autoservicio_suspension_baja(user.get("usuario_login"), u, rol)
+                if blk:
+                    st.error(msg_blk)
+                else:
+                    ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+                    if not ok_m:
+                        st.error(msg_m)
+                    else:
+                        registrar_auditoria_legal(
+                            "Equipo",
+                            "GLOBAL",
+                            "Eliminacion de usuario",
+                            user.get("nombre", "Sistema"),
+                            user.get("matricula", ""),
+                            f"Se elimino el usuario {u}.",
+                            referencia=u,
+                        )
+                        del st.session_state["usuarios_db"][u]
+                        guardar_datos()
+                        st.toast(f"Usuario {u} eliminado.")
+                        st.rerun()
+    elif puede_eliminar and not ok_gestionar:
+        st.caption("—")
+    elif not puede_eliminar:
+        pass
 
 
 def render_mi_equipo(mi_empresa, rol, user=None):
@@ -262,15 +528,19 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     st.divider()
 
     st.subheader("Control de Accesos")
-    st.caption(
-        "**Seguridad por usuario:** debajo de cada nombre, **SuperAdmin** y **Coordinador** (misma clínica) ven el "
-        "**PIN** en un recuadro azul y pueden abrir **Coordinación: nueva contraseña y/o PIN** para asignar clave "
-        "o actualizar el PIN. El PIN solo sirve en la pantalla de acceso, opción «Olvidé mi contraseña»."
-    )
-    st.caption(
-        "**Suspender / Reactivar / Eliminar:** **SuperAdmin** o **Coordinador** en su clinica "
-        "(sin cuentas globales). **Administrativo**, **Operativo** y roles clinicos: no ven suspension ni baja en esta grilla."
-    )
+    with st.expander("Ayuda: PIN, coordinación y bajas", expanded=False):
+        st.markdown(
+            "**PIN y clave:** quien puede gestionar ve el PIN en un recuadro compacto y los expanders "
+            "**Coordinación** / **Recuperación**. El PIN solo se usa en el login, opción «Olvidé mi contraseña».\n\n"
+            "**Suspender / Eliminar:** solo **SuperAdmin** o **Coordinador** de la clínica (según reglas). "
+            "Otros roles no ven esas acciones en la grilla."
+        )
+    compacto_equipo = modo_celular_viejo_activo(st.session_state) or anticolapso_activo()
+    if compacto_equipo:
+        st.caption(
+            "Vista compacta (modo celular viejo o anticolapso): fichas apiladas y ventana de lista más baja. "
+            "En PC podés desactivar «Modo celular viejo» en la barra lateral para la grilla en columnas."
+        )
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 
     usuarios_base = []
@@ -305,250 +575,92 @@ def render_mi_equipo(mi_empresa, rol, user=None):
         default=20,
         opciones=(10, 20, 30, 50, 100, 200),
     )
-    with st.container(height=620, border=True):
+    altura_lista_equipo = 400 if compacto_equipo else 520
+    with st.container(height=altura_lista_equipo, border=True):
         mostro_usuario = False
         for u, d in usuarios_ordenados[:limite]:
             mostro_usuario = True
+            estado_txt = "Activo" if d.get("estado", "Activo") == "Activo" else "Bloqueado"
+            ok_gestionar, motivo_sin_gestion = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
+            mostrar_ui_suspender = mi_equipo_mostrar_ui_suspender(user, ok_gestionar)
+            mostrar_ui_eliminar = mi_equipo_mostrar_ui_eliminar(user, d, mi_empresa, ok_gestionar)
             with st.container(border=True):
-                col1, col2, col3, col4 = st.columns([3.5, 1, 1.2, 1.2])
-                estado_color = "Activo" if d.get("estado", "Activo") == "Activo" else "Bloqueado"
-                ok_gestionar, motivo_sin_gestion = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
-                mostrar_ui_suspender = mi_equipo_mostrar_ui_suspender(user, ok_gestionar)
-                mostrar_ui_eliminar = mi_equipo_mostrar_ui_eliminar(user, d, mi_empresa, ok_gestionar)
-
-                with col1:
-                    d_norm = normalizar_usuario_sistema(dict(d))
-                    perfil_usuario = d_norm.get("perfil_profesional", "") or inferir_perfil_profesional(d_norm) or "Sin perfil"
-                    email_actual = obtener_email_usuario(d_norm)
-                    pin_actual = obtener_pin_usuario(d_norm)
-                    clave_configurada = bool(d_norm.get("pass_hash") or obtener_password_usuario(d_norm))
-                    st.markdown(f"**{d.get('nombre', 'Sin nombre')}**")
-                    st.caption(
-                        f"Empresa: {d.get('empresa', 'S/D')} | "
-                        f"Login: {u} | Rol sistema: {d.get('rol', 'S/D')} | "
-                        f"Perfil: {perfil_usuario} | Titulo: {d.get('titulo', 'S/D')} | DNI: {d.get('dni', 'S/D')}"
+                if compacto_equipo:
+                    h1, h2 = st.columns([2, 1])
+                    with h1:
+                        st.markdown(f"**{d.get('nombre', 'Sin nombre')}**")
+                    with h2:
+                        st.caption(f"Estado\n**{estado_txt}**")
+                    _mi_equipo_bloque_principal(
+                        u,
+                        d,
+                        user=user,
+                        rol=rol,
+                        mi_empresa=mi_empresa,
+                        ok_gestionar=ok_gestionar,
+                        puede_editar_mail_equipo=puede_editar_mail_equipo,
+                        motivo_sin_gestion=motivo_sin_gestion,
+                        omitir_titulo=True,
                     )
-                    _render_pings_seguridad_usuario(d, puede_ver_pin=ok_gestionar)
-                    if ok_gestionar:
-                        with st.expander("Coordinación: nueva contraseña y/o PIN", expanded=False):
-                            st.caption(
-                                "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos "
-                                "para que el usuario use «Olvidé mi contraseña» por su cuenta."
-                            )
-                            ch_pin = st.text_input(
-                                "PIN de recuperación (4 dígitos, opcional)",
-                                max_chars=4,
-                                key=_widget_key_equipo(u, "ch_pin"),
-                                placeholder="Ej. 4821",
-                            )
-                            ch_pw = st.text_input(
-                                "Nueva contraseña (opcional si solo actualizás PIN)",
-                                type="password",
-                                key=_widget_key_equipo(u, "ch_pw"),
-                            )
-                            ch_pw2 = st.text_input(
-                                "Repetir contraseña",
-                                type="password",
-                                key=_widget_key_equipo(u, "ch_pw2"),
-                            )
-                            if st.button("Guardar", key=_widget_key_equipo(u, "ch_btn"), use_container_width=True):
-                                pin_l = str(ch_pin).strip()
-                                pw_l = str(ch_pw).strip()
-                                pw2_l = str(ch_pw2).strip()
-                                if pin_l and (len(pin_l) != 4 or not pin_l.isdigit()):
-                                    st.error("El PIN debe ser exactamente 4 dígitos numéricos.")
-                                elif not pw_l and not pin_l:
-                                    st.error("Completá una nueva contraseña o un PIN para guardar.")
-                                elif pw_l and pw_l != pw2_l:
-                                    st.error("Las contraseñas no coinciden.")
-                                elif pw_l:
-                                    msg_pw = mensaje_password_no_cumple_politica(ch_pw)
-                                    if msg_pw:
-                                        st.error(msg_pw)
-                                    else:
-                                        if pin_l:
-                                            st.session_state["usuarios_db"][u]["pin"] = pin_l
-                                        establecer_password_nuevo(
-                                            st.session_state["usuarios_db"][u],
-                                            pw_l,
-                                            rounds=bcrypt_rounds_config(),
-                                        )
-                                        registrar_auditoria_legal(
-                                            "Equipo",
-                                            "GLOBAL",
-                                            "Cambio de contraseña por coordinacion",
-                                            user.get("nombre", "Sistema"),
-                                            user.get("matricula", ""),
-                                            f"Nueva clave asignada a {u}"
-                                            + ("; PIN actualizado." if pin_l else "."),
-                                            referencia=u,
-                                        )
-                                        guardar_datos()
-                                        st.success("Contraseña actualizada.")
-                                        st.rerun()
-                                else:
-                                    st.session_state["usuarios_db"][u]["pin"] = pin_l
-                                    registrar_auditoria_legal(
-                                        "Equipo",
-                                        "GLOBAL",
-                                        "Actualizacion PIN por coordinacion",
-                                        user.get("nombre", "Sistema"),
-                                        user.get("matricula", ""),
-                                        f"PIN de recuperacion actualizado para {u}.",
-                                        referencia=u,
-                                    )
-                                    guardar_datos()
-                                    st.success("PIN actualizado.")
-                                    st.rerun()
-                    if puede_editar_mail_equipo and ok_gestionar:
-                        with st.expander("Recuperacion y credenciales", expanded=False):
-                            ne = st.text_input("Correo de recuperacion", value=email_actual, key=f"emp_mail_new_{u}")
-                            np = st.text_input("PIN opcional", value=pin_actual, max_chars=4, key=f"emp_pin_{u}")
-                            nueva_pass = st.text_input("Nueva contrasena (opcional)", type="password", key=f"emp_pass_{u}")
-                            if st.button("Guardar acceso", key=f"btn_access_{u}"):
-                                ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
-                                if not ok_m:
-                                    st.error(msg_m)
-                                else:
-                                    ne_l = ne.strip().lower()
-                                    np_l = np.strip()
-                                    if ne_l and not email_formato_aceptable(ne_l):
-                                        st.error("El formato del correo electronico no es valido.")
-                                    elif np_l and (len(np_l) != 4 or not np_l.isdigit()):
-                                        st.error("Si cargas PIN, debe tener exactamente 4 digitos numericos.")
-                                    elif nueva_pass.strip() and (pw_err := mensaje_password_no_cumple_politica(nueva_pass.strip())):
-                                        st.error(pw_err)
-                                    else:
-                                        st.session_state["usuarios_db"][u]["email"] = ne_l
-                                        st.session_state["usuarios_db"][u]["pin"] = np_l
-                                        if nueva_pass.strip():
-                                            establecer_password_nuevo(
-                                                st.session_state["usuarios_db"][u],
-                                                nueva_pass.strip(),
-                                                rounds=bcrypt_rounds_config(),
-                                            )
-                                        registrar_auditoria_legal(
-                                            "Equipo",
-                                            "GLOBAL",
-                                            "Actualizacion acceso usuario",
-                                            user.get("nombre", "Sistema"),
-                                            user.get("matricula", ""),
-                                            f"Se actualizo acceso del usuario {u}. Correo: {'si' if ne_l else 'no'} | PIN: {'si' if np_l else 'no'} | Clave: {'si' if nueva_pass.strip() else 'sin cambios'}.",
-                                            referencia=u,
-                                        )
-                                        guardar_datos()
-                                        st.rerun()
-                    elif puede_editar_mail_equipo and not ok_gestionar:
-                        st.caption(motivo_sin_gestion)
-
-                with col2:
-                    st.markdown(f"**{estado_color}**")
-
-                with col3:
-                    if mostrar_ui_suspender:
-                        if d.get("estado", "Activo") == "Activo":
-                            if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
-                                if not puede_suspender_reactivar_usuario_mi_equipo(rol):
-                                    st.error("Tu rol no puede suspender usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
-                                else:
-                                    blk, msg_blk = bloqueo_autoservicio_suspension_baja(
-                                        user.get("usuario_login"), u, rol
-                                    )
-                                    if blk:
-                                        st.error(msg_blk)
-                                    else:
-                                        ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
-                                        if not ok_m:
-                                            st.error(msg_m)
-                                        else:
-                                            st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
-                                            registrar_auditoria_legal(
-                                                "Equipo",
-                                                "GLOBAL",
-                                                "Suspension de usuario",
-                                                user.get("nombre", "Sistema"),
-                                                user.get("matricula", ""),
-                                                f"Se suspendio el usuario {u}.",
-                                                referencia=u,
-                                            )
-                                            guardar_datos()
-                                            st.rerun()
-                        else:
-                            if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
-                                if not puede_suspender_reactivar_usuario_mi_equipo(rol):
-                                    st.error("Tu rol no puede reactivar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
-                                else:
-                                    blk, msg_blk = bloqueo_autoservicio_suspension_baja(
-                                        user.get("usuario_login"), u, rol
-                                    )
-                                    if blk:
-                                        st.error(msg_blk)
-                                    else:
-                                        ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
-                                        if not ok_m:
-                                            st.error(msg_m)
-                                        else:
-                                            st.session_state["usuarios_db"][u]["estado"] = "Activo"
-                                            registrar_auditoria_legal(
-                                                "Equipo",
-                                                "GLOBAL",
-                                                "Reactivacion de usuario",
-                                                user.get("nombre", "Sistema"),
-                                                user.get("matricula", ""),
-                                                f"Se reactivo el usuario {u}.",
-                                                referencia=u,
-                                            )
-                                            guardar_datos()
-                                            st.rerun()
-                    elif tiene_rol_bajas and not ok_gestionar:
-                        st.caption("—")
-                    elif not tiene_rol_bajas:
-                        pass
-                    else:
-                        st.caption("—")
-
-                with col4:
-                    if mostrar_ui_eliminar:
-                        seguro = st.checkbox("Confirmar baja", key=f"chk_del_{u}")
-                        st.caption("La eliminación es permanente y quita el usuario del sistema.")
-                        if st.button(
-                            "Eliminar",
-                            key=f"del_{u}",
-                            use_container_width=True,
-                            disabled=not seguro,
-                            type="secondary",
-                        ):
-                            if not puede_eliminar_cuenta_equipo(rol):
-                                st.error("Tu rol no puede eliminar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
-                            else:
-                                blk, msg_blk = bloqueo_autoservicio_suspension_baja(
-                                    user.get("usuario_login"), u, rol
-                                )
-                                if blk:
-                                    st.error(msg_blk)
-                                else:
-                                    ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
-                                    if not ok_m:
-                                        st.error(msg_m)
-                                    else:
-                                        registrar_auditoria_legal(
-                                            "Equipo",
-                                            "GLOBAL",
-                                            "Eliminacion de usuario",
-                                            user.get("nombre", "Sistema"),
-                                            user.get("matricula", ""),
-                                            f"Se elimino el usuario {u}.",
-                                            referencia=u,
-                                        )
-                                        del st.session_state["usuarios_db"][u]
-                                        guardar_datos()
-                                        st.toast(f"Usuario {u} eliminado.")
-                                        st.rerun()
-                    elif puede_eliminar and not ok_gestionar:
-                        st.caption("—")
-                    elif not puede_eliminar:
-                        pass
-
+                    st.divider()
+                    _mi_equipo_bloque_suspender(
+                        u,
+                        d,
+                        user=user,
+                        rol=rol,
+                        mi_empresa=mi_empresa,
+                        mostrar_ui_suspender=mostrar_ui_suspender,
+                        ok_gestionar=ok_gestionar,
+                        tiene_rol_bajas=tiene_rol_bajas,
+                    )
+                    _mi_equipo_bloque_eliminar(
+                        u,
+                        d,
+                        user=user,
+                        rol=rol,
+                        mi_empresa=mi_empresa,
+                        mostrar_ui_eliminar=mostrar_ui_eliminar,
+                        ok_gestionar=ok_gestionar,
+                        puede_eliminar=puede_eliminar,
+                    )
+                else:
+                    col1, col2, col3, col4 = st.columns([3.6, 0.45, 1.05, 1.05])
+                    with col1:
+                        _mi_equipo_bloque_principal(
+                            u,
+                            d,
+                            user=user,
+                            rol=rol,
+                            mi_empresa=mi_empresa,
+                            ok_gestionar=ok_gestionar,
+                            puede_editar_mail_equipo=puede_editar_mail_equipo,
+                            motivo_sin_gestion=motivo_sin_gestion,
+                            omitir_titulo=False,
+                        )
+                    with col2:
+                        st.markdown(f"**{estado_txt}**")
+                    with col3:
+                        _mi_equipo_bloque_suspender(
+                            u,
+                            d,
+                            user=user,
+                            rol=rol,
+                            mi_empresa=mi_empresa,
+                            mostrar_ui_suspender=mostrar_ui_suspender,
+                            ok_gestionar=ok_gestionar,
+                            tiene_rol_bajas=tiene_rol_bajas,
+                        )
+                    with col4:
+                        _mi_equipo_bloque_eliminar(
+                            u,
+                            d,
+                            user=user,
+                            rol=rol,
+                            mi_empresa=mi_empresa,
+                            mostrar_ui_eliminar=mostrar_ui_eliminar,
+                            ok_gestionar=ok_gestionar,
+                            puede_eliminar=puede_eliminar,
+                        )
         if not mostro_usuario:
             st.warning(
                 "No hay usuarios para mostrar en este rango (solo queda **admin** o el limite oculta filas). Aumenta **Usuarios a mostrar** o da de alta personal con el formulario de arriba."
