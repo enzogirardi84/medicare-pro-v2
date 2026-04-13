@@ -404,7 +404,11 @@ def _tabla_guardia_detallada(plan_dia_df):
 
 def _html_cortina_resumen_visual(plan_dia_df):
     """Vista completa del turno: colores verde / rojo / ámbar y trazabilidad."""
-    chunks = ['<div class="mc-cortina-panel"><p class="mc-cortina-intro">Vista del turno — programada vs hora registrada, estado y quién cargó.</p><div class="mc-cortina-resumen">']
+    chunks = [
+        '<div class="mc-cortina-panel mc-cortina-panel--premium">'
+        '<p class="mc-cortina-intro">Vista del turno — programada vs hora registrada, estado y firma de quien cargó (trazabilidad legal).</p>'
+        '<div class="mc-cortina-resumen">'
+    ]
     for _, r in plan_dia_df.iterrows():
         estado = str(r.get("Estado", "") or "")
         row_cls = "mc-cortina-row mc-cortina-row--pend"
@@ -502,7 +506,15 @@ def _render_bloque_cortina_medicacion(
             st.caption("No hay filas pendientes para registrar en esta vista.")
             return
 
-        st.markdown("##### Registrar pendientes — elegí acción, hora real y justificación si aplica")
+        st.markdown(
+            """
+            <div class="mc-rx-section-head mc-rx-section-head--tight" style="margin-top:0.5rem;">
+                <h4 class="mc-rx-section-title" style="font-size:1.05rem !important;">Registrar pendientes</h4>
+                <p class="mc-rx-section-sub">Elegí acción, hora real (libre) y justificación obligatoria si no se administró.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         pendientes_df = pendientes_base.copy()
         pendientes_df["Accion"] = "(sin cambio)"
         pendientes_df["Hora_real"] = pendientes_df["Hora programada"].map(_default_hora_real_cortina)
@@ -612,6 +624,7 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
         expanded = idx < 2 and fila.get("Estado") != "Realizada"
 
         with st.expander(titulo, expanded=expanded):
+            st.markdown('<div class="mc-rx-ficha-topbar" aria-hidden="true"></div>', unsafe_allow_html=True)
             estado_card = str(fila.get("Estado", "") or "").strip()
             estado_l = estado_card.lower()
             if estado_card == "Realizada":
@@ -778,23 +791,47 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     st.markdown(
         """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Prescripcion y administracion de medicamentos</h2>
-            <p class="mc-hero-text">La vista combina catalogo guiado, firma profesional y seguimiento de dosis para reducir errores de medicacion y dejar trazabilidad completa.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Catalogo de medicamentos</span>
-                <span class="mc-chip">Firma medica</span>
-                <span class="mc-chip">Registro de dosis</span>
+        <div class="mc-rx-hero-premium">
+            <p class="mc-rx-hero-kicker">Medicación con estándar clínico</p>
+            <h2 class="mc-rx-hero-title">Prescripción y administración seguras</h2>
+            <p class="mc-rx-hero-lead">
+                Cada decisión sobre un medicamento puede marcar el cuidado del paciente. Esta vista prioriza
+                <strong style="color:#e2e8f0;">orden, claridad y registro completo</strong> para que el equipo trabaje
+                con la misma información y con respaldo documental.
+            </p>
+            <div class="mc-rx-trust-bar">
+                <span class="mc-rx-trust-ico" aria-hidden="true">⚖️</span>
+                <p class="mc-rx-trust-text">
+                    <strong>Trazabilidad legal:</strong> prescripciones, administraciones, horarios reales, usuario y
+                    justificaciones quedan auditadas. Verificá siempre paciente, vía y dosis antes de confirmar.
+                </p>
+            </div>
+            <div class="mc-rx-chip-row-premium">
+                <span class="mc-rx-chip-premium mc-rx-chip--legal">Auditoría en cada guardado</span>
+                <span class="mc-rx-chip-premium">Catálogo y firma profesional</span>
+                <span class="mc-rx-chip-premium mc-rx-chip--safe">Sábana y cortina del turno</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    st.caption(
+        f"Profesional en sesión: **{nombre_usuario}** · Los registros asocian usuario, fecha/hora y contexto clínico para revisión posterior."
+    )
 
     if perfil_usuario_norm in {"operativo", "enfermeria"}:
-        st.info(
-            "El personal asistencial puede ver indicaciones activas, registrar dosis y cargar una indicacion medica en papel o PDF "
-            "cuando el medico la deja firmada fuera del sistema."
+        st.markdown(
+            """
+            <div class="mc-rx-callout-care">
+                <span class="mc-rx-callout-ico" aria-hidden="true">🩺</span>
+                <p>
+                    <strong>Enfermería y equipo asistencial:</strong> tenés la planilla del día, la cortina para registrar
+                    con hora real libre, las fichas compactas y el registro manual. Ante duda, detené el proceso y
+                    consultá: la medicación mal administrada es un riesgo evitable.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
     try:
@@ -804,17 +841,37 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     st.markdown(
         """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>Menos errores</h4><p>Elegir del catalogo evita cargar nombres mal escritos o presentaciones confusas.</p></div>
-            <div class="mc-card"><h4>Receta trazable</h4><p>La prescripcion queda con fecha, medico, matricula y firma digital cuando esta disponible.</p></div>
-            <div class="mc-card"><h4>Control diario</h4><p>La sabana muestra rapido si cada dosis fue realizada o quedo pendiente.</p></div>
+        <div class="mc-rx-pillars">
+            <div class="mc-rx-pillar">
+                <span class="mc-rx-pillar-num">1</span>
+                <h4>Precisión</h4>
+                <p>Catálogo guiado y textos estandarizados reducen ambigüedad en fármaco, vía y pauta.</p>
+            </div>
+            <div class="mc-rx-pillar">
+                <span class="mc-rx-pillar-num">2</span>
+                <h4>Constancia legal</h4>
+                <p>Recetas y administraciones conservan profesional, matrícula, sellos de tiempo y adjuntos cuando corresponde.</p>
+            </div>
+            <div class="mc-rx-pillar">
+                <span class="mc-rx-pillar-num">3</span>
+                <h4>Control del turno</h4>
+                <p>Métricas, cortina y fichas muestran pendientes, realizadas y no realizadas con motivo explícito.</p>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     if puede_prescribir:
-        st.markdown("##### Nueva prescripcion medica")
+        st.markdown(
+            """
+            <div class="mc-rx-section-head mc-rx-section-head--tight">
+                <h3 class="mc-rx-section-title">Nueva prescripción médica</h3>
+                <p class="mc-rx-section-sub">Completá la indicación con el detalle suficiente para que enfermería ejecute sin interpretaciones dudosas.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         with st.container(border=True):
             tipo_indicacion = st.radio(
                 "Tipo de indicacion",
@@ -1070,10 +1127,20 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         st.rerun()
 
     if puede_cargar_papel:
-        st.markdown("##### Cargar indicacion medica en papel")
+        st.markdown(
+            """
+            <div class="mc-rx-section-head mc-rx-section-head--tight">
+                <h3 class="mc-rx-section-title">Indicación en papel o PDF</h3>
+                <p class="mc-rx-section-sub">
+                    Digitalizá la orden firmada para que forme parte del legajo electrónico con médico, matrícula y adjunto.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         with st.container(border=True):
             st.caption(
-                "Usa esta opcion cuando el medico deja una indicacion firmada en papel o PDF y queres dejarla trazable en el sistema."
+                "El archivo y los datos quedan vinculados al paciente con registro de auditoría al guardar."
             )
             tipo_indicacion_papel = st.radio(
                 "Tipo de indicacion a cargar",
@@ -1244,7 +1311,24 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
 
     if recs_activas:
-        st.markdown("#### Administración de hoy")
+        st.markdown(
+            """
+            <div class="mc-rx-section-head">
+                <h3 class="mc-rx-section-title">Administración del turno</h3>
+                <p class="mc-rx-section-sub">
+                    Planilla del día con métricas en vivo. Usá la cortina o las fichas para dejar constancia clara:
+                    cada guardado queda firmado y auditado.
+                </p>
+            </div>
+            <ul class="mc-rx-flow" aria-label="Flujo sugerido">
+                <li><span class="mc-rx-flow-n">1</span> Revisar métricas</li>
+                <li><span class="mc-rx-flow-n">2</span> Abrir cortina</li>
+                <li><span class="mc-rx-flow-n">3</span> Registrar en ficha o manual</li>
+                <li><span class="mc-rx-flow-n">4</span> Verificar pendientes</li>
+            </ul>
+            """,
+            unsafe_allow_html=True,
+        )
         with st.expander("Guía para enfermería: sábana, cortina y registro manual", expanded=False):
             st.markdown(
                 """
@@ -1385,6 +1469,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     _fila["Medicacion"] = _mn
                     plan_hidratacion_rows.append(_fila)
 
+        st.markdown(
+            '<p style="margin:0 0 0.35rem 0;font-size:0.78rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.95);">Resumen del día</p>',
+            unsafe_allow_html=True,
+        )
         c_res1, c_res2, c_res3 = st.columns(3)
         c_res1.metric("Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
         c_res2.metric(
@@ -1395,8 +1483,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         )
         c_res3.metric("Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
 
+        st.markdown(
+            '<p class="mc-rx-turno-hint">Elegí el formato que mejor se adapte al dispositivo; la información y el respaldo legal son los mismos.</p>',
+            unsafe_allow_html=True,
+        )
         vista_guardia = st.radio(
-            "Vista de guardia",
+            "Formato de lectura del turno",
             ["Compacta para celular", "Tabla completa"],
             horizontal=True,
             index=0,
@@ -1526,10 +1618,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     else:
                         st.info("No hay nuevos horarios tildados para guardar.")
 
-        st.markdown("#### Tabla de medicación indicada")
+        st.markdown(
+            '<h4 class="mc-rx-table-zone-title">Tabla de medicación indicada</h4>',
+            unsafe_allow_html=True,
+        )
         st.caption(
-            "En celular se muestran tarjetas por defecto, con **scroll interno** para no alargar toda la página. "
-            "La tabla ancha solo si la activás y deslizás horizontalmente."
+            "Vista de referencia de la pauta. En celular, tarjetas con scroll interno; tabla ancha opcional con desliz horizontal."
         )
         if not plan_dia_df.empty:
             df_plan_visible = pd.DataFrame(
@@ -1581,7 +1675,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             st.info("No hay medicación activa cargada para mostrar en la tabla de hoy.")
 
         if plan_hidratacion_rows:
-            st.markdown("#### Plan de hidratacion parenteral")
+            st.markdown(
+                '<h4 class="mc-rx-table-zone-title">Plan de hidratación parenteral</h4>',
+                unsafe_allow_html=True,
+            )
             _render_tabla_clinica(
                 pd.DataFrame(plan_hidratacion_rows),
                 key=f"hidra_{paciente_sel}",
@@ -1610,6 +1707,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             else:
                 registro_container = st.container()
             with registro_container:
+                st.markdown(
+                    """
+                    <div class="mc-rx-form-shell">
+                        <p class="mc-rx-form-shell-title">Registro manual con respaldo legal</p>
+                        <p class="mc-rx-form-shell-sub">
+                            Usalo cuando la cortina o la ficha no alcanzan: el sistema exige estado coherente y
+                            justificación si la dosis no se administró. Queda asociado a tu usuario y sellado en tiempo.
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 with st.form("form_registro_dosis", clear_on_submit=True):
                     c_med, c_hora = st.columns([2, 1])
                     opciones_recetas = list(range(len(recs_activas)))
@@ -1658,6 +1767,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         st.divider()
         if puede_cambiar_estado:
+            st.markdown(
+                """
+                <div class="mc-rx-section-head mc-rx-section-head--tight">
+                    <h3 class="mc-rx-section-title">Gestión de indicaciones</h3>
+                    <p class="mc-rx-section-sub">Suspender o modificar con motivo explícito; cada cambio queda auditado a nombre del profesional en sesión.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             c_ed1, c_ed2 = st.columns([3, 2])
             opciones_recetas = list(range(len(recs_activas)))
             receta_idx = c_ed1.selectbox(
@@ -1746,11 +1864,30 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 "La suspension o modificacion de indicaciones queda reservada a medico, coordinacion o administracion con acceso total."
             )
     else:
-        st.info("Aun no hay medicacion activa para este paciente.")
+        st.markdown(
+            """
+            <div class="mc-rx-callout-care" style="border-color:rgba(148,163,184,0.2);background:linear-gradient(90deg,rgba(30,41,59,0.5),rgba(15,23,42,0.4));">
+                <span class="mc-rx-callout-ico" aria-hidden="true">📋</span>
+                <p>
+                    <strong>Sin indicaciones activas</strong> para este paciente. Cuando el médico prescriba o cargues una orden en papel,
+                    aparecerá aquí la administración del turno con el mismo estándar de trazabilidad.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.divider()
     if recs_todas:
-        st.markdown("#### Historial completo de prescripciones")
+        st.markdown(
+            """
+            <div class="mc-rx-section-head mc-rx-section-head--tight">
+                <h3 class="mc-rx-section-title">Historial de prescripciones</h3>
+                <p class="mc-rx-section-sub">Consulta de evolución terapéutica; activá la carga explícita para no afectar rendimiento.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         mostrar_historial = st.checkbox(
             "Cargar historial completo de prescripciones",
             value=False,
