@@ -29,3 +29,12 @@ def test_build_view_maps_mantiene_paridad_config_y_etiquetas():
     for alertas in (True, False):
         vc, vn = build_view_maps(alertas_app_visible=alertas)
         assert set(vc) == set(vn)
+
+
+def test_view_config_base_tuplas_modulo_y_render():
+    for titulo, spec in VIEW_CONFIG_BASE.items():
+        assert isinstance(spec, tuple) and len(spec) == 2, titulo
+        mod, fn = spec
+        assert isinstance(mod, str) and mod.startswith("views."), titulo
+        assert isinstance(fn, str) and fn.startswith("render_"), titulo
+        assert "." not in fn, titulo
