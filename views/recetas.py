@@ -347,8 +347,9 @@ def _construir_matriz_registro_24h(plan_dia_df):
 
     matriz_registro_rows = []
     matriz_registro_map = {}
+    row_by_key = {}
 
-    for mat_idx, (_, r) in enumerate(plan_dia_df.iterrows()):
+    for _, r in plan_dia_df.iterrows():
         med = str(r.get("Medicamento", "") or "").strip()
         via = str(r.get("Via", "") or "").strip() or "S/D"
         freq = str(r.get("Frecuencia", "") or "").strip() or "S/D"
@@ -356,34 +357,43 @@ def _construir_matriz_registro_24h(plan_dia_df):
         hp = str(r.get("Hora programada", "") or "").strip()
         estado_ok = str(r.get("Estado", "") or "").strip() == "Realizada"
 
-        row_dict = {
-            "Indicacion": med,
-            "Via": via,
-            "Frecuencia": freq,
-            "Detalle": detalle,
-        }
-        for h in horas_mar:
-            row_dict[h] = pd.NA
-        row_dict["A demanda"] = pd.NA
+        fila_key = (med, via, freq, detalle)
+        if fila_key not in row_by_key:
+            row_dict = {
+                "Medicacion": med,
+                "Via": via,
+                "Frecuencia": freq,
+                "Detalle": detalle,
+            }
+            for h in horas_mar:
+                row_dict[h] = pd.NA
+            row_dict["A demanda"] = pd.NA
+            row_by_key[fila_key] = len(matriz_registro_rows)
+            matriz_registro_rows.append(row_dict)
+
+        mat_idx = row_by_key[fila_key]
+        row_dict = matriz_registro_rows[mat_idx]
 
         col = None
         if hp.lower() == "a demanda":
             col = "A demanda"
-            row_dict[col] = estado_ok
+            valor_actual = row_dict[col]
+            row_dict[col] = estado_ok if pd.isna(valor_actual) else bool(valor_actual) or estado_ok
         else:
             partes = hp.split(":")
             if len(partes) >= 2 and str(partes[0]).strip().isdigit():
                 col = f"{int(str(partes[0]).strip()) % 24:02d}:00"
                 if col in row_dict:
-                    row_dict[col] = estado_ok
+                    valor_actual = row_dict[col]
+                    row_dict[col] = estado_ok if pd.isna(valor_actual) else bool(valor_actual) or estado_ok
 
         if col:
-            matriz_registro_map[(mat_idx, col)] = {
+            matriz_registro_map.setdefault((mat_idx, col), []).append(
+                {
                 "medicamento": med,
                 "horario_programado": hp if hp.lower() != "a demanda" else "A demanda",
-            }
-
-        matriz_registro_rows.append(row_dict)
+                }
+            )
 
     return matriz_registro_rows, horas_mar, matriz_registro_map
 
@@ -1668,13 +1678,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         )
         c_res3.metric("Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
 
-        st.markdown(
-            '<p class="mc-rx-turno-hint">Elegí el formato que mejor se adapte al dispositivo; la información y el respaldo legal son los mismos.</p>',
-            unsafe_allow_html=True,
-        )
         vista_guardia = st.radio(
-            "Formato de lectura del turno",
-            ["Compacta para celular", "Tabla completa"],
+            "Vista de administración",
+            ["Cortina empresarial", "Tarjetas (alternativa)"],
             horizontal=True,
             index=0,
             key=f"recetas_vista_guardia_{paciente_sel}",
@@ -1690,80 +1696,58 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             puede_registrar_dosis,
         )
 
-        if vista_guardia == "Compacta para celular":
+        if vista_guardia == "Tarjetas (alternativa)":
             _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis)
         else:
             mostrar_dataframe_con_scroll(tabla_guardia_df, height=340)
 
         if puede_registrar_dosis and matriz_registro_rows:
-            abrir_grilla_mar = st.checkbox(
-                "Mostrar grilla 24 h para marcar varias dosis (pesada en celulares; preferi el formulario abajo)",
-                value=False,
-                key=f"abrir_grilla_mar_{paciente_sel}_{fecha_hoy}",
+            columnas_mar = ["Medicacion", "Via", "Frecuencia"] + horas_mar + ["A demanda"]
+            matriz_registro_df = pd.DataFrame(matriz_registro_rows)
+            matriz_registro_df = matriz_registro_df[columnas_mar]
+            for hora_col in horas_mar + ["A demanda"]:
+                matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
+
+            column_config = {
+                "Medicacion": st.column_config.TextColumn("Medicacion", width="large"),
+                "Via": st.column_config.TextColumn("Via", width="small"),
+                "Frecuencia": st.column_config.TextColumn("Frecuencia", width="small"),
+            }
+            for hora_col in horas_mar + ["A demanda"]:
+                column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
+
+            editor_mar_df = st.data_editor(
+                matriz_registro_df,
+                hide_index=True,
+                width="stretch",
+                disabled=["Medicacion", "Via", "Frecuencia"],
+                column_config=column_config,
+                key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
             )
-            if abrir_grilla_mar:
-                columnas_mar = ["Prescripcion"] + horas_mar + ["A demanda"]
-                matriz_registro_df = pd.DataFrame(matriz_registro_rows)
-                matriz_registro_df["Prescripcion"] = matriz_registro_df.apply(
-                    lambda fila: "\n".join(
-                        [
-                            str(fila.get("Indicacion", "") or "").strip(),
-                            " | ".join(
-                                [
-                                    valor
-                                    for valor in [
-                                        str(fila.get("Via", "") or "").strip(),
-                                        str(fila.get("Frecuencia", "") or "").strip(),
-                                    ]
-                                    if valor
-                                ]
-                            ),
-                            str(fila.get("Detalle", "") or "").strip(),
-                        ]
-                    ).strip(),
-                    axis=1,
-                )
-                matriz_registro_df = matriz_registro_df[columnas_mar]
-                for hora_col in horas_mar + ["A demanda"]:
-                    matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
 
-                column_config = {
-                    "Prescripcion": st.column_config.TextColumn("Prescripción / vía / frecuencia", width="large"),
-                }
-                for hora_col in horas_mar + ["A demanda"]:
-                    column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
+            if st.button(
+                "Guardar tildes de cortina",
+                width="stretch",
+                key=f"guardar_mar_{paciente_sel}_{fecha_hoy}",
+            ):
+                registros_guardados = 0
+                for row_idx in range(len(editor_mar_df)):
+                    for hora_col in horas_mar + ["A demanda"]:
+                        original_valor = matriz_registro_df.at[row_idx, hora_col]
+                        nuevo_valor = editor_mar_df.at[row_idx, hora_col]
 
-                editor_mar_df = st.data_editor(
-                    matriz_registro_df,
-                    hide_index=True,
-                    width="stretch",
-                    disabled=["Prescripcion"],
-                    column_config=column_config,
-                    key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
-                )
+                        if pd.isna(original_valor):
+                            continue
+                        if bool(original_valor):
+                            continue
+                        if pd.isna(nuevo_valor) or not bool(nuevo_valor):
+                            continue
 
-                if st.button(
-                    "Guardar sábana de medicación (tildes)",
-                    width="stretch",
-                    key=f"guardar_mar_{paciente_sel}_{fecha_hoy}",
-                ):
-                    registros_guardados = 0
-                    for row_idx in range(len(editor_mar_df)):
-                        for hora_col in horas_mar + ["A demanda"]:
-                            original_valor = matriz_registro_df.at[row_idx, hora_col]
-                            nuevo_valor = editor_mar_df.at[row_idx, hora_col]
+                        metas = matriz_registro_map.get((row_idx, hora_col), [])
+                        if not metas:
+                            continue
 
-                            if pd.isna(original_valor):
-                                continue
-                            if bool(original_valor):
-                                continue
-                            if pd.isna(nuevo_valor) or not bool(nuevo_valor):
-                                continue
-
-                            meta = matriz_registro_map.get((row_idx, hora_col))
-                            if not meta:
-                                continue
-
+                        for meta in metas:
                             nombre_med = str(meta.get("medicamento", "") or "").strip()
                             horario_sel = str(meta.get("horario_programado", "") or "").strip()
                             if not nombre_med:
@@ -1780,12 +1764,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             )
                             registros_guardados += 1
 
-                    if registros_guardados:
-                        guardar_datos()
-                        st.success(f"Se guardaron {registros_guardados} administraciones desde la sábana 24 h.")
-                        st.rerun()
-                    else:
-                        st.info("No hay nuevos horarios tildados para guardar.")
+                if registros_guardados:
+                    guardar_datos()
+                    st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina.")
+                    st.rerun()
+                else:
+                    st.info("No hay nuevos horarios tildados para guardar.")
 
         if not plan_dia_df.empty:
             with st.expander("Ver tabla de referencia (opcional)", expanded=False):
