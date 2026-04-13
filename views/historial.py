@@ -775,10 +775,26 @@ def render_historial(paciente_sel: str) -> None:
         return
 
     registros_ordenados = _sort_registros_por_fecha(registros_base, recientes_primero=recientes_primero)
-    registros_mostrar = registros_ordenados[:limite]
+    total_registros_seccion = len(registros_ordenados)
+    limite_pagina = min(max(int(limite), 1), 500)
+    paginas = max((total_registros_seccion - 1) // limite_pagina + 1, 1)
+    col_pag1, col_pag2 = st.columns([2, 1])
+    col_pag1.caption(f"Tamaño de página: {limite_pagina} registro(s)")
+    pagina = col_pag2.number_input(
+        "Página de la sección",
+        min_value=1,
+        max_value=paginas,
+        value=1,
+        step=1,
+        key=f"hist_pag_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 24)}",
+    )
+    inicio = (int(pagina) - 1) * limite_pagina
+    fin = inicio + limite_pagina
+    registros_mostrar = registros_ordenados[inicio:fin]
 
     st.caption(
         f"Mostrando {len(registros_mostrar)} de {len(registros_base)} registros en «{seccion_actual}»"
+        f" (página {int(pagina)}/{paginas})"
         f"{f' (filtrados de {len(registros)})' if (buscar.strip() or usar_fecha) else ''}."
     )
 
