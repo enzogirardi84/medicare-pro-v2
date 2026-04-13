@@ -5,9 +5,25 @@ from html import escape
 from importlib import import_module
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+def _insert_repo_root_on_path() -> Path:
+    """
+    Streamlit Cloud puede ejecutar main.py dentro de una subcarpeta (p. ej. main/main.py).
+    En ese caso hace falta la raíz del repo en sys.path para resolver el paquete `core`.
+    """
+    here = Path(__file__).resolve().parent
+    if (here / "core").is_dir():
+        root = here
+    elif (here.parent / "core").is_dir():
+        root = here.parent
+    else:
+        root = here
+    rs = str(root)
+    if rs not in sys.path:
+        sys.path.insert(0, rs)
+    return root
+
+
+REPO_ROOT = _insert_repo_root_on_path()
 
 import streamlit as st
 
@@ -15,75 +31,41 @@ from core.app_logging import configurar_logging_basico, log_event
 
 configurar_logging_basico()
 
-try:
-    from core.auth import check_inactividad, render_login, verificar_clinica_sesion_activa
-except ImportError:
-    core_auth = import_module("core.auth")
-    check_inactividad = core_auth.check_inactividad
-    render_login = core_auth.render_login
-    verificar_clinica_sesion_activa = getattr(core_auth, "verificar_clinica_sesion_activa", lambda: None)
+_core_auth = import_module("core.auth")
+check_inactividad = _core_auth.check_inactividad
+render_login = _core_auth.render_login
+verificar_clinica_sesion_activa = getattr(_core_auth, "verificar_clinica_sesion_activa", lambda: None)
 
-try:
-    from core import utils as core_utils
-except ImportError:
-    core_utils = import_module("core.utils")
+core_utils = import_module("core.utils")
 
 _core_database = import_module("core.database")
 obtener_estado_guardado = getattr(_core_database, "obtener_estado_guardado", lambda: {})
 
-try:
-    from core.view_roles import MODULO_ROLES_PERMITIDOS, tiene_acceso_vista
-except ImportError:
-    _vr = import_module("core.view_roles")
-    MODULO_ROLES_PERMITIDOS = _vr.MODULO_ROLES_PERMITIDOS
-    tiene_acceso_vista = _vr.tiene_acceso_vista
+_vr = import_module("core.view_roles")
+MODULO_ROLES_PERMITIDOS = _vr.MODULO_ROLES_PERMITIDOS
+tiene_acceso_vista = _vr.tiene_acceso_vista
 
-try:
-    from core.ui_liviano import headers_sugieren_equipo_liviano, render_mc_liviano_cliente
-except ImportError:
-    ui_liv = import_module("core.ui_liviano")
-    headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
-    render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
+ui_liv = import_module("core.ui_liviano")
+headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
+render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
 
-try:
-    from core.landing_publicidad import obtener_html_landing_publicidad
-except ImportError:
-    _lpub = import_module("core.landing_publicidad")
-    obtener_html_landing_publicidad = _lpub.obtener_html_landing_publicidad
+_lpub = import_module("core.landing_publicidad")
+obtener_html_landing_publicidad = _lpub.obtener_html_landing_publicidad
 
-try:
-    from core.onboarding import render_panel_bienvenida
-except ImportError:
-    _onb = import_module("core.onboarding")
-    render_panel_bienvenida = _onb.render_panel_bienvenida
+_onb = import_module("core.onboarding")
+render_panel_bienvenida = _onb.render_panel_bienvenida
 
-try:
-    from core.anticolapso import (
-        aplicar_politicas_anticolapso_ui,
-        limite_pacientes_sidebar,
-        render_estabilidad_anticolapso_sidebar,
-    )
-except ImportError:
-    _ac = import_module("core.anticolapso")
-    aplicar_politicas_anticolapso_ui = _ac.aplicar_politicas_anticolapso_ui
-    limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
-    render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
+_ac = import_module("core.anticolapso")
+aplicar_politicas_anticolapso_ui = _ac.aplicar_politicas_anticolapso_ui
+limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
+render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
 
-try:
-    from core.alertas_app_paciente_ui import (
-        render_banner_alertas_criticas_si_aplica,
-        render_sidebar_bloque_app_paciente,
-    )
-except ImportError:
-    _aa = import_module("core.alertas_app_paciente_ui")
-    render_banner_alertas_criticas_si_aplica = _aa.render_banner_alertas_criticas_si_aplica
-    render_sidebar_bloque_app_paciente = _aa.render_sidebar_bloque_app_paciente
+_aa = import_module("core.alertas_app_paciente_ui")
+render_banner_alertas_criticas_si_aplica = _aa.render_banner_alertas_criticas_si_aplica
+render_sidebar_bloque_app_paciente = _aa.render_sidebar_bloque_app_paciente
 
-try:
-    from core.release_notes import MC_APP_CHANGELOG
-except ImportError:
-    _rn = import_module("core.release_notes")
-    MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
+_rn = import_module("core.release_notes")
+MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
 
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(

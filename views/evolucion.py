@@ -83,12 +83,14 @@ def render_evolucion(paciente_sel, user, rol=None):
     st.markdown(
         """
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Evolucion medica</h2>
-            <p class="mc-hero-text">Notas clinicas con firma del paciente o familiar y adjuntos. En celulares viejos preferi subir foto de firma antes que el lienzo tactil.</p>
+            <h2 class="mc-hero-title">Evolución clínica</h2>
+            <p class="mc-hero-text">Acá documentan <strong>todos los profesionales</strong> (médicos, enfermería, operativos): notas de evolución, cambios del paciente,
+            curaciones en texto y <strong>fotos de heridas, lesiones o hallazgos</strong>. Firma del paciente o familiar opcional; en celulares viejos conviene foto de firma antes que el lienzo.</p>
             <div class="mc-chip-row">
-                <span class="mc-chip">Firma digital</span>
-                <span class="mc-chip">Historia</span>
-                <span class="mc-chip">Auditoria legal</span>
+                <span class="mc-chip">Multidisciplina</span>
+                <span class="mc-chip">Plantillas clínicas</span>
+                <span class="mc-chip">Fotos clínicas</span>
+                <span class="mc-chip">Auditoría legal</span>
             </div>
         </div>
         """,
@@ -96,13 +98,14 @@ def render_evolucion(paciente_sel, user, rol=None):
     )
     bloque_mc_grid_tarjetas(
         [
-            ("Notas", "Registra evolucion con plantillas segun rol."),
-            ("Firma", "En celulares lentos conviene foto de firma antes que el lienzo."),
-            ("Auditoria", "Las altas quedan con trazabilidad legal."),
+            ("Notas", "Evolución con plantillas: clínica general, Enfermería, Heridas, respiratorio, etc."),
+            ("Imágenes", "Cámara o archivo desde el teléfono (heridas, dispositivos, evolución visual)."),
+            ("Firma", "Opcional: foto de firma o lienzo si el equipo lo permite."),
         ]
     )
     st.caption(
-        "Primero podes registrar la firma del paciente o familiar (opcional). Debajo, la nota de evolucion con plantilla, foto de herida opcional y el historial al final."
+        "Podés registrar primero la firma (opcional). En el formulario: plantilla, nota y **fotografía clínica** (subir archivo o usar cámara). "
+        "Enfermería suele usar plantillas **Enfermería** o **Heridas**."
     )
 
     firma_subida = None
@@ -167,8 +170,8 @@ def render_evolucion(paciente_sel, user, rol=None):
     plantillas_evolucion = {
         "Libre": "",
         "Clinica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
-        "Enfermeria": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curacion:\nTolerancia al procedimiento:\nIndicaciones para el proximo control:",
-        "Heridas": "Ubicacion de la lesion:\nAspecto del lecho:\nExudado / olor:\nCuracion aplicada:\nEvolucion respecto al control previo:",
+        "Enfermeria": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curación:\nTolerancia al procedimiento:\nIndicaciones para el próximo control:",
+        "Heridas": "Ubicación de la lesión:\nAspecto del lecho:\nExudado / olor:\nCuración aplicada:\nEvolución respecto al control previo:\n(Opcional: adjuntar foto con la cámara o un archivo debajo)",
         "Respiratorio": "Saturacion actual:\nDispositivo / flujo de oxigeno:\nTrabajo respiratorio:\nAuscultacion:\nConducta y seguimiento:",
         "Pediatria": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentacion / hidratacion:\nEvaluacion general:\nPlan y recomendaciones:",
         "Cuidados paliativos": "Sintomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las proximas horas:",
@@ -185,13 +188,18 @@ def render_evolucion(paciente_sel, user, rol=None):
                 height=220,
                 placeholder="Escribir aqui la evolucion...",
             )
-            col_foto1, col_foto2 = st.columns([3, 1])
-            desc_w = col_foto1.text_input("Descripcion de la herida / lesion (opcional)")
-
-            with col_foto2:
-                st.markdown("Foto de la herida")
-                usar_camara = st.checkbox("Encender camara")
-                foto_w = st.camera_input("Tomar foto ahora", key="cam_evol") if usar_camara else None
+            desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
+            st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
+            col_up, col_cam = st.columns(2)
+            with col_up:
+                archivo_foto = st.file_uploader(
+                    "Subir foto desde el dispositivo (galería o archivos)",
+                    type=["png", "jpg", "jpeg", "webp"],
+                    key="evol_foto_archivo",
+                )
+            with col_cam:
+                usar_camara = st.checkbox("Usar cámara ahora", key="evol_usar_cam")
+                foto_cam = st.camera_input("Capturar imagen", key="cam_evol") if usar_camara else None
 
             if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
                 if nota.strip():
@@ -204,8 +212,14 @@ def render_evolucion(paciente_sel, user, rol=None):
                         "plantilla": plantilla,
                     })
 
-                    if foto_w is not None:
-                        foto_bytes, _ = optimizar_imagen_bytes(foto_w.getvalue(), max_size=(1280, 1280), quality=70)
+                    raw_foto = None
+                    if archivo_foto is not None:
+                        raw_foto = archivo_foto.getvalue()
+                    elif foto_cam is not None:
+                        raw_foto = foto_cam.getvalue()
+
+                    if raw_foto:
+                        foto_bytes, _ = optimizar_imagen_bytes(raw_foto, max_size=(1280, 1280), quality=70)
                         base64_foto = base64.b64encode(foto_bytes).decode("utf-8")
                         st.session_state["fotos_heridas_db"].append({
                             "paciente": paciente_sel,
@@ -275,7 +289,7 @@ def render_evolucion(paciente_sel, user, rol=None):
     fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
     if fotos_heridas:
         st.divider()
-        st.markdown("#### Linea de tiempo de heridas y lesiones")
+        st.markdown("#### Línea de tiempo de heridas y lesiones (fotos clínicas)")
         limite_fotos = seleccionar_limite_registros(
             "Fotos a mostrar",
             len(fotos_heridas),

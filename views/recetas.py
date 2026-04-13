@@ -414,7 +414,7 @@ def _render_bloque_cortina_medicacion(
         editor_df = st.data_editor(
             pendientes_df[editor_columnas],
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
             disabled=[col for col in editor_columnas if col != "Administrada"],
             column_config={
                 "Administrada": st.column_config.CheckboxColumn(
@@ -428,7 +428,7 @@ def _render_bloque_cortina_medicacion(
 
         if st.button(
             "Guardar tildes de la cortina",
-            use_container_width=True,
+            width="stretch",
             key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}",
         ):
             registros_guardados = 0
@@ -506,7 +506,7 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
                     if st.button(
                         "Tildar administración realizada",
                         key=f"rx_tildar_{idx}_{hora_programada.replace(':', '')}",
-                        use_container_width=True,
+                        width="stretch",
                         type="primary",
                     ):
                         if _registrar_administracion_dosis(
@@ -803,7 +803,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         display_toolbar=firma_cfg["display_toolbar"],
                     )
 
-            if st.button("Guardar prescripcion medica", use_container_width=True, type="primary"):
+            if st.button("Guardar prescripcion medica", width="stretch", type="primary"):
                 med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum
                 if tipo_indicacion == "Medicacion" and (not med_final or med_final == "-- Seleccionar del vademecum --"):
                     st.error("Debe seleccionar o escribir un medicamento.")
@@ -981,7 +981,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 type=["pdf", "png", "jpg", "jpeg"],
                 key="adjunto_papel_receta",
             )
-            if st.button("Guardar indicacion en papel", use_container_width=True, key="guardar_indicacion_papel"):
+            if st.button("Guardar indicacion en papel", width="stretch", key="guardar_indicacion_papel"):
                 if not medico_papel.strip() or not matricula_papel.strip():
                     st.error("Debe completar medico y matricula para dejar respaldo legal.")
                 elif not detalle_papel.strip():
@@ -1277,7 +1277,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 editor_mar_df = st.data_editor(
                     matriz_registro_df,
                     hide_index=True,
-                    use_container_width=True,
+                    width="stretch",
                     disabled=["Prescripcion"],
                     column_config=column_config,
                     key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
@@ -1285,7 +1285,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
                 if st.button(
                     "Guardar sábana de medicación (tildes)",
-                    use_container_width=True,
+                    width="stretch",
                     key=f"guardar_mar_{paciente_sel}_{fecha_hoy}",
                 ):
                     registros_guardados = 0
@@ -1443,7 +1443,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     justificacion = st.text_input(
                         "Justificación clínica (obligatoria si no realizada: motivo, procedimiento, intolerancia, etc.)"
                     )
-                    if st.form_submit_button("Guardar registro", use_container_width=True):
+                    if st.form_submit_button("Guardar registro", width="stretch"):
                         nombre_med = _extraer_nombre_medicacion(receta_actual.get("med", ""))
                         if _registrar_administracion_dosis(
                             paciente_sel,
@@ -1479,7 +1479,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     "Modificar detalle",
                     value=receta_objetivo.get("med", ""),
                 )
-            if st.button("Aplicar cambios", use_container_width=True):
+            if st.button("Aplicar cambios", width="stretch"):
                 cambio_aplicado = False
                 if accion_receta == "Editar indicacion" and not nuevo_texto_receta.strip():
                     st.error("Debes escribir el nuevo detalle de la indicacion.")
@@ -1607,7 +1607,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                     file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                                     mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
                                     key=f"adj_papel_btn_{idx}",
-                                    use_container_width=True,
+                                    width="stretch",
                                 )
                             except Exception:
                                 c_info.caption("No se pudo preparar el adjunto cargado.")
@@ -1637,7 +1637,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 file_name=nombre_arch,
                                 mime="application/pdf",
                                 key=f"pdf_rec_btn_{idx}",
-                                use_container_width=True,
+                                width="stretch",
                             )
         else:
             st.caption("Historial diferido para mejorar velocidad en telefonos viejos. Activalo solo si necesitas revisar indicaciones anteriores.")

@@ -28,31 +28,16 @@ TIPOS_CUIDADO = [
 ]
 
 
-def render_enfermeria(paciente_sel, mi_empresa, user):
-    if not paciente_sel:
-        aviso_sin_paciente()
-        return
-
-    registros = [x for x in st.session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel]
-    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-    registros_ordenados = sorted(registros, key=lambda x: x.get("fecha", ""), reverse=True)
-    ultimo_registro = registros_ordenados[0]["fecha"] if registros_ordenados else "Sin datos"
-
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Enfermería y plan de cuidados</h2>
-            <p class="mc-hero-text">Centraliza curaciones, riesgos, objetivos, incidentes y observaciones por turno con trazabilidad clara para el equipo de enfermería.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Curaciones</span>
-                <span class="mc-chip">Riesgo de caídas</span>
-                <span class="mc-chip">Riesgo UPP</span>
-                <span class="mc-chip">Observaciones por turno</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+def _render_plan_cuidados_enfermeria_legacy(
+    paciente_sel,
+    mi_empresa,
+    user,
+    registros,
+    registros_ordenados,
+    detalles,
+    ultimo_registro,
+):
+    """Formulario e historial estructurado (UPP, caídas, incidentes). Opcional si la institución ya usa solo Evolución."""
     bloque_mc_grid_tarjetas(
         [
             ("Registro", "Curaciones, riesgos y observaciones por turno."),
@@ -68,8 +53,8 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
     m4.metric("Último registro", ultimo_registro)
 
     st.caption(
-        "Elegi abajo **Nuevo registro** para cargar el turno, **Plan actual** para ver el resumen vigente o **Historial** para filtrar lo anterior. "
-        "Incidentes cuenta registros marcados como evento adverso."
+        "Elegí **Nuevo registro** para cargar el turno, **Plan actual** para el resumen vigente o **Historial** para filtrar. "
+        "Para notas clínicas y **fotos de heridas** usá **Evolución** en el menú."
     )
 
     st.markdown(
@@ -109,8 +94,14 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
                 st.markdown("#### Detalle de curación y piel")
                 h1, h2, h3 = st.columns(3)
                 zona = h1.text_input("Zona / lesión", placeholder="Sacra, talón, pierna, abdomen", key="enf_zona")
-                aspecto = h2.selectbox("Aspecto", ["Limpia", "Exudado leve", "Exudado moderado", "Infectada", "Granulación"], key="enf_aspecto")
-                dolor_curacion = h3.selectbox("Dolor en curación", ["Sin dolor", "Leve", "Moderado", "Severo"], key="enf_dolor_curacion")
+                aspecto = h2.selectbox(
+                    "Aspecto",
+                    ["Limpia", "Exudado leve", "Exudado moderado", "Infectada", "Granulación"],
+                    key="enf_aspecto",
+                )
+                dolor_curacion = h3.selectbox(
+                    "Dolor en curación", ["Sin dolor", "Leve", "Moderado", "Severo"], key="enf_dolor_curacion"
+                )
             else:
                 zona = ""
                 aspecto = ""
@@ -129,7 +120,7 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
 
             if st.button("Guardar registro de enfermería", use_container_width=True, type="primary", key="enf_guardar"):
                 if not intervencion.strip():
-                    st.error("Debes registrar la intervención realizada.")
+                    st.error("Debés registrar la intervención realizada.")
                 else:
                     nuevo = {
                         "paciente": paciente_sel,
@@ -244,3 +235,51 @@ def render_enfermeria(paciente_sel, mi_empresa, user):
         )
         resumen_df = pd.DataFrame(registros_filtrados[:limite]).drop(columns=["paciente", "empresa"], errors="ignore")
         mostrar_dataframe_con_scroll(resumen_df, height=420)
+
+
+def render_enfermeria(paciente_sel, mi_empresa, user):
+    if not paciente_sel:
+        aviso_sin_paciente()
+        return
+
+    registros = [x for x in st.session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel]
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+    registros_ordenados = sorted(registros, key=lambda x: x.get("fecha", ""), reverse=True)
+    ultimo_registro = registros_ordenados[0]["fecha"] if registros_ordenados else "Sin datos"
+
+    st.markdown(
+        """
+        <div class="mc-hero">
+            <h2 class="mc-hero-title">Enfermería y documentación clínica</h2>
+            <p class="mc-hero-text">El registro narrativo de evolución, cambios del paciente y <strong>fotos de heridas o lesiones</strong> se carga en
+            <strong>Evolución</strong>, donde documentan todos los profesionales (médicos, enfermería, operativos). Este menú conserva solo un
+            <strong>plan de cuidados estructurado</strong> opcional (riesgo UPP, caídas, incidentes) si su institución lo separa del texto libre.</p>
+            <div class="mc-chip-row">
+                <span class="mc-chip">→ Evolución: notas + fotos</span>
+                <span class="mc-chip">Opcional: plan UPP / caídas</span>
+                <span class="mc-chip">Historial PDF sin cambios</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.info(
+        "**Usá el módulo Evolución** en el menú lateral para informar cambios clínicos, curaciones en texto y **fotografías** "
+        "(cámara o archivo). Elegí plantilla **Enfermería** o **Heridas**; la línea de tiempo de imágenes queda al final de esa pantalla.",
+        icon="📋",
+    )
+
+    with st.expander(
+        "Plan de cuidados estructurado — opcional (UPP, caídas, incidentes, datos ya cargados en el sistema)",
+        expanded=bool(registros),
+    ):
+        _render_plan_cuidados_enfermeria_legacy(
+            paciente_sel,
+            mi_empresa,
+            user,
+            registros,
+            registros_ordenados,
+            detalles,
+            ultimo_registro,
+        )
