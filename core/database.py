@@ -384,9 +384,11 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         st.session_state["_modo_offline"] = True
         if not st.session_state.get("_aviso_offline_mostrado"):
             st.warning(
-                "Modo local activo: no se pudo conectar a la nube. "
-                f"Detalle técnico: {type(e).__name__}. Los datos locales se siguen usando si existen."
+                "Modo local: no pudimos conectar con la nube en este momento. "
+                "Si hay copia en este equipo, seguimos trabajando con ella."
             )
+            with st.expander("Detalle tecnico (soporte)", expanded=False):
+                st.code(f"{type(e).__name__}: {e}", language="text")
             st.session_state["_aviso_offline_mostrado"] = True
         return copy.deepcopy(data_local) if data_local else None
     return None
@@ -399,8 +401,8 @@ def guardar_datos():
     except Exception as e:
         log_event("db", f"guardar_datos_fatal:{type(e).__name__}")
         st.error(
-            "Error inesperado al guardar. Los datos en pantalla no se borraron; "
-            "reintentá el guardado o recargá la pagina si el problema continua."
+            "Error inesperado al guardar. Los datos en pantalla no se vaciaron: reintenta guardar, "
+            "revisa la conexion y, si sigue igual, recarga la pagina y copia el detalle tecnico para soporte."
         )
 
 
@@ -444,7 +446,12 @@ def _guardar_datos_ejecutar():
             error_nube = str(e)
             st.session_state["_modo_offline"] = True
             if not st.session_state.get("_aviso_offline_mostrado"):
-                st.warning(f"No se pudo subir a la nube. Se guardara localmente ({e}).")
+                st.warning(
+                    "No se pudo sincronizar con la nube. Se intento guardar en este equipo. "
+                    "Revisa conexion y configuracion de Supabase si el aviso vuelve a aparecer."
+                )
+                with st.expander("Detalle del error (soporte)", expanded=False):
+                    st.code(f"{type(e).__name__}: {e}", language="text")
                 st.session_state["_aviso_offline_mostrado"] = True
 
     guardado_local = False
@@ -480,7 +487,11 @@ def _guardar_datos_ejecutar():
         elif guardado_local:
             st.toast("Guardado localmente")
         else:
-            st.error("No se pudo guardar la informacion. Verifica conexion y permisos de escritura.")
+            st.error(
+                "No se pudo guardar en la nube ni en disco local. "
+                "Revisa permisos de escritura, espacio libre y credenciales de Supabase. "
+                "No cierres la pestana sin respaldar lo que necesites si el problema continua."
+            )
         st.session_state["_ultimo_toast_guardado"] = ahora_ts
 
     return {

@@ -1,5 +1,6 @@
 import base64
 import sys
+import traceback
 from html import escape
 from importlib import import_module
 from pathlib import Path
@@ -10,7 +11,7 @@ if str(ROOT_DIR) not in sys.path:
 
 import streamlit as st
 
-from core.app_logging import configurar_logging_basico
+from core.app_logging import configurar_logging_basico, log_event
 
 configurar_logging_basico()
 
@@ -261,14 +262,17 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
         elif tab_name == "Auditoria Legal":
             render_fn(mi_empresa, user)
     except Exception as exc:
-        st.error(
-            f"No se pudo cargar el modulo **{tab_name}**. "
-            "Probá volver a elegirlo en la barra superior, refrescar la pagina (F5) o cambiar de paciente si el error persiste."
+        log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
+        st.error(f"Fallo al abrir el modulo **{tab_name}**. El resto del sistema puede seguir en uso.")
+        st.markdown(
+            "**Sugerencias:** volver a elegir el modulo en la barra superior, recargar la pagina (**F5**), "
+            "o cambiar de paciente si el error solo ocurre con uno. Si reaparece, envia el detalle tecnico a soporte."
         )
-        with st.expander("Detalle para soporte o desarrollo", expanded=False):
+        with st.expander("Detalle tecnico (soporte o desarrollo)", expanded=False):
             st.code(f"{type(exc).__name__}: {exc}", language="text")
+            st.code(traceback.format_exc(), language="text")
             st.caption(
-                "Si el mensaje menciona un paquete faltante (ImportError), puede faltar instalar una dependencia en el servidor."
+                "Si ves **ImportError**, suele faltar instalar una dependencia en el servidor (requirements.txt)."
             )
 
 
