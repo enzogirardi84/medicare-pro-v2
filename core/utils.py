@@ -1373,18 +1373,9 @@ def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
 
 
 def obtener_direccion_real(lat, lon):
-    try:
-        url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=18&addressdetails=1"
-        req = urllib.request.Request(url, headers={"User-Agent": "MediCareProApp/1.0"})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            display_name = data.get("display_name", "Direccion no encontrada")
-            partes = display_name.split(", ")
-            if len(partes) > 3:
-                return ", ".join(partes[:3])
-            return display_name
-    except Exception:
-        return "Direccion exacta no disponible (solo coordenadas)"
+    from services.nominatim import reverse_geocode_short_label
+
+    return reverse_geocode_short_label(lat, lon)
 
 
 def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
