@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+import re
 from datetime import time as dt_time
 from html import escape
 
@@ -112,6 +113,36 @@ def _nombre_usuario(user):
     return str(user.get("nombre", "") or "Sistema")
 
 
+def _parse_hora_hhmm(valor):
+    """Devuelve 'HH:MM' normalizado, '' si vacío, o None si el texto no es una hora válida."""
+    t = str(valor or "").strip()
+    if not t:
+        return ""
+    m = re.match(r"^(\d{1,2}):(\d{1,2})$", t)
+    if not m:
+        return None
+    h, mi = int(m.group(1)), int(m.group(2))
+    if not (0 <= h <= 23 and 0 <= mi <= 59):
+        return None
+    return f"{h:02d}:{mi:02d}"
+
+
+def _hora_real_para_registro(hora_real_admin):
+    """
+    None o vacío → hora actual. Si viene texto, debe ser HH:MM válido.
+    Devuelve (str_hora, error_msg) con error_msg no vacío si falla.
+    """
+    if hora_real_admin is None:
+        return ahora().strftime("%H:%M"), ""
+    s = str(hora_real_admin).strip()
+    if not s:
+        return ahora().strftime("%H:%M"), ""
+    p = _parse_hora_hhmm(s)
+    if p is None:
+        return "", "Hora real inválida. Usá formato HH:MM (ej. 08:30 o 14:05)."
+    return p, ""
+
+
 def _orden_horario_programado(valor):
     texto = str(valor or "").strip()
     if texto.lower() == "a demanda":
@@ -162,11 +193,32 @@ def _render_plan_hidratacion_preview(plan_hidratacion):
     st.markdown("".join(bloques), unsafe_allow_html=True)
 
 
-def _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, hora_sel, estado_sel, justificacion):
+def _registrar_administracion_dosis(
+    paciente_sel,
+    mi_empresa,
+    user,
+    fecha_hoy,
+    nombre_med,
+    horario_programado_slot,
+    estado_sel,
+    justificacion,
+    *,
+    hora_real_admin=None,
+):
+    """
+    horario_programado_slot: hueco de la indicación (ej. 08:00) para enlazar con la planilla.
+    hora_real_admin: hora en que se administró o se dejó constancia (libre); None → hora actual.
+    """
     if "No realizada" in estado_sel and not justificacion.strip():
         st.error("Es obligatorio justificar por que no se administro la dosis.")
         return False
 
+    hora_str, err_h = _hora_real_para_registro(hora_real_admin)
+    if err_h:
+        st.error(err_h)
+        return False
+
+    slot = str(horario_programado_slot or "").strip()
     st.session_state["administracion_med_db"] = [
         a
         for a in st.session_state.get("administracion_med_db", [])
@@ -174,7 +226,7 @@ def _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, n
             a.get("paciente") == paciente_sel
             and a.get("fecha") == fecha_hoy
             and a.get("med") == nombre_med
-            and (a.get("horario_programado") == hora_sel or a.get("hora") == hora_sel)
+            and str(a.get("horario_programado", "") or "").strip() == slot
         )
     ]
     st.session_state["administracion_med_db"].append(
@@ -182,8 +234,8 @@ def _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, n
             "paciente": paciente_sel,
             "med": nombre_med,
             "fecha": fecha_hoy,
-            "hora": ahora().strftime("%H:%M"),
-            "horario_programado": hora_sel,
+            "hora": hora_str,
+            "horario_programado": horario_programado_slot,
             "estado": estado_sel,
             "motivo": justificacion.strip() if "No realizada" in estado_sel else "",
             "firma": _nombre_usuario(user),
@@ -196,16 +248,26 @@ def _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, n
         "Registro de administracion",
         user.get("nombre", ""),
         user.get("matricula", ""),
-        f"{nombre_med} | Horario: {hora_sel} | Estado: {estado_sel}",
+        f"{nombre_med} | Programada: {slot} | Hora registro: {hora_str} | Estado: {estado_sel}",
     )
     guardar_datos()
     return True
 
 
-def _guardar_administracion_medicacion(paciente_sel, mi_empresa, user, nombre_med, fecha_hoy, horario_sel, estado_sel):
-    """Registro rápido desde grilla 24 h o tabla cortina (sin justificación obligatoria para Realizada)."""
+def _guardar_administracion_medicacion(
+    paciente_sel, mi_empresa, user, nombre_med, fecha_hoy, horario_sel, estado_sel, *, hora_real_admin=None
+):
+    """Registro rápido desde grilla 24 h o atajos (sin justificación obligatoria para Realizada)."""
     return _registrar_administracion_dosis(
-        paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, horario_sel, estado_sel, ""
+        paciente_sel,
+        mi_empresa,
+        user,
+        fecha_hoy,
+        nombre_med,
+        horario_sel,
+        estado_sel,
+        "",
+        hora_real_admin=hora_real_admin,
     )
 
 
@@ -340,6 +402,52 @@ def _tabla_guardia_detallada(plan_dia_df):
     )
 
 
+def _html_cortina_resumen_visual(plan_dia_df):
+    """Vista completa del turno: colores verde / rojo / ámbar y trazabilidad."""
+    chunks = ['<div class="mc-cortina-panel"><p class="mc-cortina-intro">Vista del turno — programada vs hora registrada, estado y quién cargó.</p><div class="mc-cortina-resumen">']
+    for _, r in plan_dia_df.iterrows():
+        estado = str(r.get("Estado", "") or "")
+        row_cls = "mc-cortina-row mc-cortina-row--pend"
+        badge = '<span class="mc-cortina-badge mc-cortina-badge--pend">Pendiente</span>'
+        if estado == "Realizada":
+            row_cls = "mc-cortina-row mc-cortina-row--ok"
+            badge = '<span class="mc-cortina-badge mc-cortina-badge--ok">Realizada</span>'
+        elif "No realizada" in estado or "Suspendida" in estado:
+            row_cls = "mc-cortina-row mc-cortina-row--no"
+            badge = '<span class="mc-cortina-badge mc-cortina-badge--no">No realizada</span>'
+        hp = escape(str(r.get("Hora programada", "") or "—"))
+        hr = escape(str(r.get("Hora realizada", "") or "—"))
+        med = escape(str(r.get("Medicamento", "") or "—"))
+        via = escape(str(r.get("Via", "") or ""))
+        freq = escape(str(r.get("Frecuencia", "") or ""))
+        det = escape(str(r.get("Detalle / velocidad", "") or "").strip() or "—")
+        obs = str(r.get("Observacion", "") or "").strip()
+        obs_e = escape(obs) if obs else ""
+        firma = escape(str(r.get("Registrado por", "") or ""))
+        meta_vf = " · ".join(x for x in [via, freq] if x) or "S/D"
+        obs_html = f'<div class="mc-cortina-obs"><span class="mc-cortina-obs-lbl">Justif. / obs.</span> {obs_e}</div>' if obs_e else ""
+        firma_html = f'<div class="mc-cortina-firma">Registró: <b>{firma}</b></div>' if firma else '<div class="mc-cortina-firma mc-cortina-firma--empty">Sin firma aún</div>'
+        chunks.append(
+            f'<div class="{row_cls}">'
+            f'<div class="mc-cortina-row-top">{badge}'
+            f'<span class="mc-cortina-med">{med}</span></div>'
+            f'<div class="mc-cortina-times">Programada <b>{hp}</b> · Hora registro <b>{hr}</b></div>'
+            f'<div class="mc-cortina-meta">{escape(meta_vf)}</div>'
+            f'<div class="mc-cortina-detalle">{det}</div>'
+            f"{obs_html}{firma_html}</div>"
+        )
+    chunks.append("</div></div>")
+    return "".join(chunks)
+
+
+def _default_hora_real_cortina(hp_raw):
+    hp = str(hp_raw or "").strip()
+    if hp.lower() == "a demanda" or not hp:
+        return ahora().strftime("%H:%M")
+    norm = _parse_hora_hhmm(hp)
+    return norm if norm else hp
+
+
 def _render_bloque_cortina_medicacion(
     plan_dia_df,
     columnas_tabla,
@@ -350,120 +458,145 @@ def _render_bloque_cortina_medicacion(
     puede_registrar_dosis,
 ):
     """
-    Cortina: referencia del turno (ya realizadas) + tabla de tildes para pendientes.
-    Va arriba del flujo para que no quede oculta al final de la página.
+    Cortina: vista completa del turno (colores) + registro con hora libre y no realizada con justificación.
     """
-    if not puede_registrar_dosis or plan_dia_df.empty:
+    if plan_dia_df.empty:
         return
 
-    pendientes_base = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
+    def _fila_pendiente_cortina(estado) -> bool:
+        return str(estado or "").strip().lower() == "pendiente"
+
+    pendientes_base = plan_dia_df[plan_dia_df["Estado"].map(_fila_pendiente_cortina)].copy().reset_index(drop=True)
     n_pend = len(pendientes_base)
-    n_ok = int((plan_dia_df["Estado"] == "Realizada").sum())
+    n_ok = int((plan_dia_df["Estado"].astype(str).str.strip() == "Realizada").sum())
 
     if n_pend:
         st.info(
-            f"**Cortina de medicación:** desplegá el panel **«Cortina de medicación»** justo abajo para ver "
-            f"**{n_ok}** realizada(s) hoy (hora real / quién registró) y tildar **{n_pend}** pendiente(s).",
+            f"**Cortina de medicación:** abrí el panel para ver **toda** la planilla del día (verde/rojo), "
+            f"**{n_ok}** realizada(s) y registrar **{n_pend}** pendiente(s) con **hora real libre**.",
             icon="📋",
         )
     else:
         st.success(
-            "Todas las dosis de la sábana de hoy figuran como **Realizada**. "
-            "Podés abrir la cortina igualmente para revisar la referencia del turno.",
+            "No quedan filas **pendientes** en la planilla de hoy (puede haber realizadas o no realizadas). "
+            "Abrí la cortina para ver la trazabilidad completa del turno.",
             icon="✅",
         )
 
     with st.expander(
-        "**Cortina de medicación** · Turno anterior, hora real y tildes (tablet / PC)",
+        "**Cortina de medicación** · Vista completa, hora libre y estados (tablet / PC)",
         expanded=False,
     ):
-        st.caption(
-            "Acá se ve **qué ya registró otro profesional** (hora real, nombre) y podés **marcar con tilde** lo que administrás ahora. "
-            "Si no se puede dar la medicación (estudio, procedimiento, intolerancia…), usá **Registro manual** más abajo → *No realizada* con justificación."
-        )
-        realizadas_hoy = plan_dia_df[plan_dia_df["Estado"] == "Realizada"].copy()
-        if not realizadas_hoy.empty:
-            st.markdown("##### Ya registradas hoy (referencia de turno)")
-            _cols_ref = [
-                c
-                for c in [
-                    "Hora programada",
-                    "Hora realizada",
-                    "Medicamento",
-                    "Via",
-                    "Frecuencia",
-                    "Registrado por",
-                    "Observacion",
-                ]
-                if c in realizadas_hoy.columns
-            ]
-            _h_ref = min(280, 56 + len(realizadas_hoy) * 26)
-            mostrar_dataframe_con_scroll(realizadas_hoy[_cols_ref], height=_h_ref)
-        else:
-            st.info("Todavía no hay dosis marcadas como **Realizada** hoy.")
+        st.markdown(_html_cortina_resumen_visual(plan_dia_df), unsafe_allow_html=True)
 
-        if pendientes_base.empty:
-            st.caption("No hay filas pendientes para tildar en esta vista.")
+        st.caption(
+            "**Verde** = realizada · **Rojo** = no realizada (con justificación) · **Ámbar** = pendiente. "
+            "La **hora registro** puede diferir de la programada (paciente ausente, procedimiento, tolerancia, etc.)."
+        )
+
+        if not puede_registrar_dosis:
+            st.warning("Solo lectura: tu rol no puede registrar administración desde acá.")
             return
 
-        st.markdown("##### Pendientes — tilde solo si administró esta dosis ahora")
+        if pendientes_base.empty:
+            st.caption("No hay filas pendientes para registrar en esta vista.")
+            return
+
+        st.markdown("##### Registrar pendientes — elegí acción, hora real y justificación si aplica")
         pendientes_df = pendientes_base.copy()
-        pendientes_df.insert(0, "Administrada", False)
-        _cols_pend = [c for c in columnas_tabla if c in pendientes_df.columns]
-        editor_columnas = ["Administrada"] + _cols_pend
+        pendientes_df["Accion"] = "(sin cambio)"
+        pendientes_df["Hora_real"] = pendientes_df["Hora programada"].map(_default_hora_real_cortina)
+        pendientes_df["Justificacion"] = ""
+
+        _cols_ref = [c for c in columnas_tabla if c in pendientes_df.columns]
+        editor_columnas = _cols_ref + ["Accion", "Hora_real", "Justificacion"]
+        disabled_cols = [c for c in editor_columnas if c not in ("Accion", "Hora_real", "Justificacion")]
+
         editor_df = st.data_editor(
             pendientes_df[editor_columnas],
             hide_index=True,
             width="stretch",
-            disabled=[col for col in editor_columnas if col != "Administrada"],
+            disabled=disabled_cols,
             column_config={
-                "Administrada": st.column_config.CheckboxColumn(
-                    "Administrada ahora",
-                    help="Solo si efectivamente administró esta dosis. Si no se pudo dar: Registro manual → No realizada.",
-                    default=False,
-                )
+                "Accion": st.column_config.SelectboxColumn(
+                    "Acción",
+                    help="Realizada: se dio la dosis (hora real editable). No realizada: obligatorio justificar.",
+                    options=["(sin cambio)", "Realizada", "No realizada"],
+                    required=True,
+                ),
+                "Hora_real": st.column_config.TextColumn(
+                    "Hora real (HH:MM)",
+                    help="Hora en que administraste o dejaste constancia. No tiene que coincidir con la programada.",
+                    max_chars=8,
+                ),
+                "Justificacion": st.column_config.TextColumn(
+                    "Justificación (si no realizada)",
+                    max_chars=400,
+                ),
             },
             key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
         )
 
         if st.button(
-            "Guardar tildes de la cortina",
+            "Guardar registros de la cortina",
             width="stretch",
             key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}",
         ):
             registros_guardados = 0
+            errores = []
             for _idx, fila in editor_df.iterrows():
-                if not bool(fila.get("Administrada")):
+                accion = str(fila.get("Accion", "")).strip()
+                if accion in ("(sin cambio)", ""):
                     continue
-                horario_sel = str(fila.get("Hora programada", "") or "").strip()
+                slot = str(fila.get("Hora programada", "") or "").strip()
                 nombre_med = str(fila.get("Medicamento", "") or "").strip()
                 if not nombre_med:
+                    errores.append("Fila sin medicamento.")
                     continue
-                _guardar_administracion_medicacion(
-                    paciente_sel,
-                    mi_empresa,
-                    user,
-                    nombre_med,
-                    fecha_hoy,
-                    horario_sel,
-                    "Realizada",
-                )
-                registrar_auditoria_legal(
-                    "Medicacion",
-                    paciente_sel,
-                    "Registro de administración desde tabla cortina de medicación",
-                    user.get("nombre", ""),
-                    user.get("matricula", ""),
-                    f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
-                )
-                registros_guardados += 1
+                hora_txt = str(fila.get("Hora_real", "") or "").strip()
+                justif = str(fila.get("Justificacion", "") or "").strip()
+
+                if accion == "No realizada" and not justif:
+                    errores.append(f"{nombre_med} ({slot}): falta justificación para no realizada.")
+                    continue
+
+                if accion == "Realizada":
+                    ok = _registrar_administracion_dosis(
+                        paciente_sel,
+                        mi_empresa,
+                        user,
+                        fecha_hoy,
+                        nombre_med,
+                        slot,
+                        "Realizada",
+                        "",
+                        hora_real_admin=hora_txt or None,
+                    )
+                else:
+                    ok = _registrar_administracion_dosis(
+                        paciente_sel,
+                        mi_empresa,
+                        user,
+                        fecha_hoy,
+                        nombre_med,
+                        slot,
+                        "No realizada / Suspendida",
+                        justif,
+                        hora_real_admin=hora_txt or None,
+                    )
+                if ok:
+                    registros_guardados += 1
+
+            for e in errores[:6]:
+                st.error(e)
+            if len(errores) > 6:
+                st.error(f"... y {len(errores) - 6} error(es) más.")
 
             if registros_guardados:
-                guardar_datos()
-                st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina de medicación.")
+                st.success(f"Se guardaron {registros_guardados} registro(s) desde la cortina.")
                 st.rerun()
-            else:
-                st.info("Tildá al menos una dosis pendiente, o usá registro manual si fue no realizada.")
+            elif not errores:
+                st.info("Elegí **Realizada** o **No realizada** en al menos una fila, completá hora real y guardá.")
 
 
 def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis):
@@ -1060,11 +1193,11 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 - **Hora programada:** cuándo corresponde la dosis según la indicación.
 - **Hora real** y **Registrado por:** cuándo se dio en la práctica y qué profesional lo cargó (turno anterior o el mismo día). Así se ve si ya está **tildada** (realizada) o sigue pendiente.
 
-**Cuándo usar la cortina (tabla para tildar)**
+**Cuándo usar la cortina (tabla con hora libre)**
 
-- Está **arriba de las tarjetas**: mensaje azul **«Cortina de medicación»** y el panel desplegable con el mismo nombre.
-- Para marcar rápido **lo que usted acaba de administrar** en tablet o PC.
-- La tabla de pendientes no reemplaza la lectura de la **tabla de medicación** ni las tarjetas: ahí se ve el detalle completo.
+- Está **arriba de las tarjetas**: panel **«Cortina de medicación»** con vista en **verde / rojo / ámbar** y **quién registró**.
+- Podés elegir **hora real (HH:MM)** distinta de la programada (paciente ausente, procedimiento, etc.) y marcar **No realizada** con **justificación** en la misma tabla.
+- La cortina no reemplaza la **tabla de medicación** ni las tarjetas: ahí sigue el detalle completo.
 
 **Si el paciente no está en el horario** (estudio, traslado, procedimiento externo, etc.)
 
@@ -1440,6 +1573,11 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         index=idx_hora if opciones_hora else 0,
                     )
                     estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
+                    hora_real_manual = st.text_input(
+                        "Hora real de administración o constancia (HH:MM, opcional)",
+                        placeholder="Vacío = hora actual del servidor",
+                        help="Si la dosis se dio u omitió en otro momento, registrá la hora real aquí.",
+                    )
                     justificacion = st.text_input(
                         "Justificación clínica (obligatoria si no realizada: motivo, procedimiento, intolerancia, etc.)"
                     )
@@ -1454,6 +1592,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             hora_sel,
                             estado_sel,
                             justificacion,
+                            hora_real_admin=hora_real_manual.strip() or None,
                         ):
                             st.success(f"Registro guardado para el horario {hora_sel}.")
                             st.rerun()
