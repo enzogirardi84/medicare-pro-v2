@@ -433,6 +433,88 @@ def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         st.sidebar.caption("Sin diagnósticos cargados.")
 
 
+def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
+    st.markdown(
+        """
+        <div class="mc-sidebar-section">
+            <div class="mc-sidebar-kicker">Pacientes</div>
+            <div class="mc-sidebar-title">Buscador y seleccion</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    buscar = st.text_input("Buscar Paciente", placeholder="Nombre, DNI o palabra clave", key="mc_buscar_paciente")
+    ver_altas = st.checkbox("Mostrar Pacientes de Alta", key="mc_ver_altas") if es_control_total(rol) else False
+
+    p_f = obtener_pacientes_visibles(
+        st.session_state,
+        mi_empresa,
+        rol,
+        incluir_altas=ver_altas,
+        busqueda=buscar,
+    )
+    limite_pacientes = valor_por_modo_liviano(limite_pacientes_sidebar(), 36, st.session_state)
+    if not buscar and len(p_f) > limite_pacientes:
+        st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
+        p_f = p_f[:limite_pacientes]
+
+    if not p_f and buscar:
+        st.caption("No hay pacientes que coincidan con la busqueda.")
+    elif p_f:
+        st.caption(f"{len(p_f)} paciente(s) visibles")
+
+    paciente_actual = st.session_state.get("paciente_actual")
+    opciones_ids = [item[0] for item in p_f]
+    index_actual = opciones_ids.index(paciente_actual) if paciente_actual in opciones_ids else 0
+    paciente_sel_tuple = (
+        st.selectbox(
+            "Seleccionar Paciente",
+            p_f,
+            index=index_actual,
+            format_func=lambda x: x[1],
+            key="paciente_actual_select",
+        )
+        if p_f
+        else None
+    )
+    paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
+    if paciente_sel:
+        st.session_state["paciente_actual"] = paciente_sel
+        det_sidebar = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+        st.markdown(_sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
+
+    if paciente_sel:
+        alertas = obtener_alertas_clinicas(st.session_state, paciente_sel)
+        if alertas:
+            colores = {
+                "critica": ("#7f1d1d", "#fecaca", "#ef4444"),
+                "alta": ("#78350f", "#fde68a", "#f59e0b"),
+                "media": ("#172554", "#bfdbfe", "#38bdf8"),
+            }
+            bloques = []
+            for alerta in alertas:
+                fondo, texto, borde = colores.get(alerta["nivel"], colores["media"])
+                bloques.append(
+                    f"<div class='mc-sidebar-alert-card' style='background:{fondo}; border-color:{borde};'>"
+                    f"<div class='mc-sidebar-alert-title' style='color:{texto};'>{escape(alerta['titulo'])}</div>"
+                    f"<div class='mc-sidebar-alert-body' style='color:{texto};'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
+                    "</div>"
+                )
+            st.markdown(
+                "<div class='mc-sidebar-alert-shell' style='max-height:360px; overflow-y:auto; padding-right:4px;'>"
+                "<div class='mc-sidebar-title'>Alertas clinicas</div>"
+                + "".join(bloques)
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+    return paciente_sel
+
+
+_fragment_api = getattr(st, "fragment", None)
+if callable(_fragment_api):
+    _render_sidebar_pacientes_y_alertas = _fragment_api(_render_sidebar_pacientes_y_alertas)
+
+
 def render_module_nav(menu, vista_actual):
     if not menu:
         return None
@@ -733,79 +815,7 @@ with st.sidebar:
     st.divider()
 
     menu = resolve_menu_for_role(rol, user)
-    st.markdown(
-        """
-        <div class="mc-sidebar-section">
-            <div class="mc-sidebar-kicker">Pacientes</div>
-            <div class="mc-sidebar-title">Buscador y seleccion</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    buscar = st.text_input("Buscar Paciente", placeholder="Nombre, DNI o palabra clave")
-    ver_altas = st.checkbox("Mostrar Pacientes de Alta") if es_control_total(rol) else False
-
-    p_f = obtener_pacientes_visibles(
-        st.session_state,
-        mi_empresa,
-        rol,
-        incluir_altas=ver_altas,
-        busqueda=buscar,
-    )
-    limite_pacientes = valor_por_modo_liviano(limite_pacientes_sidebar(), 36, st.session_state)
-    if not buscar and len(p_f) > limite_pacientes:
-        st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
-        p_f = p_f[:limite_pacientes]
-
-    if not p_f and buscar:
-        st.caption("No hay pacientes que coincidan con la busqueda.")
-    elif p_f:
-        st.caption(f"{len(p_f)} paciente(s) visibles")
-
-    paciente_actual = st.session_state.get("paciente_actual")
-    opciones_ids = [item[0] for item in p_f]
-    index_actual = opciones_ids.index(paciente_actual) if paciente_actual in opciones_ids else 0
-    paciente_sel_tuple = (
-        st.selectbox(
-            "Seleccionar Paciente",
-            p_f,
-            index=index_actual,
-            format_func=lambda x: x[1],
-            key="paciente_actual_select",
-        )
-        if p_f
-        else None
-    )
-    paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
-    if paciente_sel:
-        st.session_state["paciente_actual"] = paciente_sel
-        det_sidebar = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-        st.markdown(_sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
-
-    if paciente_sel:
-        alertas = obtener_alertas_clinicas(st.session_state, paciente_sel)
-        if alertas:
-            colores = {
-                "critica": ("#7f1d1d", "#fecaca", "#ef4444"),
-                "alta": ("#78350f", "#fde68a", "#f59e0b"),
-                "media": ("#172554", "#bfdbfe", "#38bdf8"),
-            }
-            bloques = []
-            for alerta in alertas:
-                fondo, texto, borde = colores.get(alerta["nivel"], colores["media"])
-                bloques.append(
-                    f"<div class='mc-sidebar-alert-card' style='background:{fondo}; border-color:{borde};'>"
-                    f"<div class='mc-sidebar-alert-title' style='color:{texto};'>{escape(alerta['titulo'])}</div>"
-                    f"<div class='mc-sidebar-alert-body' style='color:{texto};'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
-                    "</div>"
-                )
-            st.markdown(
-                "<div class='mc-sidebar-alert-shell' style='max-height:360px; overflow-y:auto; padding-right:4px;'>"
-                "<div class='mc-sidebar-title'>Alertas clinicas</div>"
-                + "".join(bloques)
-                + "</div>",
-                unsafe_allow_html=True,
-            )
+    paciente_sel = _render_sidebar_pacientes_y_alertas(mi_empresa, rol)
 
     render_sidebar_bloque_app_paciente(mi_empresa, rol)
 
