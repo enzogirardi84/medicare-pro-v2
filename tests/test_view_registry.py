@@ -1,5 +1,5 @@
 from core.module_catalog import ALERTAS_APP_PACIENTE_MODULO
-from core.view_registry import VIEW_CONFIG_BASE, build_view_maps
+from core.view_registry import VIEW_CONFIG_BASE, VIEW_NAV_LABELS_BASE, build_view_maps
 from core.view_roles import MODULO_ROLES_PERMITIDOS
 
 
@@ -19,3 +19,13 @@ def test_view_config_base_incluye_balance_y_visitas():
 
 def test_modulo_roles_permitidos_alineado_a_view_registry():
     assert set(MODULO_ROLES_PERMITIDOS) == set(VIEW_CONFIG_BASE)
+
+
+def test_etiquetas_navegacion_cubren_mismo_conjunto_que_vistas():
+    assert set(VIEW_NAV_LABELS_BASE) == set(VIEW_CONFIG_BASE)
+
+
+def test_build_view_maps_mantiene_paridad_config_y_etiquetas():
+    for alertas in (True, False):
+        vc, vn = build_view_maps(alertas_app_visible=alertas)
+        assert set(vc) == set(vn)
