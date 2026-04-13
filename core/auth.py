@@ -1,4 +1,5 @@
 import time
+from urllib.parse import unquote
 
 import streamlit as st
 
@@ -41,6 +42,11 @@ from core.email_2fa import (
     usuario_email_2fa_valido,
     verificar_codigo_ingresado,
 )
+from core.password_reset_email import (
+    crear_token_restablecimiento,
+    enviar_correo_restablecimiento,
+    verificar_token_restablecimiento,
+)
 from core.utils import (
     DEFAULT_ADMIN_USER,
     ahora,
@@ -58,33 +64,48 @@ MSG_LOGIN_CREDENCIALES_FALLIDAS = (
     "No pudimos validar el acceso. Revisá **usuario** y **contraseña** "
     "(no el PIN de 4 dígitos ni el DNI, salvo que esa sea la clave que te asignaron). "
     "En **multiclínica**, el nombre de **Empresa / Clínica** debe coincidir con Mi equipo. "
-    "Si olvidaste la clave, usá «Olvidé mi contraseña» con tu PIN."
+    "Si olvidaste la clave, usá «Olvidé mi contraseña» (correo con enlace seguro si está configurado SMTP)."
 )
 MSG_RECOVER_DATOS_INVALIDOS = (
-    "No pudimos validar los datos. Revisá usuario, empresa y correo registrado, e intentá de nuevo."
+    "No pudimos validar los datos. Revisá usuario y empresa tal como figuran en Mi equipo e intentá de nuevo."
 )
-
 _SESSION_LOGIN_FLASH = "_mc_auth_login_flash"
 _SESSION_RECOVER_FLASH = "_mc_auth_recover_flash"
 
 
 def _auth_set_flash(key: str, kind: str, message: str) -> None:
-    st.session_state[key] = (kind, message)
+    return None
 
 
 def _auth_pop_flash(key: str) -> None:
-    item = st.session_state.pop(key, None)
-    if not item:
+    return None
+
+
+def _obtener_pwreset_desde_query() -> str:
+    qp = getattr(st, "query_params", None)
+    if qp is None:
+        return ""
+    try:
+        raw = qp.get("pwreset")
+        if raw is None:
+            return ""
+        if isinstance(raw, list):
+            s = str(raw[0] or "").strip()
+        else:
+            s = str(raw).strip()
+        return unquote(s) if s else ""
+    except Exception:
+        return ""
+
+
+def _auth_strip_pwreset_query_param() -> None:
+    qp = getattr(st, "query_params", None)
+    if qp is None:
         return
-    kind, message = item
-    if kind == "warning":
-        st.warning(message)
-    elif kind == "error":
-        st.error(message)
-    elif kind == "info":
-        st.info(message)
-    elif kind == "success":
-        st.success(message)
+    try:
+        qp.pop("pwreset", None)
+    except Exception:
+        pass
 
 
 def _auth_strip_modulo_query_param() -> None:
@@ -255,16 +276,31 @@ def render_login():
     # Evita pantalla en blanco si quedó logeado=True sin usuario (sesión vieja o estado corrupto).
     if st.session_state["logeado"] and not st.session_state.get("u_actual"):
         st.session_state["logeado"] = False
+    if not st.session_state["logeado"] and _render_bloque_verificacion_email_2fa():
+        st.stop()
 
     if not st.session_state["logeado"]:
         _auth_strip_modulo_query_param()
-        limpiar_desafio_email_2fa()
-        _, col, _ = st.columns([1, 1.5, 1])
+        _, col, _ = st.columns([0.9, 1.35, 0.9])
         with col:
-            st.markdown("<br><h2 style='text-align:center; color:#3b82f6;'>MediCare Enterprise PRO V9.12</h2>", unsafe_allow_html=True)
+            st.markdown(
+                "<div style='text-align:center;margin-bottom:0.35rem'>"
+                "<span style='font-size:0.72rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;"
+                "color:#2dd4bf'>Plataforma clínica</span></div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "<h2 style='text-align:center;margin:0 0 0.15rem;font-size:1.55rem;font-weight:800;"
+                "letter-spacing:-0.03em;background:linear-gradient(120deg,#5eead4,#60a5fa,#a5b4fc);"
+                "-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent'>"
+                "MediCare Enterprise PRO</h2>"
+                "<p style='text-align:center;margin:0 0 1rem;font-size:0.88rem;color:#94a3b8'>V9.12 · Acceso institucional</p>",
+                unsafe_allow_html=True,
+            )
             st.caption(
-                "Ingresa con el usuario (login) y contrasena que te asigno tu clinica. "
-                "Si la clinica fue suspendida por abono o decision administrativa, el sistema bloquea el acceso hasta la reactivacion: contacta a MediCare o a tu coordinador."
+                "Ingresá con el usuario (login) y contraseña que te asignó tu clínica. "
+                "Si la clínica fue suspendida por abono o decisión administrativa, el acceso queda bloqueado hasta la reactivación: "
+                "contactá a MediCare o a tu coordinador."
             )
             with st.expander("Problemas para ingresar o fallas del sistema", expanded=False):
                 st.markdown(
@@ -276,20 +312,20 @@ def render_login():
                 )
             modo_auth = st.radio(
                 "Acceso",
-                ["Iniciar sesion", "Olvide mi contrasena"],
-                horizontal=False,
+                ["Iniciar sesión", "Olvidé mi contraseña"],
+                horizontal=True,
                 label_visibility="collapsed",
             )
 
-            if modo_auth == "Iniciar sesion":
+            if modo_auth == "Iniciar sesión":
                 st.session_state.pop(_SESSION_RECOVER_FLASH, None)
                 _sec_tip = texto_ayuda_proteccion()
                 if _sec_tip:
                     st.caption(_sec_tip)
                 st.caption(
-                    "En este paso usás **usuario + contraseña**. El **PIN** de 4 dígitos solo se usa en "
-                    "«Olvidé mi contraseña» para definir una clave nueva. La contraseña no es el DNI salvo que "
-                    "tu clínica te haya configurado la cuenta así."
+                    "En este paso usás **usuario + contraseña**. Para una clave nueva usá **Olvidé mi contraseña**: "
+                    "te enviamos un **correo** con enlace seguro (requiere SMTP y correo cargado en Mi equipo). "
+                    "La contraseña no es el DNI salvo que tu clínica te haya configurado la cuenta así."
                 )
                 with st.form("login", clear_on_submit=True):
                     if modo_shard_activo():
@@ -304,17 +340,14 @@ def render_login():
                         empresa_login = ""
                     u = st.text_input("Usuario")
                     p = st.text_input(
-                        "Contrasena",
+                        "Contraseña",
                         type="password",
                         help="Clave de acceso asignada o definida por tu clínica; no el PIN de 4 dígitos ni el DNI, salvo que esa sea tu clave.",
                     )
-                    if st.form_submit_button("Ingresar al Sistema", use_container_width=True):
+                    if st.form_submit_button("Ingresar al sistema", use_container_width=True):
                         if not u.strip() or not p.strip():
-                            _auth_set_flash(
-                                _SESSION_LOGIN_FLASH,
-                                "warning",
-                                "Ingresá usuario y contraseña.",
-                            )
+                            st.warning("Ingresá usuario y contraseña.")
+                            st.stop()
                         else:
                             u_limpio_pre = u.strip().lower()
                             ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
@@ -444,33 +477,46 @@ def render_login():
                                         else:
                                             registrar_fallo_login(u_limpio)
                                             st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
-                _auth_pop_flash(_SESSION_LOGIN_FLASH)
             else:
                 st.session_state.pop(_SESSION_LOGIN_FLASH, None)
                 _rec_tip = texto_ayuda_proteccion()
                 if _rec_tip:
                     st.caption(_rec_tip)
-                with st.form("recover", clear_on_submit=True):
-                    st.info(
-                        f"Si olvidaste la contrasena, puedes recuperarla con el correo registrado en tu cuenta. "
-                        f"Largo mínimo de clave: {password_min_length()} caracteres."
+                _qtok = _obtener_pwreset_desde_query()
+                if _qtok and len(_qtok) > 24:
+                    st.session_state.setdefault("mc_pwreset_token", _qtok)
+
+                st.markdown(
+                    f"**Recuperación por correo** · Contraseña nueva: mínimo **{password_min_length()}** caracteres."
+                )
+                if not smtp_config_ok():
+                    st.warning(
+                        "El envío de correo no está configurado (SMTP en secretos). "
+                        "Pedí a quien administra el servidor que defina SMTP_HOST, SMTP_PASSWORD y SMTP_FROM; "
+                        "hasta entonces la recuperación automática no puede enviarse."
                     )
-                    rec_u = st.text_input("Usuario (Login)")
-                    rec_emp = st.text_input("Empresa / Clinica asignada")
-                    rec_email = st.text_input("Correo registrado")
-                    rec_pass = st.text_input("Nueva Contrasena", type="password")
-                    if st.form_submit_button("Cambiar Contrasena", use_container_width=True):
+                else:
+                    st.caption(
+                        "Te enviamos un mensaje con enlace seguro y token de respaldo. "
+                        "Definí **APP_PUBLIC_URL** en secretos (URL pública de esta app, ej. https://tu-app.streamlit.app) "
+                        "para que el botón del correo abra la app directamente."
+                    )
+                    _2fa_txt = texto_ayuda_email_2fa_config()
+                    if _2fa_txt:
+                        st.caption(_2fa_txt)
+
+                st.divider()
+                st.markdown("##### 1 · Solicitar correo")
+                with st.form("recover_send_email", clear_on_submit=False):
+                    rec_u = st.text_input("Usuario (login)")
+                    rec_emp = st.text_input("Empresa / clínica asignada")
+                    if st.form_submit_button("Enviar instrucciones a mi correo", use_container_width=True):
                         if not rec_u.strip():
-                            _auth_set_flash(
-                                _SESSION_RECOVER_FLASH,
-                                "warning",
-                                "Ingresá tu usuario (login).",
-                            )
-                        elif not str(rec_email).strip() or not str(rec_pass).strip():
-                            _auth_set_flash(
-                                _SESSION_RECOVER_FLASH,
-                                "warning",
-                                "Completá correo registrado y nueva contraseña.",
+                            st.warning("Ingresá tu usuario (login).")
+                            st.stop()
+                        elif not smtp_config_ok():
+                            st.error(
+                                "No hay servidor de correo configurado. Contactá al administrador del sistema."
                             )
                         else:
                             u_limpio = rec_u.strip().lower()
@@ -490,49 +536,140 @@ def render_login():
                                     asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
                                     sincronizar_clinicas_desde_datos(st.session_state)
                                     usuario_encontrado = _buscar_usuario_por_login(u_limpio)
-                                    if usuario_encontrado:
+                                    if not usuario_encontrado:
+                                        registrar_fallo_login(u_limpio)
+                                        st.error(MSG_RECOVER_DATOS_INVALIDOS)
+                                    else:
                                         user_data = normalizar_usuario_sistema(
                                             dict(st.session_state["usuarios_db"][usuario_encontrado])
                                         )
                                         st.session_state["usuarios_db"][usuario_encontrado] = user_data
                                         rec_emp_l = rec_emp.strip().lower()
-                                        empresa_coincide = str(user_data.get("empresa", "")).strip().lower() == rec_emp_l
+                                        empresa_coincide = (
+                                            str(user_data.get("empresa", "")).strip().lower() == rec_emp_l
+                                        )
                                         if modo_shard_activo() and sesion_usa_monolito_legacy():
                                             empresa_ok = (not rec_emp.strip()) or empresa_coincide
                                         else:
                                             empresa_ok = empresa_coincide
-                                        if empresa_ok:
+                                        if not empresa_ok:
+                                            registrar_fallo_login(u_limpio)
+                                            st.error(MSG_RECOVER_DATOS_INVALIDOS)
+                                        elif user_data.get("estado", "Activo") == "Bloqueado":
+                                            registrar_fallo_login(u_limpio)
+                                            st.error(
+                                                "Tu usuario está bloqueado. Contactá al coordinador para reactivar el acceso."
+                                            )
+                                        else:
                                             email_actual = obtener_email_usuario(user_data)
-                                            email_ingresado = str(rec_email or "").strip().lower()
-                                            if not email_actual:
+                                            if not email_actual or not str(email_actual).strip():
                                                 registrar_fallo_login(u_limpio)
                                                 st.error(
-                                                    "Ese usuario no tiene correo registrado. Debe cargarlo un coordinador desde Mi Equipo."
+                                                    "Tu cuenta no tiene correo registrado. "
+                                                    "Un coordinador debe cargarlo en **Mi equipo**."
                                                 )
-                                            elif email_actual == email_ingresado:
-                                                _msg_pw = mensaje_password_no_cumple_politica(rec_pass)
-                                                if not _msg_pw:
+                                            else:
+                                                token, _exp = crear_token_restablecimiento(
+                                                    usuario_encontrado,
+                                                    u_limpio,
+                                                    str(user_data.get("empresa", "") or ""),
+                                                )
+                                                nombre_m = str(
+                                                    user_data.get("nombre") or usuario_encontrado
+                                                )
+                                                ok_mail, err_mail = enviar_correo_restablecimiento(
+                                                    str(email_actual).strip(),
+                                                    nombre_m,
+                                                    token,
+                                                )
+                                                if ok_mail:
+                                                    st.success(
+                                                        "Listo. Revisá tu correo (y la carpeta de spam) en los próximos minutos."
+                                                    )
+                                                else:
+                                                    st.error(err_mail or "No se pudo enviar el correo.")
+
+                st.divider()
+                st.markdown("##### 2 · Definir nueva contraseña")
+                st.caption("Abrí el enlace del correo o pegá el token aquí, elegí una clave nueva y guardá.")
+                with st.form("recover_set_password", clear_on_submit=True):
+                    rec_tok = st.text_input(
+                        "Token de recuperación (o pegá el enlace completo y borrá lo demás)",
+                        key="mc_pwreset_token",
+                    )
+                    rec_pass_a = st.text_input("Nueva contraseña", type="password")
+                    rec_pass_b = st.text_input("Repetir nueva contraseña", type="password")
+                    if st.form_submit_button("Guardar nueva contraseña", use_container_width=True):
+                        tok_raw = (rec_tok or "").strip()
+                        if "pwreset=" in tok_raw:
+                            try:
+                                tok_raw = unquote(
+                                    tok_raw.split("pwreset=", 1)[-1].split("&")[0].split("#")[0]
+                                )
+                            except Exception:
+                                pass
+                        if not tok_raw:
+                            st.warning("Pegá el token del correo o usá el enlace que te enviamos.")
+                            st.stop()
+                        elif not rec_pass_a.strip() or not rec_pass_b.strip():
+                            st.warning("Completá la nueva contraseña en ambos campos.")
+                            st.stop()
+                        elif rec_pass_a.strip() != rec_pass_b.strip():
+                            st.error("Las contraseñas no coinciden.")
+                        else:
+                            ok_t, err_t, info = verificar_token_restablecimiento(tok_raw)
+                            if not ok_t or not info:
+                                st.error(err_t or "Token inválido.")
+                            else:
+                                uk = info["uk"]
+                                u_limpio = info["u_limpio"]
+                                emp_tok = info.get("empresa", "")
+                                ok_rec2, lock_rec2 = puede_intentar_login(u_limpio)
+                                if not ok_rec2:
+                                    st.error(lock_rec2)
+                                else:
+                                    db_f2, err_rec2 = _cargar_db_recover(emp_tok, u_limpio)
+                                    if err_rec2:
+                                        st.error(err_rec2)
+                                    elif db_f2 is None:
+                                        st.error("No se pudieron cargar los datos.")
+                                    else:
+                                        for k, v in db_f2.items():
+                                            st.session_state[k] = v
+                                        completar_claves_db_session()
+                                        asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
+                                        sincronizar_clinicas_desde_datos(st.session_state)
+                                        if uk not in st.session_state.get("usuarios_db", {}):
+                                            st.error(
+                                                "El token ya no coincide con la base actual. Solicitá un correo nuevo."
+                                            )
+                                        else:
+                                            user_data2 = normalizar_usuario_sistema(
+                                                dict(st.session_state["usuarios_db"][uk])
+                                            )
+                                            st.session_state["usuarios_db"][uk] = user_data2
+                                            if user_data2.get("estado", "Activo") == "Bloqueado":
+                                                st.error(
+                                                    "Tu usuario está bloqueado. No se puede cambiar la contraseña hasta reactivar la cuenta."
+                                                )
+                                            else:
+                                                _msg_pw = mensaje_password_no_cumple_politica(rec_pass_a)
+                                                if _msg_pw:
+                                                    st.error(_msg_pw)
+                                                else:
                                                     limpiar_fallos_login(u_limpio)
                                                     establecer_password_nuevo(
-                                                        st.session_state["usuarios_db"][usuario_encontrado],
-                                                        rec_pass,
+                                                        st.session_state["usuarios_db"][uk],
+                                                        rec_pass_a.strip(),
                                                         rounds=bcrypt_rounds_config(),
                                                     )
                                                     guardar_datos()
-                                                    log_event("auth", "password_reset_via_email_ok")
-                                                    st.success("Contrasena actualizada.")
-                                                else:
-                                                    registrar_fallo_login(u_limpio)
-                                                    st.error(_msg_pw)
-                                            else:
-                                                registrar_fallo_login(u_limpio)
-                                                st.error(MSG_RECOVER_DATOS_INVALIDOS)
-                                        else:
-                                            registrar_fallo_login(u_limpio)
-                                            st.error(MSG_RECOVER_DATOS_INVALIDOS)
-                                    else:
-                                        registrar_fallo_login(u_limpio)
-                                        st.error(MSG_RECOVER_DATOS_INVALIDOS)
+                                                    log_event("auth", "password_reset_via_email_token_ok")
+                                                    _auth_strip_pwreset_query_param()
+                                                    st.session_state.pop("mc_pwreset_token", None)
+                                                    st.success(
+                                                        "Contraseña actualizada. Ya podés iniciar sesión con la clave nueva."
+                                                    )
                 _auth_pop_flash(_SESSION_RECOVER_FLASH)
         st.stop()
 

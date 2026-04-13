@@ -122,6 +122,11 @@ def _cuerpo_html_codigo(codigo: str, linea_extra: str = "") -> str:
     )
 
 
+def enviar_correo_smtp(destino: str, asunto: str, cuerpo_texto: str, cuerpo_html: str | None = None) -> tuple[bool, str]:
+    """Envío genérico por SMTP (2FA, recuperación de contraseña, avisos)."""
+    return _enviar_correo(destino, asunto, cuerpo_texto, cuerpo_html)
+
+
 def _enviar_correo(destino: str, asunto: str, cuerpo_texto: str, cuerpo_html: str | None = None) -> tuple[bool, str]:
     host, port, user, pwd, from_addr, use_tls = _smtp_settings()
     context = ssl.create_default_context()
@@ -162,7 +167,7 @@ def iniciar_desafio_login(destino_email: str, usuario_key: str, u_limpio: str) -
         f"Vence en {CODE_TTL_SEC // 60} minutos.\n"
         "Si no intentaste ingresar al sistema, ignorá este mensaje."
     )
-    ok, err = _enviar_correo(
+    ok, err = enviar_correo_smtp(
         destino_email.strip(),
         "Código de acceso — MediCare",
         txt,
@@ -203,7 +208,7 @@ def reenviar_codigo_login() -> tuple[bool, str]:
     exp = now + CODE_TTL_SEC
     d = _digest(codigo, str(p.get("u_limpio") or ""), exp)
     txt_r = f"Tu nuevo código: {codigo}\n\nVence en {CODE_TTL_SEC // 60} minutos."
-    ok, err = _enviar_correo(
+    ok, err = enviar_correo_smtp(
         em,
         "Código de acceso — MediCare",
         txt_r,
