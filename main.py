@@ -116,7 +116,7 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
-APP_BUILD_TAG = "Build 2026-04-13 publicidad_restaurada + changelog"
+APP_BUILD_TAG = "Build 2026-04-13 landing_refinada + changelog"
 
 st.set_page_config(page_title="MediCare Enterprise PRO V9.12", layout="wide", initial_sidebar_state="collapsed")
 
@@ -446,19 +446,32 @@ if not st.session_state.entered_app:
             html, body, .stApp { overflow-x: hidden !important; }
             .block-container { padding-top: 0rem !important; padding-bottom: 0rem !important; max-width: 100% !important; margin-top: 0 !important; overflow: visible !important; }
             .stApp { background-color: #04070d !important; background-image: radial-gradient(circle at top right, rgba(20,184,166,0.1) 0%, #04070d 75%) !important; }
-            div.stButton { display: flex; justify-content: center; margin-top: 26px; padding-bottom: 50px; }
+            div.stButton { display: flex; justify-content: center; margin-top: 18px; padding-bottom: 42px; }
             div.stButton > button {
-                background: linear-gradient(135deg, #0d9488 0%, #2563eb 100%) !important;
-                color: white !important; font-size: 1.2rem !important; font-weight: 900 !important;
-                padding: 16px 55px !important; border-radius: 9999px !important;
-                border: 1px solid rgba(255,255,255,0.28) !important;
-                box-shadow: 0 10px 30px rgba(14, 165, 233, 0.45) !important;
-                transition: all 0.3s ease !important; text-transform: uppercase; letter-spacing: 2px;
+                min-height: 60px !important;
+                min-width: 320px !important;
+                padding: 0 34px !important;
+                border-radius: 9999px !important;
+                border: 1px solid rgba(186, 230, 253, 0.24) !important;
+                background:
+                    linear-gradient(135deg, rgba(18, 184, 166, 0.98) 0%, rgba(37, 99, 235, 0.98) 58%, rgba(56, 189, 248, 0.96) 100%) !important;
+                color: white !important;
+                font-size: 1rem !important;
+                font-weight: 900 !important;
+                text-transform: uppercase;
+                letter-spacing: 0.18em;
+                box-shadow:
+                    0 18px 42px rgba(14, 165, 233, 0.22),
+                    0 0 0 1px rgba(255,255,255,0.06) inset !important;
+                transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease !important;
+                backdrop-filter: blur(12px);
             }
             div.stButton > button:hover {
-                transform: translateY(-4px) !important;
-                box-shadow: 0 15px 40px rgba(99, 102, 241, 0.65) !important;
-                background: linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%) !important;
+                transform: translateY(-3px) scale(1.01) !important;
+                filter: brightness(1.04) !important;
+                box-shadow:
+                    0 24px 54px rgba(56, 189, 248, 0.28),
+                    0 0 0 1px rgba(255,255,255,0.09) inset !important;
             }
         </style>
         """,
