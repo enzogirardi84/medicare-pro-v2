@@ -1,5 +1,7 @@
 # MediCare Enterprise PRO
 
+[![Pytest](https://github.com/enzogirardi84/medicare-pro-v2/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/enzogirardi84/medicare-pro-v2/actions/workflows/pytest.yml)
+
 Sistema de gestion clinica y domiciliaria en Streamlit.
 
 ## Modulos principales
