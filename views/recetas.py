@@ -612,48 +612,108 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
         expanded = idx < 2 and fila.get("Estado") != "Realizada"
 
         with st.expander(titulo, expanded=expanded):
+            estado_card = str(fila.get("Estado", "") or "").strip()
+            estado_l = estado_card.lower()
+            if estado_card == "Realizada":
+                st.markdown(
+                    '<span class="mc-cortina-badge mc-cortina-badge--ok">Realizada</span>',
+                    unsafe_allow_html=True,
+                )
+            elif "no realizada" in estado_l or "suspendida" in estado_l:
+                st.markdown(
+                    '<span class="mc-cortina-badge mc-cortina-badge--no">No realizada</span>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<span class="mc-cortina-badge mc-cortina-badge--pend">Pendiente</span>',
+                    unsafe_allow_html=True,
+                )
+
             st.caption(
-                "Compará **hora programada** con **hora real**: si ya hay registro, es la referencia del turno que administró o cargó la dosis."
+                "Compará **hora programada** con **hora real**. Podés registrar con **hora libre** si el paciente no estaba, hubo procedimiento o cambió el esquema."
             )
             st.markdown(
                 f"**Vía / Frecuencia:** {_texto_corto(fila.get('Via', 'S/D'), max_len=22)} | {_texto_corto(fila.get('Frecuencia', 'S/D'), max_len=28)}"
             )
-            st.markdown(f"**Estado:** {fila.get('Estado', 'Pendiente')}")
             st.markdown(
                 f"**Detalle:** {_texto_corto(fila.get('Detalle / velocidad', ''), fallback='Sin detalle operativo', max_len=120)}"
             )
             st.markdown(
-                f"**Hora real de administración:** {_texto_corto(fila.get('Hora realizada', ''), fallback='Sin registro aún', max_len=24)}"
+                f"**Hora real en sistema:** {_texto_corto(fila.get('Hora realizada', ''), fallback='Sin registro aún', max_len=24)}"
             )
             observacion = str(fila.get("Observacion", "") or "").strip()
             if observacion:
-                st.markdown(f"**Observación:** {_texto_corto(observacion, fallback='Sin observación', max_len=90)}")
+                st.markdown(f"**Justificación / obs.:** {_texto_corto(observacion, fallback='Sin observación', max_len=120)}")
             registrado_por = str(fila.get("Registrado por", "") or "").strip()
             if registrado_por:
                 st.markdown(f"**Registró:** {_texto_corto(registrado_por, fallback='Sin firma', max_len=40)}")
 
             if puede_registrar_dosis:
-                if fila.get("Estado") == "Realizada":
+                if estado_card == "Realizada":
                     st.success("Esta administración ya figura como realizada (revisá hora real y quién registró arriba).")
+                elif "no realizada" in estado_l or "suspendida" in estado_l:
+                    st.info(
+                        "Esta dosis figura como **no realizada** con su justificación. "
+                        "Para corregir o reintentar, usá **Registro manual** más abajo o coordinación según protocolo."
+                    )
                 else:
-                    if st.button(
-                        "Tildar administración realizada",
-                        key=f"rx_tildar_{idx}_{hora_programada.replace(':', '')}",
-                        width="stretch",
-                        type="primary",
-                    ):
-                        if _registrar_administracion_dosis(
-                            paciente_sel,
-                            mi_empresa,
-                            user,
-                            fecha_hoy,
-                            fila.get("Medicamento", ""),
-                            fila.get("Hora programada", "A demanda"),
-                            "Realizada",
-                            "",
-                        ):
-                            st.success(f"Administración registrada para {fila.get('Medicamento', 'la indicación')}.")
-                            st.rerun()
+                    _fk = f"rx_card_{paciente_sel}_{idx}_{str(fecha_hoy).replace('/', '-')}"
+                    with st.form(_fk):
+                        st.markdown("**Registrar desde la ficha**")
+                        _def_hr = _default_hora_real_cortina(fila.get("Hora programada"))
+                        hora_real_c = st.text_input(
+                            "Hora real (HH:MM)",
+                            value=_def_hr,
+                            help="No tiene que coincidir con la hora programada.",
+                        )
+                        accion_c = st.radio(
+                            "Acción",
+                            ["Realizada", "No realizada / Suspendida"],
+                            horizontal=True,
+                        )
+                        justif_c = st.text_input(
+                            "Justificación (obligatoria si no realizada)",
+                            placeholder="Procedimiento, intolerancia, paciente ausente…",
+                        )
+                        enviar = st.form_submit_button(
+                            "Guardar registro de esta medicación", width="stretch", type="primary"
+                        )
+                        if enviar:
+                            nombre_med_c = str(fila.get("Medicamento", "") or "").strip()
+                            slot_c = str(fila.get("Hora programada", "") or "").strip() or "A demanda"
+                            if not nombre_med_c:
+                                st.error("Falta el nombre de la medicación en la ficha.")
+                            elif accion_c.startswith("No realizada") and not str(justif_c or "").strip():
+                                st.error("Es obligatoria la justificación si marcás no realizada.")
+                            elif accion_c.startswith("No realizada"):
+                                if _registrar_administracion_dosis(
+                                    paciente_sel,
+                                    mi_empresa,
+                                    user,
+                                    fecha_hoy,
+                                    nombre_med_c,
+                                    slot_c,
+                                    "No realizada / Suspendida",
+                                    justif_c,
+                                    hora_real_admin=str(hora_real_c or "").strip() or None,
+                                ):
+                                    st.success("Registro guardado.")
+                                    st.rerun()
+                            else:
+                                if _registrar_administracion_dosis(
+                                    paciente_sel,
+                                    mi_empresa,
+                                    user,
+                                    fecha_hoy,
+                                    nombre_med_c,
+                                    slot_c,
+                                    "Realizada",
+                                    "",
+                                    hora_real_admin=str(hora_real_c or "").strip() or None,
+                                ):
+                                    st.success(f"Administración registrada: {nombre_med_c}.")
+                                    st.rerun()
 
 
 def _construir_texto_indicacion(
@@ -1327,7 +1387,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         c_res1, c_res2, c_res3 = st.columns(3)
         c_res1.metric("Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
-        c_res2.metric("No realizadas", int((plan_dia_df.get("Estado") == "No realizada").sum()) if not plan_dia_df.empty else 0)
+        c_res2.metric(
+            "No realizadas",
+            int(plan_dia_df["Estado"].astype(str).str.contains("No realizada", case=False, na=False).sum())
+            if not plan_dia_df.empty
+            else 0,
+        )
         c_res3.metric("Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
 
         vista_guardia = st.radio(
@@ -1350,7 +1415,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         if vista_guardia == "Compacta para celular":
             st.caption(
-                "Vista liviana para teléfonos viejos: lectura por tarjeta, menos columnas y acción rápida dentro de cada medicación."
+                "Vista liviana para teléfonos viejos: cada tarjeta permite **hora real libre** y **no realizada** con justificación, además de la cortina arriba."
             )
             _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis)
             with st.expander("Ver tabla corta de apoyo"):
@@ -1451,14 +1516,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 fecha_hoy,
                                 horario_sel,
                                 "Realizada",
-                            )
-                            registrar_auditoria_legal(
-                                "Medicacion",
-                                paciente_sel,
-                                "Registro de administración desde sábana 24 h",
-                                user.get("nombre", ""),
-                                user.get("matricula", ""),
-                                f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
                             )
                             registros_guardados += 1
 
