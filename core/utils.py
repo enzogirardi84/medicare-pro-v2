@@ -50,6 +50,30 @@ DEFAULT_ADMIN_USER = {
     "pin": "1234",
 }
 
+# Logins que pueden usar la clave de DEFAULT_ADMIN_USER["pass"] si el hash en base no coincide (recuperación).
+EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin", "enzogirardi"})
+
+
+def logins_clave_default_superadmin() -> frozenset[str]:
+    """
+    Usernames normalizados (minúsculas) admitidos para login de emergencia con DEFAULT_ADMIN_USER['pass'].
+    Incluye siempre admin y enzogirardi; opcional en secrets: SUPERADMIN_EMERGENCY_LOGINS_EXTRA (lista TOML o CSV).
+    """
+    s = set(EMERGENCY_SUPERADMIN_LOGINS)
+    try:
+        raw = st.secrets.get("SUPERADMIN_EMERGENCY_LOGINS_EXTRA", None)
+    except Exception:
+        return frozenset(s)
+    if raw is None:
+        return frozenset(s)
+    if isinstance(raw, (list, tuple)):
+        s.update(str(x).strip().lower() for x in raw if str(x).strip())
+    else:
+        txt = str(raw).replace(";", ",")
+        s.update(x.strip().lower() for x in txt.split(",") if x.strip())
+    return frozenset(s)
+
+
 ACTION_ROLE_RULES = {
     "recetas_prescribir": ["Medico"],
     "recetas_cargar_papel": ["Operativo", "Enfermeria", "Medico"],

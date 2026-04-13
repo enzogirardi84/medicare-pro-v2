@@ -57,7 +57,14 @@ def login_usa_monolito_legacy(login_normalizado: str) -> bool:
         return False
     if s == "admin":
         return True
-    return s in logins_monolito_allowlist()
+    if s in logins_monolito_allowlist():
+        return True
+    try:
+        from core.utils import EMERGENCY_SUPERADMIN_LOGINS
+
+        return s in EMERGENCY_SUPERADMIN_LOGINS
+    except Exception:
+        return False
 
 
 def tenant_key_normalizado(empresa: str) -> str:
