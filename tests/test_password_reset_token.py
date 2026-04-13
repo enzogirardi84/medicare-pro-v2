@@ -78,3 +78,21 @@ def test_correo_confirmacion_password_usa_diseno_profesional(_smtp_ok, mock_send
     assert "actualizada" in asunto.lower()
     assert "Ana Perez" in html
     assert "MediCare" in html
+
+
+@patch("core.password_reset_email.log_event")
+@patch("core.password_reset_email.enviar_correo_smtp", return_value=(True, ""))
+@patch("core.password_reset_email.smtp_config_ok", return_value=True)
+def test_correo_confirmacion_con_pin_actualizado(_smtp_ok, mock_send, _log_event):
+    from core.password_reset_email import enviar_correo_confirmacion_cambio_password
+
+    ok, err = enviar_correo_confirmacion_cambio_password(
+        "usuario@ejemplo.com", "Ana Perez", pin_actualizado=True
+    )
+
+    assert ok is True
+    assert err == ""
+    asunto = mock_send.call_args.args[1]
+    html = mock_send.call_args.args[3]
+    assert "pin" in asunto.lower()
+    assert "PIN" in html

@@ -77,15 +77,15 @@ def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> 
                 "<div class='mc-mi-equipo-pin-ok' role='status'>"
                 "<span class='mc-mi-equipo-pin-label'>PIN recuperación</span> "
                 f"<code class='mc-mi-equipo-pin-code'>{escape(pin)}</code>"
-                "<span class='mc-mi-equipo-pin-hint'> Pantalla de acceso → «Olvidé mi contraseña» (usuario, empresa, PIN).</span>"
+                "<span class='mc-mi-equipo-pin-hint'> Opcional (procesos internos). Recuperación por cuenta propia: correo + SMTP en «Olvidé mi contraseña».</span>"
                 "</div>",
                 unsafe_allow_html=True,
             )
         elif not pin:
             st.markdown(
                 "<div class='mc-mi-equipo-pin-warn' role='alert'>"
-                "<strong>Sin PIN de recuperación.</strong> No puede usar «Olvidé mi contraseña» hasta definir 4 dígitos "
-                "(alta o edición en ficha).</div>",
+                "<strong>Sin PIN.</strong> Opcional. Para recuperar solo: <strong>correo</strong> en ficha y servidor SMTP; "
+                "el usuario usa «Olvidé mi contraseña» en el login.</div>",
                 unsafe_allow_html=True,
             )
         else:
@@ -150,8 +150,8 @@ def _mi_equipo_bloque_principal(
     if ok_gestionar:
         with st.expander("Coordinación: nueva contraseña y/o PIN", expanded=False):
             st.caption(
-                "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos "
-                "para que el usuario use «Olvidé mi contraseña» por su cuenta."
+                "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos (opcional, respaldo interno). "
+                "La recuperación por el usuario es por **correo** («Olvidé mi contraseña») si hay SMTP."
             )
             ch_pin = st.text_input(
                 "PIN de recuperación (4 dígitos, opcional)",
@@ -491,7 +491,10 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                     ),
                 )
                 st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
-                st.caption("El ingreso normal es con login + contrasena. El correo sirve para recuperar la clave y el PIN queda opcional como respaldo.")
+                st.caption(
+                    "Ingreso con login + contraseña. **Recuperación:** correo en ficha + SMTP → el usuario pide "
+                    "«Olvidé mi contraseña» y recibe un enlace. PIN opcional para uso interno de la clínica."
+                )
                 u_email = st.text_input(
                     "Correo de recuperacion",
                     placeholder="profesional@clinica.com",
@@ -543,7 +546,8 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     with st.expander("Ayuda: PIN, coordinación y bajas", expanded=False):
         st.markdown(
             "**PIN y clave:** quien puede gestionar ve el PIN en un recuadro compacto y los expanders "
-            "**Coordinación** / **Recuperación**. El PIN solo se usa en el login, opción «Olvidé mi contraseña».\n\n"
+            "**Coordinación** / **Recuperación**. «Olvidé mi contraseña» envía **correo con enlace** (SMTP); "
+            "en el mismo paso de la app podés **cambiar contraseña y PIN** (PIN opcional).\n\n"
             "**Suspender / Eliminar:** solo **SuperAdmin** o **Coordinador** de la clínica (según reglas). "
             "Otros roles no ven esas acciones en la grilla."
         )

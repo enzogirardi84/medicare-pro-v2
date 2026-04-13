@@ -107,6 +107,14 @@ def html_password_reset_body(
             "y pegá el token de abajo.</p>"
         )
 
+    enlace_plano = ""
+    if url_reset:
+        enlace_plano = (
+            "<p style='margin:14px 0 0;font-size:11px;color:#64748b;line-height:1.55;word-break:break-all'>"
+            "Si el botón no responde, copiá este enlace en el navegador:<br>"
+            f'<a href="{url_e}" style="color:#5eead4;text-decoration:underline">{url_e}</a></p>'
+        )
+
     bloque_token = (
         f"<p style='margin:18px 0 8px;color:#64748b;font-size:13px;font-weight:600'>"
         "Token (pegar en la app, paso 2)</p>"
@@ -120,33 +128,21 @@ def html_password_reset_body(
         "<ol style='margin:12px 0 0;padding-left:20px;color:#94a3b8;font-size:13px;line-height:1.65'>"
         "<li style='margin-bottom:6px'>Hacé clic en el botón o copiá el token.</li>"
         "<li style='margin-bottom:6px'>En la pantalla de acceso, abrí <strong style='color:#cbd5e1'>Olvidé mi contraseña</strong>.</li>"
-        "<li>Elegí una contraseña nueva y guardá.</li>"
+        "<li>Elegí una contraseña nueva y guardá. Opcional: en el mismo paso podés definir un <strong style='color:#cbd5e1'>PIN de recuperación</strong> de 4 dígitos.</li>"
         "</ol>"
     )
 
     return (
         f"<p style='margin:0 0 14px;font-size:15px;line-height:1.65;color:#cbd5e1'>"
         f"Hola <strong style='color:#f8fafc'>{nombre_e}</strong>, recibimos una solicitud para definir una "
-        f"<strong style='color:#e2e8f0'>nueva contraseña</strong>. Tu clave actual <strong>no cambia</strong> "
+        f"<strong style='color:#e2e8f0'>nueva contraseña</strong> (y, si lo deseás, un <strong style='color:#e2e8f0'>PIN</strong> de 4 dígitos). "
+        f"Tu clave actual <strong>no cambia</strong> "
         f"hasta que completes el proceso en la app.</p>"
         f"<p style='margin:0 0 4px;font-size:13px;color:#94a3b8'>El enlace y el token vencen en "
         f"<strong style='color:#e2e8f0'>{min_e} minutos</strong>.</p>"
         f"<div style='text-align:center'>{boton}</div>"
+        f"{enlace_plano}"
         f"{bloque_token}{pasos}"
-    )
-
-
-def build_email_2fa_html(codigo: str, ttl_minutes: int, linea_extra: str = "") -> str:
-    """Documento HTML completo para el correo de código 2FA al iniciar sesión."""
-    return medicare_email_document(
-        page_title="Código de acceso MediCare",
-        preheader_plain=f"Tu código MediCare es {codigo}. Vence en {ttl_minutes} minutos.",
-        heading_plain="Verificación en dos pasos",
-        alert_plain=(
-            "No compartas este código. Nadie de MediCare ni de tu institución debería pedírtelo por teléfono, "
-            "WhatsApp u otro canal."
-        ),
-        body_inner_html=html_2fa_code_body(codigo, ttl_minutes, linea_extra),
     )
 
 
@@ -182,8 +178,22 @@ def html_2fa_code_body(codigo: str, ttl_minutes: int, linea_extra: str = "") -> 
     )
 
 
-def html_password_changed_body(nombre: str, url_app: str) -> str:
-    """Fragmento para correo de confirmación tras cambio de contraseña."""
+def build_email_2fa_html(codigo: str, ttl_minutes: int, linea_extra: str = "") -> str:
+    """Documento HTML completo para el correo de código 2FA al iniciar sesión."""
+    return medicare_email_document(
+        page_title="Código de acceso MediCare",
+        preheader_plain=f"Tu código MediCare es {codigo}. Vence en {ttl_minutes} minutos.",
+        heading_plain="Verificación en dos pasos",
+        alert_plain=(
+            "No compartas este código. Nadie de MediCare ni de tu institución debería pedírtelo por teléfono, "
+            "WhatsApp u otro canal."
+        ),
+        body_inner_html=html_2fa_code_body(codigo, ttl_minutes, linea_extra),
+    )
+
+
+def html_password_changed_body(nombre: str, url_app: str, *, pin_actualizado: bool = False) -> str:
+    """Fragmento para correo de confirmación tras cambio de contraseña (y opcionalmente PIN)."""
     nombre_e = escape(nombre or "usuario")
     url_e = escape(url_app) if url_app else ""
 
@@ -201,10 +211,19 @@ def html_password_changed_body(nombre: str, url_app: str) -> str:
             "Volvé a la pantalla de acceso de MediCare e ingresá con tu <strong style='color:#e2e8f0'>nueva contraseña</strong>.</p>"
         )
 
+    linea_pin = ""
+    if pin_actualizado:
+        linea_pin = (
+            "<p style='margin:0 0 14px;font-size:13px;color:#94a3b8'>"
+            "También quedó actualizado tu <strong style='color:#e2e8f0'>PIN de recuperación</strong> (4 dígitos). "
+            "No lo compartas por correo ni mensajes.</p>"
+        )
+
     return (
         f"<p style='margin:0 0 14px;font-size:15px;line-height:1.65;color:#cbd5e1'>"
         f"Hola <strong style='color:#f8fafc'>{nombre_e}</strong>, te confirmamos que la "
         f"<strong style='color:#e2e8f0'>contraseña de tu cuenta se actualizó correctamente</strong>.</p>"
+        f"{linea_pin}"
         f"<p style='margin:0 0 14px;font-size:13px;color:#94a3b8'>"
         "Desde ahora debés usar la clave nueva para ingresar.</p>"
         f"<div style='text-align:center'>{boton}</div>"

@@ -570,6 +570,16 @@ hr {
     letter-spacing: -0.03em;
 }
 
+.mc-module-shell-sub {
+    margin: 0.35rem 0 0 !important;
+    max-width: 42rem;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    line-height: 1.45 !important;
+    color: #94a3b8 !important;
+    letter-spacing: 0 !important;
+}
+
 [data-testid="stPills"] {
     width: 100% !important;
 }
@@ -1838,4 +1848,11 @@ html.mc-equipo-liviano iframe {
     font-size: 0.95rem !important;
     line-height: 1.5 !important;
     color: var(--text-muted) !important;
+}
+
+/* Pantalla de acceso (login / olvidé contraseña): selector principal centrado */
+[data-testid="stVerticalBlock"] [data-testid="stRadio"] [role="radiogroup"] {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.75rem 1.25rem !important;
 }

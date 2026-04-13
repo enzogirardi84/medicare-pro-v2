@@ -127,6 +127,15 @@ def mensaje_password_no_cumple_politica(plain: str) -> Optional[str]:
     return None
 
 
+def texto_ayuda_politica_password_breve() -> str:
+    """Texto corto para UI (login / recuperación) según secrets."""
+    mn = password_min_length()
+    partes = [f"al menos {mn} caracteres"]
+    if password_exigir_letra_y_numero():
+        partes.append("una letra y un número")
+    return "La contraseña debe tener " + " y ".join(partes) + "."
+
+
 def establecer_password_nuevo(user_dict: dict, plain: str, rounds: int = 12) -> None:
     """Recuperación de contraseña u alta: solo hash si bcrypt está disponible."""
     if hashing_disponible():

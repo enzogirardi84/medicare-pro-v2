@@ -27,6 +27,7 @@ from core.password_crypto import (
     mensaje_password_no_cumple_politica,
     password_min_length,
     password_usuario_coincide,
+    texto_ayuda_politica_password_breve,
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
@@ -34,6 +35,7 @@ from core.email_2fa import (
     iniciar_desafio_login,
     limpiar_desafio_email_2fa,
     login_email_2fa_enabled,
+    mascarar_email_privado,
     reenviar_codigo_login,
     requiere_2fa_correo,
     smtp_config_ok,
@@ -499,11 +501,13 @@ def render_login():
                 token_precargado = bool(str(st.session_state.get("mc_pwreset_token", "")).strip())
 
                 st.markdown(
-                    f"**Recuperación por correo** · Contraseña nueva: mínimo **{password_min_length()}** caracteres."
+                    f"**Recuperación por correo** · Contraseña nueva: mínimo **{password_min_length()}** caracteres. "
+                    "Opcional: **PIN** de 4 dígitos en el mismo paso."
                 )
                 if st.session_state.pop("_mc_pwreset_link_detected", False):
                     st.success(
-                        "Detectamos el enlace de recuperación del correo. Ya podés definir la nueva contraseña."
+                        "Detectamos el enlace de recuperación del correo. Ya podés definir la nueva contraseña "
+                        "(y el PIN opcional) en el paso 2."
                     )
                 if not smtp_config_ok():
                     st.warning(
@@ -520,6 +524,14 @@ def render_login():
                     _2fa_txt = texto_ayuda_email_2fa_config()
                     if _2fa_txt:
                         st.caption(_2fa_txt)
+
+                with st.expander("¿No llega el correo o el enlace venció?", expanded=False):
+                    st.markdown(
+                        "- Revisá **spam** o **promociones**.\n"
+                        "- Tu coordinador debe tener cargado tu correo en **Mi equipo**.\n"
+                        "- Enlaces y tokens **caducan**: pedí uno nuevo con **Enviar instrucciones** y usá el último mensaje.\n"
+                        "- Si abrís el enlace en otro dispositivo, podés **copiar el token** del correo y pegarlo en el paso 2."
+                    )
 
                 st.divider()
                 st.markdown("##### 1 · Solicitar correo")
@@ -593,26 +605,33 @@ def render_login():
                                                 nombre_m = str(
                                                     user_data.get("nombre") or usuario_encontrado
                                                 )
-                                                ok_mail, err_mail = enviar_correo_restablecimiento(
-                                                    str(email_actual).strip(),
-                                                    nombre_m,
-                                                    token,
-                                                )
+                                                with st.spinner("Enviando correo…"):
+                                                    ok_mail, err_mail = enviar_correo_restablecimiento(
+                                                        str(email_actual).strip(),
+                                                        nombre_m,
+                                                        token,
+                                                    )
                                                 if ok_mail:
+                                                    em_m = mascarar_email_privado(str(email_actual).strip())
                                                     st.success(
-                                                        "Listo. Revisá tu correo (y la carpeta de spam) en los próximos minutos."
+                                                        f"Listo. Revisá **{em_m}** (y la carpeta de spam) en los próximos minutos."
                                                     )
                                                 else:
                                                     st.error(err_mail or "No se pudo enviar el correo.")
 
                 st.divider()
                 st.markdown("##### 2 · Definir nueva contraseña")
+                st.caption(texto_ayuda_politica_password_breve())
                 if token_precargado:
                     st.caption(
-                        "Abriste el enlace del correo. El token ya está cargado: solo elegí la nueva contraseña y guardá."
+                        "Abriste el enlace del correo. El token ya está cargado: elegí la nueva contraseña "
+                        "(y, si querés, un PIN nuevo) y guardá."
                     )
                 else:
-                    st.caption("Abrí el enlace del correo o pegá el token aquí, elegí una clave nueva y guardá.")
+                    st.caption(
+                        "Abrí el enlace del correo o pegá el token aquí, elegí una clave nueva "
+                        "(PIN opcional) y guardá."
+                    )
                 with st.form("recover_set_password", clear_on_submit=True):
                     rec_tok = st.text_input(
                         "Token de recuperación (o pegá el enlace completo y borrá lo demás)",
@@ -620,6 +639,17 @@ def render_login():
                     )
                     rec_pass_a = st.text_input("Nueva contraseña", type="password")
                     rec_pass_b = st.text_input("Repetir nueva contraseña", type="password")
+                    rec_pin_a = st.text_input(
+                        "Nuevo PIN de recuperación (4 dígitos, opcional)",
+                        type="password",
+                        max_chars=4,
+                        help="Si lo completás, debe coincidir con el campo de abajo. Dejalo vacío para no cambiar el PIN.",
+                    )
+                    rec_pin_b = st.text_input(
+                        "Repetir PIN (opcional)",
+                        type="password",
+                        max_chars=4,
+                    )
                     if st.form_submit_button("Guardar nueva contraseña", use_container_width=True):
                         tok_raw = extraer_token_restablecimiento_desde_texto(rec_tok)
                         if not tok_raw:
@@ -631,6 +661,16 @@ def render_login():
                         elif rec_pass_a.strip() != rec_pass_b.strip():
                             st.error("Las contraseñas no coinciden.")
                         else:
+                            pin_a = str(rec_pin_a or "").strip()
+                            pin_b = str(rec_pin_b or "").strip()
+                            if pin_a or pin_b:
+                                if pin_a != pin_b:
+                                    st.error("Los PIN no coinciden.")
+                                    st.stop()
+                                if len(pin_a) != 4 or not pin_a.isdigit():
+                                    st.error("El PIN debe ser exactamente 4 dígitos numéricos.")
+                                    st.stop()
+                            pin_nuevo = pin_a if pin_a else None
                             ok_t, err_t, info = verificar_token_restablecimiento(tok_raw)
                             if not ok_t or not info:
                                 st.error(err_t or "Token inválido.")
@@ -671,31 +711,45 @@ def render_login():
                                                 if _msg_pw:
                                                     st.error(_msg_pw)
                                                 else:
-                                                    limpiar_fallos_login(u_limpio)
-                                                    establecer_password_nuevo(
-                                                        st.session_state["usuarios_db"][uk],
-                                                        rec_pass_a.strip(),
-                                                        rounds=bcrypt_rounds_config(),
-                                                    )
-                                                    guardar_datos()
-                                                    log_event("auth", "password_reset_via_email_token_ok")
-                                                    email_confirmacion = obtener_email_usuario(user_data2)
-                                                    if email_confirmacion:
-                                                        ok_ping, _err_ping = (
-                                                            enviar_correo_confirmacion_cambio_password(
-                                                                str(email_confirmacion).strip(),
-                                                                str(user_data2.get("nombre") or uk),
-                                                            )
+                                                    with st.spinner("Guardando tu acceso…"):
+                                                        limpiar_fallos_login(u_limpio)
+                                                        establecer_password_nuevo(
+                                                            st.session_state["usuarios_db"][uk],
+                                                            rec_pass_a.strip(),
+                                                            rounds=bcrypt_rounds_config(),
                                                         )
-                                                        if ok_ping:
-                                                            st.info(
-                                                                "También te enviamos una confirmación de seguridad a tu correo."
+                                                        if pin_nuevo:
+                                                            st.session_state["usuarios_db"][uk]["pin"] = pin_nuevo
+                                                            log_event("auth", "password_reset_pin_via_email_ok")
+                                                        guardar_datos()
+                                                        log_event("auth", "password_reset_via_email_token_ok")
+                                                        email_confirmacion = obtener_email_usuario(user_data2)
+                                                        ok_confirm = False
+                                                        if email_confirmacion:
+                                                            ok_confirm, _err_confirm = (
+                                                                enviar_correo_confirmacion_cambio_password(
+                                                                    str(email_confirmacion).strip(),
+                                                                    str(user_data2.get("nombre") or uk),
+                                                                    pin_actualizado=bool(pin_nuevo),
+                                                                )
                                                             )
-                                                    _auth_strip_pwreset_query_param()
-                                                    st.session_state.pop("mc_pwreset_token", None)
-                                                    st.success(
+                                                        _auth_strip_pwreset_query_param()
+                                                        st.session_state.pop("mc_pwreset_token", None)
+                                                    msg_exito = (
                                                         "Contraseña actualizada. Ya podés iniciar sesión con la clave nueva."
                                                     )
+                                                    if pin_nuevo:
+                                                        msg_exito += " El PIN de recuperación nuevo también quedó guardado."
+                                                    st.success(msg_exito)
+                                                    if email_confirmacion and ok_confirm:
+                                                        st.info(
+                                                            "También te enviamos una confirmación de seguridad a tu correo."
+                                                        )
+                                                    elif email_confirmacion and not ok_confirm:
+                                                        st.caption(
+                                                            "Tu clave se guardó bien, pero no pudimos enviar el correo de confirmación. "
+                                                            "Si tenés dudas, avisá a coordinación."
+                                                        )
                 _auth_pop_flash(_SESSION_RECOVER_FLASH)
         st.stop()
 

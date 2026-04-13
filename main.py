@@ -192,6 +192,68 @@ VIEW_NAV_LABELS = {
     "Auditoria Legal": "\u2696\ufe0f Legal",
 }
 
+# Cada módulo en una sola categoría. Si agregás una entrada en VIEW_CONFIG, sumala acá
+# (si no, el usuario solo la verá con el filtro «Todas las áreas»).
+CATEGORIAS_MODULOS = {
+    "Clínica": [
+        "Visitas y Agenda",
+        "Clinica",
+        "Enfermeria",
+        "Evolucion",
+        "Estudios",
+        "Recetas",
+        "Escalas Clinicas",
+        "Historial",
+        "Pediatria",
+        "Telemedicina",
+    ],
+    "Gestión": [
+        "Dashboard",
+        "Admision",
+        "Inventario",
+        "Materiales",
+        "Cierre Diario",
+        "Caja",
+        "RRHH y Fichajes",
+        "Clinicas (panel global)",
+    ],
+    "Emergencias": [
+        "Emergencias y Ambulancia",
+        "Alertas app paciente",
+        "Asistencia en Vivo",
+        "Red de Profesionales",
+    ],
+    "Legal y documentación": [
+        "PDF",
+        "Auditoria",
+        "Auditoria Legal",
+        "Proyecto y Roadmap",
+        "Mi Equipo",
+        "Balance",
+    ],
+}
+
+CATEGORIAS_ORDEN = list(CATEGORIAS_MODULOS.keys())
+
+_MC_FILTRO_TODAS = "Todas las áreas"
+
+
+def _categorias_con_modulos_en_menu(menu):
+    return [c for c in CATEGORIAS_ORDEN if any(m in menu for m in CATEGORIAS_MODULOS[c])]
+
+
+def _etiqueta_filtro_categoria(nombre):
+    if nombre == _MC_FILTRO_TODAS:
+        return f"\U0001F5C2\ufe0f  {nombre}"
+    prefijos = {
+        "Clínica": "\U0001FA7A",
+        "Gestión": "\U0001F4CA",
+        "Emergencias": "\U0001F691",
+        "Legal y documentación": "\u2696\ufe0f",
+    }
+    return f"{prefijos.get(nombre, '')}  {nombre}".strip()
+
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
     if tab_name not in resolve_menu_for_role(rol, user):
         st.error("No tienes permisos para acceder a este modulo.")
@@ -330,15 +392,47 @@ def render_module_nav(menu, vista_actual):
             <div class="mc-module-shell-head">
                 <span class="mc-module-shell-kicker">Navegacion</span>
                 <h3 class="mc-module-shell-title">Modulos del sistema</h3>
+                <p class="mc-module-shell-sub">Filtrá por área o mostrá todos los módulos habilitados para tu rol.</p>
             </div>
         </section>
         """,
         unsafe_allow_html=True,
     )
+
+    cats_ok = _categorias_con_modulos_en_menu(menu)
+    filtro_opciones = [_MC_FILTRO_TODAS] + cats_ok
+
+    if "mc_nav_filtro_cat" not in st.session_state or st.session_state["mc_nav_filtro_cat"] not in filtro_opciones:
+        st.session_state["mc_nav_filtro_cat"] = _MC_FILTRO_TODAS
+
+    filtro = st.selectbox(
+        "Area del sistema",
+        filtro_opciones,
+        key="mc_nav_filtro_cat",
+        format_func=_etiqueta_filtro_categoria,
+        label_visibility="collapsed",
+    )
+
+    if filtro == _MC_FILTRO_TODAS:
+        pill_options = list(menu)
+        default_sel = vista_actual if vista_actual in pill_options else pill_options[0]
+    else:
+        mods_in_cat = [m for m in CATEGORIAS_MODULOS[filtro] if m in menu]
+        if not mods_in_cat:
+            st.caption("No hay módulos en esta área para tu usuario.")
+            pill_options = list(menu)
+            default_sel = vista_actual if vista_actual in pill_options else pill_options[0]
+        elif vista_actual in mods_in_cat:
+            pill_options = mods_in_cat
+            default_sel = vista_actual
+        else:
+            pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
+            default_sel = vista_actual
+
     selected = st.pills(
         "Modulos del sistema",
-        menu,
-        default=vista_actual,
+        pill_options,
+        default=default_sel,
         selection_mode="single",
         format_func=lambda x: VIEW_NAV_LABELS.get(x, x),
         label_visibility="collapsed",
@@ -397,6 +491,7 @@ def limpiar_sesion_app():
     st.session_state.pop("_mc_onboarding_oculto", None)
     st.session_state.pop("_db_monolito_sesion", None)
     st.session_state.pop("_mc_aviso_payload_grande", None)
+    st.session_state.pop("mc_nav_filtro_cat", None)
     st.session_state["entered_app"] = False
 
 
@@ -440,12 +535,31 @@ if not st.session_state.entered_app:
     st.markdown(
         """
         <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
+            #MainMenu {visibility: hidden !important;}
+            header[data-testid="stHeader"],
+            [data-testid="stHeader"] {display: none !important;}
+            [data-testid="stToolbar"],
+            [data-testid="stDecoration"] {display: none !important;}
+            div[data-testid="stToolbarActions"] {display: none !important;}
+            .stDeployButton,
+            [class*="stDeployButton"] {display: none !important;}
+            footer,
+            footer[data-testid="stFooter"] {visibility: hidden !important; height: 0 !important; min-height: 0 !important; overflow: hidden !important;}
             html, body, .stApp { overflow-x: hidden !important; }
-            .block-container { padding-top: 0rem !important; padding-bottom: 0rem !important; max-width: 100% !important; margin-top: 0 !important; overflow: visible !important; }
-            .stApp { background-color: #04070d !important; background-image: radial-gradient(circle at top right, rgba(20,184,166,0.1) 0%, #04070d 75%) !important; }
+            .block-container {
+                padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+                padding-bottom: 0rem !important;
+                max-width: 100% !important;
+                margin-top: 0 !important;
+                overflow: visible !important;
+            }
+            .stApp {
+                background-color: #03050a !important;
+                background-image:
+                    radial-gradient(ellipse 100% 50% at 50% -15%, rgba(45, 212, 191, 0.08), transparent 50%),
+                    radial-gradient(circle at 92% 8%, rgba(96, 165, 250, 0.1), transparent 40%),
+                    linear-gradient(168deg, #03050a 0%, #060d18 100%) !important;
+            }
             div.stButton { display: flex; justify-content: center; margin-top: 18px; padding-bottom: 42px; }
             div.stButton > button {
                 min-height: 60px !important;

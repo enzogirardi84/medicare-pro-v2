@@ -4,6 +4,7 @@ Segundo factor por correo tras contraseña correcta (opcional).
 Secrets:
 - LOGIN_EMAIL_2FA = true para activar (requiere SMTP y email en el usuario).
 - SMTP_HOST, SMTP_PORT (587 o 465), SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+- SMTP_REPLY_TO (opcional): dirección de respuesta en correos transaccionales.
 - SMTP_USE_TLS = true (STARTTLS en puerto 587); en puerto 465 se usa SSL implícito.
 - EMAIL_2FA_HMAC_SECRET (recomendado): cadena larga para firmar el código; si falta, se usa SMTP_PASSWORD.
 """
@@ -16,12 +17,12 @@ import secrets
 import smtplib
 import ssl
 import time
-import html as html_lib
 from email.message import EmailMessage
 
 import streamlit as st
 
 from core.app_logging import log_event
+from core.email_templates_medicare import build_email_2fa_html
 from core.input_validation import email_formato_aceptable
 
 SESSION_KEY = "_mc_email_2fa"
@@ -102,24 +103,13 @@ def _mascarar_email(e: str) -> str:
     return f"{a[0]}***{a[-1]}@{b}"
 
 
+def mascarar_email_privado(e: str) -> str:
+    """Muestra el correo de forma parcial (pantallas de éxito, sin filtrar el dominio completo)."""
+    return _mascarar_email(e or "")
+
+
 def _generar_codigo() -> str:
     return f"{secrets.randbelow(900000) + 100000:06d}"
-
-
-def _cuerpo_html_codigo(codigo: str, linea_extra: str = "") -> str:
-    c = html_lib.escape(codigo.strip())
-    extra = html_lib.escape(linea_extra) if linea_extra else ""
-    bloque_extra = f"<p style='color:#444'>{extra}</p>" if extra else ""
-    return (
-        "<!DOCTYPE html><html><body style='font-family:system-ui,Segoe UI,sans-serif;background:#f8fafc;padding:24px'>"
-        "<div style='max-width:480px;margin:0 auto;background:#fff;padding:28px;border-radius:12px;"
-        "box-shadow:0 4px 24px rgba(0,0,0,.08)'>"
-        "<p style='margin:0 0 12px;color:#334155'>Código de verificación <strong>MediCare</strong></p>"
-        f"<p style='font-size:30px;letter-spacing:10px;font-weight:700;color:#0f172a;margin:16px 0'>{c}</p>"
-        f"<p style='color:#64748b;font-size:14px'>Vence en {CODE_TTL_SEC // 60} minutos. "
-        "Si no intentaste ingresar, ignorá este mensaje.</p>"
-        f"{bloque_extra}</div></body></html>"
-    )
 
 
 def enviar_correo_smtp(destino: str, asunto: str, cuerpo_texto: str, cuerpo_html: str | None = None) -> tuple[bool, str]:
@@ -135,6 +125,12 @@ def _enviar_correo(destino: str, asunto: str, cuerpo_texto: str, cuerpo_html: st
         msg["Subject"] = asunto
         msg["From"] = from_addr
         msg["To"] = destino.strip()
+        try:
+            reply_to = str(st.secrets.get("SMTP_REPLY_TO", "") or "").strip()
+        except Exception:
+            reply_to = ""
+        if reply_to and email_formato_aceptable(reply_to):
+            msg["Reply-To"] = reply_to
         msg.set_content(cuerpo_texto)
         if cuerpo_html:
             msg.add_alternative(cuerpo_html, subtype="html")
@@ -169,9 +165,9 @@ def iniciar_desafio_login(destino_email: str, usuario_key: str, u_limpio: str) -
     )
     ok, err = enviar_correo_smtp(
         destino_email.strip(),
-        "Código de acceso — MediCare",
+        "Código de acceso — MediCare Enterprise PRO",
         txt,
-        _cuerpo_html_codigo(codigo),
+        build_email_2fa_html(codigo, CODE_TTL_SEC // 60, ""),
     )
     if not ok:
         return False, err
@@ -210,9 +206,9 @@ def reenviar_codigo_login() -> tuple[bool, str]:
     txt_r = f"Tu nuevo código: {codigo}\n\nVence en {CODE_TTL_SEC // 60} minutos."
     ok, err = enviar_correo_smtp(
         em,
-        "Código de acceso — MediCare",
+        "Código de acceso — MediCare Enterprise PRO",
         txt_r,
-        _cuerpo_html_codigo(codigo, "Este reemplaza al código anterior."),
+        build_email_2fa_html(codigo, CODE_TTL_SEC // 60, "Este código reemplaza al anterior."),
     )
     if not ok:
         return False, err

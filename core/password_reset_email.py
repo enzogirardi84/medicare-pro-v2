@@ -6,6 +6,7 @@ Secrets (reutiliza los de 2FA si existen):
 - PASSWORD_RESET_HMAC_SECRET (recomendado) o EMAIL_2FA_HMAC_SECRET o SMTP_PASSWORD
 - APP_PUBLIC_URL = URL pública de la app (ej. https://tu-app.streamlit.app) para el botón del correo.
   Sin esto, el correo igual llega con el token para copiar y pegar en la app.
+- SMTP_REPLY_TO (opcional, ver email_2fa): respuesta a soporte en correos transaccionales.
 
 Opcional: PASSWORD_RESET_TTL_MINUTES (default 60).
 """
@@ -158,20 +159,28 @@ def _html_correo_profesional(nombre: str, url_reset: str, token: str, minutos: i
     mins_s = str(minutos)
     return medicare_email_document(
         page_title="Recuperación MediCare",
-        preheader_plain=f"MediCare: restablecer contraseña (vence en {mins_s} min).",
+        preheader_plain=f"MediCare: restablecer contraseña y PIN opcional (vence en {mins_s} min).",
         heading_plain="Recuperación de acceso",
         alert_plain="Mensaje confidencial. Si no solicitaste un cambio de clave, ignorá este correo.",
         body_inner_html=html_password_reset_body(nombre, url_reset, token, minutos),
     )
 
 
-def _html_confirmacion_password_profesional(nombre: str, url_app: str) -> str:
+def _html_confirmacion_password_profesional(
+    nombre: str, url_app: str, *, pin_actualizado: bool = False
+) -> str:
+    pre = (
+        "MediCare: tu contraseña y PIN se actualizaron correctamente."
+        if pin_actualizado
+        else "MediCare: tu contraseña se actualizó correctamente."
+    )
+    head = "Acceso actualizado" if pin_actualizado else "Contraseña actualizada"
     return medicare_email_document(
         page_title="Contraseña actualizada — MediCare",
-        preheader_plain="MediCare: tu contraseña se actualizó correctamente.",
-        heading_plain="Contraseña actualizada",
+        preheader_plain=pre,
+        heading_plain=head,
         alert_plain="Aviso de seguridad. Si no reconocés este cambio, contactá de inmediato a coordinación o soporte.",
-        body_inner_html=html_password_changed_body(nombre, url_app),
+        body_inner_html=html_password_changed_body(nombre, url_app, pin_actualizado=pin_actualizado),
     )
 
 
@@ -188,7 +197,8 @@ def enviar_correo_restablecimiento(destino: str, nombre_usuario: str, token: str
         "",
         f"Hola {nombre_usuario or 'usuario'},",
         "",
-        "Recibimos una solicitud para definir una nueva contraseña. Tu clave actual no cambia hasta completar el proceso.",
+        "Recibimos una solicitud para definir una nueva contraseña (y, si querés, un PIN de 4 dígitos en el mismo paso).",
+        "Tu clave actual no cambia hasta completar el proceso en la app.",
         "Si no fuiste vos, ignorá este mensaje.",
         f"Enlace y token vencen en {mins} minutos.",
         "",
@@ -227,22 +237,35 @@ def enviar_correo_restablecimiento(destino: str, nombre_usuario: str, token: str
     return ok, err
 
 
-def enviar_correo_confirmacion_cambio_password(destino: str, nombre_usuario: str) -> tuple[bool, str]:
+def enviar_correo_confirmacion_cambio_password(
+    destino: str, nombre_usuario: str, *, pin_actualizado: bool = False
+) -> tuple[bool, str]:
     if not smtp_config_ok():
         return False, "Falta configuración SMTP."
     if not email_formato_aceptable(destino.strip()):
         return False, "Correo de destino inválido."
 
     url_app = _app_public_url()
+    titulo_txt = (
+        "MediCare Enterprise PRO — Contraseña y PIN actualizados"
+        if pin_actualizado
+        else "MediCare Enterprise PRO — Contraseña actualizada"
+    )
     txt_lines = [
-        "MediCare Enterprise PRO — Contraseña actualizada",
+        titulo_txt,
         "",
         f"Hola {nombre_usuario or 'usuario'},",
         "",
         "Tu contraseña se actualizó correctamente.",
-        "A partir de ahora debés ingresar con la clave nueva.",
-        "",
     ]
+    if pin_actualizado:
+        txt_lines.append("También quedó actualizado tu PIN de recuperación (4 dígitos). No lo compartas.")
+    txt_lines.extend(
+        [
+            "A partir de ahora debés ingresar con la clave nueva.",
+            "",
+        ]
+    )
     if url_app:
         txt_lines.append("Abrí MediCare desde este enlace:")
         txt_lines.append(url_app)
@@ -252,10 +275,15 @@ def enviar_correo_confirmacion_cambio_password(destino: str, nombre_usuario: str
     txt_lines.append("— MediCare · mensaje automático, no responder")
     cuerpo_txt = "\n".join(txt_lines)
 
-    html = _html_confirmacion_password_profesional(nombre_usuario, url_app)
+    html = _html_confirmacion_password_profesional(nombre_usuario, url_app, pin_actualizado=pin_actualizado)
+    asunto = (
+        "Contraseña y PIN actualizados — MediCare Enterprise PRO"
+        if pin_actualizado
+        else "Tu contraseña fue actualizada — MediCare Enterprise PRO"
+    )
     ok, err = enviar_correo_smtp(
         destino.strip(),
-        "Tu contraseña fue actualizada — MediCare Enterprise PRO",
+        asunto,
         cuerpo_txt,
         html,
     )

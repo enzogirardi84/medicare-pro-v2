@@ -202,6 +202,65 @@ def _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, n
     return True
 
 
+def _guardar_administracion_medicacion(paciente_sel, mi_empresa, user, nombre_med, fecha_hoy, horario_sel, estado_sel):
+    """Registro rápido desde grilla 24 h o tabla cortina (sin justificación obligatoria para Realizada)."""
+    return _registrar_administracion_dosis(
+        paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, horario_sel, estado_sel, ""
+    )
+
+
+def _construir_matriz_registro_24h(plan_dia_df):
+    """
+    Una fila por dosis planificada del día; columnas 00:00–23:00 y A demanda.
+    True = ya administrada, False = pendiente (tildable), pd.NA = no aplica.
+    """
+    horas_mar = [f"{h:02d}:00" for h in range(24)]
+    if plan_dia_df.empty:
+        return [], horas_mar, {}
+
+    matriz_registro_rows = []
+    matriz_registro_map = {}
+
+    for mat_idx, (_, r) in enumerate(plan_dia_df.iterrows()):
+        med = str(r.get("Medicamento", "") or "").strip()
+        via = str(r.get("Via", "") or "").strip() or "S/D"
+        freq = str(r.get("Frecuencia", "") or "").strip() or "S/D"
+        detalle = str(r.get("Detalle / velocidad", "") or "").strip()
+        hp = str(r.get("Hora programada", "") or "").strip()
+        estado_ok = str(r.get("Estado", "") or "").strip() == "Realizada"
+
+        row_dict = {
+            "Indicacion": med,
+            "Via": via,
+            "Frecuencia": freq,
+            "Detalle": detalle,
+        }
+        for h in horas_mar:
+            row_dict[h] = pd.NA
+        row_dict["A demanda"] = pd.NA
+
+        col = None
+        if hp.lower() == "a demanda":
+            col = "A demanda"
+            row_dict[col] = estado_ok
+        else:
+            partes = hp.split(":")
+            if len(partes) >= 2 and str(partes[0]).strip().isdigit():
+                col = f"{int(str(partes[0]).strip()) % 24:02d}:00"
+                if col in row_dict:
+                    row_dict[col] = estado_ok
+
+        if col:
+            matriz_registro_map[(mat_idx, col)] = {
+                "medicamento": med,
+                "horario_programado": hp if hp.lower() != "a demanda" else "A demanda",
+            }
+
+        matriz_registro_rows.append(row_dict)
+
+    return matriz_registro_rows, horas_mar, matriz_registro_map
+
+
 def _tabla_guardia_operativa(plan_dia_df):
     columnas_base = ["Hora", "Medicacion", "Indicacion", "Estado", "Registro"]
     if plan_dia_df.empty:
@@ -294,29 +353,32 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
         expanded = idx < 2 and fila.get("Estado") != "Realizada"
 
         with st.expander(titulo, expanded=expanded):
+            st.caption(
+                "Compará **hora programada** con **hora real**: si ya hay registro, es la referencia del turno que administró o cargó la dosis."
+            )
             st.markdown(
-                f"**Via / Frecuencia:** {_texto_corto(fila.get('Via', 'S/D'), max_len=22)} | {_texto_corto(fila.get('Frecuencia', 'S/D'), max_len=28)}"
+                f"**Vía / Frecuencia:** {_texto_corto(fila.get('Via', 'S/D'), max_len=22)} | {_texto_corto(fila.get('Frecuencia', 'S/D'), max_len=28)}"
             )
             st.markdown(f"**Estado:** {fila.get('Estado', 'Pendiente')}")
             st.markdown(
                 f"**Detalle:** {_texto_corto(fila.get('Detalle / velocidad', ''), fallback='Sin detalle operativo', max_len=120)}"
             )
             st.markdown(
-                f"**Hora real:** {_texto_corto(fila.get('Hora realizada', ''), fallback='Sin registro', max_len=24)}"
+                f"**Hora real de administración:** {_texto_corto(fila.get('Hora realizada', ''), fallback='Sin registro aún', max_len=24)}"
             )
             observacion = str(fila.get("Observacion", "") or "").strip()
             if observacion:
-                st.markdown(f"**Observacion:** {_texto_corto(observacion, fallback='Sin observacion', max_len=90)}")
+                st.markdown(f"**Observación:** {_texto_corto(observacion, fallback='Sin observación', max_len=90)}")
             registrado_por = str(fila.get("Registrado por", "") or "").strip()
             if registrado_por:
-                st.markdown(f"**Registrado por:** {_texto_corto(registrado_por, fallback='Sin firma', max_len=40)}")
+                st.markdown(f"**Registró:** {_texto_corto(registrado_por, fallback='Sin firma', max_len=40)}")
 
             if puede_registrar_dosis:
                 if fila.get("Estado") == "Realizada":
-                    st.success("Esta administracion ya fue registrada.")
+                    st.success("Esta administración ya figura como realizada (revisá hora real y quién registró arriba).")
                 else:
                     if st.button(
-                        "Tildar administracion",
+                        "Tildar administración realizada",
                         key=f"rx_tildar_{idx}_{hora_programada.replace(':', '')}",
                         use_container_width=True,
                         type="primary",
@@ -331,7 +393,7 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
                             "Realizada",
                             "",
                         ):
-                            st.success(f"Administracion registrada para {fila.get('Medicamento', 'la indicacion')}.")
+                            st.success(f"Administración registrada para {fila.get('Medicamento', 'la indicación')}.")
                             st.rerun()
 
 
@@ -863,7 +925,34 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
 
     if recs_activas:
-        st.markdown("#### Administracion de hoy")
+        st.markdown("#### Administración de hoy")
+        with st.expander("Guía para enfermería: sábana, cortina y registro manual", expanded=False):
+            st.markdown(
+                """
+**Qué mirar primero**
+
+- **Hora programada:** cuándo corresponde la dosis según la indicación.
+- **Hora real** y **Registrado por:** cuándo se dio en la práctica y qué profesional lo cargó (turno anterior o el mismo día). Así se ve si ya está **tildada** (realizada) o sigue pendiente.
+
+**Cuándo usar la cortina (tabla para tildar)**
+
+- Para marcar rápido **lo que usted acaba de administrar** en tablet o PC.
+- La tabla de pendientes no reemplaza la lectura de la **tabla de medicación** ni las tarjetas: ahí se ve el detalle completo.
+
+**Si el paciente no está en el horario** (estudio, traslado, procedimiento externo, etc.)
+
+- Es **habitual** que el esquema se ajuste al día. Registrá la situación con criterio institucional: muchas veces hace falta **registro manual** eligiendo el **horario programado** correcto o dejando constancia en **observación / justificación**.
+- Si la prescripción debe cambiar de fondo (nueva pauta), corresponde **coordinación con medicina** o quien suspenda/edite la indicación según el rol.
+
+**Si no se administra** (procedimiento que lo impide, intolerancia, rechazo, ayuno, etc.)
+
+- No use solo la tilde de “realizada”. Vaya a **Registro manual** → estado **No realizada / Suspendida** y complete la **justificación clínica** (obligatoria).
+
+**Grilla 24 h**
+
+- Atajo para marcar varias horas seguidas; en celular suele ser más cómodo el formulario manual o las tarjetas compactas.
+                """
+            )
         fecha_hoy = ahora().strftime("%d/%m/%Y")
         admin_hoy = [
             a
@@ -952,6 +1041,30 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         tabla_guardia_detallada_df = _tabla_guardia_detallada(plan_dia_df)
         sabana_resumen_df = pd.DataFrame(sabana_resumen)
 
+        matriz_registro_rows, horas_mar, matriz_registro_map = _construir_matriz_registro_24h(plan_dia_df)
+        columnas_tabla = [
+            "Hora programada",
+            "Medicamento",
+            "Detalle / velocidad",
+            "Via",
+            "Frecuencia",
+            "Estado",
+            "Hora realizada",
+            "Registrado por",
+            "Observacion",
+        ]
+        plan_hidratacion_rows = []
+        for _rx in recs_guardia:
+            _plan = _rx.get("plan_hidratacion") or []
+            if not _plan:
+                continue
+            _mn = _extraer_nombre_medicacion(str(_rx.get("med", "")))
+            for _it in _plan:
+                if isinstance(_it, dict):
+                    _fila = dict(_it)
+                    _fila["Medicacion"] = _mn
+                    plan_hidratacion_rows.append(_fila)
+
         c_res1, c_res2, c_res3 = st.columns(3)
         c_res1.metric("Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
         c_res2.metric("No realizadas", int((plan_dia_df.get("Estado") == "No realizada").sum()) if not plan_dia_df.empty else 0)
@@ -965,18 +1078,20 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             key=f"recetas_vista_guardia_{paciente_sel}",
         )
         if vista_guardia == "Compacta para celular":
-            st.caption("Vista liviana para telefonos viejos: lectura por tarjeta, menos columnas y accion rapida dentro de cada medicacion.")
+            st.caption(
+                "Vista liviana para teléfonos viejos: lectura por tarjeta, menos columnas y acción rápida dentro de cada medicación."
+            )
             _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis)
             with st.expander("Ver tabla corta de apoyo"):
                 mostrar_dataframe_con_scroll(tabla_guardia_df, height=260)
-            with st.expander("Ver resumen por indicacion"):
+            with st.expander("Ver resumen por indicación"):
                 mostrar_dataframe_con_scroll(sabana_resumen_df, height=240)
         else:
-            st.caption("Tabla operativa de medicacion con columnas mas cortas y lectura mas limpia.")
+            st.caption("Tabla operativa de medicación con columnas más cortas y lectura más limpia.")
             mostrar_dataframe_con_scroll(tabla_guardia_df, height=340)
             with st.expander("Ver detalle completo de la guardia"):
                 mostrar_dataframe_con_scroll(tabla_guardia_detallada_df, height=320)
-            with st.expander("Ver resumen por indicacion"):
+            with st.expander("Ver resumen por indicación"):
                 mostrar_dataframe_con_scroll(sabana_resumen_df, height=260)
 
         if puede_registrar_dosis and matriz_registro_rows:
@@ -986,9 +1101,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 key=f"abrir_grilla_mar_{paciente_sel}_{fecha_hoy}",
             )
             if abrir_grilla_mar:
-                st.caption("Tildado rapido desde la sabana")
+                st.caption("Tildado rápido desde la sábana de medicación")
                 st.caption(
-                    "Marca solo los casilleros de la fila y la hora correspondiente. Al guardar se registra la hora real y el usuario."
+                    "Marcá solo el casillero de la fila y la hora correspondiente. Al guardar se registra la hora real y el usuario."
                 )
                 columnas_mar = ["Prescripcion"] + horas_mar + ["A demanda"]
                 matriz_registro_df = pd.DataFrame(matriz_registro_rows)
@@ -1016,7 +1131,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype("boolean")
 
                 column_config = {
-                    "Prescripcion": st.column_config.TextColumn("Prescripcion", width="large"),
+                    "Prescripcion": st.column_config.TextColumn("Prescripción / vía / frecuencia", width="large"),
                 }
                 for hora_col in horas_mar + ["A demanda"]:
                     column_config[hora_col] = st.column_config.CheckboxColumn(hora_col, width="small")
@@ -1030,7 +1145,11 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
                 )
 
-                if st.button("Guardar sabana tipo prescripcion", use_container_width=True, key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
+                if st.button(
+                    "Guardar sábana de medicación (tildes)",
+                    use_container_width=True,
+                    key=f"guardar_mar_{paciente_sel}_{fecha_hoy}",
+                ):
                     registros_guardados = 0
                     for row_idx in range(len(editor_mar_df)):
                         for hora_col in horas_mar + ["A demanda"]:
@@ -1065,7 +1184,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             registrar_auditoria_legal(
                                 "Medicacion",
                                 paciente_sel,
-                                "Registro de administracion desde sabana 24 hs",
+                                "Registro de administración desde sábana 24 h",
                                 user.get("nombre", ""),
                                 user.get("matricula", ""),
                                 f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
@@ -1074,15 +1193,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
                     if registros_guardados:
                         guardar_datos()
-                        st.success(f"Se guardaron {registros_guardados} administraciones desde la sabana 24 hs.")
+                        st.success(f"Se guardaron {registros_guardados} administraciones desde la sábana 24 h.")
                         st.rerun()
                     else:
                         st.info("No hay nuevos horarios tildados para guardar.")
 
-        st.markdown("#### Tabla de medicacion indicada")
+        st.markdown("#### Tabla de medicación indicada")
         st.caption(
-            "En celular se muestran tarjetas por defecto, con **scroll interno** para no alargar toda la pagina. "
-            "La tabla ancha solo si la activas y deslizas horizontalmente."
+            "En celular se muestran tarjetas por defecto, con **scroll interno** para no alargar toda la página. "
+            "La tabla ancha solo si la activás y deslizás horizontalmente."
         )
         if not plan_dia_df.empty:
             df_plan_visible = pd.DataFrame(
@@ -1131,20 +1250,46 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 with st.container(height=_h_tarjetas_plan):
                     _render_dataframe_filas_tarjetas(df_plan_visible)
         else:
-            st.info("No hay medicacion activa cargada para mostrar en la tabla de hoy.")
+            st.info("No hay medicación activa cargada para mostrar en la tabla de hoy.")
 
         if puede_registrar_dosis and not plan_dia_df.empty:
             pendientes_df = plan_dia_df[plan_dia_df["Estado"] != "Realizada"].copy().reset_index(drop=True)
             if not pendientes_df.empty:
                 abrir_tabla_tildes = st.checkbox(
-                    "Mostrar tabla detallada para tildar dosis (muchas columnas; mejor en tablet o PC)",
+                    "Mostrar cortina de medicación: tabla para tildar dosis (mejor en tablet o PC)",
                     value=False,
                     key=f"abrir_tabla_tildes_{paciente_sel}_{fecha_hoy}",
                 )
                 if abrir_tabla_tildes:
-                    st.caption("Tildar administracion desde la tabla")
+                    st.caption(
+                        "La cortina sirve para **ver qué ya hizo el turno anterior (o el mismo día)** y **tildar solo lo que usted administra ahora**. "
+                        "Si no corresponde dar la medicación (estudio, procedimiento, intolerancia, etc.), use **Registro manual** con *No realizada* y justificación."
+                    )
+                    realizadas_hoy = plan_dia_df[plan_dia_df["Estado"] == "Realizada"].copy()
+                    if not realizadas_hoy.empty:
+                        st.markdown("##### Ya registradas hoy — referencia (hora real y quién cargó)")
+                        _cols_ref = [
+                            c
+                            for c in [
+                                "Hora programada",
+                                "Hora realizada",
+                                "Medicamento",
+                                "Via",
+                                "Frecuencia",
+                                "Registrado por",
+                                "Observacion",
+                            ]
+                            if c in realizadas_hoy.columns
+                        ]
+                        _h_ref = min(260, 56 + len(realizadas_hoy) * 26)
+                        mostrar_dataframe_con_scroll(realizadas_hoy[_cols_ref], height=_h_ref)
+                    else:
+                        st.info("Todavía no hay dosis marcadas como **Realizada** hoy; las que aparezcan abajo están todas pendientes.")
+
+                    st.markdown("##### Pendientes — tildar solo si administró esta dosis ahora")
                     pendientes_df.insert(0, "Administrada", False)
-                    editor_columnas = ["Administrada"] + columnas_tabla
+                    _cols_pend = [c for c in columnas_tabla if c in pendientes_df.columns]
+                    editor_columnas = ["Administrada"] + _cols_pend
                     editor_df = st.data_editor(
                         pendientes_df[editor_columnas],
                         hide_index=True,
@@ -1152,8 +1297,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         disabled=[col for col in editor_columnas if col != "Administrada"],
                         column_config={
                             "Administrada": st.column_config.CheckboxColumn(
-                                "Tildar",
-                                help="Marca la indicacion como realizada y guarda la hora real.",
+                                "Administrada ahora",
+                                help="Solo si efectivamente administró esta dosis en este momento. Si no se pudo dar, use Registro manual → No realizada con justificación.",
                                 default=False,
                             )
                         },
@@ -1161,7 +1306,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     )
 
                     if st.button(
-                        "Guardar tildes de la tabla",
+                        "Guardar tildes de la cortina",
                         use_container_width=True,
                         key=f"guardar_tildes_cortina_{paciente_sel}",
                     ):
@@ -1187,7 +1332,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             registrar_auditoria_legal(
                                 "Medicacion",
                                 paciente_sel,
-                                "Registro de administracion desde tabla de cortina",
+                                "Registro de administración desde tabla cortina de medicación",
                                 user.get("nombre", ""),
                                 user.get("matricula", ""),
                                 f"{nombre_med} | Horario: {horario_sel or 'A demanda'} | Estado: Realizada",
@@ -1196,10 +1341,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
                         if registros_guardados:
                             guardar_datos()
-                            st.success(f"Se guardaron {registros_guardados} administraciones desde la tabla.")
+                            st.success(f"Se guardaron {registros_guardados} administraciones desde la cortina de medicación.")
                             st.rerun()
                         else:
-                            st.info("Marca al menos una indicacion para guardar.")
+                            st.info("Tildá al menos una dosis pendiente para guardar, o usá el registro manual si fue no realizada.")
             else:
                 st.caption("Todas las indicaciones de hoy ya figuran como realizadas.")
 
@@ -1223,8 +1368,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         if puede_registrar_dosis:
             if vista_guardia == "Compacta para celular":
-                st.caption("Si necesitas justificar una no administrada o elegir otra hora, usa el registro manual.")
-                registro_container = st.expander("Registro manual / justificar no administrada", expanded=False)
+                st.caption(
+                    "Si no se administró (procedimiento, intolerancia, paciente en estudio, etc.) o debe quedar otra hora, "
+                    "usá **Registro manual** con estado y justificación."
+                )
+                registro_container = st.expander(
+                    "Registro manual / no realizada / otro horario", expanded=False
+                )
             else:
                 registro_container = st.container()
             with registro_container:
@@ -1248,7 +1398,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         index=idx_hora if opciones_hora else 0,
                     )
                     estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
-                    justificacion = st.text_input("Justificacion clinica")
+                    justificacion = st.text_input(
+                        "Justificación clínica (obligatoria si no realizada: motivo, procedimiento, intolerancia, etc.)"
+                    )
                     if st.form_submit_button("Guardar registro", use_container_width=True):
                         nombre_med = _extraer_nombre_medicacion(receta_actual.get("med", ""))
                         if _registrar_administracion_dosis(
