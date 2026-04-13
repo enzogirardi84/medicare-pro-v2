@@ -129,7 +129,6 @@ VIEW_CONFIG = {
     "Clinicas (panel global)": ("views.clinicas_panel", "render_clinicas_panel"),
     "Admision": ("views.admision", "render_admision"),
     "Clinica": ("views.clinica", "render_clinica"),
-    "Enfermeria": ("views.enfermeria", "render_enfermeria"),
     "Pediatria": ("views.pediatria", "render_pediatria"),
     "Evolucion": ("views.evolucion", "render_evolucion"),
     "Estudios": ("views.estudios", "render_estudios"),
@@ -160,7 +159,6 @@ VIEW_NAV_LABELS = {
     "Clinicas (panel global)": "\U0001F3E5 Clinicas",
     "Admision": "\U0001FA7E Admision",
     "Clinica": "\U0001FA7A Clinica",
-    "Enfermeria": "\U0001F469\U0000200D\U00002695\U0000FE0F Enfermeria",
     "Pediatria": "\U0001F476 Pediatria",
     "Evolucion": "\u270D\ufe0f Evolucion",
     "Estudios": "\U0001F9EA Estudios",
@@ -191,7 +189,6 @@ CATEGORIAS_MODULOS = {
     "Clínica": [
         "Visitas y Agenda",
         "Clinica",
-        "Enfermeria",
         "Evolucion",
         "Estudios",
         "Recetas",
@@ -268,8 +265,6 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
             render_fn(mi_empresa, rol)
         elif tab_name == "Clinica":
             render_fn(paciente_sel, user)
-        elif tab_name == "Enfermeria":
-            render_fn(paciente_sel, mi_empresa, user)
         elif tab_name == "Pediatria":
             render_fn(paciente_sel, user)
         elif tab_name == "Evolucion":
@@ -389,7 +384,7 @@ def _parse_fecha_sidebar(fecha_txt):
 
 
 def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
-    vistas_clinicas = {"Recetas", "Clinica", "Enfermeria", "Evolucion", "Emergencias y Ambulancia"}
+    vistas_clinicas = {"Recetas", "Clinica", "Evolucion", "Emergencias y Ambulancia"}
     if not paciente_sel or vista_actual not in vistas_clinicas:
         return
 

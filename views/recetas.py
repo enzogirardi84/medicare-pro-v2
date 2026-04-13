@@ -1706,33 +1706,21 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             key=f"recetas_vista_guardia_{paciente_sel}",
         )
 
-        _render_bloque_cortina_medicacion(
-            plan_dia_df,
-            columnas_tabla,
-            paciente_sel,
-            mi_empresa,
-            user,
-            fecha_hoy,
-            puede_registrar_dosis,
-        )
-
         if vista_guardia == "Tarjetas (alternativa)":
             _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis)
-        else:
-            mostrar_dataframe_con_scroll(tabla_guardia_df, height=340)
 
         if puede_registrar_dosis and matriz_registro_rows:
             columnas_mar = ["Medicacion", "Via", "Frecuencia"] + horas_mar + ["A demanda"]
             matriz_registro_df = pd.DataFrame(matriz_registro_rows)
             matriz_registro_df = matriz_registro_df[columnas_mar]
-            estado_celda_opciones = ["—", "🟨 Pendiente", "🟩 Realizada", "🟥 No realizada"]
+            estado_celda_opciones = ["⬜", "🟨 Pendiente", "🟩 Realizada", "🟥 No realizada"]
             for hora_col in horas_mar + ["A demanda"]:
                 matriz_registro_df[hora_col] = (
                     matriz_registro_df[hora_col]
                     .astype(str)
                     .replace(
                         {
-                            "": "—",
+                            "": "⬜",
                             "Pendiente": "🟨 Pendiente",
                             "Realizada": "🟩 Realizada",
                             "No realizada": "🟥 No realizada",
@@ -1746,7 +1734,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 "Frecuencia": st.column_config.TextColumn("Frecuencia", width="small"),
             }
             # Referencia visual para carga rápida de enfermería.
-            st.markdown("🟩 **Realizada** · 🟥 **No realizada** (requiere motivo) · 🟨 **Pendiente**")
+            st.markdown("⬜ **Sin horario/celda vacía** · 🟩 **Realizada** · 🟥 **No realizada** (requiere motivo) · 🟨 **Pendiente**")
             for hora_col in horas_mar + ["A demanda"]:
                 column_config[hora_col] = st.column_config.SelectboxColumn(
                     hora_col,
@@ -1782,7 +1770,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         nuevo_valor = str(editor_mar_df.at[row_idx, hora_col] or "").strip()
                         if not original_valor and not nuevo_valor:
                             continue
-                        if nuevo_valor in {"", "—"} or nuevo_valor == original_valor:
+                        if nuevo_valor in {"", "⬜"} or nuevo_valor == original_valor:
                             continue
 
                         metas = matriz_registro_map.get((row_idx, hora_col), [])

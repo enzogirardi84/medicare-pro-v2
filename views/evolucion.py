@@ -7,6 +7,7 @@ import streamlit.components.v1 as components
 
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from views.enfermeria import render_enfermeria
 from core.utils import (
     ahora,
     firma_a_base64,
@@ -307,3 +308,7 @@ def render_evolucion(paciente_sel, user, rol=None):
                         st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
                     except Exception:
                         st.warning("No se pudo mostrar una foto registrada.")
+
+    st.divider()
+    with st.expander("Ventana de Enfermería (plan estructurado)", expanded=False):
+        render_enfermeria(paciente_sel, user.get("empresa", ""), user)
