@@ -828,6 +828,19 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                 font-size: 0.94rem;
               }
 
+              @media (prefers-reduced-motion: reduce) {
+                .mc-lp-cell,
+                .mc-lp-mini-card,
+                .mc-lp-btns a {
+                  transition: none !important;
+                }
+                .mc-lp-cell:hover,
+                .mc-lp-mini-card:hover,
+                .mc-lp-btns a:hover {
+                  transform: none !important;
+                }
+              }
+
               @media (max-width: 980px) {
                 .mc-lp-hero,
                 .mc-lp-two-up,
@@ -943,7 +956,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                     </div>
                   </div>
 
-                  <aside class="mc-lp-board">
+                  <aside class="mc-lp-board" role="complementary" aria-label="Vista operativa del producto">
                     <div class="mc-lp-board-head">
                       <span class="mc-lp-board-kicker">Vista operativa</span>
                       <span class="mc-lp-board-badge">Tiempo real</span>
