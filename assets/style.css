@@ -1877,6 +1877,125 @@ html.mc-equipo-liviano iframe {
     letter-spacing: 0.02em;
 }
 
+.mc-cortina-rapida-titulo {
+    margin: 0 0 0.35rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: var(--text-primary, #e2e8f0) !important;
+    letter-spacing: 0.01em;
+}
+
+/* Planilla MAR (cortina estilo hoja hospitalaria — Recetas) */
+.mc-mar-encabezado {
+    margin: 0 0 0.5rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    color: rgba(148, 163, 184, 0.95) !important;
+}
+
+.mc-mar-validado {
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    color: rgba(148, 163, 184, 0.88) !important;
+    line-height: 1.3 !important;
+    padding-top: 0.35rem !important;
+    max-width: 4.6rem;
+    word-break: break-word;
+    cursor: help;
+}
+
+.mc-mar-block {
+    border-radius: 10px;
+    padding: 10px 12px 10px;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.mc-mar-block--pend {
+    border-left: 4px solid rgba(251, 191, 36, 0.85);
+    background: linear-gradient(90deg, rgba(251, 191, 36, 0.07) 0%, rgba(15, 23, 42, 0.4) 52%);
+}
+
+.mc-mar-block--ok {
+    border-left: 4px solid var(--success);
+    background: linear-gradient(90deg, rgba(52, 211, 153, 0.12) 0%, rgba(15, 23, 42, 0.4) 52%);
+}
+
+.mc-mar-block--no {
+    border-left: 4px solid var(--danger);
+    background: linear-gradient(90deg, rgba(248, 113, 113, 0.1) 0%, rgba(15, 23, 42, 0.4) 52%);
+}
+
+.mc-mar-title {
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    color: var(--text-primary, #e2e8f0) !important;
+    line-height: 1.3 !important;
+    margin: 0 0 4px !important;
+}
+
+.mc-mar-sub {
+    font-size: 0.78rem !important;
+    color: rgba(148, 163, 184, 0.95) !important;
+    line-height: 1.35 !important;
+    margin: 0 0 4px !important;
+}
+
+.mc-mar-detail {
+    font-size: 0.76rem !important;
+    color: rgba(203, 213, 225, 0.92) !important;
+    line-height: 1.4 !important;
+    margin: 0 0 6px !important;
+}
+
+.mc-mar-ritmo {
+    font-size: 0.74rem !important;
+    color: rgba(94, 234, 212, 0.88) !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    margin: 0 !important;
+}
+
+.mc-mar-firma {
+    color: rgba(148, 163, 184, 0.95) !important;
+    font-weight: 600 !important;
+}
+
+.mc-mar-chip {
+    display: inline-block;
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.mc-mar-chip--ok {
+    background: rgba(52, 211, 153, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.mc-mar-chip--no {
+    background: rgba(248, 113, 113, 0.16);
+    color: #fca5a5;
+    border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.mc-mar-chip-note {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    color: rgba(203, 213, 225, 0.88);
+    line-height: 1.35;
+}
+
 .mc-cortina-resumen {
     display: flex;
     flex-direction: column;
