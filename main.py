@@ -8,18 +8,26 @@ from pathlib import Path
 def _insert_repo_root_on_path() -> Path:
     """
     Streamlit Cloud puede ejecutar main.py dentro de una subcarpeta (p. ej. main/main.py).
-    En ese caso hace falta la raíz del repo en sys.path para resolver el paquete `core`.
+    Subimos directorios hasta encontrar `core/` (máx. 4 niveles) y lo anteponemos a sys.path.
     """
     here = Path(__file__).resolve().parent
-    if (here / "core").is_dir():
-        root = here
-    elif (here.parent / "core").is_dir():
-        root = here.parent
-    else:
-        root = here
+    cur: Path = here
+    root = here
+    for _ in range(5):
+        if (cur / "core").is_dir():
+            root = cur
+            break
+        parent = cur.parent
+        if parent == cur:
+            break
+        cur = parent
     rs = str(root)
     if rs not in sys.path:
         sys.path.insert(0, rs)
+    # También el directorio del script por si hay imports relativos a ese nivel
+    hs = str(here)
+    if hs != rs and hs not in sys.path:
+        sys.path.insert(0, hs)
     return root
 
 

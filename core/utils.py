@@ -1311,7 +1311,7 @@ def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
     with st.container(height=height, border=border):
         st.dataframe(
             df,
-            use_container_width=True,
+            width="stretch",
             hide_index=hide_index,
             height=height - 24,
         )

@@ -29,6 +29,38 @@ from core.utils import (
     seleccionar_limite_registros,
 )
 
+
+def _render_tabla_clinica(df, key=None, max_height=420, sticky_first_col=False):
+    """Tabla clínica con scroll (antes faltaba en el módulo y causaba NameError en Recetas)."""
+    _ = key, sticky_first_col
+    mostrar_dataframe_con_scroll(df, height=max_height, border=True, hide_index=True)
+
+
+def _render_dataframe_filas_tarjetas(df):
+    """Vista tipo tarjeta por fila para la planilla en pantallas angostas."""
+    if df is None or getattr(df, "empty", True):
+        st.caption("Sin filas para mostrar.")
+        return
+    for idx, row in df.iterrows():
+        cols_prev = list(df.columns)[:4]
+        partes = []
+        for c in cols_prev:
+            try:
+                v = str(row[c])[:52].strip()
+            except Exception:
+                v = ""
+            if v:
+                partes.append(v)
+        titulo = " · ".join(partes) if partes else f"Ítem {idx}"
+        with st.expander(titulo[:110], expanded=False):
+            for c in df.columns:
+                try:
+                    val = row[c]
+                except Exception:
+                    val = ""
+                st.markdown(f"**{escape(str(c))}:** {escape(str(val))}")
+
+
 FPDF_DISPONIBLE = False
 try:
     from fpdf import FPDF
