@@ -112,6 +112,19 @@ def test_paciente_visible_misma_clinica_con_o_sin_tilde():
     assert vis[0][0] == "Ana Gomez - 111"
 
 
+def test_coordinador_no_ve_pacientes_de_otra_clinica():
+    ss = {
+        "pacientes_db": ["Ana Gomez - 111", "Luis Perez - 222"],
+        "detalles_pacientes_db": {
+            "Ana Gomez - 111": {"dni": "111", "empresa": "Clinica A", "estado": "Activo"},
+            "Luis Perez - 222": {"dni": "222", "empresa": "Clinica B", "estado": "Activo"},
+        },
+    }
+    vis = obtener_pacientes_visibles(ss, "Clinica A", "Coordinador")
+    assert len(vis) == 1
+    assert vis[0][0] == "Ana Gomez - 111"
+
+
 def test_filtrar_registros_empresa_coincide_tildes():
     items = [{"empresa": "Clínica X", "v": 1}]
     out = filtrar_registros_empresa(items, "Clinica X", "Medico")

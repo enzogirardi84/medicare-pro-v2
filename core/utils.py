@@ -716,7 +716,7 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
         detalles = detalles_db.get(paciente, {})
         if not isinstance(detalles, dict):
             detalles = {}
-        if not es_control_total(rol_actual):
+        if not rol_ve_datos_todas_las_clinicas(rol_actual):
             if not empresas_clinica_coinciden(detalles.get("empresa", ""), mi_empresa):
                 continue
 
