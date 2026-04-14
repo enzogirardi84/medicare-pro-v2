@@ -905,8 +905,10 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
-    consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
-    if not consentimientos:
+    tiene_consentimiento = any(
+        x.get("paciente") == paciente_sel for x in session_state.get("consentimientos_db", [])
+    )
+    if not tiene_consentimiento:
         alertas.append(
             {
                 "nivel": "alta",
@@ -915,9 +917,13 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
-    vitales = [x for x in session_state.get("vitales_db", []) if x.get("paciente") == paciente_sel]
-    if vitales:
-        ultimo_vital = sorted(vitales, key=lambda x: parse_fecha_hora(x.get("fecha", "")))[-1]
+    ultimo_vital = None
+    # Camino caliente: suele estar append-ordenado; buscamos desde el final para evitar sort O(n log n).
+    for x in reversed(session_state.get("vitales_db", [])):
+        if x.get("paciente") == paciente_sel:
+            ultimo_vital = x
+            break
+    if ultimo_vital:
         sat = _to_float(ultimo_vital.get("Sat"))
         temp = _to_float(ultimo_vital.get("Temp"))
         fc = _to_float(ultimo_vital.get("FC"))
@@ -962,6 +968,8 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
                     ),
                 }
             )
+            if len(alertas) >= 5:
+                break
 
     return alertas[:5]
 
