@@ -77,6 +77,25 @@ def tenant_key_normalizado(empresa: str) -> str:
     return norm_empresa_key(empresa) or ""
 
 
+def _tenant_local_fs_key(tenant_key: str) -> str:
+    """
+    Nombre de archivo seguro bajo LOCAL_TENANTS_DIR (evita .., /, \\ y caracteres raros).
+    No sustituye tenant_key en Supabase; solo aplica al JSON local por clínica.
+    """
+    raw = (tenant_key or "").strip().lower()
+    if not raw:
+        return ""
+    s = raw.replace("..", "_").replace("/", "_").replace("\\", "_")
+    out: list[str] = []
+    for ch in s:
+        if ch.isalnum() or ch in " _-.":
+            out.append(ch)
+        else:
+            out.append("_")
+    s2 = "".join(out).strip("._ ")
+    return (s2 if s2 else "tenant")[:180]
+
+
 def sesion_usa_monolito_legacy() -> bool:
     return bool(st.session_state.get("_db_monolito_sesion"))
 
@@ -328,7 +347,10 @@ def _cargar_local():
 
 def _cargar_local_tenant(tenant_key: str):
     try:
-        p = LOCAL_TENANTS_DIR / f"{tenant_key}.json"
+        fs_key = _tenant_local_fs_key(tenant_key)
+        if not fs_key:
+            return None
+        p = LOCAL_TENANTS_DIR / f"{fs_key}.json"
         if p.exists():
             raw = p.read_bytes()
             if not raw.strip():
@@ -341,8 +363,11 @@ def _cargar_local_tenant(tenant_key: str):
 
 def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | None = None) -> bool:
     try:
+        fs_key = _tenant_local_fs_key(tenant_key)
+        if not fs_key:
+            return False
         LOCAL_TENANTS_DIR.mkdir(parents=True, exist_ok=True)
-        path = LOCAL_TENANTS_DIR / f"{tenant_key}.json"
+        path = LOCAL_TENANTS_DIR / f"{fs_key}.json"
         if payload_bytes is not None:
             path.write_bytes(payload_bytes)
         else:
@@ -397,7 +422,7 @@ def _fijar_cache_y_hash(data: dict) -> bytes | None:
         return None
     pb, _ = dumps_db_sorted(data)
     st.session_state["_db_cache"] = loads_db_payload(pb)
-    st.session_state["_db_cache_hash"] = hashlib.md5(pb).hexdigest()
+    st.session_state["_db_cache_hash"] = hashlib.sha256(pb).hexdigest()
     return pb
 
 
@@ -457,7 +482,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             st.session_state["_modo_offline"] = True
             return copy.deepcopy(data_local)
     except Exception as e:
-        log_event("db", f"supabase_unavailable:{type(e).__name__}")
+        log_event("db", f"supabase_unavailable:{type(e).__name__}:{e!s}")
         data_local = None
         if shard and tk and not monolito_legacy:
             data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
@@ -472,7 +497,8 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 "Si hay copia en este equipo, seguimos trabajando con ella."
             )
             with st.expander("Detalle tecnico (soporte)", expanded=False):
-                st.code(f"{type(e).__name__}: {e}", language="text")
+                st.caption("El mensaje completo quedó registrado en los logs del servidor (si están activos).")
+                st.code(type(e).__name__, language="text")
             st.session_state["_aviso_offline_mostrado"] = True
         return copy.deepcopy(data_local) if data_local else None
     return None
@@ -492,13 +518,14 @@ def guardar_datos(*, spinner: Optional[bool] = None):
         with ctx:
             _guardar_datos_ejecutar()
     except Exception as e:
-        log_event("db", f"guardar_datos_fatal:{type(e).__name__}")
+        log_event("db", f"guardar_datos_fatal:{type(e).__name__}:{e!s}")
         st.error(
             "Error inesperado al guardar. Los datos en pantalla no se vaciaron: reintenta guardar, "
             "revisa la conexion y, si sigue igual, recarga la pagina y copia el detalle tecnico para soporte."
         )
         with st.expander("Detalle tecnico (soporte)", expanded=False):
-            st.code(f"{type(e).__name__}: {e}", language="text")
+            st.caption("El detalle completo quedó en los logs del servidor.")
+            st.code(type(e).__name__, language="text")
 
 
 def _guardar_datos_ejecutar():
@@ -522,7 +549,7 @@ def _guardar_datos_ejecutar_core():
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
     payload_bytes, _ = dumps_db_sorted(data)
-    payload_hash = hashlib.md5(payload_bytes).hexdigest()
+    payload_hash = hashlib.sha256(payload_bytes).hexdigest()
 
     if st.session_state.get("_db_cache_hash") == payload_hash:
         _registrar_estado_guardado("sin_cambios", "No habia cambios pendientes.", guardado_nube=supabase is not None, guardado_local=True)
@@ -555,7 +582,8 @@ def _guardar_datos_ejecutar_core():
             guardado_nube = True
             st.session_state["_modo_offline"] = False
         except Exception as e:
-            error_nube = str(e)
+            log_event("db", f"guardar_supabase:{type(e).__name__}:{e!s}")
+            error_nube = type(e).__name__
             st.session_state["_modo_offline"] = True
             if not st.session_state.get("_aviso_offline_mostrado"):
                 st.warning(
@@ -563,7 +591,8 @@ def _guardar_datos_ejecutar_core():
                     "Revisa conexion y configuracion de Supabase si el aviso vuelve a aparecer."
                 )
                 with st.expander("Detalle del error (soporte)", expanded=False):
-                    st.code(f"{type(e).__name__}: {e}", language="text")
+                    st.caption("El detalle completo quedó en los logs del servidor.")
+                    st.code(error_nube, language="text")
                 st.session_state["_aviso_offline_mostrado"] = True
 
     guardado_local = False
@@ -583,12 +612,12 @@ def _guardar_datos_ejecutar_core():
     elif guardado_local:
         detalle = "Guardado local activo."
         if error_nube:
-            detalle = f"Guardado local por falta de nube: {error_nube}"
+            detalle = f"Guardado local (sin nube). Tipo de error: {error_nube}"
         _registrar_estado_guardado("local", detalle, guardado_nube=False, guardado_local=True)
     else:
         detalle = "No se pudo guardar ni en la nube ni en este equipo."
         if error_nube:
-            detalle = f"{detalle} Error nube: {error_nube}"
+            detalle = f"{detalle} Error nube ({error_nube})."
         _registrar_estado_guardado("error", detalle, guardado_nube=False, guardado_local=False)
 
     ultimo_toast = st.session_state.get("_ultimo_toast_guardado")

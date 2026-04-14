@@ -168,6 +168,11 @@ def _texto_normalizado(valor):
     return "".join(c for c in t if unicodedata.category(c) != "Mn")
 
 
+def empresas_clinica_coinciden(empresa_a, empresa_b) -> bool:
+    """Misma clínica aunque difieran tildes o espacios raros (NFKC + sin diacríticos)."""
+    return _texto_normalizado(empresa_a) == _texto_normalizado(empresa_b)
+
+
 def _password_normalizado(password):
     return str(password or "").strip()
 
@@ -668,13 +673,11 @@ def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empres
     if rol_ve_datos_todas_las_clinicas(rol_actual):
         return list(items or [])
 
-    empresa_actual = str(mi_empresa or "").strip().lower()
     filtrados = []
     for item in items or []:
         if not isinstance(item, dict):
             continue
-        empresa_item = str(item.get(empresa_key, "") or "").strip().lower()
-        if empresa_item == empresa_actual:
+        if empresas_clinica_coinciden(item.get(empresa_key, ""), mi_empresa):
             filtrados.append(item)
     return filtrados
 
@@ -710,10 +713,10 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
 
     for paciente in session_state.get("pacientes_db", []):
         detalles = detalles_db.get(paciente, {})
+        if not isinstance(detalles, dict):
+            detalles = {}
         if not es_control_total(rol_actual):
-            empresa_paciente = str(detalles.get("empresa", "") or "").strip().lower()
-            empresa_actual = str(mi_empresa or "").strip().lower()
-            if empresa_paciente != empresa_actual:
+            if not empresas_clinica_coinciden(detalles.get("empresa", ""), mi_empresa):
                 continue
 
         estado = detalles.get("estado", "Activo")
@@ -1172,7 +1175,6 @@ def format_horarios_receta(registro):
 
 
 def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_validos=None):
-    empresa_actual = str(mi_empresa or "").strip().lower()
     roles_validos_normalizados = (
         {str(rol).strip().lower() for rol in roles_validos if rol}
         if roles_validos
@@ -1187,8 +1189,7 @@ def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_
         if roles_validos_normalizados and not roles_usuario.intersection(roles_validos_normalizados):
             continue
         if not rol_ve_datos_todas_las_clinicas(rol_actual):
-            empresa_usuario = str(data_normalizada.get("empresa", "") or "").strip().lower()
-            if empresa_usuario != empresa_actual:
+            if not empresas_clinica_coinciden(data_normalizada.get("empresa", ""), mi_empresa):
                 continue
         visibles.append(
             {

@@ -7,6 +7,7 @@ from core.database import guardar_datos
 from core.utils import (
     ahora,
     asegurar_detalles_pacientes_en_sesion,
+    empresas_clinica_coinciden,
     es_control_total,
     mapa_detalles_pacientes,
     mostrar_dataframe_con_scroll,
@@ -143,7 +144,7 @@ def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False,
         incluir_altas=incluir_altas,
         busqueda=busqueda,
     ):
-        if empresa_filtro and empresa != empresa_filtro:
+        if empresa_filtro and not empresas_clinica_coinciden(empresa, empresa_filtro):
             continue
         detalles = mapa_detalles_pacientes(st.session_state).get(paciente_id, {})
         pacientes.append(

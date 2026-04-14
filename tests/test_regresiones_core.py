@@ -8,11 +8,13 @@ from core.utils import (
     clave_menu_usuario,
     construir_registro_auditoria_legal,
     decodificar_base64_seguro,
+    filtrar_registros_empresa,
     generar_hash_password,
     limite_archivo_mb,
     modo_celular_viejo_activo,
     normalizar_usuario_sistema,
     obtener_modulos_permitidos,
+    obtener_pacientes_visibles,
     preparar_imagen_clinica_bytes,
     rol_ve_datos_todas_las_clinicas,
     validar_archivo_bytes,
@@ -95,6 +97,26 @@ def test_multiclinica_solo_para_roles_globales():
     assert rol_ve_datos_todas_las_clinicas("SuperAdmin") is True
     assert rol_ve_datos_todas_las_clinicas("Operativo") is False
     assert rol_ve_datos_todas_las_clinicas("Coordinador") is False
+
+
+def test_paciente_visible_misma_clinica_con_o_sin_tilde():
+    """Evita que el legajo no aparezca en Admisión / sidebar si empresa y sesión difieren solo en tildes."""
+    ss = {
+        "pacientes_db": ["Ana Gomez - 111"],
+        "detalles_pacientes_db": {
+            "Ana Gomez - 111": {"dni": "111", "empresa": "Clínica Este", "estado": "Activo"},
+        },
+    }
+    vis = obtener_pacientes_visibles(ss, "Clinica Este", "Medico", busqueda="")
+    assert len(vis) == 1
+    assert vis[0][0] == "Ana Gomez - 111"
+
+
+def test_filtrar_registros_empresa_coincide_tildes():
+    items = [{"empresa": "Clínica X", "v": 1}]
+    out = filtrar_registros_empresa(items, "Clinica X", "Medico")
+    assert len(out) == 1
+    assert out[0]["v"] == 1
 
 
 def test_normalizar_usuario_migra_administrativo_a_operativo():
