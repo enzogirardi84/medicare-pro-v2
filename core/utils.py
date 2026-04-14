@@ -7,6 +7,7 @@ import secrets
 import unicodedata
 import urllib.request
 from datetime import datetime
+from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 
@@ -974,7 +975,8 @@ def _to_float(value):
         return None
 
 
-def parse_fecha_hora(fecha_str):
+@lru_cache(maxsize=8192)
+def _parse_fecha_hora_cached(fecha_txt: str):
     formatos = (
         "%d/%m/%Y %H:%M:%S",
         "%d/%m/%Y %H:%M",
@@ -987,10 +989,14 @@ def parse_fecha_hora(fecha_str):
     )
     for formato in formatos:
         try:
-            return datetime.strptime(str(fecha_str), formato)
+            return datetime.strptime(fecha_txt, formato)
         except Exception:
             continue
     return datetime.min
+
+
+def parse_fecha_hora(fecha_str):
+    return _parse_fecha_hora_cached(str(fecha_str or "").strip())
 
 
 def parse_agenda_datetime(item):
