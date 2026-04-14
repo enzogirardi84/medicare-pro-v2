@@ -281,6 +281,29 @@ def init_supabase():
 supabase = init_supabase()
 
 
+def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay: float = 0.35):
+    """
+    Reintentos acotados para amortiguar picos de concurrencia (locks/transitorios de red).
+    No silencia el error final: lo vuelve a lanzar para respetar el flujo existente.
+    """
+    last_error = None
+    tries = max(1, int(attempts or 1))
+    for intento in range(1, tries + 1):
+        try:
+            return fn()
+        except Exception as e:
+            last_error = e
+            if intento >= tries:
+                break
+            try:
+                espera = max(0.05, float(base_delay) * (2 ** (intento - 1)))
+            except Exception:
+                espera = 0.35
+            log_event("db", f"{op_name}_retry:{intento}/{tries}:{type(e).__name__}")
+            time.sleep(espera)
+    raise last_error
+
+
 def _payload_muy_grande(serializado_o_bytes) -> bool:
     if isinstance(serializado_o_bytes, bytes):
         return len(serializado_o_bytes) >= PAYLOAD_ALERTA_BYTES
@@ -381,19 +404,23 @@ def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | No
 
 
 def _cargar_supabase_monolito():
-    response = supabase.table("medicare_db").select("datos").eq("id", 1).execute()
+    response = _supabase_execute_with_retry(
+        "cargar_monolito",
+        lambda: supabase.table("medicare_db").select("datos").eq("id", 1).execute(),
+    )
     if response.data:
         return response.data[0]["datos"]
     return None
 
 
 def _cargar_supabase_tenant(tenant_key: str):
-    r = (
-        supabase.table("medicare_db")
+    r = _supabase_execute_with_retry(
+        "cargar_tenant",
+        lambda: supabase.table("medicare_db")
         .select("datos")
         .eq("tenant_key", tenant_key)
         .limit(1)
-        .execute()
+        .execute(),
     )
     if r.data and len(r.data) > 0:
         return r.data[0].get("datos")
@@ -403,17 +430,26 @@ def _cargar_supabase_tenant(tenant_key: str):
 def _upsert_supabase_monolito(data: dict):
     tbl = supabase.table("medicare_db")
     try:
-        tbl.upsert({"id": 1, "datos": data}, on_conflict="id").execute()
+        _supabase_execute_with_retry(
+            "upsert_monolito",
+            lambda: tbl.upsert({"id": 1, "datos": data}, on_conflict="id").execute(),
+        )
     except TypeError:
-        tbl.upsert({"id": 1, "datos": data}).execute()
+        _supabase_execute_with_retry("upsert_monolito", lambda: tbl.upsert({"id": 1, "datos": data}).execute())
 
 
 def _upsert_supabase_tenant(tenant_key: str, data: dict):
     tbl = supabase.table("medicare_db")
     try:
-        tbl.upsert({"tenant_key": tenant_key, "datos": data}, on_conflict="tenant_key").execute()
+        _supabase_execute_with_retry(
+            "upsert_tenant",
+            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": data}, on_conflict="tenant_key").execute(),
+        )
     except TypeError:
-        tbl.upsert({"tenant_key": tenant_key, "datos": data}).execute()
+        _supabase_execute_with_retry(
+            "upsert_tenant",
+            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": data}).execute(),
+        )
 
 
 def _fijar_cache_y_hash(data: dict) -> bytes | None:
