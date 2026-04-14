@@ -13,8 +13,8 @@ import streamlit as st
 
 from core.ui_liviano import headers_sugieren_equipo_liviano
 
-LIMITE_PACIENTES_SIDEBAR_NORMAL = 80
-LIMITE_PACIENTES_SIDEBAR_ANTICOLAPSO = 40
+LIMITE_PACIENTES_SIDEBAR_NORMAL = 60
+LIMITE_PACIENTES_SIDEBAR_ANTICOLAPSO = 30
 
 
 def _truthy_secret(val) -> bool:

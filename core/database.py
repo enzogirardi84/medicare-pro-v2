@@ -286,6 +286,14 @@ def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay
     Reintentos acotados para amortiguar picos de concurrencia (locks/transitorios de red).
     No silencia el error final: lo vuelve a lanzar para respetar el flujo existente.
     """
+    try:
+        from core.feature_flags import SUPABASE_RETRY_ATTEMPTS, SUPABASE_RETRY_BASE_DELAY_SEGUNDOS
+
+        attempts = int(SUPABASE_RETRY_ATTEMPTS or attempts)
+        base_delay = float(SUPABASE_RETRY_BASE_DELAY_SEGUNDOS or base_delay)
+    except Exception:
+        pass
+
     last_error = None
     tries = max(1, int(attempts or 1))
     for intento in range(1, tries + 1):
@@ -546,9 +554,28 @@ def guardar_datos(*, spinner: Optional[bool] = None):
 
     spinner: None = usar `GUARDAR_DATOS_SPINNER_DEFAULT` en feature_flags; False = sin spinner; True = forzar.
     """
-    from core.feature_flags import GUARDAR_DATOS_SPINNER_DEFAULT
+    from core.feature_flags import GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS, GUARDAR_DATOS_SPINNER_DEFAULT
 
     mostrar = GUARDAR_DATOS_SPINNER_DEFAULT if spinner is None else spinner
+    # Guardados no forzados: evita ráfagas de upserts cuando hay muchos eventos seguidos.
+    # Los flujos críticos que usan spinner=True mantienen persistencia inmediata.
+    if not mostrar:
+        try:
+            min_intervalo = float(GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS or 0)
+        except Exception:
+            min_intervalo = 0.0
+        if min_intervalo > 0:
+            ahora_ts = time.monotonic()
+            ultimo_ts = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
+            if ultimo_ts > 0 and (ahora_ts - ultimo_ts) < min_intervalo:
+                _registrar_estado_guardado(
+                    "sin_cambios",
+                    "Guardado agrupado para evitar saturacion temporal.",
+                    guardado_nube=supabase is not None,
+                    guardado_local=True,
+                )
+                return
+            st.session_state["_guardar_datos_ultimo_intento_ts"] = ahora_ts
     ctx = st.spinner("Guardando cambios...") if mostrar else nullcontext()
     try:
         with ctx:
