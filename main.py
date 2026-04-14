@@ -340,8 +340,14 @@ def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     alergias = str(detalles.get("alergias", "") or "").strip()
     patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "") or "").strip()
 
-    vitales = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
-    vitales_orden = sorted(vitales, key=lambda x: _parse_fecha_sidebar(x.get("fecha", "")), reverse=True)[:3]
+    # Camino caliente: evita sort completo en cada rerun; toma hasta 3 registros recientes desde el final.
+    vitales_orden = []
+    for v in reversed(st.session_state.get("vitales_db", [])):
+        if v.get("paciente") != paciente_sel:
+            continue
+        vitales_orden.append(v)
+        if len(vitales_orden) >= 3:
+            break
 
     st.sidebar.divider()
     st.sidebar.markdown(
