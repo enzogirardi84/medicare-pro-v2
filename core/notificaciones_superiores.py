@@ -25,6 +25,28 @@ STOCK_BAJO_MAX = 10
 _MOD_INVENTARIO = "Inventario"
 
 
+def _render_tarjeta_alerta_inventario_html(accent: str, stats_html: str, foot_html: str) -> None:
+    """Tarjeta con `st.html` para no perder estructura (el Markdown de Streamlit puede aplanar divs)."""
+    body = (
+        f'<div class="mc-inv-alert {accent}" role="region" aria-label="Alerta de inventario y stock">'
+        '<div class="mc-inv-alert__main">'
+        '<div class="mc-inv-alert__brand">'
+        '<span class="mc-inv-alert__ico" aria-hidden="true">📦</span>'
+        '<div class="mc-inv-alert__titles">'
+        '<p class="mc-inv-alert__kicker">Inventario</p>'
+        '<p class="mc-inv-alert__title">Hay insumos que requieren atención</p>'
+        "</div></div>"
+        f'<div class="mc-inv-alert__stats">{stats_html}</div>'
+        "</div>"
+        f'<p class="mc-inv-alert__foot">{foot_html}</p>'
+        "</div>"
+    )
+    if hasattr(st, "html"):
+        st.html(body, width="stretch")
+    else:
+        st.markdown(body, unsafe_allow_html=True)
+
+
 def _navegar_a_modulo_inventario() -> None:
     """Misma idea que al elegir un módulo en la navegación: deja atajo «Anterior»."""
     cur = st.session_state.get("modulo_actual")
@@ -173,9 +195,9 @@ def render_alerta_inventario_banda_superior(
     minificado = st.session_state.get(_SESSION_INV_DISMISS) == f_inv
     if minificado:
         if puede_ir_inventario:
-            c1, c_go, c2 = st.columns([4, 1.35, 1])
+            c1, c_go, c2 = st.columns([2.6, 2.4, 1.6])
         else:
-            c1, c2 = st.columns([5, 1])
+            c1, c2 = st.columns([4, 2])
             c_go = None
         with c1:
             tags = []
@@ -201,9 +223,10 @@ def render_alerta_inventario_banda_superior(
         if c_go is not None:
             with c_go:
                 if st.button(
-                    "Ir a Inventario",
+                    "📦 Ir a Inventario",
                     key="mc_inv_go_inventario_mini",
                     help="Abre el módulo Inventario",
+                    type="primary",
                     use_container_width=True,
                 ):
                     _navegar_a_modulo_inventario()
@@ -237,49 +260,52 @@ def render_alerta_inventario_banda_superior(
     stats_html = "".join(stat_blocks)
     accent = "mc-inv-alert--mixed" if na and nb else ("mc-inv-alert--critical" if na else "mc-inv-alert--caution")
 
-    if puede_ir_inventario:
-        col_bar, col_go, col_hide = st.columns([4.65, 1.45, 1])
-    else:
-        col_bar, col_hide = st.columns([6, 1])
+    foot_line_a = (
+        "Revisá el detalle abajo"
+        + (puede_ir_inventario and ", o usá los botones de esta fila." or ".")
+        + " "
+    )
+    foot_line_b = (
+        puede_ir_inventario
+        and "Podés cargar o ajustar existencias en el módulo Inventario."
+        or "Pedí acceso al módulo Inventario si tu rol aún no lo incluye."
+    )
+    foot_html = escape(foot_line_a) + escape(foot_line_b)
 
-    with col_bar:
-        st.markdown(
-            f"""
-            <div class="mc-inv-alert {accent}" role="region" aria-label="Alerta de inventario y stock">
-                <div class="mc-inv-alert__main">
-                    <div class="mc-inv-alert__brand">
-                        <span class="mc-inv-alert__ico" aria-hidden="true">📦</span>
-                        <div class="mc-inv-alert__titles">
-                            <p class="mc-inv-alert__kicker">Inventario</p>
-                            <p class="mc-inv-alert__title">Hay insumos que requieren atención</p>
-                        </div>
-                    </div>
-                    <div class="mc-inv-alert__stats">{stats_html}</div>
-                </div>
-                <p class="mc-inv-alert__foot">
-                    Revisá el detalle abajo{puede_ir_inventario and ", o usá el botón «Ir a Inventario»" or ""}.
-                    {puede_ir_inventario
-                        and " Ahí podés cargar o ajustar existencias."
-                        or " Pedí acceso al módulo Inventario si tu rol aún no lo incluye."}
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    if puede_ir_inventario:
-        with col_go:
+    _render_tarjeta_alerta_inventario_html(accent, stats_html, foot_html)
+
+    with st.container(border=True):
+        if puede_ir_inventario:
+            b1, b2 = st.columns(2)
+            with b1:
+                if st.button(
+                    "📦 Ir a Inventario",
+                    key="mc_inv_go_inventario",
+                    help="Cambia al módulo Inventario (atajo «Anterior» disponible)",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    _navegar_a_modulo_inventario()
+            with b2:
+                if st.button(
+                    "Ocultar aviso",
+                    key="mc_inv_dismiss",
+                    help="Minimiza la alerta (se reabre si cambia el stock)",
+                    type="secondary",
+                    use_container_width=True,
+                ):
+                    st.session_state[_SESSION_INV_DISMISS] = f_inv
+                    st.rerun()
+        else:
             if st.button(
-                "Ir a Inventario",
-                key="mc_inv_go_inventario",
-                help="Cambia al módulo Inventario (atajo «Anterior» disponible)",
-                type="primary",
+                "Ocultar aviso",
+                key="mc_inv_dismiss",
+                help="Minimiza la alerta (se reabre si cambia el stock)",
+                type="secondary",
                 use_container_width=True,
             ):
-                _navegar_a_modulo_inventario()
-    with col_hide:
-        if st.button("Ocultar", key="mc_inv_dismiss", help="Minimiza la alerta (se reabre si cambia el stock)", use_container_width=True):
-            st.session_state[_SESSION_INV_DISMISS] = f_inv
-            st.rerun()
+                st.session_state[_SESSION_INV_DISMISS] = f_inv
+                st.rerun()
 
     _h_det = min(340, max(180, 28 * (total + 4)))
     with lista_plegable("Detalle de ítems en alerta", count=total, expanded=False, height=_h_det):
