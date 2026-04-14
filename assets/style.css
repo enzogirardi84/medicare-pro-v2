@@ -450,6 +450,24 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
     color: #f1f5f9;
 }
 
+/* Detalle inventario vía Markdown (evita HTML crudo en expander + scroll) */
+.mc-inv-md-sec {
+    margin: 0 0 0.45rem 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    line-height: 1.35;
+}
+
+.mc-inv-md-sec--danger {
+    color: #fca5a5;
+}
+
+.mc-inv-md-sec--warn {
+    color: #fcd34d;
+}
+
 /* Franja minimizada (Ocultar) */
 .mc-inv-mini {
     position: sticky;

@@ -308,31 +308,24 @@ def render_alerta_inventario_banda_superior(
 
     _h_det = min(280, max(160, 22 * (total + 3)))
     with lista_plegable("Lista de ítems", count=total, expanded=False, height=_h_det):
-        blocks: list[str] = []
+        # Listas Markdown (sin HTML): dentro del expander + contenedor con scroll el HTML
+        # a veces se muestra como texto/código; Markdown nativo es estable en todos los hosts.
         if agotados:
-            lis = "".join(f"<li>{escape(n)}</li>" for n, _s in agotados)
-            blocks.append(
-                f"""
-                <div class="mc-inv-detail-block">
-                    <p class="mc-inv-detail-block__label mc-inv-detail-block__label--danger">Sin stock</p>
-                    <ul class="mc-inv-detail-block__list">{lis}</ul>
-                </div>
-                """
+            st.markdown(
+                '<p class="mc-inv-md-sec mc-inv-md-sec--danger">Sin stock · reposición urgente</p>',
+                unsafe_allow_html=True,
             )
+            st.markdown("\n".join(f"- {escape(n)}" for n, _s in agotados))
+        if agotados and bajos:
+            st.divider()
         if bajos:
-            lis = "".join(
-                f'<li><span class="mc-inv-detail-block__name">{escape(n)}</span> — {s} u.</li>'
-                for n, s in bajos
+            st.markdown(
+                f'<p class="mc-inv-md-sec mc-inv-md-sec--warn">Stock bajo (≤ {STOCK_BAJO_MAX} u.)</p>',
+                unsafe_allow_html=True,
             )
-            blocks.append(
-                f"""
-                <div class="mc-inv-detail-block">
-                    <p class="mc-inv-detail-block__label mc-inv-detail-block__label--warn">Stock bajo (≤ {STOCK_BAJO_MAX} u.)</p>
-                    <ul class="mc-inv-detail-block__list">{lis}</ul>
-                </div>
-                """
+            st.markdown(
+                "\n".join(f"- **{escape(n)}** — {s} u." for n, s in bajos),
             )
-        st.markdown('<div class="mc-inv-detail-root">' + "".join(blocks) + "</div>", unsafe_allow_html=True)
 
 
 def render_franja_avisos_operativos(mi_empresa: str) -> None:
