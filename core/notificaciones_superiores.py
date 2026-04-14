@@ -25,26 +25,47 @@ STOCK_BAJO_MAX = 10
 _MOD_INVENTARIO = "Inventario"
 
 
-def _render_tarjeta_alerta_inventario_html(accent: str, stats_html: str, foot_html: str) -> None:
-    """Tarjeta con `st.html` para no perder estructura (el Markdown de Streamlit puede aplanar divs)."""
+def _chips_inventario_html(na: int, nb: int) -> str:
+    """Chips compactos (mejor en móvil que cajas altas)."""
+    parts: list[str] = []
+    if na:
+        parts.append(
+            f'<span class="mc-inv-chip mc-inv-chip--danger" title="Ítems sin stock — reposición urgente">'
+            f'<span class="mc-inv-chip__dot" aria-hidden="true"></span>'
+            f'<span class="mc-inv-chip__n">{na}</span>'
+            f'<span class="mc-inv-chip__txt">sin stock</span>'
+            f'<span class="mc-inv-chip__hint">urgente</span>'
+            f"</span>"
+        )
+    if nb:
+        parts.append(
+            f'<span class="mc-inv-chip mc-inv-chip--warn" title="Stock bajo (≤ {STOCK_BAJO_MAX} u.)">'
+            f'<span class="mc-inv-chip__dot" aria-hidden="true"></span>'
+            f'<span class="mc-inv-chip__n">{nb}</span>'
+            f'<span class="mc-inv-chip__txt">bajos</span>'
+            f'<span class="mc-inv-chip__hint">≤{STOCK_BAJO_MAX} u.</span>'
+            f"</span>"
+        )
+    return "".join(parts)
+
+
+def _render_tarjeta_alerta_inventario_markdown(accent: str, chips_html: str, foot_html: str) -> None:
+    """Solo `st.markdown`: los estilos de `assets/style.css` aplican (st.html suele aislar y verse “plano”)."""
     body = (
-        f'<div class="mc-inv-alert {accent}" role="region" aria-label="Alerta de inventario y stock">'
+        f'<div class="mc-inv-alert mc-inv-alert--compact {accent}" role="region" aria-label="Alerta de inventario y stock">'
         '<div class="mc-inv-alert__main">'
         '<div class="mc-inv-alert__brand">'
         '<span class="mc-inv-alert__ico" aria-hidden="true">📦</span>'
         '<div class="mc-inv-alert__titles">'
         '<p class="mc-inv-alert__kicker">Inventario</p>'
-        '<p class="mc-inv-alert__title">Hay insumos que requieren atención</p>'
+        '<p class="mc-inv-alert__title">Atención: faltantes o stock bajo</p>'
         "</div></div>"
-        f'<div class="mc-inv-alert__stats">{stats_html}</div>'
+        f'<div class="mc-inv-chips">{chips_html}</div>'
         "</div>"
-        f'<p class="mc-inv-alert__foot">{foot_html}</p>'
+        f'<p class="mc-inv-alert__foot mc-inv-alert__foot--compact">{foot_html}</p>'
         "</div>"
     )
-    if hasattr(st, "html"):
-        st.html(body, width="stretch")
-    else:
-        st.markdown(body, unsafe_allow_html=True)
+    st.markdown(body, unsafe_allow_html=True)
 
 
 def _navegar_a_modulo_inventario() -> None:
@@ -223,7 +244,7 @@ def render_alerta_inventario_banda_superior(
         if c_go is not None:
             with c_go:
                 if st.button(
-                    "📦 Ir a Inventario",
+                    "📦 Inventario",
                     key="mc_inv_go_inventario_mini",
                     help="Abre el módulo Inventario",
                     type="primary",
@@ -236,69 +257,37 @@ def render_alerta_inventario_banda_superior(
                 st.rerun()
         return
 
-    stat_blocks: list[str] = []
-    if na:
-        stat_blocks.append(
-            f"""
-            <div class="mc-inv-stat mc-inv-stat--danger">
-                <span class="mc-inv-stat__num">{na}</span>
-                <span class="mc-inv-stat__lbl">Sin stock</span>
-                <span class="mc-inv-stat__hint">Reposición urgente</span>
-            </div>
-            """
-        )
-    if nb:
-        stat_blocks.append(
-            f"""
-            <div class="mc-inv-stat mc-inv-stat--warn">
-                <span class="mc-inv-stat__num">{nb}</span>
-                <span class="mc-inv-stat__lbl">Stock bajo</span>
-                <span class="mc-inv-stat__hint">≤ {STOCK_BAJO_MAX} u.</span>
-            </div>
-            """
-        )
-    stats_html = "".join(stat_blocks)
+    chips_html = _chips_inventario_html(na, nb)
     accent = "mc-inv-alert--mixed" if na and nb else ("mc-inv-alert--critical" if na else "mc-inv-alert--caution")
 
-    foot_line_a = (
-        "Revisá el detalle abajo"
-        + (puede_ir_inventario and ", o usá los botones de esta fila." or ".")
-        + " "
-    )
-    foot_line_b = (
-        puede_ir_inventario
-        and "Podés cargar o ajustar existencias en el módulo Inventario."
-        or "Pedí acceso al módulo Inventario si tu rol aún no lo incluye."
-    )
-    foot_html = escape(foot_line_a) + escape(foot_line_b)
+    if puede_ir_inventario:
+        foot_plain = (
+            "Expandí el detalle abajo o entrá a Inventario con el botón. "
+            "Ajustá existencias o ingresá mercadería ahí."
+        )
+    else:
+        foot_plain = "Expandí el detalle abajo. Si no ves el módulo Inventario, pedí acceso según tu rol."
+    foot_html = escape(foot_plain)
 
-    _render_tarjeta_alerta_inventario_html(accent, stats_html, foot_html)
+    _render_tarjeta_alerta_inventario_markdown(accent, chips_html, foot_html)
 
-    with st.container(border=True):
-        if puede_ir_inventario:
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button(
-                    "📦 Ir a Inventario",
-                    key="mc_inv_go_inventario",
-                    help="Cambia al módulo Inventario (atajo «Anterior» disponible)",
-                    type="primary",
-                    use_container_width=True,
-                ):
-                    _navegar_a_modulo_inventario()
-            with b2:
-                if st.button(
-                    "Ocultar aviso",
-                    key="mc_inv_dismiss",
-                    help="Minimiza la alerta (se reabre si cambia el stock)",
-                    type="secondary",
-                    use_container_width=True,
-                ):
-                    st.session_state[_SESSION_INV_DISMISS] = f_inv
-                    st.rerun()
-        else:
+    # Ancla para CSS: centrar y limitar ancho de la fila de botones en escritorio/tablet
+    st.markdown('<div class="mc-inv-after-card" aria-hidden="true"></div>', unsafe_allow_html=True)
+
+    if puede_ir_inventario:
+        b1, b2 = st.columns(2)
+        with b1:
             if st.button(
-                "Ocultar aviso",
+                "📦 Inventario",
+                key="mc_inv_go_inventario",
+                help="Abre el módulo Inventario (atajo «Anterior» disponible)",
+                type="primary",
+                use_container_width=True,
+            ):
+                _navegar_a_modulo_inventario()
+        with b2:
+            if st.button(
+                "Ocultar",
                 key="mc_inv_dismiss",
                 help="Minimiza la alerta (se reabre si cambia el stock)",
                 type="secondary",
@@ -306,9 +295,19 @@ def render_alerta_inventario_banda_superior(
             ):
                 st.session_state[_SESSION_INV_DISMISS] = f_inv
                 st.rerun()
+    else:
+        if st.button(
+            "Ocultar",
+            key="mc_inv_dismiss",
+            help="Minimiza la alerta (se reabre si cambia el stock)",
+            type="secondary",
+            use_container_width=True,
+        ):
+            st.session_state[_SESSION_INV_DISMISS] = f_inv
+            st.rerun()
 
-    _h_det = min(340, max(180, 28 * (total + 4)))
-    with lista_plegable("Detalle de ítems en alerta", count=total, expanded=False, height=_h_det):
+    _h_det = min(280, max(160, 22 * (total + 3)))
+    with lista_plegable("Lista de ítems", count=total, expanded=False, height=_h_det):
         blocks: list[str] = []
         if agotados:
             lis = "".join(f"<li>{escape(n)}</li>" for n, _s in agotados)

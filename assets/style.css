@@ -240,6 +240,179 @@ body {
     font-weight: 800;
 }
 
+/* Variante compacta + responsive (móvil / tablet) */
+.mc-inv-alert--compact {
+    max-width: min(100%, 36rem);
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 0.35rem;
+    padding: 0.48rem 0.72rem 0.42rem;
+    border-radius: 12px;
+}
+
+.mc-inv-alert--compact .mc-inv-alert__main {
+    align-items: center;
+    gap: 0.45rem 0.65rem;
+}
+
+.mc-inv-alert--compact .mc-inv-alert__ico {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.92rem;
+    border-radius: 10px;
+}
+
+.mc-inv-alert--compact .mc-inv-alert__kicker {
+    font-size: 0.58rem;
+    margin-bottom: 0.06rem;
+}
+
+.mc-inv-alert--compact .mc-inv-alert__title {
+    font-size: 0.86rem;
+    line-height: 1.3;
+}
+
+.mc-inv-alert__foot--compact {
+    margin-top: 0.42rem;
+    padding-top: 0.38rem;
+    font-size: 0.72rem;
+    line-height: 1.42;
+}
+
+/* Chips de métricas (baja altura vs. cajas .mc-inv-stat) */
+.mc-inv-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.32rem;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 9rem;
+    min-width: 0;
+}
+
+.mc-inv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.2rem 0.48rem 0.2rem 0.34rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.mc-inv-chip__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mc-inv-chip__n {
+    font-size: 0.92rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+
+.mc-inv-chip__txt {
+    text-transform: lowercase;
+    opacity: 0.95;
+}
+
+.mc-inv-chip__hint {
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.75;
+    margin-left: 0.06rem;
+}
+
+.mc-inv-chip--danger {
+    background: linear-gradient(165deg, rgba(127, 29, 29, 0.42) 0%, rgba(45, 15, 18, 0.52) 100%);
+    border-color: rgba(248, 113, 113, 0.38);
+    color: #fecaca;
+}
+
+.mc-inv-chip--danger .mc-inv-chip__dot {
+    background: #f87171;
+    box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.2);
+}
+
+.mc-inv-chip--warn {
+    background: linear-gradient(165deg, rgba(120, 53, 15, 0.44) 0%, rgba(35, 28, 12, 0.48) 100%);
+    border-color: rgba(251, 191, 36, 0.32);
+    color: #fde68a;
+}
+
+.mc-inv-chip--warn .mc-inv-chip__dot {
+    background: #fbbf24;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+}
+
+/* Ancla invisible: centrar fila de botones Streamlit siguiente (escritorio / tablet) */
+div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
+    + div[data-testid="stElementContainer"]
+    [data-testid="stHorizontalBlock"] {
+    max-width: min(100%, 26rem);
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+@media (max-width: 900px) {
+    .mc-inv-chips {
+        justify-content: flex-start;
+        flex: 1 1 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .mc-inv-alert--compact {
+        position: static;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        padding: 0.4rem 0.55rem 0.38rem;
+    }
+
+    .mc-inv-alert--compact .mc-inv-alert__main {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mc-inv-chip {
+        flex: 1 1 auto;
+        min-width: 0;
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .mc-inv-chip__hint {
+        display: none;
+    }
+
+    div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
+        + div[data-testid="stElementContainer"]
+        [data-testid="stHorizontalBlock"] {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 380px) {
+    .mc-inv-chip {
+        font-size: 0.66rem;
+        padding: 0.18rem 0.4rem;
+    }
+
+    .mc-inv-chip__n {
+        font-size: 0.85rem;
+    }
+}
+
 /* Detalle dentro del expander “Ítems en alerta” */
 .mc-inv-detail-root {
     display: flex;
@@ -2449,7 +2622,8 @@ html.mc-equipo-liviano .mc-inv-mini {
     backdrop-filter: none !important;
 }
 
-html.mc-equipo-liviano .mc-inv-stat {
+html.mc-equipo-liviano .mc-inv-stat,
+html.mc-equipo-liviano .mc-inv-chip {
     box-shadow: none !important;
 }
 
