@@ -32,6 +32,14 @@ def test_auth_strip_pwreset_url_si_hay_param_limpia_y_avisa():
         strip_q.assert_called_once()
 
 
+def test_pin_coincide_tiempo_constante():
+    u_ok = {"pin": "4821"}
+    assert auth._pin_coincide_tiempo_constante(u_ok, "4821") is True
+    assert auth._pin_coincide_tiempo_constante(u_ok, "4822") is False
+    assert auth._pin_coincide_tiempo_constante(u_ok, "48") is False
+    assert auth._pin_coincide_tiempo_constante({}, "4821") is False
+
+
 def test_auth_strip_pwreset_url_si_hay_param_sin_parametro():
     with patch.object(auth, "st") as mock_st:
         mock_st.query_params = {}

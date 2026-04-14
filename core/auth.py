@@ -1,3 +1,4 @@
+import secrets
 import time
 
 import streamlit as st
@@ -23,7 +24,10 @@ from core.auth_security import (
 from core.password_crypto import (
     aplicar_hash_tras_login_ok,
     bcrypt_rounds_config,
+    establecer_password_nuevo,
+    mensaje_password_no_cumple_politica,
     password_usuario_coincide,
+    texto_ayuda_politica_password_breve,
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
@@ -45,6 +49,7 @@ from core.utils import (
     asegurar_usuarios_base,
     logins_clave_default_superadmin,
     normalizar_usuario_sistema,
+    obtener_pin_usuario,
 )
 
 SESSION_TIMEOUT_MINUTES = 90
@@ -55,7 +60,11 @@ MSG_LOGIN_CREDENCIALES_FALLIDAS = (
     "No pudimos validar el acceso. Revisá **usuario** y **contraseña** "
     "(no el PIN de 4 dígitos ni el DNI, salvo que esa sea la clave que te asignaron). "
     "En **multiclínica**, el nombre de **Empresa / Clínica** debe coincidir con Mi equipo. "
-    "Si olvidaste la clave, pedila a **coordinación** o al administrador de tu clínica."
+    "Si olvidaste la clave y tenés **PIN** de recuperación, usá **Nueva contraseña con PIN**; si no, pedila a **coordinación**."
+)
+MSG_PIN_RESET_FALLIDO = (
+    "No pudimos cambiar la contraseña. Revisá **usuario**, **PIN** de 4 dígitos y, en multiclínica, **empresa** "
+    "como en Mi equipo."
 )
 _SESSION_LOGIN_FLASH = "_mc_auth_login_flash"
 
@@ -127,6 +136,19 @@ def _buscar_usuario_por_login(login_texto: str):
         if str(key_db or "").strip().lower() == login_normalizado:
             return key_db
     return None
+
+
+def _pin_coincide_tiempo_constante(user_data: dict, pin_raw: str) -> bool:
+    pin = str(pin_raw or "").strip()
+    if len(pin) != 4 or not pin.isdigit():
+        return False
+    alm = str(obtener_pin_usuario(user_data) or "").strip()
+    if not alm:
+        return False
+    try:
+        return secrets.compare_digest(pin, alm)
+    except Exception:
+        return False
 
 
 def _cargar_db_login(empresa_login: str, u_limpio: str):
@@ -282,16 +304,31 @@ def render_login():
             if st.session_state.pop("_mc_pwreset_url_aviso_once", False):
                 st.info(
                     "Detectamos un enlace de restablecimiento de contraseña en la URL. "
-                    "En esta instalación **no está disponible** la recuperación automática por correo. "
-                    "Pedí una clave nueva a **coordinación** o al administrador de tu clínica."
+                    "En esta instalación **no** se usa recuperación por correo. "
+                    "Si tenés **PIN** en Mi equipo, probá **Nueva contraseña con PIN**; si no, pedí clave a **coordinación**."
                 )
             _sec_tip = texto_ayuda_proteccion()
             if _sec_tip:
                 st.caption(_sec_tip)
-            st.caption(
-                "En este paso usás **usuario + contraseña**. Si necesitás una clave nueva, pedila a **coordinación** "
-                "o al administrador de tu clínica. La contraseña no es el DNI salvo que tu clínica te haya configurado la cuenta así."
+            modo_auth = st.radio(
+                "Acceso",
+                ["login", "pin_new"],
+                horizontal=True,
+                label_visibility="collapsed",
+                format_func=lambda m: "Iniciar sesión" if m == "login" else "Nueva contraseña con PIN",
+                key="mc_auth_mode_radio",
             )
+            if modo_auth == "login":
+                st.caption(
+                    "Ingresá con **usuario** y **contraseña**. La contraseña no es el DNI salvo que tu clínica te haya "
+                    "configurado la cuenta así."
+                )
+            else:
+                st.caption(
+                    "Si **coordinación** te cargó un **PIN de 4 dígitos** en Mi equipo, podés definir una **clave nueva** "
+                    "sin correo. Sin PIN, pedí la clave a coordinación."
+                )
+                st.caption(texto_ayuda_politica_password_breve())
             with st.form("login", clear_on_submit=True):
                 if modo_shard_activo():
                     st.caption(
@@ -304,12 +341,115 @@ def render_login():
                 else:
                     empresa_login = ""
                 u = st.text_input("Usuario")
-                p = st.text_input(
-                    "Contraseña",
-                    type="password",
-                    help="Clave de acceso asignada o definida por tu clínica; no el PIN de 4 dígitos ni el DNI, salvo que esa sea tu clave.",
-                )
-                if st.form_submit_button("Ingresar al sistema", use_container_width=True):
+                if modo_auth == "login":
+                    p = st.text_input(
+                        "Contraseña",
+                        type="password",
+                        help="Clave de acceso asignada o definida por tu clínica; no el PIN de 4 dígitos ni el DNI, salvo que esa sea tu clave.",
+                    )
+                else:
+                    pin_rec = st.text_input(
+                        "PIN de recuperación (4 dígitos)",
+                        type="password",
+                        max_chars=4,
+                        help="El mismo PIN que figura en Mi equipo para tu usuario.",
+                    )
+                    p1 = st.text_input("Nueva contraseña", type="password")
+                    p2 = st.text_input("Repetir nueva contraseña", type="password")
+                if modo_auth == "login":
+                    submit = st.form_submit_button("Ingresar al sistema", use_container_width=True)
+                else:
+                    submit = st.form_submit_button("Guardar nueva contraseña", use_container_width=True)
+                if submit and modo_auth == "pin_new":
+                    if not u.strip():
+                        st.warning("Ingresá tu usuario (login).")
+                        st.stop()
+                    pin_rec_s = str(pin_rec or "").strip()
+                    p1s = str(p1 or "").strip()
+                    p2s = str(p2 or "").strip()
+                    if not pin_rec_s or not p1s or not p2s:
+                        st.warning("Completá usuario, PIN y la nueva contraseña en ambos campos.")
+                        st.stop()
+                    if p1s != p2s:
+                        st.error("Las contraseñas nuevas no coinciden.")
+                        st.stop()
+                    u_limpio_pre = u.strip().lower()
+                    ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
+                    if not ok_lock:
+                        st.error(lock_msg)
+                        st.stop()
+                    db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
+                    if err_db:
+                        st.error(err_db)
+                        st.stop()
+                    if db_f is None:
+                        st.error("No se pudieron cargar los datos.")
+                        st.stop()
+                    for k, v in db_f.items():
+                        st.session_state[k] = v
+                    completar_claves_db_session()
+                    asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
+                    sincronizar_clinicas_desde_datos(st.session_state)
+                    u_limpio = u.strip().lower()
+                    usuario_encontrado = _buscar_usuario_por_login(u_limpio)
+                    if not usuario_encontrado:
+                        registrar_fallo_login(u_limpio)
+                        st.error(MSG_PIN_RESET_FALLIDO)
+                        st.stop()
+                    user_data = normalizar_usuario_sistema(
+                        dict(st.session_state["usuarios_db"][usuario_encontrado])
+                    )
+                    user_data["usuario_login"] = usuario_encontrado
+                    st.session_state["usuarios_db"][usuario_encontrado] = user_data
+                    emp_l = str(empresa_login or "").strip().lower()
+                    empresa_coincide = str(user_data.get("empresa", "")).strip().lower() == emp_l
+                    if modo_shard_activo() and sesion_usa_monolito_legacy():
+                        empresa_ok = (not str(empresa_login or "").strip()) or empresa_coincide
+                    else:
+                        empresa_ok = empresa_coincide
+                    if not empresa_ok:
+                        registrar_fallo_login(u_limpio)
+                        st.error(MSG_PIN_RESET_FALLIDO)
+                        st.stop()
+                    if user_data.get("estado", "Activo") == "Bloqueado":
+                        registrar_fallo_login(u_limpio)
+                        st.error(
+                            "Tu usuario está **bloqueado**. Contactá al coordinador para reactivar el acceso antes de cambiar la clave."
+                        )
+                        st.stop()
+                    if login_bloqueado_por_clinica(user_data):
+                        registrar_fallo_login(u_limpio)
+                        st.error(
+                            "La clínica asignada a tu usuario está suspendida. No se puede cambiar la contraseña hasta la reactivación."
+                        )
+                        st.stop()
+                    if not str(obtener_pin_usuario(user_data) or "").strip():
+                        st.error(
+                            "Tu cuenta **no tiene PIN de recuperación** en Mi equipo. Pedí una clave nueva a coordinación."
+                        )
+                        st.stop()
+                    if not _pin_coincide_tiempo_constante(user_data, pin_rec_s):
+                        registrar_fallo_login(u_limpio)
+                        st.error(MSG_PIN_RESET_FALLIDO)
+                        st.stop()
+                    msg_pw = mensaje_password_no_cumple_politica(p1s)
+                    if msg_pw:
+                        st.error(msg_pw)
+                        st.stop()
+                    with st.spinner("Guardando tu nueva contraseña…"):
+                        limpiar_fallos_login(u_limpio)
+                        establecer_password_nuevo(
+                            st.session_state["usuarios_db"][usuario_encontrado],
+                            p1s,
+                            rounds=bcrypt_rounds_config(),
+                        )
+                        guardar_datos()
+                        log_event("auth", "password_reset_via_pin_ok")
+                    st.success(
+                        "Listo. Ya podés **iniciar sesión** con tu usuario y la contraseña nueva (elegí **Iniciar sesión** arriba)."
+                    )
+                    st.stop()
+                if submit and modo_auth == "login":
                     if not u.strip() or not p.strip():
                         st.warning("Ingresá usuario y contraseña.")
                         st.stop()

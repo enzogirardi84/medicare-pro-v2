@@ -151,7 +151,8 @@ def _mi_equipo_bloque_principal(
         with st.expander("Coordinación: nueva contraseña y/o PIN", expanded=False):
             st.caption(
                 "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos (opcional, respaldo interno). "
-                "En esta instalación **no** hay recuperación automática por correo: la clave nueva la asignás desde acá."
+                "Sin correo de recuperación: el usuario puede usar **Nueva contraseña con PIN** en el login si tiene PIN cargado; "
+                "si no, la clave nueva la asignás desde acá."
             )
             ch_pin = st.text_input(
                 "PIN de recuperación (4 dígitos, opcional)",
