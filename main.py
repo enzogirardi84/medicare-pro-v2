@@ -302,24 +302,24 @@ def _html_signos_vitales_sidebar(vitales_orden):
             f'<div class="mc-vital-card__time" title="Fecha y hora del control">{fecha}</div>'
             '<div class="mc-vital-metrics mc-vital-metrics--grid">'
             '<div class="mc-vital-metric mc-vital-metric--ta">'
-            '<span class="mc-vital-metric__label">Tensión</span>'
-            f'<span class="mc-vital-metric__value">{ta}</span>'
+            '<div class="mc-vital-metric__label">Tensión</div>'
+            f'<div class="mc-vital-metric__value">{ta}</div>'
             "</div>"
             '<div class="mc-vital-metric mc-vital-metric--fc">'
-            '<span class="mc-vital-metric__label">FC</span>'
-            f'<span class="mc-vital-metric__value">{fc}</span>'
+            '<div class="mc-vital-metric__label">FC</div>'
+            f'<div class="mc-vital-metric__value">{fc}</div>'
             "</div>"
             '<div class="mc-vital-metric mc-vital-metric--sat">'
-            '<span class="mc-vital-metric__label">SatO₂</span>'
-            f'<span class="mc-vital-metric__value">{sat}</span>'
+            '<div class="mc-vital-metric__label">SatO₂</div>'
+            f'<div class="mc-vital-metric__value">{sat}</div>'
             "</div>"
             '<div class="mc-vital-metric mc-vital-metric--temp">'
-            '<span class="mc-vital-metric__label">Temp</span>'
-            f'<span class="mc-vital-metric__value">{temp}</span>'
+            '<div class="mc-vital-metric__label">Temp</div>'
+            f'<div class="mc-vital-metric__value">{temp}</div>'
             "</div>"
             '<div class="mc-vital-metric mc-vital-metric--hgt" title="Glucemia capilar (mg/dL)">'
-            '<span class="mc-vital-metric__label">HGT</span>'
-            f'<span class="mc-vital-metric__value">{hgt}</span>'
+            '<div class="mc-vital-metric__label">HGT</div>'
+            f'<div class="mc-vital-metric__value">{hgt}</div>'
             "</div>"
             "</div>"
             "</article>"

@@ -1525,61 +1525,85 @@ hr {
 .mc-vitales-stack {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    margin: 0 0 0.35rem;
+    gap: 0.85rem;
+    margin: 0 0 0.5rem;
 }
 
 .mc-vital-card {
     margin: 0;
-    padding: 0.62rem 0.72rem 0.65rem;
+    padding: 0.72rem 0.78rem 0.75rem;
     border-radius: var(--radius-md);
     background:
         linear-gradient(145deg, rgba(22, 36, 62, 0.92) 0%, rgba(12, 22, 40, 0.97) 100%);
-    border: none;
+    border: 1px solid rgba(148, 163, 184, 0.12);
     box-shadow: var(--shadow-card), var(--shadow-inset);
 }
 
 .mc-vital-card__time {
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     color: #5eead4;
-    margin-bottom: 0.42rem;
-    line-height: 1.3;
+    margin: 0 0 0.55rem 0;
+    padding-bottom: 0.48rem;
+    line-height: 1.35;
     opacity: 0.95;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .mc-vital-metrics--grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.38rem 0.5rem;
+    gap: 0.5rem 0.55rem;
 }
 
 .mc-vital-metric {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.1rem;
+    align-items: stretch;
+    gap: 0.32rem;
     min-width: 0;
+    padding: 0.42rem 0.48rem 0.45rem;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.42);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    box-sizing: border-box;
 }
 
 .mc-vital-metric__label {
-    font-size: 0.6rem;
+    display: block;
+    font-size: 0.58rem;
     font-weight: 800;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
-    color: #7b8fb3;
-    line-height: 1.2;
+    color: #94a3b8;
+    line-height: 1.35;
+    margin: 0;
+    padding: 0;
 }
 
 .mc-vital-metric__value {
-    font-size: 0.8rem;
+    display: block;
+    font-size: 0.84rem;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
-    line-height: 1.25;
+    line-height: 1.35;
     color: #e8f4f1;
     word-break: break-word;
+    margin: 0;
+    padding: 0;
+}
+
+/* Sidebar: refuerzo por si el tema de Streamlit aplana etiqueta + valor */
+[data-testid="stSidebar"] .mc-vital-metric {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+[data-testid="stSidebar"] .mc-vital-metric__label + .mc-vital-metric__value {
+    margin-top: 0.08rem;
 }
 
 .mc-vital-metric--ta .mc-vital-metric__value {
@@ -1600,6 +1624,7 @@ hr {
 
 .mc-vital-metric--hgt {
     grid-column: 1 / -1;
+    margin-top: 0.15rem;
 }
 
 .mc-vital-metric--hgt .mc-vital-metric__value {
@@ -2693,6 +2718,10 @@ html.mc-equipo-liviano .mc-inv-alert,
 html.mc-equipo-liviano .mc-inv-mini {
     box-shadow: none !important;
     backdrop-filter: none !important;
+}
+
+html.mc-equipo-liviano .mc-vital-card {
+    box-shadow: none !important;
 }
 
 html.mc-equipo-liviano .mc-inv-stat,
