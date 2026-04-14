@@ -260,6 +260,20 @@ def test_feature_flags_exportan_claves_esperadas():
     assert hasattr(ff, "ALERTAS_APP_PACIENTE_VISIBLE")
     assert hasattr(ff, "GUARDAR_DATOS_SPINNER_DEFAULT")
     assert hasattr(ff, "GUARDAR_DATOS_LOG_LENTO_SEGUNDOS")
+    assert hasattr(ff, "MAX_LOGS_DB_ENTRIES")
+
+
+def test_trim_logs_db_for_save_recorta_a_tope(monkeypatch):
+    import streamlit as st
+    import core.feature_flags as ff
+    from core.database import _trim_logs_db_for_save
+
+    max_logs = int(getattr(ff, "MAX_LOGS_DB_ENTRIES", 3000))
+    fake_state = {"logs_db": [{"i": i} for i in range(max_logs + 5)]}
+    monkeypatch.setattr(st, "session_state", fake_state)
+    _trim_logs_db_for_save()
+    assert len(fake_state["logs_db"]) == max_logs
+    assert fake_state["logs_db"][0]["i"] == 5
 
 
 def test_user_feedback_importable():

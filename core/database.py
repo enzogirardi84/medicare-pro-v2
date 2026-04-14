@@ -653,6 +653,8 @@ def _guardar_datos_ejecutar():
 
 
 def _guardar_datos_ejecutar_core():
+    _trim_logs_db_for_save()
+
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
     payload_bytes, _ = dumps_db_sorted(data)
@@ -749,3 +751,20 @@ def _guardar_datos_ejecutar_core():
         "guardado_local": guardado_local,
         "error_nube": error_nube,
     }
+
+
+def _trim_logs_db_for_save() -> None:
+    try:
+        from core.feature_flags import MAX_LOGS_DB_ENTRIES
+
+        max_logs = int(MAX_LOGS_DB_ENTRIES or 0)
+    except Exception:
+        max_logs = 0
+    if max_logs <= 0:
+        return
+    logs = st.session_state.get("logs_db")
+    if not isinstance(logs, list) or len(logs) <= max_logs:
+        return
+    exceso = len(logs) - max_logs
+    st.session_state["logs_db"] = logs[-max_logs:]
+    log_event("db", f"logs_db_trim:{exceso}")

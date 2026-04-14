@@ -20,3 +20,7 @@ GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 0.8
 # Reintentos de Supabase para picos transitorios de concurrencia/red.
 SUPABASE_RETRY_ATTEMPTS = 3
 SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.35
+
+# Tope de eventos operativos en memoria que viajan en cada guardado.
+# Mantiene los más recientes para evitar crecimiento indefinido del payload.
+MAX_LOGS_DB_ENTRIES = 3000
