@@ -296,6 +296,7 @@ def _html_signos_vitales_sidebar(vitales_orden):
         fc = escape(_vitales_valor_corto(v, "FC"))
         sat = escape(_vitales_valor_corto(v, "Sat"))
         temp = escape(_vitales_valor_corto(v, "Temp"))
+        hgt = escape(_vitales_valor_corto(v, "HGT"))
         bloques.append(
             '<article class="mc-vital-card">'
             f'<div class="mc-vital-card__time" title="Fecha y hora del control">{fecha}</div>'
@@ -315,6 +316,10 @@ def _html_signos_vitales_sidebar(vitales_orden):
             '<div class="mc-vital-metric mc-vital-metric--temp">'
             '<span class="mc-vital-metric__label">Temp</span>'
             f'<span class="mc-vital-metric__value">{temp}</span>'
+            "</div>"
+            '<div class="mc-vital-metric mc-vital-metric--hgt" title="Glucemia capilar (mg/dL)">'
+            '<span class="mc-vital-metric__label">HGT</span>'
+            f'<span class="mc-vital-metric__value">{hgt}</span>'
             "</div>"
             "</div>"
             "</article>"
