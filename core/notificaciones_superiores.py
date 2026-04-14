@@ -7,7 +7,8 @@ El umbral de «stock bajo» coincide con la vista Inventario (≤10 unidades).
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from html import escape
+from typing import Any, Optional, Sequence
 
 import streamlit as st
 
@@ -21,6 +22,16 @@ from core.view_helpers import lista_plegable
 
 # Alineado con views/inventario.py (stock crítico listado ahí).
 STOCK_BAJO_MAX = 10
+_MOD_INVENTARIO = "Inventario"
+
+
+def _navegar_a_modulo_inventario() -> None:
+    """Misma idea que al elegir un módulo en la navegación: deja atajo «Anterior»."""
+    cur = st.session_state.get("modulo_actual")
+    if cur and str(cur) != _MOD_INVENTARIO:
+        st.session_state["modulo_anterior"] = cur
+    st.session_state["modulo_actual"] = _MOD_INVENTARIO
+    st.rerun()
 
 
 def _parse_dia(val: Any) -> date | None:
@@ -131,11 +142,17 @@ def clasificar_inventario_alerta(
 _SESSION_INV_DISMISS = "_mc_inv_dismiss_firma"
 
 
-def render_alerta_inventario_banda_superior(mi_empresa: str) -> None:
+def render_alerta_inventario_banda_superior(
+    mi_empresa: str,
+    menu: Optional[Sequence[str]] = None,
+) -> None:
     """
     Alerta de stock (agotado / bajo) en formato compacto al inicio del área principal.
     Ocultar reduce a una franja miniatura; si cambia el inventario (nueva firma), vuelve a mostrarse expandida.
+
+    ``menu``: módulos permitidos para el usuario; si incluye Inventario, se ofrece el botón «Ir a Inventario».
     """
+    puede_ir_inventario = bool(menu) and _MOD_INVENTARIO in menu
     agotados, bajos = clasificar_inventario_alerta(st.session_state.get("inventario_db") or [], mi_empresa)
     if not agotados and not bajos:
         toast_alerta_si_firma_cambia("insumos_alerta", "", None)
@@ -155,64 +172,142 @@ def render_alerta_inventario_banda_superior(mi_empresa: str) -> None:
 
     minificado = st.session_state.get(_SESSION_INV_DISMISS) == f_inv
     if minificado:
-        c1, c2 = st.columns([5, 1])
+        if puede_ir_inventario:
+            c1, c_go, c2 = st.columns([4, 1.35, 1])
+        else:
+            c1, c2 = st.columns([5, 1])
+            c_go = None
         with c1:
+            tags = []
+            if na:
+                tags.append(f'<span class="mc-inv-mini__tag mc-inv-mini__tag--danger">{na} sin stock</span>')
+            if nb:
+                tags.append(
+                    f'<span class="mc-inv-mini__tag mc-inv-mini__tag--warn">{nb} bajo ≤{STOCK_BAJO_MAX}</span>'
+                )
+            tags_html = "".join(tags)
             st.markdown(
                 f"""
-                <div class="mc-inv-mini" title="Stock: pulse Mostrar para ampliar">
+                <div class="mc-inv-mini" title="Alerta de inventario: pulse Mostrar para ampliar" role="status">
                     <span class="mc-inv-mini__ico" aria-hidden="true">📦</span>
-                    <span class="mc-inv-mini__txt">
-                        <strong>Stock</strong> · {na} crít. · {nb} bajo
-                    </span>
+                    <div class="mc-inv-mini__body">
+                        <span class="mc-inv-mini__title">Inventario</span>
+                        <div class="mc-inv-mini__tags">{tags_html}</div>
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
+        if c_go is not None:
+            with c_go:
+                if st.button(
+                    "Ir a Inventario",
+                    key="mc_inv_go_inventario_mini",
+                    help="Abre el módulo Inventario",
+                    use_container_width=True,
+                ):
+                    _navegar_a_modulo_inventario()
         with c2:
             if st.button("Mostrar", key="mc_inv_expand_from_mini", use_container_width=True):
                 st.session_state[_SESSION_INV_DISMISS] = None
                 st.rerun()
         return
 
-    res_parts: list[str] = []
+    stat_blocks: list[str] = []
     if na:
-        res_parts.append(f'<span class="mc-inv-bar__pill mc-inv-bar__pill--danger">{na} sin stock</span>')
-    if nb:
-        res_parts.append(
-            f'<span class="mc-inv-bar__pill mc-inv-bar__pill--warn">{nb} bajo ≤{STOCK_BAJO_MAX}</span>'
+        stat_blocks.append(
+            f"""
+            <div class="mc-inv-stat mc-inv-stat--danger">
+                <span class="mc-inv-stat__num">{na}</span>
+                <span class="mc-inv-stat__lbl">Sin stock</span>
+                <span class="mc-inv-stat__hint">Reposición urgente</span>
+            </div>
+            """
         )
-    res_html = " ".join(res_parts)
+    if nb:
+        stat_blocks.append(
+            f"""
+            <div class="mc-inv-stat mc-inv-stat--warn">
+                <span class="mc-inv-stat__num">{nb}</span>
+                <span class="mc-inv-stat__lbl">Stock bajo</span>
+                <span class="mc-inv-stat__hint">≤ {STOCK_BAJO_MAX} u.</span>
+            </div>
+            """
+        )
+    stats_html = "".join(stat_blocks)
+    accent = "mc-inv-alert--mixed" if na and nb else ("mc-inv-alert--critical" if na else "mc-inv-alert--caution")
 
-    col_bar, col_hide = st.columns([6, 1])
+    if puede_ir_inventario:
+        col_bar, col_go, col_hide = st.columns([4.65, 1.45, 1])
+    else:
+        col_bar, col_hide = st.columns([6, 1])
+
     with col_bar:
         st.markdown(
             f"""
-            <div class="mc-inv-bar mc-inv-bar--slim" role="status" aria-live="polite">
-                <div class="mc-inv-bar__strip">
-                    <span class="mc-inv-bar__ico" aria-hidden="true">📦</span>
-                    <span class="mc-inv-bar__kicker">Stock</span>
-                    <div class="mc-inv-bar__summary">{res_html}</div>
-                    <span class="mc-inv-bar__hint">Módulo <strong>Inventario</strong></span>
+            <div class="mc-inv-alert {accent}" role="region" aria-label="Alerta de inventario y stock">
+                <div class="mc-inv-alert__main">
+                    <div class="mc-inv-alert__brand">
+                        <span class="mc-inv-alert__ico" aria-hidden="true">📦</span>
+                        <div class="mc-inv-alert__titles">
+                            <p class="mc-inv-alert__kicker">Inventario</p>
+                            <p class="mc-inv-alert__title">Hay insumos que requieren atención</p>
+                        </div>
+                    </div>
+                    <div class="mc-inv-alert__stats">{stats_html}</div>
                 </div>
+                <p class="mc-inv-alert__foot">
+                    Revisá el detalle abajo{puede_ir_inventario and ", o usá el botón «Ir a Inventario»" or ""}.
+                    {puede_ir_inventario
+                        and " Ahí podés cargar o ajustar existencias."
+                        or " Pedí acceso al módulo Inventario si tu rol aún no lo incluye."}
+                </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
+    if puede_ir_inventario:
+        with col_go:
+            if st.button(
+                "Ir a Inventario",
+                key="mc_inv_go_inventario",
+                help="Cambia al módulo Inventario (atajo «Anterior» disponible)",
+                type="primary",
+                use_container_width=True,
+            ):
+                _navegar_a_modulo_inventario()
     with col_hide:
         if st.button("Ocultar", key="mc_inv_dismiss", help="Minimiza la alerta (se reabre si cambia el stock)", use_container_width=True):
             st.session_state[_SESSION_INV_DISMISS] = f_inv
             st.rerun()
 
     _h_det = min(340, max(180, 28 * (total + 4)))
-    with lista_plegable("Ítems en alerta", count=total, expanded=False, height=_h_det):
+    with lista_plegable("Detalle de ítems en alerta", count=total, expanded=False, height=_h_det):
+        blocks: list[str] = []
         if agotados:
-            st.caption("Sin stock (reposición urgente)")
-            for n, _s in agotados:
-                st.caption(f"· {n}")
+            lis = "".join(f"<li>{escape(n)}</li>" for n, _s in agotados)
+            blocks.append(
+                f"""
+                <div class="mc-inv-detail-block">
+                    <p class="mc-inv-detail-block__label mc-inv-detail-block__label--danger">Sin stock</p>
+                    <ul class="mc-inv-detail-block__list">{lis}</ul>
+                </div>
+                """
+            )
         if bajos:
-            st.caption(f"Stock bajo (≤{STOCK_BAJO_MAX} u.)")
-            for n, s in bajos:
-                st.caption(f"· {n} — {s} u.")
+            lis = "".join(
+                f'<li><span class="mc-inv-detail-block__name">{escape(n)}</span> — {s} u.</li>'
+                for n, s in bajos
+            )
+            blocks.append(
+                f"""
+                <div class="mc-inv-detail-block">
+                    <p class="mc-inv-detail-block__label mc-inv-detail-block__label--warn">Stock bajo (≤ {STOCK_BAJO_MAX} u.)</p>
+                    <ul class="mc-inv-detail-block__list">{lis}</ul>
+                </div>
+                """
+            )
+        st.markdown('<div class="mc-inv-detail-root">' + "".join(blocks) + "</div>", unsafe_allow_html=True)
 
 
 def render_franja_avisos_operativos(mi_empresa: str) -> None:
@@ -221,8 +316,9 @@ def render_franja_avisos_operativos(mi_empresa: str) -> None:
 
     f_sys = firma_avisos_sistema(avisos)
     if avisos:
-        hay_peligro = any(str(a.get("nivel")) == "danger" for a in avisos)
-        hay_warn = any(str(a.get("nivel")) == "warning" for a in avisos)
+        _niveles = {str(a.get("nivel")) for a in avisos}
+        hay_peligro = "danger" in _niveles
+        hay_warn = "warning" in _niveles
         if hay_peligro:
             toast_alerta_si_firma_cambia(
                 "aviso_sistema",

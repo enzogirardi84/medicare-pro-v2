@@ -126,8 +126,11 @@ CATEGORIAS_ORDEN = list(CATEGORIAS_MODULOS.keys())
 _MC_FILTRO_TODAS = "Todas las áreas"
 
 
-def _categorias_con_modulos_en_menu(menu):
-    return [c for c in CATEGORIAS_ORDEN if any(m in menu for m in CATEGORIAS_MODULOS[c])]
+def _categorias_con_modulos_en_menu(menu_set):
+    """menu_set: frozenset o set de nombres de módulo visibles (lookup O(1) por categoría)."""
+    if not menu_set:
+        return []
+    return [c for c in CATEGORIAS_ORDEN if any(m in menu_set for m in CATEGORIAS_MODULOS[c])]
 
 
 def _etiqueta_filtro_categoria(nombre):
@@ -142,8 +145,11 @@ def _etiqueta_filtro_categoria(nombre):
     return f"{prefijos.get(nombre, '')}  {nombre}".strip()
 
 
-def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
-    if tab_name not in resolve_menu_for_role(rol, user):
+def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=None):
+    """menu_set: frozenset del menú ya resuelto (sidebar); evita recomputar permisos en cada rerun."""
+    if menu_set is None:
+        menu_set = frozenset(resolve_menu_for_role(rol, user))
+    if tab_name not in menu_set:
         st.error("No tienes permisos para acceder a este modulo.")
         return
     module_name, function_name = VIEW_CONFIG[tab_name]
@@ -213,12 +219,13 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol):
         render_modulo_fallo_ui(tab_name, exc)
 
 
-def resolve_current_view(menu):
+def resolve_current_view(menu, menu_set=None):
     if not menu:
         st.session_state.pop("modulo_actual", None)
         return None
+    ms = menu_set if menu_set is not None else frozenset(menu)
     vista_actual = st.session_state.get("modulo_actual", menu[0])
-    if vista_actual not in menu:
+    if vista_actual not in ms:
         vista_actual = menu[0]
     st.session_state["modulo_actual"] = vista_actual
     return vista_actual
@@ -445,9 +452,10 @@ def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
 # con módulos clínicos que dependen de recarga completa de estado.
 
 
-def render_module_nav(menu, vista_actual):
+def render_module_nav(menu, vista_actual, menu_set=None):
     if not menu:
         return None
+    menu_set = frozenset(menu) if menu_set is None else menu_set
     st.markdown(
         """
         <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
@@ -461,7 +469,7 @@ def render_module_nav(menu, vista_actual):
         unsafe_allow_html=True,
     )
 
-    cats_ok = _categorias_con_modulos_en_menu(menu)
+    cats_ok = _categorias_con_modulos_en_menu(menu_set)
     filtro_opciones = [_MC_FILTRO_TODAS] + cats_ok
 
     if "mc_nav_filtro_cat" not in st.session_state or st.session_state["mc_nav_filtro_cat"] not in filtro_opciones:
@@ -477,13 +485,13 @@ def render_module_nav(menu, vista_actual):
 
     if filtro == _MC_FILTRO_TODAS:
         pill_options = list(menu)
-        default_sel = vista_actual if vista_actual in pill_options else pill_options[0]
+        default_sel = vista_actual if vista_actual in menu_set else pill_options[0]
     else:
-        mods_in_cat = [m for m in CATEGORIAS_MODULOS[filtro] if m in menu]
+        mods_in_cat = [m for m in CATEGORIAS_MODULOS[filtro] if m in menu_set]
         if not mods_in_cat:
             st.caption("No hay módulos en esta área para tu usuario.")
             pill_options = list(menu)
-            default_sel = vista_actual if vista_actual in pill_options else pill_options[0]
+            default_sel = vista_actual if vista_actual in menu_set else pill_options[0]
         elif vista_actual in mods_in_cat:
             pill_options = mods_in_cat
             default_sel = vista_actual
@@ -707,13 +715,14 @@ with st.sidebar:
 
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
-render_alerta_inventario_banda_superior(mi_empresa)
+render_alerta_inventario_banda_superior(mi_empresa, menu)
 
-vista_actual = resolve_current_view(menu)
+menu_set = frozenset(menu)
+vista_actual = resolve_current_view(menu, menu_set)
 if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()
-vista_actual = render_module_nav(menu, vista_actual)
+vista_actual = render_module_nav(menu, vista_actual, menu_set)
 if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
@@ -725,7 +734,7 @@ render_banner_alertas_criticas_si_aplica(mi_empresa)
 render_franja_avisos_operativos(mi_empresa)
 
 modulo_anterior = st.session_state.get("modulo_anterior")
-mostrar_atajo = modulo_anterior and modulo_anterior in menu and modulo_anterior != vista_actual
+mostrar_atajo = modulo_anterior and modulo_anterior in menu_set and modulo_anterior != vista_actual
 
 if mostrar_atajo or paciente_sel:
     if mostrar_atajo and paciente_sel:
@@ -776,5 +785,5 @@ if mostrar_atajo or paciente_sel:
             unsafe_allow_html=True,
         )
 
-render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol)
+render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol, menu_set)
 

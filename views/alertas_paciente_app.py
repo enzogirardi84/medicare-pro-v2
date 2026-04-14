@@ -27,6 +27,35 @@ def _osm_link(lat: Any, lon: Any) -> str:
         return ""
 
 
+OPTIONS_ESTADO = ["Pendiente", "En camino", "Resuelto"]
+OPTIONS_NIVEL = ["Rojo", "Amarillo", "Verde"]
+
+
+def _fetch_alertas_filtradas(
+    *,
+    vista_todas: bool,
+    emp_key: str,
+    limite: int,
+    filtro_estado: List[str],
+    filtro_nivel: List[str],
+) -> List[Dict[str, Any]]:
+    """
+    Lee Supabase con límite y, si el triage está acotado, filtra nivel en servidor
+    (menos filas transferidas). El estado se refina en Python para respetar filas sin
+    campo `estado` (se tratan como Pendiente), igual que antes.
+    """
+    q = supabase.table("alertas_pacientes").select("*")
+    if not vista_todas:
+        q = q.eq("empresa", emp_key)
+    if filtro_nivel and len(filtro_nivel) < len(OPTIONS_NIVEL):
+        q = q.in_("nivel_urgencia", filtro_nivel)
+    resp = q.order("fecha_hora", desc=True).limit(int(limite)).execute()
+    rows = list(resp.data or [])
+    if filtro_estado:
+        rows = [r for r in rows if str(r.get("estado") or "Pendiente") in filtro_estado]
+    return rows
+
+
 def _ordenar_filas(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Rojo primero, luego Amarillo, Verde; dentro de cada grupo mas reciente primero."""
 
@@ -90,6 +119,19 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
             "La app debe enviar la misma clinica en minusculas."
         )
 
+    filtro_estado = st.multiselect(
+        "Filtrar por estado",
+        options=OPTIONS_ESTADO,
+        default=list(OPTIONS_ESTADO),
+        key="mc_alertas_filtro_estado",
+    )
+    filtro_nivel = st.multiselect(
+        "Filtrar por triage",
+        options=OPTIONS_NIVEL,
+        default=list(OPTIONS_NIVEL),
+        key="mc_alertas_filtro_nivel",
+    )
+
     c_ref, c_lim = st.columns([1, 2])
     with c_ref:
         if st.button("Actualizar lista", use_container_width=True, key="mc_alertas_refresh"):
@@ -97,36 +139,25 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
     with c_lim:
         limite = st.slider("Maximo de filas", 50, 500, 200, 50, key="mc_alertas_limite")
 
-    try:
-        q = supabase.table("alertas_pacientes").select("*")
-        if not vista_todas:
-            q = q.eq("empresa", emp_key)
-        resp = q.order("fecha_hora", desc=True).limit(int(limite)).execute()
-        rows = list(resp.data or [])
-    except Exception as exc:
-        st.error(
-            "No se pudo leer **alertas_pacientes**. Ejecuta `supabase/alertas_pacientes.sql` y despliega la Edge Function **submit-alerta-paciente**."
-        )
-        with st.expander("Detalle"):
-            st.code(f"{type(exc).__name__}: {exc}", language="text")
-        return
-
-    filtro_estado = st.multiselect(
-        "Filtrar por estado",
-        options=["Pendiente", "En camino", "Resuelto"],
-        default=["Pendiente", "En camino", "Resuelto"],
-        key="mc_alertas_filtro_estado",
-    )
-    filtro_nivel = st.multiselect(
-        "Filtrar por triage",
-        options=["Rojo", "Amarillo", "Verde"],
-        default=["Rojo", "Amarillo", "Verde"],
-        key="mc_alertas_filtro_nivel",
-    )
-    if filtro_estado:
-        rows = [r for r in rows if str(r.get("estado") or "Pendiente") in filtro_estado]
-    if filtro_nivel:
-        rows = [r for r in rows if str(r.get("nivel_urgencia") or "") in filtro_nivel]
+    if not filtro_estado or not filtro_nivel:
+        st.warning("Seleccioná al menos un **estado** y un **nivel de triage**.")
+        rows = []
+    else:
+        try:
+            rows = _fetch_alertas_filtradas(
+                vista_todas=vista_todas,
+                emp_key=emp_key,
+                limite=limite,
+                filtro_estado=filtro_estado,
+                filtro_nivel=filtro_nivel,
+            )
+        except Exception as exc:
+            st.error(
+                "No se pudo leer **alertas_pacientes**. Ejecuta `supabase/alertas_pacientes.sql` y despliega la Edge Function **submit-alerta-paciente**."
+            )
+            with st.expander("Detalle"):
+                st.code(f"{type(exc).__name__}: {exc}", language="text")
+            return
 
     rows = _ordenar_filas(rows)
 
@@ -218,7 +249,7 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
     with st.expander("Detalle JSON", expanded=False):
         st.json(row)
 
-    opts_estado = ["Pendiente", "En camino", "Resuelto"]
+    opts_estado = list(OPTIONS_ESTADO)
     st_actual = str(row.get("estado") or "Pendiente")
     idx_est = opts_estado.index(st_actual) if st_actual in opts_estado else 0
     c1, c2 = st.columns(2)

@@ -109,10 +109,11 @@ def render_dashboard(mi_empresa, rol):
     emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
     facturacion = filtrar_registros_empresa(st.session_state.get("facturacion_db", []), mi_empresa, rol)
     balance = filtrar_registros_empresa(st.session_state.get("balance_db", []), mi_empresa, rol)
+    _pac_ids = {p["paciente"] for p in pacientes}
     indicaciones = [
         x
         for x in st.session_state.get("indicaciones_db", [])
-        if any(x.get("paciente") == paciente["paciente"] for paciente in pacientes)
+        if x.get("paciente") in _pac_ids
     ]
 
     ahora_local = ahora().replace(tzinfo=None)
