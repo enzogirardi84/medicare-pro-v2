@@ -215,44 +215,40 @@ def render_alerta_inventario_banda_superior(
 
     minificado = st.session_state.get(_SESSION_INV_DISMISS) == f_inv
     if minificado:
+        # Vista reducida: sin números (evita texto pegado); el detalle solo al pulsar «Mostrar».
         if puede_ir_inventario:
-            c1, c_go, c2 = st.columns([2.6, 2.4, 1.6])
+            c1, c_go, c2 = st.columns([3.4, 1.45, 1.15])
         else:
-            c1, c2 = st.columns([4, 2])
+            c1, c2 = st.columns([4.2, 1.8])
             c_go = None
         with c1:
-            tags = []
-            if na:
-                tags.append(f'<span class="mc-inv-mini__tag mc-inv-mini__tag--danger">{na} sin stock</span>')
-            if nb:
-                tags.append(
-                    f'<span class="mc-inv-mini__tag mc-inv-mini__tag--warn">{nb} bajo ≤{STOCK_BAJO_MAX}</span>'
-                )
-            tags_html = "".join(tags)
             st.markdown(
-                f"""
-                <div class="mc-inv-mini" title="Alerta de inventario: pulse Mostrar para ampliar" role="status">
-                    <span class="mc-inv-mini__ico" aria-hidden="true">📦</span>
-                    <div class="mc-inv-mini__body">
-                        <span class="mc-inv-mini__title">Inventario</span>
-                        <div class="mc-inv-mini__tags">{tags_html}</div>
-                    </div>
-                </div>
-                """,
+                '<div class="mc-inv-mini mc-inv-mini--tidy" role="status" title="Pulsa Mostrar para ver faltantes y stock bajo">'
+                '<span class="mc-inv-mini__ico" aria-hidden="true">📦</span>'
+                '<div class="mc-inv-mini__text">'
+                '<span class="mc-inv-mini__head">Inventario</span>'
+                '<span class="mc-inv-mini__sub">Alertas de stock · usá <strong>Mostrar</strong> para el listado completo</span>'
+                "</div></div>",
                 unsafe_allow_html=True,
             )
         if c_go is not None:
             with c_go:
                 if st.button(
-                    "📦 Inventario",
+                    "Inventario",
                     key="mc_inv_go_inventario_mini",
-                    help="Abre el módulo Inventario",
+                    help="Ir al módulo Inventario",
                     type="primary",
                     use_container_width=True,
                 ):
                     _navegar_a_modulo_inventario()
         with c2:
-            if st.button("Mostrar", key="mc_inv_expand_from_mini", use_container_width=True):
+            if st.button(
+                "Mostrar",
+                key="mc_inv_expand_from_mini",
+                help="Ver resumen, botones y lista de ítems",
+                type="secondary",
+                use_container_width=True,
+            ):
                 st.session_state[_SESSION_INV_DISMISS] = None
                 st.rerun()
         return
@@ -278,9 +274,9 @@ def render_alerta_inventario_banda_superior(
         b1, b2 = st.columns(2)
         with b1:
             if st.button(
-                "📦 Inventario",
+                "Inventario",
                 key="mc_inv_go_inventario",
-                help="Abre el módulo Inventario (atajo «Anterior» disponible)",
+                help="Ir al módulo Inventario (atajo «Anterior» disponible)",
                 type="primary",
                 use_container_width=True,
             ):

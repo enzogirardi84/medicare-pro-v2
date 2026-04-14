@@ -485,11 +485,49 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
     backdrop-filter: blur(8px);
 }
 
+/* Minimizada prolija: sin chips numéricos (el detalle va en «Mostrar») */
+.mc-inv-mini--tidy {
+    align-items: flex-start;
+    padding: 0.5rem 0.65rem;
+    margin-bottom: 0.5rem;
+    border-color: rgba(20, 184, 166, 0.28);
+    max-width: min(100%, 42rem);
+}
+
+.mc-inv-mini__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.mc-inv-mini--tidy .mc-inv-mini__head {
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #f8fafc;
+    line-height: 1.2;
+}
+
+.mc-inv-mini--tidy .mc-inv-mini__sub {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #94a3b8;
+    line-height: 1.35;
+}
+
+.mc-inv-mini--tidy .mc-inv-mini__sub strong {
+    color: #5eead4;
+    font-weight: 700;
+}
+
 .mc-inv-mini__ico {
     font-size: 0.95rem;
     line-height: 1;
     opacity: 0.95;
     flex-shrink: 0;
+    margin-top: 0.12rem;
 }
 
 .mc-inv-mini__body {
@@ -545,6 +583,15 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
     .mc-inv-stat {
         flex: 1 1 calc(50% - 0.3rem);
         min-width: calc(50% - 0.3rem);
+    }
+
+    .mc-inv-mini--tidy {
+        max-width: 100%;
+        padding: 0.45rem 0.5rem;
+    }
+
+    .mc-inv-mini--tidy .mc-inv-mini__sub {
+        font-size: 0.66rem;
     }
 }
 
