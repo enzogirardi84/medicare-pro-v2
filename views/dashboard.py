@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
-from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import (
     ahora,
     calcular_estado_agenda,
@@ -225,61 +225,66 @@ def render_dashboard(mi_empresa, rol):
     st.divider()
     st.markdown("#### Listados ejecutivos")
 
-    col_l1, col_l2 = st.columns(2)
-    with col_l1:
-        st.caption("Agenda prioritaria")
-        if agenda_enriquecida:
-            df_ag = pd.DataFrame(agenda_enriquecida)
-            df_ag["Fecha y Hora"] = df_ag["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y %H:%M") if x != datetime.min else "Sin fecha")
-            df_ag = df_ag.rename(columns={"paciente": "Paciente", "profesional": "Profesional", "estado_calc": "Estado"})
-            df_ag = df_ag[["Fecha y Hora", "Paciente", "Profesional", "Estado"]].sort_values("Fecha y Hora")
-            limite_ag = seleccionar_limite_registros(
-                "Agenda a mostrar",
-                len(df_ag),
-                key=f"dash_agenda_limit_{mi_empresa}_{rol}",
-                default=12,
-                opciones=(6, 12, 20, 30, 50),
-            )
-            mostrar_dataframe_con_scroll(df_ag.head(limite_ag), height=340)
-        else:
-            bloque_estado_vacio(
-                "Lista de agenda vacía",
-                "No hay turnos próximos para mostrar en la agenda prioritaria.",
-                sugerencia="Revisá pacientes activos y la carga de agenda en el módulo de visitas.",
-            )
+    with lista_plegable("Tablas — agenda prioritaria y medicación", expanded=False, height=None):
+        col_l1, col_l2 = st.columns(2)
+        with col_l1:
+            st.caption("Agenda prioritaria")
+            if agenda_enriquecida:
+                df_ag = pd.DataFrame(agenda_enriquecida)
+                df_ag["Fecha y Hora"] = df_ag["_fecha_dt"].apply(
+                    lambda x: x.strftime("%d/%m/%Y %H:%M") if x != datetime.min else "Sin fecha"
+                )
+                df_ag = df_ag.rename(columns={"paciente": "Paciente", "profesional": "Profesional", "estado_calc": "Estado"})
+                df_ag = df_ag[["Fecha y Hora", "Paciente", "Profesional", "Estado"]].sort_values("Fecha y Hora")
+                limite_ag = seleccionar_limite_registros(
+                    "Agenda a mostrar",
+                    len(df_ag),
+                    key=f"dash_agenda_limit_{mi_empresa}_{rol}",
+                    default=12,
+                    opciones=(6, 12, 20, 30, 50),
+                )
+                mostrar_dataframe_con_scroll(df_ag.head(limite_ag), height=340)
+            else:
+                bloque_estado_vacio(
+                    "Lista de agenda vacía",
+                    "No hay turnos próximos para mostrar en la agenda prioritaria.",
+                    sugerencia="Revisá pacientes activos y la carga de agenda en el módulo de visitas.",
+                )
 
-    with col_l2:
-        st.caption("Cambios recientes de medicacion")
-        if meds_suspendidas:
-            df_med = pd.DataFrame(meds_suspendidas)
-            estado_base = df_med["estado_receta"] if "estado_receta" in df_med.columns else pd.Series(["Activa"] * len(df_med))
-            df_med["Estado"] = estado_base.fillna("Activa")
+        with col_l2:
+            st.caption("Cambios recientes de medicacion")
+            if meds_suspendidas:
+                df_med = pd.DataFrame(meds_suspendidas)
+                estado_base = (
+                    df_med["estado_receta"] if "estado_receta" in df_med.columns else pd.Series(["Activa"] * len(df_med))
+                )
+                df_med["Estado"] = estado_base.fillna("Activa")
 
-            profesional_estado = (
-                df_med["profesional_estado"]
-                if "profesional_estado" in df_med.columns
-                else pd.Series([""] * len(df_med))
-            )
-            medico_nombre = (
-                df_med["medico_nombre"]
-                if "medico_nombre" in df_med.columns
-                else pd.Series([""] * len(df_med))
-            )
-            df_med["Profesional"] = profesional_estado.fillna("").replace("", pd.NA).fillna(medico_nombre.fillna("")).replace("", "Sin profesional")
+                profesional_estado = (
+                    df_med["profesional_estado"]
+                    if "profesional_estado" in df_med.columns
+                    else pd.Series([""] * len(df_med))
+                )
+                medico_nombre = (
+                    df_med["medico_nombre"] if "medico_nombre" in df_med.columns else pd.Series([""] * len(df_med))
+                )
+                df_med["Profesional"] = (
+                    profesional_estado.fillna("").replace("", pd.NA).fillna(medico_nombre.fillna("")).replace("", "Sin profesional")
+                )
 
-            df_med = df_med.rename(columns={"fecha_estado": "Fecha", "med": "Indicacion"})
-            if "Fecha" not in df_med.columns:
-                df_med["Fecha"] = df_med.get("fecha", "S/D")
-            if "Indicacion" not in df_med.columns:
-                df_med["Indicacion"] = df_med.get("med", "Sin detalle")
-            df_med = df_med[["Fecha", "Indicacion", "Estado", "Profesional"]].sort_values("Fecha", ascending=False)
-            limite_med = seleccionar_limite_registros(
-                "Cambios a mostrar",
-                len(df_med),
-                key=f"dash_med_limit_{mi_empresa}_{rol}",
-                default=10,
-                opciones=(5, 10, 20, 30),
-            )
-            mostrar_dataframe_con_scroll(df_med.head(limite_med), height=340)
-        else:
-            st.success("No hay suspensiones o modificaciones de medicacion registradas.")
+                df_med = df_med.rename(columns={"fecha_estado": "Fecha", "med": "Indicacion"})
+                if "Fecha" not in df_med.columns:
+                    df_med["Fecha"] = df_med.get("fecha", "S/D")
+                if "Indicacion" not in df_med.columns:
+                    df_med["Indicacion"] = df_med.get("med", "Sin detalle")
+                df_med = df_med[["Fecha", "Indicacion", "Estado", "Profesional"]].sort_values("Fecha", ascending=False)
+                limite_med = seleccionar_limite_registros(
+                    "Cambios a mostrar",
+                    len(df_med),
+                    key=f"dash_med_limit_{mi_empresa}_{rol}",
+                    default=10,
+                    opciones=(5, 10, 20, 30),
+                )
+                mostrar_dataframe_con_scroll(df_med.head(limite_med), height=340)
+            else:
+                st.success("No hay suspensiones o modificaciones de medicacion registradas.")

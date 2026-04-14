@@ -8,7 +8,7 @@ from PIL import Image
 
 from core.clinical_exports import build_emergency_pdf_bytes
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import (
     ahora,
     mapa_detalles_pacientes,
@@ -390,26 +390,27 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 sugerencia="Completá el formulario de evento arriba para el primer registro.",
             )
         else:
-            for evento in recientes:
-                titulo = f"{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')} | {evento.get('tipo_evento', '')}"
-                with st.container(border=True):
-                    col_info, col_badges = st.columns([4, 2])
-                    col_info.markdown(f"#### {titulo}")
-                    col_info.markdown(evento.get("motivo", ""))
-                    badges = [
-                        _badge_html(evento.get("triage_grado", "S/D"), _triage_meta(evento.get("triage_grado", "")).get("clase", "")),
-                        _badge_html(evento.get("prioridad", "S/D"), ""),
-                        _badge_html("Ambulancia" if evento.get("ambulancia_solicitada") else "Sin movil", ""),
-                    ]
-                    col_badges.markdown(" ".join(badges), unsafe_allow_html=True)
-                    col_info.caption(
-                        f"Categoria: {evento.get('categoria_evento', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')} | Matricula: {evento.get('matricula', 'S/D')} | Destino: {evento.get('destino', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')}"
-                    )
-                    if evento.get("firma_b64"):
-                        try:
-                            col_badges.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=180)
-                        except Exception:
-                            pass
+            with lista_plegable("Eventos recientes (panel operativo)", count=len(recientes), expanded=False, height=420):
+                for evento in recientes:
+                    titulo = f"{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')} | {evento.get('tipo_evento', '')}"
+                    with st.container(border=True):
+                        col_info, col_badges = st.columns([4, 2])
+                        col_info.markdown(f"#### {titulo}")
+                        col_info.markdown(evento.get("motivo", ""))
+                        badges = [
+                            _badge_html(evento.get("triage_grado", "S/D"), _triage_meta(evento.get("triage_grado", "")).get("clase", "")),
+                            _badge_html(evento.get("prioridad", "S/D"), ""),
+                            _badge_html("Ambulancia" if evento.get("ambulancia_solicitada") else "Sin movil", ""),
+                        ]
+                        col_badges.markdown(" ".join(badges), unsafe_allow_html=True)
+                        col_info.caption(
+                            f"Categoria: {evento.get('categoria_evento', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')} | Matricula: {evento.get('matricula', 'S/D')} | Destino: {evento.get('destino', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')}"
+                        )
+                        if evento.get("firma_b64"):
+                            try:
+                                col_badges.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=180)
+                            except Exception:
+                                pass
 
     else:
         st.markdown("### Historial, tiempos y PDF")
@@ -446,9 +447,10 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 for x in registros
             ]
         )
-        mostrar_dataframe_con_scroll(resumen_df, height=380)
+        with lista_plegable("Tabla resumen de eventos", count=len(registros), expanded=False, height=400):
+            mostrar_dataframe_con_scroll(resumen_df, height=360)
 
-        with st.container(height=520):
+        with lista_plegable("Detalle y PDF por evento", count=len(registros), expanded=False, height=520):
             for idx, evento in enumerate(registros):
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])

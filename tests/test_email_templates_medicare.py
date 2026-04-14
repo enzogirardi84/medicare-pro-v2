@@ -35,7 +35,7 @@ def test_password_reset_body_has_token():
     inner = html_password_reset_body("Ana", "", "TOKENXYZ", 30)
     assert "Ana" in inner
     assert "TOKENXYZ" in inner
-    assert "Olvidé mi contraseña" in inner
+    assert "coordinación" in inner
     assert "PIN" in inner
 
 

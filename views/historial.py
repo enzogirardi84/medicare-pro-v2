@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, lista_plegable
 from core.clinical_exports import (
     build_backup_pdf_bytes,
     build_history_pdf_bytes,
@@ -206,11 +206,12 @@ def _render_seccion_tabla(registros: List[Dict[str, Any]], seccion_actual: str) 
             if col in df.columns:
                 df[col] = df[col].astype(str) + " ml"
     df = _ordenar_columnas_tabla(df)
-    mostrar_dataframe_con_scroll(df, height=520)
+    with lista_plegable(f"Tabla: {seccion_actual}", count=len(registros), expanded=False, height=520):
+        mostrar_dataframe_con_scroll(df, height=496)
 
 
 def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
-    with st.container(height=520):
+    with lista_plegable("Consentimientos (detalle)", count=len(registros), expanded=False, height=520):
         for idx, reg in enumerate(registros):
             with st.container(border=True):
                 st.markdown(f"**{reg.get('fecha', 'S/D')}**")
@@ -229,7 +230,7 @@ def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) 
 
 def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
     mostrar_adjuntos = st.checkbox("Cargar imágenes y PDF adjuntos", value=False, key=f"hist_adjuntos_{paciente_sel}")
-    with st.container(height=520):
+    with lista_plegable("Estudios en historia", count=len(registros), expanded=False, height=520):
         for idx, est in enumerate(registros):
             with st.container(border=True):
                 st.markdown(f"**{est.get('fecha', '')} - {est.get('tipo', '')}**")
@@ -257,7 +258,7 @@ def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None
 
 def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
     mostrar_fotos = st.checkbox("Cargar fotos", value=False, key=f"hist_fotos_{paciente_sel}")
-    with st.container(height=520):
+    with lista_plegable("Fotos de heridas", count=len(registros), expanded=False, height=520):
         for idx, fh in enumerate(registros):
             with st.container(border=True):
                 st.markdown(f"**{fh.get('fecha', '')}**")
@@ -322,7 +323,7 @@ def _render_registros_genericos(
     seccion_actual: str,
     paciente_sel: str,
 ) -> None:
-    with st.container(height=520):
+    with lista_plegable(f"Registros: {seccion_actual}", count=len(registros), expanded=False, height=520):
         for idx, registro in enumerate(registros):
             with st.container(border=True):
                 fecha = registro.get("fecha", registro.get("fecha_hora", "S/D"))
@@ -455,7 +456,8 @@ def render_historial(paciente_sel: str) -> None:
         st.warning(f"Antecedentes / riesgos: {patologias}")
 
     st.caption(
-        "Filtros y limite arriba · exportaciones PDF/Excel/JSON/respaldo · panorama y grafico · linea de tiempo y busqueda global · selector de seccion al final."
+        "Filtros y límite arriba · exportaciones PDF/Excel/JSON/respaldo · panorama y gráfico · línea de tiempo y búsqueda global · "
+        "al final, exploración por sección en franja horizontal (plegable)."
     )
 
     st.markdown("##### Opciones de visualización")
@@ -634,14 +636,33 @@ def render_historial(paciente_sel: str) -> None:
                     st.rerun()
     
         st.divider()
-        st.markdown("##### Explorar por sección")
         lista_secciones = list(secciones.keys())
-        seccion_actual = st.radio(
-            "Elegí una sección",
-            lista_secciones,
-            key=f"hist_seccion_radio_{paciente_sel}",
-            horizontal=False,
-        )
+        key_sec = f"hist_seccion_radio_{paciente_sel}"
+        if key_sec not in st.session_state:
+            st.session_state[key_sec] = lista_secciones[0]
+        else:
+            _prev = st.session_state[key_sec]
+            if _prev not in lista_secciones:
+                st.session_state[key_sec] = lista_secciones[0]
+
+        with st.expander("Explorar por sección", expanded=True):
+            st.caption(
+                "Franja horizontal: en el celular deslizá con el dedo; en PC usá la rueda o la barra inferior. "
+                "Podés plegar este bloque para ganar espacio."
+            )
+            st.markdown(
+                '<div class="mc-hist-cortina-mark" aria-hidden="true"></div>',
+                unsafe_allow_html=True,
+            )
+            seccion_actual = st.pills(
+                "Elegí una sección",
+                lista_secciones,
+                selection_mode="single",
+                key=key_sec,
+                label_visibility="collapsed",
+            )
+        if not seccion_actual:
+            seccion_actual = st.session_state.get(key_sec) or lista_secciones[0]
         registros = secciones.get(seccion_actual, [])
     
         if not registros:

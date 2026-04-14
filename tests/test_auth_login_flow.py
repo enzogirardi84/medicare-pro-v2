@@ -20,16 +20,23 @@ def test_render_login_prioriza_desafio_2fa_activo():
             assert mock_st.session_state["logeado"] is False
 
 
-def test_sincronizar_pwreset_desde_query_activa_recuperacion():
-    token = "x" * 32
+def test_auth_strip_pwreset_url_si_hay_param_limpia_y_avisa():
+    with patch.object(auth, "st") as mock_st:
+        mock_st.query_params = {"pwreset": "tok123"}
+        mock_st.session_state = {"mc_pwreset_token": "old", "mc_auth_mode_radio": "recover"}
+        with patch.object(auth, "_auth_strip_pwreset_query_param") as strip_q:
+            result = auth._auth_strip_pwreset_url_si_hay_param()
+        assert result is True
+        assert "mc_pwreset_token" not in mock_st.session_state
+        assert "mc_auth_mode_radio" not in mock_st.session_state
+        strip_q.assert_called_once()
 
-    with patch.object(auth, "_obtener_pwreset_desde_query", return_value=token):
-        with patch.object(auth, "st") as mock_st:
-            mock_st.session_state = {}
 
-            result = auth._sincronizar_pwreset_desde_query()
-
-            assert result == token
-            assert mock_st.session_state["mc_auth_mode_radio"] == "recover"
-            assert mock_st.session_state["mc_pwreset_token"] == token
-            assert mock_st.session_state["_mc_pwreset_link_detected"] is True
+def test_auth_strip_pwreset_url_si_hay_param_sin_parametro():
+    with patch.object(auth, "st") as mock_st:
+        mock_st.query_params = {}
+        mock_st.session_state = {}
+        with patch.object(auth, "_auth_strip_pwreset_query_param") as strip_q:
+            result = auth._auth_strip_pwreset_url_si_hay_param()
+        assert result is False
+        strip_q.assert_not_called()

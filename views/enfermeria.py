@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import (
     ahora,
     mapa_detalles_pacientes,
@@ -189,14 +189,14 @@ def _render_plan_cuidados_enfermeria_legacy(
 
         pendientes = [x for x in registros_ordenados if x.get("prioridad") == "Alta"][:8]
         if pendientes:
-            st.markdown("#### Registros de mayor prioridad")
-            for reg in pendientes:
-                with st.container(border=True):
-                    st.markdown(f"**{reg.get('fecha', '')}** | {reg.get('tipo_cuidado', '')}")
-                    st.caption(
-                        f"Turno: {reg.get('turno', 'S/D')} | Profesional: {reg.get('profesional', 'S/D')} | Riesgo UPP: {reg.get('riesgo_upp', 'S/D')}"
-                    )
-                    st.write(reg.get("intervencion", ""))
+            with lista_plegable("Registros de mayor prioridad", count=len(pendientes), expanded=False, height=300):
+                for reg in pendientes:
+                    with st.container(border=True):
+                        st.markdown(f"**{reg.get('fecha', '')}** | {reg.get('tipo_cuidado', '')}")
+                        st.caption(
+                            f"Turno: {reg.get('turno', 'S/D')} | Profesional: {reg.get('profesional', 'S/D')} | Riesgo UPP: {reg.get('riesgo_upp', 'S/D')}"
+                        )
+                        st.write(reg.get("intervencion", ""))
 
     else:
         st.markdown("### Historial de cuidados")
@@ -234,7 +234,8 @@ def _render_plan_cuidados_enfermeria_legacy(
             opciones=(10, 20, 30, 50, 100, 200, 500),
         )
         resumen_df = pd.DataFrame(registros_filtrados[:limite]).drop(columns=["paciente", "empresa"], errors="ignore")
-        mostrar_dataframe_con_scroll(resumen_df, height=420)
+        with lista_plegable("Historial de cuidados (tabla)", count=len(resumen_df), expanded=False, height=440):
+            mostrar_dataframe_con_scroll(resumen_df, height=380)
 
 
 def render_enfermeria(paciente_sel, mi_empresa, user, *, compact=False):

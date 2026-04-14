@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
+from core.alert_toasts import firma_alertas_por_ids, toast_alerta_si_firma_cambia
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.database import supabase
 from core.norm_empresa import norm_empresa_key
@@ -144,8 +145,16 @@ def render_banner_alertas_criticas_si_aplica(mi_empresa: str) -> None:
         return
     rows = obtener_alertas_rojas_pendientes(mi_empresa)
     if not rows:
+        toast_alerta_si_firma_cambia("app_paciente_rojo", "", None)
         return
     n = len(rows)
+    firma = firma_alertas_por_ids(rows)
+    toast_alerta_si_firma_cambia(
+        "app_paciente_rojo",
+        firma,
+        f"{n} alerta(s) ROJA(s) pendiente(s). Revisá «Alertas app paciente».",
+        icon="🚨",
+    )
     st.markdown(
         f"""
         <div style="

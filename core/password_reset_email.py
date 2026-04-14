@@ -120,7 +120,7 @@ def verificar_token_restablecimiento(token: str) -> tuple[bool, str, dict | None
     except Exception:
         return False, "El token de recuperación no es válido.", None
     if time.time() > exp:
-        return False, "Este enlace venció. Volvé a pedir uno desde «Olvidé mi contraseña».", None
+        return False, "Este enlace venció. Pedí asistencia a coordinación o un token nuevo.", None
     return True, "", {"uk": uk, "u_limpio": u_limpio, "empresa": empresa}
 
 
@@ -209,7 +209,7 @@ def enviar_correo_restablecimiento(destino: str, nombre_usuario: str, token: str
         txt_lines.extend(
             [
                 "1) Abrí la app MediCare en el navegador.",
-                "2) Elegí «Olvidé mi contraseña».",
+                "2) Seguí las instrucciones de tu clínica (muchas asignan la clave desde coordinación).",
                 "",
             ]
         )

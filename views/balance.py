@@ -3,7 +3,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from features.balance import formato_shift_ml, totales_balance_hidrico_ml
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -147,10 +147,11 @@ def render_balance(paciente_sel, user):
         opciones=(10, 20, 30, 50, 100, 200, 500),
     )
 
-    mostrar_dataframe_con_scroll(
-        df_mostrar.head(limite)[["Fecha y hora", "Turno", "Ingresos", "Egresos", "Shift (Resultado)", "Profesional"]],
-        height=450,
-    )
+    with lista_plegable("Historial de balances (tabla)", count=min(limite, len(df_mostrar)), expanded=False, height=480):
+        mostrar_dataframe_con_scroll(
+            df_mostrar.head(limite)[["Fecha y hora", "Turno", "Ingresos", "Egresos", "Shift (Resultado)", "Profesional"]],
+            height=430,
+        )
 
     st.divider()
     col_chk, col_btn = st.columns([1.2, 2.8])

@@ -47,7 +47,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Visitas y Agenda": "\U0001F4CD Visitas",
     "Dashboard": "\U0001F4CA Dashboard",
     "Clinicas (panel global)": "\U0001F3E5 Clinicas",
-    "Admision": "\U0001FA7E Admision",
+    "Admision": "\U0001FA7E Admision / alta",
     "Clinica": "\U0001FA7A Clinica",
     "Pediatria": "\U0001F476 Pediatria",
     "Evolucion": "\u270D\ufe0f Evolucion",

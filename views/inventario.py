@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import bloque_estado_vacio
+from core.view_helpers import bloque_estado_vacio, lista_plegable
 from core.utils import cargar_json_asset, seleccionar_limite_registros
 
 
@@ -26,8 +26,7 @@ def render_inventario(mi_empresa):
     stock_critico = [i for i in inv_mio if i.get("stock", 0) <= 10]
 
     if stock_critico:
-        st.markdown("#### Stock critico")
-        with st.container(height=260, border=True):
+        with lista_plegable("Stock crítico (≤10 unidades)", count=len(stock_critico), expanded=False, height=260):
             for item in stock_critico[:80]:
                 st.error(f"{item.get('item')} -> quedan {item.get('stock', 0)} unidades")
 
@@ -47,7 +46,7 @@ def render_inventario(mi_empresa):
         unsafe_allow_html=True,
     )
     st.caption(
-        "Stock critico (≤10) se lista arriba en rojo. El formulario suma mercaderia; mas abajo el stock completo y la seccion para corregir o eliminar insumos."
+        "Stock crítico (≤10) está en un panel plegable. El formulario suma mercadería; la tabla completa y la corrección de ítems también se pueden plegar."
     )
 
     with st.form("form_inv", clear_on_submit=True):
@@ -79,7 +78,6 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
-        st.markdown("#### Stock actual")
         df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual"})
         limite_stock = seleccionar_limite_registros(
             "Insumos a mostrar",
@@ -102,7 +100,7 @@ def render_inventario(mi_empresa):
             .head(limite_stock)
             .style.apply(colorear_stock, axis=1)
         )
-        with st.container(height=520, border=True):
+        with lista_plegable("Tabla de stock actual", count=len(df_stock), expanded=False, height=520):
             st.dataframe(styled, use_container_width=True, hide_index=True, height=496)
     else:
         bloque_estado_vacio(
@@ -114,28 +112,29 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
-        st.markdown("#### Ajuste manual y correccion")
-        col1, col2, col3 = st.columns([2, 1, 1])
-        item_a_editar = col1.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
-        stock_actual = next((i.get("stock", 0) for i in inv_mio if i["item"] == item_a_editar), 0)
-        nuevo_stock = col2.number_input("Nuevo stock real", min_value=0, value=stock_actual, key="new_stock")
+        with lista_plegable("Ajuste manual, corrección y baja de insumos", expanded=False, height=None):
+            st.markdown("#### Ajuste manual y correccion")
+            col1, col2, col3 = st.columns([2, 1, 1])
+            item_a_editar = col1.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
+            stock_actual = next((i.get("stock", 0) for i in inv_mio if i["item"] == item_a_editar), 0)
+            nuevo_stock = col2.number_input("Nuevo stock real", min_value=0, value=stock_actual, key="new_stock")
 
-        if col3.button("Actualizar stock", use_container_width=True):
-            for i in st.session_state["inventario_db"]:
-                if i["item"] == item_a_editar and i.get("empresa") == mi_empresa:
-                    i["stock"] = nuevo_stock
-                    break
-            guardar_datos(spinner=True)
-            st.success(f"Stock actualizado a {nuevo_stock} unidades.")
-            st.rerun()
+            if col3.button("Actualizar stock", use_container_width=True):
+                for i in st.session_state["inventario_db"]:
+                    if i["item"] == item_a_editar and i.get("empresa") == mi_empresa:
+                        i["stock"] = nuevo_stock
+                        break
+                guardar_datos(spinner=True)
+                st.success(f"Stock actualizado a {nuevo_stock} unidades.")
+                st.rerun()
 
-        col_del1, col_del2 = st.columns([3, 1])
-        del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
-        confirmar = col_del1.checkbox("Confirmar eliminacion definitiva", key="conf_del_item")
-        if col_del2.button("Eliminar insumo", use_container_width=True, type="secondary", disabled=not confirmar):
-            st.session_state["inventario_db"] = [
-                i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
-            ]
-            guardar_datos(spinner=True)
-            st.success(f"Se elimino {del_item} del inventario.")
-            st.rerun()
+            col_del1, col_del2 = st.columns([3, 1])
+            del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
+            confirmar = col_del1.checkbox("Confirmar eliminacion definitiva", key="conf_del_item")
+            if col_del2.button("Eliminar insumo", use_container_width=True, type="secondary", disabled=not confirmar):
+                st.session_state["inventario_db"] = [
+                    i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
+                ]
+                guardar_datos(spinner=True)
+                st.success(f"Se elimino {del_item} del inventario.")
+                st.rerun()

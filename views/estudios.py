@@ -4,7 +4,7 @@ from uuid import uuid4
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros
 
 
@@ -164,7 +164,7 @@ def render_estudios(paciente_sel, user, rol=None):
     cargar_multimedia = st.checkbox("Cargar imagenes y PDF adjuntos", value=False, key="cargar_estudios_adjuntos")
     st.caption(f"Mostrando {len(estudios_mostrar)} de {len(estudios_pac)} estudios cargados.")
 
-    with st.container(height=520):
+    with lista_plegable("Archivo de estudios (detalle y adjuntos)", count=len(estudios_mostrar), expanded=False, height=520):
         for idx, est in enumerate(reversed(estudios_mostrar)):
             with st.container(border=True):
                 col1, col2 = st.columns([4, 1])

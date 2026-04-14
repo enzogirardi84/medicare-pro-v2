@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -196,4 +196,5 @@ def render_clinica(paciente_sel, user=None):
             "registrado_por": "Registrado por",
         }
         df_vits = df_vits.rename(columns={k: v for k, v in rename_map.items() if k in df_vits.columns})
-        mostrar_dataframe_con_scroll(df_vits, height=360)
+        with lista_plegable("Historial de signos vitales", count=len(df_vits), expanded=False, height=400):
+            mostrar_dataframe_con_scroll(df_vits, height=340)

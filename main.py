@@ -270,6 +270,52 @@ def _parse_fecha_sidebar(fecha_txt):
     return datetime.min
 
 
+def _vitales_valor_corto(registro, clave, default="S/D"):
+    raw = registro.get(clave)
+    if raw is None:
+        return default
+    s = str(raw).strip()
+    return s if s else default
+
+
+def _html_signos_vitales_sidebar(vitales_orden):
+    """Tarjetas compactas para el panel lateral (evita lista densa con backticks)."""
+    if not vitales_orden:
+        return ""
+    bloques = ['<div class="mc-vitales-stack">']
+    for v in vitales_orden:
+        fecha = escape(_vitales_valor_corto(v, "fecha", "S/D"))
+        ta = escape(_vitales_valor_corto(v, "TA"))
+        fc = escape(_vitales_valor_corto(v, "FC"))
+        sat = escape(_vitales_valor_corto(v, "Sat"))
+        temp = escape(_vitales_valor_corto(v, "Temp"))
+        bloques.append(
+            '<article class="mc-vital-card">'
+            f'<div class="mc-vital-card__time" title="Fecha y hora del control">{fecha}</div>'
+            '<div class="mc-vital-metrics mc-vital-metrics--grid">'
+            '<div class="mc-vital-metric mc-vital-metric--ta">'
+            '<span class="mc-vital-metric__label">Tensión</span>'
+            f'<span class="mc-vital-metric__value">{ta}</span>'
+            "</div>"
+            '<div class="mc-vital-metric mc-vital-metric--fc">'
+            '<span class="mc-vital-metric__label">FC</span>'
+            f'<span class="mc-vital-metric__value">{fc}</span>'
+            "</div>"
+            '<div class="mc-vital-metric mc-vital-metric--sat">'
+            '<span class="mc-vital-metric__label">SatO₂</span>'
+            f'<span class="mc-vital-metric__value">{sat}</span>'
+            "</div>"
+            '<div class="mc-vital-metric mc-vital-metric--temp">'
+            '<span class="mc-vital-metric__label">Temp</span>'
+            f'<span class="mc-vital-metric__value">{temp}</span>'
+            "</div>"
+            "</div>"
+            "</article>"
+        )
+    bloques.append("</div>")
+    return "".join(bloques)
+
+
 def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     vistas_clinicas = {"Recetas", "Clinica", "Evolucion", "Emergencias y Ambulancia"}
     if not paciente_sel or vista_actual not in vistas_clinicas:
@@ -297,14 +343,12 @@ def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     else:
         st.sidebar.caption("Alergias: sin datos.")
 
-    st.sidebar.caption("Últimos signos vitales")
+    st.sidebar.markdown(
+        '<p class="mc-sidebar-subhead">Últimos signos vitales</p>',
+        unsafe_allow_html=True,
+    )
     if vitales_orden:
-        for v in vitales_orden:
-            ta = str(v.get("TA", "S/D") or "S/D")
-            fc = str(v.get("FC", "S/D") or "S/D")
-            temp = str(v.get("Temp", "S/D") or "S/D")
-            fecha = str(v.get("fecha", "S/D") or "S/D")
-            st.sidebar.markdown(f"- `{fecha}` · TA `{ta}` · FC `{fc}` · Temp `{temp}`")
+        st.sidebar.markdown(_html_signos_vitales_sidebar(vitales_orden), unsafe_allow_html=True)
     else:
         st.sidebar.caption("Sin registros vitales recientes.")
 
@@ -538,6 +582,7 @@ render_sidebar_bloque_app_paciente = _aa.render_sidebar_bloque_app_paciente
 
 _ns = import_module("core.notificaciones_superiores")
 render_franja_avisos_operativos = _ns.render_franja_avisos_operativos
+render_alerta_inventario_banda_superior = _ns.render_alerta_inventario_banda_superior
 
 _rn = import_module("core.release_notes")
 MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
@@ -662,6 +707,7 @@ with st.sidebar:
 
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
+render_alerta_inventario_banda_superior(mi_empresa)
 
 vista_actual = resolve_current_view(menu)
 if not vista_actual:

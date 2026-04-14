@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -342,7 +342,8 @@ def render_red_profesionales(mi_empresa, user, rol):
                     default=20,
                     opciones=(5, 10, 20, 30, 50, 100),
                 )
-                with st.container(height=540):
+                n_perfiles = min(limite, len(df))
+                with lista_plegable("Perfiles coincidentes", count=n_perfiles, expanded=False, height=560):
                     for _, reg in df.head(limite).iterrows():
                         with st.container(border=True):
                             st.markdown(f"**{reg.get('nombre', '')}** | {reg.get('titulo', '')}")
@@ -423,7 +424,6 @@ def render_red_profesionales(mi_empresa, user, rol):
                 default=20,
                 opciones=(10, 20, 30, 50, 100, 200),
             )
-            mostrar_dataframe_con_scroll(
-                df_sol.sort_values(by="fecha", ascending=False).head(limite),
-                height=420,
-            )
+            df_sol_show = df_sol.sort_values(by="fecha", ascending=False).head(limite)
+            with lista_plegable("Solicitudes de servicios", count=len(df_sol_show), expanded=False, height=460):
+                mostrar_dataframe_con_scroll(df_sol_show, height=400)

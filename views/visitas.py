@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, lista_plegable
 from core.utils import (
     ahora,
     calcular_estado_agenda,
@@ -541,136 +541,143 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
 
     if agenda_paciente:
         st.divider()
-        st.markdown("#### Agenda inteligente")
-        df_agenda = pd.DataFrame(agenda_paciente)
-        df_agenda["Fecha y Hora"] = df_agenda["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y %H:%M") if x.year > 1900 else "Sin fecha")
-        df_agenda["Profesional"] = df_agenda["profesional"].fillna("Sin profesional")
-        df_agenda["Estado"] = df_agenda["estado_calc"]
+        with lista_plegable(
+            "Agenda inteligente — gráficos, filtros y tablas",
+            count=len(agenda_paciente),
+            expanded=False,
+            height=None,
+        ):
+            st.caption("Expandí para ver barras de estado, acciones rápidas, semana y tablas sin alargar toda la página.")
+            st.markdown("#### Agenda inteligente")
+            df_agenda = pd.DataFrame(agenda_paciente)
+            df_agenda["Fecha y Hora"] = df_agenda["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y %H:%M") if x.year > 1900 else "Sin fecha")
+            df_agenda["Profesional"] = df_agenda["profesional"].fillna("Sin profesional")
+            df_agenda["Estado"] = df_agenda["estado_calc"]
 
-        c_f1, c_f2 = st.columns(2)
-        profesionales_disp = ["Todos"] + sorted(df_agenda["Profesional"].dropna().unique().tolist())
-        estados_disp = ["Todos", "Pendiente", "En curso", "Vencida", "Realizada", "Cancelada"]
-        filtro_prof = c_f1.selectbox("Filtrar por profesional", profesionales_disp, key=f"agenda_prof_{paciente_sel}")
-        filtro_estado = c_f2.selectbox("Filtrar por estado", estados_disp, key=f"agenda_estado_{paciente_sel}")
+            c_f1, c_f2 = st.columns(2)
+            profesionales_disp = ["Todos"] + sorted(df_agenda["Profesional"].dropna().unique().tolist())
+            estados_disp = ["Todos", "Pendiente", "En curso", "Vencida", "Realizada", "Cancelada"]
+            filtro_prof = c_f1.selectbox("Filtrar por profesional", profesionales_disp, key=f"agenda_prof_{paciente_sel}")
+            filtro_estado = c_f2.selectbox("Filtrar por estado", estados_disp, key=f"agenda_estado_{paciente_sel}")
 
-        df_filtrado = df_agenda.copy()
-        if filtro_prof != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Profesional"] == filtro_prof]
-        if filtro_estado != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Estado"] == filtro_estado]
+            df_filtrado = df_agenda.copy()
+            if filtro_prof != "Todos":
+                df_filtrado = df_filtrado[df_filtrado["Profesional"] == filtro_prof]
+            if filtro_estado != "Todos":
+                df_filtrado = df_filtrado[df_filtrado["Estado"] == filtro_estado]
 
-        col_g1, col_g2 = st.columns([1.1, 1])
-        with col_g1:
-            st.caption("Estado de la agenda del paciente")
-            estado_chart = df_agenda.groupby("Estado").size().reset_index(name="Visitas")
-            if not estado_chart.empty:
-                st.bar_chart(estado_chart.set_index("Estado")["Visitas"], use_container_width=True)
-        with col_g2:
-            st.caption("Carga por profesional")
-            prof_chart = df_agenda.groupby("Profesional").size().reset_index(name="Visitas").sort_values("Visitas", ascending=False)
-            if not prof_chart.empty:
-                st.bar_chart(prof_chart.set_index("Profesional")["Visitas"], use_container_width=True)
+            col_g1, col_g2 = st.columns([1.1, 1])
+            with col_g1:
+                st.caption("Estado de la agenda del paciente")
+                estado_chart = df_agenda.groupby("Estado").size().reset_index(name="Visitas")
+                if not estado_chart.empty:
+                    st.bar_chart(estado_chart.set_index("Estado")["Visitas"], use_container_width=True)
+            with col_g2:
+                st.caption("Carga por profesional")
+                prof_chart = df_agenda.groupby("Profesional").size().reset_index(name="Visitas").sort_values("Visitas", ascending=False)
+                if not prof_chart.empty:
+                    st.bar_chart(prof_chart.set_index("Profesional")["Visitas"], use_container_width=True)
 
-        c_a1, c_a2 = st.columns([2, 1])
-        opciones_accion = [f"{x['Fecha y Hora']} | {x['Profesional']} | {x['Estado']}" for _, x in df_filtrado.sort_values("_fecha_dt").iterrows()]
-        seleccion = c_a1.selectbox("Accion rapida sobre una visita", ["Sin cambios"] + opciones_accion, key=f"agenda_accion_sel_{paciente_sel}")
-        accion = c_a2.selectbox("Accion", ["Marcar realizada", "Cancelar"], key=f"agenda_accion_tipo_{paciente_sel}")
-        if st.button("Aplicar cambio de agenda", use_container_width=True, key=f"agenda_apply_{paciente_sel}"):
-            if seleccion != "Sin cambios":
-                objetivo = next(
-                    (
-                        x
-                        for x in agenda_paciente
-                        if f"{x['_fecha_dt'].strftime('%d/%m/%Y %H:%M') if x['_fecha_dt'].year > 1900 else 'Sin fecha'} | {x.get('profesional', 'Sin profesional')} | {x['estado_calc']}" == seleccion
-                    ),
-                    None,
+            c_a1, c_a2 = st.columns([2, 1])
+            opciones_accion = [f"{x['Fecha y Hora']} | {x['Profesional']} | {x['Estado']}" for _, x in df_filtrado.sort_values("_fecha_dt").iterrows()]
+            seleccion = c_a1.selectbox("Accion rapida sobre una visita", ["Sin cambios"] + opciones_accion, key=f"agenda_accion_sel_{paciente_sel}")
+            accion = c_a2.selectbox("Accion", ["Marcar realizada", "Cancelar"], key=f"agenda_accion_tipo_{paciente_sel}")
+            if st.button("Aplicar cambio de agenda", use_container_width=True, key=f"agenda_apply_{paciente_sel}"):
+                if seleccion != "Sin cambios":
+                    objetivo = next(
+                        (
+                            x
+                            for x in agenda_paciente
+                            if f"{x['_fecha_dt'].strftime('%d/%m/%Y %H:%M') if x['_fecha_dt'].year > 1900 else 'Sin fecha'} | {x.get('profesional', 'Sin profesional')} | {x['estado_calc']}" == seleccion
+                        ),
+                        None,
+                    )
+                    if objetivo:
+                        for item in st.session_state["agenda_db"]:
+                            if (
+                                item.get("paciente") == objetivo.get("paciente")
+                                and item.get("profesional") == objetivo.get("profesional")
+                                and item.get("fecha") == objetivo.get("fecha")
+                                and normalizar_hora_texto(item.get("hora", ""), default="") == normalizar_hora_texto(objetivo.get("hora", ""), default="")
+                            ):
+                                item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
+                                break
+                        guardar_datos(spinner=True)
+                        st.success("Agenda actualizada correctamente.")
+                        st.rerun()
+
+            st.markdown("##### Agenda semanal del paciente")
+            semana_ref = st.date_input(
+                "Semana de referencia",
+                value=ahora().date(),
+                key=f"agenda_semana_ref_{paciente_sel}",
+            )
+            inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
+            fin_semana = inicio_semana + timedelta(days=6)
+            agenda_semana = [
+                item
+                for item in agenda_paciente
+                if item["_fecha_dt"] != datetime.min and inicio_semana <= item["_fecha_dt"].date() <= fin_semana
+            ]
+
+            cols_semana = st.columns(7)
+            for idx_dia in range(7):
+                dia = inicio_semana + timedelta(days=idx_dia)
+                items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
+                pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})
+                realizadas_dia = sum(1 for x in items_dia if x["estado_calc"] == "Realizada")
+                cols_semana[idx_dia].markdown(
+                    f"""
+                    <div class="mc-card" style="padding:14px 12px; min-height:118px;">
+                        <div style="font-size:0.78rem; color:#93c5fd; text-transform:uppercase; letter-spacing:1px;">
+                            {dia.strftime('%a')}
+                        </div>
+                        <div style="font-size:1rem; font-weight:800; color:#f8fafc; margin-top:4px;">
+                            {dia.strftime('%d/%m')}
+                        </div>
+                        <div style="font-size:1.4rem; font-weight:900; color:#ffffff; margin-top:10px;">{len(items_dia)}</div>
+                        <div style="font-size:0.86rem; color:#cbd5e1; margin-top:4px;">
+                            {pendientes_dia} pendientes<br>{realizadas_dia} realizadas
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
-                if objetivo:
-                    for item in st.session_state["agenda_db"]:
-                        if (
-                            item.get("paciente") == objetivo.get("paciente")
-                            and item.get("profesional") == objetivo.get("profesional")
-                            and item.get("fecha") == objetivo.get("fecha")
-                            and normalizar_hora_texto(item.get("hora", ""), default="") == normalizar_hora_texto(objetivo.get("hora", ""), default="")
-                        ):
-                            item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
-                            break
-                    guardar_datos(spinner=True)
-                    st.success("Agenda actualizada correctamente.")
-                    st.rerun()
 
-        st.markdown("##### Agenda semanal del paciente")
-        semana_ref = st.date_input(
-            "Semana de referencia",
-            value=ahora().date(),
-            key=f"agenda_semana_ref_{paciente_sel}",
-        )
-        inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
-        fin_semana = inicio_semana + timedelta(days=6)
-        agenda_semana = [
-            item
-            for item in agenda_paciente
-            if item["_fecha_dt"] != datetime.min and inicio_semana <= item["_fecha_dt"].date() <= fin_semana
-        ]
+            if agenda_semana:
+                df_semana = pd.DataFrame(agenda_semana)
+                df_semana["Dia"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%A") if x != datetime.min else "Sin fecha")
+                df_semana["Fecha"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y") if x != datetime.min else "Sin fecha")
+                df_semana["Hora"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%H:%M") if x != datetime.min else "--:--")
+                df_semana["Profesional"] = df_semana["profesional"].fillna("Sin profesional")
+                df_semana["Zona"] = df_semana.get("zona", pd.Series(["Zona sin definir"] * len(df_semana))).fillna("Zona sin definir")
+                df_semana["Estado"] = df_semana["estado_calc"]
+                df_semana = df_semana[["Dia", "Fecha", "Hora", "Profesional", "Zona", "Estado"]].sort_values(["Fecha", "Hora"])
+                limite_semana = seleccionar_limite_registros(
+                    "Filas de la semana",
+                    len(df_semana),
+                    key=f"agenda_semana_limit_{paciente_sel}",
+                    default=14,
+                    opciones=(7, 14, 21, 35, 50),
+                )
+                mostrar_dataframe_con_scroll(df_semana.head(limite_semana), height=300)
+            else:
+                bloque_estado_vacio(
+                    "Semana sin visitas en agenda",
+                    "No hay turnos en la semana elegida para este paciente.",
+                    sugerencia="Cambiá la fecha de referencia de la semana o agendá una visita nueva.",
+                )
 
-        cols_semana = st.columns(7)
-        for idx_dia in range(7):
-            dia = inicio_semana + timedelta(days=idx_dia)
-            items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
-            pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})
-            realizadas_dia = sum(1 for x in items_dia if x["estado_calc"] == "Realizada")
-            cols_semana[idx_dia].markdown(
-                f"""
-                <div class="mc-card" style="padding:14px 12px; min-height:118px;">
-                    <div style="font-size:0.78rem; color:#93c5fd; text-transform:uppercase; letter-spacing:1px;">
-                        {dia.strftime('%a')}
-                    </div>
-                    <div style="font-size:1rem; font-weight:800; color:#f8fafc; margin-top:4px;">
-                        {dia.strftime('%d/%m')}
-                    </div>
-                    <div style="font-size:1.4rem; font-weight:900; color:#ffffff; margin-top:10px;">{len(items_dia)}</div>
-                    <div style="font-size:0.86rem; color:#cbd5e1; margin-top:4px;">
-                        {pendientes_dia} pendientes<br>{realizadas_dia} realizadas
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
+            limite = seleccionar_limite_registros(
+                "Visitas a mostrar",
+                len(df_filtrado),
+                key=f"agenda_limit_{paciente_sel}",
+                default=20,
+                opciones=(10, 20, 30, 50, 80, 120),
             )
-
-        if agenda_semana:
-            df_semana = pd.DataFrame(agenda_semana)
-            df_semana["Dia"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%A") if x != datetime.min else "Sin fecha")
-            df_semana["Fecha"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y") if x != datetime.min else "Sin fecha")
-            df_semana["Hora"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%H:%M") if x != datetime.min else "--:--")
-            df_semana["Profesional"] = df_semana["profesional"].fillna("Sin profesional")
-            df_semana["Zona"] = df_semana.get("zona", pd.Series(["Zona sin definir"] * len(df_semana))).fillna("Zona sin definir")
-            df_semana["Estado"] = df_semana["estado_calc"]
-            df_semana = df_semana[["Dia", "Fecha", "Hora", "Profesional", "Zona", "Estado"]].sort_values(["Fecha", "Hora"])
-            limite_semana = seleccionar_limite_registros(
-                "Filas de la semana",
-                len(df_semana),
-                key=f"agenda_semana_limit_{paciente_sel}",
-                default=14,
-                opciones=(7, 14, 21, 35, 50),
-            )
-            mostrar_dataframe_con_scroll(df_semana.head(limite_semana), height=300)
-        else:
-            bloque_estado_vacio(
-                "Semana sin visitas en agenda",
-                "No hay turnos en la semana elegida para este paciente.",
-                sugerencia="Cambiá la fecha de referencia de la semana o agendá una visita nueva.",
-            )
-
-        limite = seleccionar_limite_registros(
-            "Visitas a mostrar",
-            len(df_filtrado),
-            key=f"agenda_limit_{paciente_sel}",
-            default=20,
-            opciones=(10, 20, 30, 50, 80, 120),
-        )
-        cols_visibles = ["Fecha y Hora", "Profesional", "Estado", "fecha", "hora"]
-        df_render = df_filtrado.sort_values("_fecha_dt", ascending=False)[cols_visibles].rename(columns={"fecha": "Fecha", "hora": "Hora"})
-        mostrar_dataframe_con_scroll(df_render.head(limite), height=360)
+            cols_visibles = ["Fecha y Hora", "Profesional", "Estado", "fecha", "hora"]
+            df_render = df_filtrado.sort_values("_fecha_dt", ascending=False)[cols_visibles].rename(columns={"fecha": "Fecha", "hora": "Hora"})
+            mostrar_dataframe_con_scroll(df_render.head(limite), height=360)
 
     st.divider()
     st.subheader("Contacto y ubicacion")

@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.jira_status import fetch_jira_issues, jira_setup_hint, load_jira_config
-from core.view_helpers import bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import mostrar_dataframe_con_scroll
 
 
@@ -270,7 +270,9 @@ def render_project_management(mi_empresa, user=None, rol=None):
 
     with tab_hitos:
         st.markdown("#### Hitos del roadmap")
-        mostrar_dataframe_con_scroll(pd.DataFrame(MILESTONES), height=380)
+        df_hitos = pd.DataFrame(MILESTONES)
+        with lista_plegable("Hitos (tabla)", count=len(df_hitos), expanded=False, height=420):
+            mostrar_dataframe_con_scroll(df_hitos, height=360)
 
         with st.container(border=True):
             st.markdown("**Lectura operativa**")
@@ -289,7 +291,9 @@ def render_project_management(mi_empresa, user=None, rol=None):
             "[Documento fuente](%s)."
             % DOC_URL
         )
-        mostrar_dataframe_con_scroll(pd.DataFrame(ROLE_MATRIX), height=460)
+        df_roles = pd.DataFrame(ROLE_MATRIX)
+        with lista_plegable("Matriz de roles", count=len(df_roles), expanded=False, height=500):
+            mostrar_dataframe_con_scroll(df_roles, height=440)
 
     with tab_jira:
         st.markdown("#### Backlog y tablero (Jira Cloud)")

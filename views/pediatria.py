@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -157,4 +157,5 @@ def render_pediatria(paciente_sel, user):
         df_ped = pd.DataFrame(ped[-limite:]).drop(columns=["paciente"], errors='ignore')
         df_ped["fecha_dt"] = df_ped["fecha"].apply(_parse_fecha_hora)
         df_ped = df_ped.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
-        mostrar_dataframe_con_scroll(df_ped, height=360)
+        with lista_plegable("Controles pediátricos (tabla)", count=len(df_ped), expanded=False, height=400):
+            mostrar_dataframe_con_scroll(df_ped, height=340)

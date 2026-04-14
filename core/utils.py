@@ -109,6 +109,7 @@ PERMISOS_MODULOS = {
     # Perfil asistencial (Medico, Enfermeria, Operativo): menu acotado a lo clinico.
     "operativo_clinico": [
         "Visitas",
+        "Admision",
         "Clinica",
         "Pediatria",
         "Evolucion",

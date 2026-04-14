@@ -31,7 +31,7 @@ from core.utils import (
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
-from core.view_helpers import bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 
 
 def _widget_key_equipo(login: str, parte: str) -> str:
@@ -68,7 +68,7 @@ def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> 
 
     st.caption(
         "**Clave de acceso:** "
-        + ("asignada" if tiene_clave else "sin clave (alta o «Olvidé mi contraseña»)")
+        + ("asignada" if tiene_clave else "sin clave (alta o pedí clave a coordinación)")
     )
 
     if puede_ver_pin:
@@ -77,15 +77,15 @@ def _render_pings_seguridad_usuario(d: dict, *, puede_ver_pin: bool = False) -> 
                 "<div class='mc-mi-equipo-pin-ok' role='status'>"
                 "<span class='mc-mi-equipo-pin-label'>PIN recuperación</span> "
                 f"<code class='mc-mi-equipo-pin-code'>{escape(pin)}</code>"
-                "<span class='mc-mi-equipo-pin-hint'> Opcional (procesos internos). Recuperación por cuenta propia: correo + SMTP en «Olvidé mi contraseña».</span>"
+                "<span class='mc-mi-equipo-pin-hint'> Opcional (procesos internos). La clave nueva la asigna coordinación desde Mi equipo.</span>"
                 "</div>",
                 unsafe_allow_html=True,
             )
         elif not pin:
             st.markdown(
                 "<div class='mc-mi-equipo-pin-warn' role='alert'>"
-                "<strong>Sin PIN.</strong> Opcional. Para recuperar solo: <strong>correo</strong> en ficha y servidor SMTP; "
-                "el usuario usa «Olvidé mi contraseña» en el login.</div>",
+                "<strong>Sin PIN.</strong> Opcional. El correo en ficha puede usarse para avisos o 2FA si hay SMTP; "
+                "la clave la define coordinación.</div>",
                 unsafe_allow_html=True,
             )
         else:
@@ -151,7 +151,7 @@ def _mi_equipo_bloque_principal(
         with st.expander("Coordinación: nueva contraseña y/o PIN", expanded=False):
             st.caption(
                 "Podés **asignar una clave nueva** desde acá o **definir/cambiar el PIN** de 4 dígitos (opcional, respaldo interno). "
-                "La recuperación por el usuario es por **correo** («Olvidé mi contraseña») si hay SMTP."
+                "En esta instalación **no** hay recuperación automática por correo: la clave nueva la asignás desde acá."
             )
             ch_pin = st.text_input(
                 "PIN de recuperación (4 dígitos, opcional)",
@@ -219,7 +219,7 @@ def _mi_equipo_bloque_principal(
                     st.rerun()
     if puede_editar_mail_equipo and ok_gestionar:
         with st.expander("Recuperacion y credenciales", expanded=False):
-            ne = st.text_input("Correo de recuperacion", value=email_actual, key=f"emp_mail_new_{u}")
+            ne = st.text_input("Correo electrónico", value=email_actual, key=f"emp_mail_new_{u}")
             np = st.text_input("PIN opcional", value=pin_actual, max_chars=4, key=f"emp_pin_{u}")
             nueva_pass = st.text_input("Nueva contrasena (opcional)", type="password", key=f"emp_pass_{u}")
             if st.button("Guardar acceso", key=f"btn_access_{u}"):
@@ -417,7 +417,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     )
     bloque_mc_grid_tarjetas(
         [
-            ("Alta", "Login, clave, correo de recuperacion y PIN opcional para nuevos accesos."),
+            ("Alta", "Login, clave, correo y PIN opcional para nuevos accesos."),
             ("Control", "Busqueda y gestion por rol: SuperAdmin o Coordinador en su clinica, segun reglas."),
             ("Rol vs perfil", "Rol = permisos en el sistema; perfil = agenda y filtros asistenciales."),
         ]
@@ -493,11 +493,11 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 )
                 st.caption("El rol define accesos del sistema. El perfil profesional se usa para agenda, equipo y filtros asistenciales.")
                 st.caption(
-                    "Ingreso con login + contraseña. **Recuperación:** correo en ficha + SMTP → el usuario pide "
-                    "«Olvidé mi contraseña» y recibe un enlace. PIN opcional para uso interno de la clínica."
+                    "Ingreso con login + contraseña. **Clave nueva:** la asigna coordinación desde Mi equipo. "
+                    "El correo en ficha puede usarse para 2FA si hay SMTP. PIN opcional interno."
                 )
                 u_email = st.text_input(
-                    "Correo de recuperacion",
+                    "Correo electrónico",
                     placeholder="profesional@clinica.com",
                 )
 
@@ -546,9 +546,9 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     st.subheader("Control de Accesos")
     with st.expander("Ayuda: PIN, coordinación y bajas", expanded=False):
         st.markdown(
-            "**PIN y clave:** quien puede gestionar ve el PIN en un recuadro compacto y los expanders "
-            "**Coordinación** / **Recuperación**. «Olvidé mi contraseña» envía **correo con enlace** (SMTP); "
-            "en el mismo paso de la app podés **cambiar contraseña y PIN** (PIN opcional).\n\n"
+            "**PIN y clave:** quien puede gestionar ve el PIN en un recuadro compacto y el expander "
+            "**Coordinación: nueva contraseña y/o PIN**. La contraseña la cambia coordinación desde acá "
+            "(no hay recuperación automática por correo en el login).\n\n"
             "**Suspender / Eliminar:** solo **SuperAdmin** o **Coordinador** de la clínica (según reglas). "
             "Otros roles no ven esas acciones en la grilla."
         )
@@ -592,7 +592,12 @@ def render_mi_equipo(mi_empresa, rol, user=None):
         opciones=(10, 20, 30, 50, 100, 200),
     )
     altura_lista_equipo = 400 if compacto_equipo else 520
-    with st.container(height=altura_lista_equipo, border=True):
+    with lista_plegable(
+        "Listado del equipo (fichas y permisos)",
+        count=min(limite, len(usuarios_ordenados)),
+        expanded=False,
+        height=altura_lista_equipo,
+    ):
         mostro_usuario = False
         for u, d in usuarios_ordenados[:limite]:
             mostro_usuario = True

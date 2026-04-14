@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from views.enfermeria import render_enfermeria
 from core.utils import (
     ahora,
@@ -265,11 +265,17 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         else:
             st.caption("El borrado de evoluciones queda reservado a medico, coordinacion o administracion total.")
 
-        st.caption(
-            f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones registradas. "
-            "El panel gris tiene altura fija: con muchas notas el desplazamiento es dentro de ese panel (barra a la derecha del recuadro)."
-        )
-        _historial_evoluciones_scroll_interno(list(reversed(evs_paciente[-limite_evol:])))
+        with lista_plegable(
+            "Ver historial de evoluciones",
+            count=min(limite_evol, len(evs_paciente)),
+            expanded=False,
+            height=None,
+        ):
+            st.caption(
+                f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones. "
+                "El panel interno tiene scroll propio."
+            )
+            _historial_evoluciones_scroll_interno(list(reversed(evs_paciente[-limite_evol:])))
     else:
         bloque_estado_vacio(
             "Sin evoluciones todavía",
@@ -288,7 +294,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             default=12,
             opciones=(6, 12, 20, 30),
         )
-        with st.container(height=520):
+        with lista_plegable("Galería de fotos clínicas", count=min(limite_fotos, len(fotos_heridas)), expanded=False, height=520):
             for foto in reversed(fotos_heridas[-limite_fotos:]):
                 with st.container(border=True):
                     st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")

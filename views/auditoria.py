@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.view_helpers import bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll
 
 FPDF_DISPONIBLE = False
@@ -115,10 +115,11 @@ def render_auditoria(mi_empresa, user):
         fin = inicio + limite
         df_pagina = df_filtrado.iloc[::-1].iloc[inicio:fin]
         st.caption(f"Mostrando {len(df_pagina)} de {total} registro(s) filtrado(s).")
-        mostrar_dataframe_con_scroll(
-            df_pagina.drop(columns=["fecha_dt"], errors="ignore"),
-            height=460,
-        )
+        with lista_plegable("Log de auditoría (tabla)", count=len(df_pagina), expanded=False, height=500):
+            mostrar_dataframe_con_scroll(
+                df_pagina.drop(columns=["fecha_dt"], errors="ignore"),
+                height=440,
+            )
 
         csv_key = f"audit_logs_csv_{mi_empresa}_{user.get('nombre','')}_{usuario_filtro}_{str(buscar_log or '').strip().lower()}"
         if st.button("Preparar auditoría CSV", use_container_width=True):
@@ -173,7 +174,8 @@ def render_auditoria(mi_empresa, user):
         fin_chk = ini_chk + limite
         df_chk_page = df_chk.iloc[ini_chk:fin_chk]
         st.caption(f"Mostrando {len(df_chk_page)} de {total_chk} fichada(s) en el período.")
-        mostrar_dataframe_con_scroll(df_chk_page, height=420)
+        with lista_plegable("Asistencia del profesional (tabla)", count=len(df_chk_page), expanded=False, height=460):
+            mostrar_dataframe_con_scroll(df_chk_page, height=400)
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF de asistencia", value=False):
             pdf = FPDF()

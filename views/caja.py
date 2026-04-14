@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
@@ -139,7 +139,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             pdf.cell(0, 14, safe_text(f"TOTAL: ${mov['monto']:,.2f}"), 1, 1, 'C', True)
             return pdf_output_bytes(pdf)
 
-        with st.container(height=420):
+        with lista_plegable("Movimientos del paciente", count=min(limite, len(fact_paciente)), expanded=False, height=420):
             for i, mov in enumerate(reversed(fact_paciente[-limite:])):
                 with st.container(border=True):
                     col_r1, col_r2 = st.columns([4, 1])
@@ -149,7 +149,14 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     with col_r2:
                         if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_mov_{i}", value=False):
                             pdf_bytes = generar_recibo_pdf(mov)
-                            st.download_button("Descargar PDF", data=pdf_bytes, file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf", mime="application/pdf", key=f"pdf_btn_{i}", use_container_width=True)
+                            st.download_button(
+                                "Descargar PDF",
+                                data=pdf_bytes,
+                                file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf",
+                                mime="application/pdf",
+                                key=f"pdf_btn_{i}",
+                                use_container_width=True,
+                            )
     else:
         st.warning(
             "No hay movimientos de facturacion para este paciente en esta clinica. Usa el formulario **Registrar Nuevo Movimiento** de arriba (servicio, monto y estado de cobro)."
@@ -178,7 +185,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 default=100,
                 opciones=(20, 50, 100, 200, 500),
             )
-            mostrar_dataframe_con_scroll(df_mostrar.tail(limite).iloc[::-1], height=400)
+            with lista_plegable("Auditoría de facturación (tabla)", count=min(limite, len(df_mostrar)), expanded=False, height=440):
+                mostrar_dataframe_con_scroll(df_mostrar.tail(limite).iloc[::-1], height=380)
 
             csv_data = dataframe_csv_bytes(df_mostrar)
             st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)

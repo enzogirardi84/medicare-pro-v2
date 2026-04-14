@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -134,7 +134,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
                     "firma": "Registrado por",
                 }
             )
-            mostrar_dataframe_con_scroll(df_cons, height=380)
+            with lista_plegable("Historial de consumos (tabla)", count=len(df_cons), expanded=False, height=400):
+                mostrar_dataframe_con_scroll(df_cons, height=340)
     else:
         bloque_estado_vacio(
             "Sin consumos registrados",

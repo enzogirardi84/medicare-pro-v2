@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.export_utils import dataframe_csv_bytes, sanitize_filename_component
-from core.view_helpers import bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -95,7 +95,8 @@ def render_auditoria_legal(mi_empresa, user):
     st.caption(f"Mostrando {len(pagina_regs)} de {total_filtrado} evento(s) filtrado(s).")
 
     df_page = pd.DataFrame(pagina_regs)
-    mostrar_dataframe_con_scroll(df_page, height=460)
+    with lista_plegable("Eventos de auditoría legal", count=len(df_page), expanded=False, height=500):
+        mostrar_dataframe_con_scroll(df_page, height=440)
 
     filtro_key = f"{paciente_sel}|{str(filtro or '').strip().lower()}|{total_filtrado}"
     cache_key = f"_csv_aud_legal_{sanitize_filename_component(mi_empresa, 'empresa')}_{user.get('nombre', '')}_{filtro_key}"

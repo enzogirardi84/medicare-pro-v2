@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
+from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 
 
@@ -174,7 +174,8 @@ def render_escalas_clinicas(paciente_sel, user):
         key=f"limite_escalas_{paciente_sel}",
         default=30,
     )
-    mostrar_dataframe_con_scroll(
-        pd.DataFrame(registros[-limite:]).drop(columns=["paciente"], errors="ignore").iloc[::-1],
-        height=420,
-    )
+    with lista_plegable("Historial de escalas (tabla)", count=min(limite, len(registros)), expanded=False, height=460):
+        mostrar_dataframe_con_scroll(
+            pd.DataFrame(registros[-limite:]).drop(columns=["paciente"], errors="ignore").iloc[::-1],
+            height=400,
+        )

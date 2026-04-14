@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -65,7 +65,7 @@ def render_asistencia(mi_empresa, user):
 
     if activos:
         st.markdown("#### Profesionales actualmente en domicilio")
-        with st.container(height=360):
+        with lista_plegable("En domicilio ahora", count=len(activos), expanded=True, height=380):
             for profesional, data in activos.items():
                 with st.container(border=True):
                     col_info, col_btn = st.columns([3, 1])
@@ -113,7 +113,9 @@ def render_asistencia(mi_empresa, user):
             key=f"limite_asistencia_{mi_empresa}",
             default=30,
         )
-        mostrar_dataframe_con_scroll(df_chks.tail(limite).iloc[::-1], height=420)
+        df_mov = df_chks.tail(limite).iloc[::-1]
+        with lista_plegable("Movimientos del día", count=len(df_mov), expanded=False, height=460):
+            mostrar_dataframe_con_scroll(df_mov, height=400)
     else:
         st.warning(
             "No hay fichadas registradas hoy para esta clinica. Los movimientos aparecen cuando el equipo usa **Fichar LLEGADA/SALIDA** en Visitas con GPS o registro equivalente."

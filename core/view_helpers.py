@@ -1,9 +1,34 @@
 """Utilidades de UI compartidas entre vistas Streamlit (mensajes, bloques de ayuda)."""
 
+from contextlib import contextmanager
 from html import escape
-from typing import Optional
+from typing import Iterator, Optional
 
 import streamlit as st
+
+
+@contextmanager
+def lista_plegable(
+    titulo: str,
+    *,
+    count: Optional[int] = None,
+    expanded: bool = False,
+    height: Optional[int] = 360,
+) -> Iterator[None]:
+    """
+    Lista o bloque largo dentro de un expander; opcionalmente con contenedor con scroll vertical.
+    Reduce altura de página y DOM cuando está plegado (mejor rendimiento en el navegador).
+
+    - ``height=None``: solo expander, sin contenedor de altura fija (útil si adentro hay gráficos o varios scrolls).
+    - ``height>0``: ``st.container(height=...)`` interno con barra de desplazamiento.
+    """
+    etiqueta = f"{titulo} ({count})" if count is not None else titulo
+    with st.expander(etiqueta, expanded=expanded):
+        if height is not None and height > 0:
+            with st.container(height=height, border=True):
+                yield
+        else:
+            yield
 
 
 def aviso_sin_paciente() -> None:

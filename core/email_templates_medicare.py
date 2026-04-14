@@ -103,8 +103,9 @@ def html_password_reset_body(
     else:
         boton = (
             "<p style='margin:18px 0 6px;font-size:14px;color:#94a3b8;text-align:center'>"
-            "Abrí la aplicación MediCare en el navegador, elegí <strong style='color:#e2e8f0'>Olvidé mi contraseña</strong> "
-            "y pegá el token de abajo.</p>"
+            "Si tu centro te envió este mensaje con un <strong style='color:#e2e8f0'>token</strong>, "
+            "seguí las instrucciones que te dieron. Si no tenés enlace, pedí una clave nueva a "
+            "<strong style='color:#e2e8f0'>coordinación</strong>.</p>"
         )
 
     enlace_plano = ""
@@ -127,8 +128,9 @@ def html_password_reset_body(
     pasos = (
         "<ol style='margin:12px 0 0;padding-left:20px;color:#94a3b8;font-size:13px;line-height:1.65'>"
         "<li style='margin-bottom:6px'>Hacé clic en el botón o copiá el token.</li>"
-        "<li style='margin-bottom:6px'>En la pantalla de acceso, abrí <strong style='color:#cbd5e1'>Olvidé mi contraseña</strong>.</li>"
-        "<li>Elegí una contraseña nueva y guardá. Opcional: en el mismo paso podés definir un <strong style='color:#cbd5e1'>PIN de recuperación</strong> de 4 dígitos.</li>"
+        "<li style='margin-bottom:6px'>Completá el proceso que indique tu clínica (muchas instalaciones asignan la clave desde <strong style='color:#cbd5e1'>coordinación</strong>).</li>"
+        "<li>Si tu versión de MediCare permite cerrar el proceso en la app, elegí contraseña nueva y guardá. "
+        "Opcional: <strong style='color:#cbd5e1'>PIN de recuperación</strong> de 4 dígitos.</li>"
         "</ol>"
     )
 
