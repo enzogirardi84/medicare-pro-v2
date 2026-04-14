@@ -1,5 +1,6 @@
 import base64
 import sys
+import time
 from datetime import datetime
 from html import escape
 from importlib import import_module
@@ -56,6 +57,7 @@ from core.view_registry import build_view_maps
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 
 from core.app_logging import configurar_logging_basico, log_event
+from core.perf_metrics import record_perf, summarize_perf
 
 configurar_logging_basico()
 
@@ -799,5 +801,26 @@ if mostrar_atajo or paciente_sel:
             unsafe_allow_html=True,
         )
 
-render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol, menu_set)
+t0_view = time.monotonic()
+ok_view = True
+try:
+    render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol, menu_set)
+except Exception:
+    ok_view = False
+    raise
+finally:
+    record_perf(f"ui.modulo.{vista_actual}", (time.monotonic() - t0_view) * 1000.0, ok=ok_view)
+
+if es_control_total(rol):
+    with st.sidebar.expander("Rendimiento (ult. 15 min)", expanded=False):
+        resumen_perf = summarize_perf(window_seconds=900)
+        if not resumen_perf:
+            st.caption("Sin métricas todavía.")
+        else:
+            for ev in sorted(resumen_perf.keys()):
+                r = resumen_perf[ev]
+                st.caption(
+                    f"{ev} | n={r['count']} err={r['errors']} "
+                    f"p50={r['p50_ms']}ms p95={r['p95_ms']}ms max={r['max_ms']}ms"
+                )
 

@@ -500,75 +500,85 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     - tenant_key: empresa normalizada (minúsculas) para cargar solo esa clínica.
     - monolito_legacy: fuerza fila id=1 (usuario admin de emergencia y operación global legacy).
     """
+    t0 = time.monotonic()
+    ok = True
     cache_key = "_db_cache"
     shard = modo_shard_activo()
+    try:
+        if shard and not monolito_legacy and not tenant_key:
+            if not force and cache_key in st.session_state:
+                return copy.deepcopy(st.session_state[cache_key])
+            return None
 
-    if shard and not monolito_legacy and not tenant_key:
         if not force and cache_key in st.session_state:
             return copy.deepcopy(st.session_state[cache_key])
-        return None
 
-    if not force and cache_key in st.session_state:
-        return copy.deepcopy(st.session_state[cache_key])
+        tk = tenant_key_normalizado(tenant_key) if tenant_key else ""
 
-    tk = tenant_key_normalizado(tenant_key) if tenant_key else ""
-
-    if supabase is None:
-        st.session_state["_modo_offline"] = True
-        if shard and tk and not monolito_legacy:
-            data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
-        else:
-            data_local = _normalizar_blob_datos(_cargar_local())
-        if data_local:
-            pb = _fijar_cache_y_hash(data_local)
-            if pb and _payload_muy_grande(pb):
-                log_event("db", f"payload_grande_local:{len(pb)}")
-        return copy.deepcopy(data_local) if data_local else None
-
-    try:
-        if shard and tk and not monolito_legacy:
-            data = _normalizar_blob_datos(_cargar_supabase_tenant(tk))
-        else:
-            data = _normalizar_blob_datos(_cargar_supabase_monolito())
-
-        if data is not None:
-            pb = _fijar_cache_y_hash(data)
-            st.session_state["_modo_offline"] = False
-            if pb and _payload_muy_grande(pb):
-                log_event("db", f"payload_grande_nube:{len(pb)}")
-            return copy.deepcopy(data)
-
-        # Conexión OK pero sin fila en nube (tenant nuevo / vacío): reutilizar backup local si existe.
-        data_local = None
-        if shard and tk and not monolito_legacy:
-            data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
-        if data_local is None:
-            data_local = _normalizar_blob_datos(_cargar_local())
-        if data_local:
-            _fijar_cache_y_hash(data_local)
+        if supabase is None:
             st.session_state["_modo_offline"] = True
-            return copy.deepcopy(data_local)
-    except Exception as e:
-        log_event("db", f"supabase_unavailable:{type(e).__name__}:{e!s}")
-        data_local = None
-        if shard and tk and not monolito_legacy:
-            data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
-        if data_local is None:
-            data_local = _normalizar_blob_datos(_cargar_local())
-        if data_local:
-            _fijar_cache_y_hash(data_local)
-        st.session_state["_modo_offline"] = True
-        if not st.session_state.get("_aviso_offline_mostrado"):
-            st.warning(
-                "Modo local: no pudimos conectar con la nube en este momento. "
-                "Si hay copia en este equipo, seguimos trabajando con ella."
-            )
-            with st.expander("Detalle tecnico (soporte)", expanded=False):
-                st.caption("El mensaje completo quedó registrado en los logs del servidor (si están activos).")
-                st.code(type(e).__name__, language="text")
-            st.session_state["_aviso_offline_mostrado"] = True
-        return copy.deepcopy(data_local) if data_local else None
-    return None
+            if shard and tk and not monolito_legacy:
+                data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
+            else:
+                data_local = _normalizar_blob_datos(_cargar_local())
+            if data_local:
+                pb = _fijar_cache_y_hash(data_local)
+                if pb and _payload_muy_grande(pb):
+                    log_event("db", f"payload_grande_local:{len(pb)}")
+            return copy.deepcopy(data_local) if data_local else None
+
+        try:
+            if shard and tk and not monolito_legacy:
+                data = _normalizar_blob_datos(_cargar_supabase_tenant(tk))
+            else:
+                data = _normalizar_blob_datos(_cargar_supabase_monolito())
+
+            if data is not None:
+                pb = _fijar_cache_y_hash(data)
+                st.session_state["_modo_offline"] = False
+                if pb and _payload_muy_grande(pb):
+                    log_event("db", f"payload_grande_nube:{len(pb)}")
+                return copy.deepcopy(data)
+
+            # Conexión OK pero sin fila en nube (tenant nuevo / vacío): reutilizar backup local si existe.
+            data_local = None
+            if shard and tk and not monolito_legacy:
+                data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
+            if data_local is None:
+                data_local = _normalizar_blob_datos(_cargar_local())
+            if data_local:
+                _fijar_cache_y_hash(data_local)
+                st.session_state["_modo_offline"] = True
+                return copy.deepcopy(data_local)
+        except Exception as e:
+            log_event("db", f"supabase_unavailable:{type(e).__name__}:{e!s}")
+            data_local = None
+            if shard and tk and not monolito_legacy:
+                data_local = _normalizar_blob_datos(_cargar_local_tenant(tk))
+            if data_local is None:
+                data_local = _normalizar_blob_datos(_cargar_local())
+            if data_local:
+                _fijar_cache_y_hash(data_local)
+            st.session_state["_modo_offline"] = True
+            if not st.session_state.get("_aviso_offline_mostrado"):
+                st.warning(
+                    "Modo local: no pudimos conectar con la nube en este momento. "
+                    "Si hay copia en este equipo, seguimos trabajando con ella."
+                )
+                with st.expander("Detalle tecnico (soporte)", expanded=False):
+                    st.caption("El mensaje completo quedó registrado en los logs del servidor (si están activos).")
+                    st.code(type(e).__name__, language="text")
+                st.session_state["_aviso_offline_mostrado"] = True
+            ok = False
+            return copy.deepcopy(data_local) if data_local else None
+        return None
+    finally:
+        try:
+            from core.perf_metrics import record_perf
+
+            record_perf("db.cargar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
+        except Exception:
+            pass
 
 
 def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
@@ -617,8 +627,12 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
 
 def _guardar_datos_ejecutar():
     t0 = time.monotonic()
+    ok = True
     try:
         return _guardar_datos_ejecutar_core()
+    except Exception:
+        ok = False
+        raise
     finally:
         try:
             from core.feature_flags import GUARDAR_DATOS_LOG_LENTO_SEGUNDOS
@@ -628,6 +642,12 @@ def _guardar_datos_ejecutar():
                 dt = time.monotonic() - t0
                 if dt >= um:
                     log_event("db", f"guardar_lento:{dt:.2f}s")
+        except Exception:
+            pass
+        try:
+            from core.perf_metrics import record_perf
+
+            record_perf("db.guardar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
         except Exception:
             pass
 
