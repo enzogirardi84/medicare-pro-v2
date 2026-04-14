@@ -211,6 +211,29 @@ def obtener_estado_guardado():
     }
 
 
+def procesar_guardado_pendiente() -> bool:
+    """
+    Flush silencioso para guardados agrupados por ráfaga.
+    Se llama en cada rerun de la app ya logueada.
+    """
+    if not st.session_state.get("_guardar_datos_pendiente"):
+        return False
+    try:
+        from core.feature_flags import GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS
+
+        min_intervalo = float(GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS or 0)
+    except Exception:
+        min_intervalo = 0.0
+    if min_intervalo <= 0:
+        return False
+
+    ultimo = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
+    if ultimo > 0 and (time.monotonic() - ultimo) < min_intervalo:
+        return False
+    guardar_datos(spinner=False, force=True)
+    return True
+
+
 def _db_keys():
     return [
         "usuarios_db",
@@ -548,7 +571,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     return None
 
 
-def guardar_datos(*, spinner: Optional[bool] = None):
+def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
     """
     Anticolapso: un fallo inesperado no debe dejar la app sin mensaje claro.
 
@@ -559,7 +582,7 @@ def guardar_datos(*, spinner: Optional[bool] = None):
     mostrar = GUARDAR_DATOS_SPINNER_DEFAULT if spinner is None else spinner
     # Guardados no forzados: evita ráfagas de upserts cuando hay muchos eventos seguidos.
     # Los flujos críticos que usan spinner=True mantienen persistencia inmediata.
-    if not mostrar:
+    if not force and not mostrar:
         try:
             min_intervalo = float(GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS or 0)
         except Exception:
@@ -568,9 +591,10 @@ def guardar_datos(*, spinner: Optional[bool] = None):
             ahora_ts = time.monotonic()
             ultimo_ts = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
             if ultimo_ts > 0 and (ahora_ts - ultimo_ts) < min_intervalo:
+                st.session_state["_guardar_datos_pendiente"] = True
                 _registrar_estado_guardado(
-                    "sin_cambios",
-                    "Guardado agrupado para evitar saturacion temporal.",
+                    "pendiente",
+                    "Guardado en cola por rafaga; se sincroniza automaticamente en segundos.",
                     guardado_nube=supabase is not None,
                     guardado_local=True,
                 )
@@ -615,6 +639,7 @@ def _guardar_datos_ejecutar_core():
     payload_hash = hashlib.sha256(payload_bytes).hexdigest()
 
     if st.session_state.get("_db_cache_hash") == payload_hash:
+        st.session_state["_guardar_datos_pendiente"] = False
         _registrar_estado_guardado("sin_cambios", "No habia cambios pendientes.", guardado_nube=supabase is not None, guardado_local=True)
         return
 
@@ -669,6 +694,7 @@ def _guardar_datos_ejecutar_core():
 
     st.session_state["_db_cache"] = loads_db_payload(payload_bytes)
     st.session_state["_db_cache_hash"] = payload_hash
+    st.session_state["_guardar_datos_pendiente"] = False
 
     if guardado_nube:
         _registrar_estado_guardado("nube", "Guardado sincronizado en la nube.", guardado_nube=True, guardado_local=guardado_local)

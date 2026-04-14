@@ -69,6 +69,7 @@ core_utils = import_module("core.utils")
 _core_database = import_module("core.database")
 obtener_estado_guardado = getattr(_core_database, "obtener_estado_guardado", lambda: {})
 completar_claves_db_session = getattr(_core_database, "completar_claves_db_session", lambda: None)
+procesar_guardado_pendiente = getattr(_core_database, "procesar_guardado_pendiente", lambda: False)
 
 _vr = import_module("core.view_roles")
 MODULO_ROLES_PERMITIDOS = _vr.MODULO_ROLES_PERMITIDOS
@@ -562,6 +563,12 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
+# Drena guardados agrupados por ráfaga sin bloquear formularios.
+try:
+    procesar_guardado_pendiente()
+except Exception:
+    pass
+
 _canon = core_utils.normalizar_usuario_sistema(dict(user))
 _merged = dict(user)
 for _k in ("rol", "perfil_profesional", "empresa", "nombre", "email", "pin"):
@@ -710,6 +717,8 @@ with st.sidebar:
             st.caption(f"Guardado: error {hora_guardado}")
         elif estado_clave == "sin_cambios":
             st.caption(f"Sin cambios pendientes {hora_guardado}")
+        elif estado_clave == "pendiente":
+            st.caption(f"Guardado pendiente {hora_guardado}")
     detalle_guardado = str(estado_guardado.get("detalle", "") or "").strip()
     if detalle_guardado and estado_clave in {"local", "error"}:
         st.caption(detalle_guardado)
