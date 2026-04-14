@@ -710,6 +710,7 @@ def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
 
 def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
     busqueda_norm = str(busqueda or "").strip().lower()
+    hay_busqueda = bool(busqueda_norm)
     detalles_db = mapa_detalles_pacientes(session_state)
     pacientes_visibles = []
 
@@ -730,18 +731,19 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
         empresa = str(detalles.get("empresa", "") or "")
         etiqueta = compactar_etiqueta_paciente(paciente, estado)
 
-        searchable = " ".join(
-            [
-                str(paciente),
-                etiqueta,
-                dni,
-                obra_social,
-                empresa,
-                str(estado),
-            ]
-        ).lower()
-        if busqueda_norm and busqueda_norm not in searchable:
-            continue
+        if hay_busqueda:
+            searchable = " ".join(
+                [
+                    str(paciente),
+                    etiqueta,
+                    dni,
+                    obra_social,
+                    empresa,
+                    str(estado),
+                ]
+            ).lower()
+            if busqueda_norm not in searchable:
+                continue
 
         pacientes_visibles.append(
             (paciente, etiqueta, dni, obra_social, estado, empresa)
