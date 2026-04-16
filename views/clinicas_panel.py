@@ -228,9 +228,9 @@ def render_clinicas_panel(mi_empresa, user, rol):
                 f"Suspension logica. Usuarios operativos afectados (aprox.): {usuarios_afectados}. "
                 f"Motivo: {motivo.strip() or 'Sin motivo consignado'}."
             )
-            _registrar_cambio_clinica(user, "Suspension de clinica", nombre, key_norm, detalle)
+            _registrar_cambio_clinica(user, "Suspension de clinica", row["Clinica"], key_norm, detalle)
             guardar_datos()
-            queue_toast(f"Clinica suspendida: {nombre}. Los usuarios de esa empresa no podran iniciar sesion.")
+            queue_toast(f"Clinica suspendida: {row['Clinica']}. Los usuarios de esa empresa no podran iniciar sesion.")
             st.rerun()
     with b2:
         if st.button(
@@ -244,12 +244,12 @@ def render_clinicas_panel(mi_empresa, user, rol):
             _registrar_cambio_clinica(
                 user,
                 "Reactivacion de clinica",
-                nombre,
+                row["Clinica"],
                 key_norm,
                 "Servicio habilitado nuevamente. Accesos restaurados para coordinadores y operativos.",
             )
             guardar_datos()
-            queue_toast(f"Clinica reactivada: {nombre}.")
+            queue_toast(f"Clinica reactivada: {row['Clinica']}.")
             st.rerun()
 
     with st.expander("Historial de suspensiones y reactivaciones (auditoria)", expanded=False):

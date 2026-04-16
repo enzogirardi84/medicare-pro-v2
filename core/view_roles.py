@@ -92,7 +92,7 @@ def modulos_menu_para_rol(rol_actual: Optional[str]) -> List[str]:
     for modulo in MODULO_ORDEN_MENU:
         if modulo == ALERTAS_APP_PACIENTE_MODULO and not ALERTAS_APP_PACIENTE_VISIBLE:
             continue
-        perms = MODULO_ROLES_PERMITIDOS.get(modulo)
-        if perms and tiene_acceso_vista(rol_actual, perms):
+        perms = MODULO_ROLES_PERMITIDOS.get(modulo, [])
+        if tiene_acceso_vista(rol_actual, perms):
             salida.append(modulo)
     return salida
