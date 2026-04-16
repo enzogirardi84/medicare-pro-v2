@@ -710,6 +710,13 @@ def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
 
 def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
     busqueda_norm = str(busqueda or "").strip().lower()
+    ts = session_state.get("_ultimo_guardado_ts", 0)
+    cache_key = f"_mc_cache_pac_vis_{mi_empresa}_{rol_actual}_{incluir_altas}_{busqueda_norm}"
+    
+    cached = session_state.get(cache_key)
+    if cached and cached.get("ts") == ts:
+        return cached["data"]
+
     hay_busqueda = bool(busqueda_norm)
     detalles_db = mapa_detalles_pacientes(session_state)
     pacientes_visibles = []
@@ -732,16 +739,7 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
         etiqueta = compactar_etiqueta_paciente(paciente, estado)
 
         if hay_busqueda:
-            searchable = " ".join(
-                [
-                    str(paciente),
-                    etiqueta,
-                    dni,
-                    obra_social,
-                    empresa,
-                    str(estado),
-                ]
-            ).lower()
+            searchable = f"{paciente} {etiqueta} {dni} {obra_social} {empresa} {estado}".lower()
             if busqueda_norm not in searchable:
                 continue
 
@@ -750,6 +748,7 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
         )
 
     pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
+    session_state[cache_key] = {"ts": ts, "data": pacientes_visibles}
     return pacientes_visibles
 
 
@@ -907,9 +906,15 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
-    tiene_consentimiento = any(
-        x.get("paciente") == paciente_sel for x in session_state.get("consentimientos_db", [])
-    )
+    consentimientos = session_state.get("consentimientos_db", [])
+    cons_cache_key = f"_mc_cache_cons_{paciente_sel}"
+    cons_cached = session_state.get(cons_cache_key)
+    if cons_cached and cons_cached.get("id") == id(consentimientos) and cons_cached.get("len") == len(consentimientos):
+        tiene_consentimiento = cons_cached["tiene"]
+    else:
+        tiene_consentimiento = any(x.get("paciente") == paciente_sel for x in consentimientos)
+        session_state[cons_cache_key] = {"id": id(consentimientos), "len": len(consentimientos), "tiene": tiene_consentimiento}
+
     if not tiene_consentimiento:
         alertas.append(
             {
@@ -919,12 +924,19 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
-    ultimo_vital = None
-    # Camino caliente: suele estar append-ordenado; buscamos desde el final para evitar sort O(n log n).
-    for x in reversed(session_state.get("vitales_db", [])):
-        if x.get("paciente") == paciente_sel:
-            ultimo_vital = x
-            break
+    vitales = session_state.get("vitales_db", [])
+    vit_cache_key = f"_mc_cache_vit_ult_{paciente_sel}"
+    vit_cached = session_state.get(vit_cache_key)
+    if vit_cached and vit_cached.get("id") == id(vitales) and vit_cached.get("len") == len(vitales):
+        ultimo_vital = vit_cached["ultimo"]
+    else:
+        ultimo_vital = None
+        for x in reversed(vitales):
+            if x.get("paciente") == paciente_sel:
+                ultimo_vital = x
+                break
+        session_state[vit_cache_key] = {"id": id(vitales), "len": len(vitales), "ultimo": ultimo_vital}
+
     if ultimo_vital:
         sat = _to_float(ultimo_vital.get("Sat"))
         temp = _to_float(ultimo_vital.get("Temp"))
@@ -1219,6 +1231,7 @@ def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_
     return visibles
 
 
+@st.cache_data(show_spinner=False)
 @st.cache_data(show_spinner=False)
 def cargar_texto_asset(nombre_archivo):
     ruta = ASSETS_DIR / nombre_archivo
