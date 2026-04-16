@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 import redis
@@ -26,6 +27,15 @@ from app.services.outbox_scheduler import start_outbox_scheduler
 from app.services.self_heal import start_self_heal_autopilot
 
 app = FastAPI(title="MediCare NextGen API", version="0.2.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")] if settings.cors_origins else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _request_semaphore = asyncio.Semaphore(max(settings.api_max_inflight_requests, 1))
 _priority_slots = max(settings.api_reserved_inflight_for_priority, 0)
 _inflight_requests = 0

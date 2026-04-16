@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     import_circuit_breaker_open_seconds: int = 120
     rate_limit_burst_window_seconds: int = 10
     rate_limit_burst_multiplier: float = 0.5
+    cors_origins: str = "*"
     rate_limit_burst_min_requests: int = 10
     rate_limit_fail_open: bool = True
     idempotency_fail_open: bool = True
