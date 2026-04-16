@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 from datetime import datetime
 from html import escape
 
@@ -90,7 +91,7 @@ def render_asistencia(mi_empresa, user):
                             }
                         )
                         guardar_datos()
-                        st.success(f"Salida forzada registrada correctamente para {profesional}.")
+                        queue_toast(f"Salida forzada registrada correctamente para {profesional}.")
                         st.rerun()
     else:
         st.success("En este momento no hay profesionales con guardias abiertas en domicilios.")

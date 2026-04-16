@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 from datetime import date, datetime
 
 import pandas as pd
@@ -408,7 +409,7 @@ def render_admision(mi_empresa, rol):
                                 empresa=detalles_actualizados.get("empresa", mi_empresa),
                             )
                             guardar_datos(spinner=True)
-                            st.success("Legajo actualizado correctamente.")
+                            queue_toast("Legajo actualizado correctamente.")
                             st.rerun()
 
         if admin_total:
@@ -455,7 +456,7 @@ def render_admision(mi_empresa, rol):
                         empresa=detalle_empresa,
                     )
                     guardar_datos(spinner=True)
-                    st.success("Paciente eliminado correctamente.")
+                    queue_toast("Paciente eliminado correctamente.")
                     st.rerun()
     else:
         st.warning(
@@ -565,7 +566,7 @@ def render_admision(mi_empresa, rol):
                             empresa=emp_d.strip(),
                         )
                         guardar_datos(spinner=True)
-                        st.success(f"Paciente {n} dado de alta correctamente.")
+                        queue_toast(f"Paciente {n} dado de alta correctamente.")
                         st.rerun()
 
         st.caption("Los pacientes quedan disponibles en visitas, historia clinica y documentos.")

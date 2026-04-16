@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
 
@@ -72,7 +73,7 @@ def render_inventario(mi_empresa):
                     st.session_state["inventario_db"].append({"item": item_final, "stock": cantidad, "empresa": mi_empresa})
 
                 guardar_datos(spinner=True)
-                st.success(f"Se agregaron {cantidad} unidades de {item_final}.")
+                queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
                 st.rerun()
 
     st.divider()
@@ -125,7 +126,7 @@ def render_inventario(mi_empresa):
                         i["stock"] = nuevo_stock
                         break
                 guardar_datos(spinner=True)
-                st.success(f"Stock actualizado a {nuevo_stock} unidades.")
+                queue_toast(f"Stock actualizado a {nuevo_stock} unidades.")
                 st.rerun()
 
             col_del1, col_del2 = st.columns([3, 1])
@@ -136,5 +137,5 @@ def render_inventario(mi_empresa):
                     i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
                 ]
                 guardar_datos(spinner=True)
-                st.success(f"Se elimino {del_item} del inventario.")
+                queue_toast(f"Se elimino {del_item} del inventario.")
                 st.rerun()

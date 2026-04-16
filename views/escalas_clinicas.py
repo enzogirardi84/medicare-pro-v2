@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
 
@@ -159,7 +160,7 @@ def render_escalas_clinicas(paciente_sel, user):
                 f"Puntaje: {puntaje} | {resumen}",
             )
             guardar_datos()
-            st.success(f"Escala {escala} guardada.")
+            queue_toast(f"Escala {escala} guardada.")
             st.rerun()
 
     st.divider()

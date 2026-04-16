@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 from datetime import datetime
 
 import pandas as pd
@@ -121,7 +122,7 @@ def render_pediatria(paciente_sel, user):
                 "firma": user.get("nombre", "Sistema"),
             })
             guardar_datos()
-            st.success("Guardado correctamente.")
+            queue_toast("Guardado correctamente.")
             st.rerun()
 
     if ped:

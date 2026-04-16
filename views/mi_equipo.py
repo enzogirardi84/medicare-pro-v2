@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import re
 from html import escape
 
@@ -202,7 +203,7 @@ def _mi_equipo_bloque_principal(
                             referencia=u,
                         )
                         guardar_datos(spinner=True)
-                        st.success("Contraseña actualizada.")
+                        queue_toast("Contraseña actualizada.")
                         st.rerun()
                 else:
                     st.session_state["usuarios_db"][u]["pin"] = pin_l
@@ -216,7 +217,7 @@ def _mi_equipo_bloque_principal(
                         referencia=u,
                     )
                     guardar_datos(spinner=True)
-                    st.success("PIN actualizado.")
+                    queue_toast("PIN actualizado.")
                     st.rerun()
     if puede_editar_mail_equipo and ok_gestionar:
         with st.expander("Recuperacion y credenciales", expanded=False):
@@ -537,7 +538,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         )
                         sincronizar_clinicas_desde_datos(st.session_state)
                         guardar_datos(spinner=True)
-                        st.success(f"Usuario {u_id} habilitado correctamente.")
+                        queue_toast(f"Usuario {u_id} habilitado correctamente.")
                         st.rerun()
     else:
         st.info("La gestion de altas de usuarios queda reservada a coordinacion y administracion total.")

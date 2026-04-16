@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 """
 Panel de alertas desde la app paciente (Supabase tabla alertas_pacientes).
 Flujo triage: Rojo / Amarillo / Verde. Estados: Pendiente, En camino, Resuelto.
@@ -268,7 +269,7 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
             supabase.table("alertas_pacientes").update(payload).eq("id", str(rid)).execute()
             for k in ("_mc_app_alerta_fetch", "_mc_app_alerta_ts", "_mc_app_alerta_emp"):
                 st.session_state.pop(k, None)
-            st.success("Actualizado.")
+            queue_toast("Actualizado.")
             st.rerun()
         except Exception as exc:
             st.error(f"No se pudo actualizar: {exc}")

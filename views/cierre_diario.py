@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import base64
 from datetime import date
 from html import escape
@@ -215,7 +216,7 @@ def render_cierre_diario(mi_empresa, user):
                     "pdf_base64": b64_pdf,
                 })
                 guardar_datos()
-                st.success(f"Cierre del dia {fecha_str} guardado exitosamente.")
+                queue_toast(f"Cierre del dia {fecha_str} guardado exitosamente.")
                 st.rerun()
 
     if vista == "Archivo de Cierres":

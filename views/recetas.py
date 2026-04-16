@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import base64
 import io
 import os
@@ -615,7 +616,7 @@ def _render_cortina_tildado_rapido(
             ):
                 n += 1
         if n:
-            st.success(f"Listo: {n} administración(es) registrada(s).")
+            queue_toast(f"Listo: {n} administración(es) registrada(s).")
             st.rerun()
         else:
             st.info("Tildá **Dada** en al menos una fila o usá el registro avanzado.")
@@ -940,7 +941,7 @@ def _render_bloque_cortina_medicacion(
                     st.error(f"... y {len(errores) - 6} error(es) más.")
 
                 if registros_guardados:
-                    st.success(f"Se guardaron {registros_guardados} registro(s) desde la cortina.")
+                    queue_toast(f"Se guardaron {registros_guardados} registro(s) desde la cortina.")
                     st.rerun()
                 elif not errores:
                     st.info("Elegí **Realizada** o **No realizada** en al menos una fila, completá hora real y guardá.")
@@ -1046,7 +1047,7 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
                                     justif_c,
                                     hora_real_admin=str(hora_real_c or "").strip() or None,
                                 ):
-                                    st.success("Registro guardado.")
+                                    queue_toast("Registro guardado.")
                                     st.rerun()
                             else:
                                 if _registrar_administracion_dosis(
@@ -1060,7 +1061,7 @@ def _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_h
                                     "",
                                     hora_real_admin=str(hora_real_c or "").strip() or None,
                                 ):
-                                    st.success(f"Administración registrada: {nombre_med_c}.")
+                                    queue_toast(f"Administración registrada: {nombre_med_c}.")
                                     st.rerun()
 
 
@@ -1383,7 +1384,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             texto_receta,
                         )
                         guardar_datos(spinner=True)
-                        st.success(f"Prescripcion de {med_final} guardada con firma medica.")
+                        queue_toast(f"Prescripcion de {med_final} guardada con firma medica.")
                         st.rerun()
 
     if puede_cargar_papel:
@@ -1563,7 +1564,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
                     )
                     guardar_datos(spinner=True)
-                    st.success("La indicacion medica en papel quedo guardada y disponible en el historial.")
+                    queue_toast("La indicacion medica en papel quedo guardada y disponible en el historial.")
                     st.rerun()
 
     st.divider()
@@ -1817,7 +1818,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     return
                 if registros_guardados:
                     guardar_datos(spinner=True)
-                    st.success(f"Se guardaron {registros_guardados} cambios de estado en la cortina.")
+                    queue_toast(f"Se guardaron {registros_guardados} cambios de estado en la cortina.")
                     st.rerun()
                 else:
                     st.info("No hay cambios de estado para guardar.")
@@ -1941,7 +1942,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             justificacion,
                             hora_real_admin=hora_real_manual.strip() or None,
                         ):
-                            st.success(f"Registro guardado para el horario {hora_sel}.")
+                            queue_toast(f"Registro guardado para el horario {hora_sel}.")
                             st.rerun()
         else:
             st.caption("El registro de administracion queda deshabilitado para este rol.")

@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import base64
 import io
 
@@ -253,7 +254,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                         f"Firmante: {firmante.strip() or paciente_sel.split(' - ')[0]} | Vinculo: {vinculo}",
                     )
                     guardar_datos()
-                    st.success("Consentimiento legal guardado en la historia clinica.")
+                    queue_toast("Consentimiento legal guardado en la historia clinica.")
                     st.rerun()
     else:
         st.caption("Guardar consentimientos queda reservado a roles asistenciales y de coordinacion.")

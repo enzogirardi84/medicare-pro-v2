@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 from datetime import datetime, timedelta
 import urllib.parse
 
@@ -322,7 +323,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         }
                     )
                     guardar_datos(spinner=True)
-                    st.success("Llegada registrada.")
+                    queue_toast("Llegada registrada.")
                     st.rerun()
                 if col_out.button("Fichar SALIDA", use_container_width=True):
                     st.session_state["checkin_db"].append(
@@ -335,7 +336,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         }
                     )
                     guardar_datos(spinner=True)
-                    st.success("Salida registrada.")
+                    queue_toast("Salida registrada.")
                     st.rerun()
             else:
                 st.warning("Buscando senal GPS. Asegurate de permitir ubicacion.")
@@ -470,7 +471,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             "texto": txt,
                         }
                         st.rerun()
-                    st.success(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
+                    queue_toast(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
                     st.rerun()
 
     st.divider()
@@ -506,7 +507,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                     "general": str(tg).strip(),
                 }
                 guardar_datos(spinner=True)
-                st.success("Plantillas guardadas.")
+                queue_toast("Plantillas guardadas.")
                 st.rerun()
     ahora_naive_wa = ahora().replace(tzinfo=None)
     visitas_wa = _visitas_para_aviso_whatsapp(agenda_paciente, ahora_naive_wa)
@@ -605,7 +606,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                                 item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
                                 break
                         guardar_datos(spinner=True)
-                        st.success("Agenda actualizada correctamente.")
+                        queue_toast("Agenda actualizada correctamente.")
                         st.rerun()
 
             st.markdown("##### Agenda semanal del paciente")

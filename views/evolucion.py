@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import base64
 import html
 
@@ -144,7 +145,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     "firma_img": b64_firma,
                 })
                 guardar_datos(spinner=True)
-                st.success("Firma guardada correctamente.")
+                queue_toast("Firma guardada correctamente.")
                 st.rerun()
             else:
                 st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
@@ -229,7 +230,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         f"Se registro evolucion con plantilla {plantilla}.",
                     )
                     guardar_datos(spinner=True)
-                    st.success("Evolucion guardada correctamente.")
+                    queue_toast("Evolucion guardada correctamente.")
                     st.rerun()
                 else:
                     st.error("La nota medica no puede estar vacia.")

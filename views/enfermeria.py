@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 from html import escape
 
 import pandas as pd
@@ -154,7 +155,7 @@ def _render_plan_cuidados_enfermeria_legacy(
                         f"{tipo_cuidado} | Turno: {turno} | Prioridad: {prioridad}",
                     )
                     guardar_datos()
-                    st.success("Registro de enfermería guardado.")
+                    queue_toast("Registro de enfermería guardado.")
                     st.rerun()
 
     elif vista == "Plan actual":

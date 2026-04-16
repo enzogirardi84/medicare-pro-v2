@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import io
 
 import pandas as pd
@@ -99,7 +100,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     "operador_dni": user.get("dni", "S/D"),
                 })
                 guardar_datos()
-                st.success(f"${mon:,.2f} registrado correctamente.")
+                queue_toast(f"${mon:,.2f} registrado correctamente.")
                 st.rerun()
             else:
                 st.error("Debe ingresar una descripcion valida y un monto mayor a $0.")

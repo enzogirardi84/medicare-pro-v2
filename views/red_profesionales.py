@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
 
@@ -279,7 +280,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                     registros.append(nuevo)
                 st.session_state["profesionales_red_db"] = registros
                 guardar_datos()
-                st.success("Perfil profesional guardado.")
+                queue_toast("Perfil profesional guardado.")
                 st.rerun()
 
         vista = _obtener_profesional_actual(user, mi_empresa)
@@ -402,7 +403,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                         }
                     )
                     guardar_datos()
-                    st.success("Solicitud guardada correctamente.")
+                    queue_toast("Solicitud guardada correctamente.")
                     st.rerun()
 
         solicitudes = [

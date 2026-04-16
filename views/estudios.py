@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import base64
 from uuid import uuid4
 
@@ -103,7 +104,7 @@ def render_estudios(paciente_sel, user, rol=None):
                     "firma": user.get("nombre", "Sistema"),
                 })
                 guardar_datos()
-                st.success("Estudio guardado correctamente.")
+                queue_toast("Estudio guardado correctamente.")
                 st.rerun()
     else:
         st.caption("La carga de estudios queda deshabilitada para este rol.")
@@ -127,7 +128,7 @@ def render_estudios(paciente_sel, user, rol=None):
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
             st.session_state["estudios_db"].remove(estudios_pac[-1])
             guardar_datos()
-            st.success("Estudio eliminado correctamente.")
+            queue_toast("Estudio eliminado correctamente.")
             st.rerun()
 
         st.markdown("**Selecciona el estudio que quieres eliminar:**")
@@ -148,7 +149,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 if not _mismo_estudio(e, objetivo)
             ]
             guardar_datos()
-            st.success("Estudio eliminado correctamente.")
+            queue_toast("Estudio eliminado correctamente.")
             st.rerun()
     else:
         st.caption("La eliminacion de estudios queda reservada a medico, coordinacion o administracion total.")

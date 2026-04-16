@@ -35,6 +35,27 @@ def toast_alerta_si_firma_cambia(
         st.toast(mensaje)
 
 
+def queue_toast(mensaje: str, icon: str = "✅") -> None:
+    """
+    Encola un toast para que se muestre en el próximo rerun.
+    Útil para reemplazar st.success(...) seguido de st.rerun().
+    """
+    if "_mc_queued_toasts" not in st.session_state:
+        st.session_state["_mc_queued_toasts"] = []
+    st.session_state["_mc_queued_toasts"].append((mensaje, icon))
+
+
+def render_queued_toasts() -> None:
+    """
+    Muestra los toasts encolados y limpia la cola.
+    Debe llamarse al inicio de la app (ej. en main.py).
+    """
+    if "_mc_queued_toasts" in st.session_state:
+        toasts = st.session_state.pop("_mc_queued_toasts")
+        for mensaje, icon in toasts:
+            st.toast(mensaje, icon=icon)
+
+
 def firma_alertas_por_ids(rows: list[dict[str, Any]] | list[Any]) -> str:
     if not rows:
         return ""

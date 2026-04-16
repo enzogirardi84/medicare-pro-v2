@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import base64
 import io
 from uuid import uuid4
@@ -364,7 +365,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                         f"{categoria_evento} | {tipo_evento} | {triage_grado} | Traslado: {tipo_traslado}",
                     )
                     guardar_datos()
-                    st.success("Evento de emergencia guardado con trazabilidad legal.")
+                    queue_toast("Evento de emergencia guardado con trazabilidad legal.")
                     st.rerun()
 
     elif vista == "Panel operativo":

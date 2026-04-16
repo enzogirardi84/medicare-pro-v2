@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
 
@@ -96,7 +97,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                         }
                     )
                     guardar_datos()
-                    st.success(f"{cant_usada} x {insumo_sel} registrado correctamente.")
+                    queue_toast(f"{cant_usada} x {insumo_sel} registrado correctamente.")
                     st.rerun()
                 else:
                     st.error("Error al actualizar el stock.")
@@ -112,7 +113,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
             st.session_state["consumos_db"].remove(ultimo_consumo)
             _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
             guardar_datos()
-            st.success("Consumo eliminado correctamente.")
+            queue_toast("Consumo eliminado correctamente.")
             st.rerun()
 
         limite = seleccionar_limite_registros(

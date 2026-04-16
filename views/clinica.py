@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 from datetime import datetime
 
 import pandas as pd
@@ -161,7 +162,7 @@ def render_clinica(paciente_sel, user=None):
                 st.warning(f"Fiebre detectada -> {temp} C")
                 alerta = True
             if not alerta:
-                st.success("Signos vitales guardados correctamente.")
+                queue_toast("Signos vitales guardados correctamente.")
             st.rerun()
 
     if vits:
@@ -172,7 +173,7 @@ def render_clinica(paciente_sel, user=None):
         if col_btn.button("Borrar ultimo control", use_container_width=True, disabled=not confirmar_borrado):
             st.session_state["vitales_db"].remove(vits[-1])
             guardar_datos()
-            st.success("Registro eliminado.")
+            queue_toast("Registro eliminado.")
             st.rerun()
         limite = seleccionar_limite_registros(
             "Controles a mostrar",

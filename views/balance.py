@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
 
@@ -83,7 +84,7 @@ def render_balance(paciente_sel, user):
                 }
             )
             guardar_datos()
-            st.success(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
+            queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
             st.rerun()
 
     blp = [x for x in st.session_state.get("balance_db", []) if x.get("paciente") == paciente_sel]
@@ -159,5 +160,5 @@ def render_balance(paciente_sel, user):
     if col_btn.button("Borrar ultimo balance", use_container_width=True, type="secondary", disabled=not confirmar_borrado):
         st.session_state["balance_db"].remove(blp[-1])
         guardar_datos()
-        st.success("Ultimo balance eliminado.")
+        queue_toast("Ultimo balance eliminado.")
         st.rerun()

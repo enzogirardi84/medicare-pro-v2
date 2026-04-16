@@ -807,6 +807,9 @@ if mostrar_atajo or paciente_sel:
             unsafe_allow_html=True,
         )
 
+from core.alert_toasts import render_queued_toasts
+render_queued_toasts()
+
 t0_view = time.monotonic()
 ok_view = True
 try:

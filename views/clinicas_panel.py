@@ -1,3 +1,4 @@
+from core.alert_toasts import queue_toast
 """Panel global SuperAdmin: clinicas registradas, suspension logica y reactivacion."""
 
 import io
@@ -229,7 +230,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
             )
             _registrar_cambio_clinica(user, "Suspension de clinica", nombre, key_norm, detalle)
             guardar_datos()
-            st.success(f"Clinica suspendida: {nombre}. Los usuarios de esa empresa no podran iniciar sesion.")
+            queue_toast(f"Clinica suspendida: {nombre}. Los usuarios de esa empresa no podran iniciar sesion.")
             st.rerun()
     with b2:
         if st.button(
@@ -248,7 +249,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
                 "Servicio habilitado nuevamente. Accesos restaurados para coordinadores y operativos.",
             )
             guardar_datos()
-            st.success(f"Clinica reactivada: {nombre}.")
+            queue_toast(f"Clinica reactivada: {nombre}.")
             st.rerun()
 
     with st.expander("Historial de suspensiones y reactivaciones (auditoria)", expanded=False):
