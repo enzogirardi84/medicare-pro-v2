@@ -95,6 +95,7 @@ def _resumen_linea_tiempo(seccion: str, reg: Dict[str, Any]) -> str:
     return (t[:160] if t else seccion)[:180]
 
 
+@st.cache_data(show_spinner=False)
 def _actividad_reciente_filas(secciones: Dict[str, List[Dict[str, Any]]], limite: int) -> List[Dict[str, str]]:
     filas: List[Tuple[datetime, str, str, str]] = []
     for nombre_sec, regs in secciones.items():
@@ -199,13 +200,18 @@ def _ordenar_columnas_tabla(df: pd.DataFrame) -> pd.DataFrame:
     return df[first + rest]
 
 
-def _render_seccion_tabla(registros: List[Dict[str, Any]], seccion_actual: str) -> None:
+@st.cache_data(show_spinner=False)
+def _preparar_dataframe_seccion(registros: List[Dict[str, Any]], seccion_actual: str) -> pd.DataFrame:
     df = pd.DataFrame(registros).drop(columns=COLUMNAS_EXCLUIDAS_TABLA, errors="ignore")
     if seccion_actual == "Balance Hidrico":
         for col in ["ingresos", "egresos", "balance"]:
             if col in df.columns:
                 df[col] = df[col].astype(str) + " ml"
-    df = _ordenar_columnas_tabla(df)
+    return _ordenar_columnas_tabla(df)
+
+
+def _render_seccion_tabla(registros: List[Dict[str, Any]], seccion_actual: str) -> None:
+    df = _preparar_dataframe_seccion(registros, seccion_actual)
     with lista_plegable(f"Tabla: {seccion_actual}", count=len(registros), expanded=False, height=520):
         mostrar_dataframe_con_scroll(df, height=496)
 
@@ -358,6 +364,7 @@ def _registro_coincide_busqueda(registro: Dict[str, Any], query: str) -> bool:
     return False
 
 
+@st.cache_data(show_spinner=False)
 def _busqueda_global_resultados(
     secciones: Dict[str, List[Dict[str, Any]]],
     query: str,

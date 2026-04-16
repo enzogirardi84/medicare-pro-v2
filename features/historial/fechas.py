@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 
+@lru_cache(maxsize=8192)
 def _parse_datetime_string(s: str) -> Optional[datetime]:
     s = (s or "").strip()
     if not s:
