@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------
+  # 1. Frontend Legacy (Streamlit) - Medicare Pro v2
+  # ---------------------------------------------------------
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - NEXTGEN_API_URL=http://api:8000/v1
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/medicare_nextgen
+    depends_on:
+      - api
+      - redis
+    volumes:
+      - ./.streamlit:/app/.streamlit
+      - ./assets:/app/assets
+
+  # ---------------------------------------------------------
+  # 2. Backend NextGen (FastAPI)
+  # ---------------------------------------------------------
+  api:
+    build:
+      context: ./nextgen_platform/apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/medicare_nextgen
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ---------------------------------------------------------
+  # 3. Worker NextGen (Celery)
+  # ---------------------------------------------------------
+  worker:
+    build:
+      context: ./nextgen_platform/apps/worker
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/medicare_nextgen
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ---------------------------------------------------------
+  # 4. Infraestructura (PostgreSQL + Redis)
+  # ---------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=medicare_nextgen
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Ejecuta las migraciones/esquemas iniciales si es necesario
+      - ./nextgen_platform/infra/sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

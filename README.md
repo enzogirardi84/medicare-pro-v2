@@ -1,10 +1,17 @@
-# MediCare Enterprise PRO
+# MediCare Enterprise PRO (NextGen Architecture)
 
 [![Pytest](https://github.com/enzogirardi84/medicare-pro-v2/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/enzogirardi84/medicare-pro-v2/actions/workflows/pytest.yml)
 
-Sistema de gestion clinica y domiciliaria en Streamlit.
+Sistema de gestión clínica y domiciliaria. Ahora potenciado con una **arquitectura distribuida (NextGen)** capaz de soportar **millones de usuarios** mediante FastAPI, Celery, Redis y PostgreSQL.
 
-## Modulos principales
+## Arquitectura NextGen
+
+- **Frontend (Streamlit):** Interfaz rápida y optimizada con caché avanzado.
+- **Backend API (FastAPI):** Motor asíncrono para validaciones, idempotencia y guardado en milisegundos (`/nextgen_platform/apps/api`).
+- **Workers (Celery):** Procesamiento en segundo plano de PDFs pesados y notificaciones de WhatsApp (`/nextgen_platform/apps/worker`).
+- **Base de Datos (PostgreSQL):** Esquemas preparados para Sharding y RLS (Row Level Security) por clínica.
+
+## Módulos principales
 
 - Admision y pacientes
 - Clinica, evolucion y signos vitales (plan de enfermeria integrado en Evolucion)

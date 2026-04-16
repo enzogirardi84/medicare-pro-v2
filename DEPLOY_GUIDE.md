@@ -1,6 +1,34 @@
-# Deploy Guide
+# Deploy Guide (Arquitectura NextGen)
 
-## Opcion 1: Streamlit Community Cloud
+Para soportar **millones de usuarios**, Medicare Pro v2 ahora cuenta con una arquitectura distribuida (NextGen) compuesta por:
+1. **Frontend:** Streamlit (Medicare Pro v2 original, optimizado)
+2. **Backend API:** FastAPI (Maneja el tráfico pesado, validaciones e idempotencia)
+3. **Workers:** Celery (Procesa PDFs y WhatsApp en segundo plano)
+4. **Bases de Datos:** PostgreSQL (con Sharding/Particionamiento) y Redis (Caché y Colas)
+
+## Opción 1: Despliegue Completo con Docker Compose (Recomendado para Producción)
+
+La forma más fácil de levantar toda la infraestructura en un servidor (AWS, DigitalOcean, Azure) es usando Docker Compose.
+
+1. Clona el repositorio en tu servidor:
+```bash
+git clone https://github.com/enzogirardi84/medicare-pro-v2.git
+cd medicare-pro-v2
+```
+
+2. Levanta toda la arquitectura NextGen:
+```bash
+docker compose up -d --build
+```
+
+Esto levantará:
+- **Streamlit** en el puerto `8501`
+- **FastAPI** en el puerto `8000`
+- **PostgreSQL** en el puerto `5432`
+- **Redis** en el puerto `6379`
+- **Celery Worker** en segundo plano
+
+## Opción 2: Streamlit Community Cloud (Solo Frontend)
 
 La app ya esta subida al repo:
 
