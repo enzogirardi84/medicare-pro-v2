@@ -1,0 +1,37 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "import_jobs_retried_total", "refId": "A"}],
+      "title": "Import Jobs Retried Total",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "targets": [{"expr": "import_jobs_status_count", "legendFormat": "{{status}}", "refId": "A"}],
+      "title": "Import Jobs Status Count",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nextgen", "import"],
+  "templating": {"list": []},
+  "time": {"from": "now-30m", "to": "now"},
+  "timezone": "",
+  "title": "NextGen Import Jobs Overview",
+  "uid": "nextgen-import-jobs-overview",
+  "version": 1
+}

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextgen-worker-imports
+  namespace: nextgen
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nextgen-worker-imports
+  template:
+    metadata:
+      labels:
+        app: nextgen-worker-imports
+    spec:
+      containers:
+        - name: worker-imports
+          image: your-registry/nextgen-worker:latest
+          args: ["celery", "-A", "tasks", "worker", "--loglevel=info", "-Q", "imports", "--concurrency=8", "--prefetch-multiplier=1"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nextgen-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nextgen-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: "400m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextgen-worker-events
+  namespace: nextgen
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nextgen-worker-events
+  template:
+    metadata:
+      labels:
+        app: nextgen-worker-events
+    spec:
+      containers:
+        - name: worker-events
+          image: your-registry/nextgen-worker:latest
+          args: ["celery", "-A", "tasks", "worker", "--loglevel=info", "-Q", "events,reports", "--concurrency=6", "--prefetch-multiplier=1"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nextgen-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nextgen-secrets
+                  key: REDIS_URL
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "512Mi"
+            limits:
+              cpu: "1500m"
+              memory: "2Gi"

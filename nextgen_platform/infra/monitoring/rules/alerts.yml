@@ -1,0 +1,474 @@
+groups:
+  - name: nextgen-outbox-alerts
+    rules:
+      - alert: OutboxDeadLetterDetected
+        expr: outbox_status_count{status="dead_letter"} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox dead-letter events detected"
+          description: "There are outbox events in dead-letter status."
+
+      - alert: OutboxFailuresHighRate
+        expr: increase(outbox_failed_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox failures high rate"
+          description: "Outbox publish failures exceeded threshold in the last 5m."
+
+  - name: nextgen-api-slo-alerts
+    rules:
+      - alert: ApiHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total[5m])), 0.001)
+          ) > 0.03
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API high 5xx rate"
+          description: "5xx error ratio above 3% over 5 minutes."
+
+      - alert: ApiBurstRateLimitBlocksHigh
+        expr: increase(rate_limit_events_total{decision="blocked_burst_exceeded"}[10m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High burst-limit blocks"
+          description: "Burst rate-limit blocks exceeded threshold in the last 10 minutes."
+
+      - alert: ReadReplicaFallbackHigh
+        expr: increase(read_db_fallback_total[10m]) > 20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Read replica fallback high"
+          description: "Readonly traffic fallback to primary DB exceeded threshold in the last 10 minutes."
+
+      - alert: ReadReplicaFallbackRatioHigh
+        expr: |
+          (
+            sum(rate(read_db_fallback_total[10m]))
+            /
+            clamp_min(sum(rate(read_db_readonly_requests_total[10m])), 0.001)
+          ) > 0.10
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Read replica fallback ratio high"
+          description: "More than 10% of readonly traffic is falling back to primary DB."
+
+      - alert: ReadReplicaUnavailable
+        expr: min_over_time(read_db_replica_available[5m]) < 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Read replica unavailable"
+          description: "Read replica has been unavailable for at least 5 minutes."
+
+      - alert: ReadReplicaNotConfiguredUnderLoad
+        expr: |
+          (
+            sum(rate(read_db_fallback_reason_total{reason="replica_not_configured"}[10m])) > 0.05
+          )
+          and
+          (
+            sum(rate(read_db_readonly_requests_total[10m])) > 0.5
+          )
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Read replica not configured under readonly load"
+          description: "Readonly traffic is active but fallback reason indicates replica_not_configured for sustained period."
+
+      - alert: ApiBusyRejectionsHigh
+        expr: increase(api_request_rejections_total{reason=~"inflight_limit_exceeded|priority_lane_reserved"}[10m]) > 200
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API busy rejections high"
+          description: "High volume of server_busy rejections from inflight guardrails in the last 10 minutes."
+
+      - alert: ApiRequestTimeoutsHigh
+        expr: increase(api_request_rejections_total{reason="request_timeout"}[10m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API request timeouts high"
+          description: "Request timeout guardrail triggered frequently in the last 10 minutes."
+
+      - alert: ApiInflightSaturationHigh
+        expr: max_over_time(api_inflight_requests[5m]) > 450
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API inflight saturation high"
+          description: "In-flight requests are near capacity for sustained period."
+
+      - alert: ApiPayloadTooLargeSpike
+        expr: increase(api_request_rejections_total{reason="payload_too_large"}[10m]) > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API payload-too-large spike"
+          description: "Payload_too_large responses spiked in the last 10 minutes."
+
+      - alert: ApiPayloadAbuseBlockedSpike
+        expr: increase(api_request_rejections_total{reason="payload_too_large_blocked"}[10m]) > 20
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API payload abuse blocks spike"
+          description: "Temporary client blocks due to repeated oversized payloads spiked in the last 10 minutes."
+
+      - alert: ApiAllowlistedPayloadTooLargeSpike
+        expr: increase(api_payload_too_large_total{allowlisted="true"}[10m]) > 30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Allowlisted clients sending oversized payloads"
+          description: "Oversized payloads from allowlisted clients spiked in the last 10 minutes."
+
+      - alert: ApiExternalPayloadTooLargeSpike
+        expr: increase(api_payload_too_large_total{allowlisted="false"}[10m]) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "External clients sending oversized payloads"
+          description: "Oversized payloads from non-allowlisted clients spiked in the last 10 minutes."
+
+      - alert: ApiExternalPayloadRatioHigh
+        expr: |
+          (
+            sum(rate(api_payload_too_large_total{allowlisted="false"}[10m]))
+            /
+            clamp_min(sum(rate(api_payload_too_large_total[10m])), 0.001)
+          ) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "External oversized payload ratio high"
+          description: "More than 85% of oversized payload traffic is external in the last 10 minutes."
+
+      - alert: ApiHighErrorCodeRate
+        expr: max by (code, status) (sum by (code, status) (rate(api_error_responses_total[5m]))) > 1
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API high error code rate"
+          description: "A specific API error code/status is above 1 req/s over 10 minutes."
+
+      - alert: ApiSloBurnRateFast
+        expr: |
+          (
+            (
+              sum(rate(http_requests_total{status=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(http_requests_total[5m])), 0.001)
+            ) / 0.01
+          ) > 14
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API SLO burn rate fast"
+          description: "Error-budget burn rate over 5m is critical (14x over 1% target)."
+
+      - alert: ApiSloBurnRateSustained
+        expr: |
+          (
+            (
+              sum(rate(http_requests_total{status=~"5.."}[1h]))
+              /
+              clamp_min(sum(rate(http_requests_total[1h])), 0.001)
+            ) / 0.01
+          ) > 6
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API SLO burn rate sustained"
+          description: "Error-budget burn rate over 1h is elevated (6x over 1% target)."
+
+      - alert: ApiLatencyP99HighSustained
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p99 latency high sustained"
+          description: "Global API p99 latency is above 1.2s for at least 10 minutes."
+
+      - alert: ApiTrafficSurgeHigh
+        expr: sum(rate(http_requests_total[5m])) > 250
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API traffic surge high"
+          description: "Global API request rate is above 250 req/s for at least 10 minutes."
+
+      - alert: ApiEndpointErrorRatioHigh
+        expr: |
+          (
+            max by (handler) (
+              (
+                sum by (handler) (rate(http_requests_total{status=~"5..",handler!="",handler!="none"}[5m]))
+                /
+                clamp_min(sum by (handler) (rate(http_requests_total{handler!="",handler!="none"}[5m])), 0.001)
+              )
+            ) > 0.05
+          )
+          and
+          on (handler)
+          (
+            sum by (handler) (rate(http_requests_total{handler!="",handler!="none"}[5m])) > 1
+          )
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API endpoint error ratio high"
+          description: "A relevant endpoint has >5% 5xx error ratio with traffic above 1 req/s for 10 minutes."
+
+      - alert: ApiRuntimeCpuHigh
+        expr: sum(rate(process_cpu_seconds_total[5m])) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API runtime CPU high"
+          description: "API process CPU usage is above 0.8 cores sustained for 10 minutes."
+
+      - alert: ApiRuntimeMemoryHigh
+        expr: sum(process_resident_memory_bytes) > 1500000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API runtime memory high"
+          description: "API process RSS memory is above 1.5 GB sustained for 10 minutes."
+
+      - alert: ApiCapacityEfficiencyDrop
+        expr: (sum(rate(http_requests_total[5m])) / clamp_min(sum(rate(process_cpu_seconds_total[5m])), 0.05)) < 120
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API capacity efficiency drop"
+          description: "RPS per CPU core dropped below 120 for 15 minutes; consider optimization or scaling."
+
+      - alert: ApiWeeklyLatencyRegression
+        expr: |
+          (
+            histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+            /
+            clamp_min(histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m] offset 1w)) by (le)), 0.05)
+          ) > 1.30
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API weekly latency regression"
+          description: "Current p99 latency is more than 30% worse than same period last week."
+
+      - alert: ApiMixedVersionActive
+        expr: count(count by (version) (api_build_info)) > 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple API versions active"
+          description: "More than one API version is active for sustained period; check rollout consistency."
+
+      - alert: ApiBuildInfoStaleNode
+        expr: max by (region, node_id, version) (time() - timestamp(api_build_info)) > 180
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API node build_info metric stale"
+          description: "An API node has not refreshed api_build_info for over 3 minutes, which may indicate scrape/pod/node issues."
+
+      - alert: ApiBuildInfoRegionHeartbeatMissing
+        expr: min by (region) (time() - timestamp(api_build_info)) > 180
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API region heartbeat missing"
+          description: "All API nodes in a region appear stale for api_build_info for over 3 minutes; possible zonal outage or scrape path failure."
+
+      - alert: ApiRegionalCapacityImbalanceHigh
+        expr: (max(count by (region) (api_build_info)) / clamp_min(sum(api_build_info), 1)) > 0.70
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API regional capacity imbalance high"
+          description: "A single region holds over 70% of active API nodes for sustained period; review balancing/autoscaling and traffic distribution."
+
+      - alert: ApiRegionalErrorRatioSkewHigh
+        expr: |
+          (
+            max(
+              (
+                sum by (region) (rate(http_requests_total{status=~"5.."}[5m]))
+                /
+                clamp_min(sum by (region) (rate(http_requests_total[5m])), 0.001)
+              )
+            ) > 0.05
+          )
+          and
+          (
+            (
+              sum(rate(http_requests_total{status=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(http_requests_total[5m])), 0.001)
+            ) < 0.03
+          )
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API regional error skew high"
+          description: "A region has high 5xx ratio (>5%) while global error ratio remains lower; possible regional degradation."
+
+      - alert: ApiRegionalLatencySkewHigh
+        expr: |
+          (
+            max(
+              histogram_quantile(
+                0.99,
+                sum by (le, region) (rate(http_request_duration_seconds_bucket[5m]))
+              )
+            )
+            /
+            clamp_min(
+              histogram_quantile(
+                0.99,
+                sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+              ),
+              0.05
+            )
+          ) > 1.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API regional latency skew high"
+          description: "A region p99 latency is at least 80% worse than global p99 for sustained period; investigate regional dependencies and routing."
+
+  - name: nextgen-import-alerts
+    rules:
+      - alert: ImportJobsFailedBacklog
+        expr: import_jobs_status_count{status="failed"} > 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Import jobs failed backlog"
+          description: "There are failed import jobs pending retry."
+
+      - alert: ImportJobsHighErrorRate
+        expr: import_jobs_status_count{status="completed_with_errors"} > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Import jobs completed with many errors"
+          description: "Import jobs with errors are above threshold."
+
+      - alert: ImportJobsRetryStorm
+        expr: increase(import_jobs_retried_total[10m]) > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Import jobs retry storm"
+          description: "High volume of import retries detected in the last 10 minutes."
+
+      - alert: ImportTenantThrottleHigh
+        expr: increase(imports_throttled_total[10m]) > 30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High import throttling detected"
+          description: "Import throttling by tenant guardrail exceeded threshold in the last 10 minutes."
+
+      - alert: ImportCircuitOpenSpike
+        expr: increase(imports_circuit_open_total[10m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Import circuit breaker activity high"
+          description: "Import circuit breaker open responses exceeded threshold in the last 10 minutes."
+
+  - name: nextgen-resilience-alerts
+    rules:
+      - alert: ResilienceRollbackActivityHigh
+        expr: increase(resilience_ops_total{operation=~"rollback_last|rollback_index", outcome="ok"}[15m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rollback activity"
+          description: "More than 3 successful resilience rollbacks in 15 minutes."
+
+      - alert: ResiliencePrecheckInvalidSpike
+        expr: increase(resilience_ops_total{operation=~"precheck_.*", outcome="invalid"}[10m]) > 15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Invalid resilience prechecks spike"
+          description: "Resilience precheck invalid responses exceeded threshold in the last 10 minutes."
+
+      - alert: ResilienceConfirmationMissingSpike
+        expr: increase(resilience_ops_total{operation=~"rollback_last|rollback_index", outcome="confirmation_required"}[10m]) > 8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Repeated rollback without confirm"
+          description: "Rollback attempts without confirm=true exceeded threshold in the last 10 minutes."
+
+      - alert: ResiliencePrecheckInvalidRateHigh
+        expr: sum(rate(resilience_ops_total{operation=~"precheck_.*", outcome="invalid"}[5m])) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High invalid precheck rate"
+          description: "Resilience precheck invalid rate is above 0.05/sec for 15 minutes."
+
+      - alert: ResilienceRollbackRateHigh
+        expr: sum(rate(resilience_ops_total{operation=~"rollback_last|rollback_index", outcome="ok"}[5m])) > 0.02
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rollback execution rate"
+          description: "Successful resilience rollbacks are occurring at sustained high rate."

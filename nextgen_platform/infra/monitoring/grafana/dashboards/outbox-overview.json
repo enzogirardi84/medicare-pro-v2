@@ -1,0 +1,52 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "outbox_published_total", "refId": "A"}],
+      "title": "Outbox Published Total",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "outbox_failed_total", "refId": "A"}],
+      "title": "Outbox Failed Total",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 8},
+      "id": 3,
+      "targets": [{"expr": "outbox_status_count", "legendFormat": "{{status}}", "refId": "A"}],
+      "title": "Outbox Status Counts",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nextgen", "outbox"],
+  "templating": {"list": []},
+  "time": {"from": "now-15m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "NextGen Outbox Overview",
+  "uid": "nextgen-outbox-overview",
+  "version": 1,
+  "weekStart": ""
+}

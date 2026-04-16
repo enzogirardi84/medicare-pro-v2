@@ -1,0 +1,86 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", "refId": "A"}],
+      "title": "API p95 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "id": 2,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "(sum(rate(http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 0.001))", "refId": "A"}],
+      "title": "API 5xx Ratio",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "id": 3,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(rate(http_requests_total[1m]))", "refId": "A"}],
+      "title": "Request Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8},
+      "id": 4,
+      "targets": [{"expr": "outbox_status_count", "legendFormat": "outbox {{status}}", "refId": "A"}],
+      "title": "Outbox Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8},
+      "id": 5,
+      "targets": [{"expr": "import_jobs_status_count", "legendFormat": "import {{status}}", "refId": "A"}],
+      "title": "Import Jobs Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+      "id": 6,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "outbox_failed_total", "refId": "A"}],
+      "title": "Outbox Failed Total",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 17},
+      "id": 7,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "import_jobs_retried_total", "refId": "A"}],
+      "title": "Import Jobs Retried Total",
+      "type": "stat"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nextgen", "platform"],
+  "templating": {"list": []},
+  "time": {"from": "now-30m", "to": "now"},
+  "timezone": "",
+  "title": "NextGen Platform Overview",
+  "uid": "nextgen-platform-overview",
+  "version": 1
+}

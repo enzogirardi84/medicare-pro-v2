@@ -1,0 +1,19 @@
+# Smaller build context and faster `docker build` (CI and local).
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.git/
+.gitignore
+.cursor/
+*.md
+*.log
+.env
+.env.*
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
