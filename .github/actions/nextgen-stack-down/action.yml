@@ -1,0 +1,18 @@
+name: NextGen Stack Down
+description: Stop and remove docker compose stack with volumes.
+inputs:
+  project_dir:
+    description: Working directory where docker compose command should run
+    required: true
+  compose_file:
+    description: Docker compose file path relative to project_dir
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Shutdown stack
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ inputs.project_dir }}"
+        docker compose -f "${{ inputs.compose_file }}" down -v

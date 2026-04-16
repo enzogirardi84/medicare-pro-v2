@@ -1,0 +1,171 @@
+name: nextgen-post-release-watch-scheduled
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      interval_seconds:
+        description: "Seconds between checks inside this run"
+        required: true
+        default: "600"
+        type: string
+      duration_minutes:
+        description: "Total watch window in minutes for this run"
+        required: true
+        default: "30"
+        type: string
+      retry_attempts:
+        description: "Retry attempts per endpoint check (default 1)"
+        required: true
+        default: "1"
+        type: string
+      retry_sleep_seconds:
+        description: "Sleep between retries (seconds)"
+        required: true
+        default: "2"
+        type: string
+      max_total_time_seconds:
+        description: "Fail if curl time_total exceeds this (seconds). Empty = no latency check."
+        required: false
+        default: ""
+        type: string
+      max_total_time_health_seconds:
+        description: "Optional threshold for /health (seconds)"
+        required: false
+        default: ""
+        type: string
+      max_total_time_live_seconds:
+        description: "Optional threshold for /live (seconds)"
+        required: false
+        default: ""
+        type: string
+      max_total_time_ready_seconds:
+        description: "Optional threshold for /ready (seconds)"
+        required: false
+        default: ""
+        type: string
+      fail_on_latency_breach:
+        description: "Fail workflow when aggregate avg latency exceeds configured threshold (🔴); set false for staging diagnostics only"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: nextgen-post-release-watch-scheduled
+  cancel-in-progress: true
+
+jobs:
+  watch-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secret
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.NEXTGEN_POST_RELEASE_BASE_URL }}" ]; then
+            echo "[FAIL] Missing secret NEXTGEN_POST_RELEASE_BASE_URL"
+            exit 1
+          fi
+
+      - name: Run staged watch verification
+        env:
+          POST_RELEASE_MODE: watch
+          BASE_URL: ${{ secrets.NEXTGEN_POST_RELEASE_BASE_URL }}
+          POST_RELEASE_WATCH_INTERVAL_SECONDS: ${{ github.event_name == 'schedule' && '600' || inputs.interval_seconds }}
+          POST_RELEASE_WATCH_DURATION_SECONDS: ${{ github.event_name == 'schedule' && '1800' || '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p nextgen_platform/ci_artifacts
+          export POST_RELEASE_REPORT_PATH="nextgen_platform/ci_artifacts/post-release-report.csv"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            export POST_RELEASE_RETRY_ATTEMPTS="1"
+            export POST_RELEASE_RETRY_SLEEP_SECONDS="2"
+            export POST_RELEASE_MAX_TOTAL_TIME_SECONDS="${{ secrets.NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_SECONDS }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS="${{ secrets.NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS="${{ secrets.NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS="${{ secrets.NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS }}"
+          else
+            export POST_RELEASE_RETRY_ATTEMPTS="${{ inputs.retry_attempts }}"
+            export POST_RELEASE_RETRY_SLEEP_SECONDS="${{ inputs.retry_sleep_seconds }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_SECONDS="${{ inputs.max_total_time_seconds }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS="${{ inputs.max_total_time_health_seconds }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS="${{ inputs.max_total_time_live_seconds }}"
+            export POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS="${{ inputs.max_total_time_ready_seconds }}"
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ inputs.duration_minutes }}" in
+              ''|*[!0-9]*) echo "[FAIL] duration_minutes must be numeric"; exit 1 ;;
+            esac
+            case "${{ inputs.interval_seconds }}" in
+              ''|*[!0-9]*) echo "[FAIL] interval_seconds must be numeric"; exit 1 ;;
+            esac
+            export POST_RELEASE_WATCH_DURATION_SECONDS="$((${{ inputs.duration_minutes }} * 60))"
+          fi
+
+          chmod +x nextgen_platform/scripts/post_release_http_verify.sh
+          nextgen_platform/scripts/post_release_http_verify.sh
+
+      - name: Publish summary
+        env:
+          POST_RELEASE_REPORT_PATH: nextgen_platform/ci_artifacts/post-release-report.csv
+        run: |
+          set -euo pipefail
+          chmod +x nextgen_platform/scripts/post_release_aggregate_latency.sh
+          {
+            echo "## Scheduled staging watch"
+            echo ""
+            echo "- Base URL source: \`NEXTGEN_POST_RELEASE_BASE_URL\` (secret)"
+            echo "- Event: \`${{ github.event_name }}\`"
+            if [ "${{ github.event_name }}" = "schedule" ]; then
+              echo "- Window: \`30 min\`"
+              echo "- Interval: \`600s\`"
+              echo "- Retry attempts: \`1\`"
+              echo "- Retry sleep: \`2s\`"
+              echo "- Max total time: from secret \`NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_SECONDS\` (optional)"
+              echo "- Max /health: from secret \`NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS\` (optional)"
+              echo "- Max /live: from secret \`NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS\` (optional)"
+              echo "- Max /ready: from secret \`NEXTGEN_POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS\` (optional)"
+              echo "- Fail on aggregate latency breach: secret \`NEXTGEN_POST_RELEASE_FAIL_ON_LATENCY_BREACH\` (optional; empty = enforce; \`false\` = skip aggregate guardrail only)"
+            else
+              echo "- Window: \`${{ inputs.duration_minutes }} min\`"
+              echo "- Interval: \`${{ inputs.interval_seconds }}s\`"
+              echo "- Retry attempts: \`${{ inputs.retry_attempts }}\`"
+              echo "- Retry sleep: \`${{ inputs.retry_sleep_seconds }}s\`"
+              echo "- Max total time (optional): \`${{ inputs.max_total_time_seconds }}\`"
+              echo "- Max /health (optional): \`${{ inputs.max_total_time_health_seconds }}\`"
+              echo "- Max /live (optional): \`${{ inputs.max_total_time_live_seconds }}\`"
+              echo "- Max /ready (optional): \`${{ inputs.max_total_time_ready_seconds }}\`"
+              echo "- Fail on aggregate latency breach: \`${{ inputs.fail_on_latency_breach }}\`"
+            fi
+            echo "- Result: ✅ watch completed"
+            echo ""
+            echo "### Endpoint latency report"
+            echo "| Round | Endpoint | Time (s) | Attempt | Outcome | Threshold Used |"
+            echo "|---|---|---:|---:|---|---:|"
+            nextgen_platform/scripts/post_release_aggregate_latency.sh detail-table
+            echo ""
+            echo "### Endpoint latency aggregates"
+            echo "| Endpoint | Samples | Avg (s) | Min (s) | Max (s) | Threshold | Status |"
+            echo "|---|---:|---:|---:|---:|---:|---|"
+            nextgen_platform/scripts/post_release_aggregate_latency.sh aggregates-table
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce latency guardrail
+        env:
+          SCHEDULE_FAIL_ON_BREACH: ${{ secrets.NEXTGEN_POST_RELEASE_FAIL_ON_LATENCY_BREACH }}
+        run: |
+          set -euo pipefail
+          export POST_RELEASE_REPORT_PATH="nextgen_platform/ci_artifacts/post-release-report.csv"
+          chmod +x nextgen_platform/scripts/post_release_aggregate_latency.sh
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            export FAIL_ON_LATENCY_BREACH="${SCHEDULE_FAIL_ON_BREACH:-true}"
+            export POST_RELEASE_GUARDRAIL_SKIP_HINT='secret `NEXTGEN_POST_RELEASE_FAIL_ON_LATENCY_BREACH` disables aggregate failure'
+          else
+            export FAIL_ON_LATENCY_BREACH="${{ inputs.fail_on_latency_breach }}"
+            export POST_RELEASE_GUARDRAIL_SKIP_HINT='`fail_on_latency_breach=false`'
+          fi
+          nextgen_platform/scripts/post_release_aggregate_latency.sh guardrail

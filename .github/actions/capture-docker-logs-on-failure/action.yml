@@ -1,0 +1,30 @@
+name: Capture Docker Logs on Failure
+description: Capture docker compose logs into an artifact path and upload them.
+inputs:
+  project_dir:
+    description: Working directory where docker compose command should run
+    required: true
+  compose_file:
+    description: Docker compose file path relative to project_dir
+    required: true
+  artifact_path:
+    description: Output file path for docker logs relative to project_dir
+    required: true
+  artifact_name:
+    description: Artifact name used when uploading logs
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Capture docker compose logs
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ inputs.project_dir }}"
+        mkdir -p "$(dirname "${{ inputs.artifact_path }}")"
+        docker compose -f "${{ inputs.compose_file }}" logs > "${{ inputs.artifact_path }}"
+    - name: Upload docker logs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ${{ inputs.project_dir }}/${{ inputs.artifact_path }}

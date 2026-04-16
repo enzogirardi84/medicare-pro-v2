@@ -1,0 +1,54 @@
+name: nextgen-security
+
+on:
+  pull_request:
+    paths:
+      - "nextgen_platform/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "nextgen_platform/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  workflow_dispatch:
+
+concurrency:
+  group: nextgen-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: nextgen_platform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "nextgen_platform/requirements-dev.txt"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install pip-audit bandit
+
+      - name: Dependency vulnerability audit
+        run: |
+          pip-audit -r requirements-dev.txt
+
+      - name: Static security scan (Bandit)
+        run: |
+          bandit -q -r apps/api/app

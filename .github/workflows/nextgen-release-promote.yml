@@ -1,0 +1,71 @@
+name: nextgen-release-promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to promote (e.g. 1.2.0)"
+        required: true
+        type: string
+      mark_as_latest:
+        description: "Mark release as latest"
+        required: true
+        default: true
+        type: boolean
+      prerelease:
+        description: "Keep release as prerelease"
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: nextgen-release-promote-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Validate draft release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view "${{ inputs.version }}" --json isDraft >/tmp/release.json
+          is_draft="$(python -c "import json;print(json.load(open('/tmp/release.json'))['isDraft'])")"
+          if [ "$is_draft" != "True" ] && [ "$is_draft" != "true" ]; then
+            echo "Release ${{ inputs.version }} is not draft. Nothing to promote."
+            exit 1
+          fi
+
+      - name: Promote release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest_flag="--latest=false"
+          if [ "${{ inputs.mark_as_latest }}" = "true" ]; then
+            latest_flag="--latest"
+          fi
+
+          pre_flag="--prerelease=false"
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            pre_flag="--prerelease"
+          fi
+
+          gh release edit "${{ inputs.version }}" --draft=false $pre_flag $latest_flag
+
+      - name: Publish summary
+        run: |
+          {
+            echo "## Release promoted"
+            echo ""
+            echo "- Tag: \`${{ inputs.version }}\`"
+            echo "- Draft: false"
+            echo "- Prerelease: \`${{ inputs.prerelease }}\`"
+            echo "- Latest: \`${{ inputs.mark_as_latest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

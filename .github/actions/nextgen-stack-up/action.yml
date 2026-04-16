@@ -1,0 +1,48 @@
+name: NextGen Stack Up
+description: Build/start docker compose stack and wait for health endpoint.
+inputs:
+  project_dir:
+    description: Working directory where docker compose command should run
+    required: true
+  compose_file:
+    description: Docker compose file path relative to project_dir
+    required: true
+  healthcheck_url:
+    description: Health/readiness URL to poll
+    required: true
+  max_attempts:
+    description: Maximum number of healthcheck attempts
+    required: false
+    default: "30"
+  sleep_seconds:
+    description: Seconds to wait between retries
+    required: false
+    default: "3"
+runs:
+  using: composite
+  steps:
+    - name: Build and start stack
+      shell: bash
+      run: |
+        set -euo pipefail
+        export DOCKER_BUILDKIT=1
+        export COMPOSE_DOCKER_CLI_BUILD=1
+        cd "${{ inputs.project_dir }}"
+        docker compose -f "${{ inputs.compose_file }}" up --build -d
+
+    - name: Wait for healthcheck
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ inputs.project_dir }}"
+        ATTEMPTS="${{ inputs.max_attempts }}"
+        SLEEP_SECONDS="${{ inputs.sleep_seconds }}"
+        for ((i=1; i<=ATTEMPTS; i++)); do
+          if curl -sSf "${{ inputs.healthcheck_url }}" > /dev/null; then
+            exit 0
+          fi
+          sleep "$SLEEP_SECONDS"
+        done
+        echo "Service did not become healthy in time: ${{ inputs.healthcheck_url }}"
+        docker compose -f "${{ inputs.compose_file }}" logs
+        exit 1

@@ -1,0 +1,95 @@
+name: nextgen-pr-gate
+
+on:
+  pull_request:
+    paths:
+      - "nextgen_platform/**"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+  workflow_dispatch:
+
+concurrency:
+  group: nextgen-pr-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: nextgen_platform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint workflows and actions
+        uses: rhysd/actionlint@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: "nextgen_platform/requirements-dev.txt"
+
+      - name: Install dependencies and security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install pip-audit bandit
+
+      - name: Dependency vulnerability audit
+        run: |
+          pip-audit -r requirements-dev.txt
+
+      - name: Static security scan (Bandit)
+        run: |
+          bandit -q -r apps/api/app
+
+      - name: Build/start stack and wait health
+        uses: ./.github/actions/nextgen-stack-up
+        with:
+          project_dir: nextgen_platform
+          compose_file: infra/docker/docker-compose.yml
+          healthcheck_url: http://localhost:8000/health
+          max_attempts: "30"
+          sleep_seconds: "3"
+
+      - name: Run smoke integration contracts
+        env:
+          NEXTGEN_BASE_URL: http://localhost:8000
+        run: |
+          mkdir -p ci_artifacts
+          python -m pytest tests/integration/test_auth_contract.py tests/integration/test_outbox_contract.py tests/integration/test_system_resilience_contract.py tests/integration/test_api_guardrails_contract.py -q --junitxml=ci_artifacts/pr-gate-junit.xml
+
+      - name: Capture and upload docker logs on failure
+        if: failure()
+        uses: ./.github/actions/capture-docker-logs-on-failure
+        with:
+          project_dir: nextgen_platform
+          compose_file: infra/docker/docker-compose.yml
+          artifact_path: ci_artifacts/pr-gate-docker-logs.txt
+          artifact_name: nextgen-pr-gate-failure-logs
+
+      - name: Publish gate test summary
+        if: always()
+        uses: ./.github/actions/publish-junit-summary
+        with:
+          report_path: nextgen_platform/ci_artifacts/pr-gate-junit.xml
+          title: PR Gate Smoke Test Summary
+
+      - name: Upload gate junit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextgen-pr-gate-junit
+          path: nextgen_platform/ci_artifacts/pr-gate-junit.xml
+
+      - name: Shutdown stack
+        if: always()
+        uses: ./.github/actions/nextgen-stack-down
+        with:
+          project_dir: nextgen_platform
+          compose_file: infra/docker/docker-compose.yml

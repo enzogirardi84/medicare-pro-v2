@@ -1,0 +1,151 @@
+name: nextgen-post-release-watch
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Base URL to verify (e.g. https://api.example.com)"
+        required: true
+        type: string
+      expected_version:
+        description: "Expected x-api-version header (optional)"
+        required: false
+        default: ""
+        type: string
+      expected_deploy_id:
+        description: "Expected x-deploy-id header (optional)"
+        required: false
+        default: ""
+        type: string
+      expected_git_sha:
+        description: "Expected x-git-sha header (optional)"
+        required: false
+        default: ""
+        type: string
+      duration_minutes:
+        description: "Total watch window (minutes)"
+        required: true
+        default: "60"
+        type: string
+      interval_seconds:
+        description: "Seconds between check iterations"
+        required: true
+        default: "600"
+        type: string
+      retry_attempts:
+        description: "Retry attempts per endpoint check (default 1)"
+        required: true
+        default: "1"
+        type: string
+      retry_sleep_seconds:
+        description: "Sleep between retries (seconds)"
+        required: true
+        default: "2"
+        type: string
+      max_total_time_seconds:
+        description: "Fail if curl time_total exceeds this (seconds). Empty = no latency check."
+        required: false
+        default: ""
+        type: string
+      max_total_time_health_seconds:
+        description: "Optional threshold for /health (seconds)"
+        required: false
+        default: ""
+        type: string
+      max_total_time_live_seconds:
+        description: "Optional threshold for /live (seconds)"
+        required: false
+        default: ""
+        type: string
+      max_total_time_ready_seconds:
+        description: "Optional threshold for /ready (seconds)"
+        required: false
+        default: ""
+        type: string
+      fail_on_latency_breach:
+        description: "Fail workflow when aggregate avg latency exceeds configured threshold (🔴); set false for staging diagnostics only"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: nextgen-post-release-watch-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 125
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Watch health endpoints (time window)
+        env:
+          POST_RELEASE_MODE: watch
+          BASE_URL: ${{ inputs.base_url }}
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          EXPECTED_DEPLOY_ID: ${{ inputs.expected_deploy_id }}
+          EXPECTED_GIT_SHA: ${{ inputs.expected_git_sha }}
+          POST_RELEASE_RETRY_ATTEMPTS: ${{ inputs.retry_attempts }}
+          POST_RELEASE_RETRY_SLEEP_SECONDS: ${{ inputs.retry_sleep_seconds }}
+          POST_RELEASE_MAX_TOTAL_TIME_SECONDS: ${{ inputs.max_total_time_seconds }}
+          POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS: ${{ inputs.max_total_time_health_seconds }}
+          POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS: ${{ inputs.max_total_time_live_seconds }}
+          POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS: ${{ inputs.max_total_time_ready_seconds }}
+        run: |
+          set -euo pipefail
+          mkdir -p nextgen_platform/ci_artifacts
+          export POST_RELEASE_REPORT_PATH="nextgen_platform/ci_artifacts/post-release-report.csv"
+          case "${{ inputs.duration_minutes }}" in
+            ''|*[!0-9]*) echo "[FAIL] duration_minutes must be numeric"; exit 1 ;;
+          esac
+          case "${{ inputs.interval_seconds }}" in
+            ''|*[!0-9]*) echo "[FAIL] interval_seconds must be numeric"; exit 1 ;;
+          esac
+          export POST_RELEASE_WATCH_DURATION_SECONDS="$((${{ inputs.duration_minutes }} * 60))"
+          export POST_RELEASE_WATCH_INTERVAL_SECONDS="${{ inputs.interval_seconds }}"
+          chmod +x nextgen_platform/scripts/post_release_http_verify.sh
+          nextgen_platform/scripts/post_release_http_verify.sh
+
+      - name: Publish watch summary
+        env:
+          POST_RELEASE_REPORT_PATH: nextgen_platform/ci_artifacts/post-release-report.csv
+        run: |
+          set -euo pipefail
+          chmod +x nextgen_platform/scripts/post_release_aggregate_latency.sh
+          {
+            echo "## Post-release watch"
+            echo ""
+            echo "- Base URL: \`${{ inputs.base_url }}\`"
+            echo "- Window: \`${{ inputs.duration_minutes }} min\`"
+            echo "- Interval: \`${{ inputs.interval_seconds }}s\`"
+            echo "- Retry attempts: \`${{ inputs.retry_attempts }}\`"
+            echo "- Retry sleep: \`${{ inputs.retry_sleep_seconds }}s\`"
+            echo "- Max total time (optional): \`${{ inputs.max_total_time_seconds }}\`"
+            echo "- Max /health (optional): \`${{ inputs.max_total_time_health_seconds }}\`"
+            echo "- Max /live (optional): \`${{ inputs.max_total_time_live_seconds }}\`"
+            echo "- Max /ready (optional): \`${{ inputs.max_total_time_ready_seconds }}\`"
+            echo "- Fail on aggregate latency breach: \`${{ inputs.fail_on_latency_breach }}\`"
+            echo "- Result: ✅ watch completed"
+            echo ""
+            echo "### Endpoint latency report"
+            echo "| Round | Endpoint | Time (s) | Attempt | Outcome | Threshold Used |"
+            echo "|---|---|---:|---:|---|---:|"
+            nextgen_platform/scripts/post_release_aggregate_latency.sh detail-table
+            echo ""
+            echo "### Endpoint latency aggregates"
+            echo "| Endpoint | Samples | Avg (s) | Min (s) | Max (s) | Threshold | Status |"
+            echo "|---|---:|---:|---:|---:|---:|---|"
+            nextgen_platform/scripts/post_release_aggregate_latency.sh aggregates-table
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce latency guardrail
+        env:
+          POST_RELEASE_REPORT_PATH: nextgen_platform/ci_artifacts/post-release-report.csv
+          FAIL_ON_LATENCY_BREACH: ${{ inputs.fail_on_latency_breach }}
+          POST_RELEASE_GUARDRAIL_SKIP_HINT: "`fail_on_latency_breach=false`"
+        run: |
+          set -euo pipefail
+          chmod +x nextgen_platform/scripts/post_release_aggregate_latency.sh
+          nextgen_platform/scripts/post_release_aggregate_latency.sh guardrail

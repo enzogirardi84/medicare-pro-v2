@@ -1,0 +1,51 @@
+name: Publish JUnit Summary
+description: Parse a JUnit XML file and append a test summary to GitHub Step Summary.
+inputs:
+  report_path:
+    description: Path to junit xml report
+    required: true
+  title:
+    description: Summary title
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Publish junit summary
+      shell: bash
+      run: |
+        python - <<'PY'
+        import os
+        import xml.etree.ElementTree as ET
+
+        report_path = "${{ inputs.report_path }}"
+        title = "${{ inputs.title }}"
+        summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+        if not os.path.exists(report_path):
+            with open(summary_path, "a", encoding="utf-8") as f:
+                f.write(f"## {title}\n\nJUnit report not found.\n")
+            raise SystemExit(0)
+
+        root = ET.parse(report_path).getroot()
+        if root.tag == "testsuite":
+            tests = int(root.attrib.get("tests", 0))
+            failures = int(root.attrib.get("failures", 0))
+            errors = int(root.attrib.get("errors", 0))
+            skipped = int(root.attrib.get("skipped", 0))
+        else:
+            tests = failures = errors = skipped = 0
+            for suite in root.findall("testsuite"):
+                tests += int(suite.attrib.get("tests", 0))
+                failures += int(suite.attrib.get("failures", 0))
+                errors += int(suite.attrib.get("errors", 0))
+                skipped += int(suite.attrib.get("skipped", 0))
+
+        passed = max(tests - failures - errors - skipped, 0)
+        with open(summary_path, "a", encoding="utf-8") as f:
+            f.write(f"## {title}\n\n")
+            f.write(f"- Total: {tests}\n")
+            f.write(f"- Passed: {passed}\n")
+            f.write(f"- Failures: {failures}\n")
+            f.write(f"- Errors: {errors}\n")
+            f.write(f"- Skipped: {skipped}\n")
+        PY

@@ -1,0 +1,88 @@
+name: nextgen-release-notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release label (e.g. 1.2.0)"
+        required: true
+        default: "draft"
+        type: string
+      compare_from:
+        description: "Git ref for changelog range (tag or commit). Empty = last N commits touching paths."
+        required: false
+        default: ""
+        type: string
+      max_commits:
+        description: "When compare_from is empty, max commits to list."
+        required: false
+        default: "50"
+        type: string
+      create_github_release:
+        description: "Create/update GitHub Release draft from generated markdown"
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: "Mark GitHub release as prerelease"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: nextgen-release-notes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release draft
+        working-directory: nextgen_platform
+        run: |
+          set -euo pipefail
+          mkdir -p ci_artifacts
+          if [ -z "${{ inputs.compare_from }}" ]; then
+            python scripts/generate_release_draft.py \
+              --version "${{ inputs.version }}" \
+              --max-commits "${{ inputs.max_commits }}" \
+              --out ci_artifacts/release-draft.md
+          else
+            python scripts/generate_release_draft.py \
+              --version "${{ inputs.version }}" \
+              --compare-from "${{ inputs.compare_from }}" \
+              --max-commits "${{ inputs.max_commits }}" \
+              --out ci_artifacts/release-draft.md
+          fi
+
+      - name: Append to job summary
+        run: |
+          echo "## Release draft (${{ inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat nextgen_platform/ci_artifacts/release-draft.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release draft artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextgen-release-draft
+          path: nextgen_platform/ci_artifacts/release-draft.md
+
+      - name: Create or update GitHub Release draft
+        if: ${{ inputs.create_github_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: NextGen ${{ inputs.version }}
+          body_path: nextgen_platform/ci_artifacts/release-draft.md
+          draft: true
+          prerelease: ${{ inputs.prerelease }}
+          make_latest: false
