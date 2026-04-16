@@ -37,43 +37,6 @@ LEGACY_ROLE_TO_PROFILE = {
 }
 
 
-DEFAULT_ADMIN_USER = {
-    "pass": "37108100",
-    "rol": "SuperAdmin",
-    "nombre": "Enzo Girardi",
-    "empresa": "SISTEMAS E.G.",
-    "matricula": "M.P 21947",
-    "dni": "37108100",
-    "titulo": "Director de Sistemas",
-    "perfil_profesional": "Direccion",
-    "estado": "Activo",
-    "pin": "1234",
-}
-
-# Logins que pueden usar la clave de DEFAULT_ADMIN_USER["pass"] si el hash en base no coincide (recuperación).
-EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin", "enzogirardi"})
-
-
-def logins_clave_default_superadmin() -> frozenset[str]:
-    """
-    Usernames normalizados (minúsculas) admitidos para login de emergencia con DEFAULT_ADMIN_USER['pass'].
-    Incluye siempre admin y enzogirardi; opcional en secrets: SUPERADMIN_EMERGENCY_LOGINS_EXTRA (lista TOML o CSV).
-    """
-    s = set(EMERGENCY_SUPERADMIN_LOGINS)
-    try:
-        raw = st.secrets.get("SUPERADMIN_EMERGENCY_LOGINS_EXTRA", None)
-    except Exception:
-        return frozenset(s)
-    if raw is None:
-        return frozenset(s)
-    if isinstance(raw, (list, tuple)):
-        s.update(str(x).strip().lower() for x in raw if str(x).strip())
-    else:
-        txt = str(raw).replace(";", ",")
-        s.update(x.strip().lower() for x in txt.split(",") if x.strip())
-    return frozenset(s)
-
-
 ACTION_ROLE_RULES = {
     "recetas_prescribir": ["Medico"],
     "recetas_cargar_papel": ["Operativo", "Enfermeria", "Medico"],
@@ -860,16 +823,11 @@ def registrar_auditoria_legal(
 
 def asegurar_usuarios_base(solo_normalizar: bool = False):
     """
-    solo_normalizar=True: solo renormaliza usuarios existentes (modo shard / sin inyectar admin de emergencia).
+    Normaliza usuarios existentes y migra hashes viejos.
+
+    Nota: se eliminó el usuario de emergencia hardcodeado; no se inyectan cuentas "admin" desde código.
     """
     st.session_state.setdefault("usuarios_db", {})
-    if not solo_normalizar:
-        if "admin" not in st.session_state["usuarios_db"]:
-            st.session_state["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
-        else:
-            combinado = DEFAULT_ADMIN_USER.copy()
-            combinado.update(st.session_state["usuarios_db"]["admin"])
-            st.session_state["usuarios_db"]["admin"] = combinado
     for login, datos in list(st.session_state["usuarios_db"].items()):
         if not isinstance(datos, dict):
             continue
@@ -1399,7 +1357,7 @@ def obtener_direccion_real(lat, lon):
 def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
     if "db_inicializada" not in st.session_state:
         claves_base = {
-            "usuarios_db": {"admin": DEFAULT_ADMIN_USER.copy()},
+            "usuarios_db": {},
             "pacientes_db": [],
             "detalles_pacientes_db": {},
             "vitales_db": [],
@@ -1439,12 +1397,8 @@ def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
         else:
             for k, v in claves_base.items():
                 st.session_state[k] = v
-            if not precargar_usuario_admin_emergencia:
-                st.session_state["usuarios_db"] = {}
-        if precargar_usuario_admin_emergencia:
-            asegurar_usuarios_base()
-        else:
-            asegurar_usuarios_base(solo_normalizar=True)
+        # Se eliminó el usuario admin de emergencia; siempre solo normalizamos usuarios existentes.
+        asegurar_usuarios_base(solo_normalizar=True)
         try:
             from core.clinicas_control import sincronizar_clinicas_desde_datos
 

@@ -44,10 +44,8 @@ from core.email_2fa import (
     verificar_codigo_ingresado,
 )
 from core.utils import (
-    DEFAULT_ADMIN_USER,
     ahora,
     asegurar_usuarios_base,
-    logins_clave_default_superadmin,
     normalizar_usuario_sistema,
     obtener_pin_usuario,
 )
@@ -547,41 +545,11 @@ def render_login():
                                                     "login_ok",
                                                 )
                                     else:
-                                        if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
-                                            DEFAULT_ADMIN_USER["pass"]
-                                        ).strip():
-                                            limpiar_fallos_login(u_limpio)
-                                            user_data = DEFAULT_ADMIN_USER.copy()
-                                            user_data["usuario_login"] = "admin"
-                                            aplicar_hash_tras_login_ok(user_data, p.strip(), rounds=bcrypt_rounds_config())
-                                            st.session_state["usuarios_db"]["admin"] = user_data
-                                            _completar_login_exitoso(
-                                                user_data,
-                                                "admin",
-                                                "Login emergencia superadmin",
-                                                "login_ok_admin_emergencia",
-                                            )
-                                        else:
-                                            registrar_fallo_login(u_limpio)
-                                            st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
-                                else:
-                                    if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
-                                        DEFAULT_ADMIN_USER["pass"]
-                                    ).strip():
-                                        limpiar_fallos_login(u_limpio)
-                                        user_data = DEFAULT_ADMIN_USER.copy()
-                                        user_data["usuario_login"] = "admin"
-                                        aplicar_hash_tras_login_ok(user_data, p.strip(), rounds=bcrypt_rounds_config())
-                                        st.session_state["usuarios_db"]["admin"] = user_data
-                                        _completar_login_exitoso(
-                                            user_data,
-                                            "admin",
-                                            "Login emergencia superadmin",
-                                            "login_ok_admin_emergencia",
-                                        )
-                                    else:
                                         registrar_fallo_login(u_limpio)
                                         st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
+                                else:
+                                    registrar_fallo_login(u_limpio)
+                                    st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
         st.stop()
 
 

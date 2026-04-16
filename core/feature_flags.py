@@ -15,7 +15,7 @@ GUARDAR_DATOS_LOG_LENTO_SEGUNDOS = 2.5
 
 # Evita tormentas de guardado por clicks seguidos en pocos milisegundos.
 # Se aplica en guardados no forzados (spinner=False/None). Formularios criticos con spinner=True no se limitan.
-GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 0.8
+GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 2.0
 
 # Reintentos de Supabase para picos transitorios de concurrencia/red.
 SUPABASE_RETRY_ATTEMPTS = 3

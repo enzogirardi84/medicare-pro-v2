@@ -65,12 +65,7 @@ def login_usa_monolito_legacy(login_normalizado: str) -> bool:
         return True
     if s in logins_monolito_allowlist():
         return True
-    try:
-        from core.utils import EMERGENCY_SUPERADMIN_LOGINS
-
-        return s in EMERGENCY_SUPERADMIN_LOGINS
-    except Exception:
-        return False
+    return False
 
 
 def tenant_key_normalizado(empresa: str) -> str:
@@ -226,6 +221,8 @@ def procesar_guardado_pendiente() -> bool:
         min_intervalo = 0.0
     if min_intervalo <= 0:
         return False
+    # Piso de seguridad: evitar ráfagas demasiado agresivas.
+    min_intervalo = max(2.0, float(min_intervalo))
 
     ultimo = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
     if ultimo > 0 and (time.monotonic() - ultimo) < min_intervalo:
@@ -274,7 +271,6 @@ def vaciar_datos_app_en_sesion() -> None:
     for k in _db_keys():
         st.session_state.pop(k, None)
     for k in (
-        "_db_cache",
         "_db_cache_hash",
         "_modo_offline",
         "_aviso_offline_mostrado",
@@ -434,6 +430,7 @@ def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | No
         return False
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def _cargar_supabase_monolito():
     response = _supabase_execute_with_retry(
         "cargar_monolito",
@@ -444,6 +441,7 @@ def _cargar_supabase_monolito():
     return None
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def _cargar_supabase_tenant(tenant_key: str):
     r = _supabase_execute_with_retry(
         "cargar_tenant",
@@ -483,12 +481,11 @@ def _upsert_supabase_tenant(tenant_key: str, data: dict):
         )
 
 
-def _fijar_cache_y_hash(data: dict) -> bytes | None:
-    """Sincroniza _db_cache y _db_cache_hash sin deepcopy (round-trip JSON estable)."""
+def _fijar_hash_payload(data: dict) -> bytes | None:
+    """Sincroniza solo el hash del payload para evitar duplicar datasets en sesión."""
     if not isinstance(data, dict):
         return None
     pb, _ = dumps_db_sorted(data)
-    st.session_state["_db_cache"] = loads_db_payload(pb)
     st.session_state["_db_cache_hash"] = hashlib.sha256(pb).hexdigest()
     return pb
 
@@ -502,16 +499,10 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     """
     t0 = time.monotonic()
     ok = True
-    cache_key = "_db_cache"
     shard = modo_shard_activo()
     try:
         if shard and not monolito_legacy and not tenant_key:
-            if not force and cache_key in st.session_state:
-                return copy.deepcopy(st.session_state[cache_key])
             return None
-
-        if not force and cache_key in st.session_state:
-            return copy.deepcopy(st.session_state[cache_key])
 
         tk = tenant_key_normalizado(tenant_key) if tenant_key else ""
 
@@ -522,10 +513,10 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             else:
                 data_local = _normalizar_blob_datos(_cargar_local())
             if data_local:
-                pb = _fijar_cache_y_hash(data_local)
+                pb = _fijar_hash_payload(data_local)
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_local:{len(pb)}")
-            return copy.deepcopy(data_local) if data_local else None
+            return data_local if data_local else None
 
         try:
             if shard and tk and not monolito_legacy:
@@ -534,11 +525,11 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 data = _normalizar_blob_datos(_cargar_supabase_monolito())
 
             if data is not None:
-                pb = _fijar_cache_y_hash(data)
+                pb = _fijar_hash_payload(data)
                 st.session_state["_modo_offline"] = False
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_nube:{len(pb)}")
-                return copy.deepcopy(data)
+                return data
 
             # Conexión OK pero sin fila en nube (tenant nuevo / vacío): reutilizar backup local si existe.
             data_local = None
@@ -547,9 +538,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             if data_local is None:
                 data_local = _normalizar_blob_datos(_cargar_local())
             if data_local:
-                _fijar_cache_y_hash(data_local)
+                _fijar_hash_payload(data_local)
                 st.session_state["_modo_offline"] = True
-                return copy.deepcopy(data_local)
+                return data_local
         except Exception as e:
             log_event("db", f"supabase_unavailable:{type(e).__name__}:{e!s}")
             data_local = None
@@ -558,7 +549,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             if data_local is None:
                 data_local = _normalizar_blob_datos(_cargar_local())
             if data_local:
-                _fijar_cache_y_hash(data_local)
+                _fijar_hash_payload(data_local)
             st.session_state["_modo_offline"] = True
             if not st.session_state.get("_aviso_offline_mostrado"):
                 st.warning(
@@ -570,7 +561,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                     st.code(type(e).__name__, language="text")
                 st.session_state["_aviso_offline_mostrado"] = True
             ok = False
-            return copy.deepcopy(data_local) if data_local else None
+            return data_local if data_local else None
         return None
     finally:
         try:
@@ -598,6 +589,8 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
         except Exception:
             min_intervalo = 0.0
         if min_intervalo > 0:
+            # Piso de seguridad: evitar saturar por clicks seguidos.
+            min_intervalo = max(2.0, float(min_intervalo))
             ahora_ts = time.monotonic()
             ultimo_ts = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
             if ultimo_ts > 0 and (ahora_ts - ultimo_ts) < min_intervalo:
@@ -714,7 +707,6 @@ def _guardar_datos_ejecutar_core():
     else:
         guardado_local = _guardar_local(data, payload_bytes)
 
-    st.session_state["_db_cache"] = loads_db_payload(payload_bytes)
     st.session_state["_db_cache_hash"] = payload_hash
     st.session_state["_guardar_datos_pendiente"] = False
 

@@ -25,10 +25,35 @@ from urllib.request import Request, urlopen
 
 
 def _secrets_dict() -> Dict[str, Any]:
+    """
+    Devuelve SOLO el subconjunto de secrets necesarios para Jira.
+    Evita materializar/exponer el dict completo de `st.secrets`.
+    """
     try:
         import streamlit as st
 
-        return dict(st.secrets)
+        out: Dict[str, Any] = {}
+        try:
+            jira_block = st.secrets.get("jira")
+        except Exception:
+            jira_block = None
+        if isinstance(jira_block, dict):
+            out["jira"] = dict(jira_block)
+
+        for k in (
+            "JIRA_BASE_URL",
+            "JIRA_EMAIL",
+            "JIRA_API_TOKEN",
+            "JIRA_JQL",
+            "JIRA_BOARD_URL",
+            "JIRA_MAX_ISSUES",
+        ):
+            try:
+                if st.secrets.get(k) is not None:
+                    out[k] = st.secrets.get(k)
+            except Exception:
+                continue
+        return out
     except Exception:
         return {}
 
