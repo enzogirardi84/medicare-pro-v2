@@ -129,8 +129,8 @@ def _armar_mensaje_whatsapp_visita(paciente_sel, mi_empresa, user, visita_dict, 
     else:
         tpl = str(plantillas_empresa.get("general", "")).strip()
     armado = _aplicar_plantilla_whatsapp(tpl, vals)
-    if armado is not None:
-        return armado
+    if armado is not None and str(armado).strip():
+        return str(armado).strip()
 
     quien = vals["contacto"]
     mat_quien = vals["mat_contacto"]
@@ -523,6 +523,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     visita_elegida = visitas_wa[pick_wa] if pick_wa < len(visitas_wa) else None
     pls_msg = _plantillas_whatsapp_para_empresa(mi_empresa)
     if st.session_state[prev_key] != pick_wa:
+        # Evita que el text_area conserve el valor anterior al cambiar la visita (sincroniza bien con Streamlit).
+        st.session_state.pop(msg_key, None)
         st.session_state[msg_key] = _armar_mensaje_whatsapp_visita(
             paciente_sel, mi_empresa, user, visita_elegida, nombre_corto_pac, dire_paciente, plantillas_empresa=pls_msg
         )

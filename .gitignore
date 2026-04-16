@@ -17,3 +17,5 @@ env/
 *.log
 Thumbs.db
 Desktop.ini
+
+nextgen_platform/ci_artifacts/

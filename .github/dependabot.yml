@@ -6,6 +6,24 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
 
+  - package-ecosystem: pip
+    directory: "/nextgen_platform/apps/api"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: pip
+    directory: "/nextgen_platform/apps/worker"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: pip
+    directory: "/nextgen_platform"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
