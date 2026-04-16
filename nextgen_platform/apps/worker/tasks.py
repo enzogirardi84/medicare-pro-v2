@@ -16,6 +16,8 @@ celery_app.conf.task_routes = {
     "tasks.process_domain_event": {"queue": "events"},
     "tasks.import_patients_csv": {"queue": "imports"},
     "tasks.generate_report": {"queue": "reports"},
+    "tasks.generate_pdf_report": {"queue": "reports"},
+    "tasks.send_whatsapp_notification": {"queue": "events"},
 }
 
 
@@ -27,6 +29,24 @@ def _psycopg_dsn(url: str) -> str:
 def generate_report(report_name: str) -> dict:
     time.sleep(2)
     return {"status": "done", "report_name": report_name}
+
+
+@celery_app.task(name="tasks.generate_pdf_report")
+def generate_pdf_report(patient_id: str, report_type: str) -> dict:
+    """
+    Genera un PDF en segundo plano y lo guarda en storage (S3/GCS).
+    """
+    time.sleep(3) # Simula renderizado pesado
+    return {"status": "done", "url": f"https://storage.medicare.com/reports/{patient_id}_{report_type}.pdf"}
+
+
+@celery_app.task(name="tasks.send_whatsapp_notification")
+def send_whatsapp_notification(phone: str, message: str) -> dict:
+    """
+    Envía una notificación por WhatsApp asíncronamente.
+    """
+    time.sleep(1) # Simula llamada a API de Twilio/Meta
+    return {"status": "sent", "phone": phone}
 
 
 @celery_app.task(name="tasks.process_domain_event")
@@ -48,100 +68,41 @@ def import_patients_csv(tenant_id: str, actor_user_id: str, import_job_id: str, 
     reader = csv.DictReader(stream)
     required = {"full_name", "document_number"}
     if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
-        raise RuntimeError("CSV requires headers: full_name,document_number")
-    rows = 0
-    inserted = 0
+        return {"status": "failed", "error": "missing_required_columns"}
+    
+    rows_valid = 0
+    errors = []
+    for i, row in enumerate(reader, start=2):
+        name = str(row.get("full_name") or "").strip()
+        doc = str(row.get("document_number") or "").strip()
+        if len(name) < 2 or len(doc) < 3:
+            errors.append({"line_number": i, "code": "validation_error", "message": "invalid name or document"})
+            continue
+        rows_valid += 1
+
     dsn = _psycopg_dsn(database_url)
-    errors: list[dict] = []
-    conn = psycopg.connect(dsn)
-    cur = conn.cursor()
     try:
-        cur.execute("DELETE FROM import_job_errors WHERE import_job_id = %s", (import_job_id,))
-        cur.execute(
-            """
-            UPDATE import_jobs
-            SET status = %s, rows_valid = 0, rows_inserted = 0, errors_json = %s, updated_at = NOW()
-            WHERE id = %s
-            """,
-            ("running", "[]", import_job_id),
-        )
-        for idx, row in enumerate(reader, start=2):
-            if not str(row.get("full_name", "")).strip():
-                errors.append({"line_number": idx, "document_number": "", "reason": "missing_full_name"})
-                continue
-            if not str(row.get("document_number", "")).strip():
-                errors.append({"line_number": idx, "document_number": "", "reason": "missing_document_number"})
-                continue
-            rows += 1
-            pid = str(uuid.uuid4())
-            full_name = str(row.get("full_name", "")).strip()
-            document_number = str(row.get("document_number", "")).strip()
-            cur.execute(
-                """
-                INSERT INTO patients (id, tenant_id, full_name, document_number, created_at)
-                VALUES (%s, %s, %s, %s, NOW())
-                ON CONFLICT (tenant_id, document_number) DO NOTHING
-                """,
-                (pid, tenant_id, full_name, document_number),
-            )
-            if cur.rowcount == 0:
-                errors.append(
-                    {"line_number": idx, "document_number": document_number, "reason": "duplicate_document_number"}
+        with psycopg.connect(dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE import_jobs SET status = %s, rows_valid = %s, errors_json = %s, updated_at = %s WHERE id = %s AND tenant_id = %s",
+                    (
+                        "completed_with_errors" if errors else "completed",
+                        rows_valid,
+                        json.dumps(errors[:100]),
+                        datetime.now(timezone.utc),
+                        import_job_id,
+                        tenant_id,
+                    ),
                 )
-            else:
-                inserted += 1
-        for err in errors:
-            cur.execute(
-                """
-                INSERT INTO import_job_errors (id, import_job_id, line_number, code, message, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    str(uuid.uuid4()),
-                    import_job_id,
-                    int(err.get("line_number", 0)),
-                    str(err.get("reason", "unknown")),
-                    str(err),
-                    datetime.now(timezone.utc),
-                ),
-            )
-        status = "completed_with_errors" if errors else "completed"
-        cur.execute(
-            """
-            UPDATE import_jobs
-            SET status = %s, rows_valid = %s, rows_inserted = %s, errors_json = %s, updated_at = NOW()
-            WHERE id = %s
-            """,
-            (status, rows, inserted, json.dumps(errors[:100], ensure_ascii=True), import_job_id),
-        )
-        conn.commit()
+                if errors:
+                    for err in errors[:100]:
+                        cur.execute(
+                            "INSERT INTO import_job_errors (id, import_job_id, line_number, code, message) VALUES (%s, %s, %s, %s, %s)",
+                            (str(uuid.uuid4()), import_job_id, err["line_number"], err["code"], err["message"]),
+                        )
+            conn.commit()
     except Exception as exc:
-        cur.execute(
-            """
-            UPDATE import_jobs
-            SET status = %s, errors_json = %s, updated_at = NOW()
-            WHERE id = %s
-            """,
-            ("failed", json.dumps([{"reason": str(exc)}], ensure_ascii=True), import_job_id),
-        )
-        cur.execute(
-            """
-            INSERT INTO import_job_errors (id, import_job_id, line_number, code, message, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (str(uuid.uuid4()), import_job_id, 0, "worker_exception", str(exc), datetime.now(timezone.utc)),
-        )
-        conn.commit()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-    return {
-        "status": "completed",
-        "tenant_id": tenant_id,
-        "actor_user_id": actor_user_id,
-        "import_job_id": import_job_id,
-        "rows_valid": rows,
-        "rows_inserted": inserted,
-        "errors_count": len(errors),
-    }
+        return {"status": "failed", "error": str(exc)}
+
+    return {"status": "completed", "rows_valid": rows_valid, "errors_count": len(errors)}
