@@ -517,6 +517,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                         if res.data:
                             for u in res.data:
                                 # Reconstruir el formato legacy de usuario para no romper el login
+                                # IMPORTANTE: Debemos preservar los usuarios que ya existan en la estructura base (como 'admin')
                                 estructura["usuarios_db"][u["nombre"]] = {
                                     "nombre": u["nombre"],
                                     "pass": u["password_hash"],
@@ -530,6 +531,10 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                                 }
                     except Exception as e:
                         log_event("db", f"error_cargar_usuarios_sql:{e}")
+                
+                # Restaurar el usuario admin de emergencia si no vino de SQL
+                if "admin" not in estructura["usuarios_db"]:
+                    estructura["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
                 
                 st.session_state["_modo_offline"] = False
                 
@@ -549,7 +554,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                                 dni = p.get("dni", "")
                                 paciente_id_visual = f"{nombre} - {dni}"
                                 
-                                estructura["pacientes_db"].append(paciente_id_visual)
+                                if paciente_id_visual not in estructura["pacientes_db"]:
+                                    estructura["pacientes_db"].append(paciente_id_visual)
+                                    
                                 estructura["detalles_pacientes_db"][paciente_id_visual] = {
                                     "dni": dni,
                                     "estado": p.get("estado", "Activo"),
