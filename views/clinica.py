@@ -8,6 +8,9 @@ from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
+# NUEVO: Sistema de guardado en Supabase (no ocupa RAM)
+from core.supabase_storage import guardar_signos_vitales_seguro, obtener_signos_vitales_paciente
+
 
 def _parse_fecha_hora(fecha_str):
     try:
