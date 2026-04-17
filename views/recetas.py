@@ -1446,8 +1446,65 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 alternar_papel = ""
                 plan_papel = []
                 st.caption(f"Horario visible en la sabana diaria: {hora_papel.strftime('%H:%M')} — {int(velocidad_papel) if velocidad_papel else '?'} ml/h")
+            # --- Boton de guardado digital rapido (solo infusion, sin adjunto requerido) ---
+            if tipo_indicacion_papel == "Infusion / hidratacion":
+                if st.button("Guardar infusion (prescripcion digital)", width="stretch", type="primary", key="guardar_infusion_digital"):
+                    if not medico_papel.strip() or not matricula_papel.strip():
+                        st.error("Debe completar medico y matricula.")
+                    else:
+                        texto_inf = _construir_texto_indicacion(
+                            tipo_indicacion="Infusion / hidratacion",
+                            via="Via Endovenosa",
+                            frecuencia="Infusion continua",
+                            dias=dias_papel,
+                            solucion=solucion_papel,
+                            volumen_ml=volumen_papel,
+                            velocidad_ml_h=velocidad_papel,
+                            detalle_infusion=detalle_papel.strip(),
+                        )
+                        reg_inf = {
+                            "paciente": paciente_sel,
+                            "med": texto_inf,
+                            "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                            "dias_duracion": dias_papel,
+                            "medico_nombre": medico_papel.strip(),
+                            "medico_matricula": matricula_papel.strip(),
+                            "firma_b64": "",
+                            "firmado_por": nombre_usuario,
+                            "estado_clinico": "Activa",
+                            "estado_receta": "Activa",
+                            "frecuencia": "Infusion continua",
+                            "hora_inicio": horarios_papel[0] if horarios_papel else hora_papel.strftime("%H:%M"),
+                            "horarios_programados": horarios_papel,
+                            "tipo_indicacion": "Infusion / hidratacion",
+                            "solucion": solucion_papel,
+                            "volumen_ml": volumen_papel,
+                            "velocidad_ml_h": velocidad_papel,
+                            "detalle_infusion": detalle_papel.strip(),
+                            "plan_hidratacion": [],
+                            "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                            "profesional_estado": nombre_usuario,
+                            "matricula_estado": user.get("matricula", ""),
+                            "origen_registro": "Prescripcion digital de infusion",
+                            "empresa": mi_empresa,
+                        }
+                        st.session_state["indicaciones_db"].append(reg_inf)
+                        registrar_auditoria_legal(
+                            "Medicacion",
+                            paciente_sel,
+                            "Infusion prescripta digitalmente",
+                            medico_papel.strip(),
+                            matricula_papel.strip(),
+                            texto_inf,
+                        )
+                        st.session_state["_rx_sql_invalidar"] = True
+                        guardar_datos(spinner=True)
+                        queue_toast(f"Infusion {solucion_papel} {int(volumen_papel)} ml a {int(velocidad_papel or 0)} ml/h guardada.")
+                        st.rerun()
+                st.caption("Si tenes la orden en papel, adjuntala abajo para dejar el respaldo legal completo.")
+
             adjunto_papel = st.file_uploader(
-                "Subir orden medica en papel o PDF",
+                "Subir orden medica en papel o PDF (opcional para infusion)",
                 type=["pdf", "png", "jpg", "jpeg"],
                 key="adjunto_papel_receta",
             )
