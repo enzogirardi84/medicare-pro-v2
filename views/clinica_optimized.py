@@ -217,14 +217,24 @@ def _render_historial_paginado(paciente_id: str):
     st.caption(f"Mostrando {len(signos)} de {total_registros} registros totales")
 
 
-def render():
+def render(paciente_sel=None, user=None):
     """Función principal de renderizado optimizado."""
     
     st.markdown("## Signos Vitales")
     st.caption("Control y seguimiento de signos vitales del paciente")
     
     # Obtener paciente activo
-    paciente_nombre, paciente_id = _get_paciente_activo()
+    if paciente_sel:
+        # Usar paciente pasado como parámetro
+        if isinstance(paciente_sel, str) and " - " in paciente_sel:
+            partes = paciente_sel.split(" - ")
+            paciente_nombre = " - ".join(partes[:-1])
+            paciente_id = partes[-1]
+        else:
+            paciente_nombre = paciente_sel
+            paciente_id = paciente_sel
+    else:
+        paciente_nombre, paciente_id = _get_paciente_activo()
     
     if not paciente_id:
         st.warning("Selecciona un paciente para ver y registrar signos vitales")

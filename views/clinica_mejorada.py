@@ -327,7 +327,7 @@ def _render_verificacion_guardado(paciente_id: str):
         st.info("💡 Usa el formulario de arriba para registrar el primer control.")
 
 
-def render():
+def render(paciente_sel=None, user=None):
     """Función principal de renderizado."""
     
     # Header profesional
@@ -335,7 +335,17 @@ def render():
     st.caption("Control y seguimiento profesional de signos vitales del paciente")
     
     # Obtener paciente activo
-    paciente_nombre, paciente_id = _get_paciente_activo()
+    if paciente_sel:
+        # Usar paciente pasado como parámetro
+        if isinstance(paciente_sel, str) and " - " in paciente_sel:
+            partes = paciente_sel.split(" - ")
+            paciente_nombre = " - ".join(partes[:-1])
+            paciente_id = partes[-1]
+        else:
+            paciente_nombre = paciente_sel
+            paciente_id = paciente_sel
+    else:
+        paciente_nombre, paciente_id = _get_paciente_activo()
     
     if not paciente_id:
         st.warning("⚠️ **Selecciona un paciente** desde el menú lateral para ver y registrar signos vitales.")
