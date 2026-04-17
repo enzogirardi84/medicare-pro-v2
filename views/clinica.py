@@ -1,12 +1,17 @@
-from core.alert_toasts import queue_toast
 from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
-from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
-from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.utils import (
+    ahora,
+    mapa_detalles_pacientes,
+    mostrar_dataframe_con_scroll,
+    normalizar_hora_texto,
+    seleccionar_limite_registros,
+)
 
 
 def _parse_fecha_hora(fecha_str):
@@ -75,7 +80,8 @@ def render_clinica(paciente_sel, user=None):
     if alergias:
         st.error(f"Alergias registradas: {alergias}")
 
-    vits = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
+    vitales_db = st.session_state.setdefault("vitales_db", [])
+    vits = [v for v in vitales_db if v.get("paciente") == paciente_sel]
 
     if vits:
         vits_ordenados = sorted(vits, key=lambda x: _parse_fecha_hora(x.get("fecha", "")))
@@ -133,7 +139,7 @@ def render_clinica(paciente_sel, user=None):
         hgt = r_s5.text_input("HGT (mg/dL)", "110")
         obs = st.text_input("Observaciones (opcional)", "", placeholder="Ej.: paciente en ayunas, edema MMII...")
         if st.form_submit_button("Guardar signos vitales", use_container_width=True, type="primary"):
-            hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
+            hora_limpia = normalizar_hora_texto(hora_toma_str, default=ahora().strftime("%H:%M"))
             fecha_str = f"{fecha_toma.strftime('%d/%m/%Y')} {hora_limpia}"
             registro = {
                 "paciente": paciente_sel,
@@ -149,7 +155,7 @@ def render_clinica(paciente_sel, user=None):
                 registro["observaciones"] = obs.strip()
             if user.get("nombre"):
                 registro["registrado_por"] = user.get("nombre", "")
-            st.session_state["vitales_db"].append(registro)
+            vitales_db.append(registro)
             guardar_datos()
             alerta = False
             if fc > 110 or fc < 50:
@@ -162,7 +168,7 @@ def render_clinica(paciente_sel, user=None):
                 st.warning(f"Fiebre detectada -> {temp} C")
                 alerta = True
             if not alerta:
-                queue_toast("Signos vitales guardados correctamente.")
+                st.success("Signos vitales guardados correctamente.")
             st.rerun()
 
     if vits:
@@ -171,10 +177,14 @@ def render_clinica(paciente_sel, user=None):
         col_tit.markdown("#### Historial de signos vitales")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_borrar_vital")
         if col_btn.button("Borrar ultimo control", use_container_width=True, disabled=not confirmar_borrado):
-            st.session_state["vitales_db"].remove(vits[-1])
-            guardar_datos()
-            queue_toast("Registro eliminado.")
-            st.rerun()
+            try:
+                vitales_db.remove(ultimo)
+            except ValueError:
+                st.error("No pudimos identificar el ultimo control para borrarlo.")
+            else:
+                guardar_datos()
+                st.success("Registro eliminado.")
+                st.rerun()
         limite = seleccionar_limite_registros(
             "Controles a mostrar",
             len(vits),
@@ -197,5 +207,4 @@ def render_clinica(paciente_sel, user=None):
             "registrado_por": "Registrado por",
         }
         df_vits = df_vits.rename(columns={k: v for k, v in rename_map.items() if k in df_vits.columns})
-        with lista_plegable("Historial de signos vitales", count=len(df_vits), expanded=False, height=400):
-            mostrar_dataframe_con_scroll(df_vits, height=340)
+        mostrar_dataframe_con_scroll(df_vits, height=360)

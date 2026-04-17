@@ -1,24 +1,23 @@
 """
-Consulta rapida a Supabase `alertas_pacientes` para sidebar y banner (alertas ROJAS pendientes).
+Consulta rapida a Supabase `alertas_pacientes` para sidebar y banner (alertas rojas pendientes).
 
 Rendimiento: una sola peticion a Supabase cada N segundos (cache en session_state). Sidebar y banner
 reusan el mismo resultado en el mismo rerun. Sin Supabase no hace nada.
 
 Secrets opcionales (`.streamlit/secrets.toml`):
 - **APP_PACIENTE_ALERTAS_POLL**: `false` desactiva consultas (sidebar/banner de app paciente).
-- **APP_PACIENTE_ALERTAS_TTL_SECONDS**: segundos entre refrescos (default **30**, rango 8–180).
+- **APP_PACIENTE_ALERTAS_TTL_SECONDS**: segundos entre refrescos (default **30**, rango 8-180).
 """
 
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from html import escape
 from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
-from core.alert_toasts import firma_alertas_por_ids, toast_alerta_si_firma_cambia
-from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.database import supabase
 from core.norm_empresa import norm_empresa_key
 from core.utils import es_control_total
@@ -68,8 +67,6 @@ def _throttle_fetch(empresa_key: str, fetch_fn):
 
 
 def obtener_alertas_rojas_pendientes(mi_empresa: str) -> List[Dict[str, Any]]:
-    if not ALERTAS_APP_PACIENTE_VISIBLE:
-        return []
     if supabase is None or not _poll_app_alertas_enabled():
         return []
     ek = _empresa_key(mi_empresa)
@@ -95,10 +92,18 @@ def obtener_alertas_rojas_pendientes(mi_empresa: str) -> List[Dict[str, Any]]:
     return _throttle_fetch(ek, fetch)
 
 
+def _formatear_fecha_alerta(valor: Any) -> str:
+    texto = str(valor or "").strip()
+    if not texto:
+        return "Sin horario informado"
+    try:
+        return datetime.fromisoformat(texto.replace("Z", "+00:00")).strftime("%d/%m %H:%M")
+    except Exception:
+        return texto[:16]
+
+
 def render_sidebar_bloque_app_paciente(mi_empresa: str, rol: Optional[str]) -> None:
-    """Bloque rojo en sidebar si hay triage ROJO pendiente (coordinacion / clinica)."""
-    if not ALERTAS_APP_PACIENTE_VISIBLE:
-        return
+    """Bloque rojo en sidebar si hay triage rojo pendiente (coordinacion / clinica)."""
     if supabase is None:
         return
     rows = obtener_alertas_rojas_pendientes(mi_empresa)
@@ -117,9 +122,9 @@ def render_sidebar_bloque_app_paciente(mi_empresa: str, rol: Optional[str]) -> N
             box-shadow: 0 0 0 1px rgba(248,113,113,0.35), 0 8px 24px rgba(0,0,0,0.35);
             animation: mc-pulse-red 1.8s ease-in-out infinite;
         ">
-            <div style="font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:#fecaca; font-weight:800;">App paciente — riesgo de vida</div>
+            <div style="font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:#fecaca; font-weight:800;">App paciente - riesgo de vida</div>
             <div style="font-size:1.15rem; font-weight:900; color:#fff; margin-top:6px;">{n} alerta(s) ROJA(s) pendiente(s)</div>
-            <div style="font-size:0.82rem; color:#fecaca; margin-top:6px;">Abri el modulo <b>Alertas app paciente</b> y asigná respuesta.</div>
+            <div style="font-size:0.82rem; color:#fecaca; margin-top:6px;">Abri el modulo <b>Alertas app paciente</b> y asigna respuesta.</div>
         </div>
         <style>
         @keyframes mc-pulse-red {{
@@ -131,44 +136,63 @@ def render_sidebar_bloque_app_paciente(mi_empresa: str, rol: Optional[str]) -> N
         unsafe_allow_html=True,
     )
     if es_control_total(rol):
-        for r in rows[:4]:
-            sint = escape(str(r.get("sintoma", ""))[:48])
-            pid = escape(str(r.get("paciente_id", ""))[:20])
-            st.caption(f"· {sint} — id {pid}…")
+        for row in rows[:4]:
+            sint = escape(str(row.get("sintoma", ""))[:48])
+            pid = escape(str(row.get("paciente_id", ""))[:20])
+            st.caption(f"- {sint} | id {pid}")
 
 
 def render_banner_alertas_criticas_si_aplica(mi_empresa: str) -> None:
-    """Franja superior en area principal (solo ROJO pendiente)."""
-    if not ALERTAS_APP_PACIENTE_VISIBLE:
-        return
+    """Franja superior en area principal (solo rojo pendiente)."""
     if supabase is None:
         return
     rows = obtener_alertas_rojas_pendientes(mi_empresa)
     if not rows:
-        toast_alerta_si_firma_cambia("app_paciente_rojo", "", None)
         return
+
     n = len(rows)
-    firma = firma_alertas_por_ids(rows)
-    toast_alerta_si_firma_cambia(
-        "app_paciente_rojo",
-        firma,
-        f"{n} alerta(s) ROJA(s) pendiente(s). Revisá «Alertas app paciente».",
-        icon="🚨",
-    )
+    preview_cards = []
+    for row in rows[:3]:
+        sintoma = escape(str(row.get("sintoma", "Sin sintoma informado"))[:72])
+        paciente_id = escape(str(row.get("paciente_id", "S/D"))[:28])
+        horario = escape(_formatear_fecha_alerta(row.get("fecha_hora")))
+        preview_cards.append(
+            f"""
+            <div class="mc-critical-banner-preview">
+                <div class="mc-critical-banner-preview-top">
+                    <span class="mc-critical-banner-preview-badge">Paciente {paciente_id}</span>
+                    <span class="mc-critical-banner-preview-time">{horario}</span>
+                </div>
+                <div class="mc-critical-banner-preview-title">{sintoma}</div>
+                <div class="mc-critical-banner-preview-copy">Abrir Alertas app paciente y coordinar respuesta clinica inmediata.</div>
+            </div>
+            """
+        )
+
+    extra = ""
+    if n > 3:
+        extra = f'<div class="mc-critical-banner-more">+{n - 3} alerta(s) adicional(es) esperando revision</div>'
+
     st.markdown(
         f"""
-        <div style="
-            padding: 12px 16px;
-            margin-bottom: 12px;
-            border-radius: 10px;
-            background: #7f1d1d;
-            color: #fecaca;
-            border: 1px solid #f87171;
-            font-weight: 700;
-            text-align: center;
-        ">
-            ATENCION: {n} alerta(s) desde app paciente con triage <span style="color:#fff">ROJO</span> (Pendiente).
-            Revisá el modulo <b>Alertas app paciente</b>.
+        <div class="mc-critical-banner" role="alert" aria-live="polite">
+            <div class="mc-critical-banner-main">
+                <span class="mc-critical-banner-kicker">Atencion prioritaria</span>
+                <h3 class="mc-critical-banner-title">{n} alerta(s) roja(s) pendiente(s)</h3>
+                <p class="mc-critical-banner-copy">
+                    Hay eventos reportados desde la app del paciente con triage rojo. Revisa el modulo
+                    <strong>Alertas app paciente</strong> y organiza una respuesta inmediata.
+                </p>
+                <div class="mc-critical-banner-chip-row">
+                    <span class="mc-chip mc-chip-danger">Respuesta urgente</span>
+                    <span class="mc-chip">Empresa actual</span>
+                    <span class="mc-chip">Actualizacion automatica</span>
+                </div>
+            </div>
+            <div class="mc-critical-banner-side">
+                {''.join(preview_cards)}
+                {extra}
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
