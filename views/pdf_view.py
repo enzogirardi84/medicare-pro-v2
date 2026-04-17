@@ -84,45 +84,53 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     tab_docs, tab_cons = st.tabs(["📄 Exportar documentos", "✍️ Consentimiento legal"])
 
     with tab_docs:
-        st.caption("Primero presiona **Preparar**, espera que se genere, luego **Descargar**. Presiona *Actualizar* si cambiaron datos.")
-        col_d1, col_d2, col_d3 = st.columns(3)
-        if puede_exportar_historia:
-            _render_lazy_download(
-                col_d1,
-                key_base=f"pdf_hc_{paciente_sel}",
-                prepare_label="Preparar historia clinica completa",
-                download_label="Descargar Historia Clinica (PDF)",
-                build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
-                file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
-                mime="application/pdf",
-            )
-        else:
-            col_d1.info("Disponible para roles clinicos y de control.")
-        if puede_exportar_excel:
-            _render_lazy_download(
-                col_d2,
-                key_base=f"pdf_excel_{paciente_sel}",
-                prepare_label="Preparar historia clinica en Excel",
-                download_label="Descargar Historia Clinica (Excel)",
-                build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
-                file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                unavailable_message="Excel no disponible en este equipo.",
-            )
-        else:
-            col_d2.caption("Excel reservado a rol Operativo o Auditoria.")
+        st.caption("Presiona **Preparar**, espera la generacion, luego **Descargar**.")
+        col_d1, col_d2 = st.columns(2)
+
+        with col_d1:
+            st.markdown("#### 📋 Historia Clínica PDF")
+            st.caption("Evoluciones, signos vitales, medicacion, emergencias y mas.")
+            if puede_exportar_historia:
+                _render_lazy_download(
+                    st,
+                    key_base=f"pdf_hc_{paciente_sel}",
+                    prepare_label="Preparar Historia Clinica (PDF)",
+                    download_label="⬇️ Descargar Historia Clinica (PDF)",
+                    build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
+                    file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                )
+            else:
+                st.info("Disponible para roles clinicos y de control.")
+
+        with col_d2:
+            st.markdown("#### 📊 Exportacion Completa Excel")
+            st.caption("Incluye cobros, insumos, medicacion, signos vitales y todos los modulos.")
+            if puede_exportar_excel:
+                _render_lazy_download(
+                    st,
+                    key_base=f"pdf_excel_{paciente_sel}",
+                    prepare_label="Preparar Excel completo",
+                    download_label="⬇️ Descargar Historia Clinica (Excel)",
+                    build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
+                    file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    unavailable_message="Excel no disponible (falta openpyxl o xlsxwriter).",
+                )
+            else:
+                st.caption("Excel reservado a rol Operativo o Auditoria.")
+
         if puede_exportar_respaldo:
-            _render_lazy_download(
-                col_d3,
-                key_base=f"pdf_respaldo_{paciente_sel}",
-                prepare_label="Preparar respaldo clinico",
-                download_label="Descargar Respaldo Clinico (PDF)",
-                build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
-                file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
-                mime="application/pdf",
-            )
-        else:
-            col_d3.info("Disponible para roles clinicos y de control.")
+            with st.expander("Respaldo clinico sintetico (PDF adicional)", expanded=False):
+                _render_lazy_download(
+                    st,
+                    key_base=f"pdf_respaldo_{paciente_sel}",
+                    prepare_label="Preparar respaldo clinico",
+                    download_label="Descargar Respaldo Clinico (PDF)",
+                    build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
+                    file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                )
 
     with tab_cons:
         st.caption("Completa los datos del firmante, registra la firma y guarda para incorporarlo a la historia clinica.")
