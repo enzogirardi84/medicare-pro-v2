@@ -1020,141 +1020,194 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
 
 
 def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, profesional=None):
+    """PDF compacto de emergencia — diseñado para caber en 1 pagina A4."""
     detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     firma_b64 = record.get("firma_b64", "")
-    firma_bytes = None
-    if firma_b64:
-        firma_bytes = decodificar_base64_seguro(firma_b64) or None
+    firma_bytes = decodificar_base64_seguro(firma_b64) or None if firma_b64 else None
+    prof_nombre = record.get("profesional") or (profesional or {}).get("nombre", "")
+    prof_mat = record.get("matricula") or (profesional or {}).get("matricula", "")
+
+    _SKIP = {"", None, "S/D", "Sin traslado confirmado", "0", 0}
+
+    def _v(val, fallback=""):
+        return str(val).strip() if val not in _SKIP else fallback
+
+    def _row(pdf, label, value, lw=48, lh=5):
+        """Label + valor en la misma linea. Omite si valor esta vacio."""
+        txt = _v(value)
+        if not txt:
+            return
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(lw, lh, safe_text(label) + ":", border=0)
+        pdf.set_font("Arial", "", 8)
+        remaining = pdf.w - pdf.l_margin - pdf.r_margin - lw
+        pdf.multi_cell(remaining, lh, safe_text(txt), border=0)
+
+    def _inline_pairs(pdf, pairs, cols=2):
+        """Imprime pares label:valor en columnas horizontales."""
+        usable = pdf.w - pdf.l_margin - pdf.r_margin
+        col_w = usable / cols
+        items = [(l, _v(v)) for l, v in pairs if _v(v)]
+        for i in range(0, len(items), cols):
+            row_items = items[i:i + cols]
+            x_start = pdf.l_margin
+            for j, (lbl, val) in enumerate(row_items):
+                pdf.set_xy(x_start + j * col_w, pdf.get_y())
+                pdf.set_font("Arial", "B", 8)
+                pdf.cell(28, 5, safe_text(lbl) + ":", border=0)
+                pdf.set_font("Arial", "", 8)
+                pdf.cell(col_w - 28, 5, safe_text(val[:38]), border=0)
+            pdf.ln(5)
+
+    def _sec(pdf, title):
+        if pdf.get_y() > 260:
+            pdf.add_page()
+        pdf.set_fill_color(220, 230, 245)
+        pdf.set_text_color(15, 30, 65)
+        pdf.set_font("Arial", "B", 9)
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(0, 6, safe_text(title), ln=True, fill=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(1)
 
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_margins(14, 12, 14)
+    pdf.set_auto_page_break(auto=True, margin=14)
     pdf.add_page()
     _insert_logo(pdf)
 
-    pdf.set_xy(40, 12)
-    pdf.set_font("Arial", "B", 15)
-    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
-    pdf.set_x(40)
+    # --- Cabecera compacta ---
+    pdf.set_xy(42, 12)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, safe_text("Acta de Emergencia, Ambulancia y Traslado"), ln=True)
-    pdf.set_x(40)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, safe_text("Registro prehospitalario, clinico y legal"), ln=True)
-    pdf.ln(8)
+    pdf.cell(0, 6, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.set_x(42)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 5, "Acta de Emergencia y Traslado", ln=True)
+    pdf.set_x(42)
+    pdf.set_font("Arial", "", 8)
+    pdf.cell(0, 5, safe_text(
+        f"Fecha: {record.get('fecha_evento','')} {record.get('hora_evento','')}  |  "
+        f"Triage: {_v(record.get('triage_grado',''))}  |  Prioridad: {_v(record.get('prioridad',''))}"
+    ), ln=True)
+    pdf.ln(3)
 
-    _section_title(pdf, "Paciente")
-    _write_pairs(
-        pdf,
-        [
-            ("Paciente", paciente_sel),
-            ("DNI", detalles.get("dni", "S/D")),
-            ("Fecha de nacimiento", detalles.get("fnac", "S/D")),
-            ("Obra social", detalles.get("obra_social", "S/D")),
-            ("Domicilio", record.get("direccion_evento") or detalles.get("direccion", "S/D")),
-            ("Telefono", detalles.get("telefono", "S/D")),
-        ],
-    )
+    # --- Paciente (1 fila) ---
+    _sec(pdf, "Paciente")
+    _inline_pairs(pdf, [
+        ("Paciente", paciente_sel.split(" - ")[0] if " - " in paciente_sel else paciente_sel),
+        ("DNI", detalles.get("dni", "")),
+        ("F.Nac", detalles.get("fnac", "")),
+        ("Obra Social", detalles.get("obra_social", "")),
+        ("Domicilio", record.get("direccion_evento") or detalles.get("direccion", "")),
+        ("Telefono", detalles.get("telefono", "")),
+    ], cols=2)
 
-    _section_title(pdf, "Evento critico")
-    _write_pairs(
-        pdf,
-        [
-            ("Fecha del evento", record.get("fecha_evento", "S/D")),
-            ("Hora del evento", record.get("hora_evento", "S/D")),
-            ("Categoria", record.get("categoria_evento", "S/D")),
-            ("Tipo de evento", record.get("tipo_evento", "S/D")),
-            ("Clasificacion de triage", record.get("triage_grado", "S/D")),
-            ("Prioridad", record.get("prioridad", "S/D")),
-            ("Codigo / alerta", record.get("codigo_alerta", "S/D")),
-            ("Motivo principal", record.get("motivo", "S/D")),
-            ("Profesional a cargo", record.get("profesional", (profesional or {}).get("nombre", "S/D"))),
-            ("Matricula", record.get("matricula", (profesional or {}).get("matricula", "S/D"))),
-        ],
-    )
+    # --- Evento ---
+    _sec(pdf, "Evento critico")
+    _inline_pairs(pdf, [
+        ("Categoria", record.get("categoria_evento", "")),
+        ("Tipo", record.get("tipo_evento", "")),
+        ("Profesional", prof_nombre),
+        ("Matricula", prof_mat),
+    ], cols=2)
+    motivo_txt = _v(record.get("motivo", ""))
+    if motivo_txt:
+        pdf.set_x(pdf.l_margin)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(28, 5, "Motivo:", border=0)
+        pdf.set_font("Arial", "", 8)
+        pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin - 28, 5, safe_text(motivo_txt), border=0)
+        pdf.ln(1)
 
-    _section_title(pdf, "Triage inicial")
-    _write_pairs(
-        pdf,
-        [
-            ("Presion arterial", record.get("presion_arterial", "")),
-            ("Frecuencia cardiaca", record.get("fc", "")),
-            ("Saturacion O2", record.get("saturacion", "")),
-            ("Temperatura", record.get("temperatura", "")),
-            ("Glucemia", record.get("glucemia", "")),
-            ("Dolor EVA", record.get("dolor", "")),
-            ("Conciencia", record.get("conciencia", "")),
-            ("Observaciones", record.get("observaciones", "")),
-        ],
-    )
+    # --- Signos vitales (1 fila si hay datos) ---
+    vitales = [
+        ("TA", record.get("presion_arterial", "")),
+        ("FC", record.get("fc", "")),
+        ("SaO2", record.get("saturacion", "")),
+        ("Temp", record.get("temperatura", "")),
+        ("Glucemia", record.get("glucemia", "")),
+        ("EVA", record.get("dolor", "")),
+        ("Conciencia", record.get("conciencia", "")),
+    ]
+    vitales_con_dato = [(l, v) for l, v in vitales if _v(v)]
+    if vitales_con_dato:
+        _sec(pdf, "Signos vitales")
+        _inline_pairs(pdf, vitales_con_dato, cols=4)
 
-    _section_title(pdf, "Ambulancia y traslado")
-    _write_pairs(
-        pdf,
-        [
-            ("Ambulancia solicitada", "Si" if record.get("ambulancia_solicitada") else "No"),
-            ("Tipo de traslado", record.get("tipo_traslado", "")),
-            ("Movil / empresa", record.get("movil", "")),
-            ("Hora de solicitud", record.get("hora_solicitud", "")),
-            ("Hora de arribo", record.get("hora_arribo", "")),
-            ("Hora de salida", record.get("hora_salida", "")),
-            ("Destino", record.get("destino", "")),
-            ("Profesional receptor", record.get("receptor", "")),
-            ("Familiar notificado", record.get("familiar_notificado", "")),
-        ],
-    )
+    # --- Ambulancia ---
+    amb_data = [
+        ("Ambulancia", "Si" if record.get("ambulancia_solicitada") else "No"),
+        ("Movil", record.get("movil", "")),
+        ("Destino", record.get("destino", "")),
+        ("Tipo traslado", record.get("tipo_traslado", "")),
+        ("Solicitud", record.get("hora_solicitud", "")),
+        ("Arribo", record.get("hora_arribo", "")),
+        ("Salida", record.get("hora_salida", "")),
+        ("Receptor", record.get("receptor", "")),
+        ("Familiar", record.get("familiar_notificado", "")),
+    ]
+    if any(_v(v) for _, v in amb_data):
+        _sec(pdf, "Ambulancia y traslado")
+        _inline_pairs(pdf, amb_data, cols=3)
 
-    _section_title(pdf, "Parte asistencial")
-    _write_pairs(
-        pdf,
-        [
-            ("Procedimientos realizados", record.get("procedimientos", "")),
-            ("Medicacion administrada", record.get("medicacion_administrada", "")),
-            ("Respuesta del paciente", record.get("respuesta", "")),
-            ("Observaciones legales", record.get("observaciones_legales", "")),
-        ],
-    )
+    # --- Parte asistencial (solo si tiene datos) ---
+    asist = [
+        ("Procedimientos", record.get("procedimientos", "")),
+        ("Medicacion", record.get("medicacion_administrada", "")),
+        ("Respuesta", record.get("respuesta", "")),
+        ("Obs. legales", record.get("observaciones_legales", "")),
+    ]
+    if any(_v(v) for _, v in asist):
+        _sec(pdf, "Parte asistencial")
+        for lbl, val in asist:
+            _row(pdf, lbl, val)
 
+    # --- Firma ---
     if firma_bytes:
-        _section_title(pdf, "Firma profesional")
         tmp_path = None
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
                 tmp.write(firma_bytes)
                 tmp_path = tmp.name
-            y_img = pdf.get_y() + 2
-            pdf.image(tmp_path, x=20, y=y_img, w=60)
-            pdf.set_xy(90, y_img + 8)
-            pdf.set_font("Arial", "B", 10)
-            pdf.cell(0, 6, safe_text(record.get("profesional", (profesional or {}).get("nombre", "S/D"))), ln=True)
-            pdf.set_x(90)
-            pdf.set_font("Arial", "", 10)
-            pdf.cell(0, 6, safe_text(f"Matricula: {record.get('matricula', (profesional or {}).get('matricula', 'S/D'))}"), ln=True)
-            pdf.ln(34)
+            if pdf.get_y() > 240:
+                pdf.add_page()
+            _sec(pdf, "Firma profesional")
+            y_img = pdf.get_y()
+            pdf.image(tmp_path, x=14, y=y_img, w=50)
+            pdf.set_xy(70, y_img + 4)
+            pdf.set_font("Arial", "B", 8)
+            pdf.cell(0, 5, safe_text(prof_nombre), ln=True)
+            pdf.set_x(70)
+            pdf.set_font("Arial", "", 8)
+            pdf.cell(0, 5, safe_text(f"Mat: {prof_mat}"), ln=True)
+            pdf.ln(20)
         except Exception:
             pass
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
 
-    y_base = max(pdf.get_y() + 12, 240)
-    if y_base > 262:
+    # --- Pie de firma ---
+    y_base = max(pdf.get_y() + 8, 250)
+    if y_base > 270:
         pdf.add_page()
-        y_base = 235
+        y_base = 250
+    pdf.line(14, y_base, 80, y_base)
+    pdf.set_xy(14, y_base + 1)
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(66, 4, safe_text(prof_nombre), align="C", ln=True)
+    pdf.set_x(14)
+    pdf.set_font("Arial", "", 8)
+    pdf.cell(66, 4, safe_text(f"Mat: {prof_mat}"), align="C", ln=True)
 
-    pdf.line(20, y_base, 90, y_base)
-    pdf.set_xy(20, y_base + 2)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, safe_text(record.get("profesional", (profesional or {}).get("nombre", "S/D"))), ln=True, align="C")
-    pdf.set_x(20)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, safe_text(f"Matricula: {record.get('matricula', (profesional or {}).get('matricula', 'S/D'))}"), ln=True, align="C")
-
-    pdf.line(120, y_base, 190, y_base)
-    pdf.set_xy(120, y_base + 2)
-    pdf.set_font("Arial", "B", 9)
-    pdf.cell(70, 5, safe_text("Recepcion / conformidad"), ln=True, align="C")
-    pdf.set_x(120)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(70, 5, safe_text(f"Familiar notificado: {record.get('familiar_notificado', 'S/D')}"), ln=True, align="C")
+    pdf.line(110, y_base, 196, y_base)
+    pdf.set_xy(110, y_base + 1)
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(86, 4, "Recepcion / conformidad", align="C", ln=True)
+    pdf.set_x(110)
+    pdf.set_font("Arial", "", 8)
+    familiar = _v(record.get("familiar_notificado", "")) or "_______________"
+    pdf.cell(86, 4, safe_text(familiar), align="C", ln=True)
 
     return pdf_output_bytes(pdf)
