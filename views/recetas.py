@@ -1409,7 +1409,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 if horarios_papel:
                     st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
             else:
-                c_inf_p1, c_inf_p2, c_inf_p3 = st.columns(3)
+                c_inf_p1, c_inf_p2 = st.columns([2, 1])
                 solucion_papel = c_inf_p1.selectbox(
                     "Solucion principal",
                     ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
@@ -1422,47 +1422,17 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     value=500,
                     key="volumen_papel_receta",
                 )
-                velocidad_papel = c_inf_p3.number_input(
-                    "Velocidad (ml/h)",
-                    min_value=0.0,
-                    step=1.0,
-                    value=21.0,
-                    key="velocidad_papel_receta",
-                )
-                alternar_papel = st.selectbox(
-                    "Alternar con",
-                    ["", "Fisiologico 0.9%", "Ringer lactato", "Dextrosa 5%", "Otra"],
-                    key="alternar_papel_receta",
-                )
                 detalle_papel = st.text_area(
-                    "Explicacion medica de la infusion / hidratacion",
+                    "Notas / evolucion del medico (opcional)",
                     key="detalle_papel_infusion_receta",
-                    placeholder="Ej: pasar Dextrosa 5% 500 ml a 21 ml/h, alternar con Ringer lactato por bolsa y aumentar segun tolerancia.",
+                    placeholder="Si quiere agregar alguna indicacion adicional o detalle sobre el plan, escribalo aqui.",
+                    height=80,
                 )
-                usar_plan_papel = st.checkbox(
-                    "Plan escalonado en la orden",
-                    value=False,
-                    key="usar_plan_papel_receta",
-                )
-                if usar_plan_papel:
-                    c_inf_p4, c_inf_p5, c_inf_p6, c_inf_p7 = st.columns(4)
-                    inicio_papel = c_inf_p4.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_papel_receta")
-                    maximo_papel = c_inf_p5.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_papel_receta")
-                    incremento_papel = c_inf_p6.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_papel_receta")
-                    intervalo_papel = c_inf_p7.number_input("Cada cuantas horas", min_value=1, step=1, value=1, key="intervalo_papel_receta")
-                    plan_papel = generar_plan_escalonado_ml_h(
-                        inicio_papel,
-                        maximo_papel,
-                        incremento_papel,
-                        hora_papel.strftime("%H:%M"),
-                        intervalo_papel,
-                    )
-                    if plan_papel:
-                        _render_plan_hidratacion_preview(plan_papel)
-                        horarios_papel = [item["Hora sugerida"] for item in plan_papel]
-                if not horarios_papel:
-                    horarios_papel = [hora_papel.strftime("%H:%M")]
-                st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_papel)}")
+                horarios_papel = [hora_papel.strftime("%H:%M")]
+                velocidad_papel = None
+                alternar_papel = ""
+                plan_papel = []
+                st.caption(f"Horario visible en la sabana diaria: {hora_papel.strftime('%H:%M')}")
             adjunto_papel = st.file_uploader(
                 "Subir orden medica en papel o PDF",
                 type=["pdf", "png", "jpg", "jpeg"],
@@ -1471,7 +1441,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             if st.button("Guardar indicacion en papel", width="stretch", key="guardar_indicacion_papel"):
                 if not medico_papel.strip() or not matricula_papel.strip():
                     st.error("Debe completar medico y matricula para dejar respaldo legal.")
-                elif not detalle_papel.strip():
+                elif tipo_indicacion_papel == "Medicacion" and not detalle_papel.strip():
                     st.error("Debe resumir la indicacion medica para que se vea rapido en la guardia.")
                 elif adjunto_papel is None:
                     st.error("Debe adjuntar la orden medica escaneada o fotografiada.")
