@@ -376,7 +376,7 @@ def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         unsafe_allow_html=True,
     )
     if alergias:
-        st.sidebar.error(f"Alergias: {alergias}")
+        st.sidebar.warning(f"⚠️ Alergias: {alergias}")
     else:
         st.sidebar.caption("Alergias: sin datos.")
 
@@ -429,18 +429,25 @@ def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
     paciente_actual = st.session_state.get("paciente_actual")
     opciones_ids = [item[0] for item in p_f]
     index_actual = opciones_ids.index(paciente_actual) if paciente_actual in opciones_ids else 0
-    paciente_sel_tuple = (
+
+    # Limpiar key obsoleto si guardó una tupla (formato viejo) — evita mismatch en selectbox
+    _stored_sel = st.session_state.get("paciente_actual_select")
+    if isinstance(_stored_sel, tuple):
+        st.session_state.pop("paciente_actual_select", None)
+
+    # Selectbox con IDs string (no tuplas) → matching estable entre reruns
+    _display_map = {item[0]: item[1] for item in p_f} if p_f else {}
+    paciente_sel = (
         st.selectbox(
             "Seleccionar Paciente",
-            p_f,
+            opciones_ids,
             index=index_actual,
-            format_func=lambda x: x[1],
+            format_func=lambda x: _display_map.get(x, x),
             key="paciente_actual_select",
         )
         if p_f
         else None
     )
-    paciente_sel = paciente_sel_tuple[0] if paciente_sel_tuple else None
     paciente_prev = st.session_state.get("paciente_actual")
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
