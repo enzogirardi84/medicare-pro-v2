@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
-from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import (
     ahora,
     calcular_estado_agenda,
@@ -19,7 +19,7 @@ from core.utils import (
 
 
 def _sumar_importe(registros):
-    claves = ("monto", "importe", "total", "facturado", "valor")
+    claves = ("monto", "importe", "total", "facturado", "valor", "balance")
     total = 0.0
     for item in registros:
         for clave in claves:
@@ -106,36 +106,13 @@ def render_dashboard(mi_empresa, rol):
 
     agenda = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
     checkins = filtrar_registros_empresa(st.session_state.get("checkin_db", []), mi_empresa, rol)
-    
-    # 1. Intentar leer emergencias desde PostgreSQL (Hybrid Read)
-    emergencias = []
-    try:
-        from core.db_sql import get_emergencias_by_empresa
-        from core.nextgen_sync import _obtener_uuid_empresa
-        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-        if empresa_uuid:
-            emg_sql = get_emergencias_by_empresa(empresa_uuid, limit=100)
-            if emg_sql:
-                for e in emg_sql:
-                    dt = pd.to_datetime(e.get("fecha_llamado", ""))
-                    emergencias.append({
-                        "fecha_evento": dt.strftime("%d/%m/%Y") if pd.notnull(dt) else "",
-                        "hora_evento": dt.strftime("%H:%M") if pd.notnull(dt) else "",
-                        "triage_grado": f"Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
-                    })
-    except Exception as e:
-        pass
-        
-    if not emergencias:
-        emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
-        
+    emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
     facturacion = filtrar_registros_empresa(st.session_state.get("facturacion_db", []), mi_empresa, rol)
     balance = filtrar_registros_empresa(st.session_state.get("balance_db", []), mi_empresa, rol)
-    _pac_ids = {p["paciente"] for p in pacientes}
     indicaciones = [
         x
         for x in st.session_state.get("indicaciones_db", [])
-        if x.get("paciente") in _pac_ids
+        if any(x.get("paciente") == paciente["paciente"] for paciente in pacientes)
     ]
 
     ahora_local = ahora().replace(tzinfo=None)
@@ -164,7 +141,7 @@ def render_dashboard(mi_empresa, rol):
     urgencias_30 = [x for x in emergencias if parse_fecha_hora(f"{x.get('fecha_evento', '')} {x.get('hora_evento', '')}") >= hace_30_dias]
     meds_suspendidas = [x for x in indicaciones if str(x.get("estado_receta", "Activa")) in {"Suspendida", "Modificada"}]
     fact_mes = _sumar_importe(facturacion)
-    balance_actual = sum(float(x.get("balance", 0) or 0) for x in balance[-30:])
+    balance_actual = _sumar_importe(balance[-30:])
 
     fila_1 = st.columns(4)
     fila_1[0].metric("Pacientes activos", activos)
@@ -248,66 +225,64 @@ def render_dashboard(mi_empresa, rol):
     st.divider()
     st.markdown("#### Listados ejecutivos")
 
-    with lista_plegable("Tablas — agenda prioritaria y medicación", expanded=False, height=None):
-        col_l1, col_l2 = st.columns(2)
-        with col_l1:
-            st.caption("Agenda prioritaria")
-            if agenda_enriquecida:
-                df_ag = pd.DataFrame(agenda_enriquecida)
-                df_ag["Fecha y Hora"] = df_ag["_fecha_dt"].apply(
-                    lambda x: x.strftime("%d/%m/%Y %H:%M") if x != datetime.min else "Sin fecha"
-                )
-                df_ag = df_ag.rename(columns={"paciente": "Paciente", "profesional": "Profesional", "estado_calc": "Estado"})
-                df_ag = df_ag[["Fecha y Hora", "Paciente", "Profesional", "Estado"]].sort_values("Fecha y Hora")
-                limite_ag = seleccionar_limite_registros(
-                    "Agenda a mostrar",
-                    len(df_ag),
-                    key=f"dash_agenda_limit_{mi_empresa}_{rol}",
-                    default=12,
-                    opciones=(6, 12, 20, 30, 50),
-                )
-                mostrar_dataframe_con_scroll(df_ag.head(limite_ag), height=340)
-            else:
-                bloque_estado_vacio(
-                    "Lista de agenda vacía",
-                    "No hay turnos próximos para mostrar en la agenda prioritaria.",
-                    sugerencia="Revisá pacientes activos y la carga de agenda en el módulo de visitas.",
-                )
+    col_l1, col_l2 = st.columns(2)
+    with col_l1:
+        st.caption("Agenda prioritaria")
+        if agenda_enriquecida:
+            df_ag = pd.DataFrame(agenda_enriquecida)
+            df_ag["Fecha y Hora"] = df_ag["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y %H:%M") if x != datetime.min else "Sin fecha")
+            df_ag = df_ag.rename(columns={"paciente": "Paciente", "profesional": "Profesional", "estado_calc": "Estado"})
+            df_ag = df_ag.sort_values("_fecha_dt")[["Fecha y Hora", "Paciente", "Profesional", "Estado"]]
+            limite_ag = seleccionar_limite_registros(
+                "Agenda a mostrar",
+                len(df_ag),
+                key=f"dash_agenda_limit_{mi_empresa}_{rol}",
+                default=12,
+                opciones=(6, 12, 20, 30, 50),
+            )
+            mostrar_dataframe_con_scroll(df_ag.head(limite_ag), height=340)
+        else:
+            bloque_estado_vacio(
+                "Lista de agenda vacía",
+                "No hay turnos próximos para mostrar en la agenda prioritaria.",
+                sugerencia="Revisá pacientes activos y la carga de agenda en el módulo de visitas.",
+            )
 
-        with col_l2:
-            st.caption("Cambios recientes de medicacion")
-            if meds_suspendidas:
-                df_med = pd.DataFrame(meds_suspendidas)
-                estado_base = (
-                    df_med["estado_receta"] if "estado_receta" in df_med.columns else pd.Series(["Activa"] * len(df_med))
-                )
-                df_med["Estado"] = estado_base.fillna("Activa")
+    with col_l2:
+        st.caption("Cambios recientes de medicacion")
+        if meds_suspendidas:
+            df_med = pd.DataFrame(meds_suspendidas)
+            estado_base = df_med["estado_receta"] if "estado_receta" in df_med.columns else pd.Series(["Activa"] * len(df_med))
+            df_med["Estado"] = estado_base.fillna("Activa")
 
-                profesional_estado = (
-                    df_med["profesional_estado"]
-                    if "profesional_estado" in df_med.columns
-                    else pd.Series([""] * len(df_med))
-                )
-                medico_nombre = (
-                    df_med["medico_nombre"] if "medico_nombre" in df_med.columns else pd.Series([""] * len(df_med))
-                )
-                df_med["Profesional"] = (
-                    profesional_estado.fillna("").replace("", pd.NA).fillna(medico_nombre.fillna("")).replace("", "Sin profesional")
-                )
+            profesional_estado = (
+                df_med["profesional_estado"]
+                if "profesional_estado" in df_med.columns
+                else pd.Series([""] * len(df_med))
+            )
+            medico_nombre = (
+                df_med["medico_nombre"]
+                if "medico_nombre" in df_med.columns
+                else pd.Series([""] * len(df_med))
+            )
+            df_med["Profesional"] = profesional_estado.fillna("").replace("", pd.NA).fillna(medico_nombre.fillna("")).replace("", "Sin profesional")
 
-                df_med = df_med.rename(columns={"fecha_estado": "Fecha", "med": "Indicacion"})
-                if "Fecha" not in df_med.columns:
-                    df_med["Fecha"] = df_med.get("fecha", "S/D")
-                if "Indicacion" not in df_med.columns:
-                    df_med["Indicacion"] = df_med.get("med", "Sin detalle")
-                df_med = df_med[["Fecha", "Indicacion", "Estado", "Profesional"]].sort_values("Fecha", ascending=False)
-                limite_med = seleccionar_limite_registros(
-                    "Cambios a mostrar",
-                    len(df_med),
-                    key=f"dash_med_limit_{mi_empresa}_{rol}",
-                    default=10,
-                    opciones=(5, 10, 20, 30),
-                )
-                mostrar_dataframe_con_scroll(df_med.head(limite_med), height=340)
-            else:
-                st.success("No hay suspensiones o modificaciones de medicacion registradas.")
+            df_med = df_med.rename(columns={"fecha_estado": "Fecha", "med": "Indicacion"})
+            if "Fecha" not in df_med.columns:
+                df_med["Fecha"] = df_med.get("fecha", "S/D")
+            if "Indicacion" not in df_med.columns:
+                df_med["Indicacion"] = df_med.get("med", "Sin detalle")
+            df_med["_fecha_sort"] = df_med["Fecha"].apply(parse_fecha_hora)
+            df_med = df_med.sort_values(["_fecha_sort", "Fecha"], ascending=[False, False])[
+                ["Fecha", "Indicacion", "Estado", "Profesional"]
+            ]
+            limite_med = seleccionar_limite_registros(
+                "Cambios a mostrar",
+                len(df_med),
+                key=f"dash_med_limit_{mi_empresa}_{rol}",
+                default=10,
+                opciones=(5, 10, 20, 30),
+            )
+            mostrar_dataframe_con_scroll(df_med.head(limite_med), height=340)
+        else:
+            st.success("No hay suspensiones o modificaciones de medicacion registradas.")

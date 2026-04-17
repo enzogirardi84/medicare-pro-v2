@@ -7,7 +7,6 @@ import secrets
 import unicodedata
 import urllib.request
 from datetime import datetime
-from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from PIL import Image, ImageOps
 # Zona horaria fija para Argentina
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+ROL_ADMIN_TOTAL = {"superadmin", "admin", "coordinador", "administrativo"}
 SESSION_KEY_MODO_LIVIANO = "modo_celular_viejo"
 PASSWORD_HASH_PREFIX = "pbkdf2_sha256"
 PASSWORD_HASH_ITERATIONS = 390000
@@ -79,11 +79,11 @@ ACTION_ROLE_RULES = {
     "recetas_cargar_papel": ["Operativo", "Enfermeria", "Medico"],
     "recetas_registrar_dosis": ["Operativo", "Enfermeria", "Medico"],
     "recetas_cambiar_estado": ["Medico"],
-    "pdf_exportar_historia": ["Operativo", "Enfermeria", "Medico", "Auditoria"],
-    "pdf_exportar_excel": ["Operativo", "Auditoria"],
-    "pdf_exportar_respaldo": ["Operativo", "Enfermeria", "Medico", "Auditoria"],
+    "pdf_exportar_historia": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
+    "pdf_exportar_excel": ["Administrativo", "Auditoria"],
+    "pdf_exportar_respaldo": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
     "pdf_guardar_consentimiento": ["Operativo", "Enfermeria", "Medico"],
-    "pdf_descargar_consentimiento": ["Operativo", "Enfermeria", "Medico", "Auditoria"],
+    "pdf_descargar_consentimiento": ["Operativo", "Enfermeria", "Medico", "Administrativo", "Auditoria"],
     "evolucion_registrar": ["Operativo", "Enfermeria", "Medico"],
     "evolucion_borrar": ["Medico"],
     "estudios_registrar": ["Operativo", "Enfermeria", "Medico"],
@@ -107,17 +107,29 @@ MODULO_ALIAS = {
 }
 
 PERMISOS_MODULOS = {
-    # Perfil asistencial (Medico, Enfermeria, Operativo): menu acotado a lo clinico.
-    "operativo_clinico": [
-        "Visitas",
+    "administrativo": [
+        "Dashboard",
         "Admision",
+        "Materiales",
+        "Balance",
+        "Inventario",
+        "Caja",
+        "Red",
+        "Historial",
+        "PDF",
+        "Equipo",
+        "Asistencia",
+        "RRHH",
+        "Legal",
+    ],
+    "operativo": [
+        "Visitas",
         "Clinica",
         "Pediatria",
         "Evolucion",
         "Estudios",
         "Materiales",
         "Recetas",
-        "Balance",
         "Emergencias",
         "Escalas",
         "Historial",
@@ -125,53 +137,21 @@ PERMISOS_MODULOS = {
         "Telemedicina",
         "Cierre",
     ],
-    # Perfil de gestion (Administrativo, Coordinacion, Direccion en ficha): backoffice + equipo.
-    "operativo_gestion": [
-        "Dashboard",
-        "Admision",
-        "Materiales",
-        "Balance",
-        "Inventario",
-        "Caja",
-        "Red",
-        "Historial",
-        "PDF",
-        "Equipo",
-        "Asistencia",
-        "RRHH",
-        "Legal",
-    ],
-    # Auditoria: mismo alcance de modulos que la antigua columna administrativa.
-    "auditoria": [
-        "Dashboard",
-        "Admision",
-        "Materiales",
-        "Balance",
-        "Inventario",
-        "Caja",
-        "Red",
-        "Historial",
-        "PDF",
-        "Equipo",
-        "Asistencia",
-        "RRHH",
-        "Legal",
-    ],
 }
 
 
 def _texto_normalizado(valor):
     """
-    Minúsculas + strip + NFKC y sin marcas diacríticas (NFD), para que
-    «Enfermería» y «enfermeria» resuelvan igual en roles, perfiles y menú.
+    Minusculas + strip + NFKC y sin marcas diacriticas (NFD), para que
+    "Enfermeria" y "Enfermería" resuelvan igual en roles, perfiles y empresa.
     """
-    t = unicodedata.normalize("NFKC", str(valor or "").strip()).lower()
-    t = unicodedata.normalize("NFD", t)
-    return "".join(c for c in t if unicodedata.category(c) != "Mn")
+    texto = unicodedata.normalize("NFKC", str(valor or "").strip()).lower()
+    texto = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in texto if unicodedata.category(c) != "Mn")
 
 
 def empresas_clinica_coinciden(empresa_a, empresa_b) -> bool:
-    """Misma clínica aunque difieran tildes o espacios raros (NFKC + sin diacríticos)."""
+    """Misma clinica aunque difieran tildes o espacios raros."""
     return _texto_normalizado(empresa_a) == _texto_normalizado(empresa_b)
 
 
@@ -283,10 +263,12 @@ def normalizar_usuario_sistema(data):
             usuario["rol"] = "Medico"
         elif perfil_normalizado == "enfermeria":
             usuario["rol"] = "Enfermeria"
-        else:
+        elif perfil_normalizado == "operativo":
             usuario["rol"] = "Operativo"
+        else:
+            usuario["rol"] = "Administrativo"
     elif not str(usuario.get("rol", "") or "").strip():
-        usuario["rol"] = "Operativo"
+        usuario["rol"] = "Administrativo"
 
     usuario["pass"] = obtener_password_usuario(usuario)
     pin_actual = obtener_pin_usuario(usuario)
@@ -317,17 +299,17 @@ def clave_menu_usuario(rol_actual, usuario_actual=None):
     rol_normalizado = _texto_normalizado(rol_actual or (usuario_actual or {}).get("rol"))
     if rol_normalizado in {"superadmin", "admin", "coordinador"}:
         return rol_normalizado
+    if rol_normalizado in {"medico", "enfermeria", "operativo"}:
+        return "operativo"
     if rol_normalizado == "auditoria":
-        return "auditoria"
-    if rol_normalizado in {"medico", "enfermeria"}:
-        return "operativo_clinico"
-    if rol_normalizado in {"operativo", "administrativo"}:
+        return "administrativo"
+
+    if rol_normalizado == "administrativo":
         perfil_normalizado = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
         if not perfil_normalizado and isinstance(usuario_actual, dict):
             perfil_normalizado = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
         if perfil_normalizado in {"operativo", "medico", "enfermeria"}:
-            return "operativo_clinico"
-        return "operativo_gestion"
+            return "operativo"
 
     return rol_normalizado
 
@@ -403,18 +385,20 @@ def _permiso_estricto_lista_o_global(rol_actual, roles_permitidos):
     return _permiso_estricto_lista_roles(rol_actual, roles_permitidos)
 
 
-# Lista cerrada: ni Operativo asistencial ni "Admin" legacy (solo SuperAdmin y Coordinador).
+# Lista cerrada: ni Administrativo ni "Admin" legacy (solo SuperAdmin y Coordinador).
 ROLES_PUEDEN_ELIMINAR_USUARIO_MI_EQUIPO = frozenset({"superadmin", "coordinador"})
 # Suspender/reactivar usuario en Mi equipo: misma lista blanca que eliminar.
 ROLES_PUEDEN_SUSPENDER_REACTIVAR_MI_EQUIPO = frozenset({"superadmin", "coordinador"})
 # Quien puede intentar suspender/eliminar otro usuario (reglas de fila aparte en la misma funcion).
 ROLES_ACTOR_GESTION_BAJA_USUARIO_MI_EQUIPO = frozenset({"superadmin", "admin", "coordinador"})
 # Denegacion explicita ademas de la lista blanca (defensa ante datos o sesiones inconsistentes).
-ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO = frozenset({"operativo", "medico", "enfermeria", "auditoria"})
+ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO = frozenset(
+    {"administrativo", "operativo", "medico", "enfermeria", "auditoria"}
+)
 
 
 def puede_eliminar_cuenta_equipo(rol_actual) -> bool:
-    """Solo SuperAdmin y Coordinador. Operativo, Medico y demas: False (lista blanca, sin ambiguedad con 'Admin')."""
+    """Solo SuperAdmin y Coordinador. Administrativo, Operativo y cualquier ot rol: False (lista blanca, sin ambiguedad con 'Admin')."""
     r = _texto_normalizado(rol_actual)
     if r in ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO:
         return False
@@ -422,7 +406,7 @@ def puede_eliminar_cuenta_equipo(rol_actual) -> bool:
 
 
 def puede_suspender_reactivar_usuario_mi_equipo(rol_actual) -> bool:
-    """Solo SuperAdmin y Coordinador. Operativo y demas: sin botones de suspension."""
+    """Solo SuperAdmin y Coordinador. Administrativo, Operativo, etc.: sin botones de suspension."""
     r = _texto_normalizado(rol_actual)
     if r in ROLES_PROHIBIDOS_ACCIONES_BAJA_MI_EQUIPO:
         return False
@@ -483,7 +467,7 @@ def actor_puede_modificar_usuario_equipo(rol_actor, empresa_actor, data_usuario_
     """
     - SuperAdmin/Admin global: suspender/eliminar según reglas de cuenta global (solo SuperAdmin toca otra global).
     - Coordinador: suspender/eliminar solo usuarios de su empresa, nunca cuentas globales.
-    - Cualquier otro rol (Operativo, Medico, variantes de texto, etc.): no suspender ni eliminar desde Mi equipo.
+    - Cualquier otro rol (Administrativo, Operativo, variantes de texto, etc.): no suspender ni eliminar desde Mi equipo.
     """
     r = _texto_normalizado(rol_actor)
     if not isinstance(data_usuario_objetivo, dict):
@@ -526,22 +510,11 @@ def bloqueo_autoservicio_suspension_baja(login_actor, login_objetivo, rol_actor)
 
 
 def modo_celular_viejo_activo(session_state=None):
-    """
-    Versión Lite (datos compactos en Python): automático por UA/cabeceras en sesión real.
-    Si se pasa un dict ajeno a st.session_state (p. ej. tests), se usa la clave legada `modo_celular_viejo`.
-    """
     state = session_state if session_state is not None else st.session_state
     try:
-        if state is not st.session_state:
-            return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
-        from core.ui_liviano import datos_compactos_por_cliente_sugerido
-
-        return datos_compactos_por_cliente_sugerido()
+        return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
     except Exception:
-        try:
-            return bool(state.get(SESSION_KEY_MODO_LIVIANO, False))
-        except Exception:
-            return False
+        return False
 
 
 def valor_por_modo_liviano(valor_normal, valor_liviano, session_state=None):
@@ -604,33 +577,6 @@ def decodificar_base64_seguro(raw):
         return b""
 
 
-def es_control_total(rol_actual, usuario_actual=None):
-    """
-    Multiclínica / altas / ciertos paneles: coordinacion y gestion.
-    Operativo con perfil asistencial (Medico, Enfermeria, Operativo) queda fuera.
-    """
-    if usuario_actual is None:
-        try:
-            usuario_actual = st.session_state.get("u_actual")
-        except Exception:
-            usuario_actual = None
-    r = str(rol_actual or "").strip().lower()
-    if r in {"superadmin", "admin", "coordinador"}:
-        return True
-    if r == "administrativo":
-        return True
-    if r == "operativo":
-        if not isinstance(usuario_actual, dict):
-            return False
-        p = _texto_normalizado((usuario_actual or {}).get("perfil_profesional"))
-        if not p:
-            p = _texto_normalizado(inferir_perfil_profesional(usuario_actual))
-        if p in {"medico", "enfermeria", "operativo"}:
-            return False
-        return True
-    return False
-
-
 def descripcion_acceso_rol(rol_actual, usuario_actual=None):
     rol_normalizado = str(rol_actual or "").strip().lower()
     if rol_normalizado in {"superadmin", "admin"}:
@@ -638,17 +584,19 @@ def descripcion_acceso_rol(rol_actual, usuario_actual=None):
     if rol_normalizado == "coordinador":
         return "Acceso total a la operacion, horarios, auditoria y control del equipo."
     if rol_normalizado == "administrativo":
-        return "Acceso de gestion y operacion (rol historico; se muestra como Operativo en el sistema)."
-    if rol_normalizado == "operativo":
-        if es_control_total(rol_actual, usuario_actual):
-            return "Acceso de gestion, facturacion, equipo y operacion de la clinica."
-        return "Acceso asistencial: registro clinico del paciente y modulos segun tu perfil profesional."
+        return "Acceso total al sistema con foco administrativo, operativo y de control."
     descripciones = {
         "medico": "Acceso clinico ampliado: prescripcion, evolucion y decisiones terapeuticas.",
         "enfermeria": "Acceso asistencial: registro clinico, indicaciones y seguimiento diario del paciente.",
+        "operativo": "Acceso asistencial limitado al registro clinico del paciente.",
+        "administrativo": "Acceso administrativo y operativo sin edicion clinica sensible.",
         "auditoria": "Acceso de control, revision y trazabilidad legal.",
     }
     return descripciones.get(rol_normalizado, "Acceso configurado segun el rol asignado.")
+
+
+def es_control_total(rol_actual):
+    return str(rol_actual or "").strip().lower() in ROL_ADMIN_TOTAL
 
 
 def obtener_modulos_permitidos(rol_actual, todos_los_modulos=None, usuario_actual=None):
@@ -675,11 +623,13 @@ def filtrar_registros_empresa(items, mi_empresa, rol_actual, empresa_key="empres
     if rol_ve_datos_todas_las_clinicas(rol_actual):
         return list(items or [])
 
+    empresa_actual = str(mi_empresa or "").strip().lower()
     filtrados = []
     for item in items or []:
         if not isinstance(item, dict):
             continue
-        if empresas_clinica_coinciden(item.get(empresa_key, ""), mi_empresa):
+        empresa_item = str(item.get(empresa_key, "") or "").strip().lower()
+        if empresa_item == empresa_actual:
             filtrados.append(item)
     return filtrados
 
@@ -710,59 +660,15 @@ def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
 
 def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
     busqueda_norm = str(busqueda or "").strip().lower()
-    
-    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
-    from core.db_sql import get_pacientes_by_empresa
-    from core.nextgen_sync import _obtener_uuid_empresa
-    
-    pacientes_visibles = []
-    uso_sql = False
-    
-    try:
-        empresa_id = _obtener_uuid_empresa(mi_empresa)
-        if empresa_id:
-            # Leemos directamente de la base de datos SQL
-            pacs_sql = get_pacientes_by_empresa(empresa_id, busqueda_norm, incluir_altas)
-            uso_sql = True
-            
-            for p in pacs_sql:
-                nombre = p.get("nombre_completo", "")
-                dni = p.get("dni", "")
-                estado = p.get("estado", "Activo")
-                obra_social = p.get("obra_social", "")
-                
-                # El ID visual sigue siendo "Nombre - DNI" para compatibilidad con el resto de la app
-                paciente_id_visual = f"{nombre} - {dni}"
-                etiqueta = compactar_etiqueta_paciente(paciente_id_visual, estado)
-                
-                pacientes_visibles.append(
-                    (paciente_id_visual, etiqueta, dni, obra_social, estado, mi_empresa)
-                )
-    except Exception as e:
-        print(f"Error en lectura SQL de pacientes: {e}")
-        
-    if uso_sql:
-        pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
-        return pacientes_visibles
-    # ----------------------------------------------
-
-    ts = session_state.get("_ultimo_guardado_ts", 0)
-    cache_key = f"_mc_cache_pac_vis_{mi_empresa}_{rol_actual}_{incluir_altas}_{busqueda_norm}"
-    
-    cached = session_state.get(cache_key)
-    if cached and cached.get("ts") == ts:
-        return cached["data"]
-
-    hay_busqueda = bool(busqueda_norm)
     detalles_db = mapa_detalles_pacientes(session_state)
     pacientes_visibles = []
 
     for paciente in session_state.get("pacientes_db", []):
         detalles = detalles_db.get(paciente, {})
-        if not isinstance(detalles, dict):
-            detalles = {}
-        if not rol_ve_datos_todas_las_clinicas(rol_actual):
-            if not empresas_clinica_coinciden(detalles.get("empresa", ""), mi_empresa):
+        if not es_control_total(rol_actual):
+            empresa_paciente = str(detalles.get("empresa", "") or "").strip().lower()
+            empresa_actual = str(mi_empresa or "").strip().lower()
+            if empresa_paciente != empresa_actual:
                 continue
 
         estado = detalles.get("estado", "Activo")
@@ -774,17 +680,24 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
         empresa = str(detalles.get("empresa", "") or "")
         etiqueta = compactar_etiqueta_paciente(paciente, estado)
 
-        if hay_busqueda:
-            searchable = f"{paciente} {etiqueta} {dni} {obra_social} {empresa} {estado}".lower()
-            if busqueda_norm not in searchable:
-                continue
+        searchable = " ".join(
+            [
+                str(paciente),
+                etiqueta,
+                dni,
+                obra_social,
+                empresa,
+                str(estado),
+            ]
+        ).lower()
+        if busqueda_norm and busqueda_norm not in searchable:
+            continue
 
         pacientes_visibles.append(
             (paciente, etiqueta, dni, obra_social, estado, empresa)
         )
 
     pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
-    session_state[cache_key] = {"ts": ts, "data": pacientes_visibles}
     return pacientes_visibles
 
 
@@ -874,31 +787,6 @@ def registrar_auditoria_legal(
     if empresa is None:
         detalles = mapa_detalles_pacientes(st.session_state).get(paciente, {})
         empresa = detalles.get("empresa") or usuario_ctx.get("empresa", "")
-        
-    # 1. Guardar en PostgreSQL (Dual-Write)
-    try:
-        from core.db_sql import insert_auditoria
-        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
-        
-        empresa_uuid = _obtener_uuid_empresa(empresa)
-        paciente_uuid = _obtener_uuid_paciente(paciente) if paciente else None
-        
-        if empresa_uuid:
-            datos_sql = {
-                "empresa_id": empresa_uuid,
-                "paciente_id": paciente_uuid,
-                "fecha_evento": ahora().isoformat(),
-                "modulo": modulo or tipo_evento,
-                "accion": accion,
-                "detalle": detalle,
-                "usuario_id": None # Por ahora no tenemos el UUID del usuario en sesion
-            }
-            insert_auditoria(datos_sql)
-    except Exception as e:
-        from core.app_logging import log_event
-        log_event("error_auditoria_sql", str(e))
-
-    # 2. Guardar en JSON (Legacy)
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append(
         construir_registro_auditoria_legal(
@@ -967,16 +855,8 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
-    consentimientos = session_state.get("consentimientos_db", [])
-    cons_cache_key = f"_mc_cache_cons_{paciente_sel}"
-    cons_cached = session_state.get(cons_cache_key)
-    if cons_cached and cons_cached.get("id") == id(consentimientos) and cons_cached.get("len") == len(consentimientos):
-        tiene_consentimiento = cons_cached["tiene"]
-    else:
-        tiene_consentimiento = any(x.get("paciente") == paciente_sel for x in consentimientos)
-        session_state[cons_cache_key] = {"id": id(consentimientos), "len": len(consentimientos), "tiene": tiene_consentimiento}
-
-    if not tiene_consentimiento:
+    consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
+    if not consentimientos:
         alertas.append(
             {
                 "nivel": "alta",
@@ -985,20 +865,9 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             }
         )
 
-    vitales = session_state.get("vitales_db", [])
-    vit_cache_key = f"_mc_cache_vit_ult_{paciente_sel}"
-    vit_cached = session_state.get(vit_cache_key)
-    if vit_cached and vit_cached.get("id") == id(vitales) and vit_cached.get("len") == len(vitales):
-        ultimo_vital = vit_cached["ultimo"]
-    else:
-        ultimo_vital = None
-        for x in reversed(vitales):
-            if x.get("paciente") == paciente_sel:
-                ultimo_vital = x
-                break
-        session_state[vit_cache_key] = {"id": id(vitales), "len": len(vitales), "ultimo": ultimo_vital}
-
-    if ultimo_vital:
+    vitales = [x for x in session_state.get("vitales_db", []) if x.get("paciente") == paciente_sel]
+    if vitales:
+        ultimo_vital = sorted(vitales, key=lambda x: parse_fecha_hora(x.get("fecha", "")))[-1]
         sat = _to_float(ultimo_vital.get("Sat"))
         temp = _to_float(ultimo_vital.get("Temp"))
         fc = _to_float(ultimo_vital.get("FC"))
@@ -1043,8 +912,6 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
                     ),
                 }
             )
-            if len(alertas) >= 5:
-                break
 
     return alertas[:5]
 
@@ -1058,8 +925,7 @@ def _to_float(value):
         return None
 
 
-@lru_cache(maxsize=8192)
-def _parse_fecha_hora_cached(fecha_txt: str):
+def parse_fecha_hora(fecha_str):
     formatos = (
         "%d/%m/%Y %H:%M:%S",
         "%d/%m/%Y %H:%M",
@@ -1072,14 +938,10 @@ def _parse_fecha_hora_cached(fecha_txt: str):
     )
     for formato in formatos:
         try:
-            return datetime.strptime(fecha_txt, formato)
+            return datetime.strptime(str(fecha_str), formato)
         except Exception:
             continue
     return datetime.min
-
-
-def parse_fecha_hora(fecha_str):
-    return _parse_fecha_hora_cached(str(fecha_str or "").strip())
 
 
 def parse_agenda_datetime(item):
@@ -1265,6 +1127,7 @@ def format_horarios_receta(registro):
 
 
 def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_validos=None):
+    empresa_actual = str(mi_empresa or "").strip().lower()
     roles_validos_normalizados = (
         {str(rol).strip().lower() for rol in roles_validos if rol}
         if roles_validos
@@ -1279,7 +1142,8 @@ def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_
         if roles_validos_normalizados and not roles_usuario.intersection(roles_validos_normalizados):
             continue
         if not rol_ve_datos_todas_las_clinicas(rol_actual):
-            if not empresas_clinica_coinciden(data_normalizada.get("empresa", ""), mi_empresa):
+            empresa_usuario = str(data_normalizada.get("empresa", "") or "").strip().lower()
+            if empresa_usuario != empresa_actual:
                 continue
         visibles.append(
             {
@@ -1292,7 +1156,6 @@ def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_
     return visibles
 
 
-@st.cache_data(show_spinner=False)
 @st.cache_data(show_spinner=False)
 def cargar_texto_asset(nombre_archivo):
     ruta = ASSETS_DIR / nombre_archivo
@@ -1455,19 +1318,35 @@ def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20
 
 
 def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
+    try:
+        height = int(height)
+    except Exception:
+        height = 420
+    # Mantiene paneles largos utilizables sin que ocupen toda la pantalla.
+    height = max(240, min(height, 480))
+    inner_height = max(196, height - 28)
     with st.container(height=height, border=border):
         st.dataframe(
             df,
-            width="stretch",
+            use_container_width=True,
             hide_index=hide_index,
-            height=height - 24,
+            height=inner_height,
         )
 
 
 def obtener_direccion_real(lat, lon):
-    from services.nominatim import reverse_geocode_short_label
-
-    return reverse_geocode_short_label(lat, lon)
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=18&addressdetails=1"
+        req = urllib.request.Request(url, headers={"User-Agent": "MediCareProApp/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            display_name = data.get("display_name", "Direccion no encontrada")
+            partes = display_name.split(", ")
+            if len(partes) > 3:
+                return ", ".join(partes[:3])
+            return display_name
+    except Exception:
+        return "Direccion exacta no disponible (solo coordenadas)"
 
 
 def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
@@ -1476,14 +1355,29 @@ def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
             "usuarios_db": {"admin": DEFAULT_ADMIN_USER.copy()},
             "pacientes_db": [],
             "detalles_pacientes_db": {},
+            "vitales_db": [],
+            "indicaciones_db": [],
             "turnos_db": [],
+            "evoluciones_db": [],
+            "facturacion_db": [],
             "logs_db": [],
+            "balance_db": [],
+            "pediatria_db": [],
             "fotos_heridas_db": [],
             "agenda_db": [],
+            "checkin_db": [],
+            "inventario_db": [],
+            "consumos_db": [],
             "nomenclador_db": [],
             "firmas_tactiles_db": [],
             "reportes_diarios_db": [],
             "estudios_db": [],
+            "administracion_med_db": [],
+            "consentimientos_db": [],
+            "emergencias_db": [],
+            "cuidados_enfermeria_db": [],
+            "escalas_clinicas_db": [],
+            "auditoria_legal_db": [],
             "profesionales_red_db": [],
             "solicitudes_servicios_db": [],
             "plantillas_whatsapp_db": {},

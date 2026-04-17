@@ -1,5 +1,5 @@
-import secrets
 import time
+from html import escape
 
 import streamlit as st
 
@@ -26,8 +26,8 @@ from core.password_crypto import (
     bcrypt_rounds_config,
     establecer_password_nuevo,
     mensaje_password_no_cumple_politica,
+    password_min_length,
     password_usuario_coincide,
-    texto_ayuda_politica_password_breve,
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
@@ -35,7 +35,6 @@ from core.email_2fa import (
     iniciar_desafio_login,
     limpiar_desafio_email_2fa,
     login_email_2fa_enabled,
-    mascarar_email_privado,
     reenviar_codigo_login,
     requiere_2fa_correo,
     smtp_config_ok,
@@ -49,7 +48,7 @@ from core.utils import (
     asegurar_usuarios_base,
     logins_clave_default_superadmin,
     normalizar_usuario_sistema,
-    obtener_pin_usuario,
+    obtener_email_usuario,
 )
 
 SESSION_TIMEOUT_MINUTES = 90
@@ -59,51 +58,33 @@ _DEBOUNCE_GUARDAR_LOGS_CLINICA_SEC = 60.0
 MSG_LOGIN_CREDENCIALES_FALLIDAS = (
     "No pudimos validar el acceso. Revisá **usuario** y **contraseña** "
     "(no el PIN de 4 dígitos ni el DNI, salvo que esa sea la clave que te asignaron). "
-    "En **multiclínica**, el nombre de **Empresa / Clínica** debe coincidir con Mi equipo. "
-    "Si olvidaste la clave y tenés **PIN** de recuperación, usá **Nueva contraseña con PIN**; si no, pedila a **coordinación**."
+    "En **multiclínica**, el nombre de **Empresa / Clínica** debe coincidir con Mi equipo."
 )
-MSG_PIN_RESET_FALLIDO = (
-    "No pudimos cambiar la contraseña. Revisá **usuario**, **PIN** de 4 dígitos y, en multiclínica, **empresa** "
-    "como en Mi equipo."
+MSG_RECOVER_DATOS_INVALIDOS = (
+    "No pudimos validar los datos. Revisá usuario, empresa y correo registrado, e intentá de nuevo."
 )
+
 _SESSION_LOGIN_FLASH = "_mc_auth_login_flash"
+_SESSION_RECOVER_FLASH = "_mc_auth_recover_flash"
 
 
 def _auth_set_flash(key: str, kind: str, message: str) -> None:
-    return None
+    st.session_state[key] = (kind, message)
 
 
 def _auth_pop_flash(key: str) -> None:
-    return None
-
-
-def _auth_strip_pwreset_url_si_hay_param() -> bool:
-    """
-    Sin recuperación por correo en esta instalación: si la URL trae ?pwreset=, se elimina el parámetro
-    y se devuelve True para mostrar un aviso único en la pantalla de login.
-    """
-    qp = getattr(st, "query_params", None)
-    if qp is None:
-        return False
-    try:
-        if qp.get("pwreset") is None:
-            return False
-    except Exception:
-        return False
-    _auth_strip_pwreset_query_param()
-    st.session_state.pop("mc_pwreset_token", None)
-    st.session_state.pop("mc_auth_mode_radio", None)
-    return True
-
-
-def _auth_strip_pwreset_query_param() -> None:
-    qp = getattr(st, "query_params", None)
-    if qp is None:
+    item = st.session_state.pop(key, None)
+    if not item:
         return
-    try:
-        qp.pop("pwreset", None)
-    except Exception:
-        pass
+    kind, message = item
+    if kind == "warning":
+        st.warning(message)
+    elif kind == "error":
+        st.error(message)
+    elif kind == "info":
+        st.info(message)
+    elif kind == "success":
+        st.success(message)
 
 
 def _auth_strip_modulo_query_param() -> None:
@@ -128,6 +109,98 @@ def _auth_strip_modulo_query_param() -> None:
         pass
 
 
+def _auth_plain_text(texto: str | None) -> str:
+    return " ".join(str(texto or "").replace("**", "").replace("`", "").split())
+
+
+def _render_auth_showcase(modo: str = "login") -> None:
+    multi_kicker = "Multiclinica activa" if modo_shard_activo() else "Clinica unificada"
+    multi_copy = (
+        "Cada clinica opera con su propia base y el acceso valida empresa, usuario y permisos."
+        if modo_shard_activo()
+        else "El ingreso se valida en un entorno centralizado para mantener la operacion estable."
+    )
+    ayuda_2fa = _auth_plain_text(texto_ayuda_email_2fa_config())
+    if not ayuda_2fa:
+        ayuda_2fa = (
+            "Ingreso protegido con usuario y contrasena, listo para sumar doble verificacion cuando la clinica lo habilite."
+        )
+    foco_title = "Ingreso ordenado"
+    foco_copy = (
+        "Usa tu usuario y contrasena asignados por la clinica para entrar rapido y sin perder contexto."
+    )
+    if modo == "recover":
+        foco_title = "Recuperacion guiada"
+        foco_copy = (
+            f"Valida usuario, empresa y correo registrado para definir una clave nueva de al menos {password_min_length()} caracteres."
+        )
+    elif modo == "2fa":
+        foco_title = "Verificacion por correo"
+        foco_copy = "Completa el codigo de 6 digitos enviado a tu correo para terminar el acceso de forma segura."
+    st.markdown(
+        f"""
+        <section class="mc-auth-showcase">
+            <div class="mc-auth-showcase-glow"></div>
+            <div class="mc-auth-showcase-head">
+                <span class="mc-auth-kicker">Modo premium</span>
+                <h1 class="mc-auth-title">MediCare Enterprise PRO</h1>
+                <p class="mc-auth-copy">
+                    Gestion clinica, operativa y administrativa con una interfaz mas clara, profesional y preparada para telefono, tablet y escritorio.
+                </p>
+            </div>
+            <div class="mc-auth-stat-grid">
+                <article class="mc-auth-stat-card">
+                    <span class="mc-auth-stat-kicker">Acceso</span>
+                    <strong>Seguro</strong>
+                    <p>Sesion controlada, registro de actividad y bloqueos progresivos ante intentos fallidos.</p>
+                </article>
+                <article class="mc-auth-stat-card">
+                    <span class="mc-auth-stat-kicker">Experiencia</span>
+                    <strong>Responsive</strong>
+                    <p>La interfaz se adapta a pantallas chicas y grandes sin perder legibilidad ni jerarquia.</p>
+                </article>
+                <article class="mc-auth-stat-card">
+                    <span class="mc-auth-stat-kicker">Clave</span>
+                    <strong>{password_min_length()}+</strong>
+                    <p>Las nuevas contrasenas respetan la politica minima de seguridad definida en el sistema.</p>
+                </article>
+            </div>
+            <div class="mc-auth-chip-row">
+                <span class="mc-auth-chip">Operacion clinica</span>
+                <span class="mc-auth-chip">Diseno tactil</span>
+                <span class="mc-auth-chip">Panel estable</span>
+            </div>
+            <div class="mc-auth-note">
+                <div class="mc-auth-note-kicker">{escape(foco_title)}</div>
+                <div class="mc-auth-note-copy">{escape(foco_copy)}</div>
+            </div>
+            <div class="mc-auth-note mc-auth-note--soft">
+                <div class="mc-auth-note-kicker">{escape(multi_kicker)}</div>
+                <div class="mc-auth-note-copy">{escape(multi_copy)}</div>
+            </div>
+            <div class="mc-auth-note mc-auth-note--soft">
+                <div class="mc-auth-note-kicker">Seguridad complementaria</div>
+                <div class="mc-auth-note-copy">{escape(ayuda_2fa)}</div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_auth_panel_head(titulo: str, descripcion: str, badge: str) -> None:
+    st.markdown(
+        f"""
+        <section class="mc-auth-panel-head">
+            <div class="mc-auth-panel-badge">{escape(badge)}</div>
+            <h3 class="mc-auth-panel-title">{escape(titulo)}</h3>
+            <p class="mc-auth-panel-copy">{escape(descripcion)}</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _buscar_usuario_por_login(login_texto: str):
     login_normalizado = str(login_texto or "").strip().lower()
     if not login_normalizado:
@@ -136,19 +209,6 @@ def _buscar_usuario_por_login(login_texto: str):
         if str(key_db or "").strip().lower() == login_normalizado:
             return key_db
     return None
-
-
-def _pin_coincide_tiempo_constante(user_data: dict, pin_raw: str) -> bool:
-    pin = str(pin_raw or "").strip()
-    if len(pin) != 4 or not pin.isdigit():
-        return False
-    alm = str(obtener_pin_usuario(user_data) or "").strip()
-    if not alm:
-        return False
-    try:
-        return secrets.compare_digest(pin, alm)
-    except Exception:
-        return False
 
 
 def _cargar_db_login(empresa_login: str, u_limpio: str):
@@ -167,6 +227,28 @@ def _cargar_db_login(empresa_login: str, u_limpio: str):
     d = cargar_datos(force=True, tenant_key=tk)
     if d is None:
         return None, "No hay datos para esa clínica. Verificá el nombre o contactá a soporte."
+    return d, None
+
+
+def _cargar_db_recover(rec_emp: str, u_limpio: str):
+    st.session_state.pop("_db_monolito_sesion", None)
+    if modo_shard_activo():
+        if login_usa_monolito_legacy(u_limpio):
+            st.session_state["_db_monolito_sesion"] = True
+            d = cargar_datos(force=True, monolito_legacy=True)
+            if d is None:
+                return None, "No se pudo cargar la base global (monolito)."
+            return d, None
+        tk = tenant_key_normalizado(rec_emp)
+        if not tk:
+            return None, "Indicá la empresa asignada."
+        d = cargar_datos(force=True, tenant_key=tk)
+        if d is None:
+            return None, "No hay datos para esa clínica."
+        return d, None
+    d = cargar_datos(force=True)
+    if d is None:
+        return None, "No se pudieron cargar los datos."
     return d, None
 
 
@@ -228,34 +310,42 @@ def _render_bloque_verificacion_email_2fa() -> bool:
         st.warning("La verificación por correo venció. Volvé a iniciar sesión.")
         return False
 
-    st.subheader("Verificación por correo")
-    st.caption(f"Código enviado a **{p.get('destino_mascarado', 'tu correo')}**.")
-    with st.form("form_email_2fa"):
-        cod = st.text_input("Código de 6 dígitos", max_chars=6, placeholder="000000")
-        if st.form_submit_button("Confirmar acceso", use_container_width=True):
-            ok, err = verificar_codigo_ingresado(cod)
-            if ok:
-                uk = p.get("usuario_key")
-                u_limpio = str(p.get("u_limpio") or "")
+    destino = escape(str(p.get("destino_mascarado", "tu correo")))
+    col_showcase, col_panel = st.columns([1.05, 0.95])
+    with col_showcase:
+        _render_auth_showcase("2fa")
+    with col_panel:
+        _render_auth_panel_head(
+            "Verificacion por correo",
+            "Completa el ultimo paso del acceso con el codigo temporal enviado a tu correo.",
+            "2FA por email",
+        )
+        st.caption(f"Codigo enviado a **{destino}**.")
+        with st.form("form_email_2fa_premium"):
+            cod = st.text_input("Codigo de 6 digitos", max_chars=6, placeholder="000000")
+            if st.form_submit_button("Confirmar acceso", use_container_width=True):
+                ok, err = verificar_codigo_ingresado(cod)
+                if ok:
+                    uk = p.get("usuario_key")
+                    u_limpio = str(p.get("u_limpio") or "")
+                    limpiar_desafio_email_2fa()
+                    user_data = dict(st.session_state["usuarios_db"][uk])
+                    user_data["usuario_login"] = uk
+                    _completar_login_exitoso(user_data, u_limpio, "Login", "login_ok")
+                else:
+                    st.error(err)
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("Reenviar codigo", key="btn_reenviar_codigo_premium", use_container_width=True):
+                ok_r, err_r = reenviar_codigo_login()
+                st.session_state["_mc_2fa_resend_toast"] = (
+                    ("ok", "Nuevo codigo enviado.") if ok_r else ("err", err_r)
+                )
+                st.rerun()
+        with c2:
+            if st.button("Cancelar", key="btn_cancelar_codigo_premium", use_container_width=True):
                 limpiar_desafio_email_2fa()
-                user_data = dict(st.session_state["usuarios_db"][uk])
-                user_data["usuario_login"] = uk
-                _completar_login_exitoso(user_data, u_limpio, "Login", "login_ok")
-            else:
-                st.error(err)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Reenviar código", use_container_width=True):
-            ok_r, err_r = reenviar_codigo_login()
-            st.session_state["_mc_2fa_resend_toast"] = (
-                ("ok", "Nuevo código enviado.") if ok_r else ("err", err_r)
-            )
-            st.rerun()
-    with c2:
-        if st.button("Cancelar", use_container_width=True):
-            limpiar_desafio_email_2fa()
-            st.rerun()
+                st.rerun()
     return True
 
 
@@ -265,33 +355,22 @@ def render_login():
     # Evita pantalla en blanco si quedó logeado=True sin usuario (sesión vieja o estado corrupto).
     if st.session_state["logeado"] and not st.session_state.get("u_actual"):
         st.session_state["logeado"] = False
-    if not st.session_state["logeado"] and _render_bloque_verificacion_email_2fa():
-        st.stop()
 
     if not st.session_state["logeado"]:
         _auth_strip_modulo_query_param()
-        if _auth_strip_pwreset_url_si_hay_param():
-            st.session_state["_mc_pwreset_url_aviso_once"] = True
-        _, col, _ = st.columns([0.9, 1.35, 0.9])
+        if _render_bloque_verificacion_email_2fa():
+            st.stop()
+        col_showcase, col = st.columns([1.02, 0.98])
         with col:
-            st.markdown(
-                "<div style='text-align:center;margin-bottom:0.35rem'>"
-                "<span style='font-size:0.72rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;"
-                "color:#2dd4bf'>Plataforma clínica</span></div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                "<h2 style='text-align:center;margin:0 0 0.15rem;font-size:1.55rem;font-weight:800;"
-                "letter-spacing:-0.03em;background:linear-gradient(120deg,#5eead4,#60a5fa,#a5b4fc);"
-                "-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent'>"
-                "MediCare Enterprise PRO</h2>"
-                "<p style='text-align:center;margin:0 0 1rem;font-size:0.88rem;color:#94a3b8'>V9.12 · Acceso institucional</p>",
-                unsafe_allow_html=True,
+            modo_auth = "Iniciar sesion"
+            _render_auth_panel_head(
+                "Ingresar al sistema",
+                "Usa el usuario y la contrasena asignados por tu clinica para entrar a tu entorno de trabajo.",
+                "Acceso principal",
             )
             st.caption(
-                "Ingresá con el usuario (login) y contraseña que te asignó tu clínica. "
-                "Si la clínica fue suspendida por abono o decisión administrativa, el acceso queda bloqueado hasta la reactivación: "
-                "contactá a MediCare o a tu coordinador."
+                "Ingresa con el usuario (login) y contrasena que te asigno tu clinica. "
+                "Si la clinica fue suspendida por abono o decision administrativa, el sistema bloquea el acceso hasta la reactivacion: contacta a MediCare o a tu coordinador."
             )
             with st.expander("Problemas para ingresar o fallas del sistema", expanded=False):
                 st.markdown(
@@ -301,251 +380,151 @@ def render_login():
                     "**Detalle tecnico** en la app y enviá captura a soporte.\n"
                     "- Si no hay conexión, la app puede usar **modo local** con datos ya descargados; revisá WiFi o datos móviles."
                 )
-            if st.session_state.pop("_mc_pwreset_url_aviso_once", False):
-                st.info(
-                    "Detectamos un enlace de restablecimiento de contraseña en la URL. "
-                    "En esta instalación **no** se usa recuperación por correo. "
-                    "Si tenés **PIN** en Mi equipo, probá **Nueva contraseña con PIN**; si no, pedí clave a **coordinación**."
-                )
-            _sec_tip = texto_ayuda_proteccion()
-            if _sec_tip:
-                st.caption(_sec_tip)
-            modo_auth = st.radio(
-                "Acceso",
-                ["login", "pin_new"],
-                horizontal=True,
-                label_visibility="collapsed",
-                format_func=lambda m: "Iniciar sesión" if m == "login" else "Nueva contraseña con PIN",
-                key="mc_auth_mode_radio",
-            )
-            if modo_auth == "login":
+            if modo_auth == "Iniciar sesion":
+                st.session_state.pop(_SESSION_RECOVER_FLASH, None)
+                _sec_tip = texto_ayuda_proteccion()
+                if _sec_tip:
+                    st.caption(_sec_tip)
                 st.caption(
-                    "Ingresá con **usuario** y **contraseña**. La contraseña no es el DNI salvo que tu clínica te haya "
-                    "configurado la cuenta así."
+                    "En este paso usás **usuario + contraseña**. La clave no es el DNI salvo que "
+                    "tu clínica te haya configurado la cuenta así. Si necesitás cambiarla, hoy debe gestionarlo "
+                    "coordinación o administración interna."
                 )
-            else:
-                st.caption(
-                    "Si **coordinación** te cargó un **PIN de 4 dígitos** en Mi equipo, podés definir una **clave nueva** "
-                    "sin correo. Sin PIN, pedí la clave a coordinación."
-                )
-                st.caption(texto_ayuda_politica_password_breve())
-            with st.form("login", clear_on_submit=True):
-                if modo_shard_activo():
-                    st.caption(
-                        "Modo **multiclínica** activo: cada clínica tiene su propia base. "
-                        "Ingresá la empresa tal como figura en el sistema. "
-                        "Los logins de operación global (p. ej. **admin** o los configurados en `MONOLITO_LOGIN_ALLOWLIST`) "
-                        "pueden dejar empresa vacía y usar solo usuario y contraseña."
-                    )
-                    empresa_login = st.text_input("Empresa / Clínica (opcional para logins monolito)")
-                else:
-                    empresa_login = ""
-                u = st.text_input("Usuario")
-                if modo_auth == "login":
+                with st.form("login", clear_on_submit=True):
+                    if modo_shard_activo():
+                        st.caption(
+                            "Modo **multiclínica** activo: cada clínica tiene su propia base. "
+                            "Ingresá la empresa tal como figura en el sistema. "
+                            "Los logins de operación global (p. ej. **admin** o los configurados en `MONOLITO_LOGIN_ALLOWLIST`) "
+                            "pueden dejar empresa vacía y usar solo usuario y contraseña."
+                        )
+                        empresa_login = st.text_input("Empresa / Clínica (opcional para logins monolito)")
+                    else:
+                        empresa_login = ""
+                    u = st.text_input("Usuario")
                     p = st.text_input(
-                        "Contraseña",
+                        "Contrasena",
                         type="password",
                         help="Clave de acceso asignada o definida por tu clínica; no el PIN de 4 dígitos ni el DNI, salvo que esa sea tu clave.",
                     )
-                else:
-                    pin_rec = st.text_input(
-                        "PIN de recuperación (4 dígitos)",
-                        type="password",
-                        max_chars=4,
-                        help="El mismo PIN que figura en Mi equipo para tu usuario.",
-                    )
-                    p1 = st.text_input("Nueva contraseña", type="password")
-                    p2 = st.text_input("Repetir nueva contraseña", type="password")
-                if modo_auth == "login":
-                    submit = st.form_submit_button("Ingresar al sistema", use_container_width=True)
-                else:
-                    submit = st.form_submit_button("Guardar nueva contraseña", use_container_width=True)
-                if submit and modo_auth == "pin_new":
-                    if not u.strip():
-                        st.warning("Ingresá tu usuario (login).")
-                        st.stop()
-                    pin_rec_s = str(pin_rec or "").strip()
-                    p1s = str(p1 or "").strip()
-                    p2s = str(p2 or "").strip()
-                    if not pin_rec_s or not p1s or not p2s:
-                        st.warning("Completá usuario, PIN y la nueva contraseña en ambos campos.")
-                        st.stop()
-                    if p1s != p2s:
-                        st.error("Las contraseñas nuevas no coinciden.")
-                        st.stop()
-                    u_limpio_pre = u.strip().lower()
-                    ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
-                    if not ok_lock:
-                        st.error(lock_msg)
-                        st.stop()
-                    db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
-                    if err_db:
-                        st.error(err_db)
-                        st.stop()
-                    if db_f is None:
-                        st.error("No se pudieron cargar los datos.")
-                        st.stop()
-                    for k, v in db_f.items():
-                        st.session_state[k] = v
-                    completar_claves_db_session()
-                    asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
-                    sincronizar_clinicas_desde_datos(st.session_state)
-                    u_limpio = u.strip().lower()
-                    usuario_encontrado = _buscar_usuario_por_login(u_limpio)
-                    if not usuario_encontrado:
-                        registrar_fallo_login(u_limpio)
-                        st.error(MSG_PIN_RESET_FALLIDO)
-                        st.stop()
-                    user_data = normalizar_usuario_sistema(
-                        dict(st.session_state["usuarios_db"][usuario_encontrado])
-                    )
-                    user_data["usuario_login"] = usuario_encontrado
-                    st.session_state["usuarios_db"][usuario_encontrado] = user_data
-                    emp_l = str(empresa_login or "").strip().lower()
-                    empresa_coincide = str(user_data.get("empresa", "")).strip().lower() == emp_l
-                    if modo_shard_activo() and sesion_usa_monolito_legacy():
-                        empresa_ok = (not str(empresa_login or "").strip()) or empresa_coincide
-                    else:
-                        empresa_ok = empresa_coincide
-                    if not empresa_ok:
-                        registrar_fallo_login(u_limpio)
-                        st.error(MSG_PIN_RESET_FALLIDO)
-                        st.stop()
-                    if user_data.get("estado", "Activo") == "Bloqueado":
-                        registrar_fallo_login(u_limpio)
-                        st.error(
-                            "Tu usuario está **bloqueado**. Contactá al coordinador para reactivar el acceso antes de cambiar la clave."
-                        )
-                        st.stop()
-                    if login_bloqueado_por_clinica(user_data):
-                        registrar_fallo_login(u_limpio)
-                        st.error(
-                            "La clínica asignada a tu usuario está suspendida. No se puede cambiar la contraseña hasta la reactivación."
-                        )
-                        st.stop()
-                    if not str(obtener_pin_usuario(user_data) or "").strip():
-                        st.error(
-                            "Tu cuenta **no tiene PIN de recuperación** en Mi equipo. Pedí una clave nueva a coordinación."
-                        )
-                        st.stop()
-                    if not _pin_coincide_tiempo_constante(user_data, pin_rec_s):
-                        registrar_fallo_login(u_limpio)
-                        st.error(MSG_PIN_RESET_FALLIDO)
-                        st.stop()
-                    msg_pw = mensaje_password_no_cumple_politica(p1s)
-                    if msg_pw:
-                        st.error(msg_pw)
-                        st.stop()
-                    with st.spinner("Guardando tu nueva contraseña…"):
-                        limpiar_fallos_login(u_limpio)
-                        establecer_password_nuevo(
-                            st.session_state["usuarios_db"][usuario_encontrado],
-                            p1s,
-                            rounds=bcrypt_rounds_config(),
-                        )
-                        guardar_datos()
-                        log_event("auth", "password_reset_via_pin_ok")
-                    st.success(
-                        "Listo. Ya podés **iniciar sesión** con tu usuario y la contraseña nueva (elegí **Iniciar sesión** arriba)."
-                    )
-                    st.stop()
-                if submit and modo_auth == "login":
-                    if not u.strip() or not p.strip():
-                        st.warning("Ingresá usuario y contraseña.")
-                        st.stop()
-                    else:
-                        u_limpio_pre = u.strip().lower()
-                        ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
-                        if not ok_lock:
-                            st.error(lock_msg)
+                    if st.form_submit_button("Ingresar al Sistema", use_container_width=True):
+                        if not u.strip() or not p.strip():
+                            _auth_set_flash(
+                                _SESSION_LOGIN_FLASH,
+                                "warning",
+                                "Ingresá usuario y contraseña.",
+                            )
                         else:
-                            db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
-                            if err_db:
-                                st.error(err_db)
-                            elif db_f is None:
-                                st.error("No se pudieron cargar los datos.")
+                            u_limpio_pre = u.strip().lower()
+                            ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
+                            if not ok_lock:
+                                st.error(lock_msg)
                             else:
-                                for k, v in db_f.items():
-                                    st.session_state[k] = v
-                                completar_claves_db_session()
-                                asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
-                                sincronizar_clinicas_desde_datos(st.session_state)
-                                u_limpio = u.strip().lower()
-                                usuario_encontrado = _buscar_usuario_por_login(u_limpio)
+                                db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
+                                if err_db:
+                                    st.error(err_db)
+                                elif db_f is None:
+                                    st.error("No se pudieron cargar los datos.")
+                                else:
+                                    for k, v in db_f.items():
+                                        st.session_state[k] = v
+                                    completar_claves_db_session()
+                                    asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
+                                    sincronizar_clinicas_desde_datos(st.session_state)
+                                    u_limpio = u.strip().lower()
+                                    usuario_encontrado = _buscar_usuario_por_login(u_limpio)
 
-                                if usuario_encontrado:
-                                    user_data = normalizar_usuario_sistema(
-                                        dict(st.session_state["usuarios_db"][usuario_encontrado])
-                                    )
-                                    user_data["usuario_login"] = usuario_encontrado
-                                    st.session_state["usuarios_db"][usuario_encontrado] = user_data
-                                    ok_pw, migrar_hash = password_usuario_coincide(user_data, p.strip())
-                                    if user_data.get("estado", "Activo") == "Bloqueado":
-                                        registrar_fallo_login(u_limpio)
-                                        st.error(
-                                            "Tu usuario está **bloqueado**. "
-                                            "Contactá al coordinador o administrador de tu clínica para reactivar el acceso."
+                                    if usuario_encontrado:
+                                        user_data = normalizar_usuario_sistema(
+                                            dict(st.session_state["usuarios_db"][usuario_encontrado])
                                         )
-                                    elif ok_pw:
-                                        if migrar_hash:
-                                            aplicar_hash_tras_login_ok(
-                                                st.session_state["usuarios_db"][usuario_encontrado],
-                                                p.strip(),
-                                                rounds=bcrypt_rounds_config(),
-                                            )
-                                            user_data = dict(st.session_state["usuarios_db"][usuario_encontrado])
-                                            user_data["usuario_login"] = usuario_encontrado
-                                        if login_bloqueado_por_clinica(user_data):
+                                        user_data["usuario_login"] = usuario_encontrado
+                                        st.session_state["usuarios_db"][usuario_encontrado] = user_data
+                                        ok_pw, migrar_hash = password_usuario_coincide(user_data, p.strip())
+                                        if user_data.get("estado", "Activo") == "Bloqueado":
                                             registrar_fallo_login(u_limpio)
-                                            st.session_state.setdefault("logs_db", [])
-                                            st.session_state["logs_db"].append(
-                                                {
-                                                    "F": ahora().strftime("%d/%m/%Y"),
-                                                    "H": ahora().strftime("%H:%M"),
-                                                    "U": str(user_data.get("nombre", usuario_encontrado)),
-                                                    "E": str(user_data.get("empresa", "")),
-                                                    "A": f"Login rechazado (clinica suspendida) login={usuario_encontrado}",
-                                                }
-                                            )
-                                            _persistir_logs_tras_rechazo_clinica()
                                             st.error(
-                                                "La clinica asignada a tu usuario esta suspendida (abono o decision administrativa). "
-                                                "No podes ingresar hasta la reactivacion. Si sos personal de la clinica, avisa a tu responsable; "
-                                                "la gestion la hace MediCare desde el panel global de clinicas."
+                                                "Tu usuario está **bloqueado**. "
+                                                "Contactá al coordinador o administrador de tu clínica para reactivar el acceso."
                                             )
-                                        else:
-                                            if requiere_2fa_correo(user_data):
-                                                if migrar_hash:
-                                                    guardar_datos()
-                                                ok_send, err_send = iniciar_desafio_login(
-                                                    str(user_data.get("email") or "").strip(),
-                                                    usuario_encontrado,
-                                                    u_limpio,
+                                        elif ok_pw:
+                                            if migrar_hash:
+                                                aplicar_hash_tras_login_ok(
+                                                    st.session_state["usuarios_db"][usuario_encontrado],
+                                                    p.strip(),
+                                                    rounds=bcrypt_rounds_config(),
                                                 )
-                                                if ok_send:
-                                                    st.info(
-                                                        "Te enviamos un código de 6 dígitos. Revisá tu correo y completá el paso siguiente."
-                                                    )
-                                                    st.rerun()
-                                                st.error(err_send)
+                                                user_data = dict(st.session_state["usuarios_db"][usuario_encontrado])
+                                                user_data["usuario_login"] = usuario_encontrado
+                                            if login_bloqueado_por_clinica(user_data):
+                                                registrar_fallo_login(u_limpio)
+                                                st.session_state.setdefault("logs_db", [])
+                                                st.session_state["logs_db"].append(
+                                                    {
+                                                        "F": ahora().strftime("%d/%m/%Y"),
+                                                        "H": ahora().strftime("%H:%M"),
+                                                        "U": str(user_data.get("nombre", usuario_encontrado)),
+                                                        "E": str(user_data.get("empresa", "")),
+                                                        "A": f"Login rechazado (clinica suspendida) login={usuario_encontrado}",
+                                                    }
+                                                )
+                                                _persistir_logs_tras_rechazo_clinica()
+                                                st.error(
+                                                    "La clinica asignada a tu usuario esta suspendida (abono o decision administrativa). "
+                                                    "No podes ingresar hasta la reactivacion. Si sos personal de la clinica, avisa a tu responsable; "
+                                                    "la gestion la hace MediCare desde el panel global de clinicas."
+                                                )
                                             else:
-                                                # 2FA por correo solo si el usuario tiene email válido (requiere_2fa_correo).
-                                                # Sin email en ficha el ingreso es con contraseña para no bloquear cuentas históricas.
-                                                if (
-                                                    login_email_2fa_enabled()
-                                                    and smtp_config_ok()
-                                                    and not usuario_email_2fa_valido(user_data)
-                                                ):
-                                                    log_event(
-                                                        "auth",
-                                                        "login_ok_2fa_omitido_sin_email_en_ficha",
+                                                if requiere_2fa_correo(user_data):
+                                                    if migrar_hash:
+                                                        guardar_datos()
+                                                    ok_send, err_send = iniciar_desafio_login(
+                                                        str(user_data.get("email") or "").strip(),
+                                                        usuario_encontrado,
+                                                        u_limpio,
                                                     )
+                                                    if ok_send:
+                                                        st.info(
+                                                            "Te enviamos un código de 6 dígitos. Revisá tu correo y completá el paso siguiente."
+                                                        )
+                                                        st.rerun()
+                                                    st.error(err_send)
+                                                else:
+                                                    # 2FA por correo solo si el usuario tiene email válido (requiere_2fa_correo).
+                                                    # Sin email en ficha el ingreso es con contraseña para no bloquear cuentas históricas.
+                                                    if (
+                                                        login_email_2fa_enabled()
+                                                        and smtp_config_ok()
+                                                        and not usuario_email_2fa_valido(user_data)
+                                                    ):
+                                                        log_event(
+                                                            "auth",
+                                                            "login_ok_2fa_omitido_sin_email_en_ficha",
+                                                        )
+                                                    _completar_login_exitoso(
+                                                        user_data,
+                                                        u_limpio,
+                                                        "Login",
+                                                        "login_ok",
+                                                    )
+                                        else:
+                                            if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
+                                                DEFAULT_ADMIN_USER["pass"]
+                                            ).strip():
+                                                limpiar_fallos_login(u_limpio)
+                                                user_data = DEFAULT_ADMIN_USER.copy()
+                                                user_data["usuario_login"] = "admin"
+                                                aplicar_hash_tras_login_ok(user_data, p.strip(), rounds=bcrypt_rounds_config())
+                                                st.session_state["usuarios_db"]["admin"] = user_data
                                                 _completar_login_exitoso(
                                                     user_data,
-                                                    u_limpio,
-                                                    "Login",
-                                                    "login_ok",
+                                                    "admin",
+                                                    "Login emergencia superadmin",
+                                                    "login_ok_admin_emergencia",
                                                 )
+                                            else:
+                                                registrar_fallo_login(u_limpio)
+                                                st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
                                     else:
                                         if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
                                             DEFAULT_ADMIN_USER["pass"]
@@ -564,24 +543,98 @@ def render_login():
                                         else:
                                             registrar_fallo_login(u_limpio)
                                             st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
+                _auth_pop_flash(_SESSION_LOGIN_FLASH)
+            else:
+                st.session_state.pop(_SESSION_LOGIN_FLASH, None)
+                _rec_tip = texto_ayuda_proteccion()
+                if _rec_tip:
+                    st.caption(_rec_tip)
+                with st.form("recover", clear_on_submit=True):
+                    st.info(
+                        f"Si olvidaste la contrasena, puedes recuperarla con el correo registrado en tu cuenta. "
+                        f"Largo mínimo de clave: {password_min_length()} caracteres."
+                    )
+                    rec_u = st.text_input("Usuario (Login)")
+                    rec_emp = st.text_input("Empresa / Clinica asignada")
+                    rec_email = st.text_input("Correo registrado")
+                    rec_pass = st.text_input("Nueva Contrasena", type="password")
+                    if st.form_submit_button("Cambiar Contrasena", use_container_width=True):
+                        if not rec_u.strip():
+                            _auth_set_flash(
+                                _SESSION_RECOVER_FLASH,
+                                "warning",
+                                "Ingresá tu usuario (login).",
+                            )
+                        elif not str(rec_email).strip() or not str(rec_pass).strip():
+                            _auth_set_flash(
+                                _SESSION_RECOVER_FLASH,
+                                "warning",
+                                "Completá correo registrado y nueva contraseña.",
+                            )
+                        else:
+                            u_limpio = rec_u.strip().lower()
+                            ok_rec, lock_rec = puede_intentar_login(u_limpio)
+                            if not ok_rec:
+                                st.error(lock_rec)
+                            else:
+                                db_f, err_rec = _cargar_db_recover(rec_emp, u_limpio)
+                                if err_rec:
+                                    st.error(err_rec)
+                                elif db_f is None:
+                                    st.error("No se pudieron cargar los datos.")
                                 else:
-                                    if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
-                                        DEFAULT_ADMIN_USER["pass"]
-                                    ).strip():
-                                        limpiar_fallos_login(u_limpio)
-                                        user_data = DEFAULT_ADMIN_USER.copy()
-                                        user_data["usuario_login"] = "admin"
-                                        aplicar_hash_tras_login_ok(user_data, p.strip(), rounds=bcrypt_rounds_config())
-                                        st.session_state["usuarios_db"]["admin"] = user_data
-                                        _completar_login_exitoso(
-                                            user_data,
-                                            "admin",
-                                            "Login emergencia superadmin",
-                                            "login_ok_admin_emergencia",
+                                    for k, v in db_f.items():
+                                        st.session_state[k] = v
+                                    completar_claves_db_session()
+                                    asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
+                                    sincronizar_clinicas_desde_datos(st.session_state)
+                                    usuario_encontrado = _buscar_usuario_por_login(u_limpio)
+                                    if usuario_encontrado:
+                                        user_data = normalizar_usuario_sistema(
+                                            dict(st.session_state["usuarios_db"][usuario_encontrado])
                                         )
+                                        st.session_state["usuarios_db"][usuario_encontrado] = user_data
+                                        rec_emp_l = rec_emp.strip().lower()
+                                        empresa_coincide = str(user_data.get("empresa", "")).strip().lower() == rec_emp_l
+                                        if modo_shard_activo() and sesion_usa_monolito_legacy():
+                                            empresa_ok = (not rec_emp.strip()) or empresa_coincide
+                                        else:
+                                            empresa_ok = empresa_coincide
+                                        if empresa_ok:
+                                            email_actual = obtener_email_usuario(user_data)
+                                            email_ingresado = str(rec_email or "").strip().lower()
+                                            if not email_actual:
+                                                registrar_fallo_login(u_limpio)
+                                                st.error(
+                                                    "Ese usuario no tiene correo registrado. Debe cargarlo un coordinador desde Mi Equipo."
+                                                )
+                                            elif email_actual == email_ingresado:
+                                                _msg_pw = mensaje_password_no_cumple_politica(rec_pass)
+                                                if not _msg_pw:
+                                                    limpiar_fallos_login(u_limpio)
+                                                    establecer_password_nuevo(
+                                                        st.session_state["usuarios_db"][usuario_encontrado],
+                                                        rec_pass,
+                                                        rounds=bcrypt_rounds_config(),
+                                                    )
+                                                    guardar_datos()
+                                                    log_event("auth", "password_reset_via_email_ok")
+                                                    st.success("Contrasena actualizada.")
+                                                else:
+                                                    registrar_fallo_login(u_limpio)
+                                                    st.error(_msg_pw)
+                                            else:
+                                                registrar_fallo_login(u_limpio)
+                                                st.error(MSG_RECOVER_DATOS_INVALIDOS)
+                                        else:
+                                            registrar_fallo_login(u_limpio)
+                                            st.error(MSG_RECOVER_DATOS_INVALIDOS)
                                     else:
                                         registrar_fallo_login(u_limpio)
-                                        st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
+                                        st.error(MSG_RECOVER_DATOS_INVALIDOS)
+                _auth_pop_flash(_SESSION_RECOVER_FLASH)
+        with col_showcase:
+            _render_auth_showcase("login" if modo_auth == "Iniciar sesion" else "recover")
         st.stop()
 
 
@@ -602,7 +655,7 @@ def verificar_clinica_sesion_activa():
         vaciar_datos_app_en_sesion()
         st.warning(
             "El acceso de tu clinica fue suspendido mientras tenias sesion abierta. "
-            "Coordinadores y operativos (incluye personal de gestion) no pueden usar la app hasta la reactivacion. "
+            "Coordinadores, operativos y administrativos no pueden usar la app hasta la reactivacion. "
             "Volvete a intentar cuando te confirmen que el servicio fue rehabilitado."
         )
         st.rerun()
