@@ -509,7 +509,27 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
         try:
             from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
             if ENABLE_NEXTGEN_API_DUAL_WRITE:
+                u_actual = st.session_state.get("u_actual")
                 estructura = _estructura_vacia_por_clave()
+
+                # En pantalla de login todavía no hay u_actual. Si devolvemos una
+                # estructura vacía y luego se llama guardar_datos() al autenticar,
+                # el monolito remoto queda pisado con listas vacías.
+                if not isinstance(u_actual, dict):
+                    try:
+                        if supabase is not None:
+                            datos_remotos_completos = _normalizar_blob_datos(_cargar_supabase_monolito())
+                            if isinstance(datos_remotos_completos, dict):
+                                estructura = datos_remotos_completos
+                    except Exception as e:
+                        log_event("db", f"error_cargar_monolito_prelogin:{e}")
+                    if estructura == _estructura_vacia_por_clave():
+                        try:
+                            datos_locales_completos = _normalizar_blob_datos(_cargar_local())
+                            if isinstance(datos_locales_completos, dict):
+                                estructura = datos_locales_completos
+                        except Exception as e:
+                            log_event("db", f"error_cargar_local_prelogin:{e}")
 
                 def _usuarios_validos(blob):
                     if not isinstance(blob, dict):
@@ -544,7 +564,6 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 from core.db_sql import get_pacientes_by_empresa
                 from core.nextgen_sync import _obtener_uuid_empresa
 
-                u_actual = st.session_state.get("u_actual")
                 if isinstance(u_actual, dict):
                     rol_actual = str(u_actual.get("rol", "") or "").strip().lower()
                     empresa_actual = str(u_actual.get("empresa", "") or "").strip()
