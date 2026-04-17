@@ -10,9 +10,7 @@ from datetime import datetime
 
 from core.guardado_emergencia import (
     guardar_signos_vitales_local,
-    guardar_evolucion_local,
-    obtener_signos_vitales_local,
-    obtener_evoluciones_local
+    obtener_signos_vitales_local
 )
 
 
@@ -112,62 +110,13 @@ def render(paciente_sel=None, user=None):
     else:
         st.info("📋 No hay signos vitales guardados para este paciente. Usa el formulario de arriba para agregar el primero.")
     
-    # === FORMULARIO EVOLUCIONES ===
-    st.markdown("---")
-    st.markdown("### ➕ Nueva Evolución Clínica")
-    
-    with st.form("form_evolucion_emergencia"):
-        evolucion = st.text_area("📝 Evolución", height=150, key="evo_text")
-        indicaciones = st.text_area("💊 Indicaciones", height=100, key="evo_indicaciones")
-        
-        submitted_evo = st.form_submit_button(
-            "💾 GUARDAR EVOLUCIÓN (LOCAL)",
-            use_container_width=True,
-            type="primary"
-        )
-        
-        if submitted_evo:
-            if not evolucion.strip():
-                st.error("❌ Debes escribir la evolución")
-            else:
-                with st.spinner("Guardando..."):
-                    exito, mensaje = guardar_evolucion_local(
-                        paciente_id=paciente_id,
-                        paciente_nombre=paciente_nombre,
-                        evolucion=evolucion,
-                        indicaciones=indicaciones
-                    )
-                
-                if exito:
-                    st.success(f"✅ {mensaje}")
-                else:
-                    st.error(f"❌ {mensaje}")
-    
-    # === EVOLUCIONES GUARDADAS ===
-    st.markdown("---")
-    st.markdown("### 📋 Evoluciones Guardadas")
-    
-    evoluciones = obtener_evoluciones_local(paciente_id)
-    
-    if evoluciones:
-        st.success(f"✅ Hay {len(evoluciones)} evoluciones guardadas localmente")
-        
-        for i, evo in enumerate(reversed(evoluciones[-5:]), 1):  # Mostrar últimas 5
-            with st.expander(f"📅 {evo.get('fecha', 'Sin fecha')} - Ver evolución"):
-                st.write(f"**Evolución:** {evo.get('evolucion', '')}")
-                if evo.get('indicaciones'):
-                    st.write(f"**Indicaciones:** {evo.get('indicaciones', '')}")
-    else:
-        st.info("📋 No hay evoluciones guardadas. Usa el formulario de arriba para agregar la primera.")
-    
     # === INFO DE SEGURIDAD ===
     st.markdown("---")
     st.info("""
     💾 **Información de seguridad:**
-    - Los datos se guardan en `.streamlit/local_data.json`
+    - Los datos se guardan en `.streamlit/local_data.json` y en Supabase (nube)
     - Se crean backups automáticos por cada guardado
-    - Cuando se arregle la conexión a la nube, los datos se sincronizarán automáticamente
-    - **Tus datos están seguros en tu computadora**
+    - Tus datos están seguros y disponibles en cualquier momento
     """)
 
 
