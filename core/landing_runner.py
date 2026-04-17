@@ -160,7 +160,7 @@ def render_publicidad_y_detener() -> None:
         """<div style="position:sticky;top:0;z-index:99999;background:rgba(3,5,10,0.93);
         padding:10px 0;text-align:center;border-bottom:1px solid rgba(45,212,191,0.18);
         backdrop-filter:blur(12px)">
-        <a href="?login=1" style="display:inline-flex;align-items:center;justify-content:center;
+        <a href="?login=1" target="_self" style="display:inline-flex;align-items:center;justify-content:center;
         min-height:52px;padding:0 36px;border-radius:9999px;
         background:linear-gradient(135deg,rgba(18,184,166,0.98) 0%,rgba(37,99,235,0.98) 58%,rgba(56,189,248,0.96) 100%);
         color:white;font-weight:900;font-size:0.95rem;letter-spacing:0.16em;
