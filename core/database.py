@@ -175,6 +175,8 @@ def _estructura_vacia_por_clave():
         "pediatria_db": [],
         "escalas_clinicas_db": [],
         "emergencias_db": [],
+        "profesionales_red_db": [],
+        "solicitudes_servicios_db": [],
     }
 
 

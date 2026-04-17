@@ -159,31 +159,8 @@ def render_red_profesionales(mi_empresa, user, rol):
     rol_normalizado = str(rol or "").strip().lower()
     acceso_total = es_control_total(rol_normalizado)
     usuario_login = _identificador_profesional(user)
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Red de profesionales y organizaciones de salud</h2>
-            <p class="mc-hero-text">Esta vista sirve para profesionales individuales, equipos interdisciplinarios, administrativos, empresas de salud y prestadores externos. Permite publicar perfiles, servicios y recibir solicitudes segun necesidad, zona y tipo de atencion.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Perfiles profesionales</span>
-                <span class="mc-chip">Instituciones y empresas</span>
-                <span class="mc-chip">Servicios por especialidad</span>
-                <span class="mc-chip">Pedidos de pacientes y familias</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    bloque_mc_grid_tarjetas(
-        [
-            ("Mi perfil", "Datos publicos, servicios y contacto para derivaciones."),
-            ("Buscador", "Filtra perfiles de la red por tipo, zona o servicio."),
-            ("Solicitudes", "Pedidos de pacientes o familias hacia profesionales o instituciones."),
-        ]
-    )
-    st.caption(
-        "Las tres pestañas son independientes: primero completa tu ficha, luego busca colegas o revisa solicitudes entrantes."
-    )
+    st.markdown("## Red de profesionales y organizaciones")
+    st.caption("Publica tu ficha, buscá colegas y recibí solicitudes de pacientes.")
 
     tab_perfil, tab_busqueda, tab_solicitudes = st.tabs(
         ["Mi Perfil Profesional", "Buscador de Profesionales", "Solicitudes de Pacientes"]
@@ -267,7 +244,9 @@ def render_red_profesionales(mi_empresa, user, rol):
                     "empresa": mi_empresa,
                     "actualizado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                 }
-                registros = st.session_state.get("profesionales_red_db", [])
+                if "profesionales_red_db" not in st.session_state or not isinstance(st.session_state.get("profesionales_red_db"), list):
+                    st.session_state["profesionales_red_db"] = []
+                registros = st.session_state["profesionales_red_db"]
                 reemplazado = False
                 for idx, reg in enumerate(registros):
                     mismo_login = str(reg.get("usuario_login", "") or "").strip().lower() == usuario_login if usuario_login else False
@@ -386,6 +365,8 @@ def render_red_profesionales(mi_empresa, user, rol):
                 if not nombre_paciente.strip() or not telefono.strip():
                     st.error("Debe completar al menos nombre y telefono.")
                 else:
+                    if "solicitudes_servicios_db" not in st.session_state or not isinstance(st.session_state["solicitudes_servicios_db"], list):
+                        st.session_state["solicitudes_servicios_db"] = []
                     st.session_state["solicitudes_servicios_db"].append(
                         {
                             "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
