@@ -310,6 +310,47 @@ CUSTOM_CSS = """
         min-height: 2.5rem !important;
     }
     
+    /* GLOBAL BUTTON FIX - Force all buttons visible */
+    .stButton button {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: inline-flex !important;
+    }
+    
+    /* Fix for form buttons */
+    button[type="submit"] {
+        background-color: #2563EB !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.5rem !important;
+        border-radius: 8px !important;
+        border: none !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Fix all button text */
+    .stButton button p, 
+    .stButton button span,
+    .stButton button div {
+        color: inherit !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Specific fix for secondary buttons */
+    .stButton button[kind="secondary"] {
+        background-color: #F8FAFC !important;
+        border: 2px solid #CBD5E1 !important;
+    }
+    
+    .stButton button[kind="secondary"] p,
+    .stButton button[kind="secondary"] span {
+        color: #1E293B !important;
+        -webkit-text-fill-color: #1E293B !important;
+    }
+    
     /* Form submit buttons */
     button[data-testid="baseButton-primary"][type="submit"] {
         background-color: #2563EB !important;
