@@ -1,0 +1,16 @@
+{
+  "admin": {
+    "dni": "37108100",
+    "pin": "1234",
+    "rol": "SuperAdmin",
+    "pass": "",
+    "estado": "Activo",
+    "nombre": "Enzo Girardi",
+    "titulo": "Director de Sistemas",
+    "empresa": "SISTEMAS E.G.",
+    "matricula": "M.P 21947",
+    "pass_hash": "$2b$12$HcErc489pjtUszjOF1fOlOMUSfwUVxMJgLQ8kHh8Q/emNdrkP9Sxu",
+    "usuario_login": "admin",
+    "perfil_profesional": "Direccion"
+  }
+}

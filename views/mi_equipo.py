@@ -562,10 +562,42 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 
     usuarios_base = []
-    for login, datos in st.session_state["usuarios_db"].items():
-        fila = dict(datos)
-        fila["_login"] = login
-        usuarios_base.append(fila)
+    
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    try:
+        from core.db_sql import check_supabase_connection
+        from core.database import supabase
+        from core.nextgen_sync import _obtener_uuid_empresa
+        
+        if check_supabase_connection():
+            empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+            if empresa_uuid:
+                res = supabase.table("usuarios").select("*").eq("empresa_id", empresa_uuid).execute()
+                if res.data:
+                    for u_sql in res.data:
+                        fila = {
+                            "_login": u_sql["nombre"],
+                            "nombre": u_sql["nombre"],
+                            "rol": u_sql["rol"],
+                            "empresa": mi_empresa,
+                            "matricula": u_sql.get("matricula", ""),
+                            "dni": u_sql.get("dni", ""),
+                            "titulo": u_sql.get("titulo", ""),
+                            "estado": u_sql.get("estado", "Activo"),
+                            "email": u_sql.get("email", ""),
+                            "pass": u_sql.get("password_hash", "")
+                        }
+                        usuarios_base.append(fila)
+    except Exception as e:
+        from core.app_logging import log_event
+        log_event("error_leer_usuarios_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not usuarios_base:
+        for login, datos in st.session_state["usuarios_db"].items():
+            fila = dict(datos)
+            fila["_login"] = login
+            usuarios_base.append(fila)
 
     usuarios_filtrados = {
         fila["_login"]: {k: v for k, v in fila.items() if k != "_login"}
