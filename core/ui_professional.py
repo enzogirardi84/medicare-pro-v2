@@ -197,105 +197,132 @@ CUSTOM_CSS = """
         color: #475569;
     }
     
-    /* Buttons */
+    /* =====================================================
+       BUTTONS - Ultra visible with high contrast
+       ===================================================== */
+    
+    /* Base button styles - ALL buttons */
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"] .stButton > button,
+    div[data-testid="stVerticalBlock"] .stButton > button,
     .stButton > button {
-        background: var(--primary);
-        color: white;
-        border: none;
-        border-radius: var(--radius);
-        padding: 0.625rem 1.25rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        box-shadow: var(--shadow-sm);
+        border-radius: var(--radius) !important;
+        padding: 0.625rem 1.25rem !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        min-width: 100px !important;
+        cursor: pointer !important;
     }
     
-    .stButton > button:hover {
-        background: var(--primary-dark);
-        box-shadow: var(--shadow);
-        transform: translateY(-1px);
+    /* PRIMARY buttons - Blue background, WHITE text */
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"] .stButton > button[kind="primary"],
+    div[data-testid="stVerticalBlock"] .stButton > button[kind="primary"],
+    .stButton > button[kind="primary"] {
+        background-color: #2563EB !important;
+        color: #FFFFFF !important;
+        border: 2px solid #2563EB !important;
     }
     
-    .stButton > button:active {
-        transform: translateY(0);
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"] .stButton > button[kind="primary"]:hover,
+    div[data-testid="stVerticalBlock"] .stButton > button[kind="primary"]:hover,
+    .stButton > button[kind="primary"]:hover {
+        background-color: #1D4ED8 !important;
+        border-color: #1D4ED8 !important;
+        color: #FFFFFF !important;
     }
     
-    /* Secondary button - Dark mode compatible */
-    .btn-secondary > button {
-        background: #F1F5F9 !important;
-        color: #1E293B !important;
-        border: 1px solid #CBD5E1 !important;
+    /* SECONDARY buttons - Light gray background, BLACK text */
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"] .stButton > button[kind="secondary"],
+    div[data-testid="stVerticalBlock"] .stButton > button[kind="secondary"],
+    .stButton > button[kind="secondary"],
+    button[data-testid="baseButton-secondary"] {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+        border: 2px solid #CBD5E1 !important;
     }
     
-    .btn-secondary > button:hover {
-        background: #E2E8F0 !important;
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"] .stButton > button[kind="secondary"]:hover,
+    div[data-testid="stVerticalBlock"] .stButton > button[kind="secondary"]:hover,
+    .stButton > button[kind="secondary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover {
+        background-color: #E2E8F0 !important;
         border-color: #94A3B8 !important;
+        color: #0F172A !important;
     }
     
-    .btn-secondary > button p,
-    .btn-secondary > button span,
-    .btn-secondary > button {
-        color: #1E293B !important;
-        font-weight: 500 !important;
+    /* Button text - FORCE visibility */
+    .stButton > button p,
+    .stButton > button span,
+    .stButton > button div,
+    .stButton > button {
+        color: inherit !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        text-shadow: none !important;
+        -webkit-text-fill-color: inherit !important;
+    }
+    
+    /* Override Streamlit's dark mode for secondary buttons */
+    [data-theme="dark"] .stButton > button[kind="secondary"],
+    .dark .stButton > button[kind="secondary"] {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+        border-color: #CBD5E1 !important;
+    }
+    
+    [data-theme="dark"] .stButton > button[kind="secondary"] p,
+    [data-theme="dark"] .stButton > button[kind="secondary"] span,
+    .dark .stButton > button[kind="secondary"] p,
+    .dark .stButton > button[kind="secondary"] span {
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
     }
     
     /* Danger button */
-    .btn-danger > button {
-        background: #EF4444 !important;
-        color: white !important;
-        border: none !important;
+    .btn-danger > button,
+    .stButton > button[kind="primary"][class*="danger"] {
+        background-color: #EF4444 !important;
+        color: #FFFFFF !important;
+        border-color: #EF4444 !important;
     }
     
     .btn-danger > button:hover {
-        background: #DC2626 !important;
-        color: white !important;
+        background-color: #DC2626 !important;
+        border-color: #DC2626 !important;
+        color: #FFFFFF !important;
     }
     
-    /* ALL buttons - ensure high contrast text */
-    .stButton > button {
-        font-weight: 600 !important;
-        text-shadow: none !important;
-    }
-    
-    /* Primary buttons - white text */
-    .stButton > button[kind="primary"] {
-        background: #2563EB !important;
-        color: white !important;
-        border: none !important;
-    }
-    
-    .stButton > button[kind="primary"] p,
-    .stButton > button[kind="primary"] span {
-        color: white !important;
-    }
-    
-    /* Secondary buttons - dark text on light bg */
-    .stButton > button[kind="secondary"] {
-        background: #F1F5F9 !important;
-        color: #1E293B !important;
-        border: 1px solid #CBD5E1 !important;
-    }
-    
-    .stButton > button[kind="secondary"] p,
-    .stButton > button[kind="secondary"] span {
-        color: #1E293B !important;
-    }
-    
-    /* Force visible text in all buttons */
-    button[data-testid="baseButton-secondary"] {
-        background: #F1F5F9 !important;
-        color: #0F172A !important;
-        border: 1px solid #CBD5E1 !important;
-    }
-    
+    /* Ensure ALL button text is visible */
+    button[kind="secondary"] p,
+    button[kind="secondary"] span,
     button[data-testid="baseButton-secondary"] p,
     button[data-testid="baseButton-secondary"] span {
         color: #0F172A !important;
-        font-weight: 500 !important;
+        -webkit-text-fill-color: #0F172A !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
     }
     
-    /* Ensure Streamlit default buttons are visible */
-    .stButton > button[data-baseweb="button"] {
-        color: white !important;
+    button[kind="primary"] p,
+    button[kind="primary"] span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Override any dark theme text colors */
+    .stButton button p,
+    .stButton button span,
+    .stButton button div {
+        color: inherit !important;
+        -webkit-text-fill-color: inherit !important;
+    }
+    
+    /* Focus states for accessibility */
+    .stButton > button:focus {
+        outline: 2px solid #2563EB !important;
+        outline-offset: 2px !important;
     }
     
     /* Override any dark mode text colors */
