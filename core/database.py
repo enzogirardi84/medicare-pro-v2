@@ -167,6 +167,14 @@ def _estructura_vacia_por_clave():
         "facturacion_db": [],
         "administracion_med_db": [],
         "auditoria_legal_db": [],
+        # Claves adicionales de modulos
+        "consumos_db": [],
+        "checkin_db": [],
+        "balance_db": [],
+        "consentimientos_db": [],
+        "pediatria_db": [],
+        "escalas_clinicas_db": [],
+        "emergencias_db": [],
     }
 
 
@@ -261,6 +269,14 @@ def _db_keys():
         "facturacion_db",
         "administracion_med_db",
         "auditoria_legal_db",
+        # Claves adicionales de modulos
+        "consumos_db",
+        "checkin_db",
+        "balance_db",
+        "consentimientos_db",
+        "pediatria_db",
+        "escalas_clinicas_db",
+        "emergencias_db",
     ]
 
 
