@@ -8,6 +8,9 @@ from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.db_sql import get_facturacion_by_empresa, insert_facturacion
+from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
+from core.app_logging import log_event
 
 FPDF_DISPONIBLE = False
 try:
@@ -49,10 +52,43 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         "Coordinacion ve abajo la auditoria general de caja."
     )
 
-    fact_paciente = [
-        f for f in st.session_state.get("facturacion_db", [])
-        if f.get("paciente") == paciente_sel and f.get("empresa") == mi_empresa
-    ]
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    fact_empresa = []
+    try:
+        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+        if empresa_uuid:
+            fact_sql = get_facturacion_by_empresa(empresa_uuid)
+            if fact_sql:
+                for f in fact_sql:
+                    dt = pd.to_datetime(f.get("fecha_emision", ""))
+                    paciente_nombre = f.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(f.get("pacientes"), dict) else "N/A"
+                    # Buscar el ID visual del paciente (Nombre - DNI)
+                    paciente_visual = paciente_nombre
+                    for p in st.session_state.get("pacientes_db", []):
+                        if p.startswith(paciente_nombre):
+                            paciente_visual = p
+                            break
+                            
+                    fact_empresa.append({
+                        "paciente": paciente_visual,
+                        "serv": f.get("concepto", ""),
+                        "monto": float(f.get("monto_total", 0)),
+                        "metodo": f.get("observaciones", ""), # El método lo guardamos en observaciones temporalmente
+                        "estado": f.get("estado", ""),
+                        "fecha": dt.strftime("%d/%m/%Y %H:%M") if pd.notnull(dt) else "",
+                        "empresa": mi_empresa,
+                        "operador": "Sistema",
+                        "operador_dni": "S/D",
+                        "id_sql": f.get("id")
+                    })
+    except Exception as e:
+        log_event("error_leer_facturacion_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not fact_empresa:
+        fact_empresa = [f for f in st.session_state.get("facturacion_db", []) if f.get("empresa") == mi_empresa]
+
+    fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
 
     total_cobrado = sum(f.get("monto", 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
     total_pendiente = sum(f.get("monto", 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
@@ -88,13 +124,40 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         if st.form_submit_button("Registrar Cobro / Practica", use_container_width=True, type="primary"):
             desc_final = practica_manual.strip() if practica_sel == "-- Otro (Especificar manualmente) --" else f"{practica_sel} {('- ' + practica_manual.strip()) if practica_manual.strip() else ''}"
             if desc_final.strip() and mon > 0:
+                fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
+                
+                # 1. Guardar en SQL (Dual-Write)
+                try:
+                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                    paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                    if empresa_uuid and paciente_uuid:
+                        datos_sql = {
+                            "empresa_id": empresa_uuid,
+                            "paciente_id": paciente_uuid,
+                            "fecha_emision": ahora().isoformat(),
+                            "numero_comprobante": "",
+                            "concepto": desc_final.strip(),
+                            "monto_total": mon,
+                            "estado": estado,
+                            "obra_social": "",
+                            "observaciones": metodo # Guardamos el método en observaciones
+                        }
+                        insert_facturacion(datos_sql)
+                        log_event("facturacion_sql_insert", f"Paciente: {paciente_uuid}")
+                except Exception as e:
+                    log_event("error_facturacion_sql", str(e))
+                    st.error(f"Error al guardar en SQL: {e}")
+
+                # 2. Guardar en JSON (Legacy)
+                if "facturacion_db" not in st.session_state:
+                    st.session_state["facturacion_db"] = []
                 st.session_state["facturacion_db"].append({
                     "paciente": paciente_sel,
                     "serv": desc_final.strip(),
                     "monto": mon,
                     "metodo": metodo,
                     "estado": estado,
-                    "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                    "fecha": fecha_str,
                     "empresa": mi_empresa,
                     "operador": user.get("nombre", "Sistema"),
                     "operador_dni": user.get("dni", "S/D"),
@@ -167,7 +230,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         st.divider()
         st.markdown("#### Auditoria de Facturacion General")
         st.caption("Vista global de la empresa: busca por texto, acota filas y exporta CSV. No reemplaza el detalle por paciente de la seccion anterior.")
-        df_caja = pd.DataFrame([f for f in st.session_state.get("facturacion_db", []) if f.get("empresa") == mi_empresa])
+        df_caja = pd.DataFrame(fact_empresa)
         if not df_caja.empty:
             filtro_caja = st.text_input("Buscar por paciente, practica, fecha o estado", "")
             if filtro_caja:

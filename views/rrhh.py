@@ -9,6 +9,9 @@ from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.db_sql import get_checkins_by_empresa
+from core.nextgen_sync import _obtener_uuid_empresa
+from core.app_logging import log_event
 
 FPDF_DISPONIBLE = False
 try:
@@ -68,7 +71,32 @@ def render_rrhh(mi_empresa, rol, user):
 
     fichajes_lista = []
     rastreador_ingresos = {}
-    checkins = [c for c in st.session_state.get("checkin_db", []) if c.get("empresa") == mi_empresa or acceso_total]
+    
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    checkins = []
+    try:
+        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+        if empresa_uuid:
+            chk_sql = get_checkins_by_empresa(empresa_uuid, limit=2000)
+            if chk_sql:
+                for c in chk_sql:
+                    dt = pd.to_datetime(c.get("fecha_hora", ""))
+                    checkins.append({
+                        "empresa": mi_empresa,
+                        "profesional": c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido",
+                        "paciente": c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A",
+                        "fecha_hora": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else "",
+                        "tipo": c.get("tipo_registro", ""),
+                        "gps": f"{c.get('latitud', '')},{c.get('longitud', '')}" if c.get("latitud") else "-",
+                        "id_sql": c.get("id")
+                    })
+    except Exception as e:
+        log_event("error_leer_checkins_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not checkins:
+        checkins = [c for c in st.session_state.get("checkin_db", []) if c.get("empresa") == mi_empresa or acceso_total]
+        
     checkins_ordenados = sorted(checkins, key=lambda c: _obtener_dt(c.get("fecha_hora", "")))
 
     usuarios_db = st.session_state.get("usuarios_db", {})

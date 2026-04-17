@@ -5,6 +5,9 @@ import streamlit as st
 from core.database import guardar_datos
 from core.view_helpers import bloque_estado_vacio, lista_plegable
 from core.utils import cargar_json_asset, seleccionar_limite_registros
+from core.db_sql import get_inventario_by_empresa, insert_inventario
+from core.nextgen_sync import _obtener_uuid_empresa
+from core.app_logging import log_event
 
 
 def render_inventario(mi_empresa):
@@ -23,7 +26,27 @@ def render_inventario(mi_empresa):
         unsafe_allow_html=True,
     )
 
-    inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    inv_mio = []
+    try:
+        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+        if empresa_uuid:
+            inv_sql = get_inventario_by_empresa(empresa_uuid)
+            if inv_sql:
+                for i in inv_sql:
+                    inv_mio.append({
+                        "empresa": mi_empresa,
+                        "item": i.get("nombre", ""),
+                        "stock": i.get("stock_actual", 0),
+                        "id_sql": i.get("id")
+                    })
+    except Exception as e:
+        log_event("error_leer_inventario_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not inv_mio:
+        inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
+        
     stock_critico = [i for i in inv_mio if i.get("stock", 0) <= 10]
 
     if stock_critico:
@@ -62,7 +85,35 @@ def render_inventario(mi_empresa):
         if st.form_submit_button("Sumar al stock", use_container_width=True, type="primary"):
             item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
             if item_final and item_final != "-- Seleccionar del catalogo --":
+                # 1. Guardar en SQL (Dual-Write)
+                try:
+                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                    if empresa_uuid:
+                        # Buscar si ya existe en SQL
+                        from core.database import supabase
+                        res = supabase.table("inventario").select("id, stock_actual").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
+                        if res.data:
+                            # Actualizar stock
+                            nuevo_stock_sql = res.data[0]["stock_actual"] + cantidad
+                            supabase.table("inventario").update({"stock_actual": nuevo_stock_sql}).eq("id", res.data[0]["id"]).execute()
+                        else:
+                            # Insertar nuevo
+                            datos_sql = {
+                                "empresa_id": empresa_uuid,
+                                "nombre": item_final,
+                                "stock_actual": cantidad
+                            }
+                            insert_inventario(datos_sql)
+                        log_event("inventario_sql_insert_update", f"Item: {item_final}")
+                except Exception as e:
+                    log_event("error_inventario_sql", str(e))
+                    st.error(f"Error al guardar en SQL: {e}")
+
+                # 2. Guardar en JSON (Legacy)
                 encontrado = False
+                if "inventario_db" not in st.session_state:
+                    st.session_state["inventario_db"] = []
+                    
                 for i in st.session_state["inventario_db"]:
                     if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
                         i["stock"] = i.get("stock", 0) + cantidad
@@ -121,10 +172,25 @@ def render_inventario(mi_empresa):
             nuevo_stock = col2.number_input("Nuevo stock real", min_value=0, value=stock_actual, key="new_stock")
 
             if col3.button("Actualizar stock", use_container_width=True):
-                for i in st.session_state["inventario_db"]:
-                    if i["item"] == item_a_editar and i.get("empresa") == mi_empresa:
-                        i["stock"] = nuevo_stock
-                        break
+                # 1. Actualizar en SQL (Dual-Write)
+                try:
+                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                    if empresa_uuid:
+                        from core.database import supabase
+                        res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", item_a_editar).execute()
+                        if res.data:
+                            supabase.table("inventario").update({"stock_actual": nuevo_stock}).eq("id", res.data[0]["id"]).execute()
+                        log_event("inventario_sql_update", f"Item: {item_a_editar}")
+                except Exception as e:
+                    log_event("error_inventario_sql_update", str(e))
+                    st.error(f"Error al actualizar en SQL: {e}")
+
+                # 2. Actualizar en JSON (Legacy)
+                if "inventario_db" in st.session_state:
+                    for i in st.session_state["inventario_db"]:
+                        if i["item"] == item_a_editar and i.get("empresa") == mi_empresa:
+                            i["stock"] = nuevo_stock
+                            break
                 guardar_datos(spinner=True)
                 queue_toast(f"Stock actualizado a {nuevo_stock} unidades.")
                 st.rerun()
@@ -133,9 +199,24 @@ def render_inventario(mi_empresa):
             del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
             confirmar = col_del1.checkbox("Confirmar eliminacion definitiva", key="conf_del_item")
             if col_del2.button("Eliminar insumo", use_container_width=True, type="secondary", disabled=not confirmar):
-                st.session_state["inventario_db"] = [
-                    i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
-                ]
+                # 1. Eliminar en SQL (Dual-Write)
+                try:
+                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                    if empresa_uuid:
+                        from core.database import supabase
+                        res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", del_item).execute()
+                        if res.data:
+                            supabase.table("inventario").delete().eq("id", res.data[0]["id"]).execute()
+                        log_event("inventario_sql_delete", f"Item: {del_item}")
+                except Exception as e:
+                    log_event("error_inventario_sql_delete", str(e))
+                    st.error(f"Error al eliminar en SQL: {e}")
+
+                # 2. Eliminar en JSON (Legacy)
+                if "inventario_db" in st.session_state:
+                    st.session_state["inventario_db"] = [
+                        i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
+                    ]
                 guardar_datos(spinner=True)
                 queue_toast(f"Se elimino {del_item} del inventario.")
                 st.rerun()

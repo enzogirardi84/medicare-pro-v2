@@ -615,3 +615,111 @@ def update_estado_emergencia(emergencia_id: str, nuevo_estado: str, resolucion: 
     except Exception as e:
         log_event("db_sql", f"error_update_emergencia:{type(e).__name__}")
         return False
+
+# ==========================================
+# GESTIÓN ADMINISTRATIVA (INVENTARIO, FACTURACIÓN, BALANCE, RRHH)
+# ==========================================
+
+def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_inventario", 
+            lambda: supabase.table("inventario").select("*").eq("empresa_id", empresa_id).order("nombre").execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_inventario:{type(e).__name__}")
+        return []
+
+def insert_inventario(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_inventario", 
+            lambda: supabase.table("inventario").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_inventario:{type(e).__name__}")
+        return None
+
+def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_facturacion", 
+            lambda: supabase.table("facturacion").select("*, pacientes(nombre_completo)").eq("empresa_id", empresa_id).order("fecha_emision", desc=True).execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_facturacion:{type(e).__name__}")
+        return []
+
+def insert_facturacion(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_facturacion", 
+            lambda: supabase.table("facturacion").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_facturacion:{type(e).__name__}")
+        return None
+
+def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_balance", 
+            lambda: supabase.table("balance").select("*").eq("empresa_id", empresa_id).order("fecha_movimiento", desc=True).execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_balance:{type(e).__name__}")
+        return []
+
+def insert_balance(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_balance", 
+            lambda: supabase.table("balance").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_balance:{type(e).__name__}")
+        return None
+
+def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_checkins", 
+            lambda: supabase.table("checkin_asistencia").select("*, pacientes(nombre_completo), usuarios(nombre)").eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_checkins:{type(e).__name__}")
+        return []
+
+def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_checkin", 
+            lambda: supabase.table("checkin_asistencia").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_checkin:{type(e).__name__}")
+        return None

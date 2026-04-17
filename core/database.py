@@ -206,6 +206,12 @@ def completar_claves_db_session():
                 st.session_state["vitales_db"] = []
                 st.session_state["cuidados_enfermeria_db"] = []
                 st.session_state["auditoria_legal_db"] = []
+                st.session_state["consentimientos_db"] = []
+                st.session_state["escalas_clinicas_db"] = []
+                st.session_state["inventario_db"] = []
+                st.session_state["facturacion_db"] = []
+                st.session_state["balance_db"] = []
+                st.session_state["checkin_db"] = []
                 # st.session_state["pacientes_db"] = [] # Aún lo usan algunas vistas legacy
         except Exception as e:
             from core.app_logging import log_event
