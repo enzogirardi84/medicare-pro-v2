@@ -103,13 +103,95 @@ def render_estudios(paciente_sel, user, rol=None):
                     "extension": ext,
                     "firma": user.get("nombre", "Sistema"),
                 })
+                
+                # --- NUEVO CÓDIGO SQL Y STORAGE ---
+                from core.database import supabase
+                from core.db_sql import insert_estudio
+                from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
+                try:
+                    partes = paciente_sel.split(" - ")
+                    if len(partes) > 1 and supabase:
+                        dni = partes[1].strip()
+                        empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
+                        empresa_id = _obtener_uuid_empresa(empresa)
+                        if empresa_id:
+                            pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
+                            if pac_uuid:
+                                archivo_url = ""
+                                if archivo_subido is not None or foto_estudio is not None:
+                                    # Subir a Storage
+                                    file_path = f"{pac_uuid}/{uuid4()}.{ext}"
+                                    content_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+                                    
+                                    # Usamos los bytes originales o los optimizados
+                                    bytes_a_subir = raw_bytes
+                                    supabase.storage.from_("medicare-estudios").upload(file_path, bytes_a_subir, {"content-type": content_type})
+                                    archivo_url = supabase.storage.from_("medicare-estudios").get_public_url(file_path)
+                                    
+                                datos_sql = {
+                                    "paciente_id": pac_uuid,
+                                    "medico_solicitante": user.get("nombre", "Sistema"),
+                                    "tipo_estudio": tipo_estudio,
+                                    "fecha_realizacion": ahora().date().isoformat(),
+                                    "informe": detalle_estudio,
+                                    "archivo_url": archivo_url,
+                                    "estado": "Completado"
+                                }
+                                insert_estudio(datos_sql)
+                except Exception as e:
+                    print(f"Error dual-write estudio: {e}")
+                # ----------------------------------
+                
                 guardar_datos()
                 queue_toast("Estudio guardado correctamente.")
                 st.rerun()
     else:
         st.caption("La carga de estudios queda deshabilitada para este rol.")
 
-    estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e.get("paciente") == paciente_sel]
+    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
+    from core.db_sql import get_estudios_by_paciente
+    from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
+    
+    estudios_pac = []
+    uso_sql = False
+    
+    try:
+        partes = paciente_sel.split(" - ")
+        if len(partes) > 1:
+            dni = partes[1].strip()
+            empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
+            empresa_id = _obtener_uuid_empresa(empresa)
+            
+            if empresa_id:
+                pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
+                if pac_uuid:
+                    estudios_sql = get_estudios_by_paciente(pac_uuid)
+                    uso_sql = True
+                    
+                    for e in estudios_sql:
+                        fecha_raw = e.get("fecha_realizacion", "")
+                        fecha_fmt = ""
+                        if fecha_raw:
+                            d_parts = fecha_raw.split("-")
+                            if len(d_parts) == 3:
+                                fecha_fmt = f"{d_parts[2]}/{d_parts[1]}/{d_parts[0]} 00:00:00"
+                        
+                        estudios_pac.append({
+                            "id_sql": e.get("id"),
+                            "paciente": paciente_sel,
+                            "fecha": fecha_fmt,
+                            "tipo": e.get("tipo_estudio", ""),
+                            "detalle": e.get("informe", ""),
+                            "archivo_url": e.get("archivo_url", ""),
+                            "firma": e.get("medico_solicitante", "Sistema"),
+                            "extension": "pdf" if ".pdf" in str(e.get("archivo_url", "")).lower() else "jpg"
+                        })
+    except Exception as e:
+        print(f"Error en lectura SQL de estudios: {e}")
+        
+    if not uso_sql:
+        estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e.get("paciente") == paciente_sel]
+    # ----------------------------------------------
 
     if not estudios_pac:
         bloque_estado_vacio(
@@ -126,7 +208,16 @@ def render_estudios(paciente_sel, user, rol=None):
         col_del1, col_del1_chk = st.columns([3, 1.2])
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
-            st.session_state["estudios_db"].remove(estudios_pac[-1])
+            ultimo_est = estudios_pac[-1]
+            if not uso_sql:
+                st.session_state["estudios_db"].remove(ultimo_est)
+                
+            # --- ACTUALIZAR EN SQL ---
+            if ultimo_est.get("id_sql"):
+                from core.db_sql import delete_estudio
+                delete_estudio(ultimo_est["id_sql"])
+            # -------------------------
+            
             guardar_datos()
             queue_toast("Estudio eliminado correctamente.")
             st.rerun()
@@ -145,9 +236,16 @@ def render_estudios(paciente_sel, user, rol=None):
         if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True, disabled=not confirmar_estudio):
             objetivo = estudio_seleccionado[1]
             st.session_state["estudios_db"] = [
-                e for e in st.session_state["estudios_db"]
+                e for e in st.session_state.get("estudios_db", [])
                 if not _mismo_estudio(e, objetivo)
             ]
+            
+            # --- ACTUALIZAR EN SQL ---
+            if objetivo.get("id_sql"):
+                from core.db_sql import delete_estudio
+                delete_estudio(objetivo["id_sql"])
+            # -------------------------
+            
             guardar_datos()
             queue_toast("Estudio eliminado correctamente.")
             st.rerun()
@@ -194,13 +292,21 @@ def render_estudios(paciente_sel, user, rol=None):
                             guardar_datos()
                             st.rerun()
 
-                if cargar_multimedia and est.get("imagen"):
-                    try:
-                        img_bytes = base64.b64decode(est["imagen"])
-                        if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
-                            nombre_arch = f"Estudio_{est['fecha'][:10].replace('/', '-')}.pdf"
-                            st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", use_container_width=True)
+                if cargar_multimedia:
+                    if est.get("archivo_url") and est["archivo_url"].startswith("http"):
+                        # Es una URL de Supabase Storage
+                        if est.get("extension") == "pdf" or ".pdf" in est["archivo_url"].lower():
+                            st.link_button("Abrir PDF en el navegador", est["archivo_url"], use_container_width=True)
                         else:
-                            st.image(img_bytes, caption="Documento Adjunto", use_container_width=True)
-                    except Exception:
-                        st.error("Error al leer el archivo")
+                            st.image(est["archivo_url"], caption="Documento Adjunto", use_container_width=True)
+                    elif est.get("imagen"):
+                        # Es el base64 legacy
+                        try:
+                            img_bytes = base64.b64decode(est["imagen"])
+                            if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
+                                nombre_arch = f"Estudio_{est['fecha'][:10].replace('/', '-')}.pdf"
+                                st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", use_container_width=True)
+                            else:
+                                st.image(img_bytes, caption="Documento Adjunto", use_container_width=True)
+                        except Exception:
+                            st.error("Error al leer el archivo")

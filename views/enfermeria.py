@@ -13,6 +13,9 @@ from core.utils import (
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
+from core.db_sql import get_cuidados_enfermeria, insert_cuidado_enfermeria
+from core.nextgen_sync import _obtener_uuid_paciente
+from core.app_logging import log_event
 
 
 TIPOS_CUIDADO = [
@@ -123,10 +126,30 @@ def _render_plan_cuidados_enfermeria_legacy(
                 if not intervencion.strip():
                     st.error("Debés registrar la intervención realizada.")
                 else:
+                    fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")
+                    
+                    # 1. Guardar en SQL (Dual-Write)
+                    try:
+                        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                        if paciente_uuid:
+                            datos_sql = {
+                                "paciente_id": paciente_uuid,
+                                "fecha_registro": ahora().isoformat(),
+                                "tipo_cuidado": tipo_cuidado,
+                                "descripcion": f"Turno: {turno} | Prioridad: {prioridad} | Riesgo Caídas: {riesgo_caidas} | Riesgo UPP: {riesgo_upp} | Dolor: {dolor}\nObjetivo: {objetivo.strip()}\nIntervención: {intervencion.strip()}\nRespuesta: {respuesta.strip()}\nObs: {observaciones.strip()}",
+                                "realizado": True
+                            }
+                            insert_cuidado_enfermeria(datos_sql)
+                            log_event("enfermeria_sql_insert", f"Paciente: {paciente_uuid}")
+                    except Exception as e:
+                        log_event("error_enfermeria_sql", str(e))
+                        st.error(f"Error al guardar en SQL: {e}")
+
+                    # 2. Guardar en JSON (Legacy)
                     nuevo = {
                         "paciente": paciente_sel,
                         "empresa": mi_empresa,
-                        "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                        "fecha": fecha_str,
                         "tipo_cuidado": tipo_cuidado,
                         "turno": turno,
                         "prioridad": prioridad,
@@ -145,7 +168,10 @@ def _render_plan_cuidados_enfermeria_legacy(
                         "profesional": user.get("nombre", ""),
                         "matricula": user.get("matricula", ""),
                     }
+                    if "cuidados_enfermeria_db" not in st.session_state:
+                        st.session_state["cuidados_enfermeria_db"] = []
                     st.session_state["cuidados_enfermeria_db"].append(nuevo)
+                    
                     registrar_auditoria_legal(
                         "Enfermeria",
                         paciente_sel,
@@ -244,7 +270,47 @@ def render_enfermeria(paciente_sel, mi_empresa, user, *, compact=False):
         aviso_sin_paciente()
         return
 
-    registros = [x for x in st.session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel]
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    registros = []
+    try:
+        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        if paciente_uuid:
+            # Traer los ultimos 30 dias para no sobrecargar la vista
+            fecha_inicio = (pd.Timestamp.now() - pd.Timedelta(days=30)).isoformat()
+            fecha_fin = (pd.Timestamp.now() + pd.Timedelta(days=1)).isoformat()
+            
+            cuidados_sql = get_cuidados_enfermeria(paciente_uuid, fecha_inicio, fecha_fin)
+            if cuidados_sql:
+                for c in cuidados_sql:
+                    # Mapear de SQL a formato legacy para la UI
+                    dt = pd.to_datetime(c.get("fecha_registro", ""))
+                    registros.append({
+                        "paciente": paciente_sel,
+                        "empresa": mi_empresa,
+                        "fecha": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else c.get("fecha_registro"),
+                        "tipo_cuidado": c.get("tipo_cuidado", ""),
+                        "intervencion": c.get("descripcion", ""),
+                        "profesional": c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido",
+                        # Campos legacy que quizas no esten en SQL pero la UI espera
+                        "turno": "S/D",
+                        "prioridad": "S/D",
+                        "riesgo_caidas": "S/D",
+                        "riesgo_upp": "S/D",
+                        "dolor": "S/D",
+                        "objetivo": "S/D",
+                        "respuesta": "S/D",
+                        "observaciones": "S/D",
+                        "incidente": False,
+                        "zona": "",
+                        "aspecto": "",
+                    })
+    except Exception as e:
+        log_event("error_leer_cuidados_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not registros:
+        registros = [x for x in st.session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel]
+        
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
     registros_ordenados = sorted(registros, key=lambda x: x.get("fecha", ""), reverse=True)
     ultimo_registro = registros_ordenados[0]["fecha"] if registros_ordenados else "Sin datos"

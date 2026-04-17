@@ -710,6 +710,42 @@ def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
 
 def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
     busqueda_norm = str(busqueda or "").strip().lower()
+    
+    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
+    from core.db_sql import get_pacientes_by_empresa
+    from core.nextgen_sync import _obtener_uuid_empresa
+    
+    pacientes_visibles = []
+    uso_sql = False
+    
+    try:
+        empresa_id = _obtener_uuid_empresa(mi_empresa)
+        if empresa_id:
+            # Leemos directamente de la base de datos SQL
+            pacs_sql = get_pacientes_by_empresa(empresa_id, busqueda_norm, incluir_altas)
+            uso_sql = True
+            
+            for p in pacs_sql:
+                nombre = p.get("nombre_completo", "")
+                dni = p.get("dni", "")
+                estado = p.get("estado", "Activo")
+                obra_social = p.get("obra_social", "")
+                
+                # El ID visual sigue siendo "Nombre - DNI" para compatibilidad con el resto de la app
+                paciente_id_visual = f"{nombre} - {dni}"
+                etiqueta = compactar_etiqueta_paciente(paciente_id_visual, estado)
+                
+                pacientes_visibles.append(
+                    (paciente_id_visual, etiqueta, dni, obra_social, estado, mi_empresa)
+                )
+    except Exception as e:
+        print(f"Error en lectura SQL de pacientes: {e}")
+        
+    if uso_sql:
+        pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
+        return pacientes_visibles
+    # ----------------------------------------------
+
     ts = session_state.get("_ultimo_guardado_ts", 0)
     cache_key = f"_mc_cache_pac_vis_{mi_empresa}_{rol_actual}_{incluir_altas}_{busqueda_norm}"
     
@@ -838,6 +874,31 @@ def registrar_auditoria_legal(
     if empresa is None:
         detalles = mapa_detalles_pacientes(st.session_state).get(paciente, {})
         empresa = detalles.get("empresa") or usuario_ctx.get("empresa", "")
+        
+    # 1. Guardar en PostgreSQL (Dual-Write)
+    try:
+        from core.db_sql import insert_auditoria
+        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+        
+        empresa_uuid = _obtener_uuid_empresa(empresa)
+        paciente_uuid = _obtener_uuid_paciente(paciente) if paciente else None
+        
+        if empresa_uuid:
+            datos_sql = {
+                "empresa_id": empresa_uuid,
+                "paciente_id": paciente_uuid,
+                "fecha_evento": ahora().isoformat(),
+                "modulo": modulo or tipo_evento,
+                "accion": accion,
+                "detalle": detalle,
+                "usuario_id": None # Por ahora no tenemos el UUID del usuario en sesion
+            }
+            insert_auditoria(datos_sql)
+    except Exception as e:
+        from core.app_logging import log_event
+        log_event("error_auditoria_sql", str(e))
+
+    # 2. Guardar en JSON (Legacy)
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append(
         construir_registro_auditoria_legal(

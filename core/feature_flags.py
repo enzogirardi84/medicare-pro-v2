@@ -24,3 +24,6 @@ SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.35
 # Tope de eventos operativos en memoria que viajan en cada guardado.
 # Mantiene los más recientes para evitar crecimiento indefinido del payload.
 MAX_LOGS_DB_ENTRIES = 3000
+
+# Activa el dual-write hacia la API NextGen (FastAPI) para creacion de pacientes y evoluciones.
+ENABLE_NEXTGEN_API_DUAL_WRITE = True

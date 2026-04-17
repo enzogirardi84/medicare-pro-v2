@@ -178,6 +178,63 @@ def _armar_mensaje_whatsapp_visita(paciente_sel, mi_empresa, user, visita_dict, 
 
 
 def _agenda_empresa(mi_empresa, rol):
+    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
+    from core.db_sql import get_turnos_by_empresa
+    from core.nextgen_sync import _obtener_uuid_empresa
+    from core.utils import ahora
+    from datetime import timedelta
+    
+    agenda_sql = []
+    uso_sql = False
+    
+    try:
+        empresa_id = _obtener_uuid_empresa(mi_empresa)
+        if empresa_id:
+            # Traemos turnos desde hace 30 días hasta 60 días en el futuro
+            fecha_inicio = (ahora() - timedelta(days=30)).isoformat()
+            fecha_fin = (ahora() + timedelta(days=60)).isoformat()
+            
+            turnos_sql = get_turnos_by_empresa(empresa_id, fecha_inicio, fecha_fin)
+            uso_sql = True
+            
+            for t in turnos_sql:
+                paciente_nombre = t.get("pacientes", {}).get("nombre_completo", "") if t.get("pacientes") else ""
+                paciente_dni = t.get("pacientes", {}).get("dni", "") if t.get("pacientes") else ""
+                paciente_visual = f"{paciente_nombre} - {paciente_dni}" if paciente_nombre else ""
+                
+                profesional_nombre = t.get("usuarios", {}).get("nombre", "") if t.get("usuarios") else ""
+                
+                fecha_hora_raw = t.get("fecha_hora_programada", "")
+                fecha_str = ""
+                hora_str = ""
+                if fecha_hora_raw:
+                    parts = fecha_hora_raw[:16].split("T")
+                    if len(parts) == 2:
+                        d_parts = parts[0].split("-")
+                        if len(d_parts) == 3:
+                            fecha_str = f"{d_parts[2]}/{d_parts[1]}/{d_parts[0]}"
+                        hora_str = parts[1]
+                
+                agenda_sql.append({
+                    "id_sql": t.get("id"),
+                    "paciente": paciente_visual,
+                    "profesional": profesional_nombre,
+                    "fecha": fecha_str,
+                    "fecha_programada": fecha_str,
+                    "fecha_hora_programada": fecha_hora_raw.replace("T", " ")[:19] if fecha_hora_raw else "",
+                    "hora": hora_str,
+                    "empresa": mi_empresa,
+                    "estado": t.get("estado", "Pendiente"),
+                    "motivo": t.get("motivo", ""),
+                    "notas": t.get("notas", "")
+                })
+    except Exception as e:
+        print(f"Error en lectura SQL de agenda: {e}")
+        
+    if uso_sql:
+        return agenda_sql
+    # ----------------------------------------------
+
     return filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
 
 
@@ -457,6 +514,37 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             "creado_en": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                         }
                     )
+                    
+                    # --- NUEVO CÓDIGO SQL ---
+                    from core.db_sql import insert_turno
+                    from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+                    try:
+                        partes = paciente_sel.split(" - ")
+                        if len(partes) > 1:
+                            dni = partes[1].strip()
+                            empresa_id = _obtener_uuid_empresa(mi_empresa)
+                            if empresa_id:
+                                pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
+                                if pac_uuid:
+                                    from core.database import supabase
+                                    prof_id = None
+                                    if supabase:
+                                        res_prof = supabase.table("usuarios").select("id").eq("nombre", prof_ag).eq("empresa_id", empresa_id).limit(1).execute()
+                                        if res_prof.data:
+                                            prof_id = res_prof.data[0]["id"]
+                                            
+                                    datos_sql = {
+                                        "paciente_id": pac_uuid,
+                                        "empresa_id": empresa_id,
+                                        "profesional_id": prof_id,
+                                        "fecha_hora_programada": fecha_hora_programada,
+                                        "estado": "Pendiente"
+                                    }
+                                    insert_turno(datos_sql)
+                    except Exception as e:
+                        print(f"Error dual-write turno: {e}")
+                    # ------------------------
+                    
                     guardar_datos(spinner=True)
                     tel_n = _normalizar_telefono_whatsapp(tel_paciente)
                     if ofrecer_wpp_tras_agendar and tel_n:
@@ -604,6 +692,13 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                                 and normalizar_hora_texto(item.get("hora", ""), default="") == normalizar_hora_texto(objetivo.get("hora", ""), default="")
                             ):
                                 item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
+                                
+                                # --- ACTUALIZAR EN SQL ---
+                                if item.get("id_sql"):
+                                    from core.db_sql import update_estado_turno
+                                    update_estado_turno(item["id_sql"], item["estado"])
+                                # -------------------------
+                                
                                 break
                         guardar_datos(spinner=True)
                         queue_toast("Agenda actualizada correctamente.")

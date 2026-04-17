@@ -230,6 +230,11 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         f"Se registro evolucion con plantilla {plantilla}.",
                     )
                     guardar_datos(spinner=True)
+                    
+                    # Dual-write a la nueva API NextGen y PostgreSQL
+                    from core.nextgen_sync import sync_visita_evolucion_to_nextgen
+                    sync_visita_evolucion_to_nextgen(paciente_sel, nota)
+                    
                     queue_toast("Evolucion guardada correctamente.")
                     st.rerun()
                 else:
@@ -237,7 +242,48 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
 
-    evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
+    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
+    from core.db_sql import get_evoluciones_by_paciente
+    from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
+    
+    evs_paciente = []
+    uso_sql = False
+    
+    try:
+        partes = paciente_sel.split(" - ")
+        if len(partes) > 1:
+            dni = partes[1].strip()
+            empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
+            empresa_id = _obtener_uuid_empresa(empresa)
+            
+            if empresa_id:
+                pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
+                if pac_uuid:
+                    # Leemos directamente de la base de datos SQL
+                    evs_sql = get_evoluciones_by_paciente(pac_uuid)
+                    uso_sql = True
+                    
+                    # Adaptamos el formato SQL al formato que espera la interfaz visual
+                    for e in evs_sql:
+                        # Formateamos la fecha de ISO a DD/MM/YYYY HH:MM
+                        fecha_raw = e.get("fecha_registro", "")
+                        fecha_fmt = fecha_raw[:16].replace("T", " ") if fecha_raw else "S/D"
+                        
+                        evs_paciente.append({
+                            "paciente": paciente_sel,
+                            "nota": e.get("nota", ""),
+                            "fecha": fecha_fmt,
+                            "firma": e.get("firma_medico", "Sistema"),
+                            "plantilla": e.get("plantilla", "Libre")
+                        })
+    except Exception as e:
+        print(f"Error en lectura SQL de evoluciones: {e}")
+        
+    # Fallback de seguridad: Si falló SQL o el paciente no tiene UUID aún, leemos del JSON viejo
+    if not uso_sql:
+        evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
+    # ----------------------------------------------
+
     if evs_paciente:
         st.divider()
         st.markdown("#### Historial de Evoluciones Clinicas")

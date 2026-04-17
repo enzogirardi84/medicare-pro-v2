@@ -341,13 +341,20 @@ def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "") or "").strip()
 
     # Camino caliente: evita sort completo en cada rerun; toma hasta 3 registros recientes desde el final.
-    vitales_orden = []
-    for v in reversed(st.session_state.get("vitales_db", [])):
-        if v.get("paciente") != paciente_sel:
-            continue
-        vitales_orden.append(v)
-        if len(vitales_orden) >= 3:
-            break
+    vitales = st.session_state.get("vitales_db", [])
+    vit_cache_key = f"_mc_cache_vit_top3_{paciente_sel}"
+    vit_cached = st.session_state.get(vit_cache_key)
+    if vit_cached and vit_cached.get("id") == id(vitales) and vit_cached.get("len") == len(vitales):
+        vitales_orden = vit_cached["top3"]
+    else:
+        vitales_orden = []
+        for v in reversed(vitales):
+            if v.get("paciente") != paciente_sel:
+                continue
+            vitales_orden.append(v)
+            if len(vitales_orden) >= 3:
+                break
+        st.session_state[vit_cache_key] = {"id": id(vitales), "len": len(vitales), "top3": vitales_orden}
 
     st.sidebar.divider()
     st.sidebar.markdown(

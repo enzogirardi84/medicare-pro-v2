@@ -60,14 +60,51 @@ def render_auditoria(mi_empresa, user):
     seccion = st.radio("Seccion", ["Logs del sistema", "Asistencia por profesional"], horizontal=False, label_visibility="collapsed")
 
     if seccion == "Logs del sistema":
-        logs = st.session_state.get("logs_db", [])
-        if not logs:
+        # 1. Intentar leer de PostgreSQL (Hybrid Read)
+        logs_empresa = []
+        try:
+            from core.db_sql import get_auditoria_by_empresa
+            from core.nextgen_sync import _obtener_uuid_empresa
+            
+            empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+            if empresa_uuid:
+                logs_sql = get_auditoria_by_empresa(empresa_uuid, limit=1000)
+                if logs_sql:
+                    for log in logs_sql:
+                        dt = pd.to_datetime(log.get("fecha_evento", ""))
+                        logs_empresa.append({
+                            "fecha": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else "",
+                            "modulo": log.get("modulo", ""),
+                            "usuario": log.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(log.get("usuarios"), dict) else "Desconocido",
+                            "paciente": log.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(log.get("pacientes"), dict) else "N/A",
+                            "accion": log.get("accion", ""),
+                            "detalle": log.get("detalle", "")
+                        })
+        except Exception as e:
+            from core.app_logging import log_event
+            log_event("error_leer_auditoria_sql", str(e))
+
+        # 2. Fallback a JSON si SQL falla o esta vacio
+        if not logs_empresa:
+            logs = st.session_state.get("auditoria_legal_db", [])
+            for r in reversed(logs):
+                if r.get("empresa") == mi_empresa or r.get("empresa") == "":
+                    logs_empresa.append({
+                        "fecha": r.get("fecha", ""),
+                        "modulo": r.get("modulo", ""),
+                        "usuario": r.get("actor", r.get("profesional", "")),
+                        "paciente": r.get("paciente", "N/A"),
+                        "accion": r.get("accion", ""),
+                        "detalle": r.get("detalle", "")
+                    })
+
+        if not logs_empresa:
             st.warning(
-                "Todavia no hay registros en **logs_db** (logins y acciones). Los eventos aparecen cuando el equipo usa el sistema con normalidad."
+                "Todavia no hay registros de auditoría. Los eventos aparecen cuando el equipo usa el sistema con normalidad."
             )
             return
 
-        df_logs = pd.DataFrame(logs)
+        df_logs = pd.DataFrame(logs_empresa)
         col_f1, col_f2, col_f3 = st.columns([2, 2, 1])
         fecha_inicio = col_f1.date_input("Desde", value=ahora().date().replace(day=1), key="log_desde")
         fecha_fin = col_f2.date_input("Hasta", value=ahora().date(), key="log_hasta")
@@ -79,7 +116,7 @@ def render_auditoria(mi_empresa, user):
         buscar_log = st.text_input("Buscar en registros", key="buscar_log")
 
         col_fecha = "fecha" if "fecha" in df_logs.columns else "F" if "F" in df_logs.columns else None
-        registros_filtrados = list(logs)
+        registros_filtrados = list(logs_empresa)
         if col_fecha:
             filtro_fechas = []
             for r in registros_filtrados:

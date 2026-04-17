@@ -191,6 +191,26 @@ def completar_claves_db_session():
             continue
         if not _coleccion_db_tipo_valido(k, st.session_state[k]):
             st.session_state[k] = _coleccion_fresca_como(default)
+            
+        # --- LIMPIEZA DE MEMORIA SELECTIVA (STATELESS PARCIAL) ---
+        # Como Evoluciones y Recetas (MAR) ya leen 100% desde PostgreSQL,
+        # vaciamos estas listas gigantes de la memoria RAM del servidor
+        # para soportar millones de usuarios sin colapsar.
+        try:
+            from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
+            # Si el dual-write está activo, confiamos en SQL y liberamos RAM
+            if ENABLE_NEXTGEN_API_DUAL_WRITE:
+                st.session_state["evoluciones_db"] = []
+                st.session_state["indicaciones_db"] = []
+                st.session_state["administracion_med_db"] = []
+                st.session_state["vitales_db"] = []
+                st.session_state["cuidados_enfermeria_db"] = []
+                st.session_state["auditoria_legal_db"] = []
+                # st.session_state["pacientes_db"] = [] # Aún lo usan algunas vistas legacy
+        except Exception as e:
+            from core.app_logging import log_event
+            log_event("db_ram_cleanup", f"Error al liberar RAM: {e}")
+        # ---------------------------------------------------------
 
 
 def _registrar_estado_guardado(estado, detalle="", guardado_nube=False, guardado_local=False):

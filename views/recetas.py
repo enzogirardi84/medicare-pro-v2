@@ -316,6 +316,18 @@ def _registrar_administracion_dosis(
         modulo="Recetas / MAR",
         criticidad="alta",
     )
+    
+    # Dual-write a PostgreSQL
+    from core.nextgen_sync import sync_administracion_to_sql
+    datos_admin_extra = {
+        "medicamento": nombre_med,
+        "hora_real_administracion": hora_str,
+        "firma": _nombre_usuario(user),
+        "matricula_profesional": mat_prof,
+        "usuario_login": login_ref
+    }
+    sync_administracion_to_sql(paciente_sel, nombre_med, slot, estado_sel, justificacion.strip() if "No realizada" in estado_sel else "", datos_admin_extra)
+    
     guardar_datos(spinner=True)
     return True
 
@@ -1383,6 +1395,25 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             medico_matricula.strip(),
                             texto_receta,
                         )
+                        
+                        # Dual-write a PostgreSQL
+                        from core.nextgen_sync import sync_receta_to_sql
+                        datos_receta_completa = {
+                            "dias_duracion": dias,
+                            "medico_nombre": medico_nombre.strip(),
+                            "medico_matricula": medico_matricula.strip(),
+                            "firma_b64": firma_b64,
+                            "hora_inicio": hora_inicio.strftime("%H:%M"),
+                            "horarios_programados": horarios_sugeridos,
+                            "solucion": solucion,
+                            "volumen_ml": volumen_ml,
+                            "velocidad_ml_h": velocidad_ml_h,
+                            "alternar_con": alternar_con,
+                            "detalle_infusion": detalle_infusion,
+                            "plan_hidratacion": plan_hidratacion
+                        }
+                        sync_receta_to_sql(paciente_sel, med_final, via, frecuencia, tipo_indicacion, datos_receta_completa)
+                        
                         guardar_datos(spinner=True)
                         queue_toast(f"Prescripcion de {med_final} guardada con firma medica.")
                         st.rerun()
@@ -1568,17 +1599,96 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     st.rerun()
 
     st.divider()
-    recs_todas = [r for r in st.session_state.get("indicaciones_db", []) if r.get("paciente") == paciente_sel]
-    recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
+    
+    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
+    from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
+    
+    recs_todas = []
+    admin_hoy = []
+    fecha_hoy = ahora().strftime("%d/%m/%Y")
+    uso_sql_recetas = False
+    
+    try:
+        partes = paciente_sel.split(" - ")
+        if len(partes) > 1:
+            dni = partes[1].strip()
+            empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
+            empresa_id = _obtener_uuid_empresa(empresa)
+            
+            if empresa_id:
+                pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
+                if pac_uuid:
+                    from core.database import supabase
+                    # Traemos TODAS las indicaciones para este paciente
+                    res_ind = supabase.table("indicaciones").select("*").eq("paciente_id", pac_uuid).order("fecha_indicacion", desc=True).execute()
+                    inds_sql = res_ind.data if res_ind and res_ind.data else []
+                    
+                    # Traemos las administraciones de hoy
+                    fecha_hoy_iso = ahora().strftime("%Y-%m-%d")
+                    res_adm = supabase.table("administracion_med").select("*").eq("paciente_id", pac_uuid).gte("fecha_registro", f"{fecha_hoy_iso}T00:00:00").lte("fecha_registro", f"{fecha_hoy_iso}T23:59:59").execute()
+                    adms_sql = res_adm.data if res_adm and res_adm.data else []
+                    
+                    uso_sql_recetas = True
+                    
+                    # Mapear indicaciones SQL a formato JSON legacy
+                    for ind in inds_sql:
+                        extra = ind.get("datos_extra", {}) or {}
+                        recs_todas.append({
+                            "paciente": paciente_sel,
+                            "med": ind.get("medicamento", ""),
+                            "fecha": ind.get("fecha_indicacion", "")[:16].replace("T", " ") if ind.get("fecha_indicacion") else "",
+                            "estado_receta": ind.get("estado", "Activa"),
+                            "estado_clinico": ind.get("estado", "Activa"),
+                            "via": ind.get("via_administracion", ""),
+                            "frecuencia": ind.get("frecuencia", ""),
+                            "tipo_indicacion": ind.get("tipo_indicacion", ""),
+                            "dias_duracion": extra.get("dias_duracion", 7),
+                            "medico_nombre": extra.get("medico_nombre", ""),
+                            "medico_matricula": extra.get("medico_matricula", ""),
+                            "firma_b64": extra.get("firma_b64", ""),
+                            "hora_inicio": extra.get("hora_inicio", ""),
+                            "horarios_programados": extra.get("horarios_programados", []),
+                            "solucion": extra.get("solucion", ""),
+                            "volumen_ml": extra.get("volumen_ml", 0),
+                            "velocidad_ml_h": extra.get("velocidad_ml_h", None),
+                            "alternar_con": extra.get("alternar_con", ""),
+                            "detalle_infusion": extra.get("detalle_infusion", ""),
+                            "plan_hidratacion": extra.get("plan_hidratacion", [])
+                        })
+                        
+                    # Mapear administraciones SQL a formato JSON legacy
+                    for adm in adms_sql:
+                        extra = adm.get("datos_extra", {}) or {}
+                        med_name = extra.get("medicamento", "")
+                                
+                        admin_hoy.append({
+                            "paciente": paciente_sel,
+                            "fecha": fecha_hoy,
+                            "med": med_name,
+                            "horario_programado": adm.get("horario_programado", ""),
+                            "hora": extra.get("hora_real_administracion", adm.get("hora_real_administracion", "")),
+                            "estado": adm.get("estado", ""),
+                            "motivo": adm.get("motivo_no_realizada", ""),
+                            "firma": extra.get("firma", ""),
+                            "matricula_profesional": extra.get("matricula_profesional", ""),
+                            "usuario_login": extra.get("usuario_login", "")
+                        })
+    except Exception as e:
+        print(f"Error en lectura SQL de recetas: {e}")
 
-    if recs_activas:
-        st.subheader("Administración del turno")
-        fecha_hoy = ahora().strftime("%d/%m/%Y")
+    if not uso_sql_recetas:
+        recs_todas = [r for r in st.session_state.get("indicaciones_db", []) if r.get("paciente") == paciente_sel]
         admin_hoy = [
             a
             for a in st.session_state.get("administracion_med_db", [])
             if a.get("paciente") == paciente_sel and a.get("fecha") == fecha_hoy
         ]
+    # ----------------------------------------------
+
+    recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
+
+    if recs_activas:
+        st.subheader("Administración del turno")
         limite_guardia = seleccionar_limite_registros(
             "Indicaciones activas visibles",
             len(recs_activas),
