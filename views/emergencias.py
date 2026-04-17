@@ -478,9 +478,6 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                             try:
                                 col_badges.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=180)
                             except Exception as e:
-
-                                from core.app_logging import log_event
-
                                 log_event('emergencias_error', f'Error: {e}')
 
     else:
