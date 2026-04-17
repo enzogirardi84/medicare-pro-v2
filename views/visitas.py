@@ -363,38 +363,108 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             loc = streamlit_geolocation()
             lat = loc.get("latitude") if loc and loc.get("latitude") is not None else None
             lon = loc.get("longitude") if loc and loc.get("longitude") is not None else None
-            if lat is not None and lon is not None:
-                lat_str = f"{float(lat):.5f}"
-                lon_str = f"{float(lon):.5f}"
-                direccion_real = obtener_direccion_real(lat_str, lon_str)
-                st.success(f"Estas fisicamente en: {direccion_real}")
-                col_in, col_out = st.columns(2)
-                if col_in.button("Fichar LLEGADA", use_container_width=True, type="primary"):
-                    st.session_state["checkin_db"].append(
-                        {
-                            "paciente": paciente_sel,
-                            "profesional": nombre_usuario,
-                            "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                            "tipo": f"LLEGADA en: {direccion_real} (Lat: {lat_str})",
-                            "empresa": mi_empresa,
-                        }
-                    )
-                    guardar_datos(spinner=True)
-                    queue_toast("Llegada registrada.")
-                    st.rerun()
-                if col_out.button("Fichar SALIDA", use_container_width=True):
-                    st.session_state["checkin_db"].append(
-                        {
-                            "paciente": paciente_sel,
-                            "profesional": nombre_usuario,
-                            "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                            "tipo": f"SALIDA de: {direccion_real} (Lat: {lat_str})",
-                            "empresa": mi_empresa,
-                        }
-                    )
-                    guardar_datos(spinner=True)
-                    queue_toast("Salida registrada.")
-                    st.rerun()
+                if lat is not None and lon is not None:
+                    lat_str = f"{float(lat):.5f}"
+                    lon_str = f"{float(lon):.5f}"
+                    direccion_real = obtener_direccion_real(lat_str, lon_str)
+                    st.success(f"Estas fisicamente en: {direccion_real}")
+                    col_in, col_out = st.columns(2)
+                    if col_in.button("Fichar LLEGADA", use_container_width=True, type="primary"):
+                        # --- NUEVO CÓDIGO SQL ---
+                        try:
+                            from core.db_sql import insert_checkin
+                            from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+                            empresa_id = _obtener_uuid_empresa(mi_empresa)
+                            if empresa_id:
+                                pac_uuid = None
+                                partes = paciente_sel.split(" - ")
+                                if len(partes) > 1:
+                                    pac_uuid = _obtener_uuid_paciente(partes[1].strip(), empresa_id)
+                                    
+                                from core.database import supabase
+                                usr_id = None
+                                if supabase:
+                                    res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
+                                    if res_usr.data:
+                                        usr_id = res_usr.data[0]["id"]
+                                        
+                                datos_sql = {
+                                    "empresa_id": empresa_id,
+                                    "usuario_id": usr_id,
+                                    "paciente_id": pac_uuid,
+                                    "fecha_hora": ahora().isoformat(),
+                                    "tipo_registro": "LLEGADA",
+                                    "latitud": float(lat),
+                                    "longitud": float(lon),
+                                    "direccion_estimada": direccion_real,
+                                    "observaciones": ""
+                                }
+                                insert_checkin(datos_sql)
+                        except Exception as e:
+                            print(f"Error dual-write checkin llegada: {e}")
+                        # ------------------------
+                        
+                        st.session_state["checkin_db"].append(
+                            {
+                                "paciente": paciente_sel,
+                                "profesional": nombre_usuario,
+                                "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                                "tipo": f"LLEGADA en: {direccion_real} (Lat: {lat_str})",
+                                "empresa": mi_empresa,
+                                "gps": f"{lat_str},{lon_str}"
+                            }
+                        )
+                        guardar_datos(spinner=True)
+                        queue_toast("Llegada registrada.")
+                        st.rerun()
+                    if col_out.button("Fichar SALIDA", use_container_width=True):
+                        # --- NUEVO CÓDIGO SQL ---
+                        try:
+                            from core.db_sql import insert_checkin
+                            from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+                            empresa_id = _obtener_uuid_empresa(mi_empresa)
+                            if empresa_id:
+                                pac_uuid = None
+                                partes = paciente_sel.split(" - ")
+                                if len(partes) > 1:
+                                    pac_uuid = _obtener_uuid_paciente(partes[1].strip(), empresa_id)
+                                    
+                                from core.database import supabase
+                                usr_id = None
+                                if supabase:
+                                    res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
+                                    if res_usr.data:
+                                        usr_id = res_usr.data[0]["id"]
+                                        
+                                datos_sql = {
+                                    "empresa_id": empresa_id,
+                                    "usuario_id": usr_id,
+                                    "paciente_id": pac_uuid,
+                                    "fecha_hora": ahora().isoformat(),
+                                    "tipo_registro": "SALIDA",
+                                    "latitud": float(lat),
+                                    "longitud": float(lon),
+                                    "direccion_estimada": direccion_real,
+                                    "observaciones": ""
+                                }
+                                insert_checkin(datos_sql)
+                        except Exception as e:
+                            print(f"Error dual-write checkin salida: {e}")
+                        # ------------------------
+                        
+                        st.session_state["checkin_db"].append(
+                            {
+                                "paciente": paciente_sel,
+                                "profesional": nombre_usuario,
+                                "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                                "tipo": f"SALIDA de: {direccion_real} (Lat: {lat_str})",
+                                "empresa": mi_empresa,
+                                "gps": f"{lat_str},{lon_str}"
+                            }
+                        )
+                        guardar_datos(spinner=True)
+                        queue_toast("Salida registrada.")
+                        st.rerun()
             else:
                 st.warning("Buscando senal GPS. Asegurate de permitir ubicacion.")
     else:
@@ -684,6 +754,17 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         None,
                     )
                     if objetivo:
+                        # --- ACTUALIZAR EN SQL ---
+                        if objetivo.get("id_sql"):
+                            try:
+                                from core.db_sql import update_estado_turno
+                                nuevo_estado = "Realizada" if accion == "Marcar realizada" else "Cancelada"
+                                update_estado_turno(objetivo["id_sql"], nuevo_estado)
+                            except Exception as e:
+                                print(f"Error dual-write update turno: {e}")
+                        # -------------------------
+                        
+                        # Actualizar en JSON legacy
                         for item in st.session_state["agenda_db"]:
                             if (
                                 item.get("paciente") == objetivo.get("paciente")
@@ -692,14 +773,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                                 and normalizar_hora_texto(item.get("hora", ""), default="") == normalizar_hora_texto(objetivo.get("hora", ""), default="")
                             ):
                                 item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
-                                
-                                # --- ACTUALIZAR EN SQL ---
-                                if item.get("id_sql"):
-                                    from core.db_sql import update_estado_turno
-                                    update_estado_turno(item["id_sql"], item["estado"])
-                                # -------------------------
-                                
                                 break
+                                
                         guardar_datos(spinner=True)
                         queue_toast("Agenda actualizada correctamente.")
                         st.rerun()
