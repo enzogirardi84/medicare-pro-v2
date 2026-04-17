@@ -43,6 +43,16 @@ LANDING_CHROME_CSS = """
                     radial-gradient(circle at 92% 8%, rgba(96, 165, 250, 0.1), transparent 40%),
                     linear-gradient(168deg, #03050a 0%, #060d18 100%) !important;
             }
+            /* Sticky top-ingresar button */
+            .block-container > div:has(> .stButton):first-of-type {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 99999 !important;
+                background: rgba(3, 5, 10, 0.93) !important;
+                padding: 6px 0 !important;
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(45, 212, 191, 0.15);
+            }
             div.stButton { display: flex; justify-content: center; margin-top: 18px; padding-bottom: 42px; }
             div.stButton > button {
                 min-height: 60px !important;
@@ -145,10 +155,21 @@ def render_publicidad_y_detener() -> None:
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
-    # Boton de ingreso en la parte superior — visible sin necesidad de scrollear
-    if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_top"):
-        st.session_state.entered_app = True
-        st.rerun()
+    # Boton sticky en HTML puro — no desaparece en re-renders de Streamlit
+    st.markdown(
+        """<div style="position:sticky;top:0;z-index:99999;background:rgba(3,5,10,0.93);
+        padding:10px 0;text-align:center;border-bottom:1px solid rgba(45,212,191,0.18);
+        backdrop-filter:blur(12px)">
+        <a href="?login=1" style="display:inline-flex;align-items:center;justify-content:center;
+        min-height:52px;padding:0 36px;border-radius:9999px;
+        background:linear-gradient(135deg,rgba(18,184,166,0.98) 0%,rgba(37,99,235,0.98) 58%,rgba(56,189,248,0.96) 100%);
+        color:white;font-weight:900;font-size:0.95rem;letter-spacing:0.16em;
+        text-decoration:none;text-transform:uppercase;
+        box-shadow:0 12px 32px rgba(14,165,233,0.22);border:1px solid rgba(186,230,253,0.22)">
+        \U0001F680&nbsp;&nbsp;INGRESAR AL SISTEMA
+        </a></div>""",
+        unsafe_allow_html=True,
+    )
 
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
