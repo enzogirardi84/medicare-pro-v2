@@ -1028,12 +1028,18 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     prof_mat = record.get("matricula") or (profesional or {}).get("matricula", "")
 
     _SKIP = {"", None, "S/D", "Sin traslado confirmado", "0", 0}
+    _triage_colors = {
+        "Grado 1 - Rojo":    (192, 38,  38),
+        "Grado 2 - Amarillo":(180, 120,  0),
+        "Grado 3 - Verde":   ( 22, 120, 60),
+    }
+    triage_grado = record.get("triage_grado", "")
+    triage_rgb = _triage_colors.get(triage_grado, (60, 80, 120))
 
     def _v(val, fallback=""):
         return str(val).strip() if val not in _SKIP else fallback
 
     def _row(pdf, label, value, lw=48, lh=5):
-        """Label + valor en la misma linea. Omite si valor esta vacio."""
         txt = _v(value)
         if not txt:
             return
@@ -1045,7 +1051,6 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
         pdf.multi_cell(remaining, lh, safe_text(txt), border=0)
 
     def _inline_pairs(pdf, pairs, cols=2):
-        """Imprime pares label:valor en columnas horizontales."""
         usable = pdf.w - pdf.l_margin - pdf.r_margin
         col_w = usable / cols
         items = [(l, _v(v)) for l, v in pairs if _v(v)]
@@ -1055,42 +1060,74 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
             for j, (lbl, val) in enumerate(row_items):
                 pdf.set_xy(x_start + j * col_w, pdf.get_y())
                 pdf.set_font("Arial", "B", 8)
+                pdf.set_text_color(80, 80, 100)
                 pdf.cell(28, 5, safe_text(lbl) + ":", border=0)
                 pdf.set_font("Arial", "", 8)
-                pdf.cell(col_w - 28, 5, safe_text(val[:38]), border=0)
+                pdf.set_text_color(20, 20, 20)
+                pdf.cell(col_w - 28, 5, safe_text(val[:40]), border=0)
             pdf.ln(5)
+        pdf.set_text_color(0, 0, 0)
 
     def _sec(pdf, title):
-        if pdf.get_y() > 260:
+        if pdf.get_y() > 262:
             pdf.add_page()
-        pdf.set_fill_color(220, 230, 245)
-        pdf.set_text_color(15, 30, 65)
-        pdf.set_font("Arial", "B", 9)
+        pdf.ln(2)
+        pdf.set_fill_color(35, 55, 90)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Arial", "B", 8)
         pdf.set_x(pdf.l_margin)
-        pdf.cell(0, 6, safe_text(title), ln=True, fill=True)
+        pdf.cell(0, 6, safe_text("  " + title.upper()), ln=True, fill=True)
         pdf.set_text_color(0, 0, 0)
-        pdf.ln(1)
+        pdf.ln(2)
 
     pdf = FPDF()
     pdf.set_margins(14, 12, 14)
     pdf.set_auto_page_break(auto=True, margin=14)
     pdf.add_page()
+
+    # --- Banda superior de color (triage) ---
+    pdf.set_fill_color(*triage_rgb)
+    pdf.rect(0, 0, pdf.w, 4, "F")
+
     _insert_logo(pdf)
 
-    # --- Cabecera compacta ---
-    pdf.set_xy(42, 12)
-    pdf.set_font("Arial", "B", 12)
+    # --- Cabecera: logo + textos ---
+    pdf.set_xy(42, 10)
+    pdf.set_font("Arial", "B", 13)
+    pdf.set_text_color(20, 20, 20)
     pdf.cell(0, 6, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
     pdf.set_x(42)
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 5, "Acta de Emergencia y Traslado", ln=True)
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(40, 60, 100)
+    pdf.cell(0, 5, "ACTA DE EMERGENCIA Y TRASLADO", ln=True)
     pdf.set_x(42)
     pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(80, 80, 80)
     pdf.cell(0, 5, safe_text(
-        f"Fecha: {record.get('fecha_evento','')} {record.get('hora_evento','')}  |  "
-        f"Triage: {_v(record.get('triage_grado',''))}  |  Prioridad: {_v(record.get('prioridad',''))}"
+        f"Fecha: {record.get('fecha_evento','')} {record.get('hora_evento','')}   "
+        f"Prioridad: {_v(record.get('prioridad',''))}   Profesional: {prof_nombre}"
     ), ln=True)
-    pdf.ln(3)
+    pdf.set_text_color(0, 0, 0)
+
+    # --- Badge de triage ---
+    badge_txt = safe_text(triage_grado or "Sin triage")
+    badge_w = 55
+    badge_x = pdf.w - pdf.r_margin - badge_w
+    pdf.set_fill_color(*triage_rgb)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 9)
+    pdf.rect(badge_x, 10, badge_w, 12, "F")
+    pdf.set_xy(badge_x, 13)
+    pdf.cell(badge_w, 6, badge_txt, align="C", border=0)
+    pdf.set_text_color(0, 0, 0)
+
+    # Línea separadora
+    pdf.set_draw_color(35, 55, 90)
+    pdf.set_line_width(0.6)
+    pdf.line(pdf.l_margin, 28, pdf.w - pdf.r_margin, 28)
+    pdf.set_line_width(0.2)
+    pdf.set_draw_color(0, 0, 0)
+    pdf.ln(4)
 
     # --- Paciente (1 fila) ---
     _sec(pdf, "Paciente")
