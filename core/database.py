@@ -143,29 +143,14 @@ def _estructura_vacia_por_clave():
         "usuarios_db": {},
         "pacientes_db": [],
         "detalles_pacientes_db": {},
-        "vitales_db": [],
-        "indicaciones_db": [],
         "turnos_db": [],
-        "evoluciones_db": [],
-        "facturacion_db": [],
         "logs_db": [],
-        "balance_db": [],
-        "pediatria_db": [],
         "fotos_heridas_db": [],
         "agenda_db": [],
-        "checkin_db": [],
-        "inventario_db": [],
-        "consumos_db": [],
         "nomenclador_db": [],
         "firmas_tactiles_db": [],
         "reportes_diarios_db": [],
         "estudios_db": [],
-        "administracion_med_db": [],
-        "consentimientos_db": [],
-        "emergencias_db": [],
-        "cuidados_enfermeria_db": [],
-        "escalas_clinicas_db": [],
-        "auditoria_legal_db": [],
         "profesionales_red_db": [],
         "solicitudes_servicios_db": [],
         "plantillas_whatsapp_db": {},
@@ -265,29 +250,14 @@ def _db_keys():
         "usuarios_db",
         "pacientes_db",
         "detalles_pacientes_db",
-        "vitales_db",
-        "indicaciones_db",
         "turnos_db",
-        "evoluciones_db",
-        "facturacion_db",
         "logs_db",
-        "balance_db",
-        "pediatria_db",
         "fotos_heridas_db",
         "agenda_db",
-        "checkin_db",
-        "inventario_db",
-        "consumos_db",
         "nomenclador_db",
         "firmas_tactiles_db",
         "reportes_diarios_db",
         "estudios_db",
-        "administracion_med_db",
-        "consentimientos_db",
-        "emergencias_db",
-        "cuidados_enfermeria_db",
-        "escalas_clinicas_db",
-        "auditoria_legal_db",
         "profesionales_red_db",
         "solicitudes_servicios_db",
         "plantillas_whatsapp_db",
@@ -531,6 +501,40 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     cache_key = "_db_cache"
     shard = modo_shard_activo()
     try:
+        # --- OPTIMIZACIÓN STATELESS ---
+        # Si el dual-write está activo, significa que ya estamos 100% en PostgreSQL.
+        # No necesitamos descargar el JSON gigante de Supabase, solo devolvemos una estructura vacía.
+        try:
+            from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
+            if ENABLE_NEXTGEN_API_DUAL_WRITE:
+                estructura = _estructura_vacia_por_clave()
+                # Solo cargamos los usuarios desde SQL para que el login funcione
+                if supabase is not None:
+                    try:
+                        res = supabase.table("usuarios").select("*, empresas(nombre)").execute()
+                        if res.data:
+                            for u in res.data:
+                                # Reconstruir el formato legacy de usuario para no romper el login
+                                estructura["usuarios_db"][u["nombre"]] = {
+                                    "nombre": u["nombre"],
+                                    "pass": u["password_hash"],
+                                    "rol": u["rol"],
+                                    "empresa": u["empresas"]["nombre"] if u.get("empresas") else "SISTEMAS E.G.",
+                                    "matricula": u["matricula"],
+                                    "dni": u["dni"],
+                                    "titulo": u["titulo"],
+                                    "estado": u["estado"],
+                                    "email": u["email"]
+                                }
+                    except Exception as e:
+                        log_event("db", f"error_cargar_usuarios_sql:{e}")
+                
+                st.session_state["_modo_offline"] = False
+                return estructura
+        except Exception:
+            pass
+        # ------------------------------
+
         if shard and not monolito_legacy and not tenant_key:
             if not force and cache_key in st.session_state:
                 return copy.deepcopy(st.session_state[cache_key])
