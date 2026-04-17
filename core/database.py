@@ -533,16 +533,6 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 
                 st.session_state["_modo_offline"] = False
                 
-                # Fijar el cache para evitar guardados innecesarios
-                # Le pasamos la estructura completa para que calcule el hash base
-                _fijar_cache_y_hash(estructura)
-                
-                # También marcamos que no hay guardado pendiente
-                st.session_state["_guardar_datos_pendiente"] = False
-                
-                # IMPORTANTE: Asegurarnos de que el estado de inicialización esté completo
-                st.session_state["db_inicializada"] = True
-                
                 # Cargar pacientes para que el sidebar funcione
                 from core.db_sql import get_pacientes_by_empresa
                 from core.nextgen_sync import _obtener_uuid_empresa
@@ -572,6 +562,13 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                                 }
                         except Exception as e:
                             log_event("db", f"error_cargar_pacientes_sql:{e}")
+                
+                # Fijar el cache para evitar guardados innecesarios
+                # Le pasamos la estructura completa para que calcule el hash base
+                _fijar_cache_y_hash(estructura)
+                
+                # También marcamos que no hay guardado pendiente
+                st.session_state["_guardar_datos_pendiente"] = False
                 
                 return estructura
         except Exception:
