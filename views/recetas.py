@@ -1497,6 +1497,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             matricula_papel.strip(),
                             texto_inf,
                         )
+                        from core.nextgen_sync import sync_receta_to_sql
+                        sync_receta_to_sql(
+                            paciente_sel, f"{solucion_papel} {int(volumen_papel)} ml",
+                            "Via Endovenosa", "Infusion continua", "Infusion / hidratacion",
+                            {"velocidad_ml_h": velocidad_papel, "dias_duracion": dias_papel,
+                             "hora_inicio": horarios_papel[0] if horarios_papel else "",
+                             "medico_nombre": medico_papel.strip(), "medico_matricula": matricula_papel.strip(),
+                             "detalle_infusion": detalle_papel.strip()}
+                        )
                         st.session_state["_rx_sql_invalidar"] = True
                         guardar_datos(spinner=True)
                         queue_toast(f"Infusion {solucion_papel} {int(volumen_papel)} ml a {int(velocidad_papel or 0)} ml/h guardada.")
@@ -1568,6 +1577,18 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         user.get("nombre", ""),
                         user.get("matricula", ""),
                         f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
+                    )
+                    from core.nextgen_sync import sync_receta_to_sql as _sync_rx
+                    _med_papel = detalle_papel.strip() if tipo_indicacion_papel == "Medicacion" else f"{solucion_papel} {int(volumen_papel)} ml"
+                    _sync_rx(
+                        paciente_sel, _med_papel,
+                        "Via Endovenosa" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        "Infusion continua" if tipo_indicacion_papel == "Infusion / hidratacion" else "",
+                        tipo_indicacion_papel,
+                        {"velocidad_ml_h": velocidad_papel, "dias_duracion": dias_papel,
+                         "hora_inicio": horarios_papel[0] if horarios_papel else "",
+                         "medico_nombre": medico_papel.strip(), "medico_matricula": matricula_papel.strip(),
+                         "origen": "papel", "detalle_infusion": detalle_papel.strip()}
                     )
                     st.session_state["_rx_sql_invalidar"] = True
                     guardar_datos(spinner=True)
@@ -2135,6 +2156,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         )
                         cambio_aplicado = True
                 if cambio_aplicado:
+                    st.session_state["_rx_sql_invalidar"] = True
                     guardar_datos(spinner=True)
                     st.rerun()
         else:
