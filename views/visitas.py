@@ -473,11 +473,42 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     st.divider()
     st.markdown("#### Control de Horas de Guardia (Hoy)")
     hoy_str = ahora().strftime("%d/%m/%Y")
-    fichadas_hoy = [
-        c
-        for c in st.session_state.get("checkin_db", [])
-        if c.get("paciente") == paciente_sel and c.get("profesional") == nombre_usuario and c.get("fecha_hora", "").startswith(hoy_str)
-    ]
+    
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    fichadas_hoy = []
+    try:
+        from core.db_sql import get_checkins_by_empresa
+        from core.nextgen_sync import _obtener_uuid_empresa
+        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+        if empresa_uuid:
+            chk_sql = get_checkins_by_empresa(empresa_uuid, limit=500)
+            if chk_sql:
+                for c in chk_sql:
+                    dt = pd.to_datetime(c.get("fecha_hora", ""))
+                    if pd.notnull(dt) and dt.strftime("%d/%m/%Y") == hoy_str:
+                        paciente_nombre = c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A"
+                        prof_nombre = c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido"
+                        
+                        # Solo agregamos si coincide paciente y profesional
+                        if paciente_sel.startswith(paciente_nombre) and prof_nombre == nombre_usuario:
+                            fichadas_hoy.append({
+                                "paciente": paciente_sel,
+                                "profesional": nombre_usuario,
+                                "fecha_hora": dt.strftime("%d/%m/%Y %H:%M:%S"),
+                                "tipo": c.get("tipo_registro", ""),
+                                "empresa": mi_empresa,
+                            })
+    except Exception as e:
+        print(f"Error leyendo checkins SQL: {e}")
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not fichadas_hoy:
+        fichadas_hoy = [
+            c
+            for c in st.session_state.get("checkin_db", [])
+            if c.get("paciente") == paciente_sel and c.get("profesional") == nombre_usuario and c.get("fecha_hora", "").startswith(hoy_str)
+        ]
+        
     if fichadas_hoy:
         fichadas_hoy = sorted(fichadas_hoy, key=lambda x: pd.to_datetime(x["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce"))
         llegada_time = None
