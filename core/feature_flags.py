@@ -11,19 +11,26 @@ ALERTAS_APP_PACIENTE_VISIBLE = False
 GUARDAR_DATOS_SPINNER_DEFAULT = False
 
 # 0 = desactivado. Si el upsert/local supera estos segundos, se emite un log tecnico (sin UI extra).
-GUARDAR_DATOS_LOG_LENTO_SEGUNDOS = 2.5
+# Ajustado a 3.5s porque con compresion gzip el guardado puede tardar ~300ms.
+GUARDAR_DATOS_LOG_LENTO_SEGUNDOS = 3.5
 
-# Evita tormentas de guardado por clicks seguidos en pocos milisegundos.
-# Se aplica en guardados no forzados (spinner=False/None). Formularios criticos con spinner=True no se limitan.
-GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 0.8
+# Evita tormentas de guardado. Con compresion, cada save cuesta menos pero igual throttleamos.
+# 3s = balance entre frescura de datos y cantidad de upserts a Supabase.
+GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 3.0
 
-# Reintentos de Supabase para picos transitorios de concurrencia/red.
-SUPABASE_RETRY_ATTEMPTS = 3
-SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.35
+# Reintentos de Supabase. Con 2 intentos + 0.15s delay = maximo 150ms extra en caso de error transiente.
+# Antes: 3 intentos x 0.35s = hasta 1.05s de delay acumulado.
+SUPABASE_RETRY_ATTEMPTS = 2
+SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.15
 
 # Tope de eventos operativos en memoria que viajan en cada guardado.
-# Mantiene los más recientes para evitar crecimiento indefinido del payload.
-MAX_LOGS_DB_ENTRIES = 3000
+# 500 entradas = ~50KB de logs vs 3000 = ~300KB. El payload comprimido ya es mas pequeno.
+MAX_LOGS_DB_ENTRIES = 500
+
+# TTL del cache de session_state para cargar_datos.
+# Si se cargo hace menos de 90s, se devuelve el cache sin ir a Supabase.
+# Esto evita re-fetches en cada rerun sin perder frescura.
+DB_CACHE_TTL_SEGUNDOS = 90
 
 # DESACTIVADO: La API NextGen (localhost:8000) no existe en produccion.
 # Con True, el sistema borraba evoluciones/vitales de sesion y luego guardaba listas vacias en Supabase.

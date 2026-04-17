@@ -9,7 +9,10 @@ from typing import Optional
 import streamlit as st
 
 from core.app_logging import log_event
-from core.db_serialize import dumps_db_sorted, loads_db_payload, loads_json_any
+from core.db_serialize import (
+    compress_payload, decompress_payload,
+    dumps_db_sorted, loads_db_payload, loads_json_any,
+)
 from core.norm_empresa import norm_empresa_key
 
 try:
@@ -432,7 +435,8 @@ def _cargar_supabase_monolito():
         lambda: supabase.table("medicare_db").select("datos").eq("id", 1).execute(),
     )
     if response.data:
-        return response.data[0]["datos"]
+        raw = response.data[0]["datos"]
+        return decompress_payload(raw) if isinstance(raw, dict) else raw
     return None
 
 
@@ -446,43 +450,46 @@ def _cargar_supabase_tenant(tenant_key: str):
         .execute(),
     )
     if r.data and len(r.data) > 0:
-        return r.data[0].get("datos")
+        raw = r.data[0].get("datos")
+        return decompress_payload(raw) if isinstance(raw, dict) else raw
     return None
 
 
 def _upsert_supabase_monolito(data: dict):
     tbl = supabase.table("medicare_db")
+    payload = compress_payload(data)
     try:
         _supabase_execute_with_retry(
             "upsert_monolito",
-            lambda: tbl.upsert({"id": 1, "datos": data}, on_conflict="id").execute(),
+            lambda: tbl.upsert({"id": 1, "datos": payload}, on_conflict="id").execute(),
         )
     except TypeError:
-        _supabase_execute_with_retry("upsert_monolito", lambda: tbl.upsert({"id": 1, "datos": data}).execute())
+        _supabase_execute_with_retry("upsert_monolito", lambda: tbl.upsert({"id": 1, "datos": payload}).execute())
 
 
 def _upsert_supabase_tenant(tenant_key: str, data: dict):
     tbl = supabase.table("medicare_db")
+    payload = compress_payload(data)
     try:
         _supabase_execute_with_retry(
             "upsert_tenant",
-            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": data}, on_conflict="tenant_key").execute(),
+            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": payload}, on_conflict="tenant_key").execute(),
         )
     except TypeError:
         _supabase_execute_with_retry(
             "upsert_tenant",
-            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": data}).execute(),
+            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": payload}).execute(),
         )
 
 
 def _fijar_cache_y_hash(data: dict) -> bytes | None:
-    """Sincroniza _db_cache y _db_cache_hash sin deepcopy (round-trip JSON estable)."""
+    """Sincroniza _db_cache, _db_cache_hash y _db_cache_ts (para TTL)."""
     if not isinstance(data, dict):
         return None
     pb, _ = dumps_db_sorted(data)
     st.session_state["_db_cache"] = loads_db_payload(pb)
     st.session_state["_db_cache_hash"] = hashlib.sha256(pb).hexdigest()
-    # Asegurar que no quede un guardado pendiente al fijar el cache inicial
+    st.session_state["_db_cache_ts"] = time.monotonic()
     st.session_state["_guardar_datos_pendiente"] = False
     return pb
 
@@ -626,11 +633,38 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
 
         if shard and not monolito_legacy and not tenant_key:
             if not force and cache_key in st.session_state:
-                return copy.deepcopy(st.session_state[cache_key])
+                _cts = float(st.session_state.get("_db_cache_ts", 0))
+                try:
+                    from core.feature_flags import DB_CACHE_TTL_SEGUNDOS
+                    _ttl = float(DB_CACHE_TTL_SEGUNDOS or 90)
+                except Exception:
+                    _ttl = 90.0
+                if (time.monotonic() - _cts) < _ttl:
+                    cached = st.session_state[cache_key]
+                    try:
+                        pb, _ = dumps_db_sorted(cached)
+                        return loads_db_payload(pb)
+                    except Exception:
+                        return copy.deepcopy(cached)
             return None
 
         if not force and cache_key in st.session_state:
-            return copy.deepcopy(st.session_state[cache_key])
+            # TTL: si el cache tiene menos de DB_CACHE_TTL_SEGUNDOS, usarlo directo
+            _cache_ts = float(st.session_state.get("_db_cache_ts", 0))
+            _cache_age = time.monotonic() - _cache_ts
+            try:
+                from core.feature_flags import DB_CACHE_TTL_SEGUNDOS
+                ttl = float(DB_CACHE_TTL_SEGUNDOS or 90)
+            except Exception:
+                ttl = 90.0
+            if _cache_age < ttl:
+                # Fast path: orjson round-trip es ~3x mas rapido que deepcopy en dicts grandes
+                cached = st.session_state[cache_key]
+                try:
+                    pb, _ = dumps_db_sorted(cached)
+                    return loads_db_payload(pb)
+                except Exception:
+                    return copy.deepcopy(cached)
 
         tk = tenant_key_normalizado(tenant_key) if tenant_key else ""
 
