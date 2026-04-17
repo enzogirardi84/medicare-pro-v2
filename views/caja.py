@@ -98,9 +98,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     col_m2.metric("Pendiente de Cobro", f"${total_pendiente:,.2f}")
     col_m3.metric("Practicas Registradas", len(fact_paciente))
 
-    st.divider()
+    tabs_caja = st.tabs(["Registrar cobro", "Historial del paciente", "Auditoría general"])
 
-    with st.form("caja_form", clear_on_submit=True):
+    with tabs_caja[0]:
+      with st.form("caja_form", clear_on_submit=True):
         st.markdown("##### Registrar Nuevo Movimiento")
         c1, c2 = st.columns([3, 1])
         practicas_comunes = [
@@ -170,95 +171,94 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             else:
                 st.error("Debe ingresar una descripcion valida y un monto mayor a $0.")
 
-    st.divider()
-    st.markdown("#### Historial de Recibos del Paciente")
-    if fact_paciente:
-        limite = seleccionar_limite_registros(
-            "Movimientos a mostrar",
-            len(fact_paciente),
-            key="caja_limite_recibos",
-            default=30,
-            opciones=(10, 20, 30, 50, 100, 200),
-        )
-
-        def generar_recibo_pdf(mov):
-            if not FPDF_DISPONIBLE:
-                return b""
-            pdf = FPDF(format="A5")
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 10, safe_text(f"RECIBO - {mi_empresa}"), ln=True, align='C')
-            pdf.set_font("Arial", '', 10)
-            pdf.cell(0, 6, safe_text(f"Fecha: {mov['fecha']}"), ln=True, align='C')
-            pdf.cell(0, 6, safe_text(f"Operador: {mov.get('operador', 'S/D')} (DNI: {mov.get('operador_dni', 'S/D')})"), ln=True, align='C')
-            pdf.ln(10)
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 8, safe_text(f"Recibimos de: {mov['paciente']}"), ln=True)
-            pdf.ln(4)
-            pdf.set_font("Arial", '', 11)
-            pdf.multi_cell(0, 8, safe_text(f"Concepto: {mov['serv']}"))
-            pdf.cell(0, 8, safe_text(f"Medio de pago: {mov.get('metodo', 'S/D')}"), ln=True)
-            pdf.cell(0, 8, safe_text(f"Estado: {mov.get('estado', 'Cobrado')}"), ln=True)
-            pdf.ln(8)
-            pdf.set_fill_color(240, 240, 240)
-            pdf.set_font("Arial", 'B', 18)
-            pdf.cell(0, 14, safe_text(f"TOTAL: ${mov['monto']:,.2f}"), 1, 1, 'C', True)
-            return pdf_output_bytes(pdf)
-
-        with lista_plegable("Movimientos del paciente", count=min(limite, len(fact_paciente)), expanded=False, height=420):
-            for i, mov in enumerate(reversed(fact_paciente[-limite:])):
-                with st.container(border=True):
-                    col_r1, col_r2 = st.columns([4, 1])
-                    with col_r1:
-                        st.markdown(f"**{mov['fecha']}** - {mov['serv']}")
-                        st.caption(f"{mov.get('estado', 'S/D')} | {mov.get('metodo', 'S/D')} | ${mov['monto']:,.2f}")
-                    with col_r2:
-                        if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_mov_{i}", value=False):
-                            pdf_bytes = generar_recibo_pdf(mov)
-                            st.download_button(
-                                "Descargar PDF",
-                                data=pdf_bytes,
-                                file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf",
-                                mime="application/pdf",
-                                key=f"pdf_btn_{i}",
-                                use_container_width=True,
-                            )
-    else:
-        st.warning(
-            "No hay movimientos de facturacion para este paciente en esta clinica. Usa el formulario **Registrar Nuevo Movimiento** de arriba (servicio, monto y estado de cobro)."
-        )
-
-    if es_control_total(rol_normalizado):
-        st.divider()
-        st.markdown("#### Auditoria de Facturacion General")
-        st.caption("Vista global de la empresa: busca por texto, acota filas y exporta CSV. No reemplaza el detalle por paciente de la seccion anterior.")
-        df_caja = pd.DataFrame(fact_empresa)
-        if not df_caja.empty:
-            filtro_caja = st.text_input("Buscar por paciente, practica, fecha o estado", "")
-            if filtro_caja:
-                mask = df_caja.astype(str).apply(lambda x: x.str.contains(filtro_caja, case=False, na=False)).any(axis=1)
-                df_caja = df_caja[mask]
-
-            df_mostrar = df_caja.rename(columns={
-                "fecha": "Fecha", "paciente": "Paciente", "serv": "Concepto",
-                "monto": "Monto ($)", "metodo": "Medio de Pago", "estado": "Estado", "operador": "Registro",
-            }).drop(columns=["empresa", "operador_dni"], errors='ignore')
-
+    with tabs_caja[1]:
+        st.caption(f"Mostrando movimientos de **{paciente_sel}**")
+        if fact_paciente:
             limite = seleccionar_limite_registros(
-                "Filas de caja",
-                len(df_mostrar),
-                key="caja_limite_auditoria",
-                default=100,
-                opciones=(20, 50, 100, 200, 500),
+                "Movimientos a mostrar",
+                len(fact_paciente),
+                key="caja_limite_recibos",
+                default=30,
+                opciones=(10, 20, 30, 50, 100, 200),
             )
-            with lista_plegable("Auditoría de facturación (tabla)", count=min(limite, len(df_mostrar)), expanded=False, height=440):
-                mostrar_dataframe_con_scroll(df_mostrar.tail(limite).iloc[::-1], height=380)
 
-            csv_data = dataframe_csv_bytes(df_mostrar)
-            st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
+            def generar_recibo_pdf(mov):
+                if not FPDF_DISPONIBLE:
+                    return b""
+                pdf = FPDF(format="A5")
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 16)
+                pdf.cell(0, 10, safe_text(f"RECIBO - {mi_empresa}"), ln=True, align='C')
+                pdf.set_font("Arial", '', 10)
+                pdf.cell(0, 6, safe_text(f"Fecha: {mov['fecha']}"), ln=True, align='C')
+                pdf.cell(0, 6, safe_text(f"Operador: {mov.get('operador', 'S/D')} (DNI: {mov.get('operador_dni', 'S/D')})"), ln=True, align='C')
+                pdf.ln(10)
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 8, safe_text(f"Recibimos de: {mov['paciente']}"), ln=True)
+                pdf.ln(4)
+                pdf.set_font("Arial", '', 11)
+                pdf.multi_cell(0, 8, safe_text(f"Concepto: {mov['serv']}"))
+                pdf.cell(0, 8, safe_text(f"Medio de pago: {mov.get('metodo', 'S/D')}"), ln=True)
+                pdf.cell(0, 8, safe_text(f"Estado: {mov.get('estado', 'Cobrado')}"), ln=True)
+                pdf.ln(8)
+                pdf.set_fill_color(240, 240, 240)
+                pdf.set_font("Arial", 'B', 18)
+                pdf.cell(0, 14, safe_text(f"TOTAL: ${mov['monto']:,.2f}"), 1, 1, 'C', True)
+                return pdf_output_bytes(pdf)
+
+            with st.container(height=480, border=False):
+                for i, mov in enumerate(reversed(fact_paciente[-limite:])):
+                    with st.container(border=True):
+                        col_r1, col_r2 = st.columns([4, 1])
+                        with col_r1:
+                            st.markdown(f"**{mov['fecha']}** - {mov['serv']}")
+                            st.caption(f"{mov.get('estado', 'S/D')} | {mov.get('metodo', 'S/D')} | ${mov['monto']:,.2f}")
+                        with col_r2:
+                            if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_mov_{i}", value=False):
+                                pdf_bytes = generar_recibo_pdf(mov)
+                                st.download_button(
+                                    "Descargar PDF",
+                                    data=pdf_bytes,
+                                    file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf",
+                                    mime="application/pdf",
+                                    key=f"pdf_btn_{i}",
+                                    use_container_width=True,
+                                )
         else:
-            bloque_estado_vacio(
-                "Caja sin movimientos",
-                "No hay registros de facturación para esta clínica todavía.",
-                sugerencia="Los movimientos del paciente se cargan arriba; el listado general aparece cuando existan datos.",
+            st.warning(
+                "No hay movimientos de facturacion para este paciente. Registralos en la pestaña **Registrar cobro**."
             )
+
+    with tabs_caja[2]:
+        if es_control_total(rol_normalizado):
+            st.caption("Vista global de la empresa: busca por texto, acota filas y exporta CSV.")
+            df_caja = pd.DataFrame(fact_empresa)
+            if not df_caja.empty:
+                filtro_caja = st.text_input("Buscar por paciente, practica, fecha o estado", "")
+                if filtro_caja:
+                    mask = df_caja.astype(str).apply(lambda x: x.str.contains(filtro_caja, case=False, na=False)).any(axis=1)
+                    df_caja = df_caja[mask]
+
+                df_mostrar = df_caja.rename(columns={
+                    "fecha": "Fecha", "paciente": "Paciente", "serv": "Concepto",
+                    "monto": "Monto ($)", "metodo": "Medio de Pago", "estado": "Estado", "operador": "Registro",
+                }).drop(columns=["empresa", "operador_dni", "id_sql"], errors='ignore')
+
+                limite_aud = seleccionar_limite_registros(
+                    "Filas de caja",
+                    len(df_mostrar),
+                    key="caja_limite_auditoria",
+                    default=100,
+                    opciones=(20, 50, 100, 200, 500),
+                )
+                mostrar_dataframe_con_scroll(df_mostrar.tail(limite_aud).iloc[::-1], height=420)
+                csv_data = dataframe_csv_bytes(df_mostrar)
+                st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
+            else:
+                bloque_estado_vacio(
+                    "Caja sin movimientos",
+                    "No hay registros de facturación para esta clínica todavía.",
+                    sugerencia="Los movimientos del paciente se cargan en la pestaña Registrar cobro.",
+                )
+        else:
+            st.info("La auditoría general está disponible solo para coordinación y administración.")
