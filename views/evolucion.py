@@ -171,15 +171,27 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     }
 
     if puede_registrar:
-        with st.form("evol", clear_on_submit=True):
-            plantilla = st.selectbox("Plantilla de evolucion", list(plantillas_evolucion.keys()))
-            if plantilla != "Libre":
-                st.caption("Se carga una guia sugerida para agilizar el registro y mantener el formato clinico.")
+        # Selectbox FUERA del form para que al cambiar plantilla se actualice el area de texto
+        plantilla = st.selectbox(
+            "Plantilla de evolucion",
+            list(plantillas_evolucion.keys()),
+            key="evol_plantilla_sel"
+        )
+        plantilla_prev = st.session_state.get("evol_plantilla_prev", "Libre")
+        if plantilla != plantilla_prev:
+            # Plantilla cambió: precargar en session_state
+            st.session_state["evol_nota_draft"] = plantillas_evolucion.get(plantilla, "")
+            st.session_state["evol_plantilla_prev"] = plantilla
+        if plantilla != "Libre":
+            st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
+
+        with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
                 "Nota medica / Evolucion clinica",
-                value=plantillas_evolucion.get(plantilla, ""),
+                value=st.session_state.get("evol_nota_draft", ""),
                 height=220,
                 placeholder="Escribir aqui la evolucion...",
+                key="evol_nota_textarea"
             )
             desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
             st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
@@ -267,6 +279,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         print(f"[EVOLUCION] NextGen sync falló (esperado): {e_nextgen}")
                     
                     queue_toast("Evolucion guardada correctamente.")
+                    # Limpiar draft y reset plantilla para la proxima entrada
+                    st.session_state["evol_nota_draft"] = ""
+                    st.session_state["evol_plantilla_prev"] = "Libre"
                     st.rerun()
                 else:
                     st.error("La nota medica no puede estar vacia.")

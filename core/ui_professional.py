@@ -323,8 +323,9 @@ CUSTOM_CSS = """
     
     [data-theme="dark"] button[kind="primary"],
     .dark button[kind="primary"] {
-        background-color: #3B82F6 !important;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* Ensure Streamlit's styled buttons are visible */
@@ -339,22 +340,35 @@ CUSTOM_CSS = """
         display: inline-flex !important;
     }
     
-    /* Fix for form buttons */
+    /* Fix for form buttons - always GREEN */
     button[type="submit"] {
-        background-color: #2563EB !important;
-        color: white !important;
-        font-weight: 600 !important;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 700 !important;
         padding: 0.75rem 1.5rem !important;
         border-radius: 8px !important;
-        border: none !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+        border: 2px solid #047857 !important;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4) !important;
     }
     
-    /* Fix all button text */
+    /* Fix ALL button text - always white on primary, dark on secondary */
+    .stButton button[kind="primary"] p, 
+    .stButton button[kind="primary"] span,
+    .stButton button[kind="primary"] div,
+    button[type="submit"] p,
+    button[type="submit"] span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 700 !important;
+        font-size: 0.875rem !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
     .stButton button p, 
     .stButton button span,
     .stButton button div {
-        color: inherit !important;
         font-weight: 600 !important;
         font-size: 0.875rem !important;
         opacity: 1 !important;
@@ -373,10 +387,11 @@ CUSTOM_CSS = """
         -webkit-text-fill-color: #1E293B !important;
     }
     
-    /* Form submit buttons */
+    /* Form submit buttons - GREEN */
     button[data-testid="baseButton-primary"][type="submit"] {
-        background-color: #2563EB !important;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* Sidebar buttons */
