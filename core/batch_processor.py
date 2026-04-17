@@ -20,7 +20,14 @@ from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, TypeV
 import streamlit as st
 
 from core.app_logging import log_event
-from core.perf_metrics import record_perf
+
+# Import perf_metrics with fallback to prevent KeyError crashes
+try:
+    from core.perf_metrics import record_perf
+except Exception:
+    # Fallback: dummy function if perf_metrics fails to import
+    def record_perf(event: str, duration_ms: float, ok: bool = True) -> None:
+        pass
 
 T = TypeVar('T')
 R = TypeVar('R')

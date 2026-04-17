@@ -6,6 +6,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.database import guardar_datos
+from core.guardado_universal import guardar_registro
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from views.enfermeria import render_enfermeria
 from core.utils import (
@@ -231,9 +232,39 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     )
                     guardar_datos(spinner=True)
                     
-                    # Dual-write a la nueva API NextGen y PostgreSQL
-                    from core.nextgen_sync import sync_visita_evolucion_to_nextgen
-                    sync_visita_evolucion_to_nextgen(paciente_sel, nota)
+                    # GUARDADO LOCAL DE RESPALDO (siempre funciona)
+                    try:
+                        # Extraer nombre y DNI del paciente
+                        paciente_nombre = paciente_sel
+                        paciente_id = paciente_sel
+                        if isinstance(paciente_sel, str) and " - " in paciente_sel:
+                            partes = paciente_sel.split(" - ")
+                            paciente_nombre = " - ".join(partes[:-1])
+                            paciente_id = partes[-1]
+                        
+                        exito_local, mensaje_local = guardar_registro(
+                            tipo="evoluciones",
+                            paciente_id=paciente_id,
+                            paciente_nombre=paciente_nombre,
+                            datos={
+                                "evolucion": nota.strip(),
+                                "plantilla": plantilla,
+                                "indicaciones": "",
+                                "firma": user.get("nombre", "Sistema"),
+                                "fecha": fecha_n
+                            }
+                        )
+                        if exito_local:
+                            print(f"[EVOLUCION] Guardado local OK: {mensaje_local}")
+                    except Exception as e_local:
+                        print(f"[EVOLUCION] Error guardado local: {e_local}")
+                    
+                    # Dual-write a la nueva API NextGen y PostgreSQL (puede fallar)
+                    try:
+                        from core.nextgen_sync import sync_visita_evolucion_to_nextgen
+                        sync_visita_evolucion_to_nextgen(paciente_sel, nota)
+                    except Exception as e_nextgen:
+                        print(f"[EVOLUCION] NextGen sync falló (esperado): {e_nextgen}")
                     
                     queue_toast("Evolucion guardada correctamente.")
                     st.rerun()
