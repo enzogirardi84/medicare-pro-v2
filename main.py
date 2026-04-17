@@ -203,7 +203,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=
         elif tab_name == "Escalas Clinicas":
             render_fn(paciente_sel, user)
         elif tab_name == "Historial":
-            render_fn(paciente_sel)
+            render_fn(paciente_sel, user)
         elif tab_name == "PDF":
             render_fn(paciente_sel, mi_empresa, user, rol)
         elif tab_name == "Telemedicina":
@@ -224,6 +224,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=
             render_fn(mi_empresa, user)
         elif tab_name == "Auditoria Legal":
             render_fn(mi_empresa, user)
+        elif tab_name == "Diagnosticos":
+            render_fn(user)
     except Exception as exc:
         log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
         render_modulo_fallo_ui(tab_name, exc)

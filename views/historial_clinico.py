@@ -3,6 +3,7 @@ HISTORIAL CLINICO COMPLETO
 Muestra y guarda TODOS los datos del paciente en un solo lugar
 """
 
+import json
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -12,6 +13,77 @@ from core.guardado_universal import (
     obtener_historial_paciente,
     obtener_registros
 )
+
+
+def _generar_historial_texto(paciente_nombre, paciente_id, user=None):
+    """Genera texto completo del historial clinico para descarga."""
+    sep = "=" * 60
+    sep2 = "-" * 60
+    lineas = [
+        sep, "HISTORIAL CLINICO COMPLETO", sep,
+        f"Paciente: {paciente_nombre}",
+        f"DNI / ID: {paciente_id}",
+        f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+    ]
+    if user:
+        lineas.append(f"Por: {user.get('nombre', '')}")
+    lineas += [sep, ""]
+
+    signos = obtener_registros("signos_vitales", paciente_id)
+    lineas += [f"SIGNOS VITALES ({len(signos)} registros)", sep2]
+    for s in signos:
+        d = s.get("datos", {})
+        lineas.append(f"  Fecha: {s.get('fecha', '-')}")
+        for campo, lbl in [("tension_arterial","T.A"),("frecuencia_cardiaca","F.C"),("temperatura","Temp"),
+                           ("saturacion_oxigeno","SatO2"),("glucemia","Gluc"),("peso","Peso"),("talla","Talla")]:
+            if d.get(campo):
+                lineas.append(f"    {lbl}: {d[campo]}")
+        if d.get("observaciones"):
+            lineas.append(f"    Obs: {d['observaciones']}")
+        lineas.append("")
+
+    evoluciones = obtener_registros("evoluciones", paciente_id)
+    ss_evols = [e for e in st.session_state.get("evoluciones_db", [])
+                if paciente_id in str(e.get("paciente","")) or paciente_nombre in str(e.get("paciente",""))]
+    total_evols = len(evoluciones) + len(ss_evols)
+    lineas += [f"EVOLUCIONES ({total_evols} registros)", sep2]
+    for e in evoluciones:
+        d = e.get("datos", {})
+        firma = d.get("firma", d.get("firma_medico", e.get("paciente_nombre", "")))
+        nota = d.get("nota", d.get("nota_medica", d.get("evolucion", "-")))
+        lineas.append(f"  Fecha: {e.get('fecha','-')} | Plantilla: {d.get('plantilla','Libre')} | Por: {firma}")
+        for l in str(nota).split("\n"):
+            lineas.append(f"    {l}")
+        if d.get("indicaciones"):
+            lineas.append(f"  Indicaciones: {d['indicaciones']}")
+        lineas.append("")
+    for se in ss_evols:
+        lineas.append(f"  Fecha: {se.get('fecha','-')} | Por: {se.get('firma','')}")
+        for l in str(se.get('nota','')).split("\n"):
+            lineas.append(f"    {l}")
+        lineas.append("")
+
+    recetas = obtener_registros("recetas", paciente_id)
+    lineas += [f"RECETAS ({len(recetas)} registros)", sep2]
+    for r in recetas:
+        d = r.get("datos", {})
+        lineas.append(f"  Fecha: {r.get('fecha','-')}")
+        lineas.append(f"  Medicamentos: {d.get('medicamentos','-')}")
+        if d.get("indicaciones"):
+            lineas.append(f"  Indicaciones: {d['indicaciones']}")
+        lineas.append("")
+
+    materiales = obtener_registros("materiales", paciente_id)
+    lineas += [f"MATERIALES E INSUMOS ({len(materiales)} registros)", sep2]
+    for m in materiales:
+        d = m.get("datos", {})
+        lineas.append(f"  Fecha: {m.get('fecha','-')} | {d.get('material','-')} x {d.get('cantidad','-')}")
+        if d.get("observaciones"):
+            lineas.append(f"  Obs: {d['observaciones']}")
+        lineas.append("")
+
+    lineas += [sep, "FIN DEL HISTORIAL CLINICO", sep]
+    return "\n".join(lineas)
 
 
 def render(paciente_sel=None, user=None):
@@ -329,9 +401,43 @@ def render(paciente_sel=None, user=None):
     # === TAB 5: HISTORIAL COMPLETO ===
     with tab5:
         st.markdown("### 📚 Historial Clínico Completo")
-        
+
+        # --- BOTONES DE DESCARGA ---
+        st.markdown("#### 📥 Descargar Historial")
+        dcol1, dcol2 = st.columns(2)
+        with dcol1:
+            texto_hist = _generar_historial_texto(paciente_nombre, paciente_id, user)
+            st.download_button(
+                "📄 Descargar Historial Completo (.txt)",
+                data=texto_hist.encode("utf-8"),
+                file_name=f"historial_{paciente_id.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.txt",
+                mime="text/plain",
+                use_container_width=True,
+                type="primary",
+                key="dl_historial_txt"
+            )
+        with dcol2:
+            todos_regs = obtener_historial_paciente(paciente_id)
+            ss_evols = [e for e in st.session_state.get("evoluciones_db", [])
+                        if paciente_id in str(e.get("paciente","")) or paciente_nombre in str(e.get("paciente",""))]
+            json_export = json.dumps(
+                {"paciente": paciente_nombre, "dni": paciente_id,
+                 "exportado": datetime.now().isoformat(),
+                 "historial_local": todos_regs, "evoluciones_sesion": ss_evols},
+                ensure_ascii=False, indent=2
+            )
+            st.download_button(
+                "🔷 Descargar JSON Completo",
+                data=json_export.encode("utf-8"),
+                file_name=f"historial_{paciente_id.replace(' ','_')}.json",
+                mime="application/json",
+                use_container_width=True,
+                key="dl_historial_json"
+            )
+
+        st.markdown("---")
         historial = obtener_historial_paciente(paciente_id)
-        
+
         if historial:
             st.success(f"Total de registros en historial: {len(historial)}")
             
