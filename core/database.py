@@ -530,6 +530,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                         log_event("db", f"error_cargar_usuarios_sql:{e}")
                 
                 st.session_state["_modo_offline"] = False
+                
+                # Fijar el cache para evitar guardados innecesarios
+                _fijar_cache_y_hash(estructura)
                 return estructura
         except Exception:
             pass
