@@ -99,8 +99,11 @@ def render_clinica(paciente_sel, user=None):
                 penultimo = vits_ordenados[-2]
                 delta_fc = int(ultimo.get("FC", 0)) - int(penultimo.get("FC", 0))
                 st.caption(f"Tendencia FC respecto al control previo: {'↑' if delta_fc > 0 else '↓' if delta_fc < 0 else '→'} {abs(delta_fc)} lpm")
-            except Exception:
-                pass
+            except Exception as e:
+
+                from core.app_logging import log_event
+
+                log_event('clinica_error', f'Error: {e}')
 
         if len(vits_ordenados) >= 3:
             st.markdown("##### Evolucion reciente (F.C.)")

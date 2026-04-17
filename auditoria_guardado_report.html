@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auditoria de Guardado - Medicare Pro</title>
+    <style>
+        body { font-family: Inter, -apple-system, sans-serif; margin: 40px; background: #f8fafc; }
+        .header { background: linear-gradient(135deg, #DC2626, #991B1B); color: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; }
+        .header.safe { background: linear-gradient(135deg, #059669, #047857); }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 2rem; font-weight: bold; }
+        .stat-value.critical { color: #DC2626; }
+        .stat-value.warning { color: #D97706; }
+        .stat-value.good { color: #059669; }
+        .stat-label { color: #64748b; margin-top: 5px; }
+        table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 20px; }
+        th { background: #f1f5f9; padding: 12px; text-align: left; font-weight: 600; color: #475569; }
+        td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #f8fafc; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .badge-critical { background: #FEE2E2; color: #991B1B; }
+        .badge-warning { background: #FEF3C7; color: #92400E; }
+        .badge-good { background: #D1FAE5; color: #065F46; }
+        .issue-list { margin: 0; padding-left: 20px; }
+        .issue-list li { margin-bottom: 4px; color: #DC2626; }
+        .warning-list li { color: #D97706; }
+        .summary-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #DC2626; }
+        .summary-box.safe { border-left-color: #059669; }
+    </style>
+</head>
+<body>
+
+    <div class="header ">
+        <h1>Auditoria de Guardado - Medicare Pro</h1>
+        <p>PROBLEMAS CRÍTICOS ENCONTRADOS</p>
+        <p style="font-size: 0.875rem; opacity: 0.9;">Generado: 2026-04-17 02:14:12</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value critical">16</div>
+            <div class="stat-label">Problemas Críticos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value warning">8</div>
+            <div class="stat-label">Advertencias</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value good">21/28</div>
+            <div class="stat-label">Vistas con Guardado</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">50</div>
+            <div class="stat-label">Total Llamadas guardar_datos()</div>
+        </div>
+    </div>
+
+    <div class="summary-box">
+        <h3>ACCION REQUERIDA</h3>
+        <p>Se encontraron problemas críticos que pueden causar pérdida de datos. Revisar inmediatamente las vistas marcadas.</p>
+    </div>
+
+    <h2>Detalle por Vista</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Vista</th>
+                <th>Guardado</th>
+                <th>Llamadas</th>
+                <th>Estado</th>
+                <th>Problemas</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td><strong>recetas.py</strong></td>
+                <td>Sí</td>
+                <td>5</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: 5 llamadas a guardar_datos - puede ser ineficiente</li><li class="">ERROR CRÍTICO: except: pass en línea 69 - silencia errores de guardado</li><li class="">ERROR CRÍTICO: except: pass en línea 77 - silencia errores de guardado</li><li class="">ERROR CRÍTICO: except: pass en línea 2225 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>emergencias.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 29 - silencia errores de guardado</li><li class="">ERROR CRÍTICO: except: pass en línea 480 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>pdf_view.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 32 - silencia errores de guardado</li><li class="">ERROR CRÍTICO: except: pass en línea 309 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>alertas_paciente_app.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 224 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>auditoria.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 16 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>balance.py</strong></td>
+                <td>Sí</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: Llama guardar_datos() sin try/except para manejo de errores</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>caja.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 19 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>cierre_diario.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 18 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>clinica.py</strong></td>
+                <td>Sí</td>
+                <td>2</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 102 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>clinicas_panel.py</strong></td>
+                <td>Sí</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: Llama guardar_datos() sin try/except para manejo de errores</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>dashboard.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 126 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>estudios.py</strong></td>
+                <td>Sí</td>
+                <td>4</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: 4 llamadas a guardar_datos - puede ser ineficiente</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>evolucion.py</strong></td>
+                <td>Sí</td>
+                <td>3</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 25 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>historial.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 310 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>materiales.py</strong></td>
+                <td>Sí</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: Llama guardar_datos() sin try/except para manejo de errores</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>mi_equipo.py</strong></td>
+                <td>Sí</td>
+                <td>7</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: 7 llamadas a guardar_datos - puede ser ineficiente</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>red_profesionales.py</strong></td>
+                <td>Sí</td>
+                <td>2</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: Llama guardar_datos() sin try/except para manejo de errores</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>rrhh.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-critical">CRÍTICO</span></td>
+                <td><ul class="issue-list"><li class="">ERROR CRÍTICO: except: pass en línea 20 - silencia errores de guardado</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>visitas.py</strong></td>
+                <td>Sí</td>
+                <td>5</td>
+                <td><span class="badge badge-warning">ADVERTENCIA</span></td>
+                <td><ul class="issue-list"><li class="warning-list">ADVERTENCIA: 5 llamadas a guardar_datos - puede ser ineficiente</li></ul></td>
+            </tr>
+
+            <tr>
+                <td><strong>admision.py</strong></td>
+                <td>Sí</td>
+                <td>3</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>asistencia.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>auditoria_legal.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>enfermeria.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>escalas_clinicas.py</strong></td>
+                <td>Sí</td>
+                <td>1</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>inventario.py</strong></td>
+                <td>Sí</td>
+                <td>3</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>pediatria.py</strong></td>
+                <td>Sí</td>
+                <td>2</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>project_management.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+            <tr>
+                <td><strong>telemedicina.py</strong></td>
+                <td>No</td>
+                <td>0</td>
+                <td><span class="badge badge-good">OK</span></td>
+                <td>Sin problemas</td>
+            </tr>
+
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 40px; padding: 20px; background: #F1F5F9; border-radius: 8px;">
+        <h3>Recomendaciones</h3>
+        <ol>
+            <li><strong>Prioridad 1:</strong> Arreglar todas las vistas con "ERROR CRÍTICO"</li>
+            <li><strong>Prioridad 2:</strong> Agregar manejo de errores try/except en guardados</li>
+            <li><strong>Prioridad 3:</strong> Eliminar todos los "except: pass" silenciando errores</li>
+            <li><strong>Prioridad 4:</strong> Agregar mensajes de éxito/error visibles al usuario</li>
+        </ol>
+    </div>
+    
+</body>
+</html>

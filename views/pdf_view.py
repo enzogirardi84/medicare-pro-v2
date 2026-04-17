@@ -306,8 +306,11 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
         if ultimo.get("firma_b64"):
             try:
                 st.image(base64.b64decode(ultimo["firma_b64"]), caption="Firma paciente / familiar registrada", width=280)
-            except Exception:
-                pass
+            except Exception as e:
+
+                from core.app_logging import log_event
+
+                log_event('pdf_view_error', f'Error: {e}')
     elif puede_descargar_consentimiento:
         st.warning(
             "Todavia no hay consentimientos guardados para este paciente. Completa el formulario de arriba (aceptacion + firma) antes de **Preparar consentimiento legal**."

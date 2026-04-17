@@ -124,7 +124,10 @@ def render_dashboard(mi_empresa, rol):
                         "triage_grado": f"Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
                     })
     except Exception as e:
-        pass
+
+        from core.app_logging import log_event
+
+        log_event('dashboard_error', f'Error: {e}')
         
     if not emergencias:
         emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)

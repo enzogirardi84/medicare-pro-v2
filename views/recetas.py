@@ -2222,8 +2222,11 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         if r.get("firma_b64"):
                             try:
                                 c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
-                            except Exception:
-                                pass
+                            except Exception as e:
+
+                                from core.app_logging import log_event
+
+                                log_event('recetas_error', f'Error: {e}')
                         if r.get("adjunto_papel_b64"):
                             try:
                                 c_btn.download_button(
