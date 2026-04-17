@@ -198,62 +198,74 @@ CUSTOM_CSS = """
     }
     
     /* =====================================================
-       BUTTONS - GREEN THEME FOR MAXIMUM VISIBILITY
+       BUTTONS - GREEN THEME - USA data-testid MODERNO
        ===================================================== */
-    
-    /* ALL buttons - Base visibility */
-    button, .stButton button, [data-testid="baseButton"] {
+
+    /* BASE: todos los botones visibles */
+    .stButton > button,
+    [data-testid="stDownloadButton"] > button,
+    [data-testid="stFormSubmitButton"] > button,
+    .stButton button {
         opacity: 1 !important;
         visibility: visible !important;
         display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 2.5rem !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
     }
-    
-    /* PRIMARY buttons - GREEN with WHITE text */
-    button[kind="primary"],
-    .stButton button[kind="primary"],
-    button[data-testid="baseButton-primary"] {
+
+    /* PRIMARY - Verde con texto blanco (selector viejo + nuevo Streamlit) */
+    .stButton > button[kind="primary"],
+    [data-testid="baseButton-primary"],
+    [data-testid="stBaseButton-primary"],
+    [data-testid="stFormSubmitButton"] > button,
+    button[type="submit"] {
         background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
         border: 2px solid #047857 !important;
         font-weight: 700 !important;
         font-size: 0.9rem !important;
-        padding: 0.75rem 1.5rem !important;
+        padding: 0.6rem 1.4rem !important;
         border-radius: 8px !important;
-        text-shadow: none !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
+        box-shadow: 0 4px 6px -1px rgba(16,185,129,0.4) !important;
+        letter-spacing: 0.3px !important;
     }
-    
-    button[kind="primary"] p,
-    button[kind="primary"] span,
-    button[kind="primary"] div {
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span,
+    [data-testid="baseButton-primary"] p,
+    [data-testid="baseButton-primary"] span,
+    [data-testid="stBaseButton-primary"] p,
+    [data-testid="stBaseButton-primary"] span,
+    [data-testid="stFormSubmitButton"] > button p,
+    [data-testid="stFormSubmitButton"] > button span,
+    button[type="submit"] p,
+    button[type="submit"] span {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
         font-weight: 700 !important;
-        font-size: 0.9rem !important;
     }
-    
-    /* SECONDARY buttons - Light GREEN with DARK text */
-    button[kind="secondary"],
-    .stButton button[kind="secondary"],
-    button[data-testid="baseButton-secondary"] {
-        background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%) !important;
+
+    /* SECONDARY - Gris claro con texto oscuro legible */
+    .stButton > button[kind="secondary"],
+    [data-testid="baseButton-secondary"],
+    [data-testid="stBaseButton-secondary"] {
+        background: #E2F0E8 !important;
         color: #064E3B !important;
+        -webkit-text-fill-color: #064E3B !important;
         border: 2px solid #34D399 !important;
         font-weight: 600 !important;
         font-size: 0.875rem !important;
-        padding: 0.625rem 1.25rem !important;
+        padding: 0.5rem 1.1rem !important;
         border-radius: 8px !important;
-        text-shadow: none !important;
-        -webkit-text-fill-color: #064E3B !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
-    
-    button[kind="secondary"] p,
-    button[kind="secondary"] span,
-    button[kind="secondary"] div {
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span,
+    [data-testid="baseButton-secondary"] p,
+    [data-testid="baseButton-secondary"] span,
+    [data-testid="stBaseButton-secondary"] p,
+    [data-testid="stBaseButton-secondary"] span {
         color: #064E3B !important;
         -webkit-text-fill-color: #064E3B !important;
         font-weight: 600 !important;
@@ -270,158 +282,78 @@ CUSTOM_CSS = """
         border-radius: 6px !important;
     }
     
-    button[kind="tertiary"] p,
-    button[kind="tertiary"] span {
-        color: #10B981 !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Hover states */
-    button[kind="primary"]:hover {
+    /* DOWNLOAD BUTTON - Verde oscuro con texto blanco */
+    [data-testid="stDownloadButton"] > button {
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-        border-color: #065F46 !important;
-        box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.5) !important;
-        transform: translateY(-1px) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        border: 2px solid #065F46 !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
     }
-    
-    button[kind="secondary"]:hover {
-        background: linear-gradient(135deg, #A7F3D0 0%, #6EE7B7 100%) !important;
+    [data-testid="stDownloadButton"] > button p,
+    [data-testid="stDownloadButton"] > button span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+
+    /* CATCH-ALL: cualquier boton que quede sin texto visible */
+    .stButton > button p,
+    .stButton > button span {
+        opacity: 1 !important;
+        visibility: visible !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+    }
+
+    /* Hover states */
+    .stButton > button[kind="primary"]:hover,
+    [data-testid="stBaseButton-primary"]:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 8px -1px rgba(16,185,129,0.5) !important;
+    }
+    .stButton > button[kind="secondary"]:hover,
+    [data-testid="stBaseButton-secondary"]:hover {
+        background: #c6e8d4 !important;
         border-color: #10B981 !important;
     }
-    
-    /* Form submit buttons */
-    button[type="submit"] {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-        padding: 0.875rem 2rem !important;
-        border-radius: 8px !important;
-        border: 2px solid #047857 !important;
-        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4) !important;
+
+    /* Focus */
+    .stButton > button:focus {
+        outline: 2px solid #10B981 !important;
+        outline-offset: 2px !important;
     }
-    
-    button[kind="secondary"]:hover {
-        background-color: #E2E8F0 !important;
-        border-color: #94A3B8 !important;
-    }
-    
-    /* Dark mode overrides - FORCE light buttons */
-    [data-theme="dark"] button[kind="secondary"],
-    .dark button[kind="secondary"] {
-        background-color: #F1F5F9 !important;
-        color: #0F172A !important;
-        border-color: #CBD5E1 !important;
-    }
-    
-    [data-theme="dark"] button[kind="secondary"] p,
-    [data-theme="dark"] button[kind="secondary"] span,
-    .dark button[kind="secondary"] p,
-    .dark button[kind="secondary"] span {
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-    }
-    
-    [data-theme="dark"] button[kind="primary"],
-    .dark button[kind="primary"] {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-    
-    /* Ensure Streamlit's styled buttons are visible */
-    .stButton > button {
-        min-height: 2.5rem !important;
-    }
-    
-    /* GLOBAL BUTTON FIX - Force all buttons visible */
-    .stButton button {
-        opacity: 1 !important;
-        visibility: visible !important;
-        display: inline-flex !important;
-    }
-    
-    /* Fix for form buttons - always GREEN */
-    button[type="submit"] {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        font-weight: 700 !important;
-        padding: 0.75rem 1.5rem !important;
-        border-radius: 8px !important;
-        border: 2px solid #047857 !important;
-        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4) !important;
-    }
-    
-    /* Fix ALL button text - always white on primary, dark on secondary */
-    .stButton button[kind="primary"] p, 
-    .stButton button[kind="primary"] span,
-    .stButton button[kind="primary"] div,
-    button[type="submit"] p,
-    button[type="submit"] span {
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-        font-weight: 700 !important;
-        font-size: 0.875rem !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-    }
-    
-    .stButton button p, 
-    .stButton button span,
-    .stButton button div {
-        font-weight: 600 !important;
-        font-size: 0.875rem !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-    }
-    
-    /* Specific fix for secondary buttons */
-    .stButton button[kind="secondary"] {
-        background-color: #F8FAFC !important;
-        border: 2px solid #CBD5E1 !important;
-    }
-    
-    .stButton button[kind="secondary"] p,
-    .stButton button[kind="secondary"] span {
-        color: #1E293B !important;
-        -webkit-text-fill-color: #1E293B !important;
-    }
-    
-    /* Form submit buttons - GREEN */
-    button[data-testid="baseButton-primary"][type="submit"] {
-        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-    
+
     /* Sidebar buttons */
-    [data-testid="stSidebar"] button {
+    [data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
         margin-bottom: 0.5rem !important;
     }
-    
-    /* Dialog/Modal buttons */
-    [data-testid="stDialog"] button {
-        margin: 0.25rem !important;
+
+    /* =====================================================
+       SCROLL CONTAINERS INTERNOS
+       ===================================================== */
+    .mc-scroll-block {
+        max-height: 220px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: rgba(30,41,59,0.5);
+        border: 1px solid rgba(148,163,184,0.3);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.88rem;
+        line-height: 1.6;
+        color: #cbd5e1;
+        white-space: pre-wrap;
+        word-break: break-word;
+        scrollbar-width: thin;
+        scrollbar-color: #10B981 transparent;
+        -webkit-overflow-scrolling: touch;
     }
-    
-    /* Focus states for accessibility */
-    .stButton > button:focus {
-        outline: 2px solid #2563EB !important;
-        outline-offset: 2px !important;
-    }
-    
-    /* Override any dark mode text colors */
-    .stButton button p,
-    .stButton button span,
-    .stButton button div {
-        color: inherit !important;
-    }
-    
-    /* Specific fix for "Inventario" and "Mostrar" buttons */
-    [data-testid="stHorizontalBlock"] .stButton > button {
-        min-width: 120px !important;
-    }
+    .mc-scroll-block::-webkit-scrollbar { width: 5px; }
+    .mc-scroll-block::-webkit-scrollbar-thumb { background: #10B981; border-radius: 4px; }
     
     /* Tables */
     .data-table {

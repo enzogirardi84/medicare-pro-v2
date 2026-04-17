@@ -271,10 +271,11 @@ def render(paciente_sel=None, user=None):
                 with st.expander(f"📅 {evo.get('fecha', 'Sin fecha')}"):
                     st.markdown(f"**👤 Registrado por:** {evo.get('paciente_nombre', '')}")
                     st.markdown("**📝 Evolución:**")
-                    st.markdown(f"> {datos.get('evolucion', 'Sin evolución')}")
+                    nota_txt = datos.get('evolucion', datos.get('nota', 'Sin evolución'))
+                    st.markdown(f'<div class="mc-scroll-block">{nota_txt}</div>', unsafe_allow_html=True)
                     if datos.get('indicaciones'):
                         st.markdown("**💊 Indicaciones:**")
-                        st.markdown(f"> {datos.get('indicaciones', '')}")
+                        st.markdown(f'<div class="mc-scroll-block" style="max-height:120px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
         else:
             st.info("📋 No hay evoluciones registradas. Usa el formulario de arriba para agregar la primera.")
     
@@ -321,10 +322,10 @@ def render(paciente_sel=None, user=None):
                 datos = rec.get('datos', {})
                 with st.expander(f"📅 {rec.get('fecha', 'Sin fecha')}"):
                     st.markdown("**💊 Medicamentos:**")
-                    st.markdown(f"> {datos.get('medicamentos', 'Sin medicamentos')}")
+                    st.markdown(f'<div class="mc-scroll-block">{datos.get("medicamentos", "Sin medicamentos")}</div>', unsafe_allow_html=True)
                     if datos.get('indicaciones'):
                         st.markdown("**📝 Indicaciones:**")
-                        st.markdown(f"> {datos.get('indicaciones', '')}")
+                        st.markdown(f'<div class="mc-scroll-block" style="max-height:100px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
         else:
             st.info("📋 No hay recetas registradas. Usa el formulario de arriba para agregar la primera.")
     
@@ -484,17 +485,18 @@ def render(paciente_sel=None, user=None):
                     
                     elif tipo in ['evoluciones', 'evolucion']:
                         st.markdown("**📝 Evolución Clínica:**")
-                        st.markdown(f"> {datos.get('evolucion', 'Sin evolución')}")
+                        nota_ev = datos.get('nota', datos.get('nota_medica', datos.get('evolucion', 'Sin evolución')))
+                        st.markdown(f'<div class="mc-scroll-block">{nota_ev}</div>', unsafe_allow_html=True)
                         if datos.get('indicaciones'):
                             st.markdown("**💊 Indicaciones:**")
-                            st.markdown(f"> {datos.get('indicaciones')}")
+                            st.markdown(f'<div class="mc-scroll-block" style="max-height:100px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
                     
                     elif tipo in ['recetas', 'receta']:
                         st.markdown("**💊 Medicamentos:**")
-                        st.markdown(f"> {datos.get('medicamentos', 'Sin medicamentos')}")
+                        st.markdown(f'<div class="mc-scroll-block">{datos.get("medicamentos", "Sin medicamentos")}</div>', unsafe_allow_html=True)
                         if datos.get('indicaciones'):
                             st.markdown("**📝 Indicaciones generales:**")
-                            st.markdown(f"> {datos.get('indicaciones')}")
+                            st.markdown(f'<div class="mc-scroll-block" style="max-height:100px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
                     
                     elif tipo in ['materiales', 'material']:
                         col1, col2 = st.columns(2)
