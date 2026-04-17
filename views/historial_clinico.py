@@ -108,8 +108,47 @@ def render(paciente_sel=None, user=None):
         signos = obtener_registros("signos_vitales", paciente_id)
         if signos:
             st.markdown("#### 📋 Signos Vitales Guardados")
-            df_signos = pd.DataFrame(signos)
-            st.dataframe(df_signos.tail(10), use_container_width=True, hide_index=True)
+            
+            # Preparar datos para tabla
+            tabla_signos = []
+            for s in signos:
+                datos = s.get('datos', {})
+                tabla_signos.append({
+                    'Fecha': s.get('fecha', ''),
+                    'T.A.': datos.get('tension_arterial', ''),
+                    'F.C.': datos.get('frecuencia_cardiaca', ''),
+                    'F.R.': datos.get('frecuencia_respiratoria', ''),
+                    'Temp': datos.get('temperatura', ''),
+                    'SatO2': datos.get('saturacion_oxigeno', ''),
+                    'Gluc': datos.get('glucemia', ''),
+                    'Peso': datos.get('peso', ''),
+                    'Talla': datos.get('talla', ''),
+                    'Obs': datos.get('observaciones', '')
+                })
+            
+            df_signos = pd.DataFrame(tabla_signos)
+            st.dataframe(
+                df_signos,
+                use_container_width=True,
+                hide_index=True,
+                height=min(350, len(df_signos) * 45 + 50),
+                column_config={
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width=120),
+                    'T.A.': st.column_config.TextColumn('T.A.', width=90),
+                    'F.C.': st.column_config.NumberColumn('F.C.', width=70),
+                    'F.R.': st.column_config.NumberColumn('F.R.', width=70),
+                    'Temp': st.column_config.NumberColumn('Temp', width=70, format="%.1f"),
+                    'SatO2': st.column_config.NumberColumn('SatO2', width=70),
+                    'Gluc': st.column_config.TextColumn('Gluc', width=70),
+                    'Peso': st.column_config.NumberColumn('Peso', width=70),
+                    'Talla': st.column_config.NumberColumn('Talla', width=70),
+                    'Obs': st.column_config.TextColumn('Observaciones', width=150)
+                }
+            )
+            
+            # Descargar
+            csv = df_signos.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Descargar CSV", csv, f"signos_vitales_{paciente_id}.csv", "text/csv")
         else:
             st.info("No hay signos vitales registrados")
     
@@ -154,14 +193,18 @@ def render(paciente_sel=None, user=None):
         # Mostrar evoluciones guardadas
         evoluciones = obtener_registros("evoluciones", paciente_id)
         if evoluciones:
-            st.markdown("#### 📋 Evoluciones Guardadas")
-            for evo in reversed(evoluciones[-5:]):
+            st.markdown(f"#### 📋 Evoluciones Guardadas ({len(evoluciones)} total)")
+            for evo in reversed(evoluciones[-10:]):  # Mostrar últimas 10
+                datos = evo.get('datos', {})
                 with st.expander(f"📅 {evo.get('fecha', 'Sin fecha')}"):
-                    st.write(f"**Evolución:** {evo.get('evolucion', '')}")
-                    if evo.get('indicaciones'):
-                        st.write(f"**Indicaciones:** {evo.get('indicaciones', '')}")
+                    st.markdown(f"**👤 Registrado por:** {evo.get('paciente_nombre', '')}")
+                    st.markdown("**📝 Evolución:**")
+                    st.markdown(f"> {datos.get('evolucion', 'Sin evolución')}")
+                    if datos.get('indicaciones'):
+                        st.markdown("**💊 Indicaciones:**")
+                        st.markdown(f"> {datos.get('indicaciones', '')}")
         else:
-            st.info("No hay evoluciones registradas")
+            st.info("📋 No hay evoluciones registradas. Usa el formulario de arriba para agregar la primera.")
     
     # === TAB 3: RECETAS ===
     with tab3:
@@ -196,6 +239,22 @@ def render(paciente_sel=None, user=None):
                     st.rerun()
                 else:
                     st.error(f"❌ {mensaje}")
+        
+        # Mostrar recetas
+        recetas = obtener_registros("recetas", paciente_id)
+        if recetas:
+            st.markdown(f"#### 📋 Recetas Guardadas ({len(recetas)} total)")
+            
+            for rec in reversed(recetas[-5:]):  # Mostrar últimas 5
+                datos = rec.get('datos', {})
+                with st.expander(f"📅 {rec.get('fecha', 'Sin fecha')}"):
+                    st.markdown("**💊 Medicamentos:**")
+                    st.markdown(f"> {datos.get('medicamentos', 'Sin medicamentos')}")
+                    if datos.get('indicaciones'):
+                        st.markdown("**📝 Indicaciones:**")
+                        st.markdown(f"> {datos.get('indicaciones', '')}")
+        else:
+            st.info("📋 No hay recetas registradas. Usa el formulario de arriba para agregar la primera.")
     
     # === TAB 4: MATERIALES ===
     with tab4:
@@ -235,11 +294,37 @@ def render(paciente_sel=None, user=None):
         # Mostrar materiales
         materiales = obtener_registros("materiales", paciente_id)
         if materiales:
-            st.markdown("#### 📋 Materiales Usados")
-            df_mat = pd.DataFrame(materiales)
-            st.dataframe(df_mat.tail(10), use_container_width=True, hide_index=True)
+            st.markdown(f"#### 📋 Materiales Usados ({len(materiales)} total)")
+            
+            # Preparar tabla
+            tabla_mat = []
+            for m in materiales:
+                datos = m.get('datos', {})
+                tabla_mat.append({
+                    'Fecha': m.get('fecha', ''),
+                    'Material': datos.get('material', ''),
+                    'Cantidad': datos.get('cantidad', 0),
+                    'Observaciones': datos.get('observaciones', '')
+                })
+            
+            df_mat = pd.DataFrame(tabla_mat)
+            st.dataframe(
+                df_mat,
+                use_container_width=True,
+                hide_index=True,
+                height=min(300, len(df_mat) * 45 + 50),
+                column_config={
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width=130),
+                    'Material': st.column_config.TextColumn('Material/Insumo', width=200),
+                    'Cantidad': st.column_config.NumberColumn('Cantidad', width=90),
+                    'Observaciones': st.column_config.TextColumn('Observaciones', width=250)
+                }
+            )
+            
+            csv = df_mat.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Descargar CSV", csv, f"materiales_{paciente_id}.csv", "text/csv")
         else:
-            st.info("No hay materiales registrados")
+            st.info("📋 No hay materiales registrados. Usa el formulario de arriba para agregar el primero.")
     
     # === TAB 5: HISTORIAL COMPLETO ===
     with tab5:
@@ -256,41 +341,63 @@ def render(paciente_sel=None, user=None):
             for registro in historial_ordenado[:20]:  # Mostrar últimos 20
                 tipo = registro.get('tipo', 'desconocido')
                 fecha = registro.get('fecha', 'Sin fecha')
+                datos = registro.get('datos', {})
                 
-                # Icono según tipo
-                icono = {
-                    'signos_vitales': '📊',
-                    'evolucion': '📝',
-                    'receta': '💊',
-                    'visita': '📅',
-                    'material': '🔧'
-                }.get(tipo, '📄')
+                # Icono y color según tipo
+                iconos = {
+                    'signos_vitales': ('📊', 'blue'),
+                    'evoluciones': ('📝', 'green'),
+                    'recetas': ('💊', 'orange'),
+                    'materiales': ('🔧', 'red'),
+                    'evolucion': ('📝', 'green'),
+                    'receta': ('�', 'orange'),
+                    'material': ('🔧', 'red')
+                }
+                icono, color = iconos.get(tipo, ('📄', 'gray'))
                 
-                with st.expander(f"{icono} {tipo.upper()} - {fecha}"):
-                    datos = registro.get('datos', {})
+                with st.expander(f"{icono} **{tipo.replace('_', ' ').upper()}** - {fecha}"):
+                    st.caption(f"ID: {registro.get('id', 'N/A')}")
                     
-                    if tipo == 'signos_vitales':
-                        col1, col2, col3 = st.columns(3)
+                    if tipo in ['signos_vitales']:
+                        cols = st.columns(4)
+                        metricas = [
+                            ('T.A.', datos.get('tension_arterial', '-')),
+                            ('F.C.', datos.get('frecuencia_cardiaca', '-')),
+                            ('F.R.', datos.get('frecuencia_respiratoria', '-')),
+                            ('Temp', datos.get('temperatura', '-')),
+                            ('SatO2', datos.get('saturacion_oxigeno', '-')),
+                            ('Gluc', datos.get('glucemia', '-')),
+                            ('Peso', datos.get('peso', '-')),
+                            ('Talla', datos.get('talla', '-'))
+                        ]
+                        for i, (label, valor) in enumerate(metricas):
+                            with cols[i % 4]:
+                                st.metric(label, valor)
+                        if datos.get('observaciones'):
+                            st.markdown(f"**📝 Observaciones:** {datos.get('observaciones')}")
+                    
+                    elif tipo in ['evoluciones', 'evolucion']:
+                        st.markdown("**📝 Evolución Clínica:**")
+                        st.markdown(f"> {datos.get('evolucion', 'Sin evolución')}")
+                        if datos.get('indicaciones'):
+                            st.markdown("**💊 Indicaciones:**")
+                            st.markdown(f"> {datos.get('indicaciones')}")
+                    
+                    elif tipo in ['recetas', 'receta']:
+                        st.markdown("**💊 Medicamentos:**")
+                        st.markdown(f"> {datos.get('medicamentos', 'Sin medicamentos')}")
+                        if datos.get('indicaciones'):
+                            st.markdown("**📝 Indicaciones generales:**")
+                            st.markdown(f"> {datos.get('indicaciones')}")
+                    
+                    elif tipo in ['materiales', 'material']:
+                        col1, col2 = st.columns(2)
                         with col1:
-                            st.write(f"**TA:** {datos.get('tension_arterial', 'N/A')}")
-                            st.write(f"**FC:** {datos.get('frecuencia_cardiaca', 'N/A')}")
+                            st.metric("Material", datos.get('material', '-'))
                         with col2:
-                            st.write(f"**FR:** {datos.get('frecuencia_respiratoria', 'N/A')}")
-                            st.write(f"**Temp:** {datos.get('temperatura', 'N/A')}")
-                        with col3:
-                            st.write(f"**SatO2:** {datos.get('saturacion_oxigeno', 'N/A')}")
-                            st.write(f"**Glucemia:** {datos.get('glucemia', 'N/A')}")
-                    
-                    elif tipo == 'evolucion':
-                        st.write(f"**Evolución:** {datos.get('evolucion', 'N/A')}")
-                        st.write(f"**Indicaciones:** {datos.get('indicaciones', 'N/A')}")
-                    
-                    elif tipo == 'receta':
-                        st.write(f"**Medicamentos:** {datos.get('medicamentos', 'N/A')}")
-                    
-                    elif tipo == 'material':
-                        st.write(f"**Material:** {datos.get('material', 'N/A')}")
-                        st.write(f"**Cantidad:** {datos.get('cantidad', 'N/A')}")
+                            st.metric("Cantidad", datos.get('cantidad', '-'))
+                        if datos.get('observaciones'):
+                            st.markdown(f"**📝 Observaciones:** {datos.get('observaciones')}")
         else:
             st.info("No hay registros en el historial clínico")
     

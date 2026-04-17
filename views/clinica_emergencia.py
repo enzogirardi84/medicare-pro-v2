@@ -95,18 +95,49 @@ def render(paciente_sel=None, user=None):
     if signos:
         st.success(f"✅ Hay {len(signos)} registros guardados localmente")
         
-        # Mostrar tabla
-        df = pd.DataFrame(signos)
+        # Preparar datos para tabla bonita
+        tabla_datos = []
+        for s in signos:
+            datos = s.get('datos', {})
+            tabla_datos.append({
+                'Fecha': s.get('fecha', ''),
+                'T.A.': datos.get('tension_arterial', ''),
+                'F.C.': datos.get('frecuencia_cardiaca', ''),
+                'F.R.': datos.get('frecuencia_respiratoria', ''),
+                'Temp': datos.get('temperatura', ''),
+                'SatO2': datos.get('saturacion_oxigeno', ''),
+                'Gluc': datos.get('glucemia', ''),
+                'Observaciones': datos.get('observaciones', '')
+            })
         
-        # Seleccionar columnas
-        cols_mostrar = ['fecha', 'ta', 'fc', 'fr', 'temp', 'sat', 'hgt', 'observaciones']
-        cols_existentes = [c for c in cols_mostrar if c in df.columns]
+        df = pd.DataFrame(tabla_datos)
         
+        # Tabla con formato profesional
         st.dataframe(
-            df[cols_existentes],
+            df,
             use_container_width=True,
             hide_index=True,
-            height=min(400, len(df) * 40 + 50)
+            height=min(400, len(df) * 45 + 50),
+            column_config={
+                'Fecha': st.column_config.TextColumn('Fecha/Hora', width=120),
+                'T.A.': st.column_config.TextColumn('Tensión Arterial', width=100),
+                'F.C.': st.column_config.NumberColumn('Frec. Cardiaca', width=90),
+                'F.R.': st.column_config.NumberColumn('Frec. Respiratoria', width=90),
+                'Temp': st.column_config.NumberColumn('Temperatura °C', width=90, format="%.1f"),
+                'SatO2': st.column_config.NumberColumn('Sat O2 %', width=80),
+                'Gluc': st.column_config.TextColumn('Glucemia', width=80),
+                'Observaciones': st.column_config.TextColumn('Observaciones', width=200)
+            }
+        )
+        
+        # Botón para descargar
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Descargar CSV",
+            data=csv,
+            file_name=f"signos_vitales_{paciente_id}.csv",
+            mime="text/csv",
+            use_container_width=False
         )
     else:
         st.info("📋 No hay signos vitales guardados para este paciente. Usa el formulario de arriba para agregar el primero.")
