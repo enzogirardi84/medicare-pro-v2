@@ -25,5 +25,7 @@ SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.35
 # Mantiene los más recientes para evitar crecimiento indefinido del payload.
 MAX_LOGS_DB_ENTRIES = 3000
 
-# Activa el dual-write hacia la API NextGen (FastAPI) para creacion de pacientes y evoluciones.
-ENABLE_NEXTGEN_API_DUAL_WRITE = True
+# DESACTIVADO: La API NextGen (localhost:8000) no existe en produccion.
+# Con True, el sistema borraba evoluciones/vitales de sesion y luego guardaba listas vacias en Supabase.
+# Dejar en False para usar el guardado clasico via JSON blob en Supabase + guardado_universal local.
+ENABLE_NEXTGEN_API_DUAL_WRITE = False
