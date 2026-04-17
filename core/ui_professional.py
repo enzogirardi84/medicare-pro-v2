@@ -219,24 +219,95 @@ CUSTOM_CSS = """
         transform: translateY(0);
     }
     
-    /* Secondary button */
+    /* Secondary button - Dark mode compatible */
     .btn-secondary > button {
-        background: var(--surface);
-        color: var(--text-primary);
-        border: 1px solid var(--border);
+        background: #F1F5F9 !important;
+        color: #1E293B !important;
+        border: 1px solid #CBD5E1 !important;
     }
     
     .btn-secondary > button:hover {
-        background: #F8FAFC;
+        background: #E2E8F0 !important;
+        border-color: #94A3B8 !important;
+    }
+    
+    .btn-secondary > button p,
+    .btn-secondary > button span,
+    .btn-secondary > button {
+        color: #1E293B !important;
+        font-weight: 500 !important;
     }
     
     /* Danger button */
     .btn-danger > button {
-        background: var(--danger);
+        background: #EF4444 !important;
+        color: white !important;
+        border: none !important;
     }
     
     .btn-danger > button:hover {
-        background: #DC2626;
+        background: #DC2626 !important;
+        color: white !important;
+    }
+    
+    /* ALL buttons - ensure high contrast text */
+    .stButton > button {
+        font-weight: 600 !important;
+        text-shadow: none !important;
+    }
+    
+    /* Primary buttons - white text */
+    .stButton > button[kind="primary"] {
+        background: #2563EB !important;
+        color: white !important;
+        border: none !important;
+    }
+    
+    .stButton > button[kind="primary"] p,
+    .stButton > button[kind="primary"] span {
+        color: white !important;
+    }
+    
+    /* Secondary buttons - dark text on light bg */
+    .stButton > button[kind="secondary"] {
+        background: #F1F5F9 !important;
+        color: #1E293B !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+    
+    .stButton > button[kind="secondary"] p,
+    .stButton > button[kind="secondary"] span {
+        color: #1E293B !important;
+    }
+    
+    /* Force visible text in all buttons */
+    button[data-testid="baseButton-secondary"] {
+        background: #F1F5F9 !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+    
+    button[data-testid="baseButton-secondary"] p,
+    button[data-testid="baseButton-secondary"] span {
+        color: #0F172A !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Ensure Streamlit default buttons are visible */
+    .stButton > button[data-baseweb="button"] {
+        color: white !important;
+    }
+    
+    /* Override any dark mode text colors */
+    .stButton button p,
+    .stButton button span,
+    .stButton button div {
+        color: inherit !important;
+    }
+    
+    /* Specific fix for "Inventario" and "Mostrar" buttons */
+    [data-testid="stHorizontalBlock"] .stButton > button {
+        min-width: 120px !important;
     }
     
     /* Tables */
