@@ -159,8 +159,34 @@ def clasificar_inventario_alerta(
     emp = (mi_empresa or "").strip()
     agotados: list[tuple[str, int]] = []
     bajos: list[tuple[str, int]] = []
-    if not emp or not isinstance(inventario_db, list):
+    if not emp:
         return agotados, bajos
+        
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    try:
+        from core.db_sql import get_inventario_by_empresa
+        from core.nextgen_sync import _obtener_uuid_empresa
+        empresa_uuid = _obtener_uuid_empresa(emp)
+        if empresa_uuid:
+            inv_sql = get_inventario_by_empresa(empresa_uuid)
+            if inv_sql:
+                for i in inv_sql:
+                    item = i.get("nombre", "")
+                    stock = i.get("stock_actual", 0)
+                    if stock <= 0:
+                        agotados.append((item, stock))
+                    elif stock <= stock_bajo_max:
+                        bajos.append((item, stock))
+                agotados.sort(key=lambda x: x[0].lower())
+                bajos.sort(key=lambda x: (x[1], x[0].lower()))
+                return agotados, bajos
+    except Exception:
+        pass
+        
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not isinstance(inventario_db, list):
+        return agotados, bajos
+        
     for row in inventario_db:
         if not isinstance(row, dict):
             continue
