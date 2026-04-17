@@ -157,7 +157,7 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
       el.setAttribute('content', content);
     }}
     setMeta('description', P.description);
-    setMeta('robots', 'index, follow');
+    setMeta('robots', 'noindex, nofollow');
     setMeta('application-name', 'MediCare Enterprise PRO');
     setMeta('theme-color', P.theme);
     setMeta('og:title', P.ogTitle, true);

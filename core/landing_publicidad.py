@@ -1210,8 +1210,8 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                     </p>
 
                     <div class="mc-lp-cta-group">
-                      <a class="mc-lp-btn-primary" href="#mc-lp-contact">Solicitar demo en vivo</a>
-                      <a class="mc-lp-btn-outline" href="#mc-lp-modulos">Ver módulos</a>
+                      <a class="mc-lp-btn-primary" href="#mc-lp-contact" aria-label="Solicitar demo en vivo de MediCare PRO">Solicitar demo en vivo</a>
+                      <a class="mc-lp-btn-outline" href="#mc-lp-modulos" aria-label="Ver módulos del sistema">Ver módulos</a>
                     </div>
 
                     <div class="mc-lp-pill-row">
@@ -1433,8 +1433,8 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                       <p class="nm">Enzo N. Girardi</p>
                       <p class="rl">Desarrollo y soporte</p>
                       <div class="mc-lp-btns">
-                        <a class="mc-lp-wa" href="https://wa.me/5493584302024" target="_blank" rel="noopener">WhatsApp</a>
-                        <a class="mc-lp-em" href="mailto:enzogirardi84@gmail.com">Email</a>
+                        <a class="mc-lp-wa" href="https://wa.me/5493584302024" target="_blank" rel="noopener" aria-label="Contactar a Enzo Girardi por WhatsApp">WhatsApp</a>
+                        <a class="mc-lp-em" href="mailto:enzogirardi84@gmail.com" aria-label="Enviar email a Enzo Girardi">Email</a>
                       </div>
                     </div>
 
@@ -1442,8 +1442,8 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                       <p class="nm">Dario Lanfranco</p>
                       <p class="rl">Implementación y contratos</p>
                       <div class="mc-lp-btns">
-                        <a class="mc-lp-wa" href="https://wa.me/5493584201263" target="_blank" rel="noopener">WhatsApp</a>
-                        <a class="mc-lp-em" href="mailto:dariolanfrancoruffener@gmail.com">Email</a>
+                        <a class="mc-lp-wa" href="https://wa.me/5493584201263" target="_blank" rel="noopener" aria-label="Contactar a Dario Lanfranco por WhatsApp">WhatsApp</a>
+                        <a class="mc-lp-em" href="mailto:dariolanfrancoruffener@gmail.com" aria-label="Enviar email a Dario Lanfranco">Email</a>
                       </div>
                     </div>
                   </div>
@@ -1451,7 +1451,7 @@ def obtener_html_landing_publicidad(logo_html: str) -> str:
                   <div class="mc-lp-incident">
                     <p>No carga la app o aparece un error raro: mandá captura y hora aproximada para acelerar el soporte.</p>
                     <div class="mc-lp-btns">
-                      <a class="mc-lp-su" href="mailto:enzogirardi84@gmail.com?subject=MediCare%20Enterprise%20-%20Incidencia%20tecnica" rel="noopener">Abrir correo de incidencia</a>
+                      <a class="mc-lp-su" href="mailto:enzogirardi84@gmail.com?subject=MediCare%20Enterprise%20-%20Incidencia%20tecnica" rel="noopener" aria-label="Abrir correo para reportar incidencia técnica">Abrir correo de incidencia</a>
                     </div>
                   </div>
                 </section>
