@@ -24,7 +24,11 @@ LANDING_CHROME_CSS = """
             [class*="stDeployButton"] {display: none !important;}
             footer,
             footer[data-testid="stFooter"] {visibility: hidden !important; height: 0 !important; min-height: 0 !important; overflow: hidden !important;}
-            html, body, .stApp { overflow-x: hidden !important; }
+            html { overflow-x: hidden !important; scroll-behavior: smooth; }
+            body, .stApp { overflow-x: hidden !important; }
+            ::-webkit-scrollbar { width: 7px; background: rgba(5,8,18,0.6); }
+            ::-webkit-scrollbar-thumb { background: rgba(45,212,191,0.38); border-radius: 6px; }
+            ::-webkit-scrollbar-thumb:hover { background: rgba(45,212,191,0.62); }
             .block-container {
                 padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
                 padding-bottom: 0rem !important;
@@ -140,6 +144,12 @@ def render_publicidad_y_detener() -> None:
     from core.landing_publicidad import obtener_html_landing_publicidad
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
+
+    # Boton de ingreso en la parte superior — visible sin necesidad de scrollear
+    if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_top"):
+        st.session_state.entered_app = True
+        st.rerun()
+
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
     if hasattr(st, "html"):
