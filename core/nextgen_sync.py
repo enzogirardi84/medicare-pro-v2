@@ -32,8 +32,9 @@ def _generate_nextgen_token(empresa: str) -> str:
     return jwt.encode(payload, secret, algorithm="HS256")
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def _obtener_uuid_empresa(nombre_empresa: str) -> str:
-    """Busca el UUID de la empresa en la base de datos SQL."""
+    """Busca el UUID de la empresa en la base de datos SQL. Cached 1h."""
     from core.database import supabase
     if not supabase: return None
     try:
@@ -45,8 +46,9 @@ def _obtener_uuid_empresa(nombre_empresa: str) -> str:
     return None
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def _obtener_uuid_paciente(dni: str, empresa_id: str) -> str:
-    """Busca el UUID del paciente en la base de datos SQL."""
+    """Busca el UUID del paciente en la base de datos SQL. Cached 1h."""
     from core.database import supabase
     if not supabase: return None
     try:

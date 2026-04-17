@@ -1414,6 +1414,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         }
                         sync_receta_to_sql(paciente_sel, med_final, via, frecuencia, tipo_indicacion, datos_receta_completa)
                         
+                        st.session_state["_rx_sql_invalidar"] = True
                         guardar_datos(spinner=True)
                         queue_toast(f"Prescripcion de {med_final} guardada con firma medica.")
                         st.rerun()
@@ -1594,6 +1595,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         user.get("matricula", ""),
                         f"Medico: {medico_papel.strip()} | Matricula: {matricula_papel.strip()} | {detalle_papel.strip()}",
                     )
+                    st.session_state["_rx_sql_invalidar"] = True
                     guardar_datos(spinner=True)
                     queue_toast("La indicacion medica en papel quedo guardada y disponible en el historial.")
                     st.rerun()
@@ -1601,12 +1603,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     st.divider()
     
     # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
+    import time as _time
     from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
     
     recs_todas = []
     admin_hoy = []
     fecha_hoy = ahora().strftime("%d/%m/%Y")
     uso_sql_recetas = False
+    _RECETAS_SQL_TTL = 30  # segundos antes de refrescar desde Supabase
     
     try:
         partes = paciente_sel.split(" - ")
@@ -1618,16 +1622,23 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             if empresa_id:
                 pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                 if pac_uuid:
-                    from core.database import supabase
-                    # Traemos TODAS las indicaciones para este paciente
-                    res_ind = supabase.table("indicaciones").select("*").eq("paciente_id", pac_uuid).order("fecha_indicacion", desc=True).execute()
-                    inds_sql = res_ind.data if res_ind and res_ind.data else []
-                    
-                    # Traemos las administraciones de hoy
-                    fecha_hoy_iso = ahora().strftime("%Y-%m-%d")
-                    res_adm = supabase.table("administracion_med").select("*").eq("paciente_id", pac_uuid).gte("fecha_registro", f"{fecha_hoy_iso}T00:00:00").lte("fecha_registro", f"{fecha_hoy_iso}T23:59:59").execute()
-                    adms_sql = res_adm.data if res_adm and res_adm.data else []
-                    
+                    # Cache de 30s en session_state: evita 2 queries Supabase por rerun
+                    _ck = f"_rx_sql_{pac_uuid}"
+                    if st.session_state.pop("_rx_sql_invalidar", False):
+                        st.session_state.pop(_ck, None)
+                    _cached = st.session_state.get(_ck, {})
+                    _cache_age = _time.monotonic() - _cached.get("ts", 0)
+                    if _cache_age < _RECETAS_SQL_TTL and _cached.get("fecha") == fecha_hoy:
+                        inds_sql = _cached["inds"]
+                        adms_sql = _cached["adms"]
+                    else:
+                        from core.database import supabase
+                        fecha_hoy_iso = ahora().strftime("%Y-%m-%d")
+                        res_ind = supabase.table("indicaciones").select("*").eq("paciente_id", pac_uuid).order("fecha_indicacion", desc=True).execute()
+                        inds_sql = res_ind.data if res_ind and res_ind.data else []
+                        res_adm = supabase.table("administracion_med").select("*").eq("paciente_id", pac_uuid).gte("fecha_registro", f"{fecha_hoy_iso}T00:00:00").lte("fecha_registro", f"{fecha_hoy_iso}T23:59:59").execute()
+                        adms_sql = res_adm.data if res_adm and res_adm.data else []
+                        st.session_state[_ck] = {"ts": _time.monotonic(), "fecha": fecha_hoy, "inds": inds_sql, "adms": adms_sql}
                     uso_sql_recetas = True
                     
                     # Mapear indicaciones SQL a formato JSON legacy
@@ -1927,6 +1938,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     st.error("Para guardar celdas en rojo, completá el motivo clínico.")
                     return
                 if registros_guardados:
+                    st.session_state["_rx_sql_invalidar"] = True
                     guardar_datos(spinner=True)
                     queue_toast(f"Se guardaron {registros_guardados} cambios de estado en la cortina.")
                     st.rerun()
