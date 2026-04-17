@@ -534,10 +534,44 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 st.session_state["_modo_offline"] = False
                 
                 # Fijar el cache para evitar guardados innecesarios
+                # Le pasamos la estructura completa para que calcule el hash base
                 _fijar_cache_y_hash(estructura)
                 
                 # También marcamos que no hay guardado pendiente
                 st.session_state["_guardar_datos_pendiente"] = False
+                
+                # IMPORTANTE: Asegurarnos de que el estado de inicialización esté completo
+                st.session_state["db_inicializada"] = True
+                
+                # Cargar pacientes para que el sidebar funcione
+                from core.db_sql import get_pacientes_by_empresa
+                from core.nextgen_sync import _obtener_uuid_empresa
+                
+                # Si hay un usuario logueado, cargar sus pacientes
+                u_actual = st.session_state.get("u_actual")
+                if isinstance(u_actual, dict) and u_actual.get("empresa"):
+                    empresa_uuid = _obtener_uuid_empresa(u_actual["empresa"])
+                    if empresa_uuid:
+                        try:
+                            pacs_sql = get_pacientes_by_empresa(empresa_uuid, incluir_altas=True)
+                            for p in pacs_sql:
+                                nombre = p.get("nombre_completo", "")
+                                dni = p.get("dni", "")
+                                paciente_id_visual = f"{nombre} - {dni}"
+                                
+                                estructura["pacientes_db"].append(paciente_id_visual)
+                                estructura["detalles_pacientes_db"][paciente_id_visual] = {
+                                    "dni": dni,
+                                    "estado": p.get("estado", "Activo"),
+                                    "obra_social": p.get("obra_social", ""),
+                                    "empresa": u_actual["empresa"],
+                                    "telefono": p.get("telefono", ""),
+                                    "direccion": p.get("direccion", ""),
+                                    "alergias": p.get("alergias", ""),
+                                    "patologias": p.get("patologias", "")
+                                }
+                        except Exception as e:
+                            log_event("db", f"error_cargar_pacientes_sql:{e}")
                 
                 return estructura
         except Exception:
