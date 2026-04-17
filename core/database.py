@@ -486,6 +486,8 @@ def _fijar_cache_y_hash(data: dict) -> bytes | None:
     pb, _ = dumps_db_sorted(data)
     st.session_state["_db_cache"] = loads_db_payload(pb)
     st.session_state["_db_cache_hash"] = hashlib.sha256(pb).hexdigest()
+    # Asegurar que no quede un guardado pendiente al fijar el cache inicial
+    st.session_state["_guardar_datos_pendiente"] = False
     return pb
 
 
