@@ -1,0 +1,101 @@
+{
+  "usuarios": {
+    "admin": {
+      "dni": "37108100",
+      "pin": "1234",
+      "rol": "SuperAdmin",
+      "pass": "37108100",
+      "estado": "Activo",
+      "nombre": "Enzo Girardi",
+      "titulo": "Director de Sistemas",
+      "empresa": "SISTEMAS E.G.",
+      "matricula": "M.P 21947",
+      "pass_hash": "$2b$12$51iSN1uagj8cTOf6Sv5djOqXZNZlfsrFH4g/SmFdyP/xV9YnmWO9m",
+      "usuario_login": "admin",
+      "perfil_profesional": "Direccion"
+    },
+    "dariolanfranco": {
+      "nombre": "Dario Lanfranco",
+      "rol": "SuperAdmin",
+      "titulo": "Socio tecnico y arquitecto",
+      "perfil_profesional": "Direccion",
+      "empresa": "Girardi",
+      "matricula": "M.P13584",
+      "dni": "41019006",
+      "estado": "Activo",
+      "pin": "2570",
+      "email": "dariolanfrancoruffener@gmail.com",
+      "usuario_login": "dariolanfranco",
+      "pass": "",
+      "pass_hash": "$2b$12$GLQPaGAMD2kcARc/rGQMZ.9fFLYM48bwo7CGwkAzKGuYVSWSyVdf6"
+    }
+  },
+  "pacientes": [
+    {
+      "n": "Juan perez",
+      "d": "13823265",
+      "o": "PAMI",
+      "e": "TEST"
+    },
+    {
+      "n": "Javier Ogas",
+      "d": "37108077",
+      "o": "Mutual Medica",
+      "e": "Girardi"
+    },
+    {
+      "n": "Juan suarez",
+      "d": "35322168",
+      "o": "Particular",
+      "e": "Girardi"
+    },
+    {
+      "n": "Enzo Rivero",
+      "d": "32423532566",
+      "o": "Mutual Medica",
+      "e": "Girardi"
+    },
+    {
+      "n": "Federico Lopez",
+      "d": "87855484",
+      "o": "Osde",
+      "e": "Empresa Suarez"
+    },
+    {
+      "n": "Felipe Girardi",
+      "d": "37108900",
+      "o": "Apros",
+      "e": "Perez"
+    },
+    {
+      "n": "Facundo Acosta (Nobis)",
+      "d": "41440234",
+      "o": "",
+      "e": "Girardi"
+    },
+    {
+      "n": "Jorge Quevedo (Federada)",
+      "d": "35410143",
+      "o": "",
+      "e": "Clinica Girardi"
+    },
+    {
+      "n": "Lourdes Vengolea  (Osde )",
+      "d": "38883955",
+      "o": "Apros",
+      "e": "Clinica Girardi"
+    },
+    {
+      "n": "Roberto Carlos Gutiérrez",
+      "d": "14.223.805",
+      "o": "PAMI",
+      "e": "CIS San Ignacio"
+    },
+    {
+      "n": "Juan Carlos Rodriguez (Municipal)",
+      "d": "30123123",
+      "o": "",
+      "e": "Girardi"
+    }
+  ]
+}

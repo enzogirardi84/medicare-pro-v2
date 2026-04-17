@@ -1,0 +1,87 @@
+{
+  "timestamp": "20260416_233552",
+  "added_patients": 11,
+  "patients_total": 11,
+  "details_total": 11,
+  "updated_details": 11,
+  "added_evoluciones": 7,
+  "evoluciones_total": 7,
+  "added_vitales": 7,
+  "vitales_total": 7,
+  "added_consentimientos": 1,
+  "consentimientos_total": 1,
+  "added_pediatria": 2,
+  "pediatria_total": 2,
+  "added_escalas": 3,
+  "escalas_total": 3,
+  "added_turnos": 6,
+  "turnos_total": 6,
+  "patients": [
+    {
+      "paciente_id": "Lourdes Vengolea  (Osde ) - 38883955",
+      "empresa": "Clinica Girardi",
+      "dni": "38883955",
+      "estado": "Activo"
+    },
+    {
+      "paciente_id": "Facundo Acosta (Nobis) - 41440234",
+      "empresa": "Girardi",
+      "dni": "41440234",
+      "estado": "Activo"
+    },
+    {
+      "paciente_id": "Juan Carlos Rodriguez (Municipal) - 30123123",
+      "empresa": "Girardi",
+      "dni": "30123123",
+      "estado": "Activo"
+    },
+    {
+      "paciente_id": "Juan perez - 13823265",
+      "empresa": "TEST",
+      "dni": "13823265",
+      "estado": "De Alta"
+    },
+    {
+      "paciente_id": "Felipe Girardi - 37108900",
+      "empresa": "Perez",
+      "dni": "37108900",
+      "estado": "Activo"
+    },
+    {
+      "paciente_id": "Javier Ogas - 37108077",
+      "empresa": "Girardi",
+      "dni": "37108077",
+      "estado": "De Alta"
+    },
+    {
+      "paciente_id": "Enzo Rivero - 32423532566",
+      "empresa": "Girardi",
+      "dni": "32423532566",
+      "estado": "De Alta"
+    },
+    {
+      "paciente_id": "Federico Lopez - 87855484",
+      "empresa": "Empresa Suarez",
+      "dni": "87855484",
+      "estado": "Activo"
+    },
+    {
+      "paciente_id": "Juan suarez - 35322168",
+      "empresa": "Girardi",
+      "dni": "35322168",
+      "estado": "Activo"
+    },
+    {
+      "paciente_id": "Jorge Quevedo (Federada) - 35410143",
+      "empresa": "Clinica Girardi",
+      "dni": "35410143",
+      "estado": "De Alta"
+    },
+    {
+      "paciente_id": "Roberto Carlos Gutiérrez - 14.223.805",
+      "empresa": "CIS San Ignacio",
+      "dni": "14.223.805",
+      "estado": "Activo"
+    }
+  ]
+}

@@ -1,0 +1,445 @@
+{
+  "logs_db": [
+    {
+      "A": "Login emergencia superadmin",
+      "E": "SISTEMAS E.G.",
+      "F": "16/04/2026",
+      "H": "23:20",
+      "U": "Enzo Girardi"
+    }
+  ],
+  "agenda_db": [],
+  "turnos_db": [
+    {
+      "paciente": "Javier Ogas - 37108077",
+      "fecha_hora_programada": "2026-04-03T17:50:00+00:00",
+      "estado": "Pendiente",
+      "motivo": "",
+      "notas": "",
+      "empresa": "Girardi"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha_hora_programada": "2026-04-08T22:51:00+00:00",
+      "estado": "Pendiente",
+      "motivo": "",
+      "notas": "",
+      "empresa": "Girardi"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha_hora_programada": "2026-04-09T15:23:00+00:00",
+      "estado": "Pendiente",
+      "motivo": "",
+      "notas": "",
+      "empresa": "Girardi"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha_hora_programada": "2026-04-10T01:50:00+00:00",
+      "estado": "Pendiente",
+      "motivo": "",
+      "notas": "",
+      "empresa": "Girardi"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha_hora_programada": "2026-04-10T03:05:00+00:00",
+      "estado": "Pendiente",
+      "motivo": "",
+      "notas": "",
+      "empresa": "Girardi"
+    },
+    {
+      "paciente": "Roberto Carlos Gutiérrez - 14.223.805",
+      "fecha_hora_programada": "2026-04-16T11:25:00+00:00",
+      "estado": "Pendiente",
+      "motivo": "",
+      "notas": "",
+      "empresa": "CIS San Ignacio"
+    }
+  ],
+  "clinicas_db": {
+    "sistemas e.g.": {
+      "estado": "Activa",
+      "motivo_baja": "",
+      "actualizado_en": "",
+      "nombre_display": "SISTEMAS E.G."
+    }
+  },
+  "estudios_db": [],
+  "usuarios_db": {
+    "admin": {
+      "dni": "37108100",
+      "pin": "1234",
+      "rol": "SuperAdmin",
+      "pass": "",
+      "estado": "Activo",
+      "nombre": "Enzo Girardi",
+      "titulo": "Director de Sistemas",
+      "empresa": "SISTEMAS E.G.",
+      "matricula": "M.P 21947",
+      "pass_hash": "$2b$12$51iSN1uagj8cTOf6Sv5djOqXZNZlfsrFH4g/SmFdyP/xV9YnmWO9m",
+      "usuario_login": "admin",
+      "perfil_profesional": "Direccion"
+    }
+  },
+  "pacientes_db": [
+    "Lourdes Vengolea  (Osde ) - 38883955",
+    "Facundo Acosta (Nobis) - 41440234",
+    "Juan Carlos Rodriguez (Municipal) - 30123123",
+    "Juan perez - 13823265",
+    "Felipe Girardi - 37108900",
+    "Javier Ogas - 37108077",
+    "Enzo Rivero - 32423532566",
+    "Federico Lopez - 87855484",
+    "Juan suarez - 35322168",
+    "Jorge Quevedo (Federada) - 35410143",
+    "Roberto Carlos Gutiérrez - 14.223.805"
+  ],
+  "nomenclador_db": [],
+  "fotos_heridas_db": [],
+  "firmas_tactiles_db": [],
+  "reportes_diarios_db": [],
+  "profesionales_red_db": [],
+  "detalles_pacientes_db": {
+    "Lourdes Vengolea  (Osde ) - 38883955": {
+      "dni": "38883955",
+      "fnac": "",
+      "sexo": "",
+      "telefono": "3544632014",
+      "direccion": "Ranqueles 150, rio cuarto, cordoba",
+      "empresa": "Clinica Girardi",
+      "estado": "Activo",
+      "obra_social": "",
+      "alergias": "",
+      "patologias": ""
+    },
+    "Facundo Acosta (Nobis) - 41440234": {
+      "dni": "41440234",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "3584823029",
+      "direccion": "9 de julio 568",
+      "empresa": "Girardi",
+      "estado": "Activo",
+      "obra_social": "",
+      "alergias": "",
+      "patologias": ""
+    },
+    "Juan Carlos Rodriguez (Municipal) - 30123123": {
+      "dni": "30123123",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "3584201263",
+      "direccion": "peru 500",
+      "empresa": "Girardi",
+      "estado": "Activo",
+      "obra_social": "",
+      "alergias": "",
+      "patologias": ""
+    },
+    "Juan perez - 13823265": {
+      "dni": "13823265",
+      "fnac": "",
+      "sexo": "F",
+      "telefono": "3584201263",
+      "direccion": "Peru 474",
+      "empresa": "TEST",
+      "estado": "De Alta",
+      "obra_social": "PAMI",
+      "alergias": "",
+      "patologias": ""
+    },
+    "Felipe Girardi - 37108900": {
+      "dni": "37108900",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "356345666",
+      "direccion": "mitre 545, cordoba capital",
+      "empresa": "Perez",
+      "estado": "Activo",
+      "obra_social": "Apros",
+      "alergias": "",
+      "patologias": ""
+    },
+    "Javier Ogas - 37108077": {
+      "dni": "37108077",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "2664748177",
+      "direccion": "Rioja 500, rio cuarto, cordoba",
+      "empresa": "Girardi",
+      "estado": "De Alta",
+      "obra_social": "Mutual Medica",
+      "alergias": "",
+      "patologias": ""
+    },
+    "Enzo Rivero - 32423532566": {
+      "dni": "32423532566",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "234235256634",
+      "direccion": "rioja 500, cordoba",
+      "empresa": "Girardi",
+      "estado": "De Alta",
+      "obra_social": "Mutual Medica",
+      "alergias": "alergia, penicilina",
+      "patologias": "ASMA"
+    },
+    "Federico Lopez - 87855484": {
+      "dni": "87855484",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "654661716574561",
+      "direccion": "rioja 500",
+      "empresa": "Empresa Suarez",
+      "estado": "Activo",
+      "obra_social": "Osde",
+      "alergias": "alergia penicilina",
+      "patologias": ""
+    },
+    "Juan suarez - 35322168": {
+      "dni": "35322168",
+      "fnac": "",
+      "sexo": "F",
+      "telefono": "3544555631",
+      "direccion": "Rivadavia 330",
+      "empresa": "Girardi",
+      "estado": "Activo",
+      "obra_social": "Particular",
+      "alergias": "Penicilina",
+      "patologias": "Hta"
+    },
+    "Jorge Quevedo (Federada) - 35410143": {
+      "dni": "35410143",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "384201263",
+      "direccion": "Peru 475",
+      "empresa": "Clinica Girardi",
+      "estado": "De Alta",
+      "obra_social": "",
+      "alergias": "Alergia penicilina",
+      "patologias": ""
+    },
+    "Roberto Carlos Gutiérrez - 14.223.805": {
+      "dni": "14.223.805",
+      "fnac": "",
+      "sexo": "M",
+      "telefono": "3584201263",
+      "direccion": "peru 478",
+      "empresa": "CIS San Ignacio",
+      "estado": "Activo",
+      "obra_social": "PAMI",
+      "alergias": "Amoxicilina",
+      "patologias": "marcapasos"
+    }
+  },
+  "plantillas_whatsapp_db": {},
+  "solicitudes_servicios_db": [],
+  "evoluciones_db": [
+    {
+      "paciente": "Lourdes Vengolea  (Osde ) - 38883955",
+      "nota": "Se realiza curación de la herida: limpieza con suero fisiológico al 0.9% a presión, lavado suave, secado de piel perilesional sin frotar. Se aplica apósito de alginato de calcio en cavidad para gestionar exudado y hidrocoloide grueso como apósito secundario.",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Enzo Nicolas Girardi",
+      "plantilla": "Libre"
+    },
+    {
+      "paciente": "Jorge Quevedo (Federada) - 35410143",
+      "nota": "pte, con via perifercia permeable, se realiza control de signos vitales, tolera dieta, se realiza cambio de sonda vesical, se toma muestra de urocultivo, presento episodios de febrícula, se administra dipirona.",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Enzo Nicolas Girardi",
+      "plantilla": "Libre"
+    },
+    {
+      "paciente": "Juan Carlos Rodriguez (Municipal) - 30123123",
+      "nota": "El paciente es fumador y sufre de asma.",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Darío Lanfranco",
+      "plantilla": "Libre"
+    },
+    {
+      "paciente": "Federico Lopez - 87855484",
+      "nota": "pte, presenta hipertension arterial, se administra amlodipina 10mg, dipirona.",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Juan Suarez",
+      "plantilla": "Libre"
+    },
+    {
+      "paciente": "Lourdes Vengolea  (Osde ) - 38883955",
+      "nota": "Paciente permanece en estado crítico con pronóstico reservado. Tras la carga de fluidos, la PA asciende a 105/65 mmHg. Se mantiene vigilancia estrecha ante signos de deterioro neurológico o falla respiratoria.",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Enzo Nicolas Girardi",
+      "plantilla": "Libre"
+    },
+    {
+      "paciente": "Juan Carlos Rodriguez (Municipal) - 30123123",
+      "nota": "evolucion favorable ñ",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Darío Lanfranco",
+      "plantilla": "Libre"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "nota": "Paciente ote, poco comunicativo, con app de hipertensión arterial, que al csv se encuentra con normotenso, se moviliza por sus medios, con buena tolerancia gástrica, presenta escara sacra grado 3, se realiza higiene personal.",
+      "fecha": "16/04/2026 23:29",
+      "firma": "Lourdes Patricia Vengolea",
+      "plantilla": "Libre"
+    }
+  ],
+  "vitales_db": [
+    {
+      "paciente": "Jorge Quevedo (Federada) - 35410143",
+      "TA": "120/80",
+      "FC": 75,
+      "FR": 16,
+      "Sat": 98,
+      "Temp": 36.5,
+      "HGT": 100,
+      "fecha": "01/04/2026 11:56"
+    },
+    {
+      "paciente": "Jorge Quevedo (Federada) - 35410143",
+      "TA": "150/80",
+      "FC": 75,
+      "FR": 16,
+      "Sat": 98,
+      "Temp": 36.5,
+      "HGT": 100,
+      "fecha": "01/04/2026 12:04"
+    },
+    {
+      "paciente": "Jorge Quevedo (Federada) - 35410143",
+      "TA": "120/80",
+      "FC": 75,
+      "FR": 16,
+      "Sat": 98,
+      "Temp": 36.5,
+      "HGT": 100,
+      "fecha": "01/04/2026 12:08"
+    },
+    {
+      "paciente": "Felipe Girardi - 37108900",
+      "TA": "120/80",
+      "FC": 75,
+      "FR": 16,
+      "Sat": 96,
+      "Temp": 36.5,
+      "HGT": 110,
+      "fecha": "03/04/2026 13:11"
+    },
+    {
+      "paciente": "Federico Lopez - 87855484",
+      "TA": "180/100",
+      "FC": 100,
+      "FR": 19,
+      "Sat": 90,
+      "Temp": 38.0,
+      "HGT": 450,
+      "fecha": "07/04/2026 18:07"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "TA": "140/90",
+      "FC": 96,
+      "FR": 16,
+      "Sat": 98,
+      "Temp": 37.0,
+      "HGT": 120,
+      "fecha": "08/04/2026 22:56"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "TA": "120/80",
+      "FC": 75,
+      "FR": 16,
+      "Sat": 96,
+      "Temp": 36.5,
+      "HGT": 110,
+      "fecha": "08/04/2026 22:56"
+    }
+  ],
+  "consentimientos_db": [
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha": "08/04/2026 23:10",
+      "firmante": "Enzo Rivero",
+      "dni_firmante": "32423532566",
+      "vinculo": "",
+      "telefono": "234235256634",
+      "observaciones": "Tipo: Consentimiento General",
+      "firma_b64": "",
+      "profesional": "",
+      "matricula_profesional": ""
+    }
+  ],
+  "pediatria_db": [
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha": "08/04/2026 22:56",
+      "edad_meses": "",
+      "peso": 93.0,
+      "talla": 169.0,
+      "pc": null,
+      "imc": "",
+      "percentil_sug": "",
+      "nota": "",
+      "firma": "Sistema"
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha": "08/04/2026 22:56",
+      "edad_meses": "",
+      "peso": 0.0,
+      "talla": 0.0,
+      "pc": null,
+      "imc": "",
+      "percentil_sug": "",
+      "nota": "",
+      "firma": "Sistema"
+    }
+  ],
+  "escalas_clinicas_db": [
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha": "08/04/2026 23:08",
+      "escala": "Braden",
+      "puntaje": 19,
+      "interpretacion": "Bajo riesgo",
+      "observaciones": "",
+      "profesional": "",
+      "matricula": ""
+    },
+    {
+      "paciente": "Enzo Rivero - 32423532566",
+      "fecha": "13/04/2026 23:07",
+      "escala": "EVA",
+      "puntaje": 6,
+      "interpretacion": "Dolor moderado",
+      "observaciones": "",
+      "profesional": "",
+      "matricula": ""
+    },
+    {
+      "paciente": "Roberto Carlos Gutiérrez - 14.223.805",
+      "fecha": "14/04/2026 11:19",
+      "escala": "Glasgow",
+      "puntaje": 13,
+      "interpretacion": "Leve / normal",
+      "observaciones": "",
+      "profesional": "",
+      "matricula": ""
+    }
+  ],
+  "administracion_med_db": [],
+  "indicaciones_db": [],
+  "auditoria_legal_db": [],
+  "balance_db": [],
+  "checkin_db": [],
+  "inventario_db": [],
+  "consumos_db": [],
+  "emergencias_db": [],
+  "cuidados_enfermeria_db": []
+}

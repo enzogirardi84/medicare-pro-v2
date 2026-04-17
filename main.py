@@ -58,8 +58,15 @@ from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 
 from core.app_logging import configurar_logging_basico, log_event
 from core.perf_metrics import record_perf, summarize_perf
+from core.ui_professional import configure_professional_page, apply_professional_theme
 
 configurar_logging_basico()
+
+# Aplicar tema profesional moderno
+try:
+    apply_professional_theme()
+except Exception as e:
+    log_event("ui_theme", f"Error aplicando tema: {e}")
 
 _core_auth = import_module("core.auth")
 check_inactividad = _core_auth.check_inactividad
