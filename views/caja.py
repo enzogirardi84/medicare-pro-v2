@@ -185,25 +185,39 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             def generar_recibo_pdf(mov):
                 if not FPDF_DISPONIBLE:
                     return b""
+                from core.clinical_exports import _pdf_header_oscuro
+                _cobrado = "Cobrado" in mov.get("estado", "")
+                _badge_rgb = (13, 90, 80) if _cobrado else (130, 80, 0)
                 pdf = FPDF(format="A5")
+                pdf.set_margins(12, 10, 12)
+                pdf.set_auto_page_break(auto=True, margin=12)
                 pdf.add_page()
-                pdf.set_font("Arial", 'B', 16)
-                pdf.cell(0, 10, safe_text(f"RECIBO - {mi_empresa}"), ln=True, align='C')
-                pdf.set_font("Arial", '', 10)
-                pdf.cell(0, 6, safe_text(f"Fecha: {mov['fecha']}"), ln=True, align='C')
-                pdf.cell(0, 6, safe_text(f"Operador: {mov.get('operador', 'S/D')} (DNI: {mov.get('operador_dni', 'S/D')})"), ln=True, align='C')
-                pdf.ln(10)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 8, safe_text(f"Recibimos de: {mov['paciente']}"), ln=True)
-                pdf.ln(4)
-                pdf.set_font("Arial", '', 11)
-                pdf.multi_cell(0, 8, safe_text(f"Concepto: {mov['serv']}"))
-                pdf.cell(0, 8, safe_text(f"Medio de pago: {mov.get('metodo', 'S/D')}"), ln=True)
-                pdf.cell(0, 8, safe_text(f"Estado: {mov.get('estado', 'Cobrado')}"), ln=True)
+                _pdf_header_oscuro(
+                    pdf, mi_empresa,
+                    "RECIBO DE COBRO",
+                    subtitulo=safe_text(f"Fecha: {mov['fecha']}  |  Operador: {mov.get('operador','S/D')}"),
+                    badge_txt=mov.get("estado", "Cobrado"),
+                    badge_rgb=_badge_rgb,
+                )
+                pdf.ln(2)
+                pdf.set_font("Arial", "B", 10)
+                pdf.cell(0, 6, safe_text(f"Recibimos de: {mov.get('paciente', '')}"), ln=True)
+                pdf.ln(2)
+                pdf.set_font("Arial", "", 9)
+                pdf.multi_cell(0, 6, safe_text(f"Concepto: {mov['serv']}"))
+                pdf.cell(0, 6, safe_text(f"Medio de pago: {mov.get('metodo', 'S/D')}"), ln=True)
+                pdf.ln(6)
+                pdf.set_fill_color(22, 38, 68)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(0, 14, safe_text(f"TOTAL: ${mov['monto']:,.2f}"), 1, 1, "C", True)
+                pdf.set_text_color(0, 0, 0)
                 pdf.ln(8)
-                pdf.set_fill_color(240, 240, 240)
-                pdf.set_font("Arial", 'B', 18)
-                pdf.cell(0, 14, safe_text(f"TOTAL: ${mov['monto']:,.2f}"), 1, 1, 'C', True)
+                usable = pdf.w - pdf.l_margin - pdf.r_margin
+                pdf.line(pdf.l_margin, pdf.get_y(), pdf.l_margin + usable * 0.45, pdf.get_y())
+                pdf.set_xy(pdf.l_margin, pdf.get_y() + 1)
+                pdf.set_font("Arial", "", 7)
+                pdf.cell(0, 4, "Firma / Aclaracion", ln=True)
                 return pdf_output_bytes(pdf)
 
             with st.container(height=480, border=False):

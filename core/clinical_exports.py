@@ -140,6 +140,51 @@ def _insert_logo(pdf_obj, y_offset: float = 8.0):
                 pass
 
 
+def _pdf_header_oscuro(pdf, empresa, titulo, subtitulo="", badge_txt="", badge_rgb=(60, 80, 120)):
+    """Cabecera oscura unificada para todos los PDFs del sistema."""
+    header_h = 36
+    pdf.set_fill_color(22, 38, 68)
+    pdf.rect(0, 0, pdf.w, header_h, "F")
+    pdf.set_fill_color(*badge_rgb)
+    pdf.rect(0, 0, 5, header_h, "F")
+    for ruta in [
+        ASSETS_DIR / "logo_medicare_pro.jpeg",
+        ASSETS_DIR / "logo_medicare_pro.jpg",
+        ASSETS_DIR / "logo_medicare_pro.png",
+    ]:
+        if ruta.exists():
+            try:
+                pdf.image(str(ruta), x=8, y=5, w=26)
+            except Exception:
+                pass
+            break
+    pdf.set_xy(38, 7)
+    pdf.set_font("Arial", "B", 14)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 7, safe_text(empresa), ln=True)
+    pdf.set_x(38)
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(160, 200, 255)
+    pdf.cell(0, 5, safe_text(titulo), ln=True)
+    if subtitulo:
+        pdf.set_x(38)
+        pdf.set_font("Arial", "", 7)
+        pdf.set_text_color(200, 210, 230)
+        pdf.cell(0, 5, safe_text(subtitulo), ln=True)
+    if badge_txt:
+        badge_w = 52
+        badge_x = pdf.w - badge_w - 6
+        pdf.set_fill_color(*badge_rgb)
+        pdf.rect(badge_x, 10, badge_w, 16, "F")
+        pdf.set_font("Arial", "B", 9)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_xy(badge_x, 15)
+        pdf.cell(badge_w, 6, safe_text(badge_txt), align="C", border=0)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(pdf.l_margin, header_h + 4)
+    return header_h + 4
+
+
 class RespaldoClinicoPDF(FPDF):
     """FPDF con pie de página: contexto del paciente y numeración."""
 
@@ -620,36 +665,13 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
     pdf.set_right_margin(14)
     pdf.add_page()
 
-    band_h = 38.0
-    pdf.set_fill_color(240, 253, 250)
-    pdf.rect(0, 0, 210, band_h, "F")
-    pdf.set_draw_color(13, 148, 136)
-    pdf.set_line_width(0.55)
-    pdf.line(0, band_h, 210, band_h)
-
-    _insert_logo(pdf, 9.0)
-
-    pdf.set_xy(40, 6)
-    pdf.set_text_color(15, 23, 42)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 5, safe_text(empresa), ln=True)
-    pdf.set_x(40)
-    pdf.set_text_color(13, 148, 136)
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 5, safe_text("Respaldo clinico del paciente"), ln=True)
-    pdf.set_x(40)
-    pdf.set_text_color(30, 41, 59)
-    pdf.set_font("Arial", "B", 10)
-    sub_nom = safe_text(nom_pac)
-    if dni_final != "S/D":
-        sub_nom += safe_text(f"  ·  DNI: {dni_final}")
-    pdf.cell(0, 5, sub_nom, ln=True)
-    pdf.set_x(40)
-    pdf.set_text_color(100, 116, 139)
-    pdf.set_font("Arial", "", 8)
-    pdf.cell(0, 4, safe_text(f"Generado: {generado}  ·  Documento para archivo, impresion o auditoria"), ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_y(band_h + 5)
+    _pdf_header_oscuro(
+        pdf, empresa,
+        "RESPALDO CLINICO DEL PACIENTE",
+        subtitulo=safe_text(f"{nom_pac}  ·  DNI: {dni_final}  ·  Generado: {generado}"),
+        badge_txt="Historia Clinica",
+        badge_rgb=(13, 90, 80),
+    )
 
     _section_title_backup(pdf, "1. Datos demograficos y alertas")
     _write_pairs(
@@ -790,16 +812,17 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
 
     pdf = FPDF()
+    pdf.set_margins(14, 12, 14)
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    _insert_logo(pdf)
-    pdf.set_xy(40, 12)
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
-    pdf.set_x(40)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, safe_text("Consentimiento Informado para Atencion y Terapia en Domicilio"), ln=True)
-    pdf.ln(10)
+    _pdf_header_oscuro(
+        pdf, detalles.get("empresa", mi_empresa),
+        "CONSENTIMIENTO INFORMADO",
+        subtitulo="Atencion y Terapia en Domicilio",
+        badge_txt="Consentimiento",
+        badge_rgb=(13, 90, 80),
+    )
+    pdf.ln(4)
 
     texto = (
         "Por medio del presente, dejo constancia de que he recibido informacion clara, suficiente y comprensible "
@@ -887,21 +910,25 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
     medico_indicante = record.get("medico_nombre") or (profesional or {}).get("nombre", "S/D")
     matricula_indicante = record.get("medico_matricula") or (profesional or {}).get("matricula", "S/D")
 
+    _estado_colors = {
+        "Activa": (13, 90, 80),
+        "Suspendida": (180, 60, 20),
+        "Completada": (60, 80, 120),
+        "Modificada": (130, 100, 0),
+    }
+    _badge_color = _estado_colors.get(estado_actual, (60, 80, 120))
+
     pdf = FPDF()
+    pdf.set_margins(14, 12, 14)
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    _insert_logo(pdf)
-
-    pdf.set_xy(40, 12)
-    pdf.set_font("Arial", "B", 15)
-    pdf.cell(0, 8, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
-    pdf.set_x(40)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 7, safe_text("Prescripcion y Acta Legal de Medicacion"), ln=True)
-    pdf.set_x(40)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, safe_text("Documento imprimible con trazabilidad clinica y legal"), ln=True)
-    pdf.ln(8)
+    _pdf_header_oscuro(
+        pdf, detalles.get("empresa", mi_empresa),
+        "PRESCRIPCION Y ACTA LEGAL DE MEDICACION",
+        subtitulo=safe_text(f"Paciente: {paciente_sel.split(' - ')[0]}  ·  Medico: {medico_indicante}  ·  Mat: {matricula_indicante}"),
+        badge_txt=estado_actual,
+        badge_rgb=_badge_color,
+    )
 
     _section_title(pdf, "Datos del paciente")
     _write_pairs(
