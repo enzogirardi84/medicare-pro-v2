@@ -198,7 +198,7 @@ CUSTOM_CSS = """
     }
     
     /* =====================================================
-       BUTTONS - MAXIMUM VISIBILITY FIX
+       BUTTONS - GREEN THEME FOR MAXIMUM VISIBILITY
        ===================================================== */
     
     /* ALL buttons - Base visibility */
@@ -208,20 +208,22 @@ CUSTOM_CSS = """
         display: inline-flex !important;
     }
     
-    /* PRIMARY buttons - Blue with WHITE text */
+    /* PRIMARY buttons - GREEN with WHITE text */
     button[kind="primary"],
     .stButton button[kind="primary"],
     button[data-testid="baseButton-primary"] {
-        background-color: #2563EB !important;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
         color: #FFFFFF !important;
-        border: 2px solid #1D4ED8 !important;
-        font-weight: 600 !important;
-        font-size: 0.875rem !important;
-        padding: 0.5rem 1rem !important;
-        border-radius: 6px !important;
+        border: 2px solid #047857 !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        padding: 0.75rem 1.5rem !important;
+        border-radius: 8px !important;
         text-shadow: none !important;
         -webkit-text-fill-color: #FFFFFF !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
     
     button[kind="primary"] p,
@@ -229,53 +231,73 @@ CUSTOM_CSS = """
     button[kind="primary"] div {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
-        font-weight: 600 !important;
-        font-size: 0.875rem !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
     }
     
-    /* SECONDARY buttons - Light gray with BLACK text */
+    /* SECONDARY buttons - Light GREEN with DARK text */
     button[kind="secondary"],
     .stButton button[kind="secondary"],
     button[data-testid="baseButton-secondary"] {
-        background-color: #F8FAFC !important;
-        color: #1E293B !important;
-        border: 2px solid #CBD5E1 !important;
+        background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%) !important;
+        color: #064E3B !important;
+        border: 2px solid #34D399 !important;
         font-weight: 600 !important;
         font-size: 0.875rem !important;
-        padding: 0.5rem 1rem !important;
-        border-radius: 6px !important;
+        padding: 0.625rem 1.25rem !important;
+        border-radius: 8px !important;
         text-shadow: none !important;
-        -webkit-text-fill-color: #1E293B !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+        -webkit-text-fill-color: #064E3B !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
     
     button[kind="secondary"] p,
     button[kind="secondary"] span,
     button[kind="secondary"] div {
-        color: #1E293B !important;
-        -webkit-text-fill-color: #1E293B !important;
+        color: #064E3B !important;
+        -webkit-text-fill-color: #064E3B !important;
         font-weight: 600 !important;
         font-size: 0.875rem !important;
     }
     
-    /* TERTIARY/Link buttons */
+    /* TERTIARY/Link buttons - GREEN */
     button[kind="tertiary"] {
-        color: #2563EB !important;
+        color: #10B981 !important;
         background: transparent !important;
-        border: none !important;
-        font-weight: 500 !important;
+        border: 2px solid #10B981 !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 6px !important;
     }
     
     button[kind="tertiary"] p,
     button[kind="tertiary"] span {
-        color: #2563EB !important;
-        font-weight: 500 !important;
+        color: #10B981 !important;
+        font-weight: 600 !important;
     }
     
     /* Hover states */
     button[kind="primary"]:hover {
-        background-color: #1D4ED8 !important;
-        border-color: #1E40AF !important;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        border-color: #065F46 !important;
+        box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.5) !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    button[kind="secondary"]:hover {
+        background: linear-gradient(135deg, #A7F3D0 0%, #6EE7B7 100%) !important;
+        border-color: #10B981 !important;
+    }
+    
+    /* Form submit buttons */
+    button[type="submit"] {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        padding: 0.875rem 2rem !important;
+        border-radius: 8px !important;
+        border: 2px solid #047857 !important;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4) !important;
     }
     
     button[kind="secondary"]:hover {
