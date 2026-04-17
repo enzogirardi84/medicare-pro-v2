@@ -164,7 +164,10 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     eventos = []
     try:
-        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        _partes_em = paciente_sel.split(" - ")
+        _dni_em = _partes_em[1].strip() if len(_partes_em) > 1 else ""
+        _emp_em = _obtener_uuid_empresa(mi_empresa)
+        paciente_uuid = _obtener_uuid_paciente(_dni_em, _emp_em) if _dni_em and _emp_em else None
         if paciente_uuid:
             emergencias_sql = get_emergencias_by_paciente(paciente_uuid)
             if emergencias_sql:
@@ -201,155 +204,95 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     activos = [x for x in eventos if x.get("triage_grado") in {"Grado 1 - Rojo", "Grado 2 - Amarillo"}]
     traslados = [x for x in eventos if x.get("ambulancia_solicitada")]
 
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Emergencias y ambulancia</h2>
-            <p class="mc-hero-text">Modulo operativo y legal para registrar alertas criticas, triage, solicitud de movil,
-            parte prehospitalario, traslado y recepcion del paciente con trazabilidad profesional.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip mc-chip-danger">Grado 1 rojo</span>
-                <span class="mc-chip mc-chip-warning">Grado 2 amarillo</span>
-                <span class="mc-chip mc-chip-success">Grado 3 verde</span>
-                <span class="mc-chip">Ambulancia</span>
-                <span class="mc-chip">PDF legal</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    bloque_mc_grid_tarjetas(
-        [
-            ("Triage", "Clasifica gravedad y prioridad del evento."),
-            ("Ambulancia", "Registra solicitud y datos del traslado."),
-            ("PDF legal", "Documenta el parte para archivo y auditoria."),
-        ]
-    )
-
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Eventos registrados", len(eventos))
-    m2.metric("Triage rojo/amarillo", len(activos))
-    m3.metric("Traslados solicitados", len(traslados))
-    m4.metric("Ultimo evento", eventos[-1]["fecha_evento"] if eventos else "Sin eventos")
+    m1.metric("Eventos", len(eventos))
+    m2.metric("Criticos activos", len(activos))
+    m3.metric("Traslados", len(traslados))
+    m4.metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
 
-    st.caption(
-        "**Registrar evento:** alta de un caso nuevo. **Panel operativo:** seguimiento del momento. **Historial y PDF:** listado, descargas y cierre documental. "
-        "Rojo/amarillo en metricas = triage activo de alta prioridad."
-    )
+    tab_reg, tab_panel, tab_hist = st.tabs(["⚡ Registrar evento", "📋 Panel operativo", "📄 Historial y PDF"])
 
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>1. Alerta inmediata</h4><p>Deja asentado el tipo de urgencia, prioridad, domicilio y hora exacta del inicio del evento.</p></div>
-            <div class="mc-card"><h4>2. Triage por grados</h4><p>Clasifica rapido en Grado 1 rojo, Grado 2 amarillo o Grado 3 verde con impacto operativo inmediato.</p></div>
-            <div class="mc-card"><h4>3. Traslado trazable</h4><p>Guarda movil, tiempos de respuesta, destino, familiar notificado y PDF imprimible.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    vista = st.radio(
-        "Vista del modulo",
-        ["Registrar evento", "Panel operativo", "Historial y PDF"],
-        horizontal=False,
-        label_visibility="collapsed",
-        key="emergencias_vista_radio",
-    )
-
-    if vista == "Registrar evento":
-        st.markdown("### Nuevo evento critico o traslado")
+    with tab_reg:
+        fecha_actual = ahora()
         with st.container(border=True):
-            fecha_actual = ahora()
-            c1, c2, c3 = st.columns([2, 2, 1])
-            categoria_evento = c1.selectbox("Categoria principal", list(EVENTO_CATEGORIAS.keys()))
-            patologias_categoria = EVENTO_CATEGORIAS.get(categoria_evento, ["Evento no clasificado"])
-            tipo_evento = c2.selectbox("Patologia / motivo presuntivo", patologias_categoria)
-            triage_grado = c3.selectbox(
-                "Clasificacion de triage",
+            # --- Fila 1: Triage + Categoria + Tipo ---
+            c1, c2, c3 = st.columns([1, 2, 2])
+            triage_grado = c1.selectbox(
+                "Triage",
                 ["Grado 1 - Rojo", "Grado 2 - Amarillo", "Grado 3 - Verde"],
                 index=1,
+                key="em_triage",
             )
             triage_info = _triage_meta(triage_grado)
-            codigo_alerta = st.text_input("Color / codigo", value=triage_info["codigo"], disabled=True)
+            codigo_alerta = triage_info["codigo"]
+            categoria_evento = c2.selectbox("Categoria", list(EVENTO_CATEGORIAS.keys()), key="em_cat")
+            patologias_categoria = EVENTO_CATEGORIAS.get(categoria_evento, ["Evento no clasificado"])
+            tipo_evento = c3.selectbox("Tipo / motivo presuntivo", patologias_categoria, key="em_tipo")
 
-            st.markdown(
-                f"""
-                <div class="mc-note">
-                    <strong>Triage actual:</strong> <span class="mc-chip {triage_info['clase']}">{triage_grado}</span><br>
-                    <strong>Prioridad operativa:</strong> {triage_info['prioridad']}<br>
-                    <strong>Uso sugerido:</strong> {"Activacion inmediata de movil y medico" if triage_grado == "Grado 1 - Rojo" else "Atencion prioritaria y monitoreo cercano" if triage_grado == "Grado 2 - Amarillo" else "Control y seguimiento programado / demora segura"}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            # --- Fila 2: Motivo (obligatorio) ---
+            motivo = st.text_area("Motivo principal", height=70, placeholder="Descripcion breve del cuadro", key="em_motivo")
 
-            c4, c5, c6 = st.columns(3)
-            fecha_evento = c4.date_input("Fecha del evento", value=fecha_actual.date())
-            hora_evento = c5.time_input("Hora del evento", value=fecha_actual.time().replace(microsecond=0))
-            tipo_traslado = c6.selectbox(
-                "Tipo de traslado",
-                [
-                    "Sin traslado confirmado",
-                    "Traslado asistencial",
-                    "Derivacion cronica",
-                    "Traslado interhospitalario",
-                    "Alta complejidad / UTI movil",
-                    "Derivacion a guardia",
-                    "Retorno a domicilio",
-                ],
-            )
+            # --- Fila 3: Signos vitales rapidos ---
+            v1, v2, v3, v4 = st.columns(4)
+            presion = v1.text_input("TA", placeholder="120/80", key="em_ta")
+            fc = v2.text_input("FC", placeholder="78", key="em_fc")
+            saturacion = v3.text_input("SaO2", placeholder="98%", key="em_sat")
+            temperatura = v4.text_input("Temp", placeholder="36.5", key="em_temp")
 
-            motivo = st.text_area("Resumen del cuadro y descripcion inicial", height=90)
-            direccion_evento = st.text_input("Domicilio / lugar del evento", value=detalles.get("direccion", ""))
+            # --- Fila 4: Ambulancia ---
+            a1, a2, a3 = st.columns([1, 2, 2])
+            ambulancia_solicitada = a1.checkbox("Ambulancia", value=triage_info["prioridad"] in {"Alta", "Critica"}, key="em_amb")
+            movil = a2.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
+            destino = a3.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
 
-            st.markdown("#### Triage inicial")
-            t1, t2, t3, t4 = st.columns(4)
-            presion = t1.text_input("Presion arterial", placeholder="120/80")
-            fc = t2.text_input("Frecuencia cardiaca", placeholder="78 lpm")
-            saturacion = t3.text_input("Saturacion O2", placeholder="98%")
-            temperatura = t4.text_input("Temperatura", placeholder="36.5 C")
-            t5, t6, t7 = st.columns(3)
-            glucemia = t5.text_input("Glucemia", placeholder="110 mg/dl")
-            dolor = t6.selectbox("Dolor (EVA)", [str(x) for x in range(11)], index=0)
-            conciencia = t7.selectbox("Estado de conciencia", ["Alerta", "Somnoliento", "Confuso", "No responde"])
-            observaciones = st.text_area("Observaciones clinicas", height=90)
-
-            st.markdown("#### Ambulancia, traslado y recepcion")
-            a1, a2, a3 = st.columns(3)
-            ambulancia_solicitada = a1.checkbox("Solicitar ambulancia", value=triage_info["prioridad"] in {"Alta", "Critica"})
-            movil = a2.text_input("Movil / empresa", placeholder="Emerger / privado / SAME")
-            destino = a3.text_input("Destino", placeholder="Clinica / hospital / guardia")
-            a4, a5, a6 = st.columns(3)
-            hora_solicitud = a4.text_input("Hora de solicitud", value=fecha_actual.strftime("%H:%M"))
-            hora_arribo = a5.text_input("Hora de arribo", placeholder="HH:MM")
-            hora_salida = a6.text_input("Hora de salida / entrega", placeholder="HH:MM")
-            receptor = st.text_input("Profesional receptor / institucion receptora")
-            familiar_notificado = st.text_input("Familiar o responsable notificado")
-
-            st.markdown("#### Parte asistencial y legal")
-            procedimientos = st.text_area("Procedimientos realizados", height=90)
-            medicacion_administrada = st.text_area("Medicacion administrada", height=90)
-            respuesta = st.text_area("Respuesta del paciente", height=80)
-            observaciones_legales = st.text_area("Observaciones legales / cadena de custodia / conformidad", height=80)
-
+            # --- Fila 5: Profesional ---
             p1, p2 = st.columns(2)
-            profesional = p1.text_input("Profesional a cargo", value=user.get("nombre", ""))
-            matricula = p2.text_input("Matricula profesional", value=user.get("matricula", ""))
+            profesional = p1.text_input("Profesional a cargo", value=user.get("nombre", ""), key="em_prof")
+            matricula = p2.text_input("Matricula", value=user.get("matricula", ""), key="em_mat")
 
-            firma_canvas = None
-            if CANVAS_DISPONIBLE:
-                st.caption("Firma digital del profesional interviniente")
-                firma_canvas = st_canvas(
-                    key="firma_emergencias",
-                    background_color="#ffffff",
-                    height=140,
-                    drawing_mode="freedraw",
-                    stroke_width=3,
-                    stroke_color="#000000",
-                    display_toolbar=True,
-                )
+            # --- Datos adicionales (opcional) ---
+            with st.expander("Mas datos (opcional)"):
+                d1, d2, d3 = st.columns(3)
+                glucemia = d1.text_input("Glucemia", placeholder="110 mg/dl", key="em_gluc")
+                dolor = d2.selectbox("Dolor EVA", [str(x) for x in range(11)], index=0, key="em_dolor")
+                conciencia = d3.selectbox("Conciencia", ["Alerta", "Somnoliento", "Confuso", "No responde"], key="em_conc")
+                e1, e2, e3 = st.columns(3)
+                tipo_traslado = e1.selectbox("Tipo traslado", ["Sin traslado confirmado", "Traslado asistencial", "Derivacion a guardia", "Traslado interhospitalario", "Alta complejidad / UTI movil", "Retorno a domicilio"], key="em_tras")
+                hora_solicitud = e2.text_input("Hora solicitud", value=fecha_actual.strftime("%H:%M"), key="em_hsol")
+                hora_arribo = e3.text_input("Hora arribo", placeholder="HH:MM", key="em_harr")
+                f1, f2 = st.columns(2)
+                hora_salida = f1.text_input("Hora salida", placeholder="HH:MM", key="em_hsal")
+                receptor = f2.text_input("Receptor / institucion", key="em_rec")
+                familiar_notificado = st.text_input("Familiar notificado", key="em_fam")
+                fecha_evento = st.date_input("Fecha (si distinta a hoy)", value=fecha_actual.date(), key="em_fecha")
+                hora_evento = st.time_input("Hora inicio (si distinta)", value=fecha_actual.time().replace(microsecond=0), key="em_hora")
+                procedimientos = st.text_area("Procedimientos realizados", height=70, key="em_proc")
+                medicacion_administrada = st.text_area("Medicacion administrada", height=70, key="em_meds")
+                respuesta = st.text_area("Respuesta del paciente", height=60, key="em_resp")
+                observaciones_legales = st.text_area("Observaciones legales", height=60, key="em_obs_leg")
+                observaciones = st.text_area("Observaciones clinicas", height=60, key="em_obs")
+                direccion_evento = st.text_input("Domicilio del evento", value=detalles.get("direccion", ""), key="em_dir")
+                firma_canvas = None
+                if CANVAS_DISPONIBLE:
+                    st.caption("Firma digital del profesional")
+                    firma_canvas = st_canvas(
+                        key="firma_emergencias",
+                        background_color="#ffffff",
+                        height=120,
+                        drawing_mode="freedraw",
+                        stroke_width=3,
+                        stroke_color="#000000",
+                        display_toolbar=True,
+                    )
+            # defaults para campos opcionales si no fueron abiertos
+            if "em_tras" not in st.session_state:
+                tipo_traslado = "Sin traslado confirmado"
+            if "em_fecha" not in st.session_state:
+                fecha_evento = fecha_actual.date()
+            if "em_hora" not in st.session_state:
+                hora_evento = fecha_actual.time().replace(microsecond=0)
 
-            if st.button("Guardar evento critico", use_container_width=True, type="primary"):
+            if st.button("GUARDAR EVENTO CRITICO", use_container_width=True, type="primary", key="em_guardar"):
                 if not motivo.strip():
                     st.error("Debes indicar el motivo principal del evento.")
                 elif not profesional.strip() or not matricula.strip():
@@ -357,10 +300,30 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 else:
                     fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")
                     
+                    # defaults para campos del expander si no fueron tocados
+                    tipo_traslado = st.session_state.get("em_tras", "Sin traslado confirmado")
+                    hora_solicitud = st.session_state.get("em_hsol", fecha_actual.strftime("%H:%M"))
+                    hora_arribo = st.session_state.get("em_harr", "")
+                    hora_salida = st.session_state.get("em_hsal", "")
+                    receptor = st.session_state.get("em_rec", "")
+                    familiar_notificado = st.session_state.get("em_fam", "")
+                    fecha_evento = st.session_state.get("em_fecha", fecha_actual.date())
+                    hora_evento = st.session_state.get("em_hora", fecha_actual.time().replace(microsecond=0))
+                    glucemia = st.session_state.get("em_gluc", "")
+                    dolor = st.session_state.get("em_dolor", "0")
+                    conciencia = st.session_state.get("em_conc", "Alerta")
+                    procedimientos = st.session_state.get("em_proc", "")
+                    medicacion_administrada = st.session_state.get("em_meds", "")
+                    respuesta = st.session_state.get("em_resp", "")
+                    observaciones_legales = st.session_state.get("em_obs_leg", "")
+                    observaciones = st.session_state.get("em_obs", "")
+                    direccion_evento = st.session_state.get("em_dir", detalles.get("direccion", ""))
+                    firma_canvas = None
+
                     # 1. Guardar en SQL (Dual-Write)
                     try:
-                        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
                         empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                        paciente_uuid = _obtener_uuid_paciente(_dni_em, empresa_uuid) if _dni_em and empresa_uuid else None
                         if paciente_uuid and empresa_uuid:
                             datos_sql = {
                                 "empresa_id": empresa_uuid,
@@ -435,7 +398,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                     queue_toast("Evento de emergencia guardado con trazabilidad legal.")
                     st.rerun()
 
-    elif vista == "Panel operativo":
+    with tab_panel:
         st.markdown("### Panel operativo del paciente")
         with st.container(border=True):
             st.markdown(
@@ -480,7 +443,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                             except Exception as e:
                                 log_event('emergencias_error', f'Error: {e}')
 
-    else:
+    with tab_hist:
         st.markdown("### Historial, tiempos y PDF")
         if not eventos:
             bloque_estado_vacio(
