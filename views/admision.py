@@ -566,7 +566,7 @@ def render_admision(mi_empresa, rol):
                             empresa=emp_d.strip(),
                         )
                         guardar_datos(spinner=True)
-                        
+
                     # Dual-write a la nueva API NextGen y PostgreSQL
                     from core.nextgen_sync import sync_paciente_to_nextgen
                     sync_paciente_to_nextgen(n, d, emp_d)
