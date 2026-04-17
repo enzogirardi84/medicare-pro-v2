@@ -1214,7 +1214,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
                 dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
 
-                hora_inicio = st.time_input(
+                c4, c5 = st.columns([1, 2])
+                velocidad_ml_h = c4.number_input(
+                    "Velocidad (ml/h)",
+                    min_value=0.0,
+                    step=1.0,
+                    value=21.0,
+                    key="velocidad_receta",
+                )
+                hora_inicio = c5.time_input(
                     "Hora inicial",
                     value=dt_time(8, 0),
                     key="hora_inicio_infusion_receta",
@@ -1226,8 +1234,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     key="detalle_infusion_receta",
                     height=80,
                 )
-                st.caption(f"Horario visible en la sabana diaria: {hora_inicio.strftime('%H:%M')}")
-                velocidad_ml_h = None
+                st.caption(f"Horario visible en la sabana diaria: {hora_inicio.strftime('%H:%M')} — {int(velocidad_ml_h) if velocidad_ml_h else '?'} ml/h")
                 alternar_con = ""
                 plan_hidratacion = []
 
@@ -1422,6 +1429,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     value=500,
                     key="volumen_papel_receta",
                 )
+                velocidad_papel = st.number_input(
+                    "Velocidad (ml/h)",
+                    min_value=0.0,
+                    step=1.0,
+                    value=21.0,
+                    key="velocidad_papel_receta",
+                )
                 detalle_papel = st.text_area(
                     "Notas / evolucion del medico (opcional)",
                     key="detalle_papel_infusion_receta",
@@ -1429,10 +1443,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     height=80,
                 )
                 horarios_papel = [hora_papel.strftime("%H:%M")]
-                velocidad_papel = None
                 alternar_papel = ""
                 plan_papel = []
-                st.caption(f"Horario visible en la sabana diaria: {hora_papel.strftime('%H:%M')}")
+                st.caption(f"Horario visible en la sabana diaria: {hora_papel.strftime('%H:%M')} — {int(velocidad_papel) if velocidad_papel else '?'} ml/h")
             adjunto_papel = st.file_uploader(
                 "Subir orden medica en papel o PDF",
                 type=["pdf", "png", "jpg", "jpeg"],
