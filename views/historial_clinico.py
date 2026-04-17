@@ -7,23 +7,22 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from core.guardado_simple import (
-    guardar_historial_clinico,
+from core.guardado_universal import (
+    guardar_registro,
     obtener_historial_paciente,
-    obtener_signos_vitales_paciente,
-    obtener_evoluciones_paciente,
-    obtener_materiales_paciente
+    obtener_registros
 )
 
 
-def render():
+def render(paciente_sel=None, user=None):
     """Vista de historial clínico completo."""
     
     st.markdown("# 📋 Historial Clínico Completo")
     st.caption("Todo el historial médico del paciente en un solo lugar")
     
     # Obtener paciente
-    paciente_sel = st.session_state.get("paciente_sel", "")
+    if not paciente_sel:
+        paciente_sel = st.session_state.get("paciente_sel", "")
     
     if not paciente_sel:
         st.error("❌ Selecciona un paciente primero")
@@ -91,21 +90,22 @@ def render():
                     "observaciones": observaciones
                 }
                 
-                exito = guardar_historial_clinico(
+                exito, mensaje = guardar_registro(
+                    tipo="signos_vitales",
                     paciente_id=paciente_id,
                     paciente_nombre=paciente_nombre,
-                    tipo_registro="signos_vitales",
                     datos=datos
                 )
                 
                 if exito:
-                    st.success("✅ Signos vitales guardados en historial clínico")
+                    st.success(f"✅ {mensaje}")
                     st.balloons()
+                    st.rerun()
                 else:
-                    st.error("❌ Error al guardar")
+                    st.error(f"❌ {mensaje}")
         
         # Mostrar tabla de signos vitales guardados
-        signos = obtener_signos_vitales_paciente(paciente_id)
+        signos = obtener_registros("signos_vitales", paciente_id)
         if signos:
             st.markdown("#### 📋 Signos Vitales Guardados")
             df_signos = pd.DataFrame(signos)
@@ -138,20 +138,21 @@ def render():
                         "indicaciones": indicaciones
                     }
                     
-                    exito = guardar_historial_clinico(
+                    exito, mensaje = guardar_registro(
+                        tipo="evoluciones",
                         paciente_id=paciente_id,
                         paciente_nombre=paciente_nombre,
-                        tipo_registro="evolucion",
                         datos=datos
                     )
                     
                     if exito:
-                        st.success("✅ Evolución guardada en historial clínico")
+                        st.success(f"✅ {mensaje}")
+                        st.rerun()
                     else:
-                        st.error("❌ Error al guardar")
+                        st.error(f"❌ {mensaje}")
         
         # Mostrar evoluciones guardadas
-        evoluciones = obtener_evoluciones_paciente(paciente_id)
+        evoluciones = obtener_registros("evoluciones", paciente_id)
         if evoluciones:
             st.markdown("#### 📋 Evoluciones Guardadas")
             for evo in reversed(evoluciones[-5:]):
@@ -183,17 +184,18 @@ def render():
                     "indicaciones": indicaciones_receta
                 }
                 
-                exito = guardar_historial_clinico(
+                exito, mensaje = guardar_registro(
+                    tipo="recetas",
                     paciente_id=paciente_id,
                     paciente_nombre=paciente_nombre,
-                    tipo_registro="receta",
                     datos=datos
                 )
                 
                 if exito:
-                    st.success("✅ Receta guardada en historial clínico")
+                    st.success(f"✅ {mensaje}")
+                    st.rerun()
                 else:
-                    st.error("❌ Error al guardar")
+                    st.error(f"❌ {mensaje}")
     
     # === TAB 4: MATERIALES ===
     with tab4:
@@ -217,20 +219,21 @@ def render():
                     "observaciones": observaciones_mat
                 }
                 
-                exito = guardar_historial_clinico(
+                exito, mensaje = guardar_registro(
+                    tipo="materiales",
                     paciente_id=paciente_id,
                     paciente_nombre=paciente_nombre,
-                    tipo_registro="material",
                     datos=datos
                 )
                 
                 if exito:
-                    st.success("✅ Material guardado en historial clínico")
+                    st.success(f"✅ {mensaje}")
+                    st.rerun()
                 else:
-                    st.error("❌ Error al guardar")
+                    st.error(f"❌ {mensaje}")
         
         # Mostrar materiales
-        materiales = obtener_materiales_paciente(paciente_id)
+        materiales = obtener_registros("materiales", paciente_id)
         if materiales:
             st.markdown("#### 📋 Materiales Usados")
             df_mat = pd.DataFrame(materiales)
