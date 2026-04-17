@@ -129,7 +129,9 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 # 1. Guardar en SQL (Dual-Write)
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-                    paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                    _partes_pac = paciente_sel.split(" - ")
+                    _dni_pac = _partes_pac[1].strip() if len(_partes_pac) > 1 else ""
+                    paciente_uuid = _obtener_uuid_paciente(_dni_pac, empresa_uuid) if empresa_uuid and _dni_pac else None
                     if empresa_uuid and paciente_uuid:
                         datos_sql = {
                             "empresa_id": empresa_uuid,
