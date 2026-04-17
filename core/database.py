@@ -533,6 +533,10 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 
                 # Fijar el cache para evitar guardados innecesarios
                 _fijar_cache_y_hash(estructura)
+                
+                # También marcamos que no hay guardado pendiente
+                st.session_state["_guardar_datos_pendiente"] = False
+                
                 return estructura
         except Exception:
             pass
