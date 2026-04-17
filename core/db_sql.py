@@ -440,3 +440,178 @@ def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any
     except Exception as e:
         log_event("db_sql", f"error_insert_administracion:{type(e).__name__}")
         return None
+
+# ==========================================
+# CONSENTIMIENTOS INFORMADOS
+# ==========================================
+
+def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_consentimientos", 
+            lambda: supabase.table("consentimientos")
+                .select("*, usuarios(nombre)")
+                .eq("paciente_id", paciente_id)
+                .order("fecha_firma", desc=True)
+                .execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_consentimientos:{type(e).__name__}")
+        return []
+
+def insert_consentimiento(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_consentimiento", 
+            lambda: supabase.table("consentimientos").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_consentimiento:{type(e).__name__}")
+        return None
+
+# ==========================================
+# PEDIATRÍA
+# ==========================================
+
+def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_pediatria", 
+            lambda: supabase.table("pediatria")
+                .select("*, usuarios(nombre)")
+                .eq("paciente_id", paciente_id)
+                .order("fecha_registro", desc=True)
+                .execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_pediatria:{type(e).__name__}")
+        return []
+
+def insert_pediatria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_pediatria", 
+            lambda: supabase.table("pediatria").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_pediatria:{type(e).__name__}")
+        return None
+
+# ==========================================
+# ESCALAS CLÍNICAS
+# ==========================================
+
+def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_escalas", 
+            lambda: supabase.table("escalas_clinicas")
+                .select("*, usuarios(nombre)")
+                .eq("paciente_id", paciente_id)
+                .order("fecha_registro", desc=True)
+                .execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_escalas:{type(e).__name__}")
+        return []
+
+def insert_escala(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_escala", 
+            lambda: supabase.table("escalas_clinicas").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_escala:{type(e).__name__}")
+        return None
+
+# ==========================================
+# EMERGENCIAS
+# ==========================================
+
+def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_emergencias_paciente", 
+            lambda: supabase.table("emergencias")
+                .select("*, pacientes(nombre_completo), usuarios(nombre)")
+                .eq("paciente_id", paciente_id)
+                .order("fecha_llamado", desc=True)
+                .limit(limit)
+                .execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}")
+        return []
+
+def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_emergencias", 
+            lambda: supabase.table("emergencias")
+                .select("*, pacientes(nombre_completo), usuarios(nombre)")
+                .eq("empresa_id", empresa_id)
+                .order("fecha_llamado", desc=True)
+                .limit(limit)
+                .execute()
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_emergencias:{type(e).__name__}")
+        return []
+
+def insert_emergencia(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not check_supabase_connection():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_emergencia", 
+            lambda: supabase.table("emergencias").insert(datos).execute()
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_emergencia:{type(e).__name__}")
+        return None
+
+def update_estado_emergencia(emergencia_id: str, nuevo_estado: str, resolucion: str = "") -> bool:
+    if not check_supabase_connection():
+        return False
+    try:
+        datos_update = {"estado": nuevo_estado}
+        if resolucion:
+            datos_update["resolucion"] = resolucion
+            
+        _supabase_execute_with_retry(
+            "update_emergencia", 
+            lambda: supabase.table("emergencias")
+                .update(datos_update)
+                .eq("id", emergencia_id)
+                .execute()
+        )
+        return True
+    except Exception as e:
+        log_event("db_sql", f"error_update_emergencia:{type(e).__name__}")
+        return False

@@ -20,6 +20,9 @@ from core.utils import (
     puede_accion,
     registrar_auditoria_legal,
 )
+from core.db_sql import get_consentimientos_by_paciente, insert_consentimiento
+from core.nextgen_sync import _obtener_uuid_paciente
+from core.app_logging import log_event
 
 CANVAS_DISPONIBLE = False
 try:
@@ -231,10 +234,30 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                 if not firma_b64:
                     st.error("La firma del paciente o familiar no se detecto. Dibujala antes de guardar.")
                 else:
+                    fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
+                    
+                    # 1. Guardar en SQL (Dual-Write)
+                    try:
+                        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                        if paciente_uuid:
+                            datos_sql = {
+                                "paciente_id": paciente_uuid,
+                                "fecha_firma": ahora().isoformat(),
+                                "tipo_documento": "Consentimiento Domiciliario",
+                                "archivo_url": None, # En el futuro, subir firma_b64 a Storage y guardar URL
+                                "observaciones": f"Firmante: {firmante.strip()} | DNI: {dni_firmante.strip()} | Vínculo: {vinculo} | Tel: {telefono.strip()}\nObs: {observaciones.strip()}"
+                            }
+                            insert_consentimiento(datos_sql)
+                            log_event("consentimiento_sql_insert", f"Paciente: {paciente_uuid}")
+                    except Exception as e:
+                        log_event("error_consentimiento_sql", str(e))
+                        st.error(f"Error al guardar en SQL: {e}")
+
+                    # 2. Guardar en JSON (Legacy)
                     st.session_state["consentimientos_db"].append(
                         {
                             "paciente": paciente_sel,
-                            "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                            "fecha": fecha_str,
                             "firmante": firmante.strip() or paciente_sel.split(" - ")[0],
                             "dni_firmante": dni_firmante.strip() or detalles.get("dni", ""),
                             "vinculo": vinculo,

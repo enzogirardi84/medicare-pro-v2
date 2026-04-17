@@ -5,6 +5,9 @@ import streamlit as st
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
+from core.db_sql import get_escalas_by_paciente, insert_escala
+from core.nextgen_sync import _obtener_uuid_paciente
+from core.app_logging import log_event
 
 
 def _glasgow(ocular, verbal, motora):
@@ -62,7 +65,32 @@ def render_escalas_clinicas(paciente_sel, user):
         aviso_sin_paciente()
         return
 
-    registros = [x for x in st.session_state.get("escalas_clinicas_db", []) if x.get("paciente") == paciente_sel]
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    registros = []
+    try:
+        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        if paciente_uuid:
+            escalas_sql = get_escalas_by_paciente(paciente_uuid)
+            if escalas_sql:
+                for e in escalas_sql:
+                    dt = pd.to_datetime(e.get("fecha_registro", ""))
+                    registros.append({
+                        "paciente": paciente_sel,
+                        "fecha": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else e.get("fecha_registro", ""),
+                        "escala": e.get("tipo_escala", ""),
+                        "puntaje": e.get("puntaje_total", 0),
+                        "interpretacion": e.get("interpretacion", ""),
+                        "observaciones": e.get("observaciones", ""),
+                        "profesional": e.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(e.get("usuarios"), dict) else "Desconocido",
+                    })
+    except Exception as e:
+        log_event("error_leer_escalas_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not registros:
+        registros = [x for x in st.session_state.get("escalas_clinicas_db", []) if x.get("paciente") == paciente_sel]
+        # Ordenar JSON por fecha descendente para igualar SQL
+        registros.sort(key=lambda x: x.get("fecha", ""), reverse=True)
 
     st.markdown(
         """
@@ -140,9 +168,30 @@ def render_escalas_clinicas(paciente_sel, user):
         )
 
         if st.button(f"Guardar {escala}", use_container_width=True, type="primary"):
+            fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")
+            
+            # 1. Guardar en SQL (Dual-Write)
+            try:
+                paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                if paciente_uuid:
+                    datos_sql = {
+                        "paciente_id": paciente_uuid,
+                        "fecha_registro": ahora().isoformat(),
+                        "tipo_escala": escala,
+                        "puntaje_total": puntaje,
+                        "interpretacion": resumen,
+                        "observaciones": observaciones.strip()
+                    }
+                    insert_escala(datos_sql)
+                    log_event("escala_sql_insert", f"Paciente: {paciente_uuid}")
+            except Exception as e:
+                log_event("error_escala_sql", str(e))
+                st.error(f"Error al guardar en SQL: {e}")
+
+            # 2. Guardar en JSON (Legacy)
             nuevo = {
                 "paciente": paciente_sel,
-                "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                "fecha": fecha_str,
                 "escala": escala,
                 "puntaje": puntaje,
                 "interpretacion": resumen,
@@ -150,7 +199,10 @@ def render_escalas_clinicas(paciente_sel, user):
                 "profesional": user.get("nombre", ""),
                 "matricula": user.get("matricula", ""),
             }
+            if "escalas_clinicas_db" not in st.session_state:
+                st.session_state["escalas_clinicas_db"] = []
             st.session_state["escalas_clinicas_db"].append(nuevo)
+            
             registrar_auditoria_legal(
                 "Escala Clinica",
                 paciente_sel,

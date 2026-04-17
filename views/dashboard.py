@@ -106,7 +106,29 @@ def render_dashboard(mi_empresa, rol):
 
     agenda = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
     checkins = filtrar_registros_empresa(st.session_state.get("checkin_db", []), mi_empresa, rol)
-    emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
+    
+    # 1. Intentar leer emergencias desde PostgreSQL (Hybrid Read)
+    emergencias = []
+    try:
+        from core.db_sql import get_emergencias_by_empresa
+        from core.nextgen_sync import _obtener_uuid_empresa
+        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+        if empresa_uuid:
+            emg_sql = get_emergencias_by_empresa(empresa_uuid, limit=100)
+            if emg_sql:
+                for e in emg_sql:
+                    dt = pd.to_datetime(e.get("fecha_llamado", ""))
+                    emergencias.append({
+                        "fecha_evento": dt.strftime("%d/%m/%Y") if pd.notnull(dt) else "",
+                        "hora_evento": dt.strftime("%H:%M") if pd.notnull(dt) else "",
+                        "triage_grado": f"Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
+                    })
+    except Exception as e:
+        pass
+        
+    if not emergencias:
+        emergencias = filtrar_registros_empresa(st.session_state.get("emergencias_db", []), mi_empresa, rol)
+        
     facturacion = filtrar_registros_empresa(st.session_state.get("facturacion_db", []), mi_empresa, rol)
     balance = filtrar_registros_empresa(st.session_state.get("balance_db", []), mi_empresa, rol)
     _pac_ids = {p["paciente"] for p in pacientes}

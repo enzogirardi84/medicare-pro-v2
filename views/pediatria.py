@@ -7,6 +7,9 @@ import streamlit as st
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.db_sql import get_pediatria_by_paciente, insert_pediatria
+from core.nextgen_sync import _obtener_uuid_paciente
+from core.app_logging import log_event
 
 
 def _parse_fecha_hora(fecha_str):
@@ -54,7 +57,46 @@ def render_pediatria(paciente_sel, user):
     if pd.isna(f_n):
         f_n = datetime(2000, 1, 1)
 
-    ped = [x for x in st.session_state.get("pediatria_db", []) if x.get("paciente") == paciente_sel]
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    ped = []
+    try:
+        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        if paciente_uuid:
+            ped_sql = get_pediatria_by_paciente(paciente_uuid)
+            if ped_sql:
+                for p in ped_sql:
+                    dt = pd.to_datetime(p.get("fecha_registro", ""))
+                    
+                    # Calcular edad en meses y IMC para mostrar
+                    edad_meses = 0.0
+                    if pd.notnull(dt) and pd.notnull(f_n):
+                        edad_meses = round((dt.tz_localize(None) - f_n).days / 30.4375, 1)
+                        if edad_meses < 0: edad_meses = 0.0
+                        
+                    peso = float(p.get("peso_kg") or 0)
+                    talla = float(p.get("talla_cm") or 0)
+                    imc = round(peso / ((talla / 100) ** 2), 2) if talla > 0 else 0.0
+                    
+                    ped.append({
+                        "paciente": paciente_sel,
+                        "fecha": dt.strftime("%d/%m/%Y %H:%M") if pd.notnull(dt) else p.get("fecha_registro", ""),
+                        "edad_meses": edad_meses,
+                        "peso": peso,
+                        "talla": talla,
+                        "pc": float(p.get("perimetro_cefalico_cm") or 0),
+                        "imc": imc,
+                        "percentil_sug": p.get("percentilo_peso", ""),
+                        "nota": p.get("observaciones", ""),
+                        "firma": p.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(p.get("usuarios"), dict) else "Desconocido",
+                        "id_sql": p.get("id")
+                    })
+    except Exception as e:
+        log_event("error_leer_pediatria_sql", str(e))
+
+    # 2. Fallback a JSON si SQL falla o esta vacio
+    if not ped:
+        ped = [x for x in st.session_state.get("pediatria_db", []) if x.get("paciente") == paciente_sel]
+
     if ped:
         ultimo_ped = sorted(ped, key=lambda x: _parse_fecha_hora(x.get("fecha", "")), reverse=True)[0]
         st.markdown("##### Resumen Actual")
@@ -109,6 +151,30 @@ def render_pediatria(paciente_sel, user):
                 percentil_sug = "P3 - Bajo peso" if imc < 14 else "P50 - Normal" if imc < 18 else "P97 - Sobrepeso"
             else:
                 percentil_sug = "P3 - Bajo peso" if imc < 14.5 else "P50 - Normal" if imc < 18.5 else "P97 - Sobrepeso"
+
+            # 1. Guardar en SQL (Dual-Write)
+            try:
+                paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                if paciente_uuid:
+                    datos_sql = {
+                        "paciente_id": paciente_uuid,
+                        "fecha_registro": dt_toma.isoformat() if dt_toma else None,
+                        "peso_kg": pes,
+                        "talla_cm": tal,
+                        "perimetro_cefalico_cm": pc,
+                        "percentilo_peso": percentil_sug,
+                        "percentilo_talla": "",
+                        "observaciones": desc
+                    }
+                    insert_pediatria(datos_sql)
+                    log_event("pediatria_sql_insert", f"Paciente: {paciente_uuid}")
+            except Exception as e:
+                log_event("error_pediatria_sql", str(e))
+                st.error(f"Error al guardar en SQL: {e}")
+
+            # 2. Guardar en JSON (Legacy)
+            if "pediatria_db" not in st.session_state:
+                st.session_state["pediatria_db"] = []
             st.session_state["pediatria_db"].append({
                 "paciente": paciente_sel,
                 "fecha": fecha_str_toma,
