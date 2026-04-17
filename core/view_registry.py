@@ -18,7 +18,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Dashboard": ("views.dashboard", "render_dashboard"),
     "Clinicas (panel global)": ("views.clinicas_panel", "render_clinicas_panel"),
     "Admision": ("views.admision", "render_admision"),
-    "Clinica": ("views.clinica", "render_clinica"),
+    "Clinica": ("views.clinica_emergencia", "render"),
     "Pediatria": ("views.pediatria", "render_pediatria"),
     "Evolucion": ("views.evolucion", "render_evolucion"),
     "Estudios": ("views.estudios", "render_estudios"),
