@@ -1214,84 +1214,22 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
                 dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
 
-                c4, c5, c6 = st.columns([1, 1, 1])
-                velocidad_ml_h = c4.number_input(
-                    "Velocidad (ml/h)",
-                    min_value=0.0,
-                    step=1.0,
-                    value=21.0,
-                    key="velocidad_receta",
-                )
-                duracion_horas = c5.number_input(
-                    "Duracion estimada (horas)",
-                    min_value=0.0,
-                    step=0.5,
-                    value=0.0,
-                    key="duracion_horas_receta",
-                )
-                alternar_con = c6.selectbox(
-                    "Alternar con",
-                    ["", "Fisiologico 0.9%", "Ringer lactato", "Dextrosa 5%", "Otra"],
-                    key="alternar_con_receta",
-                )
-
                 hora_inicio = st.time_input(
-                    "Hora inicial del plan de infusion",
+                    "Hora inicial",
                     value=dt_time(8, 0),
                     key="hora_inicio_infusion_receta",
                 )
+                horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
                 detalle_infusion = st.text_area(
-                    "Indicacion medica de infusion / hidratacion",
-                    placeholder=(
-                        "Ej: pasar Dextrosa 5% 500 ml a 21 ml/h, alternar con Fisiologico 0.9% por bolsa. "
-                        "Aumentar segun tolerancia y control clinico."
-                    ),
+                    "Notas / evolucion del medico (opcional)",
+                    placeholder="Si quiere agregar alguna indicacion adicional o detalle sobre el plan, escribalo aqui.",
                     key="detalle_infusion_receta",
+                    height=80,
                 )
-
-                velocidad_sugerida = calcular_velocidad_ml_h(volumen_ml, duracion_horas)
-                if velocidad_sugerida is not None:
-                    st.caption(
-                        f"Referencia de calculo: {int(volumen_ml)} ml / {duracion_horas:g} h = {velocidad_sugerida:g} ml/h."
-                    )
-
-                usar_plan_escalonado = st.checkbox(
-                    "Plan escalonado de hidratacion / infusion",
-                    value=False,
-                    key="usar_plan_escalonado_receta",
-                )
-                if usar_plan_escalonado:
-                    c7, c8, c9, c10 = st.columns(4)
-                    inicio_ml_h = c7.number_input("Inicio (ml/h)", min_value=1, step=1, value=21, key="inicio_ml_h_receta")
-                    maximo_ml_h = c8.number_input("Maximo (ml/h)", min_value=1, step=1, value=54, key="maximo_ml_h_receta")
-                    incremento_ml_h = c9.number_input("Incremento (ml/h)", min_value=1, step=1, value=7, key="incremento_ml_h_receta")
-                    intervalo_horas = c10.number_input(
-                        "Cada cuantas horas",
-                        min_value=1,
-                        step=1,
-                        value=1,
-                        key="intervalo_escalonado_receta",
-                    )
-                    plan_hidratacion = generar_plan_escalonado_ml_h(
-                        inicio_ml_h,
-                        maximo_ml_h,
-                        incremento_ml_h,
-                        hora_inicio.strftime("%H:%M"),
-                        intervalo_horas,
-                    )
-                    if plan_hidratacion:
-                        st.caption("Vista previa del plan de infusion / hidratacion")
-                        _render_plan_hidratacion_preview(plan_hidratacion)
-                        horarios_sugeridos = [item["Hora sugerida"] for item in plan_hidratacion]
-                    else:
-                        horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
-                else:
-                    horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
-                    st.caption(
-                        "Referencia general de bomba: ml/h = volumen total (ml) / tiempo (h). "
-                        "Verificar siempre con protocolo institucional y criterio medico."
-                    )
-                st.caption(f"Horarios visibles en la sabana diaria: {' | '.join(horarios_sugeridos)}")
+                st.caption(f"Horario visible en la sabana diaria: {hora_inicio.strftime('%H:%M')}")
+                velocidad_ml_h = None
+                alternar_con = ""
+                plan_hidratacion = []
 
             col_m1, col_m2 = st.columns(2)
             medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
@@ -1332,10 +1270,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     st.error("Debe seleccionar o escribir un medicamento.")
                 elif tipo_indicacion == "Infusion / hidratacion" and not solucion.strip():
                     st.error("Debe indicar la solucion principal.")
-                elif tipo_indicacion == "Infusion / hidratacion" and not detalle_infusion.strip():
-                    st.error("Debe explicar como pasar la infusion o hidratacion.")
-                elif tipo_indicacion == "Infusion / hidratacion" and (velocidad_ml_h in (None, "", 0) and not plan_hidratacion):
-                    st.error("Debe indicar una velocidad en ml/h o cargar un plan escalonado.")
                 else:
                     if not medico_matricula.strip():
                         st.error("Debe ingresar la matricula del medico.")
