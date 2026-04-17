@@ -16,14 +16,14 @@ from core.guardado_emergencia import (
 )
 
 
-def render():
-    """Renderiza la vista de emergencia que funciona localmente."""
+def render(paciente_sel=None, user=None):
+    """Renderiza la vista con guardado DUAL: Supabase + Local."""
     
-    st.markdown("# 🚨 MODO EMERGENCIA - Signos Vitales")
-    st.warning("⚠️ Guardando localmente mientras se arregla la conexión a la nube. Los datos están seguros en tu computadora.")
+    st.markdown("# 🏥 Signos Vitales y Evoluciones")
     
-    # Obtener paciente
-    paciente_sel = st.session_state.get("paciente_sel", "")
+    # Obtener paciente (si no viene como parametro, usar session_state)
+    if not paciente_sel:
+        paciente_sel = st.session_state.get("paciente_sel", "")
     
     if not paciente_sel:
         st.error("❌ Selecciona un paciente del menú lateral primero")
