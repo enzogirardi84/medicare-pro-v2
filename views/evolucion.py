@@ -277,7 +277,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             "plantilla": e.get("plantilla", "Libre")
                         })
     except Exception as e:
-        print(f"Error en lectura SQL de evoluciones: {e}")
+        from core.app_logging import log_event
+        log_event("evoluciones_sql_error", f"Error: {e}")
+        st.warning(f"⚠️ Usando datos locales (modo offline)")
         
     # Fallback de seguridad: Si falló SQL o el paciente no tiene UUID aún, leemos del JSON viejo
     if not uso_sql:
