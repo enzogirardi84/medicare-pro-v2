@@ -1085,49 +1085,63 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     pdf.set_auto_page_break(auto=True, margin=14)
     pdf.add_page()
 
-    # --- Banda superior de color (triage) ---
+    # ── Cabecera: bloque oscuro completo ──────────────────────────────
+    header_h = 36
+    # Fondo principal azul oscuro
+    pdf.set_fill_color(22, 38, 68)
+    pdf.rect(0, 0, pdf.w, header_h, "F")
+    # Franja de color de triage en el margen izquierdo
     pdf.set_fill_color(*triage_rgb)
-    pdf.rect(0, 0, pdf.w, 4, "F")
+    pdf.rect(0, 0, 5, header_h, "F")
 
-    _insert_logo(pdf)
+    # Logo dentro del header
+    logo_y = 5
+    logo_w = 26
+    for ruta in [
+        ASSETS_DIR / "logo_medicare_pro.jpeg",
+        ASSETS_DIR / "logo_medicare_pro.jpg",
+        ASSETS_DIR / "logo_medicare_pro.png",
+    ]:
+        if ruta.exists():
+            try:
+                pdf.image(str(ruta), x=8, y=logo_y, w=logo_w)
+            except Exception:
+                pass
+            break
 
-    # --- Cabecera: logo + textos ---
-    pdf.set_xy(42, 10)
-    pdf.set_font("Arial", "B", 13)
-    pdf.set_text_color(20, 20, 20)
-    pdf.cell(0, 6, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
-    pdf.set_x(42)
-    pdf.set_font("Arial", "B", 9)
-    pdf.set_text_color(40, 60, 100)
+    # Empresa + título en blanco
+    pdf.set_xy(38, 7)
+    pdf.set_font("Arial", "B", 14)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(0, 7, safe_text(detalles.get("empresa", mi_empresa)), ln=True)
+    pdf.set_x(38)
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(160, 200, 255)
     pdf.cell(0, 5, "ACTA DE EMERGENCIA Y TRASLADO", ln=True)
-    pdf.set_x(42)
-    pdf.set_font("Arial", "", 8)
-    pdf.set_text_color(80, 80, 80)
+    pdf.set_x(38)
+    pdf.set_font("Arial", "", 7)
+    pdf.set_text_color(200, 210, 230)
     pdf.cell(0, 5, safe_text(
         f"Fecha: {record.get('fecha_evento','')} {record.get('hora_evento','')}   "
-        f"Prioridad: {_v(record.get('prioridad',''))}   Profesional: {prof_nombre}"
+        f"Profesional: {prof_nombre}   Mat: {prof_mat}"
     ), ln=True)
-    pdf.set_text_color(0, 0, 0)
 
-    # --- Badge de triage ---
-    badge_txt = safe_text(triage_grado or "Sin triage")
-    badge_w = 55
-    badge_x = pdf.w - pdf.r_margin - badge_w
+    # Badge de triage (esquina superior derecha dentro del header)
+    badge_w = 52
+    badge_x = pdf.w - badge_w - 6
     pdf.set_fill_color(*triage_rgb)
+    pdf.rect(badge_x, 10, badge_w, 16, "F")
+    pdf.set_font("Arial", "B", 10)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", "B", 9)
-    pdf.rect(badge_x, 10, badge_w, 12, "F")
-    pdf.set_xy(badge_x, 13)
-    pdf.cell(badge_w, 6, badge_txt, align="C", border=0)
-    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(badge_x, 12)
+    pdf.cell(badge_w, 6, safe_text(triage_grado or "Sin triage"), align="C", border=0, ln=True)
+    pdf.set_font("Arial", "", 7)
+    pdf.set_xy(badge_x, 19)
+    pdf.cell(badge_w, 5, safe_text(_v(record.get("prioridad", ""))), align="C", border=0)
 
-    # Línea separadora
-    pdf.set_draw_color(35, 55, 90)
-    pdf.set_line_width(0.6)
-    pdf.line(pdf.l_margin, 28, pdf.w - pdf.r_margin, 28)
-    pdf.set_line_width(0.2)
-    pdf.set_draw_color(0, 0, 0)
-    pdf.ln(4)
+    # Resetear colores y posicion
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(pdf.l_margin, header_h + 4)
 
     # --- Paciente (1 fila) ---
     _sec(pdf, "Paciente")
