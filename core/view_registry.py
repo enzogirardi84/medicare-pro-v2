@@ -31,7 +31,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     ALERTAS_APP_PACIENTE_MODULO: ("views.alertas_paciente_app", "render_alertas_paciente_app"),
     "Red de Profesionales": ("views.red_profesionales", "render_red_profesionales"),
     "Escalas Clinicas": ("views.escalas_clinicas", "render_escalas_clinicas"),
-    "Historial": ("views.historial", "render_historial"),
+    "Historial": ("views.historial_clinico", "render"),
     "PDF": ("views.pdf_view", "render_pdf"),
     "Telemedicina": ("views.telemedicina", "render_telemedicina"),
     "Cierre Diario": ("views.cierre_diario", "render_cierre_diario"),

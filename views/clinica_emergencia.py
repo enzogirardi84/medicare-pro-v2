@@ -8,9 +8,9 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from core.guardado_emergencia import (
-    guardar_signos_vitales_local,
-    obtener_signos_vitales_local
+from core.guardado_simple import (
+    guardar_historial_clinico,
+    obtener_signos_vitales_paciente
 )
 
 
@@ -67,29 +67,34 @@ def render(paciente_sel=None, user=None):
         
         if submitted:
             with st.spinner("Guardando..."):
-                exito, mensaje = guardar_signos_vitales_local(
+                datos = {
+                    "tension_arterial": ta,
+                    "frecuencia_cardiaca": fc,
+                    "frecuencia_respiratoria": fr,
+                    "temperatura": temp,
+                    "saturacion_oxigeno": sat,
+                    "glucemia": glucemia,
+                    "observaciones": observaciones
+                }
+                
+                exito = guardar_historial_clinico(
                     paciente_id=paciente_id,
                     paciente_nombre=paciente_nombre,
-                    tension_arterial=ta,
-                    frecuencia_cardiaca=int(fc),
-                    frecuencia_respiratoria=int(fr),
-                    temperatura=float(temp),
-                    saturacion_oxigeno=int(sat),
-                    glucemia=glucemia,
-                    observaciones=observaciones
+                    tipo_registro="signos_vitales",
+                    datos=datos
                 )
             
             if exito:
-                st.success(f"✅ {mensaje}")
+                st.success("✅ Signos vitales guardados en historial clínico")
                 st.balloons()
             else:
-                st.error(f"❌ {mensaje}")
+                st.error("❌ Error al guardar")
     
     # === TABLA DE SIGNOS VITALES GUARDADOS ===
     st.markdown("---")
     st.markdown("### 📊 Signos Vitales Guardados")
     
-    signos = obtener_signos_vitales_local(paciente_id)
+    signos = obtener_signos_vitales_paciente(paciente_id)
     
     if signos:
         st.success(f"✅ Hay {len(signos)} registros guardados localmente")
