@@ -510,55 +510,92 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
             if ENABLE_NEXTGEN_API_DUAL_WRITE:
                 estructura = _estructura_vacia_por_clave()
-                
-                # 1. Cargar usuarios desde el backup local (ya que SQL está vacío por ahora)
+
+                def _usuarios_validos(blob):
+                    if not isinstance(blob, dict):
+                        return {}
+                    usuarios = blob.get("usuarios_db")
+                    return usuarios if isinstance(usuarios, dict) else {}
+
+                # 1. Usuarios: local primero, y si el servidor no tiene copia, caemos al monolito remoto.
                 try:
-                    import json
-                    from core.database import LOCAL_DB_PATH
                     if LOCAL_DB_PATH.exists():
-                        datos_locales = json.loads(LOCAL_DB_PATH.read_bytes())
-                        if "usuarios_db" in datos_locales:
-                            estructura["usuarios_db"] = datos_locales["usuarios_db"]
+                        usuarios_locales = _usuarios_validos(loads_json_any(LOCAL_DB_PATH.read_bytes()))
+                        if usuarios_locales:
+                            estructura["usuarios_db"] = usuarios_locales
                 except Exception as e:
                     log_event("db", f"error_cargar_usuarios_locales:{e}")
-                
-                # Restaurar el usuario admin de emergencia si no vino del local
+
+                if not estructura["usuarios_db"] and supabase is not None:
+                    try:
+                        datos_remotos = _normalizar_blob_datos(_cargar_supabase_monolito())
+                        usuarios_remotos = _usuarios_validos(datos_remotos)
+                        if usuarios_remotos:
+                            estructura["usuarios_db"] = usuarios_remotos
+                    except Exception as e:
+                        log_event("db", f"error_cargar_usuarios_remotos:{e}")
+
                 if "admin" not in estructura["usuarios_db"]:
                     estructura["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
-                
+
                 st.session_state["_modo_offline"] = False
-                
-                # Cargar pacientes para que el sidebar funcione
+
+                # 2. Pacientes: en roles globales traemos todas las clinicas; el resto sigue filtrado por empresa.
                 from core.db_sql import get_pacientes_by_empresa
                 from core.nextgen_sync import _obtener_uuid_empresa
-                
-                # Si hay un usuario logueado, cargar sus pacientes
+
                 u_actual = st.session_state.get("u_actual")
-                if isinstance(u_actual, dict) and u_actual.get("empresa"):
-                    empresa_uuid = _obtener_uuid_empresa(u_actual["empresa"])
-                    if empresa_uuid:
-                        try:
-                            pacs_sql = get_pacientes_by_empresa(empresa_uuid, incluir_altas=True)
-                            for p in pacs_sql:
-                                nombre = p.get("nombre_completo", "")
-                                dni = p.get("dni", "")
-                                paciente_id_visual = f"{nombre} - {dni}"
-                                
-                                if paciente_id_visual not in estructura["pacientes_db"]:
-                                    estructura["pacientes_db"].append(paciente_id_visual)
-                                    
-                                estructura["detalles_pacientes_db"][paciente_id_visual] = {
-                                    "dni": dni,
-                                    "estado": p.get("estado", "Activo"),
-                                    "obra_social": p.get("obra_social", ""),
-                                    "empresa": u_actual["empresa"],
-                                    "telefono": p.get("telefono", ""),
-                                    "direccion": p.get("direccion", ""),
-                                    "alergias": p.get("alergias", ""),
-                                    "patologias": p.get("patologias", "")
-                                }
-                        except Exception as e:
-                            log_event("db", f"error_cargar_pacientes_sql:{e}")
+                if isinstance(u_actual, dict):
+                    rol_actual = str(u_actual.get("rol", "") or "").strip().lower()
+                    empresa_actual = str(u_actual.get("empresa", "") or "").strip()
+                    empresa_map = {}
+                    pacs_sql = []
+
+                    try:
+                        if rol_actual in {"superadmin", "admin"} and supabase is not None:
+                            empresas_res = _supabase_execute_with_retry(
+                                "get_empresas_dualwrite",
+                                lambda: supabase.table("empresas").select("id,nombre").execute(),
+                            )
+                            empresa_map = {
+                                str(item.get("id")): str(item.get("nombre", "") or "").strip()
+                                for item in (empresas_res.data or [])
+                                if isinstance(item, dict)
+                            }
+                            pacientes_res = _supabase_execute_with_retry(
+                                "get_pacientes_dualwrite_global",
+                                lambda: supabase.table("pacientes").select("*").limit(1000).execute(),
+                            )
+                            pacs_sql = pacientes_res.data or []
+                        elif empresa_actual:
+                            empresa_uuid = _obtener_uuid_empresa(empresa_actual)
+                            if empresa_uuid:
+                                pacs_sql = get_pacientes_by_empresa(empresa_uuid, incluir_altas=True)
+                    except Exception as e:
+                        log_event("db", f"error_cargar_pacientes_sql:{e}")
+                        pacs_sql = []
+
+                    for p in pacs_sql:
+                        nombre = str(p.get("nombre_completo", "") or "").strip()
+                        dni = str(p.get("dni", "") or "").strip()
+                        paciente_id_visual = f"{nombre} - {dni}" if dni else nombre
+
+                        if paciente_id_visual not in estructura["pacientes_db"]:
+                            estructura["pacientes_db"].append(paciente_id_visual)
+
+                        empresa_paciente = empresa_map.get(str(p.get("empresa_id") or ""), empresa_actual)
+                        estructura["detalles_pacientes_db"][paciente_id_visual] = {
+                            "dni": dni,
+                            "fnac": str(p.get("fecha_nacimiento", "") or "").strip(),
+                            "sexo": str(p.get("sexo", "") or "").strip(),
+                            "estado": p.get("estado", "Activo"),
+                            "obra_social": p.get("obra_social", ""),
+                            "empresa": empresa_paciente,
+                            "telefono": p.get("telefono", ""),
+                            "direccion": p.get("direccion", ""),
+                            "alergias": p.get("alergias", ""),
+                            "patologias": p.get("patologias", ""),
+                        }
                 
                 # Fijar el cache para evitar guardados innecesarios
                 # Le pasamos la estructura completa para que calcule el hash base
