@@ -510,29 +510,19 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
             if ENABLE_NEXTGEN_API_DUAL_WRITE:
                 estructura = _estructura_vacia_por_clave()
-                # Solo cargamos los usuarios desde SQL para que el login funcione
-                if supabase is not None:
-                    try:
-                        res = supabase.table("usuarios").select("*, empresas(nombre)").execute()
-                        if res.data:
-                            for u in res.data:
-                                # Reconstruir el formato legacy de usuario para no romper el login
-                                # IMPORTANTE: Debemos preservar los usuarios que ya existan en la estructura base (como 'admin')
-                                estructura["usuarios_db"][u["nombre"]] = {
-                                    "nombre": u["nombre"],
-                                    "pass": u["password_hash"],
-                                    "rol": u["rol"],
-                                    "empresa": u["empresas"]["nombre"] if u.get("empresas") else "SISTEMAS E.G.",
-                                    "matricula": u["matricula"],
-                                    "dni": u["dni"],
-                                    "titulo": u["titulo"],
-                                    "estado": u["estado"],
-                                    "email": u["email"]
-                                }
-                    except Exception as e:
-                        log_event("db", f"error_cargar_usuarios_sql:{e}")
                 
-                # Restaurar el usuario admin de emergencia si no vino de SQL
+                # 1. Cargar usuarios desde el backup local (ya que SQL está vacío por ahora)
+                try:
+                    import json
+                    from core.database import LOCAL_DB_PATH
+                    if LOCAL_DB_PATH.exists():
+                        datos_locales = json.loads(LOCAL_DB_PATH.read_bytes())
+                        if "usuarios_db" in datos_locales:
+                            estructura["usuarios_db"] = datos_locales["usuarios_db"]
+                except Exception as e:
+                    log_event("db", f"error_cargar_usuarios_locales:{e}")
+                
+                # Restaurar el usuario admin de emergencia si no vino del local
                 if "admin" not in estructura["usuarios_db"]:
                     estructura["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
                 
