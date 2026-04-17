@@ -38,7 +38,7 @@ LEGACY_ROLE_TO_PROFILE = {
 
 
 DEFAULT_ADMIN_USER = {
-    "pass": "37108100",
+    "pass": None,  # Removed hardcoded password - use SUPERADMIN_EMERGENCY_PASSWORD from secrets
     "rol": "SuperAdmin",
     "nombre": "Enzo Girardi",
     "empresa": "SISTEMAS E.G.",
@@ -50,7 +50,21 @@ DEFAULT_ADMIN_USER = {
     "pin": "1234",
 }
 
-# Logins que pueden usar la clave de DEFAULT_ADMIN_USER["pass"] si el hash en base no coincide (recuperación).
+
+def obtener_emergency_password() -> str | None:
+    """
+    Obtiene la contraseña de emergencia desde secrets.toml (SUPERADMIN_EMERGENCY_PASSWORD).
+    Retorna None si no está configurada, deshabilitando el login de emergencia.
+    """
+    try:
+        pwd = st.secrets.get("SUPERADMIN_EMERGENCY_PASSWORD", None)
+        if pwd and str(pwd).strip():
+            return str(pwd).strip()
+    except Exception:
+        pass
+    return None
+
+# Logins que pueden usar la SUPERADMIN_EMERGENCY_PASSWORD desde secrets si el hash en base no coincide (recuperación).
 EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin", "enzogirardi"})
 
 

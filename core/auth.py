@@ -49,6 +49,7 @@ from core.utils import (
     asegurar_usuarios_base,
     logins_clave_default_superadmin,
     normalizar_usuario_sistema,
+    obtener_emergency_password,
     obtener_pin_usuario,
 )
 
@@ -547,9 +548,9 @@ def render_login():
                                                     "login_ok",
                                                 )
                                     else:
-                                        if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
-                                            DEFAULT_ADMIN_USER["pass"]
-                                        ).strip():
+                                        # Verificar login de emergencia con contraseña desde secrets
+                                        emergency_pwd = obtener_emergency_password()
+                                        if u_limpio in logins_clave_default_superadmin() and emergency_pwd and p.strip() == emergency_pwd:
                                             limpiar_fallos_login(u_limpio)
                                             user_data = DEFAULT_ADMIN_USER.copy()
                                             user_data["usuario_login"] = "admin"
@@ -565,9 +566,9 @@ def render_login():
                                             registrar_fallo_login(u_limpio)
                                             st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
                                 else:
-                                    if u_limpio in logins_clave_default_superadmin() and p.strip() == str(
-                                        DEFAULT_ADMIN_USER["pass"]
-                                    ).strip():
+                                    # Verificar login de emergencia con contraseña desde secrets
+                                    emergency_pwd = obtener_emergency_password()
+                                    if u_limpio in logins_clave_default_superadmin() and emergency_pwd and p.strip() == emergency_pwd:
                                         limpiar_fallos_login(u_limpio)
                                         user_data = DEFAULT_ADMIN_USER.copy()
                                         user_data["usuario_login"] = "admin"
