@@ -835,14 +835,14 @@ def _render_mobile_patient_selector(mi_empresa, rol):
     return None
 
 
+menu_set = frozenset(menu)
+vista_actual = resolve_current_view(menu, menu_set)
+
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
 _render_mobile_nav(menu, vista_actual, menu_set)
 _render_mobile_patient_selector(mi_empresa, rol)  # Selector de pacientes alternativo para móviles
 render_alerta_inventario_banda_superior(mi_empresa, menu)
-
-menu_set = frozenset(menu)
-vista_actual = resolve_current_view(menu, menu_set)
 if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()
