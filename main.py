@@ -764,14 +764,24 @@ with st.sidebar:
 # Mostramos un menú expandible en el área principal para navegación rápida.
 def _render_mobile_nav(menu, vista_actual, menu_set):
     """Menú hamburguesa simplificado para móviles y tablets en portrait."""
-    # Detectar si parece móvil por el user agent o por ancho estimado
+    # Detectar si parece móvil o tablet por el user agent
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not es_movil:
         return None
 
+    # Detectar si es tablet específicamente
+    es_tablet = False
+    try:
+        ua = ui_liv.user_agent_desde_contexto()
+        es_tablet = ui_liv.user_agent_es_tablet_probable(ua)
+    except Exception:
+        pass
+
     with st.expander("☰ Menú de navegación", expanded=False):
         st.caption("Seleccioná un módulo para navegar rápidamente:")
-        cols = st.columns(min(2, len(menu)))
+        # En tablets usar más columnas, en móvil solo 2
+        cols_count = 3 if es_tablet else 2
+        cols = st.columns(min(cols_count, len(menu)))
         for i, modulo in enumerate(menu):
             label = VIEW_NAV_LABELS.get(modulo, modulo)
             tipo = "primary" if modulo == vista_actual else "secondary"
@@ -788,6 +798,14 @@ def _render_mobile_patient_selector(mi_empresa, rol):
     if not es_movil:
         return None
     
+    # Detectar si es tablet específicamente
+    es_tablet = False
+    try:
+        ua = ui_liv.user_agent_desde_contexto()
+        es_tablet = ui_liv.user_agent_es_tablet_probable(ua)
+    except Exception:
+        pass
+    
     from core.utils import obtener_pacientes_visibles, mapa_detalles_pacientes
     
     with st.expander("👤 Selector de Paciente (Tocá para buscar)", expanded=(st.session_state.get("paciente_actual") is None)):
@@ -802,7 +820,8 @@ def _render_mobile_patient_selector(mi_empresa, rol):
             busqueda=buscar,
         )
         
-        limite_pacientes = 15  # Límite más bajo para móviles
+        # Límite dinámico: más alto en tablets, más bajo en móviles
+        limite_pacientes = 25 if es_tablet else 15
         if not buscar and len(p_f) > limite_pacientes:
             st.caption(f"Mostrando {limite_pacientes} pacientes. Escribí para filtrar.")
             p_f = p_f[:limite_pacientes]

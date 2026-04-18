@@ -413,6 +413,113 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
     }
 }
 
+/* Tablet-specific optimizations (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .block-container {
+        max-width: 100% !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    
+    /* Sidebar colapsable en tablets */
+    [data-testid="stSidebar"] {
+        width: 280px !important;
+    }
+    
+    /* Reducir sombras pesadas en tablets */
+    div[data-testid="stForm"],
+    div[data-testid="stExpander"],
+    div[data-testid="stFileUploader"] {
+        box-shadow: 0 8px 24px rgba(2, 6, 18, 0.28), var(--shadow-inset) !important;
+    }
+}
+
+/* Mobile optimizations (max-width: 767px) */
+@media (max-width: 767px) {
+    /* Reducir efectos pesados en móviles para mejor rendimiento */
+    .stButton > button,
+    .stDownloadButton > button {
+        min-height: 44px !important;
+        box-shadow: 0 4px 12px rgba(2, 6, 18, 0.24), var(--shadow-inset) !important;
+        transition: none !important;
+    }
+    
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {
+        transform: none !important;
+        box-shadow: 0 4px 12px rgba(2, 6, 18, 0.24), var(--shadow-inset) !important;
+    }
+    
+    /* Reducir blur en móviles */
+    .mc-inv-alert {
+        backdrop-filter: none !important;
+        background: linear-gradient(145deg, rgba(18, 28, 48, 0.99) 0%, rgba(10, 16, 30, 1) 100%) !important;
+    }
+    
+    /* Optimizar scroll en móviles */
+    [data-testid="stSidebar"] > div:first-child {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+    
+    /* Reducir padding en móviles */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+    
+    div[data-testid="stForm"] {
+        padding: 1rem 1rem 0.85rem !important;
+    }
+    
+    /* Optimizar inputs en móviles */
+    [data-baseweb="input"] > div,
+    [data-baseweb="select"] > div,
+    [data-baseweb="textarea"] > div,
+    textarea,
+    input[type="number"],
+    input[type="text"] {
+        min-height: 48px !important;
+        box-shadow: 0 2px 8px rgba(2, 6, 18, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* Reducir sombras en alertas móviles */
+    div[data-testid="stAlert"] {
+        box-shadow: 0 8px 20px rgba(2, 6, 18, 0.32) !important;
+    }
+}
+
+/* Very small mobile devices (max-width: 480px) */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem !important;
+    }
+    
+    h2 {
+        font-size: 1.25rem !important;
+    }
+    
+    h3 {
+        font-size: 1.1rem !important;
+    }
+    
+    /* Full width en móviles pequeños */
+    .block-container {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+    
+    /* Optimizar expander en móviles pequeños */
+    [data-testid="stExpander"] {
+        border-radius: 14px !important;
+    }
+    
+    [data-testid="stExpander"] details summary {
+        border-radius: 12px !important;
+        padding: 0.6rem 0.8rem !important;
+    }
+}
+
 /* Detalle dentro del expander “Ítems en alerta” */
 .mc-inv-detail-root {
     display: flex;

@@ -106,6 +106,27 @@ def user_agent_es_telefono_movil_probable(user_agent: str) -> bool:
     return False
 
 
+def user_agent_es_tablet_probable(user_agent: str) -> bool:
+    """
+    Detecta tablets específicamente para optimización UI.
+    Tablets tienen más espacio de pantalla que teléfonos.
+    """
+    if not user_agent:
+        return False
+    u = user_agent.lower()
+    # Tablets directas
+    if "ipad" in u or "tablet" in u:
+        return True
+    # iPadOS 13+ usa UA tipo desktop, pero tiene Macintosh + touch
+    if "macintosh" in u and "ipad" not in u:
+        if "touch" in u:
+            return True
+    # Modelos específicos de tablets Android
+    if any(x in u for x in ("sm-t", "gt-p", "tab-", "lenovo tb-", "huawei mediapad", "kindle")):
+        return True
+    return False
+
+
 def datos_compactos_por_cliente_sugerido() -> bool:
     """
     Sustituye el checkbox «Modo celular viejo»: listas/tablas más cortas en Python
