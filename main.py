@@ -624,6 +624,7 @@ render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_side
 ui_liv = import_module("core.ui_liviano")
 headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
 render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
+render_mobile_sidebar_toggle = ui_liv.render_mobile_sidebar_toggle
 
 _onb = import_module("core.onboarding")
 render_panel_bienvenida = _onb.render_panel_bienvenida
@@ -762,10 +763,22 @@ with st.sidebar:
 # === Navegación móvil simplificada ===
 # En pantallas pequeñas (móviles), el sidebar de Streamlit se comporta mal.
 # Mostramos un menú expandible en el área principal para navegación rápida.
+def _cliente_es_movil_probable():
+    if st.session_state.get("mc_liviano_modo") == "on":
+        return True
+    if headers_sugieren_equipo_liviano():
+        return True
+    try:
+        ua = ui_liv.user_agent_desde_contexto()
+        return ui_liv.user_agent_es_telefono_movil_probable(ua) or ui_liv.user_agent_es_tablet_probable(ua)
+    except Exception:
+        return False
+
+
 def _render_mobile_nav(menu, vista_actual, menu_set):
     """Menú hamburguesa simplificado para móviles y tablets en portrait."""
     # Detectar si parece móvil o tablet por el user agent
-    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    es_movil = _cliente_es_movil_probable()
     if not es_movil:
         return None
 
@@ -794,7 +807,7 @@ def _render_mobile_nav(menu, vista_actual, menu_set):
 
 def _render_mobile_patient_selector(mi_empresa, rol):
     """Selector de pacientes alternativo para móviles donde el sidebar no es accesible."""
-    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    es_movil = _cliente_es_movil_probable()
     if not es_movil:
         return None
     
@@ -860,6 +873,7 @@ vista_actual = resolve_current_view(menu, menu_set)
 
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
+render_mobile_sidebar_toggle()
 _render_mobile_nav(menu, vista_actual, menu_set)
 _render_mobile_patient_selector(mi_empresa, rol)  # Selector de pacientes alternativo para móviles
 render_alerta_inventario_banda_superior(mi_empresa, menu)
@@ -954,4 +968,3 @@ if es_control_total(rol):
                     f"{ev} | n={r['count']} err={r['errors']} "
                     f"p50={r['p50_ms']}ms p95={r['p95_ms']}ms max={r['max_ms']}ms"
                 )
-

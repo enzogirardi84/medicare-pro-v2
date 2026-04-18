@@ -213,3 +213,161 @@ def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
 </script>
 """
     components.html(html, height=0, width=0)
+
+
+def render_mobile_sidebar_toggle() -> None:
+    """
+    Boton flotante cliente-side para abrir/cerrar la sidebar en telefonos y tablets.
+    """
+    html = """
+<div id="mc-mobile-sidebar-toggle-anchor" style="height:0;width:0;overflow:hidden;"></div>
+<script>
+(function() {
+  try {
+    var parentWin = window.parent && window.parent.document ? window.parent : window;
+    var parentDoc = parentWin.document || document;
+    if (!parentDoc || !parentDoc.body) return;
+
+    var STYLE_ID = "mc-mobile-sidebar-toggle-style";
+    var BUTTON_ID = "mc-mobile-sidebar-toggle-btn";
+
+    function ensureStyle() {
+      if (parentDoc.getElementById(STYLE_ID)) return;
+      var style = parentDoc.createElement("style");
+      style.id = STYLE_ID;
+      style.textContent = [
+        "#"+BUTTON_ID+"{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:10040;",
+        "display:none;align-items:center;justify-content:center;min-height:46px;padding:0.78rem 1rem;",
+        "border:none;border-radius:999px;background:linear-gradient(135deg,#14b8a6 0%,#2563eb 100%);",
+        "color:#f8fafc;font:700 0.92rem/1 'Plus Jakarta Sans',sans-serif;letter-spacing:-0.01em;",
+        "box-shadow:0 14px 28px rgba(2,6,23,.32), inset 0 1px 0 rgba(255,255,255,.18);",
+        "cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease;}",
+        "#"+BUTTON_ID+":active{transform:scale(.98);}",
+        "#"+BUTTON_ID+".is-open{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}",
+        "@media (max-width: 900px){#"+BUTTON_ID+"{display:inline-flex;}}",
+        "@media (min-width: 901px){#"+BUTTON_ID+"{display:none !important;}}"
+      ].join("");
+      parentDoc.head.appendChild(style);
+    }
+
+    function ensureButton() {
+      var btn = parentDoc.getElementById(BUTTON_ID);
+      if (btn) return btn;
+      btn = parentDoc.createElement("button");
+      btn.id = BUTTON_ID;
+      btn.type = "button";
+      btn.setAttribute("aria-live", "polite");
+      btn.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        toggleSidebar();
+      });
+      parentDoc.body.appendChild(btn);
+      return btn;
+    }
+
+    function isMobileViewport() {
+      try {
+        return !!(parentWin.matchMedia && parentWin.matchMedia("(max-width: 900px)").matches);
+      } catch (e) {
+        return (parentWin.innerWidth || 1280) <= 900;
+      }
+    }
+
+    function getOpenControl() {
+      return parentDoc.querySelector('[data-testid="collapsedControl"] button, [data-testid="collapsedControl"]');
+    }
+
+    function getCloseControl() {
+      return parentDoc.querySelector('[data-testid="stSidebarCollapseButton"] button, [data-testid="stSidebarCollapseButton"]');
+    }
+
+    function getSidebar() {
+      return parentDoc.querySelector('[data-testid="stSidebar"]');
+    }
+
+    function isVisible(el) {
+      if (!el) return false;
+      var style = parentWin.getComputedStyle(el);
+      if (!style) return false;
+      if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity || "1") === 0) return false;
+      var rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }
+
+    function sidebarIsOpen() {
+      var closeControl = getCloseControl();
+      if (isVisible(closeControl)) return true;
+
+      var openControl = getOpenControl();
+      if (isVisible(openControl)) return false;
+
+      var sidebar = getSidebar();
+      if (!sidebar || !isVisible(sidebar)) return false;
+      var rect = sidebar.getBoundingClientRect();
+      return rect.width > 120 && rect.right > 40 && rect.left > (-rect.width * 0.55);
+    }
+
+    function press(el) {
+      if (!el) return false;
+      try {
+        if (typeof el.click === "function") {
+          el.click();
+          return true;
+        }
+      } catch (e) {}
+      try {
+        el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: parentWin }));
+        return true;
+      } catch (e) {}
+      return false;
+    }
+
+    function toggleSidebar() {
+      if (sidebarIsOpen()) {
+        press(getCloseControl());
+      } else {
+        press(getOpenControl());
+      }
+      parentWin.setTimeout(syncButton, 180);
+      parentWin.setTimeout(syncButton, 520);
+    }
+
+    function syncButton() {
+      var btn = ensureButton();
+      if (!isMobileViewport()) {
+        btn.style.display = "none";
+        return;
+      }
+      if (!getSidebar() && !getOpenControl() && !getCloseControl()) {
+        btn.style.display = "none";
+        return;
+      }
+      btn.style.display = "inline-flex";
+      var open = sidebarIsOpen();
+      btn.classList.toggle("is-open", open);
+      btn.textContent = open ? "Cerrar panel" : "Abrir pacientes";
+      btn.setAttribute("aria-label", open ? "Cerrar panel lateral de herramientas" : "Abrir panel lateral de herramientas");
+    }
+
+    ensureStyle();
+    syncButton();
+    parentWin.setTimeout(syncButton, 700);
+    parentWin.setTimeout(syncButton, 1800);
+
+    if (!parentWin.__mcSidebarToggleResizeHook) {
+      parentWin.addEventListener("resize", syncButton, { passive: true });
+      parentWin.__mcSidebarToggleResizeHook = true;
+    }
+
+    if (!parentWin.__mcSidebarToggleObserver) {
+      var observer = new MutationObserver(function() { syncButton(); });
+      observer.observe(parentDoc.body, { childList: true, subtree: true, attributes: true });
+      parentWin.__mcSidebarToggleObserver = observer;
+    }
+
+    parentWin.__mcSidebarToggleSync = syncButton;
+  } catch (e) {}
+})();
+</script>
+"""
+    components.html(html, height=0, width=0)
