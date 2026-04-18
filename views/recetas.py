@@ -17,6 +17,8 @@ def get_pandas():
         _pandas = pd
     return _pandas
 
+pd = get_pandas()
+
 from core.anticolapso import anticolapso_activo
 from core.clinical_exports import build_prescription_pdf_bytes
 from core.database import guardar_datos

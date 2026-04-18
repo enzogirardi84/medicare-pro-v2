@@ -17,10 +17,11 @@ def get_pandas():
         _pandas = pd
     return _pandas
 
+pd = get_pandas()
+
 from core.database import guardar_datos
 from core.clinical_exports import collect_patient_sections, build_history_pdf_bytes
 from core.utils import ahora, mapa_detalles_pacientes
-from core.db_sql import insert_signos_vitales, insert_evolucion, get_paciente_por_dni_empresa
 from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 
 

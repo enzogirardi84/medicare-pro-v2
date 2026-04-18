@@ -12,6 +12,8 @@ def get_pandas():
         _pandas = pd
     return _pandas
 
+pd = get_pandas()
+
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import (

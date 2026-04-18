@@ -12,6 +12,8 @@ def get_pandas():
         _pandas = pd
     return _pandas
 
+pd = get_pandas()
+
 from core.app_logging import log_event
 from core.database import guardar_datos
 from core.view_helpers import lista_plegable
@@ -300,6 +302,7 @@ def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False,
 
 
 def _dataframe_pacientes(registros):
+    pd = get_pandas()
     filas = []
     for item in registros:
         filas.append(
