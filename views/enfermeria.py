@@ -14,7 +14,7 @@ from core.utils import (
     seleccionar_limite_registros,
 )
 from core.db_sql import get_cuidados_enfermeria, insert_cuidado_enfermeria
-from core.nextgen_sync import _obtener_uuid_paciente
+from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 from core.app_logging import log_event
 
 
@@ -30,6 +30,13 @@ TIPOS_CUIDADO = [
     "Prevencion de UPP",
     "Incidente / evento adverso",
 ]
+
+
+def _resolver_uuid_paciente_sql(paciente_sel, empresa):
+    partes = str(paciente_sel or "").rsplit(" - ", 1)
+    dni = partes[1].strip() if len(partes) == 2 else ""
+    empresa_id = _obtener_uuid_empresa(empresa) if empresa else None
+    return _obtener_uuid_paciente(dni, empresa_id) if dni and empresa_id else None
 
 
 def _render_plan_cuidados_enfermeria_legacy(
@@ -130,7 +137,7 @@ def _render_plan_cuidados_enfermeria_legacy(
                     
                     # 1. Guardar en SQL (Dual-Write)
                     try:
-                        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                        paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, mi_empresa)
                         if paciente_uuid:
                             datos_sql = {
                                 "paciente_id": paciente_uuid,
@@ -273,7 +280,7 @@ def render_enfermeria(paciente_sel, mi_empresa, user, *, compact=False):
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     registros = []
     try:
-        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, mi_empresa)
         if paciente_uuid:
             # Traer los ultimos 30 dias para no sobrecargar la vista
             fecha_inicio = (pd.Timestamp.now() - pd.Timedelta(days=30)).isoformat()

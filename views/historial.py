@@ -77,7 +77,14 @@ def _resumen_linea_tiempo(seccion: str, reg: Dict[str, Any]) -> str:
     if seccion == "Emergencias y Ambulancia":
         return f"{reg.get('categoria_evento', reg.get('tipo', '-'))} → {reg.get('destino', '-')}"[:120]
     if seccion == "Procedimientos y Evoluciones":
-        txt = str(reg.get("texto", reg.get("detalle", "")))[:140]
+        txt = str(
+            reg.get("nota")
+            or reg.get("intervencion")
+            or reg.get("descripcion")
+            or reg.get("texto")
+            or reg.get("detalle")
+            or ""
+        )[:140]
         return txt or (reg.get("tipo") or "Evolución")
     if seccion == "Estudios Complementarios":
         return f"{reg.get('tipo', '-')} — {str(reg.get('detalle', ''))[:100]}"
@@ -89,6 +96,9 @@ def _resumen_linea_tiempo(seccion: str, reg: Dict[str, Any]) -> str:
         str(reg.get("tipo", "")),
         str(reg.get("profesional", "")),
         str(reg.get("titulo", "")),
+        str(reg.get("nota", ""))[:80],
+        str(reg.get("intervencion", ""))[:80],
+        str(reg.get("descripcion", ""))[:80],
         str(reg.get("detalle", ""))[:80],
     ]
     t = " | ".join(p for p in piezas if p and p != "None")
@@ -419,7 +429,7 @@ def _nombre_archivo_seguro(texto: str, max_len: int = 50) -> str:
     return (t or "archivo")[:max_len]
 
 
-def render_historial(paciente_sel: str) -> None:
+def render_historial(paciente_sel: str, user=None) -> None:
     if not paciente_sel:
         aviso_sin_paciente()
         return

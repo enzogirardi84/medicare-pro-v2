@@ -4,6 +4,7 @@ from datetime import date, datetime
 import pandas as pd
 import streamlit as st
 
+from core.app_logging import log_event
 from core.database import guardar_datos
 from core.view_helpers import lista_plegable
 from core.utils import (
@@ -54,7 +55,7 @@ NON_PATIENT_DB_KEYS = {
 
 
 def _paciente_id(nombre, dni):
-    return f"{str(nombre or '').strip()} - {str(dni or '').strip()}"
+    return f"{_texto_unilinea(nombre)} - {_normalizar_dni(dni)}"
 
 
 def _nombre_legible(paciente_id):
@@ -71,14 +72,142 @@ def _parsear_fecha_guardada(valor):
     return date(1990, 1, 1)
 
 
+def _texto_unilinea(valor):
+    return " ".join(str(valor or "").strip().split())
+
+
+def _normalizar_dni(valor):
+    return str(valor or "").strip().replace(".", "").replace(" ", "")
+
+
+def _normalizar_campos_legajo(nombre, dni, empresa):
+    return {
+        "nombre": _texto_unilinea(nombre),
+        "dni": _normalizar_dni(dni),
+        "empresa": _texto_unilinea(empresa),
+    }
+
+
 def _dni_duplicado(dni, excluir_paciente=None):
-    dni_limpio = str(dni or "").strip()
+    dni_limpio = _normalizar_dni(dni)
     for paciente_id, detalles in mapa_detalles_pacientes(st.session_state).items():
         if excluir_paciente and paciente_id == excluir_paciente:
             continue
-        if str(detalles.get("dni", "") or "").strip() == dni_limpio:
+        if _normalizar_dni(detalles.get("dni", "")) == dni_limpio:
             return True
     return False
+
+
+def _existe_dni_en_legajos(dni, mi_empresa, rol, excluir_paciente=None):
+    dni_norm = _normalizar_dni(dni)
+    if not dni_norm:
+        return False
+    if _dni_duplicado(dni_norm, excluir_paciente=excluir_paciente):
+        return True
+    try:
+        for item in _listar_pacientes_gestion(mi_empresa, rol, busqueda=dni_norm, incluir_altas=True):
+            if excluir_paciente and item["id"] == excluir_paciente:
+                continue
+            if _normalizar_dni(item.get("dni", "")) == dni_norm:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def _validar_legajo(nombre, dni, empresa, mi_empresa, rol, excluir_paciente=None):
+    campos = _normalizar_campos_legajo(nombre, dni, empresa)
+    if not campos["nombre"] or not campos["dni"]:
+        return campos, "Nombre y DNI son obligatorios."
+    if not campos["empresa"]:
+        return campos, "La clinica / empresa es obligatoria."
+    if _existe_dni_en_legajos(campos["dni"], mi_empresa, rol, excluir_paciente=excluir_paciente):
+        return campos, "Ya existe otro paciente con ese DNI."
+    return campos, ""
+
+
+def _buscar_coincidencias_legajo(busqueda, mi_empresa, rol):
+    consulta = _texto_unilinea(busqueda)
+    if not consulta:
+        return []
+
+    coincidencias = {item["id"]: item for item in _listar_pacientes_gestion(mi_empresa, rol, busqueda=consulta, incluir_altas=True)}
+    dni_norm = _normalizar_dni(consulta)
+    if dni_norm and dni_norm != consulta:
+        for item in _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=True):
+            if dni_norm and dni_norm in _normalizar_dni(item.get("dni", "")):
+                coincidencias[item["id"]] = item
+    return list(coincidencias.values())
+
+
+def _sincronizar_alta_paciente_best_effort(nombre, dni, empresa):
+    try:
+        from core.nextgen_sync import sync_paciente_to_nextgen
+
+        sync_paciente_to_nextgen(nombre, dni, empresa)
+    except Exception as e:
+        log_event("admision", f"alta_sync_error:{type(e).__name__}")
+
+
+def _sincronizar_edicion_paciente_sql_best_effort(detalle_anterior, detalle_nuevo, nombre_nuevo):
+    try:
+        from core.db_sql import (
+            get_empresa_by_nombre,
+            get_paciente_by_dni_empresa,
+            update_paciente_by_id,
+        )
+
+        empresa_origen = _texto_unilinea(detalle_anterior.get("empresa", ""))
+        empresa_destino = _texto_unilinea(detalle_nuevo.get("empresa", ""))
+        dni_origen = _normalizar_dni(detalle_anterior.get("dni", ""))
+        dni_destino = _normalizar_dni(detalle_nuevo.get("dni", ""))
+
+        empresa_sql_origen = get_empresa_by_nombre(empresa_origen) if empresa_origen else None
+        empresa_sql_destino = (
+            get_empresa_by_nombre(empresa_destino)
+            if empresa_destino and empresa_destino != empresa_origen
+            else empresa_sql_origen
+        )
+
+        paciente_sql = None
+        if empresa_sql_origen and dni_origen:
+            paciente_sql = get_paciente_by_dni_empresa(empresa_sql_origen.get("id", ""), dni_origen)
+        if paciente_sql is None and empresa_sql_destino and dni_destino:
+            paciente_sql = get_paciente_by_dni_empresa(empresa_sql_destino.get("id", ""), dni_destino)
+        if not paciente_sql:
+            return False
+
+        payload = {
+            "nombre_completo": nombre_nuevo,
+            "dni": dni_destino,
+            "estado": detalle_nuevo.get("estado", "Activo"),
+        }
+        if empresa_sql_destino and empresa_sql_destino.get("id"):
+            payload["empresa_id"] = empresa_sql_destino["id"]
+
+        updated = update_paciente_by_id(paciente_sql.get("id", ""), payload)
+        return updated is not None
+    except Exception as e:
+        log_event("admision", f"edit_sync_error:{type(e).__name__}")
+        return False
+
+
+def _sincronizar_eliminacion_paciente_sql_best_effort(detalle_paciente):
+    try:
+        from core.db_sql import delete_paciente_by_id, get_empresa_by_nombre, get_paciente_by_dni_empresa
+
+        empresa_txt = _texto_unilinea(detalle_paciente.get("empresa", ""))
+        dni_txt = _normalizar_dni(detalle_paciente.get("dni", ""))
+        empresa_sql = get_empresa_by_nombre(empresa_txt) if empresa_txt else None
+        if not empresa_sql or not dni_txt:
+            return False
+        paciente_sql = get_paciente_by_dni_empresa(empresa_sql.get("id", ""), dni_txt)
+        if not paciente_sql:
+            return False
+        return delete_paciente_by_id(paciente_sql.get("id", ""))
+    except Exception as e:
+        log_event("admision", f"delete_sync_error:{type(e).__name__}")
+        return False
 
 
 def _iterar_tablas_paciente():
@@ -182,7 +311,6 @@ def _dataframe_pacientes(registros):
 
 
 def render_admision(mi_empresa, rol):
-    rol_normalizado = str(rol or "").strip().lower()
     admin_total = es_control_total(rol)
 
     if admin_total:
@@ -279,6 +407,7 @@ def render_admision(mi_empresa, rol):
             mostrar_dataframe_con_scroll(_dataframe_pacientes(pacientes_gestion[:limite]), height=400)
 
         opciones_pacientes = [item["id"] for item in pacientes_gestion]
+        pacientes_gestion_map = {item["id"]: item for item in pacientes_gestion}
         _dm_edicion = mapa_detalles_pacientes(st.session_state)
         _pac_actual = st.session_state.get("paciente_actual")
         _idx_sel = opciones_pacientes.index(_pac_actual) if _pac_actual in opciones_pacientes else 0
@@ -286,15 +415,25 @@ def render_admision(mi_empresa, rol):
             "Seleccionar paciente para editar o eliminar",
             opciones_pacientes,
             index=_idx_sel,
-            format_func=lambda item, dm=_dm_edicion: (
-                f"{_nombre_legible(item)} | DNI {dm.get(item, {}).get('dni', 'S/D')} | "
-                f"{dm.get(item, {}).get('empresa', 'S/D')} | "
-                f"{dm.get(item, {}).get('estado', 'Activo')}"
+            format_func=lambda item, dm=_dm_edicion, gm=pacientes_gestion_map: (
+                f"{_nombre_legible(item)} | DNI {(dm.get(item) or gm.get(item, {})).get('dni', 'S/D')} | "
+                f"{(dm.get(item) or gm.get(item, {})).get('empresa', 'S/D')} | "
+                f"{(dm.get(item) or gm.get(item, {})).get('estado', 'Activo')}"
             ),
             key="adm_paciente_edicion",
         )
 
         detalle_sel = dict(mapa_detalles_pacientes(st.session_state).get(paciente_sel_admin, {}))
+        if not detalle_sel and paciente_sel_admin in pacientes_gestion_map:
+            item_sel = pacientes_gestion_map[paciente_sel_admin]
+            detalle_sel = {
+                "dni": item_sel.get("dni", ""),
+                "empresa": item_sel.get("empresa", ""),
+                "estado": item_sel.get("estado", "Activo"),
+                "obra_social": item_sel.get("obra_social", ""),
+                "telefono": item_sel.get("telefono", ""),
+                "direccion": item_sel.get("direccion", ""),
+            }
         impacto_actual = _resumen_impacto_paciente(paciente_sel_admin)
         total_impacto = sum(impacto_actual.values())
 
@@ -353,28 +492,35 @@ def render_admision(mi_empresa, rol):
                 )
 
                 if st.form_submit_button("Guardar cambios del legajo", use_container_width=True, type="primary"):
-                    if not nombre_edit.strip() or not dni_edit.strip():
-                        st.error("Nombre y DNI son obligatorios.")
-                    elif _dni_duplicado(dni_edit, excluir_paciente=paciente_sel_admin):
-                        st.error("Ya existe otro paciente con ese DNI.")
+                    campos_legajo, error_legajo = _validar_legajo(
+                        nombre_edit,
+                        dni_edit,
+                        empresa_edit if admin_total else mi_empresa,
+                        mi_empresa,
+                        rol,
+                        excluir_paciente=paciente_sel_admin,
+                    )
+                    if error_legajo:
+                        st.error(error_legajo)
                     else:
-                        paciente_nuevo = _paciente_id(nombre_edit, dni_edit)
+                        paciente_nuevo = _paciente_id(campos_legajo["nombre"], campos_legajo["dni"])
                         if paciente_nuevo != paciente_sel_admin and paciente_nuevo in mapa_detalles_pacientes(
                             st.session_state
                         ):
                             st.error("Ya existe un legajo con ese nombre y DNI.")
                         else:
+                            detalle_anterior = dict(detalle_sel)
                             detalles_actualizados = dict(detalle_sel)
                             detalles_actualizados.update(
                                 {
-                                    "dni": dni_edit.strip(),
+                                    "dni": campos_legajo["dni"],
                                     "fnac": fnac_edit.strftime("%d/%m/%Y"),
                                     "sexo": sexo_edit,
-                                    "telefono": telefono_edit.strip(),
-                                    "direccion": direccion_edit.strip(),
-                                    "empresa": str(empresa_edit or mi_empresa).strip(),
+                                    "telefono": _texto_unilinea(telefono_edit),
+                                    "direccion": _texto_unilinea(direccion_edit),
+                                    "empresa": campos_legajo["empresa"],
                                     "estado": estado_edit,
-                                    "obra_social": obra_edit.strip(),
+                                    "obra_social": _texto_unilinea(obra_edit),
                                     "alergias": alergias_edit.strip(),
                                     "patologias": patologias_edit.strip(),
                                 }
@@ -391,6 +537,7 @@ def render_admision(mi_empresa, rol):
                             _det_mut = asegurar_detalles_pacientes_en_sesion(st.session_state)
                             _det_mut.pop(paciente_sel_admin, None)
                             _det_mut[paciente_nuevo] = detalles_actualizados
+                            st.session_state["paciente_actual"] = paciente_nuevo
 
                             registros_actualizados = 0
                             if paciente_nuevo != paciente_sel_admin:
@@ -409,6 +556,11 @@ def render_admision(mi_empresa, rol):
                                 empresa=detalles_actualizados.get("empresa", mi_empresa),
                             )
                             guardar_datos(spinner=True)
+                            _sincronizar_edicion_paciente_sql_best_effort(
+                                detalle_anterior=detalle_anterior,
+                                detalle_nuevo=detalles_actualizados,
+                                nombre_nuevo=campos_legajo["nombre"],
+                            )
                             queue_toast("Legajo actualizado correctamente.")
                             st.rerun()
 
@@ -456,6 +608,7 @@ def render_admision(mi_empresa, rol):
                         empresa=detalle_empresa,
                     )
                     guardar_datos(spinner=True)
+                    _sincronizar_eliminacion_paciente_sql_best_effort(detalle_sel)
                     queue_toast("Paciente eliminado correctamente.")
                     st.rerun()
     else:
@@ -474,21 +627,16 @@ def render_admision(mi_empresa, rol):
         buscar_adm = st.text_input("Nombre, DNI o apellido", placeholder="Ej: Juan Perez o 35123456", key="adm_buscar_duplicado")
 
         if buscar_adm:
-            _dm = mapa_detalles_pacientes(st.session_state)
-            coincidencias = [
-                p
-                for p in st.session_state.get("pacientes_db", [])
-                if buscar_adm.lower() in p.lower()
-                or (buscar_adm.isdigit() and buscar_adm in _dm.get(p, {}).get("dni", ""))
-            ]
+            coincidencias = _buscar_coincidencias_legajo(buscar_adm, mi_empresa, rol)
             if coincidencias:
                 st.warning(
                     f"Se encontraron {len(coincidencias)} pacientes similares. Si es el mismo caso, no cargues de nuevo: "
                     "subi a la seccion **Corregir o eliminar legajo** (arriba en esta misma pagina)."
                 )
-                for p in coincidencias[:5]:
-                    det = _dm.get(p, {})
-                    st.caption(f"{p} | DNI: {det.get('dni', 'S/D')} | Empresa: {det.get('empresa', 'S/D')}")
+                for item in coincidencias[:5]:
+                    st.caption(
+                        f"{item['id']} | DNI: {item.get('dni', 'S/D')} | Empresa: {item.get('empresa', 'S/D')}"
+                    )
             else:
                 st.success("No hay pacientes con ese nombre o DNI. Podes continuar con el alta.")
 
@@ -529,33 +677,43 @@ def render_admision(mi_empresa, rol):
             alergias = col_alg.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
             patologias = col_pat.text_area("Patologias previas / riesgos", placeholder="Ej: DBT, HTA, marcapasos...", height=90)
 
-            if rol_normalizado == "superadmin":
+            if admin_total:
                 emp_d = st.text_input("Empresa / clinica", value=mi_empresa)
             else:
                 emp_d = mi_empresa
                 st.info(f"Paciente asignado a: {mi_empresa}")
 
             if st.form_submit_button("Habilitar paciente", use_container_width=True, type="primary"):
-                if not n or not d:
-                    st.error("Nombre y DNI son obligatorios.")
+                campos_legajo, error_legajo = _validar_legajo(
+                    n,
+                    d,
+                    emp_d,
+                    mi_empresa,
+                    rol,
+                )
+                if error_legajo:
+                    st.error(error_legajo)
                 else:
-                    if _dni_duplicado(d):
-                        st.error("Ya existe un paciente con ese DNI.")
+                    id_p = _paciente_id(campos_legajo["nombre"], campos_legajo["dni"])
+                    if id_p in mapa_detalles_pacientes(st.session_state):
+                        st.error("Ya existe un legajo con ese nombre y DNI.")
                     else:
-                        id_p = _paciente_id(n, d)
-                        st.session_state.setdefault("pacientes_db", []).append(id_p)
+                        pacientes_db = list(st.session_state.get("pacientes_db", []))
+                        pacientes_db.append(id_p)
+                        st.session_state["pacientes_db"] = list(dict.fromkeys(pacientes_db))
                         asegurar_detalles_pacientes_en_sesion(st.session_state)[id_p] = {
-                            "dni": d.strip(),
+                            "dni": campos_legajo["dni"],
                             "fnac": f_nac.strftime("%d/%m/%Y"),
                             "sexo": se,
-                            "telefono": tel.strip(),
-                            "direccion": dir_p.strip(),
-                            "empresa": emp_d.strip(),
+                            "telefono": _texto_unilinea(tel),
+                            "direccion": _texto_unilinea(dir_p),
+                            "empresa": campos_legajo["empresa"],
                             "estado": "Activo",
-                            "obra_social": o.strip(),
+                            "obra_social": _texto_unilinea(o),
                             "alergias": alergias.strip(),
                             "patologias": patologias.strip(),
                         }
+                        st.session_state["paciente_actual"] = id_p
                         registrar_auditoria_legal(
                             "Admision",
                             id_p,
@@ -563,15 +721,15 @@ def render_admision(mi_empresa, rol):
                             st.session_state.get("u_actual", {}).get("nombre", "Sistema"),
                             st.session_state.get("u_actual", {}).get("matricula", ""),
                             "Alta inicial del legajo del paciente.",
-                            empresa=emp_d.strip(),
+                            empresa=campos_legajo["empresa"],
                         )
                         guardar_datos(spinner=True)
-
-                    # Dual-write a la nueva API NextGen y PostgreSQL
-                    from core.nextgen_sync import sync_paciente_to_nextgen
-                    sync_paciente_to_nextgen(n, d, emp_d)
-
-                    queue_toast(f"Paciente {n} dado de alta correctamente.")
-                    st.rerun()
+                        _sincronizar_alta_paciente_best_effort(
+                            campos_legajo["nombre"],
+                            campos_legajo["dni"],
+                            campos_legajo["empresa"],
+                        )
+                        queue_toast(f"Paciente {campos_legajo['nombre']} dado de alta correctamente.")
+                        st.rerun()
 
         st.caption("Los pacientes quedan disponibles en visitas, historia clinica y documentos.")

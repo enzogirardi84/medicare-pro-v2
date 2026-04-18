@@ -1,10 +1,12 @@
 import copy
 import hashlib
 import json
+import os
 import time
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import streamlit as st
 
@@ -175,8 +177,6 @@ def _estructura_vacia_por_clave():
         "pediatria_db": [],
         "escalas_clinicas_db": [],
         "emergencias_db": [],
-        "profesionales_red_db": [],
-        "solicitudes_servicios_db": [],
     }
 
 
@@ -300,6 +300,25 @@ def vaciar_datos_app_en_sesion() -> None:
         st.session_state.pop(k, None)
 
 
+def _proxy_env_loopback_blackhole_activo() -> bool:
+    """
+    Detecta proxies rotos del entorno (ej. 127.0.0.1:9) que impiden cualquier salida HTTPS.
+    En ese caso forzamos a Supabase a no heredar proxies del proceso.
+    """
+    for key in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy", "http_proxy", "all_proxy"):
+        raw = str(os.environ.get(key, "") or "").strip()
+        if not raw:
+            continue
+        try:
+            parsed = urlparse(raw)
+        except Exception:
+            continue
+        host = str(parsed.hostname or "").strip().lower()
+        if host in {"127.0.0.1", "localhost", "::1"} and parsed.port == 9:
+            return True
+    return False
+
+
 @st.cache_resource
 def init_supabase():
     if create_client is None:
@@ -311,7 +330,24 @@ def init_supabase():
         return None
     if not url or "tu-proyecto-aqui" in url or not key:
         return None
-    return create_client(url, key)
+    options = None
+    if _proxy_env_loopback_blackhole_activo():
+        try:
+            import httpx
+            from supabase.lib.client_options import SyncClientOptions
+
+            options = SyncClientOptions(
+                httpx_client=httpx.Client(
+                    trust_env=False,
+                    follow_redirects=True,
+                    http2=True,
+                    timeout=120.0,
+                )
+            )
+            log_event("db", "supabase_proxy_bypass:loopback_port_9")
+        except Exception as e:
+            log_event("db", f"supabase_proxy_bypass_error:{type(e).__name__}")
+    return create_client(url, key, options=options)
 
 
 supabase = init_supabase()

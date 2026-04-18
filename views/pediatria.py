@@ -8,7 +8,7 @@ from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 from core.db_sql import get_pediatria_by_paciente, insert_pediatria
-from core.nextgen_sync import _obtener_uuid_paciente
+from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 from core.app_logging import log_event
 
 
@@ -19,6 +19,13 @@ def _parse_fecha_hora(fecha_str):
         except Exception:
             continue
     return datetime.min
+
+
+def _resolver_uuid_paciente_sql(paciente_sel, empresa):
+    partes = str(paciente_sel or "").rsplit(" - ", 1)
+    dni = partes[1].strip() if len(partes) == 2 else ""
+    empresa_id = _obtener_uuid_empresa(empresa) if empresa else None
+    return _obtener_uuid_paciente(dni, empresa_id) if dni and empresa_id else None
 
 
 def render_pediatria(paciente_sel, user):
@@ -51,6 +58,12 @@ def render_pediatria(paciente_sel, user):
         "Los percentiles aproximados usan sexo y fecha de nacimiento del legajo en **Admision**. Si no hay controles previos, el resumen aparece despues del primer guardado; el formulario de nuevo control esta mas abajo."
     )
     det = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+    empresa_actual = str(
+        det.get("empresa")
+        or st.session_state.get("u_actual", {}).get("empresa")
+        or st.session_state.get("user", {}).get("empresa")
+        or ""
+    ).strip()
     se = det.get("sexo", "F")
     f_n_str = det.get("fnac", "01/01/2000")
     f_n = pd.to_datetime(f_n_str, format="%d/%m/%Y", errors="coerce")
@@ -60,7 +73,7 @@ def render_pediatria(paciente_sel, user):
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     ped = []
     try:
-        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, empresa_actual)
         if paciente_uuid:
             ped_sql = get_pediatria_by_paciente(paciente_uuid)
             if ped_sql:
@@ -154,7 +167,7 @@ def render_pediatria(paciente_sel, user):
 
             # 1. Guardar en SQL (Dual-Write)
             try:
-                paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, empresa_actual)
                 if paciente_uuid:
                     datos_sql = {
                         "paciente_id": paciente_uuid,

@@ -4,9 +4,9 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
-from core.utils import ahora, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
+from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 from core.db_sql import get_escalas_by_paciente, insert_escala
-from core.nextgen_sync import _obtener_uuid_paciente
+from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 from core.app_logging import log_event
 
 
@@ -60,15 +60,31 @@ def _interpretacion_visual(escala, puntaje, resumen):
     return base
 
 
+def _resolver_uuid_paciente_sql(paciente_sel, empresa):
+    partes = str(paciente_sel or "").rsplit(" - ", 1)
+    dni = partes[1].strip() if len(partes) == 2 else ""
+    empresa_id = _obtener_uuid_empresa(empresa) if empresa else None
+    return _obtener_uuid_paciente(dni, empresa_id) if dni and empresa_id else None
+
+
 def render_escalas_clinicas(paciente_sel, user):
     if not paciente_sel:
         aviso_sin_paciente()
         return
 
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+    empresa_actual = str(
+        detalles.get("empresa")
+        or user.get("empresa", "")
+        or st.session_state.get("u_actual", {}).get("empresa")
+        or st.session_state.get("user", {}).get("empresa")
+        or ""
+    ).strip()
+
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     registros = []
     try:
-        paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+        paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, empresa_actual)
         if paciente_uuid:
             escalas_sql = get_escalas_by_paciente(paciente_uuid)
             if escalas_sql:
@@ -172,7 +188,7 @@ def render_escalas_clinicas(paciente_sel, user):
             
             # 1. Guardar en SQL (Dual-Write)
             try:
-                paciente_uuid = _obtener_uuid_paciente(paciente_sel)
+                paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, empresa_actual)
                 if paciente_uuid:
                     datos_sql = {
                         "paciente_id": paciente_uuid,

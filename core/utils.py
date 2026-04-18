@@ -15,6 +15,8 @@ import pytz
 import streamlit as st
 from PIL import Image, ImageOps
 
+from core.norm_empresa import norm_empresa_key
+
 # Zona horaria fija para Argentina
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -722,6 +724,14 @@ def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
     return m
 
 
+def _clave_paciente_visible(paciente_id, dni, empresa):
+    dni_txt = str(dni or "").strip()
+    empresa_key = norm_empresa_key(empresa) or ""
+    if dni_txt and empresa_key:
+        return ("dni_empresa", dni_txt, empresa_key)
+    return ("paciente_id", str(paciente_id or "").strip().lower())
+
+
 def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
     busqueda_norm = str(busqueda or "").strip().lower()
     
@@ -729,15 +739,13 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
     from core.db_sql import get_pacientes_by_empresa
     from core.nextgen_sync import _obtener_uuid_empresa
     
-    pacientes_visibles = []
-    uso_sql = False
+    pacientes_sql = []
     
     try:
         empresa_id = _obtener_uuid_empresa(mi_empresa)
         if empresa_id:
             # Leemos directamente de la base de datos SQL
             pacs_sql = get_pacientes_by_empresa(empresa_id, busqueda_norm, incluir_altas)
-            uso_sql = True
             
             for p in pacs_sql:
                 nombre = p.get("nombre_completo", "")
@@ -749,16 +757,11 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
                 paciente_id_visual = f"{nombre} - {dni}"
                 etiqueta = compactar_etiqueta_paciente(paciente_id_visual, estado)
                 
-                pacientes_visibles.append(
+                pacientes_sql.append(
                     (paciente_id_visual, etiqueta, dni, obra_social, estado, mi_empresa)
                 )
     except Exception as e:
         print(f"Error en lectura SQL de pacientes: {e}")
-        
-    if uso_sql:
-        pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
-        return pacientes_visibles
-    # ----------------------------------------------
 
     ts = session_state.get("_ultimo_guardado_ts", 0)
     cache_key = f"_mc_cache_pac_vis_{mi_empresa}_{rol_actual}_{incluir_altas}_{busqueda_norm}"
@@ -769,7 +772,9 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
 
     hay_busqueda = bool(busqueda_norm)
     detalles_db = mapa_detalles_pacientes(session_state)
-    pacientes_visibles = []
+    pacientes_visibles_map = {
+        _clave_paciente_visible(item[0], item[2], item[5]): item for item in pacientes_sql
+    }
 
     for paciente in session_state.get("pacientes_db", []):
         detalles = detalles_db.get(paciente, {})
@@ -793,10 +798,16 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
             if busqueda_norm not in searchable:
                 continue
 
-        pacientes_visibles.append(
-            (paciente, etiqueta, dni, obra_social, estado, empresa)
+        pacientes_visibles_map[_clave_paciente_visible(paciente, dni, empresa)] = (
+            paciente,
+            etiqueta,
+            dni,
+            obra_social,
+            estado,
+            empresa,
         )
 
+    pacientes_visibles = list(pacientes_visibles_map.values())
     pacientes_visibles.sort(key=lambda item: (item[1].lower(), item[0].lower()))
     session_state[cache_key] = {"ts": ts, "data": pacientes_visibles}
     return pacientes_visibles
@@ -895,7 +906,12 @@ def registrar_auditoria_legal(
         from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
         
         empresa_uuid = _obtener_uuid_empresa(empresa)
-        paciente_uuid = _obtener_uuid_paciente(paciente) if paciente else None
+        paciente_uuid = None
+        if empresa_uuid and paciente:
+            paciente_txt = str(paciente or "").strip()
+            dni_paciente = paciente_txt.rsplit(" - ", 1)[-1].strip() if " - " in paciente_txt else ""
+            if dni_paciente:
+                paciente_uuid = _obtener_uuid_paciente(dni_paciente, empresa_uuid)
         
         if empresa_uuid:
             datos_sql = {

@@ -286,31 +286,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
 
     nombre_usuario = user.get("nombre", "Profesional sin nombre")
 
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Visitas y agenda del paciente</h2>
-            <p class="mc-hero-text">Fichada con GPS (si esta disponible), control de horas de guardia del dia y alta de proximas visitas con aviso opcional por WhatsApp.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Fichaje GPS</span>
-                <span class="mc-chip">Guardia hoy</span>
-                <span class="mc-chip">Agendar y avisar</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>Fichada legal</h4><p>Activa el GPS solo al fichar. Queda registro de llegada o salida con ubicacion aproximada.</p></div>
-            <div class="mc-card"><h4>Metricas de agenda</h4><p>Los numeros de arriba resumen pendientes, vencidas, proximas 48 h y tu carga asignada.</p></div>
-            <div class="mc-card"><h4>Proxima visita</h4><p>Completa fecha, hora y profesional; si queres, se ofrece el enlace de WhatsApp al paciente.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("## Visitas y agenda del paciente")
+    st.caption("Fichada con GPS, control de horas de guardia y agendamiento con aviso por WhatsApp.")
 
     _det_map = mapa_detalles_pacientes(st.session_state)
     estado_pac = _det_map.get(paciente_sel, {}).get("estado", "Activo")

@@ -209,6 +209,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
                 if nota.strip():
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
+                    if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
+                        st.session_state["evoluciones_db"] = []
                     st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
                         "nota": nota.strip(),
@@ -226,6 +228,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     if raw_foto:
                         foto_bytes, _ = optimizar_imagen_bytes(raw_foto, max_size=(1280, 1280), quality=70)
                         base64_foto = base64.b64encode(foto_bytes).decode("utf-8")
+                        if "fotos_heridas_db" not in st.session_state or not isinstance(st.session_state["fotos_heridas_db"], list):
+                            st.session_state["fotos_heridas_db"] = []
                         st.session_state["fotos_heridas_db"].append({
                             "paciente": paciente_sel,
                             "fecha": fecha_n,

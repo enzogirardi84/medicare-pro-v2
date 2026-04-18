@@ -71,6 +71,43 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
+    """Busca una empresa por nombre exacto."""
+    if not check_supabase_connection():
+        return None
+
+    try:
+        response = _supabase_execute_with_retry(
+            "get_empresa_nombre",
+            lambda: supabase.table("empresas").select("*").eq("nombre", nombre_empresa).limit(1).execute(),
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_get_empresa_nombre:{type(e).__name__}")
+        return None
+
+
+def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str, Any]]:
+    """Busca un paciente por DNI dentro de una empresa."""
+    if not check_supabase_connection() or not empresa_id or not dni:
+        return None
+
+    try:
+        response = _supabase_execute_with_retry(
+            "get_paciente_dni_empresa",
+            lambda: supabase.table("pacientes")
+            .select("*")
+            .eq("empresa_id", empresa_id)
+            .eq("dni", dni)
+            .limit(1)
+            .execute(),
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_get_paciente_dni_empresa:{type(e).__name__}")
+        return None
+
+
 def upsert_paciente(datos_paciente: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Inserta o actualiza un paciente. Maneja la concurrencia a nivel de base de datos."""
     if not check_supabase_connection():
@@ -90,6 +127,44 @@ def upsert_paciente(datos_paciente: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     except Exception as e:
         log_event("db_sql", f"error_upsert_paciente:{type(e).__name__}")
         return None
+
+
+def update_paciente_by_id(paciente_id: str, datos_update: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Actualiza un paciente existente por id."""
+    if not check_supabase_connection() or not paciente_id:
+        return None
+
+    try:
+        payload = dict(datos_update or {})
+        if not payload:
+            return None
+        from core.utils import ahora
+
+        payload["updated_at"] = ahora().isoformat()
+        response = _supabase_execute_with_retry(
+            "update_paciente",
+            lambda: supabase.table("pacientes").update(payload).eq("id", paciente_id).execute(),
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_update_paciente:{type(e).__name__}")
+        return None
+
+
+def delete_paciente_by_id(paciente_id: str) -> bool:
+    """Elimina un paciente por id."""
+    if not check_supabase_connection() or not paciente_id:
+        return False
+
+    try:
+        _supabase_execute_with_retry(
+            "delete_paciente",
+            lambda: supabase.table("pacientes").delete().eq("id", paciente_id).execute(),
+        )
+        return True
+    except Exception as e:
+        log_event("db_sql", f"error_delete_paciente:{type(e).__name__}")
+        return False
 
 
 # ==========================================
