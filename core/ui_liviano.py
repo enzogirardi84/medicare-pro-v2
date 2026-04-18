@@ -275,7 +275,9 @@ def render_mobile_sidebar_toggle() -> None:
     }
 
     function getOpenControl() {
-      return parentDoc.querySelector('[data-testid="collapsedControl"] button, [data-testid="collapsedControl"]');
+      return parentDoc.querySelector(
+        '[data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] button, [data-testid="collapsedControl"] button, [data-testid="collapsedControl"]'
+      );
     }
 
     function getCloseControl() {
