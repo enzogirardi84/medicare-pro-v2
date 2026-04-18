@@ -360,7 +360,6 @@ def render(user=None):
                 progress = st.progress(0)
                 
                 # Simular pasos de diagnóstico
-                import time
                 time.sleep(0.5)
                 progress.progress(25)
                 
