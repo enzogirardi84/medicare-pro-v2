@@ -974,6 +974,13 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
     if not paciente_sel:
         return []
 
+    # Cache de alto nivel para evitar recomputar en cada rerun del sidebar
+    ts = session_state.get("_ultimo_guardado_ts", 0)
+    cache_key = f"_mc_cache_alertas_{paciente_sel}"
+    cached = session_state.get(cache_key)
+    if cached and cached.get("ts") == ts:
+        return cached["data"]
+
     detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     alertas = []
 
@@ -1076,7 +1083,9 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
             if len(alertas) >= 5:
                 break
 
-    return alertas[:5]
+    alertas_result = alertas[:5]
+    session_state[cache_key] = {"ts": ts, "data": alertas_result}
+    return alertas_result
 
 
 def _to_float(value):

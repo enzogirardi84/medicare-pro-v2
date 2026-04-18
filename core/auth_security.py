@@ -234,15 +234,15 @@ def registrar_fallo_login(login_norm: str) -> None:
 def aplicar_jitter_tras_fallo_credenciales() -> None:
     """Pausa breve aleatoria tras fallo (mitiga filtrado por tiempos). LOGIN_FAIL_JITTER_MS=0 desactiva."""
     try:
-        ms = int(st.secrets.get("LOGIN_FAIL_JITTER_MS", 45))
+        ms = int(st.secrets.get("LOGIN_FAIL_JITTER_MS", 15))
     except Exception:
-        ms = 45
+        ms = 15
     if ms <= 0:
         return
     import secrets as pysec
     import time as time_mod
 
-    delay_ms = min(400, ms + pysec.randbelow(max(1, ms)))
+    delay_ms = min(30, ms + pysec.randbelow(max(1, ms)))
     time_mod.sleep(delay_ms / 1000.0)
 
 

@@ -758,8 +758,87 @@ with st.sidebar:
         with st.expander("Notas de version (admin)", expanded=False):
             st.markdown(MC_APP_CHANGELOG)
 
+# === Navegación móvil simplificada ===
+# En pantallas pequeñas (móviles), el sidebar de Streamlit se comporta mal.
+# Mostramos un menú expandible en el área principal para navegación rápida.
+def _render_mobile_nav(menu, vista_actual, menu_set):
+    """Menú hamburguesa simplificado para móviles y tablets en portrait."""
+    # Detectar si parece móvil por el user agent o por ancho estimado
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    if not es_movil:
+        return None
+
+    with st.expander("☰ Menú de navegación", expanded=False):
+        st.caption("Seleccioná un módulo para navegar rápidamente:")
+        cols = st.columns(min(2, len(menu)))
+        for i, modulo in enumerate(menu):
+            label = VIEW_NAV_LABELS.get(modulo, modulo)
+            tipo = "primary" if modulo == vista_actual else "secondary"
+            with cols[i % len(cols)]:
+                if st.button(label, key=f"mobnav_{modulo}", use_container_width=True, type=tipo):
+                    st.session_state["modulo_actual"] = modulo
+                    st.rerun()
+    return True
+
+
+def _render_mobile_patient_selector(mi_empresa, rol):
+    """Selector de pacientes alternativo para móviles donde el sidebar no es accesible."""
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    if not es_movil:
+        return None
+    
+    from core.utils import obtener_pacientes_visibles, mapa_detalles_pacientes
+    
+    with st.expander("👤 Selector de Paciente (Tocá para buscar)", expanded=(st.session_state.get("paciente_actual") is None)):
+        st.caption("🔍 Buscá por nombre, DNI o empresa:")
+        buscar = st.text_input("Buscar", placeholder="Nombre, DNI o palabra clave", key="mc_buscar_paciente_mobile")
+        
+        p_f = obtener_pacientes_visibles(
+            st.session_state,
+            mi_empresa,
+            rol,
+            incluir_altas=False,
+            busqueda=buscar,
+        )
+        
+        limite_pacientes = 15  # Límite más bajo para móviles
+        if not buscar and len(p_f) > limite_pacientes:
+            st.caption(f"Mostrando {limite_pacientes} pacientes. Escribí para filtrar.")
+            p_f = p_f[:limite_pacientes]
+        
+        if not p_f:
+            st.warning("No hay pacientes visibles")
+            return None
+        
+        # Crear opciones para selectbox
+        opciones = [item[0] for item in p_f]
+        display_map = {item[0]: item[1] for item in p_f}
+        
+        paciente_sel = st.selectbox(
+            "Seleccionar Paciente",
+            opciones,
+            format_func=lambda x: display_map.get(x, x),
+            key="paciente_actual_select_mobile"
+        )
+        
+        if paciente_sel and paciente_sel != st.session_state.get("paciente_actual"):
+            st.session_state["paciente_actual"] = paciente_sel
+            st.rerun()
+        
+        # Mostrar info del paciente seleccionado
+        if paciente_sel:
+            det = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+            st.success(f"👤 {paciente_sel}")
+            st.caption(f"DNI: {det.get('dni', 'S/D')} | OS: {det.get('obra_social', 'S/D')}")
+        
+        return paciente_sel
+    return None
+
+
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
+_render_mobile_nav(menu, vista_actual, menu_set)
+_render_mobile_patient_selector(mi_empresa, rol)  # Selector de pacientes alternativo para móviles
 render_alerta_inventario_banda_superior(mi_empresa, menu)
 
 menu_set = frozenset(menu)

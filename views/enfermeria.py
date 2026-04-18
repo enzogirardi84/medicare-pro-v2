@@ -153,19 +153,7 @@ def _render_plan_cuidados_enfermeria_legacy(
                         st.error(f"Error al guardar en SQL: {e}")
 
                     # 2. Guardar en JSON (Legacy)
-                    nuevo = {
-                        "paciente": paciente_sel,
-                        "empresa": mi_empresa,
-                        "fecha": fecha_str,
-                        "tipo_cuidado": tipo_cuidado,
-                        "turno": turno,
-                        "prioridad": prioridad,
-                        "riesgo_caidas": riesgo_caidas,
-                        "riesgo_upp": riesgo_upp,
-                        "dolor": dolor,
-                        "objetivo": objetivo.strip(),
-                        "intervencion": intervencion.strip(),
-                        "respuesta": respuesta.strip(),
+                    if "cuidados_enfermeria_db" not in st.session_state or not isinstance(st.session_state["cuidados_enfermeria_db"], list):
                         "observaciones": observaciones.strip(),
                         "incidente": incidente,
                         "detalle_incidente": detalle_incidente.strip(),

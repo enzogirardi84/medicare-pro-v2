@@ -1,6 +1,7 @@
 """
 HISTORIAL CLINICO COMPLETO
 Muestra y guarda TODOS los datos del paciente en un solo lugar
+Usa sistema dual-read: SQL (Supabase) + session_state (JSON local)
 """
 
 import json
@@ -8,17 +9,37 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from core.guardado_universal import (
-    guardar_registro,
-    obtener_historial_paciente,
-    obtener_registros
-)
+from core.database import guardar_datos
+from core.clinical_exports import collect_patient_sections, build_history_pdf_bytes
+from core.utils import ahora, mapa_detalles_pacientes
+from core.db_sql import insert_signos_vitales, insert_evolucion, get_paciente_por_dni_empresa
+from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 
 
-def _generar_historial_texto(paciente_nombre, paciente_id, user=None):
+def _get_paciente_uuid(paciente_id, empresa):
+    """Obtiene UUID del paciente para guardado SQL."""
+    try:
+        empresa_id = _obtener_uuid_empresa(empresa)
+        if empresa_id:
+            return _obtener_uuid_paciente(paciente_id, empresa_id)
+    except Exception:
+        pass
+    return None
+
+
+def _generar_historial_texto(paciente_sel, sections, user=None):
     """Genera texto completo del historial clinico para descarga."""
     sep = "=" * 60
     sep2 = "-" * 60
+    
+    # Extraer nombre e ID
+    paciente_nombre = paciente_sel
+    paciente_id = paciente_sel
+    if isinstance(paciente_sel, str) and " - " in paciente_sel:
+        partes = paciente_sel.rsplit(" - ", 1)
+        paciente_nombre = partes[0]
+        paciente_id = partes[1]
+    
     lineas = [
         sep, "HISTORIAL CLINICO COMPLETO", sep,
         f"Paciente: {paciente_nombre}",
@@ -29,57 +50,74 @@ def _generar_historial_texto(paciente_nombre, paciente_id, user=None):
         lineas.append(f"Por: {user.get('nombre', '')}")
     lineas += [sep, ""]
 
-    signos = obtener_registros("signos_vitales", paciente_id)
+    # Signos Vitales
+    signos = sections.get("Signos Vitales", [])
     lineas += [f"SIGNOS VITALES ({len(signos)} registros)", sep2]
     for s in signos:
-        d = s.get("datos", {})
         lineas.append(f"  Fecha: {s.get('fecha', '-')}")
-        for campo, lbl in [("tension_arterial","T.A"),("frecuencia_cardiaca","F.C"),("temperatura","Temp"),
-                           ("saturacion_oxigeno","SatO2"),("glucemia","Gluc"),("peso","Peso"),("talla","Talla")]:
-            if d.get(campo):
-                lineas.append(f"    {lbl}: {d[campo]}")
-        if d.get("observaciones"):
-            lineas.append(f"    Obs: {d['observaciones']}")
+        lineas.append(f"    T.A: {s.get('TA', 'S/D')} | F.C: {s.get('FC', 'S/D')} | F.R: {s.get('FR', 'S/D')}")
+        lineas.append(f"    Temp: {s.get('Temp', 'S/D')}°C | SatO2: {s.get('Sat', 'S/D')}% | Gluc: {s.get('HGT', 'S/D')}")
+        if s.get('observaciones'):
+            lineas.append(f"    Obs: {s['observaciones']}")
         lineas.append("")
 
-    evoluciones = obtener_registros("evoluciones", paciente_id)
-    ss_evols = [e for e in st.session_state.get("evoluciones_db", [])
-                if paciente_id in str(e.get("paciente","")) or paciente_nombre in str(e.get("paciente",""))]
-    total_evols = len(evoluciones) + len(ss_evols)
-    lineas += [f"EVOLUCIONES ({total_evols} registros)", sep2]
+    # Evoluciones
+    evoluciones = sections.get("Procedimientos y Evoluciones", [])
+    lineas += [f"EVOLUCIONES ({len(evoluciones)} registros)", sep2]
     for e in evoluciones:
-        d = e.get("datos", {})
-        firma = d.get("firma", d.get("firma_medico", e.get("paciente_nombre", "")))
-        nota = d.get("nota", d.get("nota_medica", d.get("evolucion", "-")))
-        lineas.append(f"  Fecha: {e.get('fecha','-')} | Plantilla: {d.get('plantilla','Libre')} | Por: {firma}")
-        for l in str(nota).split("\n"):
-            lineas.append(f"    {l}")
-        if d.get("indicaciones"):
-            lineas.append(f"  Indicaciones: {d['indicaciones']}")
-        lineas.append("")
-    for se in ss_evols:
-        lineas.append(f"  Fecha: {se.get('fecha','-')} | Por: {se.get('firma','')}")
-        for l in str(se.get('nota','')).split("\n"):
+        lineas.append(f"  Fecha: {e.get('fecha','-')} | Por: {e.get('firma','Sistema')}")
+        lineas.append(f"    Plantilla: {e.get('plantilla','Libre')}")
+        for l in str(e.get('nota','Sin nota')).split("\n"):
             lineas.append(f"    {l}")
         lineas.append("")
 
-    recetas = obtener_registros("recetas", paciente_id)
-    lineas += [f"RECETAS ({len(recetas)} registros)", sep2]
+    # Recetas/Plan Terapeutico
+    recetas = sections.get("Plan Terapeutico", [])
+    lineas += [f"PLAN TERAPEUTICO ({len(recetas)} registros)", sep2]
     for r in recetas:
-        d = r.get("datos", {})
         lineas.append(f"  Fecha: {r.get('fecha','-')}")
-        lineas.append(f"  Medicamentos: {d.get('medicamentos','-')}")
-        if d.get("indicaciones"):
-            lineas.append(f"  Indicaciones: {d['indicaciones']}")
+        lineas.append(f"    Medicación: {r.get('med','-')}")
+        lineas.append(f"    Estado: {r.get('estado_receta','Activa')}")
+        if r.get('via'):
+            lineas.append(f"    Vía: {r['via']}")
+        if r.get('frecuencia'):
+            lineas.append(f"    Frecuencia: {r['frecuencia']}")
         lineas.append("")
 
-    materiales = obtener_registros("materiales", paciente_id)
+    # Materiales/Consumos
+    materiales = sections.get("Materiales Utilizados", [])
     lineas += [f"MATERIALES E INSUMOS ({len(materiales)} registros)", sep2]
     for m in materiales:
-        d = m.get("datos", {})
-        lineas.append(f"  Fecha: {m.get('fecha','-')} | {d.get('material','-')} x {d.get('cantidad','-')}")
-        if d.get("observaciones"):
-            lineas.append(f"  Obs: {d['observaciones']}")
+        lineas.append(f"  Fecha: {m.get('fecha','-')}")
+        lineas.append(f"    Insumo: {m.get('insumo', m.get('material','-'))} | Cantidad: {m.get('cantidad','-')}")
+        if m.get('observaciones'):
+            lineas.append(f"    Obs: {m['observaciones']}")
+        lineas.append("")
+
+    # Enfermeria
+    cuidados = sections.get("Enfermeria y Plan de Cuidados", [])
+    lineas += [f"ENFERMERIA ({len(cuidados)} registros)", sep2]
+    for c in cuidados:
+        lineas.append(f"  Fecha: {c.get('fecha','-')} | Por: {c.get('profesional','-')}")
+        lineas.append(f"    Tipo: {c.get('tipo_cuidado','-')}")
+        if c.get('intervencion'):
+            lineas.append(f"    Intervención: {c['intervencion']}")
+        lineas.append("")
+
+    # Emergencias
+    emergencias = sections.get("Emergencias y Ambulancia", [])
+    lineas += [f"EMERGENCIAS ({len(emergencias)} registros)", sep2]
+    for em in emergencias:
+        lineas.append(f"  Fecha: {em.get('fecha_evento','-')}")
+        lineas.append(f"    Motivo: {em.get('motivo','-')}")
+        lineas.append(f"    Destino: {em.get('destino','-')}")
+        lineas.append("")
+
+    # Consentimientos
+    consentimientos = sections.get("Consentimientos", [])
+    lineas += [f"CONSENTIMIENTOS ({len(consentimientos)} registros)", sep2]
+    for cons in consentimientos:
+        lineas.append(f"  Fecha: {cons.get('fecha','-')} | Tipo: {cons.get('tipo_documento','-')}")
         lineas.append("")
 
     lineas += [sep, "FIN DEL HISTORIAL CLINICO", sep]
@@ -87,134 +125,106 @@ def _generar_historial_texto(paciente_nombre, paciente_id, user=None):
 
 
 def render(paciente_sel=None, user=None):
-    """Vista de historial clínico completo."""
+    """Vista de historial clínico completo con dual-read SQL + session_state."""
     
     st.markdown("# 📋 Historial Clínico Completo")
-    st.caption("Todo el historial médico del paciente en un solo lugar")
+    st.caption("Todo el historial médico del paciente - Datos en tiempo real desde Supabase + local")
     
-    # Obtener paciente
+    # Obtener paciente actual del sidebar si no se pasó
     if not paciente_sel:
-        paciente_sel = st.session_state.get("paciente_sel", "")
+        paciente_sel = st.session_state.get("paciente_actual", "")
     
     if not paciente_sel:
-        st.error("❌ Selecciona un paciente primero")
+        st.warning("⚠️ Selecciona un paciente primero desde la barra lateral")
+        st.info("👈 Usa el buscador de pacientes en el sidebar izquierdo")
         return
     
     # Extraer datos del paciente
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+    empresa = detalles.get("empresa", "")
+    
     paciente_nombre = paciente_sel
     paciente_id = paciente_sel
-    
     if isinstance(paciente_sel, str) and " - " in paciente_sel:
-        partes = paciente_sel.split(" - ")
-        paciente_nombre = " - ".join(partes[:-1])
-        paciente_id = partes[-1]
+        partes = paciente_sel.rsplit(" - ", 1)
+        paciente_nombre = partes[0]
+        paciente_id = partes[1]
     
-    # Mostrar info del paciente
-    st.info(f"👤 **Paciente:** {paciente_nombre} | **DNI:** {paciente_id}")
+    # OBTENER DATOS CON DUAL-READ (SQL + session_state)
+    with st.spinner("📡 Cargando historial clínico..."):
+        sections = collect_patient_sections(st.session_state, paciente_sel)
+    
+    # Contar totales
+    total_signos = len(sections.get("Signos Vitales", []))
+    total_evoluciones = len(sections.get("Procedimientos y Evoluciones", []))
+    total_recetas = len(sections.get("Plan Terapeutico", []))
+    total_materiales = len(sections.get("Materiales Utilizados", []))
+    total_cuidados = len(sections.get("Enfermeria y Plan de Cuidados", []))
+    
+    # Mostrar info del paciente con métricas
+    st.info(f"👤 **{paciente_nombre}** | 🆔 **DNI:** {paciente_id} | 🏥 **Empresa:** {empresa or 'No especificada'}")
+    
+    # Métricas rápidas
+    cols = st.columns(5)
+    cols[0].metric("📊 Signos", total_signos)
+    cols[1].metric("📝 Evoluciones", total_evoluciones)
+    cols[2].metric("💊 Recetas", total_recetas)
+    cols[3].metric("🔧 Materiales", total_materiales)
+    cols[4].metric("🏥 Enfermería", total_cuidados)
     
     # === TABS PARA DIFERENTES SECCIONES ===
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Signos Vitales", 
-        "📝 Evoluciones", 
-        "💊 Recetas",
-        "🔧 Materiales",
+        f"📊 Signos Vitales ({total_signos})", 
+        f"📝 Evoluciones ({total_evoluciones})", 
+        f"💊 Recetas ({total_recetas})",
+        f"🔧 Materiales ({total_materiales})",
         "📚 Historial Completo"
     ])
     
     # === TAB 1: SIGNOS VITALES ===
     with tab1:
         st.markdown("### 📊 Signos Vitales")
+        st.caption("💡 Los signos vitales se guardan desde el módulo 'Clínica' o 'Enfermería'. Aquí se muestran todos los registros.")
         
-        with st.form("form_signos_vitales_historial"):
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                ta = st.text_input("Tensión Arterial", placeholder="120/80")
-                fc = st.number_input("Frec. Cardiaca", 30, 220, 75)
-                fr = st.number_input("Frec. Respiratoria", 8, 60, 16)
-            
-            with col2:
-                sat = st.number_input("Saturación O2 (%)", 70, 100, 98)
-                temp = st.number_input("Temperatura (°C)", 34.0, 42.0, 36.5, step=0.1)
-                glucemia = st.text_input("Glucemia", placeholder="110")
-            
-            with col3:
-                peso = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, step=0.1)
-                talla = st.number_input("Talla (cm)", 0, 250, 170)
-                observaciones = st.text_area("Observaciones", height=100)
-            
-            submitted = st.form_submit_button(
-                "💾 GUARDAR SIGNOS VITALES",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            if submitted:
-                datos = {
-                    "tension_arterial": ta,
-                    "frecuencia_cardiaca": fc,
-                    "frecuencia_respiratoria": fr,
-                    "saturacion_oxigeno": sat,
-                    "temperatura": temp,
-                    "glucemia": glucemia,
-                    "peso": peso,
-                    "talla": talla,
-                    "observaciones": observaciones
-                }
-                
-                exito, mensaje = guardar_registro(
-                    tipo="signos_vitales",
-                    paciente_id=paciente_id,
-                    paciente_nombre=paciente_nombre,
-                    datos=datos
-                )
-                
-                if exito:
-                    st.success(f"✅ {mensaje}")
-                    st.balloons()
-                    st.rerun()
-                else:
-                    st.error(f"❌ {mensaje}")
-        
-        # Mostrar tabla de signos vitales guardados
-        signos = obtener_registros("signos_vitales", paciente_id)
+        # Mostrar tabla de signos vitales desde dual-read (SQL + session_state)
+        signos = sections.get("Signos Vitales", [])
         if signos:
-            st.markdown("#### 📋 Signos Vitales Guardados")
+            st.success(f"📋 Mostrando {len(signos)} registros de signos vitales (Supabase + local)")
             
             # Preparar datos para tabla
             tabla_signos = []
             for s in signos:
-                datos = s.get('datos', {})
                 tabla_signos.append({
                     'Fecha': s.get('fecha', ''),
-                    'T.A.': datos.get('tension_arterial', ''),
-                    'F.C.': datos.get('frecuencia_cardiaca', ''),
-                    'F.R.': datos.get('frecuencia_respiratoria', ''),
-                    'Temp': datos.get('temperatura', ''),
-                    'SatO2': datos.get('saturacion_oxigeno', ''),
-                    'Gluc': datos.get('glucemia', ''),
-                    'Peso': datos.get('peso', ''),
-                    'Talla': datos.get('talla', ''),
-                    'Obs': datos.get('observaciones', '')
+                    'T.A.': s.get('TA', ''),
+                    'F.C.': s.get('FC', ''),
+                    'F.R.': s.get('FR', ''),
+                    'Temp': s.get('Temp', ''),
+                    'SatO2': s.get('Sat', ''),
+                    'Gluc': s.get('HGT', ''),
+                    'Obs': s.get('observaciones', ''),
+                    'Registrado por': s.get('registrado_por', s.get('firma', 'Sistema'))
                 })
+            
+            # Ordenar por fecha descendente
+            tabla_signos = sorted(tabla_signos, key=lambda x: x['Fecha'], reverse=True)
             
             df_signos = pd.DataFrame(tabla_signos)
             st.dataframe(
                 df_signos,
                 use_container_width=True,
                 hide_index=True,
-                height=min(350, len(df_signos) * 45 + 50),
+                height=min(400, len(df_signos) * 45 + 50),
                 column_config={
-                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width=120),
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width=130),
                     'T.A.': st.column_config.TextColumn('T.A.', width=90),
-                    'F.C.': st.column_config.NumberColumn('F.C.', width=70),
-                    'F.R.': st.column_config.NumberColumn('F.R.', width=70),
-                    'Temp': st.column_config.NumberColumn('Temp', width=70, format="%.1f"),
-                    'SatO2': st.column_config.NumberColumn('SatO2', width=70),
+                    'F.C.': st.column_config.TextColumn('F.C.', width=70),
+                    'F.R.': st.column_config.TextColumn('F.R.', width=70),
+                    'Temp': st.column_config.TextColumn('Temp', width=70),
+                    'SatO2': st.column_config.TextColumn('SatO2', width=70),
                     'Gluc': st.column_config.TextColumn('Gluc', width=70),
-                    'Peso': st.column_config.NumberColumn('Peso', width=70),
-                    'Talla': st.column_config.NumberColumn('Talla', width=70),
-                    'Obs': st.column_config.TextColumn('Observaciones', width=150)
+                    'Obs': st.column_config.TextColumn('Observaciones', width=200),
+                    'Registrado por': st.column_config.TextColumn('Por', width=120)
                 }
             )
             
@@ -222,297 +232,174 @@ def render(paciente_sel=None, user=None):
             csv = df_signos.to_csv(index=False).encode('utf-8')
             st.download_button("📥 Descargar CSV", csv, f"signos_vitales_{paciente_id}.csv", "text/csv")
         else:
-            st.info("No hay signos vitales registrados")
+            st.info("📭 No hay signos vitales registrados para este paciente")
+            st.caption("💡 Usa el módulo 'Clínica' para registrar signos vitales")
     
     # === TAB 2: EVOLUCIONES ===
     with tab2:
         st.markdown("### 📝 Evoluciones Clínicas")
+        st.caption("💡 Las evoluciones se guardan desde el módulo 'Evolución'. Aquí se muestran todas.")
         
-        with st.form("form_evoluciones_historial"):
-            evolucion = st.text_area("Evolución clínica", height=200, 
-                                   placeholder="Describe la evolución del paciente...")
-            indicaciones = st.text_area("Indicaciones y tratamiento", height=150,
-                                      placeholder="Medicamentos, dosis, frecuencia...")
-            
-            submitted = st.form_submit_button(
-                "💾 GUARDAR EVOLUCIÓN",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            if submitted:
-                if not evolucion.strip():
-                    st.error("❌ Debes escribir la evolución")
-                else:
-                    datos = {
-                        "evolucion": evolucion,
-                        "indicaciones": indicaciones
-                    }
-                    
-                    exito, mensaje = guardar_registro(
-                        tipo="evoluciones",
-                        paciente_id=paciente_id,
-                        paciente_nombre=paciente_nombre,
-                        datos=datos
-                    )
-                    
-                    if exito:
-                        st.success(f"✅ {mensaje}")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ {mensaje}")
-        
-        # Mostrar evoluciones guardadas
-        evoluciones = obtener_registros("evoluciones", paciente_id)
+        # Mostrar evoluciones desde dual-read (SQL + session_state)
+        evoluciones = sections.get("Procedimientos y Evoluciones", [])
         if evoluciones:
-            st.markdown(f"#### 📋 Evoluciones Guardadas ({len(evoluciones)} total)")
-            for evo in reversed(evoluciones[-10:]):  # Mostrar últimas 10
-                datos = evo.get('datos', {})
-                with st.expander(f"📅 {evo.get('fecha', 'Sin fecha')}"):
-                    st.markdown(f"**👤 Registrado por:** {evo.get('paciente_nombre', '')}")
-                    st.markdown("**📝 Evolución:**")
-                    nota_txt = datos.get('evolucion', datos.get('nota', 'Sin evolución'))
-                    st.markdown(f'<div class="mc-scroll-block">{nota_txt}</div>', unsafe_allow_html=True)
-                    if datos.get('indicaciones'):
-                        st.markdown("**💊 Indicaciones:**")
-                        st.markdown(f'<div class="mc-scroll-block" style="max-height:120px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
+            st.success(f"📋 Mostrando {len(evoluciones)} evoluciones (Supabase + local)")
+            
+            # Ordenar por fecha descendente
+            evoluciones_ordenadas = sorted(evoluciones, key=lambda x: x.get('fecha', ''), reverse=True)
+            
+            for evo in evoluciones_ordenadas[:20]:  # Mostrar últimas 20
+                with st.expander(f"📅 {evo.get('fecha', 'Sin fecha')} | 📝 {evo.get('plantilla', 'Libre')}"):
+                    st.markdown(f"**👤 Registrado por:** {evo.get('firma', 'Sistema')}")
+                    if evo.get('id_sql'):
+                        st.caption(f"🆔 SQL ID: {evo['id_sql']}")
+                    st.markdown("**📝 Nota/Evolución:**")
+                    nota_txt = evo.get('nota', 'Sin nota')
+                    st.markdown(f'<div style="background:#0f172a;padding:10px;border-radius:8px;max-height:300px;overflow-y:auto;">{nota_txt}</div>', unsafe_allow_html=True)
         else:
-            st.info("📋 No hay evoluciones registradas. Usa el formulario de arriba para agregar la primera.")
+            st.info("� No hay evoluciones registradas para este paciente")
+            st.caption("💡 Usa el módulo 'Evolución' para registrar evoluciones clínicas")
     
     # === TAB 3: RECETAS ===
     with tab3:
-        st.markdown("### 💊 Recetas Médicas")
+        st.markdown("### 💊 Plan Terapéutico / Recetas")
+        st.caption("💡 Las recetas se guardan desde el módulo 'Recetas' o 'Clínica'. Aquí se muestran todas.")
         
-        with st.form("form_recetas_historial"):
-            medicamentos = st.text_area("Medicamentos", height=200,
-                                      placeholder="1. Paracetamol 500mg - 1 cada 8hs\n2. Amoxicilina 500mg - 1 cada 12hs...")
-            indicaciones_receta = st.text_area("Indicaciones generales", height=100)
-            
-            submitted = st.form_submit_button(
-                "💾 GUARDAR RECETA",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            if submitted:
-                datos = {
-                    "medicamentos": medicamentos,
-                    "indicaciones": indicaciones_receta
-                }
-                
-                exito, mensaje = guardar_registro(
-                    tipo="recetas",
-                    paciente_id=paciente_id,
-                    paciente_nombre=paciente_nombre,
-                    datos=datos
-                )
-                
-                if exito:
-                    st.success(f"✅ {mensaje}")
-                    st.rerun()
-                else:
-                    st.error(f"❌ {mensaje}")
-        
-        # Mostrar recetas
-        recetas = obtener_registros("recetas", paciente_id)
+        # Mostrar recetas/indicaciones desde dual-read (SQL + session_state)
+        recetas = sections.get("Plan Terapeutico", [])
         if recetas:
-            st.markdown(f"#### 📋 Recetas Guardadas ({len(recetas)} total)")
+            st.success(f"📋 Mostrando {len(recetas)} registros del plan terapéutico (Supabase + local)")
             
-            for rec in reversed(recetas[-5:]):  # Mostrar últimas 5
-                datos = rec.get('datos', {})
-                with st.expander(f"📅 {rec.get('fecha', 'Sin fecha')}"):
-                    st.markdown("**💊 Medicamentos:**")
-                    st.markdown(f'<div class="mc-scroll-block">{datos.get("medicamentos", "Sin medicamentos")}</div>', unsafe_allow_html=True)
-                    if datos.get('indicaciones'):
-                        st.markdown("**📝 Indicaciones:**")
-                        st.markdown(f'<div class="mc-scroll-block" style="max-height:100px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
+            # Ordenar por fecha descendente
+            recetas_ordenadas = sorted(recetas, key=lambda x: x.get('fecha', ''), reverse=True)
+            
+            for rec in recetas_ordenadas[:15]:  # Mostrar últimas 15
+                with st.expander(f"📅 {rec.get('fecha', 'Sin fecha')} | 💊 {rec.get('med', 'Sin medicación')[:40]}..."):
+                    if rec.get('id_sql'):
+                        st.caption(f"🆔 SQL ID: {rec['id_sql']}")
+                    st.markdown(f"**💊 Medicación/Indicación:**")
+                    st.markdown(f'<div style="background:#0f172a;padding:10px;border-radius:8px;">{rec.get("med", "-")}</div>', unsafe_allow_html=True)
+                    
+                    cols = st.columns(3)
+                    cols[0].metric("Estado", rec.get('estado_receta', 'Activa'))
+                    cols[1].metric("Vía", rec.get('via', '-') or '-')
+                    cols[2].metric("Frecuencia", rec.get('frecuencia', '-') or '-')
+                    
+                    if rec.get('dias_duracion'):
+                        st.caption(f"⏱️ Duración: {rec['dias_duracion']} días")
+                    if rec.get('medico_nombre'):
+                        st.caption(f"�‍⚕️ Médico: {rec['medico_nombre']}")
         else:
-            st.info("📋 No hay recetas registradas. Usa el formulario de arriba para agregar la primera.")
+            st.info("� No hay recetas ni plan terapéutico registrado")
+            st.caption("💡 Usa el módulo 'Recetas' para agregar medicación")
     
     # === TAB 4: MATERIALES ===
     with tab4:
-        st.markdown("### 🔧 Materiales e Insumos Usados")
+        st.markdown("### 🔧 Materiales e Insumos")
+        st.caption("💡 Los materiales se guardan desde el módulo 'Materiales' o 'Enfermería'. Aquí se muestran todos.")
         
-        with st.form("form_materiales_historial"):
-            material = st.text_input("Material/insumo", placeholder="Ej: Gasas estériles 10x10")
-            cantidad = st.number_input("Cantidad", 1, 1000, 1)
-            observaciones_mat = st.text_area("Observaciones")
-            
-            submitted = st.form_submit_button(
-                "💾 GUARDAR MATERIAL",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            if submitted:
-                datos = {
-                    "material": material,
-                    "cantidad": cantidad,
-                    "observaciones": observaciones_mat
-                }
-                
-                exito, mensaje = guardar_registro(
-                    tipo="materiales",
-                    paciente_id=paciente_id,
-                    paciente_nombre=paciente_nombre,
-                    datos=datos
-                )
-                
-                if exito:
-                    st.success(f"✅ {mensaje}")
-                    st.rerun()
-                else:
-                    st.error(f"❌ {mensaje}")
-        
-        # Mostrar materiales
-        materiales = obtener_registros("materiales", paciente_id)
+        # Mostrar materiales desde dual-read (SQL + session_state)
+        materiales = sections.get("Materiales Utilizados", [])
         if materiales:
-            st.markdown(f"#### 📋 Materiales Usados ({len(materiales)} total)")
+            st.success(f"📋 Mostrando {len(materiales)} registros de materiales (Supabase + local)")
             
             # Preparar tabla
             tabla_mat = []
             for m in materiales:
-                datos = m.get('datos', {})
                 tabla_mat.append({
                     'Fecha': m.get('fecha', ''),
-                    'Material': datos.get('material', ''),
-                    'Cantidad': datos.get('cantidad', 0),
-                    'Observaciones': datos.get('observaciones', '')
+                    'Material/Insumo': m.get('insumo', m.get('material', '-')),
+                    'Cantidad': m.get('cantidad', '-'),
+                    'Observaciones': m.get('observaciones', ''),
+                    'Profesional': m.get('firma', m.get('profesional', 'Sistema'))
                 })
+            
+            # Ordenar por fecha descendente
+            tabla_mat = sorted(tabla_mat, key=lambda x: x['Fecha'], reverse=True)
             
             df_mat = pd.DataFrame(tabla_mat)
             st.dataframe(
                 df_mat,
                 use_container_width=True,
                 hide_index=True,
-                height=min(300, len(df_mat) * 45 + 50),
+                height=min(400, len(df_mat) * 45 + 50),
                 column_config={
                     'Fecha': st.column_config.TextColumn('Fecha/Hora', width=130),
-                    'Material': st.column_config.TextColumn('Material/Insumo', width=200),
-                    'Cantidad': st.column_config.NumberColumn('Cantidad', width=90),
-                    'Observaciones': st.column_config.TextColumn('Observaciones', width=250)
+                    'Material/Insumo': st.column_config.TextColumn('Material', width=250),
+                    'Cantidad': st.column_config.TextColumn('Cantidad', width=90),
+                    'Observaciones': st.column_config.TextColumn('Observaciones', width=200),
+                    'Profesional': st.column_config.TextColumn('Por', width=120)
                 }
             )
             
             csv = df_mat.to_csv(index=False).encode('utf-8')
             st.download_button("📥 Descargar CSV", csv, f"materiales_{paciente_id}.csv", "text/csv")
         else:
-            st.info("📋 No hay materiales registrados. Usa el formulario de arriba para agregar el primero.")
+            st.info("� No hay materiales registrados")
+            st.caption("💡 Usa el módulo 'Materiales' para registrar insumos utilizados")
     
     # === TAB 5: HISTORIAL COMPLETO ===
     with tab5:
         st.markdown("### 📚 Historial Clínico Completo")
+        st.caption("🔄 Datos sincronizados desde Supabase (PostgreSQL) + almacenamiento local")
 
         # --- BOTONES DE DESCARGA ---
-        st.markdown("#### 📥 Descargar Historial")
-        dcol1, dcol2 = st.columns(2)
+        st.markdown("#### 📥 Exportar Historial")
+        dcol1, dcol2, dcol3 = st.columns(3)
+        
         with dcol1:
-            texto_hist = _generar_historial_texto(paciente_nombre, paciente_id, user)
+            # Generar PDF profesional usando el sistema existente
+            with st.spinner("📄 Generando PDF..."):
+                pdf_bytes = build_history_pdf_bytes(st.session_state, paciente_sel, empresa or "MediCare")
             st.download_button(
-                "📄 Descargar Historial Completo (.txt)",
-                data=texto_hist.encode("utf-8"),
-                file_name=f"historial_{paciente_id.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.txt",
-                mime="text/plain",
+                "📄 Descargar PDF",
+                data=pdf_bytes,
+                file_name=f"historial_{paciente_id.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
                 use_container_width=True,
                 type="primary",
-                key="dl_historial_txt"
+                key="dl_historial_pdf"
             )
+        
         with dcol2:
-            todos_regs = obtener_historial_paciente(paciente_id)
-            ss_evols = [e for e in st.session_state.get("evoluciones_db", [])
-                        if paciente_id in str(e.get("paciente","")) or paciente_nombre in str(e.get("paciente",""))]
+            # Exportar como JSON con todas las secciones
             json_export = json.dumps(
-                {"paciente": paciente_nombre, "dni": paciente_id,
-                 "exportado": datetime.now().isoformat(),
-                 "historial_local": todos_regs, "evoluciones_sesion": ss_evols},
-                ensure_ascii=False, indent=2
+                {
+                    "paciente": paciente_nombre,
+                    "dni": paciente_id,
+                    "exportado": datetime.now().isoformat(),
+                    "empresa": empresa,
+                    "secciones": sections
+                },
+                ensure_ascii=False, indent=2, default=str
             )
             st.download_button(
-                "🔷 Descargar JSON Completo",
+                "🔷 Descargar JSON",
                 data=json_export.encode("utf-8"),
                 file_name=f"historial_{paciente_id.replace(' ','_')}.json",
                 mime="application/json",
                 use_container_width=True,
                 key="dl_historial_json"
             )
+        
+        with dcol3:
+            # Debug: mostrar fuente de datos
+            st.caption("📊 Fuentes de datos:")
+            for nombre, regs in sections.items():
+                if regs:
+                    st.caption(f"- {nombre}: {len(regs)} registros")
 
         st.markdown("---")
-        historial = obtener_historial_paciente(paciente_id)
-
-        if historial:
-            st.success(f"Total de registros en historial: {len(historial)}")
-            
-            # Ordenar por fecha
-            historial_ordenado = sorted(historial, key=lambda x: x.get('timestamp', ''), reverse=True)
-            
-            for registro in historial_ordenado[:20]:  # Mostrar últimos 20
-                tipo = registro.get('tipo', 'desconocido')
-                fecha = registro.get('fecha', 'Sin fecha')
-                datos = registro.get('datos', {})
-                
-                # Icono y color según tipo
-                iconos = {
-                    'signos_vitales': ('📊', 'blue'),
-                    'evoluciones': ('📝', 'green'),
-                    'recetas': ('💊', 'orange'),
-                    'materiales': ('🔧', 'red'),
-                    'evolucion': ('📝', 'green'),
-                    'receta': ('�', 'orange'),
-                    'material': ('🔧', 'red')
-                }
-                icono, color = iconos.get(tipo, ('📄', 'gray'))
-                
-                with st.expander(f"{icono} **{tipo.replace('_', ' ').upper()}** - {fecha}"):
-                    st.caption(f"ID: {registro.get('id', 'N/A')}")
-                    
-                    if tipo in ['signos_vitales']:
-                        cols = st.columns(4)
-                        metricas = [
-                            ('T.A.', datos.get('tension_arterial', '-')),
-                            ('F.C.', datos.get('frecuencia_cardiaca', '-')),
-                            ('F.R.', datos.get('frecuencia_respiratoria', '-')),
-                            ('Temp', datos.get('temperatura', '-')),
-                            ('SatO2', datos.get('saturacion_oxigeno', '-')),
-                            ('Gluc', datos.get('glucemia', '-')),
-                            ('Peso', datos.get('peso', '-')),
-                            ('Talla', datos.get('talla', '-'))
-                        ]
-                        for i, (label, valor) in enumerate(metricas):
-                            with cols[i % 4]:
-                                st.metric(label, valor)
-                        if datos.get('observaciones'):
-                            st.markdown(f"**📝 Observaciones:** {datos.get('observaciones')}")
-                    
-                    elif tipo in ['evoluciones', 'evolucion']:
-                        st.markdown("**📝 Evolución Clínica:**")
-                        nota_ev = datos.get('nota', datos.get('nota_medica', datos.get('evolucion', 'Sin evolución')))
-                        st.markdown(f'<div class="mc-scroll-block">{nota_ev}</div>', unsafe_allow_html=True)
-                        if datos.get('indicaciones'):
-                            st.markdown("**💊 Indicaciones:**")
-                            st.markdown(f'<div class="mc-scroll-block" style="max-height:100px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
-                    
-                    elif tipo in ['recetas', 'receta']:
-                        st.markdown("**💊 Medicamentos:**")
-                        st.markdown(f'<div class="mc-scroll-block">{datos.get("medicamentos", "Sin medicamentos")}</div>', unsafe_allow_html=True)
-                        if datos.get('indicaciones'):
-                            st.markdown("**📝 Indicaciones generales:**")
-                            st.markdown(f'<div class="mc-scroll-block" style="max-height:100px">{datos["indicaciones"]}</div>', unsafe_allow_html=True)
-                    
-                    elif tipo in ['materiales', 'material']:
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric("Material", datos.get('material', '-'))
-                        with col2:
-                            st.metric("Cantidad", datos.get('cantidad', '-'))
-                        if datos.get('observaciones'):
-                            st.markdown(f"**📝 Observaciones:** {datos.get('observaciones')}")
-        else:
-            st.info("No hay registros en el historial clínico")
-    
-    # === INFO FINAL ===
-    st.markdown("---")
-    st.success("✅ **Todos los datos se guardan automáticamente en el historial clínico del paciente**")
-    st.caption("Los datos se almacenan localmente y están disponibles para consultas futuras.")
+        st.success(f"✅ Historial completo cargado: {sum(len(r) for r in sections.values())} registros totales")
+        st.info("💡 Los datos se leen desde: 1) Supabase SQL (primario) + 2) Almacenamiento local (caché)")
+        
+        # Mostrar todas las secciones con datos
+        for nombre_seccion, registros in sections.items():
+            if registros:
+                with st.expander(f"📂 {nombre_seccion} ({len(registros)} registros)"):
+                    st.json([{k: str(v)[:100] + "..." if len(str(v)) > 100 else v for k, v in r.items()} for r in registros[:5]])
+                    if len(registros) > 5:
+                        st.caption(f"... y {len(registros) - 5} registros más")
 
 
 if __name__ == "__main__":

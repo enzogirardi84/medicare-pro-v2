@@ -2599,6 +2599,101 @@ div[data-testid="stDataFrame"] {
     line-height: 1.5 !important;
 }
 
+/* ===== OPTIMIZACIONES MÓVILES Y TABLETS ===== */
+
+/* Sidebar más compacto y usable en móviles */
+@media (max-width: 768px) {
+    [data-testid="stSidebar"] {
+        min-width: 280px !important;
+        max-width: 85vw !important;
+    }
+    
+    /* Botones más grandes para touch */
+    [data-testid="stSidebar"] button {
+        min-height: 44px !important;
+        font-size: 0.95rem !important;
+    }
+    
+    /* Selectbox de pacientes más alto para touch */
+    [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {
+        min-height: 44px !important;
+    }
+    
+    /* Inputs más grandes para touch */
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] textarea {
+        min-height: 44px !important;
+        font-size: 16px !important; /* Previene zoom en iOS */
+    }
+    
+    /* Reducir padding en sidebar para más espacio */
+    [data-testid="stSidebar"] > div:first-child {
+        padding: 0.5rem !important;
+    }
+    
+    /* Cards de paciente más compactas */
+    .mc-patient-card {
+        padding: 0.75rem !important;
+    }
+    
+    .mc-patient-card-name {
+        font-size: 0.95rem !important;
+    }
+    
+    /* Brand card más compacto */
+    .mc-brand-card {
+        padding: 0.75rem !important;
+    }
+    
+    .mc-brand-logo {
+        width: 36px !important;
+        height: 36px !important;
+    }
+}
+
+/* Tablets: sidebar ancho intermedio */
+@media (min-width: 769px) and (max-width: 1024px) {
+    [data-testid="stSidebar"] {
+        min-width: 300px !important;
+        max-width: 320px !important;
+    }
+}
+
+/* Touch-friendly targets en todos los dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+    button,
+    [role="button"],
+    .stButton > button {
+        min-height: 44px !important;
+        min-width: 44px !important;
+    }
+    
+    select,
+    input[type="text"],
+    input[type="password"],
+    input[type="number"] {
+        min-height: 44px !important;
+    }
+    
+    /* Aumentar espaciado entre elementos clickeables */
+    .stRadio > div[role="radiogroup"] > label,
+    .stCheckbox > div[role="checkbox"] > label {
+        padding: 0.5rem 0 !important;
+    }
+}
+
+/* Animaciones reducidas para dispositivos lentos */
+@media (prefers-reduced-motion: reduce),
+       (max-width: 480px) {
+    .mc-patient-card,
+    .mc-brand-card,
+    .mc-sidebar-alert-card,
+    .mc-evol-card {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
 /* Botones tipo link (Streamlit link_button / markdown) */
 .stElementContainer:has(a[data-testid="stLinkButton"]) a,
 a[data-testid="stLinkButton"] {

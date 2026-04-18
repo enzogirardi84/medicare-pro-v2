@@ -3,6 +3,7 @@ PANEL DE DIAGNOSTICO DEL SISTEMA
 Vista para admin: verifica Supabase, tablas SQL, datos locales, errores.
 """
 import streamlit as st
+import time
 from datetime import datetime
 
 
@@ -30,10 +31,16 @@ def render(user=None):
                 from core.diagnosticos import diagnosticar_supabase
                 diag = diagnosticar_supabase()
                 st.session_state["_ultimo_diagnostico"] = diag
+                st.session_state["_ultimo_diagnostico_ts"] = time.time()
 
         diag = st.session_state.get("_ultimo_diagnostico")
-        if not diag:
+        diag_ts = st.session_state.get("_ultimo_diagnostico_ts", 0)
+        CACHE_EXPIRE_SEGUNDOS = 600  # 10 minutos de cache para diagnosticos
+        
+        if not diag or (time.time() - diag_ts) > CACHE_EXPIRE_SEGUNDOS:
             st.info("Presioná el botón para ejecutar el diagnóstico.")
+            if diag and (time.time() - diag_ts) > CACHE_EXPIRE_SEGUNDOS:
+                st.caption(f"Datos del diagnóstico expiraron (hace más de {CACHE_EXPIRE_SEGUNDOS//60} minutos).")
         else:
             ts = diag.get("timestamp", "")
             st.caption(f"Última verificación: {ts}")

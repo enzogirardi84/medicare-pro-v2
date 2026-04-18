@@ -28,9 +28,10 @@ SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.15
 MAX_LOGS_DB_ENTRIES = 500
 
 # TTL del cache de session_state para cargar_datos.
-# Si se cargo hace menos de 90s, se devuelve el cache sin ir a Supabase.
+# Si se cargo hace menos de 300s (5 min), se devuelve el cache sin ir a Supabase.
 # Esto evita re-fetches en cada rerun sin perder frescura.
-DB_CACHE_TTL_SEGUNDOS = 90
+# Aumentado de 90s para mejorar rendimiento en navegación entre módulos.
+DB_CACHE_TTL_SEGUNDOS = 300
 
 # DESACTIVADO: La API NextGen (localhost:8000) no existe en produccion.
 # Con True, el sistema borraba evoluciones/vitales de sesion y luego guardaba listas vacias en Supabase.

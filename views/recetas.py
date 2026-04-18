@@ -275,6 +275,11 @@ def _registrar_administracion_dosis(
     ts_evento = ahora()
     mat_prof = str(user.get("matricula", "") or "").strip()
     login_ref = str(user.get("usuario_login", user.get("usuario", "")) or "").strip()
+    
+    # Safe initialization antes de append
+    if "administracion_med_db" not in st.session_state or not isinstance(st.session_state["administracion_med_db"], list):
+        st.session_state["administracion_med_db"] = []
+    
     st.session_state["administracion_med_db"].append(
         {
             "paciente": paciente_sel,
@@ -1299,6 +1304,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             detalle_infusion=detalle_infusion,
                             plan_hidratacion=plan_hidratacion,
                         )
+                        # Safe initialization antes de append
+                        if "indicaciones_db" not in st.session_state or not isinstance(st.session_state["indicaciones_db"], list):
+                            st.session_state["indicaciones_db"] = []
                         st.session_state["indicaciones_db"].append(
                             {
                                 "paciente": paciente_sel,
@@ -1488,6 +1496,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "origen_registro": "Prescripcion digital de infusion",
                             "empresa": mi_empresa,
                         }
+                        # Safe initialization antes de append
+                        if "indicaciones_db" not in st.session_state or not isinstance(st.session_state["indicaciones_db"], list):
+                            st.session_state["indicaciones_db"] = []
                         st.session_state["indicaciones_db"].append(reg_inf)
                         registrar_auditoria_legal(
                             "Medicacion",
@@ -1569,6 +1580,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         "adjunto_papel_tipo": adjunto_tipo,
                         "empresa": mi_empresa,
                     }
+                    # Safe initialization antes de append
+                    if "indicaciones_db" not in st.session_state or not isinstance(st.session_state["indicaciones_db"], list):
+                        st.session_state["indicaciones_db"] = []
                     st.session_state["indicaciones_db"].append(registro)
                     registrar_auditoria_legal(
                         "Medicacion",

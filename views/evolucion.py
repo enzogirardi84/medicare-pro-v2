@@ -140,6 +140,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             )
 
             if b64_firma:
+                # Safe initialization antes de append
+                if "firmas_tactiles_db" not in st.session_state or not isinstance(st.session_state["firmas_tactiles_db"], list):
+                    st.session_state["firmas_tactiles_db"] = []
                 st.session_state["firmas_tactiles_db"].append({
                     "paciente": paciente_sel,
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M"),

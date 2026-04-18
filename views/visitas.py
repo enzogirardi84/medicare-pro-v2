@@ -381,6 +381,9 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         print(f"Error dual-write checkin llegada: {e}")
                     # ------------------------
                     
+                    # Safe initialization antes de append
+                    if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
+                        st.session_state["checkin_db"] = []
                     st.session_state["checkin_db"].append(
                         {
                             "paciente": paciente_sel,
@@ -429,6 +432,9 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         print(f"Error dual-write checkin salida: {e}")
                     # ------------------------
                     
+                    # Safe initialization antes de append (ya inicializado arriba, verificamos igual)
+                    if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
+                        st.session_state["checkin_db"] = []
                     st.session_state["checkin_db"].append(
                         {
                             "paciente": paciente_sel,
@@ -577,6 +583,9 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                         f"{prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}."
                     )
                 else:
+                    # Safe initialization antes de append
+                    if "agenda_db" not in st.session_state or not isinstance(st.session_state["agenda_db"], list):
+                        st.session_state["agenda_db"] = []
                     st.session_state["agenda_db"].append(
                         {
                             "paciente": paciente_sel,
