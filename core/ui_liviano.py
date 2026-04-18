@@ -236,14 +236,15 @@ def render_mobile_sidebar_toggle() -> None:
       var style = parentDoc.createElement("style");
       style.id = STYLE_ID;
       style.textContent = [
-        "#"+BUTTON_ID+"{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);z-index:10040;",
-        "display:none;align-items:center;justify-content:center;min-height:46px;padding:0.78rem 1rem;",
-        "border:none;border-radius:999px;background:linear-gradient(135deg,#14b8a6 0%,#2563eb 100%);",
-        "color:#f8fafc;font:700 0.92rem/1 'Plus Jakarta Sans',sans-serif;letter-spacing:-0.01em;",
-        "box-shadow:0 14px 28px rgba(2,6,23,.32), inset 0 1px 0 rgba(255,255,255,.18);",
-        "cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease;}",
-        "#"+BUTTON_ID+":active{transform:scale(.98);}",
+        "#"+BUTTON_ID+"{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:10015;",
+        "display:none;align-items:center;justify-content:center;width:34px;height:54px;padding:0;",
+        "border:none;border-radius:0 12px 12px 0;background:linear-gradient(180deg,#14b8a6 0%,#2563eb 100%);",
+        "color:#f8fafc;font:900 1rem/1 'Plus Jakarta Sans',sans-serif;letter-spacing:0;",
+        "box-shadow:0 10px 22px rgba(2,6,23,.24), inset 0 1px 0 rgba(255,255,255,.16);",
+        "cursor:pointer;opacity:.94;}",
+        "#"+BUTTON_ID+":active{opacity:1;}",
         "#"+BUTTON_ID+".is-open{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}",
+        "#"+BUTTON_ID+" .mc-mobile-sidebar-toggle-icon{display:block;line-height:1;transform:translateX(-1px);}",
         "@media (max-width: 900px){#"+BUTTON_ID+"{display:inline-flex;}}",
         "@media (min-width: 901px){#"+BUTTON_ID+"{display:none !important;}}"
       ].join("");
@@ -345,8 +346,11 @@ def render_mobile_sidebar_toggle() -> None:
       btn.style.display = "inline-flex";
       var open = sidebarIsOpen();
       btn.classList.toggle("is-open", open);
-      btn.textContent = open ? "Cerrar panel" : "Abrir pacientes";
+      btn.innerHTML = open
+        ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&lt;</span>'
+        : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&gt;</span>';
       btn.setAttribute("aria-label", open ? "Cerrar panel lateral de herramientas" : "Abrir panel lateral de herramientas");
+      btn.setAttribute("title", open ? "Cerrar panel" : "Abrir pacientes");
     }
 
     ensureStyle();
@@ -357,12 +361,6 @@ def render_mobile_sidebar_toggle() -> None:
     if (!parentWin.__mcSidebarToggleResizeHook) {
       parentWin.addEventListener("resize", syncButton, { passive: true });
       parentWin.__mcSidebarToggleResizeHook = true;
-    }
-
-    if (!parentWin.__mcSidebarToggleObserver) {
-      var observer = new MutationObserver(function() { syncButton(); });
-      observer.observe(parentDoc.body, { childList: true, subtree: true, attributes: true });
-      parentWin.__mcSidebarToggleObserver = observer;
     }
 
     parentWin.__mcSidebarToggleSync = syncButton;
