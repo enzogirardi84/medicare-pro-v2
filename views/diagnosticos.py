@@ -307,25 +307,21 @@ def render(user=None):
         st.markdown("#### 📋 Logs de Errores Recientes")
         
         try:
-            from core.app_logging import _log_buffer
+            from core.app_logging import get_recent_errors
+            errores = get_recent_errors(limit=20)
             
-            if _log_buffer:
-                errores = [log for log in _log_buffer if log.get("level") in ["ERROR", "CRITICAL"]]
+            if errores:
+                st.error(f"⚠️ {len(errores)} errores recientes detectados")
                 
-                if errores:
-                    st.error(f"⚠️ {len(errores)} errores recientes detectados")
-                    
-                    with st.expander("Ver errores recientes", expanded=False):
-                        for err in errores[-20:]:  # Últimos 20 errores
-                            ts = err.get("timestamp", "?")
-                            msg = err.get("message", "Sin mensaje")
-                            st.markdown(f"**{ts}**: `{msg[:150]}{'...' if len(msg) > 150 else ''}`")
-                else:
-                    st.success("✅ No hay errores recientes en el log")
+                with st.expander("Ver errores recientes", expanded=False):
+                    for err in errores:
+                        ts = err.get("timestamp", "?")
+                        msg = err.get("message", "Sin mensaje")
+                        st.markdown(f"**{ts}**: `{msg[:150]}{'...' if len(msg) > 150 else ''}`")
             else:
-                st.info("ℹ️ Buffer de logs no disponible")
+                st.success("✅ No hay errores recientes en el log")
         except Exception as e:
-            st.info(f"ℹ️ No se pudo acceder a logs: {e}")
+            st.info(f"ℹ️ Sistema de logs en memoria no disponible: {e}")
         
         st.markdown("---")
         
