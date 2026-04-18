@@ -31,6 +31,10 @@ def get_canvas():
     return _canvas
 
 
+st_canvas = get_canvas()
+CANVAS_DISPONIBLE = bool(st_canvas)
+
+
 def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_iframe_px: int = 520):
     """
     Historial en iframe con altura fija: el scroll vive adentro (Streamlit suele romper overflow en st.markdown).
