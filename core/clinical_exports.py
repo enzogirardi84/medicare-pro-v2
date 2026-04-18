@@ -3,6 +3,7 @@ import io
 import json
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -537,6 +538,273 @@ def _backup_draw_module_index(pdf: FPDF, session_state, paciente_sel: str) -> No
     pdf.ln(4)
 
 
+_HISTORY_SKIP_KEYS = _BACKUP_SKIP_KEYS | frozenset(
+    {
+        "_id_local",
+        "_fecha_dt",
+        "adjunto_papel_tipo",
+        "adjunto_papel_nombre",
+        "fecha_iso",
+    }
+)
+
+_HISTORY_PRIORITY_KEYS = [
+    "fecha_hora_programada",
+    "fecha_hora",
+    "fecha",
+    "hora",
+    "fecha_programada",
+    "creado_en",
+    "fecha_evento",
+    "hora_evento",
+    "tipo",
+    "tipo_evento",
+    "categoria_evento",
+    "accion",
+    "estado",
+    "estado_receta",
+    "estado_clinico",
+    "profesional",
+    "firma",
+    "firmado_por",
+    "medico_nombre",
+    "actor",
+    "matricula",
+    "med",
+    "dosis",
+    "frecuencia",
+    "via",
+    "detalle",
+    "nota",
+    "observaciones",
+    "descripcion",
+    "texto",
+    "tipo_cuidado",
+    "intervencion",
+    "motivo",
+    "motivo_estado",
+    "turno",
+    "escala",
+    "puntaje",
+    "interpretacion",
+    "resultado",
+    "TA",
+    "FC",
+    "FR",
+    "Sat",
+    "Temp",
+    "HGT",
+    "peso",
+    "talla",
+    "ingresos",
+    "egresos",
+    "balance",
+    "insumo",
+    "cantidad",
+    "firmante",
+    "vinculo",
+    "dni_firmante",
+]
+
+
+def _history_escape_paragraph(value):
+    text = safe_text(value or "-").strip() or "-"
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+
+
+def _history_parse_datetime_string(value):
+    raw = safe_text(value or "").strip()
+    if not raw:
+        return None
+    for fmt, max_len in (
+        ("%d/%m/%Y %H:%M:%S", 19),
+        ("%d/%m/%Y %H:%M", 16),
+        ("%d/%m/%Y", 10),
+        ("%Y-%m-%d %H:%M:%S", 19),
+        ("%Y-%m-%d %H:%M", 16),
+        ("%Y-%m-%d", 10),
+    ):
+        frag = raw[:max_len]
+        try:
+            return datetime.strptime(frag, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _history_record_datetime(record):
+    if not isinstance(record, dict):
+        return None
+    for key in (
+        "fecha_hora_programada",
+        "fecha_hora",
+        "fecha",
+        "fecha_programada",
+        "creado_en",
+        "fecha_evento",
+        "fecha_toma",
+        "timestamp",
+    ):
+        dt = _history_parse_datetime_string(record.get(key))
+        if dt:
+            return dt
+    if record.get("fecha") and record.get("hora"):
+        dt = _history_parse_datetime_string(f"{record.get('fecha')} {record.get('hora')}")
+        if dt:
+            return dt
+    return None
+
+
+def _history_sort_records(records):
+    def _sort_key(rec):
+        dt = _history_record_datetime(rec)
+        if dt:
+            return (0, dt.timestamp())
+        fallback = safe_text(
+            rec.get("fecha")
+            or rec.get("fecha_hora")
+            or rec.get("fecha_hora_programada")
+            or rec.get("creado_en")
+            or ""
+        )
+        return (1, fallback)
+
+    return sorted(records or [], key=_sort_key)
+
+
+def _history_latest_record(records):
+    ordered = _history_sort_records(records)
+    return ordered[-1] if ordered else None
+
+
+def _history_trim_value(value, max_len=900):
+    text = safe_text(value).strip()
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
+
+
+def _history_record_summary(section_name, record):
+    if not record:
+        return "Sin detalle."
+    if section_name == "Signos Vitales":
+        return (
+            f"TA {_history_trim_value(record.get('TA', '-'), 80)} | "
+            f"FC {_history_trim_value(record.get('FC', '-'), 80)} | "
+            f"Sat {_history_trim_value(record.get('Sat', '-'), 80)} | "
+            f"Temp {_history_trim_value(record.get('Temp', '-'), 80)}"
+        )
+    if section_name == "Balance Hidrico":
+        return (
+            f"Ingresos {_history_trim_value(record.get('ingresos', '-'), 80)} | "
+            f"Egresos {_history_trim_value(record.get('egresos', '-'), 80)} | "
+            f"Balance {_history_trim_value(record.get('balance', '-'), 80)}"
+        )
+    if section_name == "Plan Terapeutico":
+        return _history_trim_value(
+            f"{record.get('med', 'Indicacion sin detalle')} | {record.get('estado_receta', record.get('estado_clinico', 'Activa'))}"
+        )
+    if section_name == "Materiales Utilizados":
+        return _history_trim_value(
+            f"{record.get('insumo', record.get('material', 'Material'))} x {record.get('cantidad', '-')}"
+        )
+    if section_name == "Estudios Complementarios":
+        return _history_trim_value(f"{record.get('tipo', 'Estudio')} | {record.get('detalle', 'Sin detalle')}")
+    if section_name == "Consentimientos":
+        return _history_trim_value(
+            f"{record.get('firmante', 'Firmante')} | {record.get('vinculo', 'Sin vinculo')} | DNI {record.get('dni_firmante', 'S/D')}"
+        )
+
+    for key in ("detalle", "nota", "observaciones", "texto", "descripcion", "motivo"):
+        if record.get(key):
+            return _history_trim_value(record.get(key))
+
+    piezas = [
+        record.get("tipo"),
+        record.get("categoria_evento"),
+        record.get("profesional"),
+        record.get("firma"),
+    ]
+    resumen = " | ".join(safe_text(p) for p in piezas if p not in (None, ""))
+    return resumen or "Registro sin resumen."
+
+
+def _history_rows_from_record(record):
+    if not isinstance(record, dict):
+        return []
+
+    rows = []
+    seen = set()
+
+    for key in _HISTORY_PRIORITY_KEYS:
+        if key in record and key not in _HISTORY_SKIP_KEYS:
+            value = record.get(key)
+            if value not in (None, ""):
+                rows.append((_backup_label_key(key), _history_trim_value(value)))
+                seen.add(key)
+
+    for key, value in sorted(record.items()):
+        if key in seen or key in _HISTORY_SKIP_KEYS or value in (None, ""):
+            continue
+        rows.append((_backup_label_key(key), _history_trim_value(value)))
+
+    if record.get("adjunto_papel_b64"):
+        rows.append(("Adjunto", "Orden medica adjunta en sistema."))
+    elif record.get("adjunto_papel_nombre"):
+        rows.append(("Adjunto", f"Archivo asociado: {_history_trim_value(record.get('adjunto_papel_nombre'), 180)}"))
+
+    if record.get("imagen"):
+        rows.append(("Adjunto", "Estudio o documento escaneado guardado en el sistema."))
+    if record.get("base64_foto"):
+        rows.append(("Adjunto", "Foto clinica guardada en el sistema."))
+    if record.get("firma_b64") or record.get("firma_img"):
+        rows.append(("Firma", "Firma digital registrada en el sistema."))
+
+    return rows[:24]
+
+
+def _history_record_heading(record, fallback_index):
+    fecha_dt = _history_record_datetime(record)
+    fecha = fecha_dt.strftime("%d/%m/%Y %H:%M") if fecha_dt else safe_text(
+        record.get("fecha_hora_programada")
+        or record.get("fecha_hora")
+        or record.get("fecha")
+        or record.get("creado_en")
+        or f"Registro {fallback_index}"
+    )
+    tipo = safe_text(record.get("tipo") or record.get("tipo_evento") or record.get("categoria_evento") or record.get("accion"))
+    responsable = safe_text(
+        record.get("profesional")
+        or record.get("firma")
+        or record.get("firmado_por")
+        or record.get("medico_nombre")
+        or record.get("actor")
+    )
+
+    piezas = [fecha]
+    if tipo:
+        piezas.append(tipo)
+    if responsable:
+        piezas.append(f"Responsable: {responsable}")
+    return " | ".join(piece for piece in piezas if piece)
+
+
+def _history_recent_activity_rows(sections, limit=10):
+    rows = []
+    for section_name, records in sections.items():
+        for record in records:
+            dt = _history_record_datetime(record)
+            if not dt:
+                continue
+            rows.append((dt, section_name, _history_record_summary(section_name, record)))
+
+    rows.sort(key=lambda item: item[0], reverse=True)
+    return [
+        (dt.strftime("%d/%m/%Y %H:%M"), section_name, resumen)
+        for dt, section_name, resumen in rows[:limit]
+    ]
+
+
 # =====================================================================
 # MOTOR REPORTLAB: HISTORIA CLÍNICA INTEGRAL (CORREGIDA)
 # =====================================================================
@@ -544,181 +812,356 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     if not REPORTLAB_DISPONIBLE:
         return None
 
-    from datetime import datetime as _dt
     buffer = io.BytesIO()
-    _PAGE_W = A4[0] - 60  # usable width (margins 30+30)
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=20, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=28, leftMargin=28, topMargin=28, bottomMargin=28)
     elements = []
     styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "HistTitleModern",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        alignment=1,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=4,
+    )
+    subtitle_style = ParagraphStyle(
+        "HistSubtitleModern",
+        parent=styles["Heading3"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=13,
+        alignment=1,
+        textColor=colors.HexColor("#0f766e"),
+        spaceAfter=2,
+    )
+    meta_style = ParagraphStyle(
+        "HistMetaModern",
+        parent=styles["BodyText"],
+        fontSize=8.3,
+        leading=10.2,
+        alignment=1,
+        textColor=colors.HexColor("#64748b"),
+        spaceAfter=10,
+    )
+    section_style = ParagraphStyle(
+        "HistSectionModern",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        leading=15,
+        textColor=colors.HexColor("#0f766e"),
+        spaceBefore=12,
+        spaceAfter=6,
+    )
+    item_title_style = ParagraphStyle(
+        "HistItemTitleModern",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Bold",
+        fontSize=9.2,
+        leading=11.4,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=3,
+    )
+    body_style = ParagraphStyle(
+        "HistBodyModern",
+        parent=styles["BodyText"],
+        fontSize=8.6,
+        leading=10.8,
+        textColor=colors.HexColor("#334155"),
+    )
+    label_style = ParagraphStyle(
+        "HistLabelModern",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Bold",
+        fontSize=8.2,
+        leading=10.2,
+        textColor=colors.HexColor("#0f172a"),
+    )
 
-    normal_style = ParagraphStyle('NormalHC', parent=styles['Normal'], fontSize=9, leading=12)
-    italic_style = ParagraphStyle('ItalicHC', parent=styles['Normal'], fontSize=9, leading=12, fontName='Helvetica-Oblique')
-
-    def _limpiar(texto):
-        if texto in [None, '', '-', 'S/D', 'Sin datos']: return '-'
-        t = str(texto).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        return t.replace('\n', '<br/>')
-
-    def _sec_hdr(titulo):
-        p = Paragraph(
-            f'<font color="white"><b>  {_limpiar(titulo).upper()}</b></font>',
-            ParagraphStyle('SH', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=14)
-        )
-        t = Table([[p]], colWidths=[_PAGE_W])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#162644')),
-            ('TOPPADDING', (0, 0), (0, 0), 5),
-            ('BOTTOMPADDING', (0, 0), (0, 0), 5),
-        ]))
-        return t
-
-    def _tabla_sec(titulo, cabeceras, claves, registros, anchos):
-        if not registros:
-            return
-        hdr_s = ParagraphStyle('TH', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, alignment=1)
-        cel_c = ParagraphStyle('TC', parent=styles['Normal'], fontSize=8, alignment=1)
-        cel_l = ParagraphStyle('TL', parent=styles['Normal'], fontSize=8, alignment=0)
-        datos = [[Paragraph(c, hdr_s) for c in cabeceras]]
-        for reg in registros:
-            fila = []
-            for clave in claves:
-                estilo = cel_l if clave in ('med', 'insumo', 'nota', 'observaciones') else cel_c
-                fila.append(Paragraph(_limpiar(reg.get(clave, '-')), estilo))
-            datos.append(fila)
-        t = Table(datos, colWidths=anchos, repeatRows=1)
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#374151')),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#D1D5DB')),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        elements.append(_sec_hdr(titulo))
-        elements.append(Spacer(1, 3))
-        elements.append(t)
-        elements.append(Spacer(1, 10))
-
-    # ── Cabecera navy con logo ────────────────────────────────────────
     detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
-    nombre_empresa = detalles.get('empresa', mi_empresa)
-    nom_pac = paciente_sel.split(' - ')[0] if ' - ' in paciente_sel else paciente_sel
-    fecha_gen = _dt.now().strftime('%d/%m/%Y %H:%M')
+    nombre_empresa = safe_text(detalles.get("empresa", mi_empresa) or mi_empresa or "MediCare")
+    secciones = collect_patient_sections(session_state, paciente_sel)
+    secciones_con_datos = {k: v for k, v in secciones.items() if v}
+    total_registros = sum(len(v) for v in secciones.values())
+    total_secciones = len(secciones_con_datos)
+    ultimo_global = None
+    for registros in secciones.values():
+        for registro in registros:
+            dt = _history_record_datetime(registro)
+            if dt and (ultimo_global is None or dt > ultimo_global):
+                ultimo_global = dt
 
-    logo_cell = ''
-    for ruta in [ASSETS_DIR/'logo_medicare_pro.jpeg', ASSETS_DIR/'logo_medicare_pro.jpg', ASSETS_DIR/'logo_medicare_pro.png']:
-        if ruta.exists() and RLImage is not None:
-            try:
-                logo_cell = RLImage(str(ruta), width=52, height=52)
-            except Exception:
-                pass
-            break
+    generado = datetime.now().strftime("%d/%m/%Y %H:%M")
+    responsable = safe_text(profesional or detalles.get("medico_cabecera") or "Sistema")
 
-    hdr_txt = Paragraph(
-        f'<font size="14" color="white"><b>{_limpiar(nombre_empresa)}</b></font><br/>'
-        f'<font size="9" color="#A0C8FF"><b>HISTORIA CLINICA DIGITAL INTEGRAL</b></font><br/>'
-        f'<font size="7" color="#C8D2E6">Paciente: {_limpiar(nom_pac)}   |   Generado: {fecha_gen}</font>',
-        ParagraphStyle('HdrTxt', parent=styles['Normal'], leading=18)
+    elements.append(Paragraph(f"<b>{_history_escape_paragraph(nombre_empresa.upper())}</b>", title_style))
+    elements.append(Paragraph("HISTORIA CLINICA DIGITAL INTEGRAL", subtitle_style))
+    elements.append(
+        Paragraph(
+            _history_escape_paragraph(
+                f"Paciente: {paciente_sel} | Generado: {generado} | Responsable: {responsable}"
+            ),
+            meta_style,
+        )
     )
-    badge_txt = Paragraph(
-        '<font size="10" color="white"><b>Historia<br/>Clinica</b></font>',
-        ParagraphStyle('Badge', parent=styles['Normal'], alignment=1, leading=14)
+
+    patient_table = Table(
+        [
+            [
+                Paragraph("<b>Paciente</b>", label_style),
+                Paragraph(_history_escape_paragraph(paciente_sel.split(" - ")[0]), body_style),
+                Paragraph("<b>DNI</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("dni", "S/D")), body_style),
+            ],
+            [
+                Paragraph("<b>Fecha nac.</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("fnac", "S/D")), body_style),
+                Paragraph("<b>Sexo</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("sexo", "S/D")), body_style),
+            ],
+            [
+                Paragraph("<b>Obra social</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("obra_social", "S/D")), body_style),
+                Paragraph("<b>Telefono</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("telefono", "S/D")), body_style),
+            ],
+            [
+                Paragraph("<b>Domicilio</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("direccion", "S/D")), body_style),
+                Paragraph("<b>Estado</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("estado", "Activo")), body_style),
+            ],
+        ],
+        colWidths=[78, 176, 70, 176],
     )
-    hdr_table = Table([[logo_cell, hdr_txt, badge_txt]], colWidths=[60, 410, 70])
-    hdr_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#162644')),
-        ('BACKGROUND', (2, 0), (2, 0), colors.HexColor('#0D5A50')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (0, 0), 8),
-        ('LEFTPADDING', (1, 0), (1, 0), 12),
-        ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-    ]))
-    elements.append(hdr_table)
+    patient_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#cbd5e1")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#dbe4ee")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    elements.append(patient_table)
     elements.append(Spacer(1, 10))
 
-    # ── Datos demográficos ────────────────────────────────────────────
-    lbl_s = ParagraphStyle('Lbl', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8)
-    val_s = ParagraphStyle('Val', parent=styles['Normal'], fontSize=8)
-
-    def _lbl(t): return Paragraph(t, lbl_s)
-    def _val(t): return Paragraph(_limpiar(t), val_s)
-
-    datos_pac = [
-        [_lbl('Paciente'), _val(nom_pac), _lbl('DNI'), _val(detalles.get('dni'))],
-        [_lbl('Fecha Nac.'), _val(detalles.get('fnac')), _lbl('Sexo'), _val(detalles.get('sexo'))],
-        [_lbl('Obra Social'), _val(detalles.get('obra_social')), _lbl('Telefono'), _val(detalles.get('telefono'))],
-        [_lbl('Domicilio'), _val(detalles.get('direccion')), _lbl('Estado'), _val(detalles.get('estado', 'Activo'))],
-    ]
-    t_pac = Table(datos_pac, colWidths=[70, 180, 70, 220])
-    t_pac.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F3F4F6')),
-        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#D1D5DB')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-    ]))
-    elements.append(_sec_hdr('Datos del paciente'))
-    elements.append(Spacer(1, 3))
-    elements.append(t_pac)
-
-    alergias_txt = detalles.get('alergias', '') or detalles.get('patologias', '')
-    if alergias_txt and alergias_txt not in ('-', 'Sin datos'):
-        alerg_data = [[_lbl('Alergias / Riesgos'), _val(alergias_txt)]]
-        t_al = Table(alerg_data, colWidths=[120, 420])
-        t_al.setStyle(TableStyle([
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#991B1B')),
-            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#FCA5A5')),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FEF2F2')),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ]))
-        elements.append(t_al)
+    risk_table = Table(
+        [
+            [
+                Paragraph("<b>Alergias</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("alergias", "Sin datos")), body_style),
+            ],
+            [
+                Paragraph("<b>Patologias / riesgos</b>", label_style),
+                Paragraph(_history_escape_paragraph(detalles.get("patologias", "Sin datos")), body_style),
+            ],
+        ],
+        colWidths=[110, 390],
+    )
+    risk_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff7ed")),
+                ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#fdba74")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#fed7aa")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    elements.append(risk_table)
     elements.append(Spacer(1, 12))
 
-    # ── Evoluciones y enfermería ──────────────────────────────────────
-    evoluciones = session_state.get('evoluciones_db', [])
-    cuidados = session_state.get('cuidados_enfermeria_db', [])
-    registros_clinicos = [r for r in evoluciones + cuidados if r.get('paciente') == paciente_sel]
-    if registros_clinicos:
-        elements.append(_sec_hdr('Evoluciones clinicas y enfermeria'))
-        elements.append(Spacer(1, 4))
-        for reg in sorted(registros_clinicos, key=lambda x: x.get('fecha', '')):
-            fecha = _limpiar(reg.get('fecha', 'S/D'))
-            firma = _limpiar(reg.get('firma', reg.get('profesional', 'S/D')))
-            nota = _limpiar(reg.get('nota', reg.get('observaciones', 'Sin detalle')))
-            bloque = [
-                Paragraph(f'<b>{fecha}</b>  |  {firma}', italic_style),
-                Spacer(1, 2),
-                Paragraph(nota, normal_style),
-                Spacer(1, 8),
+    metric_style = ParagraphStyle(
+        "HistMetricModern",
+        parent=body_style,
+        alignment=1,
+        textColor=colors.HexColor("#0f172a"),
+        leading=13,
+    )
+    overview_table = Table(
+        [
+            [
+                Paragraph(f"<b>REGISTROS TOTALES</b><br/>{_history_escape_paragraph(str(total_registros))}", metric_style),
+                Paragraph(f"<b>SECCIONES CON DATOS</b><br/>{_history_escape_paragraph(str(total_secciones))}", metric_style),
+                Paragraph(
+                    f"<b>ULTIMO EVENTO</b><br/>{_history_escape_paragraph(ultimo_global.strftime('%d/%m/%Y %H:%M') if ultimo_global else 'S/D')}",
+                    metric_style,
+                ),
             ]
-            elements.append(KeepTogether(bloque))
+        ],
+        colWidths=[166, 166, 166],
+    )
+    overview_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ecfeff")),
+                ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#67e8f9")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#a5f3fc")),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+    elements.append(overview_table)
+    elements.append(Spacer(1, 12))
 
-    # ── Tablas de módulos ─────────────────────────────────────────────
-    vits = [v for v in session_state.get('vitales_db', []) if v.get('paciente') == paciente_sel]
-    _tabla_sec('Signos vitales', ['Fecha', 'T.A.', 'F.C.', 'F.R.', 'SatO2', 'Temp', 'HGT'],
-               ['fecha', 'TA', 'FC', 'FR', 'Sat', 'Temp', 'HGT'], vits, [95, 60, 50, 50, 50, 50, 50])
+    if secciones_con_datos:
+        elements.append(Paragraph("Indice de actividad por modulo", section_style))
+        index_rows = [
+            [
+                Paragraph("<b>Modulo</b>", label_style),
+                Paragraph("<b>Cantidad</b>", label_style),
+                Paragraph("<b>Ultimo registro</b>", label_style),
+            ]
+        ]
+        for section_name, records in sorted(secciones_con_datos.items(), key=lambda item: len(item[1]), reverse=True):
+            ultimo = _history_latest_record(records)
+            ultimo_dt = _history_record_datetime(ultimo)
+            ultimo_txt = ultimo_dt.strftime("%d/%m/%Y %H:%M") if ultimo_dt else safe_text((ultimo or {}).get("fecha", "S/D"))
+            index_rows.append(
+                [
+                    Paragraph(_history_escape_paragraph(section_name), body_style),
+                    Paragraph(_history_escape_paragraph(str(len(records))), body_style),
+                    Paragraph(_history_escape_paragraph(ultimo_txt), body_style),
+                ]
+            )
+        index_table = Table(index_rows, colWidths=[280, 70, 150], repeatRows=1)
+        index_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#e2e8f0")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ]
+            )
+        )
+        elements.append(index_table)
+        elements.append(Spacer(1, 12))
 
-    balances = [b for b in session_state.get('balance_db', []) if b.get('paciente') == paciente_sel]
-    _tabla_sec('Balance hidrico', ['Fecha', 'Turno', 'Ingresos', 'Egresos', 'Balance', 'Firma'],
-               ['fecha', 'turno', 'ingresos', 'egresos', 'balance', 'firma'], balances, [90, 90, 60, 60, 65, 100])
+        recent_rows = _history_recent_activity_rows(secciones_con_datos, limit=10)
+        if recent_rows:
+            elements.append(Paragraph("Actividad reciente", section_style))
+            recent_table = Table(
+                [
+                    [
+                        Paragraph("<b>Fecha</b>", label_style),
+                        Paragraph("<b>Seccion</b>", label_style),
+                        Paragraph("<b>Resumen</b>", label_style),
+                    ]
+                ]
+                + [
+                    [
+                        Paragraph(_history_escape_paragraph(fecha), body_style),
+                        Paragraph(_history_escape_paragraph(seccion), body_style),
+                        Paragraph(_history_escape_paragraph(resumen), body_style),
+                    ]
+                    for fecha, seccion, resumen in recent_rows
+                ],
+                colWidths=[92, 138, 270],
+                repeatRows=1,
+            )
+            recent_table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1d4ed8")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#eff6ff")]),
+                        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfdbfe")),
+                        ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#dbeafe")),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 5),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ]
+                )
+            )
+            elements.append(recent_table)
+            elements.append(Spacer(1, 10))
 
-    meds = [m for m in session_state.get('indicaciones_db', []) if m.get('paciente') == paciente_sel]
-    _tabla_sec('Plan terapeutico', ['Fecha', 'Medicacion / Indicacion', 'Estado', 'Profesional'],
-               ['fecha', 'med', 'estado_receta', 'medico_nombre'], meds, [80, 240, 70, 75])
+    if not secciones_con_datos:
+        elements.append(Paragraph("Resumen clinico", section_style))
+        elements.append(
+            Paragraph(
+                _history_escape_paragraph(
+                    "El paciente aun no tiene registros clinicos asociados. Este PDF conserva los datos administrativos y el estado actual del legajo."
+                ),
+                body_style,
+            )
+        )
+    else:
+        for section_name, records in secciones.items():
+            if not records:
+                continue
+            ordered_records = _history_sort_records(records)
+            latest_record = ordered_records[-1]
+            latest_dt = _history_record_datetime(latest_record)
+            latest_text = latest_dt.strftime("%d/%m/%Y %H:%M") if latest_dt else safe_text(
+                latest_record.get("fecha")
+                or latest_record.get("fecha_hora")
+                or latest_record.get("fecha_hora_programada")
+                or "S/D"
+            )
 
-    materiales = [m for m in session_state.get('consumos_db', []) if m.get('paciente') == paciente_sel]
-    _tabla_sec('Materiales e insumos', ['Fecha', 'Insumo / Descripcion', 'Cantidad', 'Firma'],
-               ['fecha', 'insumo', 'cantidad', 'firma'], materiales, [90, 240, 60, 75])
+            elements.append(Paragraph(f"{section_name} ({len(ordered_records)})", section_style))
+            elements.append(
+                Paragraph(
+                    _history_escape_paragraph(
+                        f"Ultimo registro: {latest_text} | Resumen: {_history_record_summary(section_name, latest_record)}"
+                    ),
+                    body_style,
+                )
+            )
+            elements.append(Spacer(1, 5))
 
-    emergencias = [e for e in session_state.get('emergencias_db', []) if e.get('paciente') == paciente_sel]
-    _tabla_sec('Emergencias y traslados', ['Fecha', 'Triage', 'Motivo', 'Profesional', 'Destino'],
-               ['fecha_evento', 'triage_grado', 'motivo', 'profesional', 'destino'], emergencias, [80, 80, 200, 90, 85])
+            for idx, record in enumerate(ordered_records, start=1):
+                elements.append(Paragraph(_history_escape_paragraph(_history_record_heading(record, idx)), item_title_style))
+                resumen = _history_record_summary(section_name, record)
+                if resumen:
+                    elements.append(Paragraph(_history_escape_paragraph(resumen), body_style))
+                    elements.append(Spacer(1, 3))
 
-    if not (registros_clinicos or vits or balances or meds or materiales or emergencias):
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph('<i>No hay registros clinicos cargados para este paciente.</i>', normal_style))
+                rows = _history_rows_from_record(record)
+                if rows:
+                    table = Table(
+                        [
+                            [
+                                Paragraph(f"<b>{_history_escape_paragraph(label)}</b>", label_style),
+                                Paragraph(_history_escape_paragraph(value), body_style),
+                            ]
+                            for label, value in rows
+                        ],
+                        colWidths=[126, 374],
+                    )
+                    table.setStyle(
+                        TableStyle(
+                            [
+                                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                                ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.HexColor("#f8fafc"), colors.white]),
+                                ("BOX", (0, 0), (-1, -1), 0.45, colors.HexColor("#cbd5e1")),
+                                ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#e2e8f0")),
+                                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                            ]
+                        )
+                    )
+                    elements.append(table)
+                else:
+                    elements.append(Paragraph("Registro sin campos legibles.", body_style))
+
+                elements.append(Spacer(1, 7))
 
     doc.build(elements)
     return buffer.getvalue()
