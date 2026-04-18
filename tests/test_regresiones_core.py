@@ -145,6 +145,60 @@ def test_historia_pdf_degrada_bien_sin_reportlab(monkeypatch):
     assert payload is None
 
 
+def test_historia_pdf_integral_se_genera_con_registros():
+    session_state = {
+        "detalles_pacientes_db": {
+            "Paciente Demo": {
+                "dni": "30111222",
+                "fnac": "10/02/1958",
+                "sexo": "Masculino",
+                "obra_social": "Demo Salud",
+                "telefono": "1112345678",
+                "direccion": "Calle Falsa 123",
+                "estado": "Activo",
+                "empresa": "Clinica Demo",
+                "alergias": "Penicilina",
+                "patologias": "HTA",
+            }
+        },
+        "evoluciones_db": [
+            {
+                "paciente": "Paciente Demo",
+                "fecha": "15/04/2026 09:30",
+                "profesional": "Dra. Lopez",
+                "detalle": "Paciente estable, sin dolor.",
+                "tipo": "Evolucion",
+            }
+        ],
+        "vitales_db": [
+            {
+                "paciente": "Paciente Demo",
+                "fecha": "15/04/2026 08:15",
+                "TA": "120/80",
+                "FC": "78",
+                "FR": "18",
+                "Sat": "97",
+                "Temp": "36.6",
+                "HGT": "104",
+            }
+        ],
+        "indicaciones_db": [
+            {
+                "paciente": "Paciente Demo",
+                "fecha": "15/04/2026 10:00",
+                "med": "Losartan 50 mg",
+                "estado_receta": "Activa",
+                "medico_nombre": "Dra. Lopez",
+            }
+        ],
+    }
+
+    payload = clinical_exports.build_history_pdf_bytes(session_state, "Paciente Demo", "Clinica Demo")
+
+    assert isinstance(payload, (bytes, bytearray))
+    assert payload.startswith(b"%PDF")
+
+
 def test_auditoria_legal_construye_metadata_trazable():
     fecha_evento = ARG_TZ.localize(datetime(2026, 4, 12, 9, 45, 30))
     registro = construir_registro_auditoria_legal(

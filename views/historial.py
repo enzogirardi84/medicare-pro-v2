@@ -419,6 +419,199 @@ def _nombre_archivo_seguro(texto: str, max_len: int = 50) -> str:
     return (t or "archivo")[:max_len]
 
 
+def _primer_valor(*valores: Any) -> str:
+    for valor in valores:
+        if valor in (None, ""):
+            continue
+        texto = str(valor).strip()
+        if texto:
+            return texto
+    return "S/D"
+
+
+def _edad_desde_fnac(valor: Any) -> str:
+    dt = parse_registro_fecha_hora({"fecha": str(valor or "")})
+    if not dt:
+        return ""
+    hoy = ahora().date()
+    edad = hoy.year - dt.date().year - ((hoy.month, hoy.day) < (dt.date().month, dt.date().day))
+    return f"{edad} anos" if edad >= 0 else ""
+
+
+def _ultimo_registro(registros: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not registros:
+        return None
+    mejor: Optional[Dict[str, Any]] = None
+    mejor_dt: Optional[datetime] = None
+    for reg in registros:
+        dt = parse_registro_fecha_hora(reg)
+        if dt and (mejor_dt is None or dt > mejor_dt):
+            mejor_dt = dt
+            mejor = reg
+    return mejor or registros[-1]
+
+
+def _fecha_registro_legible(registro: Optional[Dict[str, Any]]) -> str:
+    if not registro:
+        return "S/D"
+    dt = parse_registro_fecha_hora(registro)
+    if dt:
+        return dt.strftime("%d/%m/%Y %H:%M")
+    return _primer_valor(
+        registro.get("fecha_hora_programada"),
+        registro.get("fecha_hora"),
+        registro.get("fecha"),
+        registro.get("fecha_programada"),
+        registro.get("creado_en"),
+    )
+
+
+def _ultimo_movimiento_con_seccion(
+    secciones: Dict[str, List[Dict[str, Any]]],
+) -> Tuple[str, Optional[Dict[str, Any]], Optional[datetime]]:
+    mejor_seccion = "Sin actividad"
+    mejor_registro: Optional[Dict[str, Any]] = None
+    mejor_dt: Optional[datetime] = None
+    for seccion, registros in secciones.items():
+        for reg in registros:
+            dt = parse_registro_fecha_hora(reg)
+            if dt and (mejor_dt is None or dt > mejor_dt):
+                mejor_dt = dt
+                mejor_registro = reg
+                mejor_seccion = seccion
+    if mejor_registro is not None:
+        return mejor_seccion, mejor_registro, mejor_dt
+    for seccion, registros in secciones.items():
+        if registros:
+            return seccion, registros[-1], None
+    return mejor_seccion, None, None
+
+
+def _medicaciones_activas(registros: List[Dict[str, Any]]) -> int:
+    activas = 0
+    for reg in registros:
+        estado = str(reg.get("estado_receta", reg.get("estado_clinico", "Activa")) or "").strip().lower()
+        if estado in {"suspendida", "suspendido", "modificada", "modificado", "finalizada", "finalizado"}:
+            continue
+        activas += 1
+    return activas
+
+
+def _render_resumen_clinico(
+    paciente_sel: str,
+    detalles: Dict[str, Any],
+    secciones: Dict[str, List[Dict[str, Any]]],
+    total_registros: int,
+    ultimo_evento: Optional[datetime],
+) -> None:
+    nombre_visible = html.escape(paciente_sel.split(" (")[0])
+    edad = _edad_desde_fnac(detalles.get("fnac"))
+    estado = _primer_valor(detalles.get("estado"), "Activo")
+    empresa = html.escape(_primer_valor(detalles.get("empresa"), "Sin empresa"))
+
+    seccion_ult, reg_ult, dt_ult = _ultimo_movimiento_con_seccion(secciones)
+    resumen_ult = _resumen_linea_tiempo(seccion_ult, reg_ult or {}) if reg_ult else "Todavia no hay actividad registrada."
+    fecha_ult = dt_ult.strftime("%d/%m/%Y %H:%M") if dt_ult else _fecha_registro_legible(reg_ult)
+
+    vital_ult = _ultimo_registro(secciones.get("Signos Vitales", []))
+    vital_titulo = "Sin controles"
+    vital_copy = "No hay signos vitales cargados todavia."
+    if vital_ult:
+        vital_titulo = _primer_valor(vital_ult.get("TA"), vital_ult.get("FC"), vital_ult.get("Sat"), "Control cargado")
+        vital_copy = f"{_resumen_linea_tiempo('Signos Vitales', vital_ult)} | {_fecha_registro_legible(vital_ult)}"
+
+    plan_regs = secciones.get("Plan Terapeutico", [])
+    plan_ult = _ultimo_registro(plan_regs)
+    plan_titulo = f"{_medicaciones_activas(plan_regs)} activas"
+    plan_copy = "Sin indicaciones cargadas."
+    if plan_ult:
+        plan_copy = (
+            f"{_primer_valor(plan_ult.get('med'), plan_ult.get('detalle'), 'Ultima indicacion registrada')} | "
+            f"{_fecha_registro_legible(plan_ult)}"
+        )
+
+    st.markdown(
+        f"""
+        <div class="mc-module-shell">
+            <div class="mc-module-shell-head">
+                <div class="mc-module-shell-kicker">Resumen clinico rapido</div>
+                <h3 class="mc-module-shell-title">Historia completa de {nombre_visible}</h3>
+                <p class="mc-module-shell-copy">
+                    PDF clinico listo para archivo, panorama del paciente y detalle por modulo en una sola vista.
+                    Empresa: {empresa}.
+                </p>
+            </div>
+            <div class="mc-module-shell-grid">
+                <div class="mc-module-feature">
+                    <span class="mc-module-feature-kicker">Ultimo movimiento</span>
+                    <div class="mc-module-feature-title">{html.escape(f"{seccion_ult} | {fecha_ult}")}</div>
+                    <div class="mc-module-feature-copy">{html.escape(resumen_ult[:180])}</div>
+                </div>
+                <div class="mc-module-stat">
+                    <span class="mc-module-stat-label">Signos vitales</span>
+                    <div class="mc-module-stat-value">{html.escape(vital_titulo[:36])}</div>
+                    <div class="mc-module-feature-copy">{html.escape(vital_copy[:180])}</div>
+                </div>
+                <div class="mc-module-stat">
+                    <span class="mc-module-stat-label">Plan terapeutico</span>
+                    <div class="mc-module-stat-value">{html.escape(plan_titulo)}</div>
+                    <div class="mc-module-feature-copy">{html.escape(plan_copy[:180])}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    ficha = [
+        f"Estado: {estado}",
+        f"Edad: {edad}" if edad else "",
+        f"Registros: {total_registros}",
+        f"Ultimo evento: {ultimo_evento.strftime('%d/%m/%Y %H:%M')}" if ultimo_evento else "Ultimo evento: S/D",
+    ]
+    if detalles.get("alergias"):
+        ficha.append(f"Alergias: {detalles.get('alergias')}")
+    if detalles.get("patologias"):
+        ficha.append(f"Antecedentes: {detalles.get('patologias')}")
+    ficha_txt = " | ".join(html.escape(str(item)) for item in ficha if item)
+    st.markdown(f'<div class="mc-callout"><strong>Ficha rapida:</strong> {ficha_txt}</div>', unsafe_allow_html=True)
+
+
+def _render_tarjetas_secciones(
+    secciones: Dict[str, List[Dict[str, Any]]],
+    paciente_sel: str,
+    max_tarjetas: int = 6,
+) -> None:
+    top = sorted(((nombre, regs) for nombre, regs in secciones.items() if regs), key=lambda item: len(item[1]), reverse=True)
+    if not top:
+        return
+
+    st.markdown("##### Modulos con mas actividad")
+    columnas = st.columns(3)
+    for idx, (seccion, registros) in enumerate(top[:max_tarjetas]):
+        ultimo = _ultimo_registro(registros)
+        resumen = _resumen_linea_tiempo(seccion, ultimo or {})
+        fecha = _fecha_registro_legible(ultimo)
+        with columnas[idx % 3]:
+            st.markdown(
+                f"""
+                <div class="mc-card">
+                    <h4>{html.escape(seccion)}</h4>
+                    <p>{len(registros)} registros cargados.</p>
+                    <p>Ultimo movimiento: {html.escape(fecha)}</p>
+                    <p>{html.escape(resumen[:150])}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("Abrir modulo", key=f"hist_open_card_{paciente_sel}_{idx}", use_container_width=True):
+                st.session_state[f"hist_seccion_radio_{paciente_sel}"] = seccion
+                st.rerun()
+
+    if len(top) > max_tarjetas:
+        st.caption(f"Se muestran {max_tarjetas} modulos prioritarios de {len(top)} con actividad.")
+
+
 def render_historial(paciente_sel: str) -> None:
     if not paciente_sel:
         aviso_sin_paciente()
@@ -465,9 +658,14 @@ def render_historial(paciente_sel: str) -> None:
     if patologias:
         st.warning(f"Antecedentes / riesgos: {patologias}")
 
+    secciones_base = collect_patient_sections(st.session_state, paciente_sel)
+    secciones_con_datos_base = {k: v for k, v in secciones_base.items() if v}
+    total_registros_base = sum(len(v) for v in secciones_base.values())
+    ultimo_base = _ultimo_evento_global(secciones_base)
+    _render_resumen_clinico(paciente_sel, detalles, secciones_base, total_registros_base, ultimo_base)
+
     st.caption(
-        "Filtros y límite arriba · exportaciones PDF/Excel/JSON/respaldo · panorama y gráfico · línea de tiempo y búsqueda global · "
-        "al final, exploración por sección en franja horizontal (plegable)."
+        "Vista integral con PDF clinico, resumen rapido, metricas, linea de tiempo, busqueda global y detalle por modulo."
     )
 
     st.markdown("##### Opciones de visualización")
@@ -483,16 +681,31 @@ def render_historial(paciente_sel: str) -> None:
     )
     col_filt4.info(f"Hasta {limite} ítems al ver una sección.")
 
-    st.markdown("##### Exportación y resguardo")
-    r1, r2, r3, r4 = st.columns(4)
+    st.markdown(
+        """
+        <div class="mc-module-shell">
+            <div class="mc-module-shell-head">
+                <div class="mc-module-shell-kicker">Centro documental</div>
+                <h3 class="mc-module-shell-title">Guardar, imprimir o auditar la historia clinica</h3>
+                <p class="mc-module-shell-copy">
+                    El PDF clinico es la salida principal para archivo y soporte. Excel, respaldo y JSON quedan disponibles
+                    para auditoria, integracion o contingencia.
+                </p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    r1, r2, r3, r4 = st.columns([1.35, 1.0, 1.0, 0.95])
     _render_lazy_download(
         r1,
         key_base=f"historial_pdf_{paciente_sel}",
-        prepare_label="Preparar historia PDF",
-        download_label="Descargar historia PDF",
+        prepare_label="Preparar PDF clinico",
+        download_label="Descargar PDF clinico",
         build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
         file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
+        unavailable_message="No se pudo generar el PDF clinico. Verifica ReportLab y los datos cargados.",
     )
     _render_lazy_download(
         r2,
@@ -524,19 +737,8 @@ def render_historial(paciente_sel: str) -> None:
     )
 
     st.divider()
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>Respaldo y filtros</h4><p>PDF, Excel, JSON o respaldo antes de profundizar; limite por seccion y solo modulos con datos.</p></div>
-            <div class="mc-card"><h4>Panorama y linea de tiempo</h4><p>Volumen por modulo y mezcla cronologica de eventos con fecha reconocible.</p></div>
-            <div class="mc-card"><h4>Busqueda y detalle</h4><p>Texto en toda la historia y luego cada seccion en tabla o ficha segun el tipo de registro.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
-    secciones = collect_patient_sections(st.session_state, paciente_sel)
-    if not any(secciones.values()):
+    if not secciones_con_datos_base:
         bloque_estado_vacio(
             "Historia sin registros",
             "No se encontraron registros clínicos agregados para este paciente.",
@@ -544,6 +746,7 @@ def render_historial(paciente_sel: str) -> None:
         )
         return
 
+    secciones = dict(secciones_base)
     if solo_con_datos:
         secciones = {k: v for k, v in secciones.items() if v}
 
@@ -577,6 +780,7 @@ def render_historial(paciente_sel: str) -> None:
             use_container_width=True,
             height=_h_bar,
         )
+        _render_tarjetas_secciones(secciones_con_datos_base, paciente_sel)
     
         mostrar_tl = st.checkbox(
             "Mostrar línea de tiempo global (mezcla de secciones)",
