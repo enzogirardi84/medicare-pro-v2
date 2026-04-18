@@ -32,7 +32,7 @@ COLUMNAS_ESPERADAS = {
     "cuidados_enfermeria":["id", "paciente_id", "fecha_registro"],
     "auditoria_legal":    ["id", "empresa_id", "fecha_evento"],
     "turnos":             ["id", "empresa_id", "fecha_hora_programada"],
-    "medicare_db":        ["id", "tenant_id", "data"],
+    "medicare_db":        ["id", "tenant_key", "datos"],
 }
 
 
@@ -148,6 +148,43 @@ def diagnosticar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
                 f"La empresa '{nombre_empresa}' NO existe en la tabla 'empresas' de Supabase. "
                 "Los pacientes NO pueden guardarse en las tablas SQL (solo en medicare_db JSON blob)."
             )
+    except Exception as e:
+        resultado["error"] = str(e)
+    return resultado
+
+
+def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
+    """
+    Inserta una empresa en la tabla empresas de Supabase si no existe.
+    Retorna el resultado de la operación.
+    """
+    resultado = {
+        "nombre_empresa": nombre_empresa,
+        "insertado": False,
+        "empresa_id": None,
+        "error": None
+    }
+    try:
+        from core.database import supabase
+        if not supabase:
+            resultado["error"] = "Sin conexion a Supabase"
+            return resultado
+        
+        # Verificar si ya existe
+        resp = supabase.table("empresas").select("id,nombre").eq("nombre", nombre_empresa).execute()
+        if resp.data:
+            resultado["insertado"] = True
+            resultado["empresa_id"] = resp.data[0]["id"]
+            resultado["error"] = "La empresa ya existe en Supabase"
+            return resultado
+        
+        # Insertar la empresa
+        insert_resp = supabase.table("empresas").insert({"nombre": nombre_empresa}).execute()
+        if insert_resp.data:
+            resultado["insertado"] = True
+            resultado["empresa_id"] = insert_resp.data[0]["id"]
+        else:
+            resultado["error"] = "No se pudo insertar la empresa (respuesta vacía)"
     except Exception as e:
         resultado["error"] = str(e)
     return resultado

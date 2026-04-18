@@ -66,6 +66,16 @@ def render(user=None):
                 st.success(f"✅ Empresas registradas ({len(empresas)}): **{nombres}**")
             else:
                 st.error("❌ No hay empresas registradas en Supabase. Esto impide guardar pacientes en tablas SQL.")
+                if empresa_actual:
+                    if st.button(f"🔧 Insertar empresa '{empresa_actual}' automáticamente", type="primary"):
+                        with st.spinner(f"Insertando '{empresa_actual}' en Supabase..."):
+                            from core.diagnosticos import insertar_empresa_en_supabase
+                            res = insertar_empresa_en_supabase(empresa_actual.strip())
+                        if res["insertado"]:
+                            st.success(f"✅ Empresa insertada correctamente: **{res['nombre_empresa']}** (ID: {res['empresa_id']})")
+                            st.info("Recarga la página para ver los cambios reflejados.")
+                        else:
+                            st.error(f"❌ Error al insertar empresa: {res['error']}")
 
             # Tabla de estado de cada tabla
             st.markdown("#### Tablas SQL")
