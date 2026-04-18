@@ -297,39 +297,51 @@ def render_mobile_sidebar_toggle() -> None:
       return rect.width > 0 && rect.height > 0;
     }
 
-    function sidebarIsOpen() {
+    function sidebarState() {
       var closeControl = getCloseControl();
-      if (isVisible(closeControl)) return true;
+      if (isVisible(closeControl)) return "open";
 
       var openControl = getOpenControl();
-      if (isVisible(openControl)) return false;
+      if (isVisible(openControl)) return "closed";
 
-      var sidebar = getSidebar();
-      if (!sidebar || !isVisible(sidebar)) return false;
-      var rect = sidebar.getBoundingClientRect();
-      return rect.width > 120 && rect.right > 40 && rect.left > (-rect.width * 0.55);
+      return "unknown";
     }
 
     function press(el) {
       if (!el) return false;
+      var target = el;
+      if (target && typeof target.matches === "function" && !target.matches("button")) {
+        var nestedButton = target.querySelector ? target.querySelector("button") : null;
+        if (nestedButton) target = nestedButton;
+      }
+      var eventNames = ["pointerdown", "mousedown", "touchstart", "pointerup", "mouseup", "touchend", "click"];
+      for (var i = 0; i < eventNames.length; i += 1) {
+        try {
+          target.dispatchEvent(new MouseEvent(eventNames[i], { bubbles: true, cancelable: true, view: parentWin }));
+        } catch (e) {}
+      }
       try {
-        if (typeof el.click === "function") {
-          el.click();
+        if (typeof target.click === "function") {
+          target.click();
           return true;
         }
       } catch (e) {}
-      try {
-        el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: parentWin }));
-        return true;
-      } catch (e) {}
-      return false;
+      return true;
     }
 
     function toggleSidebar() {
-      if (sidebarIsOpen()) {
+      var state = sidebarState();
+      var done = false;
+      if (state === "open") {
+        done = press(getCloseControl());
+      } else if (state === "closed") {
+        done = press(getOpenControl());
+      }
+      if (!done) {
+        done = press(getOpenControl());
+      }
+      if (!done) {
         press(getCloseControl());
-      } else {
-        press(getOpenControl());
       }
       parentWin.setTimeout(syncButton, 180);
       parentWin.setTimeout(syncButton, 520);
@@ -346,7 +358,8 @@ def render_mobile_sidebar_toggle() -> None:
         return;
       }
       btn.style.display = "inline-flex";
-      var open = sidebarIsOpen();
+      var state = sidebarState();
+      var open = state === "open";
       btn.classList.toggle("is-open", open);
       btn.innerHTML = open
         ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&lt;</span>'
