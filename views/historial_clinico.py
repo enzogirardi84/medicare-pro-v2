@@ -6,8 +6,16 @@ Usa sistema dual-read: SQL (Supabase) + session_state (JSON local)
 
 import json
 import streamlit as st
-import pandas as pd
 from datetime import datetime
+
+# Lazy import pandas - solo cargar cuando se necesite mostrar dataframe
+_pandas = None
+def get_pandas():
+    global _pandas
+    if _pandas is None:
+        import pandas as pd
+        _pandas = pd
+    return _pandas
 
 from core.database import guardar_datos
 from core.clinical_exports import collect_patient_sections, build_history_pdf_bytes

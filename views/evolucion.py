@@ -8,7 +8,6 @@ import streamlit.components.v1 as components
 from core.database import guardar_datos
 from core.guardado_universal import guardar_registro
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
-from views.enfermeria import render_enfermeria
 from core.utils import (
     ahora,
     firma_a_base64,
@@ -19,12 +18,17 @@ from core.utils import (
     seleccionar_limite_registros,
 )
 
-CANVAS_DISPONIBLE = False
-try:
-    from streamlit_drawable_canvas import st_canvas
-    CANVAS_DISPONIBLE = True
-except ImportError:
-    pass
+# Lazy import canvas - solo cargar cuando se necesite firmar
+_canvas = None
+def get_canvas():
+    global _canvas
+    if _canvas is None:
+        try:
+            from streamlit_drawable_canvas import st_canvas
+            _canvas = st_canvas
+        except ImportError:
+            _canvas = False
+    return _canvas
 
 
 def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_iframe_px: int = 520):

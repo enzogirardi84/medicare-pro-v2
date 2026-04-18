@@ -1,8 +1,16 @@
 from core.alert_toasts import queue_toast
 from html import escape
 
-import pandas as pd
 import streamlit as st
+
+# Lazy import pandas - solo cargar cuando se necesite mostrar dataframe
+_pandas = None
+def get_pandas():
+    global _pandas
+    if _pandas is None:
+        import pandas as pd
+        _pandas = pd
+    return _pandas
 
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
@@ -153,7 +161,18 @@ def _render_plan_cuidados_enfermeria_legacy(
                         st.error(f"Error al guardar en SQL: {e}")
 
                     # 2. Guardar en JSON (Legacy)
-                    if "cuidados_enfermeria_db" not in st.session_state or not isinstance(st.session_state["cuidados_enfermeria_db"], list):
+                    nuevo = {
+                        "paciente": paciente_sel,
+                        "fecha": fecha_str,
+                        "tipo_cuidado": tipo_cuidado,
+                        "turno": turno,
+                        "prioridad": prioridad,
+                        "riesgo_caidas": riesgo_caidas,
+                        "riesgo_upp": riesgo_upp,
+                        "dolor": dolor,
+                        "objetivo": objetivo.strip(),
+                        "intervencion": intervencion.strip(),
+                        "respuesta": respuesta.strip(),
                         "observaciones": observaciones.strip(),
                         "incidente": incidente,
                         "detalle_incidente": detalle_incidente.strip(),

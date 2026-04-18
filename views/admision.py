@@ -1,8 +1,16 @@
 from core.alert_toasts import queue_toast
 from datetime import date, datetime
 
-import pandas as pd
 import streamlit as st
+
+# Lazy import pandas - solo cargar cuando se necesite mostrar dataframe
+_pandas = None
+def get_pandas():
+    global _pandas
+    if _pandas is None:
+        import pandas as pd
+        _pandas = pd
+    return _pandas
 
 from core.app_logging import log_event
 from core.database import guardar_datos
@@ -20,8 +28,6 @@ from core.utils import (
 )
 
 DB_LABELS = {
-    "agenda_db": "Agenda",
-    "checkin_db": "Fichajes",
     "vitales_db": "Signos vitales",
     "indicaciones_db": "Recetas e indicaciones",
     "evoluciones_db": "Evoluciones",

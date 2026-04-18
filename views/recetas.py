@@ -6,8 +6,16 @@ import re
 from datetime import time as dt_time
 from html import escape
 
-import pandas as pd
 import streamlit as st
+
+# Lazy import pandas - solo cargar cuando se necesite mostrar dataframe
+_pandas = None
+def get_pandas():
+    global _pandas
+    if _pandas is None:
+        import pandas as pd
+        _pandas = pd
+    return _pandas
 
 from core.anticolapso import anticolapso_activo
 from core.clinical_exports import build_prescription_pdf_bytes
