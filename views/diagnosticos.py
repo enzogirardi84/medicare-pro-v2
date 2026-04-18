@@ -1,6 +1,7 @@
 """
 PANEL DE DIAGNOSTICO DEL SISTEMA
-Vista para admin: verifica Supabase, tablas SQL, datos locales, errores.
+Vista exclusiva para superadmin: verifica Supabase, tablas SQL, datos locales, errores,
+estado del sistema, logs, memoria y configuración.
 """
 import streamlit as st
 import time
@@ -9,18 +10,25 @@ from datetime import datetime
 
 def render(user=None):
     st.markdown("# 🔍 Diagnóstico del Sistema")
-    st.caption("Verifica el estado de la base de datos, tablas SQL y datos locales.")
+    st.caption("Verificación técnica completa - Solo Super Administradores")
 
-    roles_permitidos = {"admin", "superadmin", "dueno", "medico"}
-    if user and user.get("rol", "").lower() not in roles_permitidos:
-        st.warning("⚠️ Solo administradores pueden acceder al diagnóstico.")
+    # Solo superadmin puede acceder (control total)
+    from core.utils import es_control_total
+    rol = user.get("rol", "") if user else ""
+    if not es_control_total(rol):
+        st.error("🔒 Acceso restringido. Solo Super Administradores pueden acceder al diagnóstico completo.")
         return
 
     empresa_actual = ""
     if user:
         empresa_actual = user.get("empresa", "")
 
-    tab1, tab2, tab3 = st.tabs(["🗄️ Estado Supabase", "🏢 Empresa / Pacientes", "💾 Datos Locales"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🗄️ Estado Supabase", 
+        "🏢 Empresa / Pacientes", 
+        "💾 Datos Locales",
+        "🔧 Diagnóstico Técnico"
+    ])
 
     # === TAB 1: ESTADO SUPABASE ===
     with tab1:
@@ -218,3 +226,211 @@ def render(user=None):
                 st.caption(f"📦 `{bf.name}` — {size} KB")
         else:
             st.info("No hay backups disponibles.")
+
+    # === TAB 4: DIAGNOSTICO TECNICO AVANZADO ===
+    with tab4:
+        st.markdown("### 🔧 Diagnóstico Técnico del Sistema")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 🖥️ Estado del Sistema")
+            
+            # Memoria RAM
+            try:
+                import psutil
+                mem = psutil.virtual_memory()
+                ram_used = mem.used / (1024**3)
+                ram_total = mem.total / (1024**3)
+                ram_percent = mem.percent
+                
+                if ram_percent > 90:
+                    st.error(f"⚠️ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) - CRÍTICO")
+                elif ram_percent > 75:
+                    st.warning(f"⚡ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) - Alto")
+                else:
+                    st.success(f"✅ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB)")
+            except ImportError:
+                st.info("ℹ️ Instalar `psutil` para ver uso de RAM")
+            
+            # Disco
+            try:
+                import psutil
+                disk = psutil.disk_usage('.')
+                disk_percent = disk.percent
+                if disk_percent > 90:
+                    st.error(f"⚠️ Disco: {disk_percent}% usado - CRÍTICO")
+                elif disk_percent > 80:
+                    st.warning(f"⚡ Disco: {disk_percent}% usado - Alto")
+                else:
+                    st.success(f"✅ Disco: {disk_percent}% usado")
+            except:
+                pass
+            
+            # Python version
+            import sys
+            st.caption(f"Python: {sys.version.split()[0]}")
+            
+            # Streamlit version
+            try:
+                import streamlit as st_mod
+                st.caption(f"Streamlit: {st_mod.__version__}")
+            except:
+                pass
+        
+        with col2:
+            st.markdown("#### 🔐 Variables de Entorno")
+            
+            # Verificar secrets/configuración
+            required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+            secrets_ok = True
+            
+            for var in required_vars:
+                try:
+                    val = st.secrets.get(var, "")
+                    if val:
+                        masked = val[:10] + "..." + val[-4:] if len(val) > 20 else "***"
+                        st.success(f"✅ {var}: {masked}")
+                    else:
+                        st.error(f"❌ {var}: NO CONFIGURADO")
+                        secrets_ok = False
+                except Exception as e:
+                    st.error(f"❌ {var}: Error - {str(e)[:50]}")
+                    secrets_ok = False
+            
+            if not secrets_ok:
+                st.warning("⚠️ Algunas variables de entorno no están configuradas correctamente")
+        
+        st.markdown("---")
+        
+        # Logs de errores recientes
+        st.markdown("#### 📋 Logs de Errores Recientes")
+        
+        try:
+            from core.app_logging import _log_buffer
+            
+            if _log_buffer:
+                errores = [log for log in _log_buffer if log.get("level") in ["ERROR", "CRITICAL"]]
+                
+                if errores:
+                    st.error(f"⚠️ {len(errores)} errores recientes detectados")
+                    
+                    with st.expander("Ver errores recientes", expanded=False):
+                        for err in errores[-20:]:  # Últimos 20 errores
+                            ts = err.get("timestamp", "?")
+                            msg = err.get("message", "Sin mensaje")
+                            st.markdown(f"**{ts}**: `{msg[:150]}{'...' if len(msg) > 150 else ''}`")
+                else:
+                    st.success("✅ No hay errores recientes en el log")
+            else:
+                st.info("ℹ️ Buffer de logs no disponible")
+        except Exception as e:
+            st.info(f"ℹ️ No se pudo acceder a logs: {e}")
+        
+        st.markdown("---")
+        
+        # Verificación de archivos críticos
+        st.markdown("#### 📁 Verificación de Archivos Críticos")
+        
+        archivos_criticos = [
+            ("main.py", "Archivo principal"),
+            ("core/database.py", "Base de datos"),
+            ("core/utils.py", "Utilidades"),
+            ("assets/style.css", "Estilos CSS"),
+            ("requirements.txt", "Dependencias"),
+        ]
+        
+        cols = st.columns(3)
+        for i, (archivo, desc) in enumerate(archivos_criticos):
+            path = Path(archivo)
+            with cols[i % 3]:
+                if path.exists():
+                    size = path.stat().st_size
+                    st.success(f"✅ {desc}")
+                    st.caption(f"{size/1024:.1f} KB")
+                else:
+                    st.error(f"❌ {desc}")
+                    st.caption(f"Archivo no encontrado: {archivo}")
+        
+        st.markdown("---")
+        
+        # Botón de diagnóstico completo
+        if st.button("🔄 Ejecutar Diagnóstico Completo del Sistema", type="primary", use_container_width=True):
+            with st.spinner("Analizando todo el sistema..."):
+                progress = st.progress(0)
+                
+                # Simular pasos de diagnóstico
+                import time
+                time.sleep(0.5)
+                progress.progress(25)
+                
+                # Verificar dependencias
+                dependencias_faltantes = []
+                deps = ["streamlit", "pandas", "requests", "pillow", "psutil"]
+                for dep in deps:
+                    try:
+                        __import__(dep)
+                    except ImportError:
+                        dependencias_faltantes.append(dep)
+                
+                time.sleep(0.5)
+                progress.progress(50)
+                
+                # Verificar conexiones
+                errores_conexion = []
+                try:
+                    from core.database import supabase
+                    if not supabase:
+                        errores_conexion.append("Supabase no inicializado")
+                except Exception as e:
+                    errores_conexion.append(f"Error Supabase: {str(e)[:50]}")
+                
+                time.sleep(0.5)
+                progress.progress(75)
+                
+                # Verificar session state
+                problemas_session = []
+                required_keys = ["pacientes_db", "evoluciones_db", "vitales_db"]
+                for key in required_keys:
+                    if key not in st.session_state:
+                        problemas_session.append(f"Falta: {key}")
+                
+                time.sleep(0.3)
+                progress.progress(100)
+                
+                # Mostrar resultados
+                st.markdown("#### 📊 Resultados del Diagnóstico")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    if dependencias_faltantes:
+                        st.error(f"❌ {len(dependencias_faltantes)} dependencias faltantes")
+                        st.code(", ".join(dependencias_faltantes))
+                    else:
+                        st.success("✅ Todas las dependencias OK")
+                
+                with col2:
+                    if errores_conexion:
+                        st.error(f"❌ {len(errores_conexion)} problemas de conexión")
+                        for e in errores_conexion:
+                            st.caption(e)
+                    else:
+                        st.success("✅ Conexiones OK")
+                
+                with col3:
+                    if problemas_session:
+                        st.warning(f"⚠️ {len(problemas_session)} claves de sesión faltantes")
+                        for p in problemas_session:
+                            st.caption(p)
+                    else:
+                        st.success("✅ Session State OK")
+                
+                # Resumen final
+                total_problemas = len(dependencias_faltantes) + len(errores_conexion) + len(problemas_session)
+                
+                if total_problemas == 0:
+                    st.balloons()
+                    st.success("🎉 Sistema completamente saludable. No se detectaron problemas.")
+                else:
+                    st.error(f"⚠️ Se detectaron {total_problemas} problemas que requieren atención")
