@@ -1388,7 +1388,6 @@ def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_
 
 
 @st.cache_data(show_spinner=False)
-@st.cache_data(show_spinner=False)
 def cargar_texto_asset(nombre_archivo):
     ruta = ASSETS_DIR / nombre_archivo
     return ruta.read_text(encoding="utf-8")

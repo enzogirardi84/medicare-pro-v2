@@ -359,14 +359,21 @@ def render(user=None):
                 time.sleep(0.5)
                 progress.progress(25)
                 
-                # Verificar dependencias
+                # Verificar dependencias (usa nombres de import, no de pip)
                 dependencias_faltantes = []
-                deps = ["streamlit", "pandas", "requests", "pillow", "psutil"]
-                for dep in deps:
+                # Mapa: (nombre_pip, nombre_import)
+                deps = [
+                    ("streamlit", "streamlit"),
+                    ("pandas", "pandas"),
+                    ("requests", "requests"),
+                    ("pillow", "PIL"),
+                    ("psutil", "psutil"),
+                ]
+                for pip_name, import_name in deps:
                     try:
-                        __import__(dep)
+                        __import__(import_name)
                     except ImportError:
-                        dependencias_faltantes.append(dep)
+                        dependencias_faltantes.append(pip_name)
                 
                 time.sleep(0.5)
                 progress.progress(50)

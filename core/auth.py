@@ -460,7 +460,8 @@ def render_login():
                         if not ok_lock:
                             st.error(lock_msg)
                         else:
-                            db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
+                            with st.spinner("🔐 Verificando credenciales y cargando datos..."):
+                                db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
                             if err_db:
                                 st.error(err_db)
                             elif db_f is None:

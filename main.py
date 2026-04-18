@@ -62,11 +62,9 @@ from core.ui_professional import configure_professional_page, apply_professional
 
 configurar_logging_basico()
 
-# Aplicar tema profesional moderno
-try:
-    apply_professional_theme()
-except Exception as e:
-    log_event("ui_theme", f"Error aplicando tema: {e}")
+# NOTA: apply_professional_theme() se difiere hasta después del login
+# para que la pantalla de login cargue más rápido (ahorra ~25KB de CSS extra).
+# Se aplica automáticamente al detectar sesión activa más abajo.
 
 _core_auth = import_module("core.auth")
 check_inactividad = _core_auth.check_inactividad
@@ -594,6 +592,14 @@ user = st.session_state.get("u_actual")
 # Dict no vacío: sesiones viejas o corruptas pueden dejar None, {} o tipos inválidos.
 if not isinstance(user, dict) or not user:
     st.stop()
+
+# Aplicar tema profesional solo cuando hay sesión activa (optimización de carga de login)
+if not st.session_state.get("_mc_professional_theme_applied"):
+    try:
+        apply_professional_theme()
+        st.session_state["_mc_professional_theme_applied"] = True
+    except Exception as e:
+        log_event("ui_theme", f"Error aplicando tema: {e}")
 
 # Drena guardados agrupados por ráfaga sin bloquear formularios.
 try:
