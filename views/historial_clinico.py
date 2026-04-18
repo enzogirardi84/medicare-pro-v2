@@ -3,16 +3,20 @@ HISTORIAL CLINICO COMPLETO
 Muestra y guarda TODOS los datos del paciente en un solo lugar
 """
 
+import base64
 import json
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from fpdf import FPDF
 
 from core.guardado_universal import (
     guardar_registro,
     obtener_historial_paciente,
     obtener_registros
 )
+from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
+from core.utils import ahora
 
 
 def _generar_historial_texto(paciente_nombre, paciente_id, user=None):
@@ -84,6 +88,179 @@ def _generar_historial_texto(paciente_nombre, paciente_id, user=None):
 
     lineas += [sep, "FIN DEL HISTORIAL CLINICO", sep]
     return "\n".join(lineas)
+
+
+def _pdf_multiline(pdf, text, line_h=5):
+    contenido = safe_text(text or "-").strip() or "-"
+    for bloque in contenido.split("\n"):
+        pdf.multi_cell(0, line_h, bloque)
+
+
+def _pdf_seccion(pdf, titulo):
+    if pdf.get_y() > 255:
+        pdf.add_page()
+    pdf.ln(2)
+    pdf.set_fill_color(22, 38, 68)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 8, safe_text(titulo), ln=True, fill=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(1)
+
+
+def _pdf_item(pdf, titulo, cuerpo, meta=""):
+    if pdf.get_y() > 262:
+        pdf.add_page()
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(0, 5, safe_text(titulo), ln=True)
+    if meta:
+        pdf.set_font("Arial", "I", 8)
+        pdf.set_text_color(90, 100, 120)
+        pdf.cell(0, 4, safe_text(meta), ln=True)
+        pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "", 9)
+    _pdf_multiline(pdf, cuerpo, line_h=5)
+    pdf.ln(2)
+
+
+def _generar_historial_pdf_bytes(paciente_nombre, paciente_id, user=None):
+    pdf = FPDF(unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=14)
+    pdf.set_left_margin(12)
+    pdf.set_right_margin(12)
+    pdf.add_page()
+
+    generado = ahora().strftime("%d/%m/%Y %H:%M")
+    profesional = (user or {}).get("nombre", "") if isinstance(user, dict) else ""
+
+    pdf.set_fill_color(22, 38, 68)
+    pdf.rect(0, 0, 210, 30, "F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(12, 8)
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 7, safe_text("HISTORIAL CLINICO COMPLETO"), ln=True)
+    pdf.set_x(12)
+    pdf.set_font("Arial", "", 8)
+    subtitulo = f"Paciente: {paciente_nombre} | DNI / ID: {paciente_id} | Generado: {generado}"
+    if profesional:
+        subtitulo += f" | Por: {profesional}"
+    pdf.cell(0, 5, safe_text(subtitulo), ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_y(36)
+
+    signos = obtener_registros("signos_vitales", paciente_id)
+    evoluciones = obtener_registros("evoluciones", paciente_id)
+    ss_evols = [
+        e for e in st.session_state.get("evoluciones_db", [])
+        if paciente_id in str(e.get("paciente", "")) or paciente_nombre in str(e.get("paciente", ""))
+    ]
+    recetas = obtener_registros("recetas", paciente_id)
+    materiales = obtener_registros("materiales", paciente_id)
+    historial = obtener_historial_paciente(paciente_id)
+
+    pdf.set_fill_color(243, 244, 246)
+    pdf.set_draw_color(209, 213, 219)
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(52, 9, safe_text(f"Signos: {len(signos)}"), border=1, align="C", fill=True)
+    pdf.cell(52, 9, safe_text(f"Evoluciones: {len(evoluciones) + len(ss_evols)}"), border=1, align="C", fill=True)
+    pdf.cell(42, 9, safe_text(f"Recetas: {len(recetas)}"), border=1, align="C", fill=True)
+    pdf.cell(42, 9, safe_text(f"Materiales: {len(materiales)}"), border=1, align="C", fill=True, ln=True)
+    pdf.ln(4)
+
+    _pdf_seccion(pdf, "Resumen general")
+    if historial:
+        ultima_fecha = safe_text(historial[0].get("fecha", "S/D"))
+        pdf.set_font("Arial", "", 9)
+        pdf.cell(0, 5, safe_text(f"Total de registros en historial: {len(historial)}"), ln=True)
+        pdf.cell(0, 5, safe_text(f"Ultimo movimiento registrado: {ultima_fecha}"), ln=True)
+    else:
+        pdf.set_font("Arial", "", 9)
+        pdf.cell(0, 5, safe_text("No hay registros guardados en el historial clinico."), ln=True)
+
+    _pdf_seccion(pdf, "Signos vitales")
+    if signos:
+        for s in signos:
+            d = s.get("datos", {})
+            resumen = [
+                f"TA: {d.get('tension_arterial', '-')}",
+                f"FC: {d.get('frecuencia_cardiaca', '-')}",
+                f"FR: {d.get('frecuencia_respiratoria', '-')}",
+                f"Temp: {d.get('temperatura', '-')}",
+                f"SatO2: {d.get('saturacion_oxigeno', '-')}",
+                f"Glucemia: {d.get('glucemia', '-')}",
+                f"Peso: {d.get('peso', '-')}",
+                f"Talla: {d.get('talla', '-')}",
+            ]
+            if d.get("observaciones"):
+                resumen.append(f"Observaciones: {d.get('observaciones')}")
+            _pdf_item(pdf, f"Control del {s.get('fecha', 'S/D')}", "\n".join(resumen))
+    else:
+        _pdf_item(pdf, "Sin registros", "No hay signos vitales cargados.")
+
+    _pdf_seccion(pdf, "Evoluciones clinicas")
+    total_evoluciones = list(evoluciones)
+    for se in ss_evols:
+        total_evoluciones.append(
+            {
+                "fecha": se.get("fecha", "S/D"),
+                "datos": {
+                    "evolucion": se.get("nota", ""),
+                    "indicaciones": se.get("indicaciones", ""),
+                    "firma": se.get("firma", ""),
+                },
+            }
+        )
+    if total_evoluciones:
+        for e in total_evoluciones:
+            d = e.get("datos", {})
+            nota = d.get("nota", d.get("nota_medica", d.get("evolucion", "Sin evolucion")))
+            indicaciones = d.get("indicaciones", "")
+            cuerpo = str(nota or "Sin evolucion")
+            if indicaciones:
+                cuerpo += f"\n\nIndicaciones:\n{indicaciones}"
+            meta = f"Profesional: {d.get('firma', d.get('firma_medico', 'S/D'))}"
+            _pdf_item(pdf, f"Evolucion del {e.get('fecha', 'S/D')}", cuerpo, meta=meta)
+    else:
+        _pdf_item(pdf, "Sin registros", "No hay evoluciones cargadas.")
+
+    _pdf_seccion(pdf, "Recetas medicas")
+    if recetas:
+        for r in recetas:
+            d = r.get("datos", {})
+            cuerpo = f"Medicamentos:\n{d.get('medicamentos', 'Sin medicamentos')}"
+            if d.get("indicaciones"):
+                cuerpo += f"\n\nIndicaciones:\n{d.get('indicaciones')}"
+            _pdf_item(pdf, f"Receta del {r.get('fecha', 'S/D')}", cuerpo)
+    else:
+        _pdf_item(pdf, "Sin registros", "No hay recetas cargadas.")
+
+    _pdf_seccion(pdf, "Materiales e insumos")
+    if materiales:
+        for m in materiales:
+            d = m.get("datos", {})
+            cuerpo = f"Material: {d.get('material', '-')}\nCantidad: {d.get('cantidad', '-')}"
+            if d.get("observaciones"):
+                cuerpo += f"\nObservaciones: {d.get('observaciones')}"
+            _pdf_item(pdf, f"Material del {m.get('fecha', 'S/D')}", cuerpo)
+    else:
+        _pdf_item(pdf, "Sin registros", "No hay materiales cargados.")
+
+    _pdf_seccion(pdf, "Linea de tiempo reciente")
+    if historial:
+        for registro in historial[:20]:
+            tipo = str(registro.get("tipo", "desconocido")).replace("_", " ").upper()
+            datos = registro.get("datos", {})
+            resumen = json.dumps(datos, ensure_ascii=False, indent=2)
+            _pdf_item(
+                pdf,
+                f"{tipo} | {registro.get('fecha', 'S/D')}",
+                resumen[:1800],
+                meta=f"ID: {registro.get('id', 'N/A')}",
+            )
+    else:
+        _pdf_item(pdf, "Sin registros", "No hay eventos para mostrar en la linea de tiempo.")
+
+    return pdf_output_bytes(pdf)
 
 
 def render(paciente_sel=None, user=None):
@@ -405,39 +582,94 @@ def render(paciente_sel=None, user=None):
 
         # --- BOTONES DE DESCARGA ---
         st.markdown("#### 📥 Descargar Historial")
-        dcol1, dcol2 = st.columns(2)
+        todos_regs = obtener_historial_paciente(paciente_id)
+        ss_evols = [
+            e
+            for e in st.session_state.get("evoluciones_db", [])
+            if paciente_id in str(e.get("paciente", "")) or paciente_nombre in str(e.get("paciente", ""))
+        ]
+        total_historial = len(todos_regs) + len(ss_evols)
+        ultimo_evento = (
+            (todos_regs[0].get("fecha") if todos_regs else None)
+            or (ss_evols[0].get("fecha") if ss_evols else None)
+            or "Sin registros"
+        )
+        modulos_activos = sum(
+            1
+            for cantidad in (
+                len(obtener_registros("signos_vitales", paciente_id)),
+                len(obtener_registros("evoluciones", paciente_id)) + len(ss_evols),
+                len(obtener_registros("recetas", paciente_id)),
+                len(obtener_registros("materiales", paciente_id)),
+            )
+            if cantidad
+        )
+
+        mcol1, mcol2, mcol3 = st.columns(3)
+        mcol1.metric("Registros", total_historial)
+        mcol2.metric("Modulos activos", modulos_activos)
+        mcol3.metric("Ultimo evento", ultimo_evento)
+
+        texto_hist = _generar_historial_texto(paciente_nombre, paciente_id, user)
+        pdf_hist = _generar_historial_pdf_bytes(paciente_nombre, paciente_id, user)
+        json_export = json.dumps(
+            {
+                "paciente": paciente_nombre,
+                "dni": paciente_id,
+                "exportado": ahora().isoformat(),
+                "historial_local": todos_regs,
+                "evoluciones_sesion": ss_evols,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        file_stub = f"historial_{sanitize_filename_component(paciente_id, 'paciente')}_{ahora().strftime('%Y%m%d')}"
+
+        dcol1, dcol2, dcol3 = st.columns([1.2, 1, 1])
         with dcol1:
-            texto_hist = _generar_historial_texto(paciente_nombre, paciente_id, user)
             st.download_button(
-                "📄 Descargar Historial Completo (.txt)",
-                data=texto_hist.encode("utf-8"),
-                file_name=f"historial_{paciente_id.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.txt",
-                mime="text/plain",
+                "📄 PDF Historial Completo",
+                data=pdf_hist,
+                file_name=f"{file_stub}.pdf",
+                mime="application/pdf",
                 use_container_width=True,
                 type="primary",
-                key="dl_historial_txt"
+                key="dl_historial_pdf"
             )
         with dcol2:
-            todos_regs = obtener_historial_paciente(paciente_id)
-            ss_evols = [e for e in st.session_state.get("evoluciones_db", [])
-                        if paciente_id in str(e.get("paciente","")) or paciente_nombre in str(e.get("paciente",""))]
-            json_export = json.dumps(
-                {"paciente": paciente_nombre, "dni": paciente_id,
-                 "exportado": datetime.now().isoformat(),
-                 "historial_local": todos_regs, "evoluciones_sesion": ss_evols},
-                ensure_ascii=False, indent=2
-            )
             st.download_button(
-                "🔷 Descargar JSON Completo",
+                "🔷 JSON Completo",
                 data=json_export.encode("utf-8"),
-                file_name=f"historial_{paciente_id.replace(' ','_')}.json",
+                file_name=f"{file_stub}.json",
                 mime="application/json",
                 use_container_width=True,
                 key="dl_historial_json"
             )
 
+        with dcol3:
+            st.download_button(
+                "Historial (.txt)",
+                data=texto_hist.encode("utf-8"),
+                file_name=f"{file_stub}.txt",
+                mime="text/plain",
+                use_container_width=True,
+                key="dl_historial_txt"
+            )
+
+        st.caption("El PDF es el formato principal para archivo e impresión. JSON y TXT quedan como respaldo.")
+
+        with st.expander("Vista previa del PDF", expanded=True):
+            if pdf_hist:
+                pdf_b64 = base64.b64encode(pdf_hist).decode("utf-8")
+                st.markdown(
+                    f'<iframe src="data:application/pdf;base64,{pdf_b64}" width="100%" height="640" type="application/pdf"></iframe>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("No se pudo generar la vista previa del PDF.")
+
         st.markdown("---")
-        historial = obtener_historial_paciente(paciente_id)
+        historial = todos_regs
 
         if historial:
             st.success(f"Total de registros en historial: {len(historial)}")
