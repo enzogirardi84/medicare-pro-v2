@@ -451,7 +451,8 @@ def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
     paciente_prev = st.session_state.get("paciente_actual")
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
-        if paciente_sel != paciente_prev:
+        # Solo rerun si realmente cambió de paciente y no es la primera carga
+        if paciente_prev and paciente_sel != paciente_prev:
             # Fuerza refresco consistente de vistas clínicas al cambiar paciente.
             # Evita quedar con datos del paciente anterior cuando el sidebar corre fragmentado.
             st.rerun()

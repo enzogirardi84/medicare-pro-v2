@@ -80,29 +80,40 @@ def render(user=None):
             # Tabla de estado de cada tabla
             st.markdown("#### Tablas SQL")
             tablas_data = diag.get("tablas", {})
-            filas_estado = []
-            for tabla, info in tablas_data.items():
-                if not info["existe"]:
-                    estado = "❌ No existe"
-                    color = "🔴"
-                elif not info["columnas_ok"]:
-                    falt = ", ".join(info["columnas_faltantes"])
-                    estado = f"⚠️ Faltan columnas: {falt}"
-                    color = "🟡"
-                else:
-                    estado = "✅ OK"
-                    color = "🟢"
-                filas_estado.append({
-                    "": color,
-                    "Tabla": f"`{tabla}`",
-                    "Existe": "Sí" if info["existe"] else "No",
-                    "Filas": info.get("filas", 0),
-                    "Estado": estado,
-                    "Error": info.get("error") or ""
-                })
-
-            import pandas as pd
-            df_tablas = pd.DataFrame(filas_estado)
+            
+            # Caché para dataframe de tablas (evita recrear en cada rerun si no cambió el diagnóstico)
+            df_cache_key = "_mc_diag_df_tablas"
+            diag_hash = hash(str(sorted(tablas_data.items())))
+            cached_df = st.session_state.get(df_cache_key)
+            
+            if cached_df and cached_df.get("hash") == diag_hash:
+                df_tablas = cached_df["df"]
+            else:
+                filas_estado = []
+                for tabla, info in tablas_data.items():
+                    if not info["existe"]:
+                        estado = "❌ No existe"
+                        color = "🔴"
+                    elif not info["columnas_ok"]:
+                        falt = ", ".join(info["columnas_faltantes"])
+                        estado = f"⚠️ Faltan columnas: {falt}"
+                        color = "🟡"
+                    else:
+                        estado = "✅ OK"
+                        color = "🟢"
+                    filas_estado.append({
+                        "": color,
+                        "Tabla": f"`{tabla}`",
+                        "Existe": "Sí" if info["existe"] else "No",
+                        "Filas": info.get("filas", 0),
+                        "Estado": estado,
+                        "Error": info.get("error") or ""
+                    })
+                
+                import pandas as pd
+                df_tablas = pd.DataFrame(filas_estado)
+                st.session_state[df_cache_key] = {"hash": diag_hash, "df": df_tablas}
+            
             st.dataframe(df_tablas, use_container_width=True, hide_index=True)
 
     # === TAB 2: EMPRESA / PACIENTES ===

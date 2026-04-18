@@ -48,9 +48,65 @@ DEFAULT_ADMIN_USER = {
     "dni": "37108100",
     "titulo": "Director de Sistemas",
     "perfil_profesional": "Direccion",
-    "estado": "Activo",
-    "pin": "1234",
 }
+
+
+def validar_dni(dni: str) -> tuple[bool, str]:
+    """
+    Valida un DNI argentino.
+    Retorna (valido, mensaje_error).
+    """
+    if not dni:
+        return False, "El DNI es obligatorio"
+    dni_limpio = str(dni).strip().replace(".", "").replace("-", "").replace(" ", "")
+    if not dni_limpio.isdigit():
+        return False, "El DNI debe contener solo números"
+    if len(dni_limpio) < 7 or len(dni_limpio) > 8:
+        return False, "El DNI debe tener entre 7 y 8 dígitos"
+    if dni_limpio == "00000000" or dni_limpio == "0000000":
+        return False, "DNI inválido"
+    return True, ""
+
+
+def validar_email(email: str) -> tuple[bool, str]:
+    """
+    Valida un email.
+    Retorna (valido, mensaje_error).
+    """
+    if not email:
+        return False, "El email es obligatorio"
+    email = str(email).strip()
+    patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(patron, email):
+        return False, "Formato de email inválido"
+    return True, ""
+
+
+def validar_telefono(telefono: str) -> tuple[bool, str]:
+    """
+    Valida un teléfono argentino.
+    Retorna (valido, mensaje_error).
+    """
+    if not telefono:
+        return True, ""  # Telefono opcional
+    tel_limpio = str(telefono).strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    if not tel_limpio.isdigit():
+        return False, "El teléfono debe contener solo números"
+    if len(tel_limpio) < 8 or len(tel_limpio) > 15:
+        return False, "El teléfono debe tener entre 8 y 15 dígitos"
+    return True, ""
+
+
+def validar_texto_obligatorio(texto: str, nombre_campo: str, min_len: int = 2) -> tuple[bool, str]:
+    """
+    Valida un campo de texto obligatorio.
+    Retorna (valido, mensaje_error).
+    """
+    if not texto or not str(texto).strip():
+        return False, f"{nombre_campo} es obligatorio"
+    if len(str(texto).strip()) < min_len:
+        return False, f"{nombre_campo} debe tener al menos {min_len} caracteres"
+    return True, ""
 
 
 def obtener_emergency_password() -> str | None:

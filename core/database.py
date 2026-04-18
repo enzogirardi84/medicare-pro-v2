@@ -375,10 +375,11 @@ def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay
             last_error = e
             if intento >= tries:
                 break
+            # Backoff exponencial más agresivo: primer intento rápido (0.05s), luego 0.1s, 0.2s, 0.4s
             try:
-                espera = max(0.05, float(base_delay) * (2 ** (intento - 1)))
+                espera = max(0.05, min(0.5, float(base_delay) * (1.5 ** (intento - 1))))
             except Exception:
-                espera = 0.35
+                espera = 0.15
             log_event("db", f"{op_name}_retry:{intento}/{tries}:{type(e).__name__}")
             time.sleep(espera)
     raise last_error
