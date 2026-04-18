@@ -436,6 +436,37 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
 
 /* Mobile optimizations (max-width: 767px) */
 @media (max-width: 767px) {
+    /* Asegurar que el sidebar sea visible en móviles */
+    [data-testid="stSidebar"] {
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        position: relative !important;
+        z-index: 1000 !important;
+    }
+    
+    /* Botón de toggle del sidebar visible en móviles */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 1001 !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        background: rgba(20, 184, 166, 0.9) !important;
+        border-radius: 8px !important;
+        padding: 8px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    [data-testid="collapsedControl"] button {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
     /* Reducir efectos pesados en móviles para mejor rendimiento */
     .stButton > button,
     .stDownloadButton > button {
