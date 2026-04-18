@@ -156,6 +156,7 @@ def diagnosticar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
 def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
     """
     Inserta una empresa en la tabla empresas de Supabase si no existe.
+    Usa service role key para bypass RLS si está disponible.
     Retorna el resultado de la operación.
     """
     resultado = {
@@ -165,13 +166,28 @@ def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
         "error": None
     }
     try:
-        from core.database import supabase
-        if not supabase:
+        from supabase import create_client
+        import streamlit as st
+        
+        # Intentar usar service role key para bypass RLS
+        try:
+            supabase_url = st.secrets.get("SUPABASE_URL", "")
+            service_role_key = st.secrets.get("SUPABASE_SERVICE_ROLE_KEY", "")
+            if supabase_url and service_role_key:
+                supabase_admin = create_client(supabase_url, service_role_key)
+            else:
+                from core.database import supabase
+                supabase_admin = supabase
+        except Exception:
+            from core.database import supabase
+            supabase_admin = supabase
+        
+        if not supabase_admin:
             resultado["error"] = "Sin conexion a Supabase"
             return resultado
         
         # Verificar si ya existe
-        resp = supabase.table("empresas").select("id,nombre").eq("nombre", nombre_empresa).execute()
+        resp = supabase_admin.table("empresas").select("id,nombre").eq("nombre", nombre_empresa).execute()
         if resp.data:
             resultado["insertado"] = True
             resultado["empresa_id"] = resp.data[0]["id"]
@@ -179,14 +195,22 @@ def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
             return resultado
         
         # Insertar la empresa
-        insert_resp = supabase.table("empresas").insert({"nombre": nombre_empresa}).execute()
+        insert_resp = supabase_admin.table("empresas").insert({"nombre": nombre_empresa}).execute()
         if insert_resp.data:
             resultado["insertado"] = True
             resultado["empresa_id"] = insert_resp.data[0]["id"]
         else:
             resultado["error"] = "No se pudo insertar la empresa (respuesta vacía)"
     except Exception as e:
-        resultado["error"] = str(e)
+        error_str = str(e)
+        if "row-level security" in error_str.lower():
+            resultado["error"] = (
+                "Error RLS (Row-Level Security): Supabase bloquea la inserción. "
+                "Solución: Agrega 'SUPABASE_SERVICE_ROLE_KEY' en .streamlit/secrets.toml "
+                "o desactiva RLS en la tabla empresas desde el dashboard de Supabase."
+            )
+        else:
+            resultado["error"] = error_str
     return resultado
 
 
