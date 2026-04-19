@@ -711,7 +711,8 @@ def _render_cortina_mar_hospitalaria(
     suf = _cortina_mar_key_slug(paciente_sel, fecha_hoy)
     st.markdown('<p class="mc-mar-encabezado">Planilla MAR del turno</p>', unsafe_allow_html=True)
     plan_ord = plan_dia_df.reset_index(drop=True)
-    with st.container(height=340 if es_movil else 520):
+    altura_mar = None if es_movil and len(plan_ord) <= 4 else (340 if es_movil else 520)
+    with st.container(height=altura_mar):
         for i, (_, fila) in enumerate(plan_ord.iterrows()):
             estado = str(fila.get("Estado", "") or "").strip()
             es_pend = estado == "Pendiente"
@@ -748,8 +749,12 @@ def _render_cortina_mar_hospitalaria(
             )
 
             with st.container(border=True):
-                c1, c2 = st.columns([4.4, 2.6])
-                with c1:
+                if es_movil:
+                    info_container = st.container()
+                    action_container = st.container()
+                else:
+                    info_container, action_container = st.columns([4.4, 2.6])
+                with info_container:
                     st.markdown(
                         f'<div class="{blk}">'
                         f'<div class="mc-mar-title">{med.upper()}</div>'
@@ -759,7 +764,7 @@ def _render_cortina_mar_hospitalaria(
                         f"{extra_obs}</div>",
                         unsafe_allow_html=True,
                     )
-                with c2:
+                with action_container:
                     if es_pend:
                         k_hr = f"mar_hr_{suf}_{i}"
                         k_just = f"mar_just_{suf}_{i}"
@@ -778,7 +783,11 @@ def _render_cortina_mar_hospitalaria(
                             key=k_just,
                             placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica de suspensión…",
                         )
-                        b1, b2 = st.columns(2)
+                        if es_movil:
+                            b1 = st.container()
+                            b2 = st.container()
+                        else:
+                            b1, b2 = st.columns(2)
                         with b1:
                             if st.button(
                                 "Administración realizada",
@@ -1185,29 +1194,52 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             frecuencia = ""
 
             if tipo_indicacion == "Medicacion":
-                c1, c2 = st.columns([3, 1])
-                med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
-                med_manual = c2.text_input("O escribir manualmente")
-                col3, col4, col5 = st.columns([2, 2, 1])
-                via = col3.selectbox(
-                    "Via de administracion",
-                    ["Via Oral", "Via Endovenosa", "Via Intramuscular", "Via Subcutanea", "Via Topica", "Via Inhalatoria", "Otra"],
-                )
-                frecuencia = col4.selectbox(
-                    "Frecuencia",
-                    [
-                        "Cada 1 hora",
-                        "Cada 2 horas",
-                        "Cada 4 horas",
-                        "Cada 6 horas",
-                        "Cada 8 horas",
-                        "Cada 12 horas",
-                        "Cada 24 horas",
-                        "Dosis unica",
-                        "Segun necesidad",
-                    ],
-                )
-                dias = col5.number_input("Dias", min_value=1, max_value=90, value=7)
+                if es_movil:
+                    med_vademecum = st.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
+                    med_manual = st.text_input("O escribir manualmente")
+                    via = st.selectbox(
+                        "Via de administracion",
+                        ["Via Oral", "Via Endovenosa", "Via Intramuscular", "Via Subcutanea", "Via Topica", "Via Inhalatoria", "Otra"],
+                    )
+                    frecuencia = st.selectbox(
+                        "Frecuencia",
+                        [
+                            "Cada 1 hora",
+                            "Cada 2 horas",
+                            "Cada 4 horas",
+                            "Cada 6 horas",
+                            "Cada 8 horas",
+                            "Cada 12 horas",
+                            "Cada 24 horas",
+                            "Dosis unica",
+                            "Segun necesidad",
+                        ],
+                    )
+                    dias = st.number_input("Dias", min_value=1, max_value=90, value=7)
+                else:
+                    c1, c2 = st.columns([3, 1])
+                    med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
+                    med_manual = c2.text_input("O escribir manualmente")
+                    col3, col4, col5 = st.columns([2, 2, 1])
+                    via = col3.selectbox(
+                        "Via de administracion",
+                        ["Via Oral", "Via Endovenosa", "Via Intramuscular", "Via Subcutanea", "Via Topica", "Via Inhalatoria", "Otra"],
+                    )
+                    frecuencia = col4.selectbox(
+                        "Frecuencia",
+                        [
+                            "Cada 1 hora",
+                            "Cada 2 horas",
+                            "Cada 4 horas",
+                            "Cada 6 horas",
+                            "Cada 8 horas",
+                            "Cada 12 horas",
+                            "Cada 24 horas",
+                            "Dosis unica",
+                            "Segun necesidad",
+                        ],
+                    )
+                    dias = col5.number_input("Dias", min_value=1, max_value=90, value=7)
                 hora_inicio = st.time_input("Hora inicial de administracion", value=dt_time(8, 0), key="hora_inicio_receta")
                 horarios_sugeridos = horarios_programados_desde_frecuencia(
                     frecuencia,
@@ -1220,34 +1252,61 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             else:
                 via = "Via Endovenosa"
                 frecuencia = "Infusion continua"
-                c1, c2, c3 = st.columns([2, 1, 1])
-                solucion = c1.selectbox(
-                    "Solucion principal",
-                    [
-                        "Dextrosa 5%",
-                        "Fisiologico 0.9%",
-                        "Ringer lactato",
-                        "Mixta",
-                        "Otra",
-                    ],
-                    key="solucion_receta",
-                )
-                volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
-                dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
+                if es_movil:
+                    solucion = st.selectbox(
+                        "Solucion principal",
+                        [
+                            "Dextrosa 5%",
+                            "Fisiologico 0.9%",
+                            "Ringer lactato",
+                            "Mixta",
+                            "Otra",
+                        ],
+                        key="solucion_receta",
+                    )
+                    volumen_ml = st.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
+                    dias = st.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
+                    velocidad_ml_h = st.number_input(
+                        "Velocidad (ml/h)",
+                        min_value=0.0,
+                        step=1.0,
+                        value=21.0,
+                        key="velocidad_receta",
+                    )
+                    hora_inicio = st.time_input(
+                        "Hora inicial",
+                        value=dt_time(8, 0),
+                        key="hora_inicio_infusion_receta",
+                    )
+                else:
+                    c1, c2, c3 = st.columns([2, 1, 1])
+                    solucion = c1.selectbox(
+                        "Solucion principal",
+                        [
+                            "Dextrosa 5%",
+                            "Fisiologico 0.9%",
+                            "Ringer lactato",
+                            "Mixta",
+                            "Otra",
+                        ],
+                        key="solucion_receta",
+                    )
+                    volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
+                    dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
 
-                c4, c5 = st.columns([1, 2])
-                velocidad_ml_h = c4.number_input(
-                    "Velocidad (ml/h)",
-                    min_value=0.0,
-                    step=1.0,
-                    value=21.0,
-                    key="velocidad_receta",
-                )
-                hora_inicio = c5.time_input(
-                    "Hora inicial",
-                    value=dt_time(8, 0),
-                    key="hora_inicio_infusion_receta",
-                )
+                    c4, c5 = st.columns([1, 2])
+                    velocidad_ml_h = c4.number_input(
+                        "Velocidad (ml/h)",
+                        min_value=0.0,
+                        step=1.0,
+                        value=21.0,
+                        key="velocidad_receta",
+                    )
+                    hora_inicio = c5.time_input(
+                        "Hora inicial",
+                        value=dt_time(8, 0),
+                        key="hora_inicio_infusion_receta",
+                    )
                 horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
                 detalle_infusion = st.text_area(
                     "Notas / evolucion del medico (opcional)",
@@ -1259,9 +1318,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 alternar_con = ""
                 plan_hidratacion = []
 
-            col_m1, col_m2 = st.columns(2)
-            medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
-            medico_matricula = col_m2.text_input("Matricula profesional")
+            if es_movil:
+                medico_nombre = st.text_input("Nombre del medico", value=user.get("nombre", ""))
+                medico_matricula = st.text_input("Matricula profesional")
+            else:
+                col_m1, col_m2 = st.columns(2)
+                medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
+                medico_matricula = col_m2.text_input("Matricula profesional")
 
             firma_canvas = None
             firma_subida = None
@@ -1406,16 +1469,26 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 horizontal=True,
                 key="tipo_indicacion_papel_receta",
             )
-            c_p1, c_p2 = st.columns(2)
-            medico_papel = c_p1.text_input(
-                "Medico que indica",
-                key="medico_papel_nombre",
-                value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
-            )
-            matricula_papel = c_p2.text_input("Matricula del medico", key="medico_papel_matricula")
-            c_p3, c_p4 = st.columns([1, 2])
-            dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
-            hora_papel = c_p4.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
+            if es_movil:
+                medico_papel = st.text_input(
+                    "Medico que indica",
+                    key="medico_papel_nombre",
+                    value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
+                )
+                matricula_papel = st.text_input("Matricula del medico", key="medico_papel_matricula")
+                dias_papel = st.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
+                hora_papel = st.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
+            else:
+                c_p1, c_p2 = st.columns(2)
+                medico_papel = c_p1.text_input(
+                    "Medico que indica",
+                    key="medico_papel_nombre",
+                    value=user.get("nombre", "") if rol not in {"Operativo", "Enfermeria"} else "",
+                )
+                matricula_papel = c_p2.text_input("Matricula del medico", key="medico_papel_matricula")
+                c_p3, c_p4 = st.columns([1, 2])
+                dias_papel = c_p3.number_input("Dias indicados", min_value=1, max_value=90, value=7, key="dias_papel_receta")
+                hora_papel = c_p4.time_input("Hora inicial", value=dt_time(8, 0), key="hora_papel_receta")
 
             horarios_papel = []
             detalle_papel = ""
@@ -1440,19 +1513,33 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 if horarios_papel:
                     st.caption(f"Quedaran visibles en la sabana diaria: {' | '.join(horarios_papel)}")
             else:
-                c_inf_p1, c_inf_p2 = st.columns([2, 1])
-                solucion_papel = c_inf_p1.selectbox(
-                    "Solucion principal",
-                    ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
-                    key="solucion_papel_receta",
-                )
-                volumen_papel = c_inf_p2.number_input(
-                    "Volumen total (ml)",
-                    min_value=0,
-                    step=50,
-                    value=500,
-                    key="volumen_papel_receta",
-                )
+                if es_movil:
+                    solucion_papel = st.selectbox(
+                        "Solucion principal",
+                        ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
+                        key="solucion_papel_receta",
+                    )
+                    volumen_papel = st.number_input(
+                        "Volumen total (ml)",
+                        min_value=0,
+                        step=50,
+                        value=500,
+                        key="volumen_papel_receta",
+                    )
+                else:
+                    c_inf_p1, c_inf_p2 = st.columns([2, 1])
+                    solucion_papel = c_inf_p1.selectbox(
+                        "Solucion principal",
+                        ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Otra"],
+                        key="solucion_papel_receta",
+                    )
+                    volumen_papel = c_inf_p2.number_input(
+                        "Volumen total (ml)",
+                        min_value=0,
+                        step=50,
+                        value=500,
+                        key="volumen_papel_receta",
+                    )
                 velocidad_papel = st.number_input(
                     "Velocidad (ml/h)",
                     min_value=0.0,
@@ -1836,15 +1923,23 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             '<p style="margin:0 0 0.35rem 0;font-size:0.78rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.95);">Resumen del día</p>',
             unsafe_allow_html=True,
         )
-        c_res1, c_res2, c_res3 = st.columns(3)
-        c_res1.metric("Realizadas", int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0)
-        c_res2.metric(
-            "No realizadas",
+        realizadas_count = int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0
+        no_realizadas_count = (
             int(plan_dia_df["Estado"].astype(str).str.contains("No realizada", case=False, na=False).sum())
             if not plan_dia_df.empty
-            else 0,
+            else 0
         )
-        c_res3.metric("Pendientes", int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0)
+        pendientes_count = int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0
+        if es_movil:
+            c_res1, c_res2 = st.columns(2)
+            c_res1.metric("Realizadas", realizadas_count)
+            c_res2.metric("No realizadas", no_realizadas_count)
+            st.metric("Pendientes", pendientes_count)
+        else:
+            c_res1, c_res2, c_res3 = st.columns(3)
+            c_res1.metric("Realizadas", realizadas_count)
+            c_res2.metric("No realizadas", no_realizadas_count)
+            c_res3.metric("Pendientes", pendientes_count)
 
         vista_guardia = st.radio(
             "Vista de administración",
@@ -2015,7 +2110,10 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         sticky_first_col=False,
                     )
                 else:
-                    _h_tarjetas_plan = 280 if es_movil else (320 if anticolapso_activo() else 480)
+                    if es_movil and len(df_plan_visible) <= 4:
+                        _h_tarjetas_plan = None
+                    else:
+                        _h_tarjetas_plan = 280 if es_movil else (320 if anticolapso_activo() else 480)
                     with st.container(height=_h_tarjetas_plan):
                         _render_dataframe_filas_tarjetas(df_plan_visible)
 
@@ -2050,24 +2148,41 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             with registro_container:
                 st.markdown("#### Registro manual")
                 with st.form("form_registro_dosis", clear_on_submit=True):
-                    c_med, c_hora = st.columns([2, 1])
                     opciones_recetas = list(range(len(recs_activas)))
-                    receta_idx = c_med.selectbox(
-                        "Medicacion a registrar",
-                        opciones_recetas,
-                        format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
-                    )
+                    if es_movil:
+                        receta_idx = st.selectbox(
+                            "Medicacion a registrar",
+                            opciones_recetas,
+                            format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
+                        )
+                    else:
+                        c_med, c_hora = st.columns([2, 1])
+                        receta_idx = c_med.selectbox(
+                            "Medicacion a registrar",
+                            opciones_recetas,
+                            format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
+                        )
                     receta_actual = recs_activas[receta_idx]
-                    c_med.caption(f"Horarios: {format_horarios_receta(receta_actual)}")
+                    if es_movil:
+                        st.caption(f"Horarios: {format_horarios_receta(receta_actual)}")
+                    else:
+                        c_med.caption(f"Horarios: {format_horarios_receta(receta_actual)}")
                     horarios_receta = obtener_horarios_receta(receta_actual)
                     opciones_hora = horarios_receta or [f"{i:02d}:00" for i in range(24)]
                     hora_actual_str = f"{ahora().hour:02d}:00"
                     idx_hora = opciones_hora.index(hora_actual_str) if hora_actual_str in opciones_hora else 0
-                    hora_sel = c_hora.selectbox(
-                        "Horario programado",
-                        opciones_hora if opciones_hora else ["A demanda"],
-                        index=idx_hora if opciones_hora else 0,
-                    )
+                    if es_movil:
+                        hora_sel = st.selectbox(
+                            "Horario programado",
+                            opciones_hora if opciones_hora else ["A demanda"],
+                            index=idx_hora if opciones_hora else 0,
+                        )
+                    else:
+                        hora_sel = c_hora.selectbox(
+                            "Horario programado",
+                            opciones_hora if opciones_hora else ["A demanda"],
+                            index=idx_hora if opciones_hora else 0,
+                        )
                     estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
                     hora_real_manual = st.text_input(
                         "Hora real de administración o constancia (HH:MM, opcional)",
@@ -2106,16 +2221,27 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 """,
                 unsafe_allow_html=True,
             )
-            c_ed1, c_ed2 = st.columns([3, 2])
             opciones_recetas = list(range(len(recs_activas)))
-            receta_idx = c_ed1.selectbox(
-                "Seleccionar indicacion",
-                opciones_recetas,
-                format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
-                key=f"recetas_editar_sel_{paciente_sel}",
-            )
+            if es_movil:
+                receta_idx = st.selectbox(
+                    "Seleccionar indicacion",
+                    opciones_recetas,
+                    format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
+                    key=f"recetas_editar_sel_{paciente_sel}",
+                )
+            else:
+                c_ed1, c_ed2 = st.columns([3, 2])
+                receta_idx = c_ed1.selectbox(
+                    "Seleccionar indicacion",
+                    opciones_recetas,
+                    format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
+                    key=f"recetas_editar_sel_{paciente_sel}",
+                )
             receta_objetivo = recs_activas[receta_idx]
-            accion_receta = c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
+            if es_movil:
+                accion_receta = st.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
+            else:
+                accion_receta = c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
             nuevo_texto_receta = ""
             motivo_cambio = st.text_input("Motivo medico / legal del cambio", key="motivo_cambio_receta")
             if accion_receta == "Editar indicacion":
@@ -2233,19 +2359,24 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 opciones=(10, 15, 20, 30, 50, 80),
             )
 
-            with st.container(height=320 if es_movil else 450):
+            altura_historial = None if es_movil and limite_hist <= 4 else (320 if es_movil else 450)
+            with st.container(height=altura_historial):
                 for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
                     with st.container(border=True):
-                        c_info, c_btn = st.columns([3, 1])
                         estado_actual = r.get("estado_receta", "Activa")
-                        c_info.markdown(f"**{r.get('fecha', '-')}**")
-                        c_info.markdown(
+                        if es_movil:
+                            info_container = st.container()
+                            action_container = st.container()
+                        else:
+                            info_container, action_container = st.columns([3, 1])
+                        info_container.markdown(f"**{r.get('fecha', '-')}**")
+                        info_container.markdown(
                             f"**Indicado por:** {r.get('medico_nombre', '-')} | **Matricula:** {r.get('medico_matricula', '-')}"
                         )
                         if r.get("origen_registro"):
-                            c_info.caption(f"Origen: {r.get('origen_registro')}")
-                        c_info.markdown(f"*{r.get('med', '')}*")
-                        c_info.caption(f"Horarios: {format_horarios_receta(r)}")
+                            info_container.caption(f"Origen: {r.get('origen_registro')}")
+                        info_container.markdown(f"*{r.get('med', '')}*")
+                        info_container.caption(f"Horarios: {format_horarios_receta(r)}")
                         if r.get("tipo_indicacion") == "Infusion / hidratacion":
                             detalle_inf = []
                             if r.get("velocidad_ml_h") not in ("", None):
@@ -2253,14 +2384,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             if r.get("alternar_con"):
                                 detalle_inf.append(f"Alternar con: {r.get('alternar_con')}")
                             if detalle_inf:
-                                c_info.caption(" | ".join(detalle_inf))
+                                info_container.caption(" | ".join(detalle_inf))
                             if r.get("plan_hidratacion"):
-                                c_info.caption(f"Plan de hidratacion: {_resumen_plan_hidratacion(r.get('plan_hidratacion', []))}")
+                                info_container.caption(f"Plan de hidratacion: {_resumen_plan_hidratacion(r.get('plan_hidratacion', []))}")
                             if r.get("detalle_infusion"):
-                                c_info.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
+                                info_container.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
                         if r.get("firma_b64"):
                             try:
-                                c_info.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
+                                info_container.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
                             except Exception as e:
 
                                 from core.app_logging import log_event
@@ -2268,7 +2399,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 log_event('recetas_error', f'Error: {e}')
                         if r.get("adjunto_papel_b64"):
                             try:
-                                c_btn.download_button(
+                                action_container.download_button(
                                     "Descargar orden adjunta",
                                     data=base64.b64decode(r["adjunto_papel_b64"]),
                                     file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
@@ -2277,14 +2408,14 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                     width="stretch",
                                 )
                             except Exception:
-                                c_info.caption("No se pudo preparar el adjunto cargado.")
+                                info_container.caption("No se pudo preparar el adjunto cargado.")
                         if estado_actual != "Activa":
-                            c_info.error(
+                            info_container.error(
                                 f"Estado: {estado_actual.upper()} | Fecha: {r.get('fecha_suspension', 'S/D')} | "
                                 f"Profesional: {r.get('profesional_estado', 'S/D')}"
                             )
                             if r.get("motivo_estado"):
-                                c_info.caption(f"Motivo: {r.get('motivo_estado')}")
+                                info_container.caption(f"Motivo: {r.get('motivo_estado')}")
                         if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_rec_{idx}", value=False):
                             pdf_bytes = build_prescription_pdf_bytes(
                                 st.session_state,
@@ -2298,7 +2429,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                                 f"Receta_Legal_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
                                 f"{r.get('fecha', '')[:10].replace('/','')}_{estado_arch}.pdf"
                             )
-                            c_btn.download_button(
+                            action_container.download_button(
                                 "Descargar PDF legal",
                                 data=pdf_bytes,
                                 file_name=nombre_arch,

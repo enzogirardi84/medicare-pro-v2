@@ -275,18 +275,21 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 key="em_amb",
             )
             if es_movil:
-                a2, a3 = st.columns(2)
-                movil = a2.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
-                destino = a3.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
+                movil = st.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
+                destino = st.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
             else:
                 a2, a3 = st.columns(2)
                 movil = a2.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
                 destino = a3.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
 
             # --- Fila 5: Profesional ---
-            p1, p2 = st.columns(2)
-            profesional = p1.text_input("Profesional a cargo", value=user.get("nombre", ""), key="em_prof")
-            matricula = p2.text_input("Matricula", value=user.get("matricula", ""), key="em_mat")
+            if es_movil:
+                profesional = st.text_input("Profesional a cargo", value=user.get("nombre", ""), key="em_prof")
+                matricula = st.text_input("Matricula", value=user.get("matricula", ""), key="em_mat")
+            else:
+                p1, p2 = st.columns(2)
+                profesional = p1.text_input("Profesional a cargo", value=user.get("nombre", ""), key="em_prof")
+                matricula = p2.text_input("Matricula", value=user.get("matricula", ""), key="em_mat")
 
             # --- Datos adicionales (opcional) ---
             with st.expander("Mas datos (opcional)"):
@@ -308,9 +311,13 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                     tipo_traslado = e1.selectbox("Tipo traslado", ["Sin traslado confirmado", "Traslado asistencial", "Derivacion a guardia", "Traslado interhospitalario", "Alta complejidad / UTI movil", "Retorno a domicilio"], key="em_tras")
                     hora_solicitud = e2.text_input("Hora solicitud", value=fecha_actual.strftime("%H:%M"), key="em_hsol")
                     hora_arribo = e3.text_input("Hora arribo", placeholder="HH:MM", key="em_harr")
-                f1, f2 = st.columns(2)
-                hora_salida = f1.text_input("Hora salida", placeholder="HH:MM", key="em_hsal")
-                receptor = f2.text_input("Receptor / institucion", key="em_rec")
+                if es_movil:
+                    hora_salida = st.text_input("Hora salida", placeholder="HH:MM", key="em_hsal")
+                    receptor = st.text_input("Receptor / institucion", key="em_rec")
+                else:
+                    f1, f2 = st.columns(2)
+                    hora_salida = f1.text_input("Hora salida", placeholder="HH:MM", key="em_hsal")
+                    receptor = f2.text_input("Receptor / institucion", key="em_rec")
                 familiar_notificado = st.text_input("Familiar notificado", key="em_fam")
                 fecha_evento = st.date_input("Fecha (si distinta a hoy)", value=fecha_actual.date(), key="em_fecha")
                 hora_evento = st.time_input("Hora inicio (si distinta)", value=fecha_actual.time().replace(microsecond=0), key="em_hora")
@@ -469,7 +476,8 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 sugerencia="Completá el formulario de evento arriba para el primer registro.",
             )
         else:
-            with lista_plegable("Eventos recientes (panel operativo)", count=len(recientes), expanded=False, height=320 if es_movil else 420):
+            altura_recientes = None if es_movil and len(recientes) <= 3 else (280 if es_movil else 420)
+            with lista_plegable("Eventos recientes (panel operativo)", count=len(recientes), expanded=False, height=altura_recientes):
                 for evento in recientes:
                     titulo = f"{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')} | {evento.get('tipo_evento', '')}"
                     with st.container(border=True):
@@ -539,10 +547,12 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 for x in registros
             ]
         )
-        with lista_plegable("Tabla resumen de eventos", count=len(registros), expanded=False, height=320 if es_movil else 400):
-            mostrar_dataframe_con_scroll(resumen_df, height=280 if es_movil else 360)
+        altura_resumen = None if es_movil and len(registros) <= 4 else (280 if es_movil else 400)
+        with lista_plegable("Tabla resumen de eventos", count=len(registros), expanded=False, height=altura_resumen):
+            mostrar_dataframe_con_scroll(resumen_df, height=220 if es_movil else 360)
 
-        with lista_plegable("Detalle y PDF por evento", count=len(registros), expanded=False, height=360 if es_movil else 520):
+        altura_detalle = None if es_movil and len(registros) <= 3 else (320 if es_movil else 520)
+        with lista_plegable("Detalle y PDF por evento", count=len(registros), expanded=False, height=altura_detalle):
             for idx, evento in enumerate(registros):
                 with st.container(border=True):
                     if es_movil:
