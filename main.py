@@ -115,7 +115,10 @@ obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", N
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
 try:
-    st.markdown(f"<style>{cargar_texto_asset('style.css')}</style>", unsafe_allow_html=True)
+    import os as _os
+    _css_path = Path(__file__).parent / "assets" / "style.css"
+    _css_mtime = _css_path.stat().st_mtime if _css_path.exists() else 0.0
+    st.markdown(f"<style>{cargar_texto_asset('style.css', _mtime=_css_mtime)}</style>", unsafe_allow_html=True)
 except Exception:
     pass
 

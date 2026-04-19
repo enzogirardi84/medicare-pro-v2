@@ -662,13 +662,14 @@ def render_mobile_sidebar_toggle() -> None:
 
     function syncButton() {
       var btn = ensureButton();
-      syncNativeControls();
       if (!isMobileViewport()) {
+        syncNativeControls();
         setSidebarOpen(false);
         applyMobileSidebarLayout();
         btn.style.display = "none";
         return;
       }
+      syncNativeControls();
       if (!getSidebar() && !getOpenControl() && !getCloseControl()) {
         btn.style.display = "none";
         return;
