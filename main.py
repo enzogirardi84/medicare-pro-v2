@@ -905,7 +905,22 @@ st.markdown("""
         );
     }
 
+    function getMobileSidebarBridge() {
+        try {
+            return window.parent && window.parent !== window ? window.parent : window;
+        } catch (e) {
+            return window;
+        }
+    }
+
     function sidebarIsOpen() {
+        try {
+            var bridge = getMobileSidebarBridge();
+            if (bridge && typeof bridge.__mcSidebarMobileIsOpen === "function") {
+                return !!bridge.__mcSidebarMobileIsOpen();
+            }
+        } catch (e) {}
+
         var sidebar = getSidebar();
         if (!sidebar) return false;
         var expanded = sidebar.getAttribute("aria-expanded");
@@ -928,6 +943,14 @@ st.markdown("""
     function closeSidebar() {
         // Buscar el botón de colapso dentro del sidebar
         if (!isMobile() || !sidebarIsOpen()) return false;
+        try {
+            var bridge = getMobileSidebarBridge();
+            if (bridge && typeof bridge.__mcSidebarMobileClose === "function") {
+                bridge.__mcSidebarMobileClose();
+                syncFloatingToggle();
+                return true;
+            }
+        } catch (e) {}
         var collapseBtn = getCollapseButton();
         if (!collapseBtn) return false;
         collapseBtn.click();
