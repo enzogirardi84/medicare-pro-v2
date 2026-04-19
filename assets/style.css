@@ -2264,15 +2264,15 @@ hr {
         position: sticky;
         top: 0.1rem;
         z-index: 20;
-        padding: 0.92rem 0.92rem 0.55rem;
-        margin-bottom: 1rem;
-        border-radius: 24px;
+        padding: 0.6rem 0.75rem 0.4rem;
+        margin-bottom: 0.5rem;
+        border-radius: 18px;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
 
     .mc-module-shell-head {
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.45rem;
         padding: 0 0.18rem;
     }
 
@@ -2301,9 +2301,9 @@ hr {
     }
 
     .mc-hero {
-        border-radius: 24px;
-        padding: 20px 18px 18px;
-        margin-bottom: 1rem;
+        border-radius: 20px;
+        padding: 14px 14px 12px;
+        margin-bottom: 0.55rem;
     }
 
     .mc-hero-title {
@@ -3799,6 +3799,7 @@ html.mc-equipo-liviano iframe {
         padding-left: 1.25rem !important;
         padding-right: 1.25rem !important;
         padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
     }
 
     [data-testid="stSidebar"] {
@@ -3809,6 +3810,23 @@ html.mc-equipo-liviano iframe {
     /* Columnas mas compactas */
     [data-testid="column"] {
         padding: 0 0.4rem !important;
+    }
+
+    /* Reducir espacios muertos entre elementos */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.5rem !important;
+    }
+    [data-testid="element-container"],
+    .element-container {
+        margin-bottom: 0.3rem !important;
+    }
+    .mc-hero {
+        padding: 18px 18px 16px !important;
+        margin-bottom: 0.7rem !important;
+    }
+    .mc-module-shell {
+        padding: 0.85rem 0.95rem 0.6rem !important;
+        margin-bottom: 0.7rem !important;
     }
 
     /* Botones optimizados para touch */
@@ -3853,10 +3871,10 @@ html.mc-equipo-liviano iframe {
     /* Block container full width en movil */
     .block-container {
         max-width: 100% !important;
-        padding-top: 2.8rem !important;
+        padding-top: 1.2rem !important;
         padding-left: 0.6rem !important;
         padding-right: 0.6rem !important;
-        padding-bottom: 1rem !important;
+        padding-bottom: 0.8rem !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
     }
@@ -4191,21 +4209,21 @@ html, body {
 
     /* --- 2. ESPACIADO COMPACTO: eliminar aire muerto --- */
     .block-container {
-        padding-top: 3.5rem !important;
-        padding-bottom: 1rem !important;
+        padding-top: 1.4rem !important;
+        padding-bottom: 0.8rem !important;
     }
     [data-testid="stVerticalBlock"] {
-        gap: 0.5rem !important;
+        gap: 0.35rem !important;
     }
     [data-testid="element-container"],
     .element-container {
-        margin-bottom: 0.25rem !important;
+        margin-bottom: 0.18rem !important;
     }
     [data-testid="stMarkdownContainer"] {
-        margin-bottom: 0.3rem !important;
+        margin-bottom: 0.2rem !important;
     }
     hr {
-        margin: 0.6rem 0 !important;
+        margin: 0.4rem 0 !important;
     }
     /* Expanders: header más compacto */
     [data-testid="stExpander"] summary,
