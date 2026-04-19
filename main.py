@@ -520,6 +520,7 @@ def _html_signos_vitales_sidebar(vitales_orden):
         fecha = escape(_vitales_valor_corto(v, "fecha", "S/D"))
         ta = escape(_vitales_valor_corto(v, "TA"))
         fc = escape(_vitales_valor_corto(v, "FC"))
+        fr = escape(_vitales_valor_corto(v, "FR"))
         sat = escape(_vitales_valor_corto(v, "Sat"))
         temp = escape(_vitales_valor_corto(v, "Temp"))
         hgt = escape(_vitales_valor_corto(v, "HGT"))
@@ -534,6 +535,10 @@ def _html_signos_vitales_sidebar(vitales_orden):
             '<div class="mc-vital-metric mc-vital-metric--fc">'
             '<div class="mc-vital-metric__label">FC</div>'
             f'<div class="mc-vital-metric__value">{fc}</div>'
+            "</div>"
+            '<div class="mc-vital-metric mc-vital-metric--fr">'
+            '<div class="mc-vital-metric__label">F.R.</div>'
+            f'<div class="mc-vital-metric__value">{fr}</div>'
             "</div>"
             '<div class="mc-vital-metric mc-vital-metric--sat">'
             '<div class="mc-vital-metric__label">SatO₂</div>'
