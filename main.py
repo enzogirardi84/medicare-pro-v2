@@ -121,6 +121,45 @@ try:
 except Exception:
     pass
 
+# CSS CRITICO INLINE: siempre se inyecta, no depende de cache del archivo
+# Esto garantiza que los fixes mobile lleguen al navegador
+_CSS_CRITICO_MOBILE = """
+/* CRITICO MOBILE v19:15 - Este CSS se inyecta inline y no tiene cache */
+@media (max-width: 767px) {
+    /* Marker visible */
+    html body .block-container::before {
+        content: "CSS v19:15 CRITICO OK" !important;
+        display: block !important;
+        background: #ff4444 !important;
+        color: white !important;
+        padding: 4px 12px !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        border-radius: 4px !important;
+        margin-bottom: 8px !important;
+        text-align: center !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    /* Compactacion nuclear */
+    html body .block-container { padding: 0.4rem !important; }
+    [data-testid="stVerticalBlock"] { gap: 0.1rem !important; }
+    [data-testid="stHorizontalBlock"] { gap: 0.1rem !important; }
+    [data-testid="stElementContainer"] { margin-bottom: 0.05rem !important; margin-top: 0 !important; }
+    .stNumberInput label, .stTextInput label, .stSelectbox label {
+        margin-bottom: -4px !important; padding-bottom: 0 !important; font-size: 12px !important;
+    }
+    input[type="number"], input[type="text"] { min-height: 34px !important; padding: 2px 6px !important; }
+    [data-testid="stForm"] { padding: 0.4rem !important; margin-bottom: 0.3rem !important; }
+    hr { margin: 0.3rem 0 !important; }
+    h1, h2, h3 { margin: 0.2rem 0 !important; font-size: 1.1rem !important; }
+    [data-testid="stHeader"] { display: none !important; height: 0 !important; }
+    button[type="submit"] { min-height: 36px !important; margin-top: 0.3rem !important; }
+    [data-testid="stExpander"] { margin-bottom: 0.2rem !important; }
+}
+"""
+st.markdown(f"<style>{_CSS_CRITICO_MOBILE}</style>", unsafe_allow_html=True)
+
 if "_db_bootstrapped" not in st.session_state:
     # Sin precarga de PHI: monolito y multiclínica cargan la base en login / recuperación / tenant.
     inicializar_db_state(None, precargar_usuario_admin_emergencia=False)
