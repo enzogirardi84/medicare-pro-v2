@@ -371,17 +371,20 @@ def render_mobile_sidebar_toggle() -> None:
     }
 
     function sidebarState() {
+      // Fuente de verdad principal: aria-expanded en el sidebar
+      var sidebar = getSidebar();
+      if (sidebar) {
+        var expanded = sidebar.getAttribute("aria-expanded");
+        if (expanded === "true") return "open";
+        if (expanded === "false") return "closed";
+      }
+
+      // Fallback: clases CSS propias
       var root = getRoot();
       if (root) {
         if (root.classList.contains("mc-sidebar-mobile-open")) return "open";
         if (root.classList.contains("mc-sidebar-mobile-closed")) return "closed";
       }
-
-      var closeControl = getCloseControl();
-      if (isVisible(closeControl)) return "open";
-
-      var openControl = getOpenControl();
-      if (isVisible(openControl)) return "closed";
 
       return "unknown";
     }
@@ -422,7 +425,7 @@ def render_mobile_sidebar_toggle() -> None:
         return;
       }
 
-      var width = "min(84vw, 320px)";
+      var width = isMobileViewport() ? "100vw" : "min(84vw, 320px)";
       setImportant(sidebar, "position", "fixed");
       setImportant(sidebar, "top", "0");
       setImportant(sidebar, "left", "0");
