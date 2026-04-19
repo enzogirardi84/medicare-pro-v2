@@ -4176,19 +4176,26 @@ html, body {
         height: 100dvh !important;
         margin: 0 !important;
         transform: translateX(calc(-100% - 16px)) !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
         pointer-events: none !important;
         border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
         box-shadow: none !important;
         transition:
             transform 0.18s ease,
+            opacity 0.18s ease,
             box-shadow 0.18s ease !important;
         will-change: transform;
+        overflow: hidden !important;
     }
 
     html.mc-sidebar-mobile-open section[data-testid="stSidebar"] {
         transform: translateX(0) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
         pointer-events: auto !important;
         box-shadow: 0 16px 34px rgba(2, 6, 23, 0.34) !important;
+        overflow: visible !important;
     }
 
     [data-testid="stSidebar"] > div:first-child {
@@ -4213,8 +4220,14 @@ html, body {
 
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] button,
     [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebar"] button[kind="header"] {
+    [data-testid="stSidebar"] button[kind="header"],
+    button[kind="headerNoPadding"] {
         display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 }

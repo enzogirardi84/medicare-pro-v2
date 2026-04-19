@@ -232,9 +232,12 @@ def render_mobile_sidebar_toggle() -> None:
     var BUTTON_ID = "mc-mobile-sidebar-toggle-btn";
 
     function ensureStyle() {
-      if (parentDoc.getElementById(STYLE_ID)) return;
-      var style = parentDoc.createElement("style");
-      style.id = STYLE_ID;
+      var style = parentDoc.getElementById(STYLE_ID);
+      if (!style) {
+        style = parentDoc.createElement("style");
+        style.id = STYLE_ID;
+        parentDoc.head.appendChild(style);
+      }
       style.textContent = [
         "#"+BUTTON_ID+"{position:fixed;left:12px;top:12px;z-index:10015;",
         "display:none;align-items:center;justify-content:center;width:42px;height:42px;padding:0;",
@@ -248,7 +251,6 @@ def render_mobile_sidebar_toggle() -> None:
         "@media (max-width: 767px){#"+BUTTON_ID+"{display:inline-flex;}}",
         "@media (min-width: 768px){#"+BUTTON_ID+"{display:none !important;}}"
       ].join("");
-      parentDoc.head.appendChild(style);
     }
 
     function ensureButton() {
@@ -292,6 +294,21 @@ def render_mobile_sidebar_toggle() -> None:
       return parentDoc.documentElement;
     }
 
+    function nativeControlSelectors() {
+      return [
+        '[data-testid="stSidebarCollapsedControl"]',
+        '[data-testid="stSidebarCollapsedControl"] button',
+        '[data-testid="collapsedControl"]',
+        '[data-testid="collapsedControl"] button',
+        '[data-testid="stExpandSidebarButton"]',
+        '[data-testid="stExpandSidebarButton"] button',
+        '[data-testid="stSidebarCollapseButton"]',
+        '[data-testid="stSidebarCollapseButton"] button',
+        '[data-testid="stSidebar"] button[kind="header"]',
+        'button[kind="headerNoPadding"]'
+      ];
+    }
+
     function isVisible(el) {
       if (!el) return false;
       var style = parentWin.getComputedStyle(el);
@@ -327,6 +344,28 @@ def render_mobile_sidebar_toggle() -> None:
       }
       root.classList.toggle("mc-sidebar-mobile-open", !!open);
       root.classList.toggle("mc-sidebar-mobile-closed", !open);
+    }
+
+    function syncNativeControls() {
+      var hide = isMobileViewport();
+      var selectors = nativeControlSelectors();
+      for (var i = 0; i < selectors.length; i += 1) {
+        var nodes = parentDoc.querySelectorAll(selectors[i]);
+        for (var j = 0; j < nodes.length; j += 1) {
+          var el = nodes[j];
+          if (hide) {
+            el.style.setProperty("display", "none", "important");
+            el.style.setProperty("visibility", "hidden", "important");
+            el.style.setProperty("opacity", "0", "important");
+            el.style.setProperty("pointer-events", "none", "important");
+          } else {
+            el.style.removeProperty("display");
+            el.style.removeProperty("visibility");
+            el.style.removeProperty("opacity");
+            el.style.removeProperty("pointer-events");
+          }
+        }
+      }
     }
 
     function press(el) {
@@ -375,6 +414,7 @@ def render_mobile_sidebar_toggle() -> None:
 
     function syncButton() {
       var btn = ensureButton();
+      syncNativeControls();
       if (!isMobileViewport()) {
         setSidebarOpen(false);
         btn.style.display = "none";
