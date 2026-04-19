@@ -4107,67 +4107,8 @@ html, body {
     40%            { opacity: 1;   transform: scale(1.1); }
 }
 
-/* ===== BOTON HAMBURGUESA MOVIL ===== */
-@media (max-width: 992px) {
-
-    /* Contenedor del botón: visible y posicionado */
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        position: fixed !important;
-        top: 12px !important;
-        left: 12px !important;
-        width: 44px !important;
-        height: 44px !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        border-radius: 12px !important;
-        background: linear-gradient(135deg, #0f766e 0%, #0e7490 100%) !important;
-        border: 1.5px solid rgba(94, 234, 212, 0.3) !important;
-        box-shadow: 0 4px 16px rgba(13, 148, 136, 0.4) !important;
-        align-items: center !important;
-        justify-content: center !important;
-        z-index: 999999 !important;
-        pointer-events: auto !important;
-        cursor: pointer !important;
-    }
-
-    /* El <button> interno: también debe ser clickeable */
-    [data-testid="collapsedControl"] button,
-    [data-testid="stSidebarCollapsedControl"] button {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        cursor: pointer !important;
-        width: 100% !important;
-        height: 100% !important;
-        background: transparent !important;
-        border: none !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    [data-testid="collapsedControl"] svg,
-    [data-testid="stSidebarCollapsedControl"] svg {
-        display: block !important;
-        visibility: visible !important;
-        color: #ffffff !important;
-        fill: #ffffff !important;
-        stroke: #ffffff !important;
-        width: 20px !important;
-        height: 20px !important;
-        pointer-events: none !important;
-    }
-
-    /* Padding-top al contenido para no quedar bajo el botón */
-    .main .block-container,
-    [data-testid="block-container"] {
-        padding-top: 4rem !important;
-    }
-}
+/* El boton hamburguesa movil lo maneja el JS en core/ui_liviano.py
+   No agregar estilos CSS aqui para no interferir con los inline del JS */
 
 /* ===== SIDEBAR MOVIL: NO tocar width - dejar que Streamlit controle apertura ===== */
 @media (max-width: 992px) {
