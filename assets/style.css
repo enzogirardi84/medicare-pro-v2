@@ -4646,7 +4646,7 @@ html body .mc-spinner {
 
     /* Marker visual para verificar que CSS se carga */
     html body .block-container::before {
-        content: "CSS v19:05 OK" !important;
+        content: "CSS v19:10 OK" !important;
         display: block !important;
         background: #51B171 !important;
         color: white !important;
@@ -4665,54 +4665,96 @@ html body .mc-spinner {
         visibility: hidden !important;
     }
 
-    /* === RESET MÓVIL: Compactar toda la interfaz (del snippet del usuario) === */
+    /* === RESET MÓVIL NUCLEAR: Compactar TODA la interfaz === */
 
     /* 1. Reducir el padding general de la pantalla */
     html body .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 1rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
     }
 
-    /* 2. Aplastar el gap gigante que Streamlit le pone a las columnas apiladas */
+    /* 2. Aplastar TODOS los gaps de Streamlit */
     [data-testid="stVerticalBlock"] {
-        gap: 0.2rem !important;
+        gap: 0.15rem !important;
+    }
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.15rem !important;
     }
 
-    /* 3. Reducir el margen inferior de cada elemento individual */
+    /* 3. Reducir el margen de CADA elemento */
     [data-testid="stElementContainer"] {
-        margin-bottom: 0.2rem !important;
+        margin-bottom: 0.1rem !important;
+        margin-top: 0 !important;
     }
 
-    /* 4. Pegar la etiqueta al cuadro de input */
+    /* 4. Pegar la etiqueta al input */
     .stNumberInput label,
     .stTextInput label,
     .stSelectbox label,
+    .stTextArea label,
     [data-testid="stNumberInput"] label,
     [data-testid="stTextInput"] label,
-    [data-testid="stSelectbox"] label {
-        padding-bottom: 0px !important;
-        margin-bottom: -5px !important;
+    [data-testid="stSelectbox"] label,
+    [data-testid="stTextArea"] label {
+        padding-bottom: 0 !important;
+        margin-bottom: -2px !important;
+        margin-top: 0 !important;
         min-height: auto !important;
-        font-size: 14px !important;
+        font-size: 13px !important;
+        line-height: 1.2 !important;
     }
 
-    /* 5. Achicar el alto de los inputs para ganar espacio vertical */
+    /* 5. Compactar inputs */
     input[type="number"],
     input[type="text"],
     .stNumberInput input,
-    .stTextInput input {
-        min-height: 38px !important;
+    .stTextInput input,
+    .stTextArea textarea {
+        min-height: 36px !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
     }
 
-    /* 6. Reducir alturas en columnas apiladas */
-    html body [data-testid="stHorizontalBlock"],
-    html body [data-testid="stHorizontalBlock"] > *,
-    html body [data-testid="stHorizontalBlock"] > * > *,
-    html body [data-testid="stHorizontalBlock"] > * > * > * {
+    /* 6. Reducir espacios en formularios */
+    [data-testid="stForm"] {
+        padding: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* 7. Columnas apiladas sin altura forzada */
+    html body [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         height: auto !important;
         min-height: 0 !important;
-        max-height: none !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* 8. Separadores hr con menos margen */
+    hr {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* 9. Headers mas compactos */
+    h1, h2, h3 {
+        margin-top: 0.3rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    /* 10. Expanders compactos */
+    [data-testid="stExpander"] {
+        margin-bottom: 0.3rem !important;
+    }
+
+    /* 11. Containers con altura fija: limitar en mobile */
+    [data-testid="stVerticalBlockBorderWrapper"][style*="height"] {
+        max-height: 50vh !important;
+    }
+
+    /* 12. Botones submit mas compactos */
+    button[type="submit"] {
+        min-height: 40px !important;
+        margin-top: 0.5rem !important;
     }
 }
