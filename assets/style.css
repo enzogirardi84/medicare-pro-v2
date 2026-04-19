@@ -4385,3 +4385,136 @@ html body .mc-spinner {
     opacity: 1 !important;
     visibility: visible !important;
 }
+
+/* =====================================================================
+   MOBILE POLISH (<=767px): fixes globales aplicables a TODAS las vistas
+   para evitar espacios muertos, containers gigantes y layouts rotos.
+   ===================================================================== */
+@media (max-width: 767px) {
+    /* Containers con height fijo (ej. st.container(height=520)): limitar
+       a max 55vh para no ocupar toda la pantalla con un scroll interno. */
+    [data-testid="stVerticalBlockBorderWrapper"][style*="height:"],
+    [data-testid="stVerticalBlock"][style*="height:"],
+    div[data-testid="stVerticalBlock"] > div[style*="height:"] {
+        max-height: 55vh !important;
+        height: auto !important;
+        min-height: 0 !important;
+    }
+
+    /* Forms: padding mas compacto */
+    div[data-testid="stForm"] {
+        padding: 0.75rem 0.85rem 0.6rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Expanders: sin margen vertical grande */
+    [data-testid="stExpander"] {
+        margin-bottom: 0.4rem !important;
+    }
+    [data-testid="stExpander"] details {
+        margin: 0 !important;
+    }
+
+    /* Tabs: bordes compactos, sin margen vertical excesivo */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        gap: 0.25rem !important;
+        padding: 0 !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        padding: 0.45rem 0.7rem !important;
+        min-height: 38px !important;
+        font-size: 0.85rem !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-panel"] {
+        padding-top: 0.5rem !important;
+    }
+
+    /* Selectbox: label mas pegado al input */
+    [data-testid="stSelectbox"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stTextArea"] label,
+    [data-testid="stDateInput"] label {
+        margin-bottom: 0.15rem !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Alertas (st.info / warning / success / error): padding compacto */
+    div[data-testid="stAlert"] {
+        padding: 0.55rem 0.75rem !important;
+        margin: 0.3rem 0 !important;
+    }
+    div[data-testid="stAlert"] p {
+        margin: 0 !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Caption: sin margen top */
+    [data-testid="stCaptionContainer"] {
+        margin-top: 0 !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* Metrics: padding compacto */
+    [data-testid="stMetric"] {
+        padding: 0.5rem 0.65rem !important;
+        margin: 0.15rem 0 !important;
+    }
+
+    /* Cards custom (mc-card, mc-callout, etc.): menos padding */
+    .mc-card, .mc-callout, .mc-brand-card, .mc-chip-row {
+        padding: 0.7rem 0.85rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    .mc-grid-3 {
+        gap: 0.5rem !important;
+        grid-template-columns: 1fr !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* DataFrames: altura limitada */
+    [data-testid="stDataFrame"] {
+        max-height: 50vh !important;
+    }
+
+    /* Subheaders y h2/h3 con poco margen */
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    [data-testid="stMarkdownContainer"] h4 {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    /* Download button: mas chico en mobile */
+    [data-testid="stDownloadButton"] button {
+        padding: 0.55rem 0.9rem !important;
+        font-size: 0.85rem !important;
+        min-height: 40px !important;
+    }
+
+    /* Progress bar: mas chico */
+    [data-testid="stProgress"] {
+        margin: 0.3rem 0 !important;
+    }
+
+    /* File uploader: mas compacto */
+    [data-testid="stFileUploader"] {
+        padding: 0.5rem !important;
+    }
+    [data-testid="stFileUploader"] section {
+        padding: 0.75rem !important;
+    }
+}
+
+/* TABLET (768-1024px): reducir containers fijos muy altos tambien */
+@media (min-width: 768px) and (max-width: 1024px) {
+    [data-testid="stVerticalBlockBorderWrapper"][style*="height:"] {
+        max-height: 60vh !important;
+    }
+    div[data-testid="stForm"] {
+        padding: 1rem 1.1rem 0.85rem !important;
+    }
+    [data-testid="stExpander"] {
+        margin-bottom: 0.6rem !important;
+    }
+}
