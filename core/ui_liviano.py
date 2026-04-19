@@ -308,7 +308,7 @@ def render_mobile_sidebar_toggle() -> None:
       return parentDoc.documentElement;
     }
 
-    function nativeControlSelectors() {
+    function nativeOpenControlSelectors() {
       return [
         '[data-testid="stSidebarCollapsedControl"]',
         '[data-testid="stSidebarCollapsedControl"] button',
@@ -316,6 +316,12 @@ def render_mobile_sidebar_toggle() -> None:
         '[data-testid="collapsedControl"] button',
         '[data-testid="stExpandSidebarButton"]',
         '[data-testid="stExpandSidebarButton"] button',
+        '[aria-label="Open sidebar"]'
+      ];
+    }
+
+    function nativeCloseControlSelectors() {
+      return [
         '[data-testid="stSidebarCollapseButton"]',
         '[data-testid="stSidebarCollapseButton"] button',
         '[data-testid="stSidebar"] button[kind="header"]',
@@ -323,7 +329,6 @@ def render_mobile_sidebar_toggle() -> None:
         '[data-testid="baseButton-header"]',
         'button[kind="headerNoPadding"]',
         'button[kind="header"]',
-        '[aria-label="Open sidebar"]',
         '[aria-label="Close sidebar"]'
       ];
     }
@@ -338,6 +343,22 @@ def render_mobile_sidebar_toggle() -> None:
       for (var i = 0; i < props.length; i += 1) {
         el.style.removeProperty(props[i]);
       }
+    }
+
+    function collectUniqueNodes(selectors) {
+      var out = [];
+      var seen = new Set();
+      for (var i = 0; i < selectors.length; i += 1) {
+        var nodes = parentDoc.querySelectorAll(selectors[i]);
+        for (var j = 0; j < nodes.length; j += 1) {
+          var el = nodes[j];
+          if (!seen.has(el)) {
+            seen.add(el);
+            out.push(el);
+          }
+        }
+      }
+      return out;
     }
 
     function isVisible(el) {
@@ -470,24 +491,73 @@ def render_mobile_sidebar_toggle() -> None:
     }
 
     function syncNativeControls() {
-      var hide = isMobileViewport();
-      var selectors = nativeControlSelectors();
-      for (var i = 0; i < selectors.length; i += 1) {
-        var nodes = parentDoc.querySelectorAll(selectors[i]);
-        for (var j = 0; j < nodes.length; j += 1) {
-          var el = nodes[j];
-          if (hide) {
-            el.style.setProperty("display", "none", "important");
-            el.style.setProperty("visibility", "hidden", "important");
-            el.style.setProperty("opacity", "0", "important");
-            el.style.setProperty("pointer-events", "none", "important");
-          } else {
-            el.style.removeProperty("display");
-            el.style.removeProperty("visibility");
-            el.style.removeProperty("opacity");
-            el.style.removeProperty("pointer-events");
-          }
+      var mobile = isMobileViewport();
+      var open = sidebarState() === "open";
+      var openNodes = collectUniqueNodes(nativeOpenControlSelectors());
+      var closeNodes = collectUniqueNodes(nativeCloseControlSelectors());
+      var props = [
+        "display", "position", "left", "top", "transform", "z-index", "width", "height",
+        "min-width", "max-width", "min-height", "padding", "border", "border-radius",
+        "background", "box-shadow", "visibility", "opacity", "pointer-events", "color",
+        "fill", "stroke", "overflow"
+      ];
+
+      function showToggle(el) {
+        setImportant(el, "display", "inline-flex");
+        setImportant(el, "position", "fixed");
+        setImportant(el, "left", "0");
+        setImportant(el, "top", "50%");
+        setImportant(el, "transform", "translateY(-50%)");
+        setImportant(el, "z-index", "10016");
+        setImportant(el, "width", "34px");
+        setImportant(el, "height", "54px");
+        setImportant(el, "min-width", "34px");
+        setImportant(el, "max-width", "34px");
+        setImportant(el, "min-height", "54px");
+        setImportant(el, "padding", "0");
+        setImportant(el, "border", "none");
+        setImportant(el, "border-radius", "0 12px 12px 0");
+        setImportant(el, "background", "linear-gradient(180deg,#14b8a6 0%,#2563eb 100%)");
+        setImportant(el, "box-shadow", "0 10px 22px rgba(2,6,23,.24), inset 0 1px 0 rgba(255,255,255,.16)");
+        setImportant(el, "visibility", "visible");
+        setImportant(el, "opacity", "1");
+        setImportant(el, "pointer-events", "auto");
+        setImportant(el, "overflow", "hidden");
+        var svg = el.querySelector ? el.querySelector("svg") : null;
+        if (svg) {
+          setImportant(svg, "width", "18px");
+          setImportant(svg, "height", "18px");
+          setImportant(svg, "color", "#f8fafc");
+          setImportant(svg, "fill", "#f8fafc");
+          setImportant(svg, "stroke", "#f8fafc");
         }
+      }
+
+      function hideToggle(el) {
+        setImportant(el, "display", "none");
+        setImportant(el, "visibility", "hidden");
+        setImportant(el, "opacity", "0");
+        setImportant(el, "pointer-events", "none");
+      }
+
+      function resetToggle(el) {
+        clearInlineProps(el, props);
+        var svg = el.querySelector ? el.querySelector("svg") : null;
+        if (svg) {
+          clearInlineProps(svg, ["width", "height", "color", "fill", "stroke"]);
+        }
+      }
+
+      for (var i = 0; i < openNodes.length; i += 1) {
+        if (!mobile) resetToggle(openNodes[i]);
+        else if (open) hideToggle(openNodes[i]);
+        else showToggle(openNodes[i]);
+      }
+
+      for (var j = 0; j < closeNodes.length; j += 1) {
+        if (!mobile) resetToggle(closeNodes[j]);
+        else if (open) showToggle(closeNodes[j]);
+        else hideToggle(closeNodes[j]);
       }
     }
 
@@ -556,7 +626,7 @@ def render_mobile_sidebar_toggle() -> None:
         setSidebarOpen(false);
       }
       applyMobileSidebarLayout();
-      btn.style.display = "inline-flex";
+      btn.style.display = "none";
       var state = sidebarState();
       var open = state === "open";
       btn.classList.toggle("is-open", open);
