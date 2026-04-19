@@ -2604,16 +2604,28 @@ section.main > div {
     padding-bottom: max(2rem, var(--mc-safe-bottom)) !important;
 }
 
-/* Equipos o SO con “reducir movimiento”: menos animaciones (accesibilidad y tablets lentas) */
+/* Equipos o SO con "reducir movimiento": menos animaciones (accesibilidad y tablets lentas).
+   EXCEPCION: los spinners deben girar sino el usuario piensa que la app esta colgada. */
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto !important;
     }
 
-    .stApp * {
+    .stApp *:not([data-testid="stSpinner"]):not([data-baseweb="spinner"]):not(.stSpinner):not(.mc-spinner) {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+
+    [data-testid="stSpinner"],
+    [data-testid="stSpinner"] *,
+    .stSpinner,
+    .stSpinner *,
+    [data-baseweb="spinner"],
+    [data-baseweb="spinner"] * {
+        animation-duration: 0.85s !important;
+        animation-iteration-count: infinite !important;
+        animation-timing-function: linear !important;
     }
 }
 
@@ -3822,31 +3834,14 @@ html.mc-equipo-liviano iframe {
 
 /* --- MOVIL (< 768px) - OPTIMIZACION AGRESIVA --- */
 @media (max-width: 767px) {
-    /* Desactivar animaciones y efectos costosos */
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.1s !important;
-    }
+    /* NOTA: NO matamos animaciones globalmente porque eso rompe el spinner
+       de cargando (queda tildado). Los phones modernos manejan bien las
+       animaciones CSS; las optimizaciones reales son desactivar blur y
+       reducir shadows pesados, lo cual se hace mas abajo. */
 
-    /* EXCEPCION: el spinner (ruedita de cargando) DEBE girar aun en mobile.
-       Reglas mas especificas + !important para sobrescribir el kill global. */
-    [data-testid="stSpinner"],
-    [data-testid="stSpinner"] *,
-    [data-testid="stSpinner"] svg,
-    [data-testid="stSpinner"] i,
-    .stSpinner,
-    .stSpinner *,
-    .stSpinner svg,
-    [data-baseweb="spinner"],
-    [data-baseweb="spinner"] *,
-    [role="progressbar"] svg,
-    .mc-spinner,
-    .mc-spinner * {
-        animation-duration: 0.85s !important;
-        animation-iteration-count: infinite !important;
-        animation-timing-function: linear !important;
-        animation-play-state: running !important;
+    /* Reducir solo transiciones hover (no aplican en touch de todas formas) */
+    *:hover {
+        transition-duration: 0.1s !important;
     }
 
     /* Desactivar blur (muy costoso en movil) */
@@ -4344,4 +4339,31 @@ html, body {
         padding-right: 1rem !important;
         max-width: 100% !important;
     }
+}
+
+/* =====================================================================
+   FIX SPINNERS: garantizar que la ruedita de cargando siempre gire,
+   independientemente de killers de animaciones previos. Usa keyframes
+   propio (mc-spin-360) para no depender del nombre interno de Streamlit.
+   ===================================================================== */
+@keyframes mc-spin-360 {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+html body [data-testid="stSpinner"] svg,
+html body [data-testid="stSpinner"] > div,
+html body [data-testid="stSpinner"] i,
+html body .stSpinner svg,
+html body .stSpinner > div,
+html body [data-baseweb="spinner"],
+html body [data-baseweb="spinner"] svg,
+html body [role="progressbar"] svg,
+html body .mc-spinner {
+    animation: mc-spin-360 0.85s linear infinite !important;
+    animation-play-state: running !important;
+    transform-origin: center center !important;
+    will-change: transform !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
