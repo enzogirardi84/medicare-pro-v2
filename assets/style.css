@@ -4627,33 +4627,86 @@ html body .mc-spinner {
    Forzamos height:auto en TODO el arbol descendiente con * selector.
    ===================================================================== */
 @media (max-width: 767px) {
-    /* MARKER DE VERIFICACION v18:12 - si ves este borde verde, el CSS se actualizo.
-       Si no lo ves, hay un problema de cache (cerrar browser completamente). */
-    html body .block-container::before {
-        content: "CSS v18:12 OK" !important;
-        display: block !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        background: #10b981 !important;
-        color: white !important;
-        text-align: center !important;
-        padding: 4px !important;
-        font-size: 11px !important;
-        font-weight: 800 !important;
-        z-index: 99999 !important;
-    }
-    /* El propio stHorizontalBlock sin min-height heredado */
-    html body [data-testid="stHorizontalBlock"] {
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: none !important;
-        align-items: flex-start !important;
+    /* Loader cristal del snippet del usuario */
+    .mc-loader-cristal-overlay {
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
     }
 
-    /* TODOS los descendientes de stHorizontalBlock: height auto.
-       Esto barre con cualquier style="height:Xpx" inline de Streamlit. */
+    /* Ocultar header de Streamlit en mobile para ganar espacio */
+    header[data-testid="stHeader"],
+    [data-testid="stHeader"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Marker visual para verificar que CSS se carga */
+    html body .block-container::before {
+        content: "CSS v19:05 OK" !important;
+        display: block !important;
+        background: #51B171 !important;
+        color: white !important;
+        padding: 2px 8px !important;
+        font-size: 10px !important;
+        font-weight: bold !important;
+        border-radius: 4px !important;
+        margin-bottom: 4px !important;
+        text-align: center !important;
+        width: fit-content !important;
+    }
+
+    /* Ocultar elementos con clase ocultar-movil */
+    .ocultar-movil {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* === RESET MÓVIL: Compactar toda la interfaz (del snippet del usuario) === */
+
+    /* 1. Reducir el padding general de la pantalla */
+    html body .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* 2. Aplastar el gap gigante que Streamlit le pone a las columnas apiladas */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.2rem !important;
+    }
+
+    /* 3. Reducir el margen inferior de cada elemento individual */
+    [data-testid="stElementContainer"] {
+        margin-bottom: 0.2rem !important;
+    }
+
+    /* 4. Pegar la etiqueta al cuadro de input */
+    .stNumberInput label,
+    .stTextInput label,
+    .stSelectbox label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stSelectbox"] label {
+        padding-bottom: 0px !important;
+        margin-bottom: -5px !important;
+        min-height: auto !important;
+        font-size: 14px !important;
+    }
+
+    /* 5. Achicar el alto de los inputs para ganar espacio vertical */
+    input[type="number"],
+    input[type="text"],
+    .stNumberInput input,
+    .stTextInput input {
+        min-height: 38px !important;
+    }
+
+    /* 6. Reducir alturas en columnas apiladas */
     html body [data-testid="stHorizontalBlock"],
     html body [data-testid="stHorizontalBlock"] > *,
     html body [data-testid="stHorizontalBlock"] > * > *,
@@ -4661,33 +4714,5 @@ html body .mc-spinner {
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
-    }
-
-    /* Block container: padding final, ganamos sobre cualquier regla previa */
-    html body .block-container {
-        padding-top: 0.75rem !important;
-        padding-bottom: 0.5rem !important;
-    }
-    /* Vertical block: gap minimo */
-    html body [data-testid="stVerticalBlock"] {
-        gap: 0.25rem !important;
-    }
-    /* Element container: sin margin-bottom extra */
-    html body [data-testid="element-container"],
-    html body [data-testid="stElementContainer"],
-    html body .element-container {
-        margin-bottom: 0.12rem !important;
-    }
-    /* Markdown container: sin margen */
-    html body [data-testid="stMarkdownContainer"] {
-        margin-bottom: 0 !important;
-    }
-    html body [data-testid="stMarkdownContainer"] p:last-child {
-        margin-bottom: 0 !important;
-    }
-    /* Metrics: sin altura reservada */
-    html body [data-testid="stMetric"] {
-        height: auto !important;
-        min-height: 0 !important;
     }
 }
