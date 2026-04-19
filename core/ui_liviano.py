@@ -422,6 +422,18 @@ def render_mobile_sidebar_toggle() -> None:
         clearInlineProps(sidebar, sidebarProps);
         clearInlineProps(inner, innerProps);
         clearInlineProps(mainPanel, mainProps);
+        // Forzar limpieza de width/transform que el modo movil puede haber dejado
+        if (sidebar) {
+          sidebar.style.removeProperty("width");
+          sidebar.style.removeProperty("min-width");
+          sidebar.style.removeProperty("max-width");
+          sidebar.style.removeProperty("transform");
+          sidebar.style.removeProperty("position");
+          sidebar.style.removeProperty("visibility");
+          sidebar.style.removeProperty("opacity");
+        }
+        var closeBtn = parentDoc.getElementById("mc-sidebar-close-btn");
+        if (closeBtn) closeBtn.style.display = "none";
         return;
       }
 
