@@ -4150,34 +4150,15 @@ html, body {
     }
 }
 
-/* ===== SIDEBAR MOVIL: aria-expanded approach (sin JS extra) ===== */
+/* ===== SIDEBAR MOVIL: NO tocar width - dejar que Streamlit controle apertura ===== */
 @media (max-width: 992px) {
 
-    /* CERRADO: empujado fuera de pantalla, sin franja */
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        min-width: 0px !important;
-        max-width: 0px !important;
-        width: 0px !important;
-        transform: translateX(-100vw) !important;
-        border: none !important;
-        box-shadow: none !important;
-        overflow: hidden !important;
-    }
-
-    /* ABIERTO: pantalla completa, tapa todo el contenido */
-    [data-testid="stSidebar"][aria-expanded="true"] {
-        min-width: 100vw !important;
-        max-width: 100vw !important;
-        width: 100vw !important;
-        transform: translateX(0) !important;
-        z-index: 99999 !important;
-    }
-
-    /* Contenido principal: siempre a ancho completo */
+    /* El sidebar nativo de Streamlit maneja su propio display/width.
+       Solo nos aseguramos que el contenido principal no tenga margen lateral. */
     [data-testid="stMain"],
     [data-testid="stAppViewContainer"] > section:nth-child(2) {
-        width: 100vw !important;
-        max-width: 100vw !important;
+        width: 100% !important;
+        max-width: 100% !important;
         margin-left: 0 !important;
         padding-left: 0 !important;
     }
@@ -4185,16 +4166,5 @@ html, body {
     [data-testid="stAppViewContainer"],
     [data-testid="stMain"] {
         overflow-x: hidden !important;
-    }
-
-    /* Botón nativo de Streamlit: siempre visible y clickeable */
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        cursor: pointer !important;
-        z-index: 999999 !important;
     }
 }
