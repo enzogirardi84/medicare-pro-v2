@@ -124,11 +124,11 @@ except Exception:
 # CSS CRITICO INLINE: siempre se inyecta, no depende de cache del archivo
 # Esto garantiza que los fixes mobile lleguen al navegador
 _CSS_CRITICO_MOBILE = """
-/* CRITICO MOBILE v19:15 - Este CSS se inyecta inline y no tiene cache */
+/* CRITICO MOBILE v19:20 - Este CSS se inyecta inline y no tiene cache */
 @media (max-width: 767px) {
     /* Marker visible */
     html body .block-container::before {
-        content: "CSS v19:15 CRITICO OK" !important;
+        content: "CSS v19:20 CRITICO OK" !important;
         display: block !important;
         background: #ff4444 !important;
         color: white !important;
@@ -156,6 +156,30 @@ _CSS_CRITICO_MOBILE = """
     [data-testid="stHeader"] { display: none !important; height: 0 !important; }
     button[type="submit"] { min-height: 36px !important; margin-top: 0.3rem !important; }
     [data-testid="stExpander"] { margin-bottom: 0.2rem !important; }
+
+    /* === FIXES ESPECIFICOS LOGIN === */
+    /* st.caption tiene margen grande por defecto */
+    [data-testid="stCaptionContainer"] {
+        margin-top: 0.15rem !important;
+        margin-bottom: 0.15rem !important;
+    }
+    [data-testid="stCaptionContainer"] > div {
+        margin-bottom: 0 !important;
+    }
+    /* Expander: quitar margen superior */
+    [data-testid="stExpander"] {
+        margin-top: 0.2rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    /* st.radio compacto */
+    [data-testid="stRadio"] {
+        margin-bottom: 0.3rem !important;
+    }
+    /* st.info/st.warning/st.error compactos */
+    [data-testid="stAlert"] {
+        margin: 0.3rem 0 !important;
+        padding: 0.5rem !important;
+    }
 }
 """
 st.markdown(f"<style>{_CSS_CRITICO_MOBILE}</style>", unsafe_allow_html=True)

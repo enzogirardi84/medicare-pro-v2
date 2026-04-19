@@ -287,7 +287,7 @@ def render_login():
                 "letter-spacing:-0.03em;background:linear-gradient(120deg,#5eead4,#60a5fa,#a5b4fc);"
                 "-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent'>"
                 "MediCare Enterprise PRO</h2>"
-                "<p style='text-align:center;margin:0 0 1rem;font-size:0.88rem;color:#94a3b8'>V9.12 · Acceso institucional</p>",
+                "<p style='text-align:center;margin:0 0 0.3rem;font-size:0.88rem;color:#94a3b8'>V9.12 · Acceso institucional</p>",
                 unsafe_allow_html=True,
             )
             st.caption(
