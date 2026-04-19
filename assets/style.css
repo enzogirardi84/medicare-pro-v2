@@ -3838,14 +3838,41 @@ button[kind="headerNoPadding"] {
         overflow-x: hidden !important;
     }
 
-    /* Sidebar como drawer fullscreen */
+    /* Sidebar como drawer flotante en movil */
     [data-testid="stSidebar"] {
-        min-width: min(85vw, 320px) !important;
-        max-width: min(85vw, 320px) !important;
+        min-width: min(82vw, 300px) !important;
+        max-width: min(82vw, 300px) !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        z-index: 9998 !important;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.6) !important;
     }
 
     [data-testid="stSidebar"] > div:first-child {
         padding: 0.75rem 0.5rem !important;
+        height: 100% !important;
+        overflow-y: auto !important;
+    }
+
+    /* Overlay oscuro detrás del sidebar cuando está abierto */
+    [data-testid="stSidebar"]:not([aria-expanded="false"])::before {
+        content: "" !important;
+        display: block !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: min(82vw, 300px) !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.55) !important;
+        z-index: -1 !important;
+    }
+
+    /* El contenido principal NO se desplaza cuando el sidebar está abierto */
+    [data-testid="stMain"] {
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
     /* Botones tama�o touch optimo */

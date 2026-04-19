@@ -41,7 +41,7 @@ from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_re
 
 APP_BUILD_TAG = "Build 2026-04-13 fast-path landing (imports diferidos)"
 
-st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="collapsed")
 inyectar_redirect_apex_si_configurado()
 if not st.session_state.get("_mc_seo_head_inyectado"):
     inyectar_head_seo()
@@ -880,6 +880,70 @@ vista_actual = resolve_current_view(menu, menu_set)
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
 render_mobile_sidebar_toggle()
+
+# Inyectar JS para cerrar el sidebar automáticamente en móviles
+st.markdown("""
+<script>
+(function() {
+    function isMobile() {
+        return window.innerWidth < 768;
+    }
+
+    function closeSidebar() {
+        // Buscar el botón de colapso dentro del sidebar
+        var collapseBtn = document.querySelector('[data-testid="stSidebarCollapseButton"] button');
+        if (!collapseBtn) {
+            collapseBtn = document.querySelector('[data-testid="stSidebar"] button[kind="header"]');
+        }
+        if (collapseBtn) {
+            collapseBtn.click();
+        }
+    }
+
+    function setupMobileSidebar() {
+        if (!isMobile()) return;
+
+        // 1. Cerrar sidebar al cargar si está abierto en móvil
+        setTimeout(function() {
+            var sidebar = document.querySelector('[data-testid="stSidebar"]');
+            if (sidebar) {
+                var rect = sidebar.getBoundingClientRect();
+                // Si el sidebar está visible (tiene ancho > 0 y está en pantalla)
+                if (rect.width > 50 && rect.left >= 0) {
+                    closeSidebar();
+                }
+            }
+        }, 800);
+
+        // 2. Cerrar sidebar al hacer click en un módulo (pills/buttons del nav)
+        document.addEventListener('click', function(e) {
+            if (!isMobile()) return;
+            var sidebar = document.querySelector('[data-testid="stSidebar"]');
+            if (!sidebar) return;
+            // Si el click NO fue dentro del sidebar, cerrar
+            if (!sidebar.contains(e.target)) {
+                var rect = sidebar.getBoundingClientRect();
+                if (rect.width > 50 && rect.left >= 0) {
+                    // Dar tiempo a que se procese el click antes de cerrar
+                    setTimeout(closeSidebar, 150);
+                }
+            }
+        });
+    }
+
+    // Ejecutar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupMobileSidebar);
+    } else {
+        setupMobileSidebar();
+    }
+
+    // Re-ejecutar en cada navegación de Streamlit
+    window.addEventListener('load', setupMobileSidebar);
+})();
+</script>
+""", unsafe_allow_html=True)
+
 # En móvil usamos solo el panel lateral izquierdo; evitamos duplicar menú y selector arriba.
 render_alerta_inventario_banda_superior(mi_empresa, menu)
 if not vista_actual:
