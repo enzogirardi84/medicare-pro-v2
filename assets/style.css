@@ -4549,24 +4549,32 @@ html body .mc-spinner {
 }
 
 /* =====================================================================
-   MOBILE NUKE: reset agresivo de heights en descendientes de columnas.
-   Ultimo recurso para los casos donde Streamlit setea style inline en
-   elementos internos que heredan altura de la columna mas alta.
+   MOBILE NUCLEAR RESET: reset absoluto de heights en stHorizontalBlock.
+   Streamlit 1.56 setea height inline en stColumn para igualar alturas
+   entre columnas (util en desktop, catastrofico en mobile al apilar).
+   Forzamos height:auto en TODO el arbol descendiente con * selector.
    ===================================================================== */
 @media (max-width: 767px) {
-    /* Forzar height:auto en CUALQUIER descendant de stHorizontalBlock
-       que tenga un style="height:" inline */
-    html body [data-testid="stHorizontalBlock"] [style*="height:"] {
+    /* El propio stHorizontalBlock sin min-height heredado */
+    html body [data-testid="stHorizontalBlock"] {
         height: auto !important;
         min-height: 0 !important;
+        max-height: none !important;
+        align-items: flex-start !important;
     }
-    /* El primer hijo de cada stColumn (contenedor interno) tambien */
-    html body [data-testid="stColumn"] > *:first-child,
-    html body [data-testid="column"] > *:first-child {
+
+    /* TODOS los descendientes de stHorizontalBlock: height auto.
+       Esto barre con cualquier style="height:Xpx" inline de Streamlit. */
+    html body [data-testid="stHorizontalBlock"],
+    html body [data-testid="stHorizontalBlock"] > *,
+    html body [data-testid="stHorizontalBlock"] > * > *,
+    html body [data-testid="stHorizontalBlock"] > * > * > * {
         height: auto !important;
         min-height: 0 !important;
+        max-height: none !important;
     }
-    /* Block container: padding-top final, ganamos sobre cualquier regla previa */
+
+    /* Block container: padding final, ganamos sobre cualquier regla previa */
     html body .block-container {
         padding-top: 0.75rem !important;
         padding-bottom: 0.5rem !important;
@@ -4587,5 +4595,10 @@ html body .mc-spinner {
     }
     html body [data-testid="stMarkdownContainer"] p:last-child {
         margin-bottom: 0 !important;
+    }
+    /* Metrics: sin altura reservada */
+    html body [data-testid="stMetric"] {
+        height: auto !important;
+        min-height: 0 !important;
     }
 }
