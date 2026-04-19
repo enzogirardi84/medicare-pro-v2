@@ -2598,10 +2598,42 @@ section.main > div {
 }
 
 .block-container {
-    padding-top: max(1.85rem, var(--mc-safe-top)) !important;
+    padding-top: 1.2rem !important;
     padding-left: max(1rem, var(--mc-safe-left)) !important;
     padding-right: max(1rem, var(--mc-safe-right)) !important;
-    padding-bottom: max(2rem, var(--mc-safe-bottom)) !important;
+    padding-bottom: max(1.2rem, var(--mc-safe-bottom)) !important;
+}
+
+/* MOBILE: padding-top minimo. NO usar safe-area-inset-top aca porque el
+   top bar del browser ya respeta el notch; duplicar ese padding empuja
+   todo el login fuera del primer vistazo. Usar valor fijo chico. */
+@media (max-width: 767px) {
+    html body .block-container,
+    html body .stApp .block-container,
+    html body [data-testid="stAppViewContainer"] .block-container {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    /* Eliminar padding-top extra en stApp / stMain (si los hay) */
+    html body [data-testid="stAppViewContainer"],
+    html body [data-testid="stMain"],
+    html body section.main {
+        padding-top: 0 !important;
+    }
+    /* Header de Streamlit (top bar): no reservar espacio enorme */
+    html body header[data-testid="stHeader"] {
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+/* TABLET: tambien reducido pero menos agresivo */
+@media (min-width: 768px) and (max-width: 1024px) {
+    html body .block-container {
+        padding-top: 0.9rem !important;
+        padding-bottom: 0.9rem !important;
+    }
 }
 
 /* Equipos o SO con "reducir movimiento": menos animaciones (accesibilidad y tablets lentas).
