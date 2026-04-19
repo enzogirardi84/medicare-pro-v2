@@ -153,6 +153,17 @@ def _etiqueta_filtro_categoria(nombre):
     return f"{prefijos.get(nombre, '')}  {nombre}".strip()
 
 
+_VIEW_FN_CACHE: dict = {}
+
+
+def _get_render_fn(tab_name):
+    """Cachea render_fn en memoria de proceso para evitar import_module en cada rerun."""
+    if tab_name not in _VIEW_FN_CACHE:
+        module_name, function_name = VIEW_CONFIG[tab_name]
+        _VIEW_FN_CACHE[tab_name] = getattr(import_module(module_name), function_name)
+    return _VIEW_FN_CACHE[tab_name]
+
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=None):
     """menu_set: frozenset del menú ya resuelto (sidebar); evita recomputar permisos en cada rerun."""
     if menu_set is None:
@@ -160,9 +171,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=
     if tab_name not in menu_set:
         st.error("No tienes permisos para acceder a este modulo.")
         return
-    module_name, function_name = VIEW_CONFIG[tab_name]
     try:
-        render_fn = getattr(import_module(module_name), function_name)
+        render_fn = _get_render_fn(tab_name)
     except Exception as exc:
         render_carga_modulo_fallo(tab_name, exc)
         return
@@ -1055,70 +1065,6 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-    @media (max-width: 768px) {
-        html:not(.mc-sidebar-mobile-open) section[data-testid="stSidebar"],
-        html:not(.mc-sidebar-mobile-open) [data-testid="stSidebar"][aria-expanded="false"] {
-            width: 0px !important;
-            min-width: 0px !important;
-            max-width: 0px !important;
-            transform: translateX(-120%) !important;
-            border-right: none !important;
-            box-shadow: none !important;
-            overflow: hidden !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        html:not(.mc-sidebar-mobile-open) section[data-testid="stSidebar"] > div,
-        html:not(.mc-sidebar-mobile-open) [data-testid="stSidebar"][aria-expanded="false"] > div {
-            display: none !important;
-        }
-
-        [data-testid="stSidebarCollapsedControl"],
-        [data-testid="stSidebarCollapsedControl"] *,
-        [data-testid="collapsedControl"],
-        [data-testid="collapsedControl"] *,
-        [data-testid="stExpandSidebarButton"],
-        [data-testid="stExpandSidebarButton"] *,
-        [data-testid="stSidebarCollapseButton"],
-        [data-testid="stSidebarCollapseButton"] *,
-        [data-testid="stSidebar"] button[kind="header"],
-        button[kind="headerNoPadding"] {
-            display: none !important;
-            width: 0 !important;
-            min-width: 0 !important;
-            max-width: 0 !important;
-            height: 0 !important;
-            min-height: 0 !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            overflow: hidden !important;
-            pointer-events: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            border: 0 !important;
-        }
-
-        [data-testid="stAppViewContainer"] > section:nth-child(2),
-        [data-testid="stMain"] {
-            margin-left: 0px !important;
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-
-        .main .block-container {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            max-width: 100% !important;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # En móvil usamos solo el panel lateral izquierdo; evitamos duplicar menú y selector arriba.
 render_alerta_inventario_banda_superior(mi_empresa, menu)
