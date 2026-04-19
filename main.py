@@ -895,6 +895,11 @@ st.markdown("""
         }
     }
 
+    if (isMobile()) {
+        document.documentElement.classList.add("mc-sidebar-mobile-closed");
+        document.documentElement.classList.remove("mc-sidebar-mobile-open");
+    }
+
     function getSidebar() {
         return document.querySelector('section[data-testid="stSidebar"]');
     }

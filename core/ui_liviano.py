@@ -290,6 +290,20 @@ def render_mobile_sidebar_toggle() -> None:
       return parentDoc.querySelector('[data-testid="stSidebar"]');
     }
 
+    function getSidebarInner() {
+      var sidebar = getSidebar();
+      if (!sidebar) return null;
+      return sidebar.firstElementChild || null;
+    }
+
+    function getMainPanel() {
+      return (
+        parentDoc.querySelector('[data-testid="stAppViewContainer"] > section:nth-child(2)') ||
+        parentDoc.querySelector('[data-testid="stMain"]') ||
+        parentDoc.querySelector('section.main')
+      );
+    }
+
     function getRoot() {
       return parentDoc.documentElement;
     }
@@ -305,8 +319,25 @@ def render_mobile_sidebar_toggle() -> None:
         '[data-testid="stSidebarCollapseButton"]',
         '[data-testid="stSidebarCollapseButton"] button',
         '[data-testid="stSidebar"] button[kind="header"]',
-        'button[kind="headerNoPadding"]'
+        '[data-testid="baseButton-headerNoPadding"]',
+        '[data-testid="baseButton-header"]',
+        'button[kind="headerNoPadding"]',
+        'button[kind="header"]',
+        '[aria-label="Open sidebar"]',
+        '[aria-label="Close sidebar"]'
       ];
+    }
+
+    function setImportant(el, name, value) {
+      if (!el) return;
+      el.style.setProperty(name, value, "important");
+    }
+
+    function clearInlineProps(el, props) {
+      if (!el) return;
+      for (var i = 0; i < props.length; i += 1) {
+        el.style.removeProperty(props[i]);
+      }
     }
 
     function isVisible(el) {
@@ -344,6 +375,98 @@ def render_mobile_sidebar_toggle() -> None:
       }
       root.classList.toggle("mc-sidebar-mobile-open", !!open);
       root.classList.toggle("mc-sidebar-mobile-closed", !open);
+    }
+
+    function applyMobileSidebarLayout() {
+      var sidebar = getSidebar();
+      var inner = getSidebarInner();
+      var mainPanel = getMainPanel();
+      var mobile = isMobileViewport();
+      var open = sidebarState() === "open";
+      var sidebarProps = [
+        "position", "top", "left", "bottom", "z-index", "width", "min-width", "max-width",
+        "height", "margin", "padding", "transform", "opacity", "visibility", "pointer-events",
+        "border-right", "box-shadow", "overflow", "transition", "will-change"
+      ];
+      var innerProps = [
+        "display", "width", "min-width", "max-width", "height", "opacity", "visibility",
+        "pointer-events", "overflow-y", "overflow-x", "padding"
+      ];
+      var mainProps = ["margin-left", "width", "max-width", "padding-left"];
+
+      if (!mobile) {
+        clearInlineProps(sidebar, sidebarProps);
+        clearInlineProps(inner, innerProps);
+        clearInlineProps(mainPanel, mainProps);
+        return;
+      }
+
+      var width = "min(84vw, 320px)";
+      setImportant(sidebar, "position", "fixed");
+      setImportant(sidebar, "top", "0");
+      setImportant(sidebar, "left", "0");
+      setImportant(sidebar, "bottom", "0");
+      setImportant(sidebar, "z-index", "10012");
+      setImportant(sidebar, "height", "100dvh");
+      setImportant(sidebar, "margin", "0");
+      setImportant(sidebar, "padding", "0");
+      setImportant(sidebar, "transition", "transform 0.18s ease, opacity 0.18s ease, width 0.18s ease");
+      setImportant(sidebar, "will-change", "transform, opacity, width");
+
+      if (open) {
+        setImportant(sidebar, "width", width);
+        setImportant(sidebar, "min-width", width);
+        setImportant(sidebar, "max-width", width);
+        setImportant(sidebar, "transform", "translateX(0)");
+        setImportant(sidebar, "opacity", "1");
+        setImportant(sidebar, "visibility", "visible");
+        setImportant(sidebar, "pointer-events", "auto");
+        setImportant(sidebar, "border-right", "1px solid rgba(148, 163, 184, 0.12)");
+        setImportant(sidebar, "box-shadow", "0 16px 34px rgba(2, 6, 23, 0.34)");
+        setImportant(sidebar, "overflow", "visible");
+      } else {
+        setImportant(sidebar, "width", "0px");
+        setImportant(sidebar, "min-width", "0px");
+        setImportant(sidebar, "max-width", "0px");
+        setImportant(sidebar, "transform", "translateX(-100%)");
+        setImportant(sidebar, "opacity", "0");
+        setImportant(sidebar, "visibility", "hidden");
+        setImportant(sidebar, "pointer-events", "none");
+        setImportant(sidebar, "border-right", "none");
+        setImportant(sidebar, "box-shadow", "none");
+        setImportant(sidebar, "overflow", "hidden");
+      }
+
+      if (inner) {
+        setImportant(inner, "height", "100%");
+        setImportant(inner, "padding", "0.75rem 0.65rem");
+        setImportant(inner, "overflow-y", "auto");
+        setImportant(inner, "overflow-x", "hidden");
+        if (open) {
+          setImportant(inner, "display", "block");
+          setImportant(inner, "width", width);
+          setImportant(inner, "min-width", width);
+          setImportant(inner, "max-width", width);
+          setImportant(inner, "opacity", "1");
+          setImportant(inner, "visibility", "visible");
+          setImportant(inner, "pointer-events", "auto");
+        } else {
+          setImportant(inner, "display", "none");
+          setImportant(inner, "width", "0px");
+          setImportant(inner, "min-width", "0px");
+          setImportant(inner, "max-width", "0px");
+          setImportant(inner, "opacity", "0");
+          setImportant(inner, "visibility", "hidden");
+          setImportant(inner, "pointer-events", "none");
+        }
+      }
+
+      if (mainPanel) {
+        setImportant(mainPanel, "margin-left", "0");
+        setImportant(mainPanel, "width", "100%");
+        setImportant(mainPanel, "max-width", "100%");
+        setImportant(mainPanel, "padding-left", "0");
+      }
     }
 
     function syncNativeControls() {
@@ -393,6 +516,7 @@ def render_mobile_sidebar_toggle() -> None:
     function toggleSidebar() {
       if (isMobileViewport()) {
         setSidebarOpen(sidebarState() !== "open");
+        applyMobileSidebarLayout();
       } else {
         var state = sidebarState();
         var done = false;
@@ -417,6 +541,7 @@ def render_mobile_sidebar_toggle() -> None:
       syncNativeControls();
       if (!isMobileViewport()) {
         setSidebarOpen(false);
+        applyMobileSidebarLayout();
         btn.style.display = "none";
         return;
       }
@@ -427,6 +552,7 @@ def render_mobile_sidebar_toggle() -> None:
       if (sidebarState() === "unknown") {
         setSidebarOpen(false);
       }
+      applyMobileSidebarLayout();
       btn.style.display = "inline-flex";
       var state = sidebarState();
       var open = state === "open";

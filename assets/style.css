@@ -2706,27 +2706,14 @@ div[data-testid="stDataFrame"] {
 
 /* ===== OPTIMIZACIONES MÓVILES Y TABLETS ===== */
 
-/* SIDEBAR MOVIL: fix definitivo usando aria-expanded */
+/* SIDEBAR MOVIL LEGACY: mantenemos solo ajustes internos, no layout ni visibilidad */
 @media (max-width: 768px) {
-
-    /* 1. Sidebar CERRADO: display:none, desaparece completamente del layout */
-    section[data-testid="stSidebar"][aria-expanded="false"] {
-        display: none !important;
-    }
-
-    /* 2. Sidebar ABIERTO: ocupa pantalla completa */
-    section[data-testid="stSidebar"][aria-expanded="true"] {
-        display: block !important;
-        min-width: 100vw !important;
-        max-width: 100vw !important;
-        width: 100vw !important;
-    }
 
     /* 3. Contenedor principal: padding uniforme sin margen sobrante */
     [data-testid="block-container"] {
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        max-width: 100vw !important;
+        max-width: 100% !important;
         overflow-x: hidden !important;
     }
 
@@ -2734,7 +2721,7 @@ div[data-testid="stDataFrame"] {
     [data-testid="stAppViewContainer"] > section:nth-child(2) {
         margin-left: 0 !important;
         padding-left: 0 !important;
-        width: 100vw !important;
+        width: 100% !important;
     }
     
     /* Botones más grandes para touch */
@@ -3695,54 +3682,54 @@ html.mc-equipo-liviano iframe {
    - Desktop: > 1024px
    ======================================================================== */
 
-/* --- BOTON TOGGLE DEL SIDEBAR: SIEMPRE VISIBLE EN TODOS LOS DISPOSITIVOS --- */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapseButton"],
-button[kind="headerNoPadding"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    z-index: 999999 !important;
-}
+/* --- CONTROLES NATIVOS DEL SIDEBAR: solo desktop/tablet --- */
+@media (min-width: 768px) {
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    button[kind="headerNoPadding"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 999999 !important;
+    }
 
-/* Boton flotante de toggle del sidebar - VISIBLE y grande */
-[data-testid="stSidebarCollapsedControl"] {
-    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
-    border: 2px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 12px !important;
-    padding: 8px 10px !important;
-    box-shadow:
-        0 6px 20px rgba(20, 184, 166, 0.45),
-        0 2px 6px rgba(0, 0, 0, 0.4) !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
+    [data-testid="stSidebarCollapsedControl"] {
+        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 12px !important;
+        padding: 8px 10px !important;
+        box-shadow:
+            0 6px 20px rgba(20, 184, 166, 0.45),
+            0 2px 6px rgba(0, 0, 0, 0.4) !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
 
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="stSidebarCollapsedControl"] svg {
-    color: #ffffff !important;
-    fill: #ffffff !important;
-    stroke: #ffffff !important;
-    width: 24px !important;
-    height: 24px !important;
-}
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="stSidebarCollapsedControl"] svg {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        width: 24px !important;
+        height: 24px !important;
+    }
 
-[data-testid="stSidebarCollapsedControl"]:hover {
-    background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%) !important;
-    transform: scale(1.05) !important;
-}
+    [data-testid="stSidebarCollapsedControl"]:hover {
+        background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%) !important;
+        transform: scale(1.05) !important;
+    }
 
-/* Boton de cerrar dentro del sidebar tambien visible */
-[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
-[data-testid="stSidebar"] button[kind="header"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    color: #ffffff !important;
+    [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebar"] button[kind="header"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        color: #ffffff !important;
+    }
 }
 
 /* --- DESKTOP (> 1024px) --- */
@@ -3802,22 +3789,6 @@ button[kind="headerNoPadding"] {
 
 /* --- MOVIL (< 768px) - OPTIMIZACION AGRESIVA --- */
 @media (max-width: 767px) {
-    /* Boton toggle sidebar en movil: pequeno y en esquina, no tapa contenido */
-    [data-testid="stSidebarCollapsedControl"] {
-        position: fixed !important;
-        top: 4px !important;
-        left: 4px !important;
-        z-index: 9999 !important;
-        min-width: 36px !important;
-        min-height: 36px !important;
-        width: 36px !important;
-        height: 36px !important;
-        padding: 4px !important;
-        border-radius: 8px !important;
-        background: rgba(13,148,136,0.85) !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-    }
-    
     /* Desactivar animaciones y efectos costosos */
     * {
         animation-duration: 0.01ms !important;
@@ -3977,14 +3948,6 @@ button[kind="headerNoPadding"] {
 
     div[data-testid="stForm"] {
         padding: 0.7rem 0.6rem !important;
-    }
-
-    /* Boton toggle sidebar en pantalla pequena */
-    [data-testid="stSidebarCollapsedControl"] {
-        top: 0.4rem !important;
-        left: 0.4rem !important;
-        min-width: 38px !important;
-        min-height: 38px !important;
     }
 
     /* Gap de columnas reducido */
