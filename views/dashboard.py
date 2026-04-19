@@ -35,30 +35,40 @@ def _sumar_importe(registros):
 
 
 def render_dashboard(mi_empresa, rol):
-    st.markdown(
-        f"""
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Dashboard ejecutivo</h2>
-            <p class="mc-hero-text">Lectura rapida para {escape(str(mi_empresa))}: pacientes, agenda, visitas del dia, urgencias recientes y cambios de medicacion. Abajo, graficos y listados para priorizar acciones.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Pacientes activos</span>
-                <span class="mc-chip">Agenda y urgencias</span>
-                <span class="mc-chip">Productividad por profesional</span>
+    from core.utils import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
+    if es_movil:
+        st.markdown(
+            f'<div class="mc-hero"><h2 class="mc-hero-title">Dashboard</h2>'
+            f'<p class="mc-hero-text" style="font-size:0.82rem;margin:0">{escape(str(mi_empresa))}</p></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"""
+            <div class="mc-hero">
+                <h2 class="mc-hero-title">Dashboard ejecutivo</h2>
+                <p class="mc-hero-text">Lectura rapida para {escape(str(mi_empresa))}: pacientes, agenda, visitas del dia, urgencias recientes y cambios de medicacion. Abajo, graficos y listados para priorizar acciones.</p>
+                <div class="mc-chip-row">
+                    <span class="mc-chip">Pacientes activos</span>
+                    <span class="mc-chip">Agenda y urgencias</span>
+                    <span class="mc-chip">Productividad por profesional</span>
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    bloque_mc_grid_tarjetas(
-        [
-            ("Agenda", "Turnos por estado y lista prioritaria: quien viene y cuando."),
-            ("Operacion", "Conteo de activos, altas y visitas fichadas hoy."),
-            ("Alertas", "Urgencias ultimos 30 dias, medicacion suspendida/modificada y balance."),
-        ]
-    )
-    st.caption(
-        "Las metricas de la primera fila son conteos del momento; la segunda fila mezcla ventana de 48 h, 30 dias y senales clinicas. Los listados al final se pueden acotar con el selector de cantidad."
-    )
+            """,
+            unsafe_allow_html=True,
+        )
+        bloque_mc_grid_tarjetas(
+            [
+                ("Agenda", "Turnos por estado y lista prioritaria: quien viene y cuando."),
+                ("Operacion", "Conteo de activos, altas y visitas fichadas hoy."),
+                ("Alertas", "Urgencias ultimos 30 dias, medicacion suspendida/modificada y balance."),
+            ]
+        )
+        st.caption(
+            "Las metricas de la primera fila son conteos del momento; la segunda fila mezcla ventana de 48 h, 30 dias y senales clinicas. Los listados al final se pueden acotar con el selector de cantidad."
+        )
 
     rol_n = str(rol or "").strip().lower()
     if rol_n in {"superadmin", "admin"}:
@@ -169,17 +179,32 @@ def render_dashboard(mi_empresa, rol):
     fact_mes = _sumar_importe(facturacion)
     balance_actual = sum(float(x.get("balance", 0) or 0) for x in balance[-30:])
 
-    fila_1 = st.columns(4)
-    fila_1[0].metric("Pacientes activos", activos)
-    fila_1[1].metric("Pacientes de alta", altas)
-    fila_1[2].metric("Visitas hoy", len(visitas_hoy))
-    fila_1[3].metric("Pendientes hoy", len(pendientes_hoy))
+    if es_movil:
+        fila_1 = st.columns(2)
+        fila_1[0].metric("Activos", activos)
+        fila_1[1].metric("De alta", altas)
+        fila_2 = st.columns(2)
+        fila_2[0].metric("Visitas hoy", len(visitas_hoy))
+        fila_2[1].metric("Pendientes", len(pendientes_hoy))
+        fila_3 = st.columns(2)
+        fila_3[0].metric("48h", len(proximas_48))
+        fila_3[1].metric("Urgencias", len(urgencias_30))
+        if meds_suspendidas or balance_actual:
+            fila_4 = st.columns(2)
+            fila_4[0].metric("Cambios med.", len(meds_suspendidas))
+            fila_4[1].metric("Balance", f"{balance_actual:.0f}")
+    else:
+        fila_1 = st.columns(4)
+        fila_1[0].metric("Pacientes activos", activos)
+        fila_1[1].metric("Pacientes de alta", altas)
+        fila_1[2].metric("Visitas hoy", len(visitas_hoy))
+        fila_1[3].metric("Pendientes hoy", len(pendientes_hoy))
 
-    fila_2 = st.columns(4)
-    fila_2[0].metric("Proximas 48h", len(proximas_48))
-    fila_2[1].metric("Urgencias 30 dias", len(urgencias_30))
-    fila_2[2].metric("Cambios de medicacion", len(meds_suspendidas))
-    fila_2[3].metric("Balance registrado", f"{balance_actual:.0f}")
+        fila_2 = st.columns(4)
+        fila_2[0].metric("Proximas 48h", len(proximas_48))
+        fila_2[1].metric("Urgencias 30 dias", len(urgencias_30))
+        fila_2[2].metric("Cambios de medicacion", len(meds_suspendidas))
+        fila_2[3].metric("Balance registrado", f"{balance_actual:.0f}")
 
     if fact_mes:
         st.caption(f"Facturacion cargada en el sistema: ${fact_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -222,37 +247,48 @@ def render_dashboard(mi_empresa, rol):
     else:
         urg_chart = pd.DataFrame(columns=["Triage", "Eventos"])
 
-    col_g1, col_g2 = st.columns(2)
-    with col_g1:
-        st.caption("Agenda por estado")
-        if not agenda_estado.empty:
-            st.bar_chart(agenda_estado.set_index("Estado")["Cantidad"], use_container_width=True)
-        else:
-            bloque_estado_vacio(
-                "Gráfico sin datos",
-                "Todavía no hay turnos en agenda para armar el gráfico por estado.",
-                sugerencia="Agendá visitas en Visitas y Agenda o revisá filtros de empresa/rol.",
-            )
-    with col_g2:
-        st.caption("Visitas del dia por profesional")
-        if not visitas_prof.empty:
-            st.bar_chart(visitas_prof.set_index("Profesional")["Visitas"], use_container_width=True)
-        else:
-            bloque_estado_vacio(
-                "Sin visitas hoy",
-                "No hay fichadas o visitas del día con profesional asignado.",
-                sugerencia="El equipo puede registrar llegada/salida en Visitas para ver barras acá.",
-            )
+    if es_movil:
+        with st.expander("📊 Gráficos", expanded=False):
+            st.caption("Agenda por estado")
+            if not agenda_estado.empty:
+                st.bar_chart(agenda_estado.set_index("Estado")["Cantidad"], use_container_width=True)
+            st.caption("Visitas del dia por profesional")
+            if not visitas_prof.empty:
+                st.bar_chart(visitas_prof.set_index("Profesional")["Visitas"], use_container_width=True)
+    else:
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.caption("Agenda por estado")
+            if not agenda_estado.empty:
+                st.bar_chart(agenda_estado.set_index("Estado")["Cantidad"], use_container_width=True)
+            else:
+                bloque_estado_vacio(
+                    "Gráfico sin datos",
+                    "Todavía no hay turnos en agenda para armar el gráfico por estado.",
+                    sugerencia="Agendá visitas en Visitas y Agenda o revisá filtros de empresa/rol.",
+                )
+        with col_g2:
+            st.caption("Visitas del dia por profesional")
+            if not visitas_prof.empty:
+                st.bar_chart(visitas_prof.set_index("Profesional")["Visitas"], use_container_width=True)
+            else:
+                bloque_estado_vacio(
+                    "Sin visitas hoy",
+                    "No hay fichadas o visitas del día con profesional asignado.",
+                    sugerencia="El equipo puede registrar llegada/salida en Visitas para ver barras acá.",
+                )
 
     if not urg_chart.empty:
         st.caption("Urgencias por triage (ultimos 30 dias)")
         st.bar_chart(urg_chart.set_index("Triage")["Eventos"], use_container_width=True)
 
     st.divider()
-    st.markdown("#### Listados ejecutivos")
+    if not es_movil:
+        st.markdown("#### Listados ejecutivos")
 
-    with lista_plegable("Tablas — agenda prioritaria y medicación", expanded=False, height=None):
-        col_l1, col_l2 = st.columns(2)
+    _listados_label = "📋 Agenda y medicación" if es_movil else "Tablas — agenda prioritaria y medicación"
+    with lista_plegable(_listados_label, expanded=False, height=None):
+        col_l1, col_l2 = st.columns(1 if es_movil else 2)
         with col_l1:
             st.caption("Agenda prioritaria")
             if agenda_enriquecida:
