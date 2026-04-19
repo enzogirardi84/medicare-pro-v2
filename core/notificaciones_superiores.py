@@ -211,6 +211,11 @@ def clasificar_inventario_alerta(
 _SESSION_INV_DISMISS = "_mc_inv_dismiss_firma"
 
 
+def _clave_inv_dismiss() -> str:
+    usuario = st.session_state.get("u_actual") or "anon"
+    return f"_mc_inv_dismiss_firma_{usuario}"
+
+
 def render_alerta_inventario_banda_superior(
     mi_empresa: str,
     menu: Optional[Sequence[str]] = None,
@@ -223,8 +228,14 @@ def render_alerta_inventario_banda_superior(
     """
     puede_ir_inventario = bool(menu) and _MOD_INVENTARIO in menu
     agotados, bajos = clasificar_inventario_alerta(st.session_state.get("inventario_db") or [], mi_empresa)
+    # Clave persistente por usuario dentro de la sesion
+    _dismiss_key = _clave_inv_dismiss()
+    # Migrar clave vieja si existe
+    if st.session_state.get(_SESSION_INV_DISMISS) and not st.session_state.get(_dismiss_key):
+        st.session_state[_dismiss_key] = st.session_state[_SESSION_INV_DISMISS]
     if not agotados and not bajos:
         toast_alerta_si_firma_cambia("insumos_alerta", "", None)
+        st.session_state.pop(_dismiss_key, None)
         st.session_state.pop(_SESSION_INV_DISMISS, None)
         return
 
@@ -239,7 +250,7 @@ def render_alerta_inventario_banda_superior(
         msg_inv = f"Insumos: {nb} ítem(s) con stock bajo (≤{STOCK_BAJO_MAX} u.)."
     toast_alerta_si_firma_cambia("insumos_alerta", f_inv, msg_inv, icon="📦")
 
-    minificado = st.session_state.get(_SESSION_INV_DISMISS) == f_inv
+    minificado = st.session_state.get(_dismiss_key) == f_inv
     if minificado:
         # Vista reducida: sin números (evita texto pegado); el detalle solo al pulsar «Mostrar».
         if puede_ir_inventario:
@@ -275,7 +286,8 @@ def render_alerta_inventario_banda_superior(
                 type="secondary",
                 use_container_width=True,
             ):
-                st.session_state[_SESSION_INV_DISMISS] = None
+                st.session_state.pop(_dismiss_key, None)
+                st.session_state.pop(_SESSION_INV_DISMISS, None)
                 st.rerun()
         return
 
@@ -315,7 +327,7 @@ def render_alerta_inventario_banda_superior(
                 type="secondary",
                 use_container_width=True,
             ):
-                st.session_state[_SESSION_INV_DISMISS] = f_inv
+                st.session_state[_dismiss_key] = f_inv
                 st.rerun()
     else:
         if st.button(
@@ -325,7 +337,7 @@ def render_alerta_inventario_banda_superior(
             type="secondary",
             use_container_width=True,
         ):
-            st.session_state[_SESSION_INV_DISMISS] = f_inv
+            st.session_state[_dismiss_key] = f_inv
             st.rerun()
 
     _h_det = min(280, max(160, 22 * (total + 3)))

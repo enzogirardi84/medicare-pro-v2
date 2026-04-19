@@ -29,9 +29,23 @@ def _tips_por_rol(rol: str) -> list[str]:
     ]
 
 
+def _clave_onboarding() -> str:
+    usuario = st.session_state.get("u_actual") or "anon"
+    return f"_mc_onboarding_oculto_{usuario}"
+
+
 def render_panel_bienvenida(rol: str, menu: list[str], etiquetas_nav: dict[str, str]) -> None:
-    if st.session_state.get("_mc_onboarding_oculto"):
+    from core.utils import headers_sugieren_equipo_liviano
+    clave = _clave_onboarding()
+    # Migrar clave vieja si existe
+    if st.session_state.get("_mc_onboarding_oculto") and not st.session_state.get(clave):
+        st.session_state[clave] = True
+    if st.session_state.get(clave):
         return
+    # En movil: solo mostrar si es la primera vez en la sesion (no expanded por defecto)
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    if es_movil and not st.session_state.get("_mc_onboarding_visto_movil"):
+        st.session_state["_mc_onboarding_visto_movil"] = True
     tips = _tips_por_rol(rol)
     modulos_txt = []
     for m in menu[:8]:
@@ -41,7 +55,7 @@ def render_panel_bienvenida(rol: str, menu: list[str], etiquetas_nav: dict[str, 
     if resto:
         lista_mod += f" · (+{resto} más en el menú)"
 
-    with st.expander("Primeros pasos en MediCare", expanded=True):
+    with st.expander("Primeros pasos en MediCare", expanded=not es_movil):
         st.markdown(
             f"""
             <div class="mc-onboarding-box">
@@ -56,6 +70,7 @@ def render_panel_bienvenida(rol: str, menu: list[str], etiquetas_nav: dict[str, 
         c1, c2 = st.columns([1, 2])
         with c1:
             if st.button("Entendido, ocultar", use_container_width=True, key="mc_onboarding_cerrar"):
+                st.session_state[clave] = True
                 st.session_state["_mc_onboarding_oculto"] = True
                 st.rerun()
         with c2:
