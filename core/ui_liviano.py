@@ -588,6 +588,12 @@ def render_mobile_sidebar_toggle() -> None:
         var opening = sidebarState() !== "open";
         setSidebarOpen(opening);
         applyMobileSidebarLayout();
+        // También presionar el boton nativo para que Streamlit actualice su estado
+        if (opening) {
+          press(getOpenControl());
+        } else {
+          press(getCloseControl());
+        }
         parentWin.setTimeout(syncButton, 90);
         parentWin.setTimeout(syncButton, 240);
       } else {
@@ -626,9 +632,9 @@ def render_mobile_sidebar_toggle() -> None:
         setSidebarOpen(false);
       }
       applyMobileSidebarLayout();
-      btn.style.display = "none";
       var state = sidebarState();
       var open = state === "open";
+      btn.style.display = "inline-flex";
       btn.classList.toggle("is-open", open);
       btn.innerHTML = open
         ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&lt;</span>'
