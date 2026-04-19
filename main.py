@@ -372,6 +372,12 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=
         st.error("No tienes permisos para acceder a este modulo.")
         return
     try:
+        from core.view_helpers import aplicar_compactacion_movil_por_vista
+
+        aplicar_compactacion_movil_por_vista(tab_name)
+    except Exception:
+        pass
+    try:
         render_fn = _get_render_fn(tab_name)
     except Exception as exc:
         render_carga_modulo_fallo(tab_name, exc)
