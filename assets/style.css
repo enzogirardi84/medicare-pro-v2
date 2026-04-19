@@ -436,15 +436,7 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
 
 /* Mobile optimizations (max-width: 767px) */
 @media (max-width: 767px) {
-    /* Asegurar que el sidebar sea visible en móviles */
-    [data-testid="stSidebar"] {
-        display: block !important;
-        visibility: visible !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        position: relative !important;
-        z-index: 1000 !important;
-    }
+    /* NO forzar ancho/posicion del sidebar en movil - dejar comportamiento nativo de Streamlit */
     
     /* Reducir efectos pesados en móviles para mejor rendimiento */
     .stButton > button,
@@ -2121,10 +2113,6 @@ hr {
         font-size: clamp(1.1rem, 5vw, 1.4rem) !important;
     }
 
-    [data-testid="stSidebar"] {
-        min-width: 268px !important;
-    }
-
     .mc-brand-card {
         padding: 1rem 0.9rem 0.92rem;
         border-radius: var(--radius-lg);
@@ -2718,10 +2706,9 @@ div[data-testid="stDataFrame"] {
 
 /* ===== OPTIMIZACIONES MÓVILES Y TABLETS ===== */
 
-/* Sidebar más compacto y usable en móviles */
+/* Sidebar compacto en movil - sin forzar min-width que rompe el colapso */
 @media (max-width: 768px) {
     [data-testid="stSidebar"] {
-        min-width: 280px !important;
         max-width: 85vw !important;
     }
     
@@ -3838,38 +3825,14 @@ button[kind="headerNoPadding"] {
         overflow-x: hidden !important;
     }
 
-    /* Sidebar como drawer flotante en movil */
-    [data-testid="stSidebar"] {
-        min-width: min(82vw, 300px) !important;
-        max-width: min(82vw, 300px) !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        height: 100vh !important;
-        z-index: 9998 !important;
-        box-shadow: 4px 0 24px rgba(0,0,0,0.6) !important;
-    }
-
+    /* Sidebar en movil: NO position:fixed, NO min-width forzado.
+       Streamlit maneja el colapso nativamente; solo ajustamos padding interno. */
     [data-testid="stSidebar"] > div:first-child {
         padding: 0.75rem 0.5rem !important;
-        height: 100% !important;
         overflow-y: auto !important;
     }
 
-    /* Overlay oscuro detrás del sidebar cuando está abierto */
-    [data-testid="stSidebar"]:not([aria-expanded="false"])::before {
-        content: "" !important;
-        display: block !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: min(82vw, 300px) !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: rgba(0, 0, 0, 0.55) !important;
-        z-index: -1 !important;
-    }
-
-    /* El contenido principal NO se desplaza cuando el sidebar está abierto */
+    /* Contenido principal siempre a pantalla completa en movil */
     [data-testid="stMain"] {
         margin-left: 0 !important;
         width: 100% !important;
