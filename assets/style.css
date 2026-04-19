@@ -4143,3 +4143,83 @@ html, body {
     0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
     40%            { opacity: 1;   transform: scale(1.1); }
 }
+
+/* ===== SIDEBAR MOVIL ESTABLE ===== */
+@media (max-width: 767px) {
+    :root {
+        --mc-mobile-sidebar-width: min(86vw, 320px);
+    }
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"] {
+        overflow-x: hidden !important;
+    }
+
+    .main .block-container,
+    [data-testid="block-container"] {
+        max-width: 100% !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    section[data-testid="stSidebar"] {
+        display: block !important;
+        min-width: 0 !important;
+        transition:
+            transform 0.18s ease,
+            width 0.18s ease,
+            min-width 0.18s ease,
+            max-width 0.18s ease,
+            box-shadow 0.18s ease !important;
+        will-change: transform;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        display: block !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        transform: translateX(-100%) !important;
+        border-right: none !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        display: block !important;
+        width: var(--mc-mobile-sidebar-width) !important;
+        min-width: var(--mc-mobile-sidebar-width) !important;
+        max-width: var(--mc-mobile-sidebar-width) !important;
+        transform: translateX(0) !important;
+        box-shadow: 0 16px 34px rgba(2, 6, 23, 0.34) !important;
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        padding: 0.75rem 0.65rem !important;
+        overflow-y: auto !important;
+        max-width: 100% !important;
+    }
+
+    [data-testid="stMain"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+    }
+
+    [data-testid="stAppViewContainer"] > section:nth-child(2) {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+}

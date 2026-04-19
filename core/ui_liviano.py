@@ -217,7 +217,7 @@ def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
 
 def render_mobile_sidebar_toggle() -> None:
     """
-    Boton flotante cliente-side para abrir/cerrar la sidebar en telefonos y tablets.
+    Boton flotante cliente-side para abrir/cerrar la sidebar en telefonos.
     """
     html = """
 <div id="mc-mobile-sidebar-toggle-anchor" style="height:0;width:0;overflow:hidden;"></div>
@@ -245,8 +245,8 @@ def render_mobile_sidebar_toggle() -> None:
         "#"+BUTTON_ID+":active{opacity:1;}",
         "#"+BUTTON_ID+".is-open{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}",
         "#"+BUTTON_ID+" .mc-mobile-sidebar-toggle-icon{display:block;line-height:1;transform:translateX(-1px);}",
-        "@media (max-width: 900px){#"+BUTTON_ID+"{display:inline-flex;}}",
-        "@media (min-width: 901px){#"+BUTTON_ID+"{display:none !important;}}"
+        "@media (max-width: 767px){#"+BUTTON_ID+"{display:inline-flex;}}",
+        "@media (min-width: 768px){#"+BUTTON_ID+"{display:none !important;}}"
       ].join("");
       parentDoc.head.appendChild(style);
     }
@@ -268,15 +268,15 @@ def render_mobile_sidebar_toggle() -> None:
 
     function isMobileViewport() {
       try {
-        return !!(parentWin.matchMedia && parentWin.matchMedia("(max-width: 900px)").matches);
+        return !!(parentWin.matchMedia && parentWin.matchMedia("(max-width: 767px)").matches);
       } catch (e) {
-        return (parentWin.innerWidth || 1280) <= 900;
+        return (parentWin.innerWidth || 1280) <= 767;
       }
     }
 
     function getOpenControl() {
       return parentDoc.querySelector(
-        '[data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] button, [data-testid="collapsedControl"] button, [data-testid="collapsedControl"]'
+        '[data-testid="stExpandSidebarButton"] button, [data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"] button, [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] button, [data-testid="collapsedControl"]'
       );
     }
 

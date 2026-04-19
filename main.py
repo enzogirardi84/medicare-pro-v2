@@ -885,32 +885,76 @@ render_mobile_sidebar_toggle()
 st.markdown("""
 <script>
 (function() {
+    var MOBILE_QUERY = "(max-width: 767px)";
+
     function isMobile() {
-        return window.innerWidth < 768;
+        try {
+            return !!(window.matchMedia && window.matchMedia(MOBILE_QUERY).matches);
+        } catch (e) {
+            return window.innerWidth <= 767;
+        }
+    }
+
+    function getSidebar() {
+        return document.querySelector('section[data-testid="stSidebar"]');
+    }
+
+    function getCollapseButton() {
+        return document.querySelector(
+            '[data-testid="stSidebarCollapseButton"] button, [data-testid="stSidebarCollapseButton"], [data-testid="stSidebar"] button[kind="header"]'
+        );
+    }
+
+    function sidebarIsOpen() {
+        var sidebar = getSidebar();
+        if (!sidebar) return false;
+        var expanded = sidebar.getAttribute("aria-expanded");
+        if (expanded === "true") return true;
+        if (expanded === "false") return false;
+
+        var rect = sidebar.getBoundingClientRect();
+        return rect.width > 48 && rect.left > (-rect.width + 8);
+    }
+
+    function syncFloatingToggle() {
+        try {
+            var parentWin = window.parent && window.parent !== window ? window.parent : window;
+            if (parentWin && typeof parentWin.__mcSidebarToggleSync === "function") {
+                parentWin.__mcSidebarToggleSync();
+            }
+        } catch (e) {}
     }
 
     function closeSidebar() {
         // Buscar el botón de colapso dentro del sidebar
-        var collapseBtn = document.querySelector('[data-testid="stSidebarCollapseButton"] button');
-        if (!collapseBtn) {
-            collapseBtn = document.querySelector('[data-testid="stSidebar"] button[kind="header"]');
+        if (!isMobile() || !sidebarIsOpen()) return false;
+        var collapseBtn = getCollapseButton();
+        if (!collapseBtn) return false;
+        collapseBtn.click();
+        syncFloatingToggle();
+        return true;
+    }
+
+    function shouldCloseFromSidebarTarget(target) {
+        if (!target || !target.closest) return false;
+        if (target.closest('[data-testid="stSidebarCollapseButton"], [data-testid="stSidebar"] button[kind="header"]')) {
+            return false;
         }
-        if (collapseBtn) {
-            collapseBtn.click();
-        }
+        return !!target.closest('button, [role="button"], a, label');
     }
 
     function setupMobileSidebar() {
-        if (!isMobile()) return;
+        if (window.__mcMobileSidebarAutoCloseInstalled) return;
+        window.__mcMobileSidebarAutoCloseInstalled = true;
 
         // 1. Cerrar sidebar al cargar si está abierto en móvil
         setTimeout(function() {
-            var sidebar = document.querySelector('[data-testid="stSidebar"]');
-            if (sidebar) {
-                var rect = sidebar.getBoundingClientRect();
+            var sidebar = getSidebar();
+            if (sidebar && sidebarIsOpen()) {
+                var closed = closeSidebar();
                 // Si el sidebar está visible (tiene ancho > 0 y está en pantalla)
-                if (rect.width > 50 && rect.left >= 0) {
-                    closeSidebar();
+                if (closed) {
+                    syncFloatingToggle();
                 }
             }
         }, 800);
@@ -918,8 +962,12 @@ st.markdown("""
         // 2. Cerrar sidebar al hacer click en un módulo (pills/buttons del nav)
         document.addEventListener('click', function(e) {
             if (!isMobile()) return;
-            var sidebar = document.querySelector('[data-testid="stSidebar"]');
-            if (!sidebar) return;
+            var sidebar = getSidebar();
+            if (!sidebar || !sidebarIsOpen()) return;
+            if (sidebar.contains(e.target) && shouldCloseFromSidebarTarget(e.target)) {
+                window.setTimeout(closeSidebar, 180);
+                return;
+            }
             // Si el click NO fue dentro del sidebar, cerrar
             if (!sidebar.contains(e.target)) {
                 var rect = sidebar.getBoundingClientRect();
@@ -938,8 +986,15 @@ st.markdown("""
         setupMobileSidebar();
     }
 
+    window.setTimeout(syncFloatingToggle, 160);
+    window.setTimeout(syncFloatingToggle, 700);
+    window.setTimeout(syncFloatingToggle, 1800);
+
     // Re-ejecutar en cada navegación de Streamlit
-    window.addEventListener('load', setupMobileSidebar);
+    window.addEventListener('load', function() {
+        setupMobileSidebar();
+        syncFloatingToggle();
+    });
 })();
 </script>
 """, unsafe_allow_html=True)
