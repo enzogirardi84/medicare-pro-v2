@@ -4232,12 +4232,16 @@ html, body {
     }
 
     /* --- 5. COLUMNAS: colapsar a 1 columna en pantallas muy chicas --- */
+    /* IMPORTANTE: flex-basis auto (NO 280px) para que al combinarse con
+       flex-direction: column (que otro media query aplica), las columnas se
+       adapten al contenido y no generen 280px de altura vacia por columna. */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: wrap !important;
     }
     [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-        min-width: min(100%, 280px) !important;
-        flex: 1 1 280px !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 0 0 auto !important;
     }
 }
 
