@@ -1,5 +1,6 @@
 import secrets
 import time
+from html import escape
 
 import streamlit as st
 
@@ -76,6 +77,40 @@ def _auth_set_flash(key: str, kind: str, message: str) -> None:
 
 def _auth_pop_flash(key: str) -> None:
     return None
+
+
+def _auth_loader_markup(subtitle: str) -> str:
+    texto = escape(str(subtitle or "Autenticando..."))
+    return f"""
+<style>
+.mc-auth-overlay{{position:fixed;inset:0;background:rgba(3,6,15,0.82);
+backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;
+flex-direction:column;justify-content:center;align-items:center;z-index:9999999;
+gap:16px;padding:1rem;text-align:center;}}
+.mc-auth-spinner{{display:block;flex:0 0 auto;width:46px;height:46px;
+border:3px solid rgba(255,255,255,0.08);border-left-color:#14b8a6;
+border-top-color:#60a5fa;border-radius:50%;animation:mc-auth-spin 0.9s linear infinite;
+-webkit-animation:mc-auth-spin 0.9s linear infinite;transform-origin:center center;
+will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;}}
+.mc-auth-title{{color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+font-size:18px;font-weight:700;letter-spacing:0.2px;margin:0;}}
+.mc-auth-sub{{color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+font-size:13px;font-weight:500;letter-spacing:0.25px;margin:0;}}
+@keyframes mc-auth-spin{{to{{transform:rotate(360deg);}}}}
+@-webkit-keyframes mc-auth-spin{{to{{transform:rotate(360deg);}}}}
+@media (max-width: 767px){{
+  .mc-auth-overlay{{gap:14px;padding:0.9rem;background:rgba(3,6,15,0.9);}}
+  .mc-auth-spinner{{width:42px;height:42px;}}
+  .mc-auth-title{{font-size:16px;}}
+  .mc-auth-sub{{font-size:12px;}}
+}}
+</style>
+<div class="mc-auth-overlay" role="status" aria-live="polite">
+  <div class="mc-auth-spinner mc-spinner" aria-hidden="true"></div>
+  <p class="mc-auth-title">MediCare Enterprise PRO</p>
+  <p class="mc-auth-sub">{texto}</p>
+</div>
+"""
 
 
 def _auth_strip_pwreset_url_si_hay_param() -> bool:
@@ -271,10 +306,66 @@ def render_login():
         st.stop()
 
     if not st.session_state["logeado"]:
+        from core.ui_liviano import headers_sugieren_equipo_liviano
+
+        es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
         _auth_strip_modulo_query_param()
         if _auth_strip_pwreset_url_si_hay_param():
             st.session_state["_mc_pwreset_url_aviso_once"] = True
-        _, col, _ = st.columns([0.9, 1.35, 0.9])
+        st.markdown(
+            """
+            <style>
+            @media (max-width: 767px) {
+                .block-container {
+                    padding-top: 0.35rem !important;
+                }
+                [data-testid="stRadio"] {
+                    margin: 0.1rem 0 0.2rem !important;
+                }
+                [data-testid="stRadio"] [role="radiogroup"] {
+                    gap: 0.45rem 0.6rem !important;
+                }
+                div[data-testid="stExpander"] {
+                    margin-bottom: 0.35rem !important;
+                }
+                div[data-testid="stForm"] {
+                    padding: 0.72rem 0.78rem !important;
+                    margin: 0.18rem 0 0.38rem !important;
+                    border-radius: 16px !important;
+                }
+                div[data-testid="stForm"] [data-testid="stVerticalBlock"] {
+                    gap: 0.24rem !important;
+                }
+                div[data-testid="stForm"] [data-testid="stElementContainer"] {
+                    margin-bottom: 0.18rem !important;
+                }
+                div[data-testid="stForm"] label {
+                    margin: 0 0 0.14rem 0 !important;
+                    padding-bottom: 0 !important;
+                    line-height: 1.15 !important;
+                }
+                div[data-testid="stForm"] input {
+                    min-height: 38px !important;
+                }
+                div[data-testid="stForm"] [data-testid="stTextInput"],
+                div[data-testid="stForm"] [data-testid="stNumberInput"] {
+                    margin: 0 !important;
+                }
+                div[data-testid="stForm"] [data-testid="stFormSubmitButton"] {
+                    margin-top: 0.32rem !important;
+                }
+                div[data-testid="stForm"] button[type="submit"] {
+                    min-height: 40px !important;
+                }
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        if es_movil:
+            col = st.container()
+        else:
+            _, col, _ = st.columns([0.9, 1.35, 0.9])
         with col:
             st.markdown(
                 "<div style='text-align:center;margin-bottom:0.35rem'>"
@@ -290,11 +381,15 @@ def render_login():
                 "<p style='text-align:center;margin:0 0 0.3rem;font-size:0.88rem;color:#94a3b8'>V9.12 · Acceso institucional</p>",
                 unsafe_allow_html=True,
             )
-            st.caption(
+            intro_login = (
+                "Ingresá con el usuario y la contraseña asignados por tu clínica."
+                if es_movil
+                else
                 "Ingresá con el usuario (login) y contraseña que te asignó tu clínica. "
                 "Si la clínica fue suspendida por abono o decisión administrativa, el acceso queda bloqueado hasta la reactivación: "
                 "contactá a MediCare o a tu coordinador."
             )
+            st.caption(intro_login)
             with st.expander("Problemas para ingresar o fallas del sistema", expanded=False):
                 st.markdown(
                     "- Confirmá **usuario**, **contraseña** y, en multiclínica, **empresa** exacta como en Mi equipo.\n"
@@ -322,11 +417,17 @@ def render_login():
             )
             if modo_auth == "login":
                 st.caption(
+                    "Ingresá con **usuario** y **contraseña**."
+                    if es_movil
+                    else
                     "Ingresá con **usuario** y **contraseña**. La contraseña no es el DNI salvo que tu clínica te haya "
                     "configurado la cuenta así."
                 )
             else:
                 st.caption(
+                    "Usá tu **PIN de 4 dígitos** para definir una clave nueva."
+                    if es_movil
+                    else
                     "Si **coordinación** te cargó un **PIN de 4 dígitos** en Mi equipo, podés definir una **clave nueva** "
                     "sin correo. Sin PIN, pedí la clave a coordinación."
                 )
@@ -462,38 +563,9 @@ def render_login():
                             st.error(lock_msg)
                         else:
                             _loader_ph = st.empty()
-                            _loader_ph.markdown("""
-<style>
-.mc-auth-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;
-background:rgba(3,6,15,0.82);backdrop-filter:blur(14px);
--webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;
-justify-content:center;align-items:center;z-index:9999999;gap:20px;}
-.mc-auth-spinner{width:46px;height:46px;border:3px solid rgba(255,255,255,0.08);
-border-left-color:#14b8a6;border-top-color:#60a5fa;border-radius:50%;
-animation:mc-auth-spin 0.9s linear infinite;}
-.mc-auth-title{color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-font-size:18px;font-weight:600;letter-spacing:0.3px;margin:0;}
-.mc-auth-sub{color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-font-size:13px;font-weight:400;letter-spacing:0.4px;margin:0;
-animation:mc-auth-pulse 1.6s ease-in-out infinite;}
-@keyframes mc-auth-spin{to{transform:rotate(360deg);}}
-@keyframes mc-auth-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
-</style>
-<div class="mc-auth-overlay">
-  <div class="mc-auth-spinner"></div>
-  <p class="mc-auth-title">MediCare Enterprise PRO</p>
-  <p class="mc-auth-sub">Autenticando...</p>
-</div>
-""", unsafe_allow_html=True)
+                            _loader_ph.markdown(_auth_loader_markup("Autenticando..."), unsafe_allow_html=True)
                             db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
-                            _loader_ph.markdown("""
-<style>.mc-auth-sub{animation:none !important;}</style>
-<div class="mc-auth-overlay">
-  <div class="mc-auth-spinner"></div>
-  <p class="mc-auth-title">MediCare Enterprise PRO</p>
-  <p class="mc-auth-sub">Verificando acceso...</p>
-</div>
-""", unsafe_allow_html=True)
+                            _loader_ph.markdown(_auth_loader_markup("Verificando acceso..."), unsafe_allow_html=True)
                             if err_db:
                                 _loader_ph.empty()
                                 st.error(err_db)

@@ -4103,6 +4103,22 @@ html.mc-equipo-liviano iframe {
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+
+    [data-testid="stSpinner"],
+    [data-testid="stSpinner"] *,
+    .stSpinner,
+    .stSpinner *,
+    [data-baseweb="spinner"],
+    [data-baseweb="spinner"] *,
+    .mc-spinner,
+    .mc-auth-spinner,
+    .mc-tr-spinner,
+    .mc-loader-cristal-spinner {
+        animation-duration: 0.85s !important;
+        animation-iteration-count: infinite !important;
+        animation-timing-function: linear !important;
+        animation-play-state: running !important;
+    }
 }
 
 /* --- PREVENIR ZOOM HORIZONTAL --- */
@@ -4453,7 +4469,10 @@ html body .stSpinner > div,
 html body [data-baseweb="spinner"],
 html body [data-baseweb="spinner"] svg,
 html body [role="progressbar"] svg,
-html body .mc-spinner {
+html body .mc-spinner,
+html body .mc-auth-spinner,
+html body .mc-tr-spinner,
+html body .mc-loader-cristal-spinner {
     animation: mc-spin-360 0.85s linear infinite !important;
     animation-play-state: running !important;
     transform-origin: center center !important;

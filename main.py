@@ -1097,13 +1097,15 @@ animation:mc-tr-fadeout 0.55s ease 0.7s forwards;}
 @keyframes mc-tr-fadeout{from{opacity:1}to{opacity:0;pointer-events:none;visibility:hidden;}}
 .mc-tr-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,0.06);
 border-left-color:#14b8a6;border-top-color:#60a5fa;border-radius:50%;
-animation:mc-tr-spin 0.9s linear infinite;}
+animation:mc-tr-spin 0.9s linear infinite;-webkit-animation:mc-tr-spin 0.9s linear infinite;
+transform-origin:center center;will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
 .mc-tr-text{color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 font-size:13px;font-weight:500;letter-spacing:0.3px;}
 @keyframes mc-tr-spin{to{transform:rotate(360deg);}}
+@-webkit-keyframes mc-tr-spin{to{transform:rotate(360deg);}}
 </style>
 <div id="mc-login-transition-overlay">
-  <div class="mc-tr-spinner"></div>
+  <div class="mc-tr-spinner mc-spinner"></div>
   <span class="mc-tr-text">Cargando sistema...</span>
 </div>
 """, unsafe_allow_html=True)
