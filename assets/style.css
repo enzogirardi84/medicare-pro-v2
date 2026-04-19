@@ -4414,6 +4414,28 @@ html, body {
 }
 
 /* =====================================================================
+   LOADER CRISTAL (efecto blur) - del snippet del usuario
+   ===================================================================== */
+.mc-loader-cristal-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(14, 17, 23, 0.6);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 9999999;
+}
+.mc-loader-cristal-spinner {
+    width: 45px; height: 45px;
+    border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #51B171;
+    border-radius: 50%; animation: mc-spin-cristal 1s linear infinite; margin-bottom: 24px;
+}
+@keyframes mc-spin-cristal { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.mc-loader-cristal-texto {
+    color: #FFFFFF; font-family: -apple-system, sans-serif; font-size: 17px;
+    font-weight: 500; animation: mc-pulse-cristal 1.5s ease-in-out infinite;
+}
+@keyframes mc-pulse-cristal { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+/* =====================================================================
    FIX SPINNERS: garantizar que la ruedita de cargando siempre gire,
    independientemente de killers de animaciones previos. Usa keyframes
    propio (mc-spin-360) para no depender del nombre interno de Streamlit.
@@ -4557,6 +4579,24 @@ html body .mc-spinner {
     }
     [data-testid="stFileUploader"] section {
         padding: 0.75rem !important;
+    }
+}
+
+/* Ocultar elementos en mobile (para textos explicativos largos que no caben) */
+.ocultar-movil {
+    display: block;
+}
+@media (max-width: 767px) {
+    .ocultar-movil {
+        display: none !important;
+    }
+    /* Ocultar header de Streamlit en mobile (ganar espacio vertical) */
+    header[data-testid="stHeader"] {
+        visibility: hidden !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 }
 
