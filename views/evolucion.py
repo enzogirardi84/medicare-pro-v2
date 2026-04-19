@@ -282,16 +282,19 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             }
                         )
                         if exito_local:
-                            print(f"[EVOLUCION] Guardado local OK: {mensaje_local}")
+                            from core.app_logging import log_event
+                            log_event("evolucion", "guardado_local_ok")
                     except Exception as e_local:
-                        print(f"[EVOLUCION] Error guardado local: {e_local}")
+                        from core.app_logging import log_event
+                        log_event("evolucion", f"error_guardado_local:{type(e_local).__name__}")
                     
                     # Dual-write a la nueva API NextGen y PostgreSQL (puede fallar)
                     try:
                         from core.nextgen_sync import sync_visita_evolucion_to_nextgen
                         sync_visita_evolucion_to_nextgen(paciente_sel, nota)
                     except Exception as e_nextgen:
-                        print(f"[EVOLUCION] NextGen sync falló (esperado): {e_nextgen}")
+                        from core.app_logging import log_event
+                        log_event("evolucion", f"nextgen_sync_skip:{type(e_nextgen).__name__}")
                     
                     queue_toast("Evolucion guardada correctamente.")
                     # Limpiar draft y reset plantilla para la proxima entrada

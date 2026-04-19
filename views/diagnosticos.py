@@ -6,6 +6,7 @@ estado del sistema, logs, memoria y configuración.
 import streamlit as st
 import time
 from datetime import datetime
+from pathlib import Path
 
 
 def render_diagnosticos(user=None):
@@ -182,7 +183,6 @@ def render_diagnosticos(user=None):
     with tab3:
         st.markdown("### Estado del Archivo de Datos Local")
         from core.guardado_universal import _load_data
-        from pathlib import Path
 
         data = _load_data()
         local_path = Path(".streamlit/local_data.json")

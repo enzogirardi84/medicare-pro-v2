@@ -225,15 +225,15 @@ def render(paciente_sel=None, user=None):
                 hide_index=True,
                 height=min(400, len(df_signos) * 45 + 50),
                 column_config={
-                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width=130),
-                    'T.A.': st.column_config.TextColumn('T.A.', width=90),
-                    'F.C.': st.column_config.TextColumn('F.C.', width=70),
-                    'F.R.': st.column_config.TextColumn('F.R.', width=70),
-                    'Temp': st.column_config.TextColumn('Temp', width=70),
-                    'SatO2': st.column_config.TextColumn('SatO2', width=70),
-                    'Gluc': st.column_config.TextColumn('Gluc', width=70),
-                    'Obs': st.column_config.TextColumn('Observaciones', width=200),
-                    'Registrado por': st.column_config.TextColumn('Por', width=120)
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width='medium'),
+                    'T.A.': st.column_config.TextColumn('T.A.', width='small'),
+                    'F.C.': st.column_config.TextColumn('F.C.', width='small'),
+                    'F.R.': st.column_config.TextColumn('F.R.', width='small'),
+                    'Temp': st.column_config.TextColumn('Temp', width='small'),
+                    'SatO2': st.column_config.TextColumn('SatO2', width='small'),
+                    'Gluc': st.column_config.TextColumn('Gluc', width='small'),
+                    'Obs': st.column_config.TextColumn('Observaciones', width='large'),
+                    'Registrado por': st.column_config.TextColumn('Por', width='medium')
                 }
             )
             
@@ -333,11 +333,11 @@ def render(paciente_sel=None, user=None):
                 hide_index=True,
                 height=min(400, len(df_mat) * 45 + 50),
                 column_config={
-                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width=130),
-                    'Material/Insumo': st.column_config.TextColumn('Material', width=250),
-                    'Cantidad': st.column_config.TextColumn('Cantidad', width=90),
-                    'Observaciones': st.column_config.TextColumn('Observaciones', width=200),
-                    'Profesional': st.column_config.TextColumn('Por', width=120)
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width='medium'),
+                    'Material/Insumo': st.column_config.TextColumn('Material', width='large'),
+                    'Cantidad': st.column_config.TextColumn('Cantidad', width='small'),
+                    'Observaciones': st.column_config.TextColumn('Observaciones', width='large'),
+                    'Profesional': st.column_config.TextColumn('Por', width='medium')
                 }
             )
             

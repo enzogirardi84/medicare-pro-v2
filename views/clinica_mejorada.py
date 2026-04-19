@@ -85,13 +85,13 @@ def _render_tabla_signos_vitales(signos: List[Dict], paciente_nombre: str):
         use_container_width=True,
         height=min(400, len(df) * 45 + 50),
         column_config={
-            'Fecha y Hora': st.column_config.TextColumn('Fecha y Hora', width=150),
-            'T.A.': st.column_config.TextColumn('T.A.', width=80),
-            'F.C.': st.column_config.NumberColumn('F.C.', width=70),
-            'F.R.': st.column_config.NumberColumn('F.R.', width=70),
-            'Temp °C': st.column_config.NumberColumn('Temp', width=80, format="%.1f"),
-            'SatO2%': st.column_config.NumberColumn('SatO2%', width=80),
-            'Glucemia': st.column_config.TextColumn('Glucemia', width=90),
+            'Fecha y Hora': st.column_config.TextColumn('Fecha y Hora', width='medium'),
+            'T.A.': st.column_config.TextColumn('T.A.', width='small'),
+            'F.C.': st.column_config.NumberColumn('F.C.', width='small'),
+            'F.R.': st.column_config.NumberColumn('F.R.', width='small'),
+            'Temp °C': st.column_config.NumberColumn('Temp', width='small', format="%.1f"),
+            'SatO2%': st.column_config.NumberColumn('SatO2%', width='small'),
+            'Glucemia': st.column_config.TextColumn('Glucemia', width='small'),
         },
         hide_index=True
     )

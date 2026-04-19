@@ -139,7 +139,8 @@ def render_estudios(paciente_sel, user, rol=None):
                                 }
                                 insert_estudio(datos_sql)
                 except Exception as e:
-                    print(f"Error dual-write estudio: {e}")
+                    from core.app_logging import log_event
+                    log_event("estudios_sql", f"error_dual_write:{type(e).__name__}")
                 # ----------------------------------
                 
                 guardar_datos()
@@ -187,7 +188,8 @@ def render_estudios(paciente_sel, user, rol=None):
                             "extension": "pdf" if ".pdf" in str(e.get("archivo_url", "")).lower() else "jpg"
                         })
     except Exception as e:
-        print(f"Error en lectura SQL de estudios: {e}")
+        from core.app_logging import log_event
+        log_event("estudios_sql", f"error_lectura:{type(e).__name__}")
         
     if not uso_sql:
         estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e.get("paciente") == paciente_sel]

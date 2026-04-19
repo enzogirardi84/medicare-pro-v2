@@ -1704,7 +1704,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "usuario_login": extra.get("usuario_login", "")
                         })
     except Exception as e:
-        print(f"Error en lectura SQL de recetas: {e}")
+        from core.app_logging import log_event
+        log_event("recetas_sql", f"error_lectura:{type(e).__name__}")
 
     if not uso_sql_recetas:
         recs_todas = [r for r in st.session_state.get("indicaciones_db", []) if r.get("paciente") == paciente_sel]

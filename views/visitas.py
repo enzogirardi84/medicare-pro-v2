@@ -229,7 +229,8 @@ def _agenda_empresa(mi_empresa, rol):
                     "notas": t.get("notas", "")
                 })
     except Exception as e:
-        print(f"Error en lectura SQL de agenda: {e}")
+        from core.app_logging import log_event
+        log_event("visitas_sql", f"error_lectura_agenda:{type(e).__name__}")
         
     if uso_sql:
         return agenda_sql
@@ -378,7 +379,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             }
                             insert_checkin(datos_sql)
                     except Exception as e:
-                        print(f"Error dual-write checkin llegada: {e}")
+                        from core.app_logging import log_event
+                        log_event("visitas_sql", f"error_dual_write_checkin_in:{type(e).__name__}")
                     # ------------------------
                     
                     # Safe initialization antes de append
@@ -429,7 +431,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                             }
                             insert_checkin(datos_sql)
                     except Exception as e:
-                        print(f"Error dual-write checkin salida: {e}")
+                        from core.app_logging import log_event
+                        log_event("visitas_sql", f"error_dual_write_checkin_out:{type(e).__name__}")
                     # ------------------------
                     
                     # Safe initialization antes de append (ya inicializado arriba, verificamos igual)
@@ -482,7 +485,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                                 "empresa": mi_empresa,
                             })
     except Exception as e:
-        print(f"Error leyendo checkins SQL: {e}")
+        from core.app_logging import log_event
+        log_event("visitas_sql", f"error_lectura_checkins:{type(e).__name__}")
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not fichadas_hoy:
@@ -629,7 +633,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                                     }
                                     insert_turno(datos_sql)
                     except Exception as e:
-                        print(f"Error dual-write turno: {e}")
+                        from core.app_logging import log_event
+                        log_event("visitas_sql", f"error_dual_write_turno:{type(e).__name__}")
                     # ------------------------
                     
                     guardar_datos(spinner=True)
@@ -778,7 +783,8 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                                 nuevo_estado = "Realizada" if accion == "Marcar realizada" else "Cancelada"
                                 update_estado_turno(objetivo["id_sql"], nuevo_estado)
                             except Exception as e:
-                                print(f"Error dual-write update turno: {e}")
+                                from core.app_logging import log_event
+                                log_event("visitas_sql", f"error_dual_write_update_turno:{type(e).__name__}")
                         # -------------------------
                         
                         # Actualizar en JSON legacy

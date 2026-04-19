@@ -80,8 +80,8 @@ def render(paciente_sel=None, user=None):
                 )
             
             if exito:
-                st.success(f"✅ {mensaje}")
-                st.balloons()
+                from core.alert_toasts import queue_toast
+                queue_toast(f"✅ {mensaje}")
                 st.rerun()
             else:
                 st.error(f"❌ {mensaje}")
@@ -119,14 +119,14 @@ def render(paciente_sel=None, user=None):
             hide_index=True,
             height=min(400, len(df) * 45 + 50),
             column_config={
-                'Fecha': st.column_config.TextColumn('Fecha/Hora', width=120),
-                'T.A.': st.column_config.TextColumn('Tensión Arterial', width=100),
-                'F.C.': st.column_config.NumberColumn('Frec. Cardiaca', width=90),
-                'F.R.': st.column_config.NumberColumn('Frec. Respiratoria', width=90),
-                'Temp': st.column_config.NumberColumn('Temperatura °C', width=90, format="%.1f"),
-                'SatO2': st.column_config.NumberColumn('Sat O2 %', width=80),
-                'Gluc': st.column_config.TextColumn('Glucemia', width=80),
-                'Observaciones': st.column_config.TextColumn('Observaciones', width=200)
+                'Fecha': st.column_config.TextColumn('Fecha/Hora', width='medium'),
+                'T.A.': st.column_config.TextColumn('Tensión Arterial', width='medium'),
+                'F.C.': st.column_config.NumberColumn('Frec. Cardiaca', width='small'),
+                'F.R.': st.column_config.NumberColumn('Frec. Respiratoria', width='small'),
+                'Temp': st.column_config.NumberColumn('Temperatura °C', width='small', format="%.1f"),
+                'SatO2': st.column_config.NumberColumn('Sat O2 %', width='small'),
+                'Gluc': st.column_config.TextColumn('Glucemia', width='small'),
+                'Observaciones': st.column_config.TextColumn('Observaciones', width='large')
             }
         )
         
