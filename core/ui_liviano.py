@@ -439,6 +439,10 @@ def render_mobile_sidebar_toggle() -> None:
     }
 
     ensureStyle();
+    if (isMobileViewport() && sidebarState() === "unknown") {
+      setSidebarOpen(false);
+    }
+    syncNativeControls();
     syncButton();
     parentWin.setTimeout(syncButton, 700);
     parentWin.setTimeout(syncButton, 1800);
@@ -446,6 +450,25 @@ def render_mobile_sidebar_toggle() -> None:
     if (!parentWin.__mcSidebarToggleResizeHook) {
       parentWin.addEventListener("resize", syncButton, { passive: true });
       parentWin.__mcSidebarToggleResizeHook = true;
+    }
+
+    if (!parentWin.__mcSidebarToggleMutationHook && parentWin.MutationObserver && parentDoc.body) {
+      var observer = new parentWin.MutationObserver(function() {
+        try {
+          parentWin.clearTimeout(parentWin.__mcSidebarToggleMutationTimer);
+        } catch (e) {}
+        parentWin.__mcSidebarToggleMutationTimer = parentWin.setTimeout(function() {
+          syncNativeControls();
+          syncButton();
+        }, 40);
+      });
+      observer.observe(parentDoc.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-testid", "style", "class", "aria-expanded"]
+      });
+      parentWin.__mcSidebarToggleMutationHook = true;
     }
 
     parentWin.__mcSidebarToggleSync = syncButton;

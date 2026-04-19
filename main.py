@@ -1022,6 +1022,71 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+    @media (max-width: 768px) {
+        html:not(.mc-sidebar-mobile-open) section[data-testid="stSidebar"],
+        html:not(.mc-sidebar-mobile-open) [data-testid="stSidebar"][aria-expanded="false"] {
+            width: 0px !important;
+            min-width: 0px !important;
+            max-width: 0px !important;
+            transform: translateX(-120%) !important;
+            border-right: none !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        html:not(.mc-sidebar-mobile-open) section[data-testid="stSidebar"] > div,
+        html:not(.mc-sidebar-mobile-open) [data-testid="stSidebar"][aria-expanded="false"] > div {
+            display: none !important;
+        }
+
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stSidebarCollapsedControl"] *,
+        [data-testid="collapsedControl"],
+        [data-testid="collapsedControl"] *,
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="stExpandSidebarButton"] *,
+        [data-testid="stSidebarCollapseButton"],
+        [data-testid="stSidebarCollapseButton"] *,
+        [data-testid="stSidebar"] button[kind="header"],
+        button[kind="headerNoPadding"] {
+            display: none !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            height: 0 !important;
+            min-height: 0 !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+        }
+
+        [data-testid="stAppViewContainer"] > section:nth-child(2),
+        [data-testid="stMain"] {
+            margin-left: 0px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        .main .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 100% !important;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # En móvil usamos solo el panel lateral izquierdo; evitamos duplicar menú y selector arriba.
 render_alerta_inventario_banda_superior(mi_empresa, menu)
 if not vista_actual:
