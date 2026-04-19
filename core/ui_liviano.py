@@ -516,19 +516,10 @@ def render_mobile_sidebar_toggle() -> None:
     function toggleSidebar() {
       if (isMobileViewport()) {
         var opening = sidebarState() !== "open";
-        var handled = false;
-        if (opening) {
-          handled = press(getOpenControl());
-          setSidebarOpen(true);
-        } else {
-          handled = press(getCloseControl());
-          setSidebarOpen(false);
-        }
-        if (!handled) {
-          setSidebarOpen(opening);
-        }
+        setSidebarOpen(opening);
         applyMobileSidebarLayout();
         parentWin.setTimeout(syncButton, 90);
+        parentWin.setTimeout(syncButton, 240);
       } else {
         var state = sidebarState();
         var done = false;

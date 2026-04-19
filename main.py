@@ -971,6 +971,11 @@ st.markdown("""
         return !!target.closest('button, [role="button"], a, label');
     }
 
+    function clickCameFromFloatingToggle(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest('#mc-mobile-sidebar-toggle-btn');
+    }
+
     function setupMobileSidebar() {
         if (window.__mcMobileSidebarAutoCloseInstalled) return;
         window.__mcMobileSidebarAutoCloseInstalled = true;
@@ -990,6 +995,7 @@ st.markdown("""
         // 2. Cerrar sidebar al hacer click en un módulo (pills/buttons del nav)
         document.addEventListener('click', function(e) {
             if (!isMobile()) return;
+            if (clickCameFromFloatingToggle(e.target)) return;
             var sidebar = getSidebar();
             if (!sidebar || !sidebarIsOpen()) return;
             if (sidebar.contains(e.target) && shouldCloseFromSidebarTarget(e.target)) {
