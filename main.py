@@ -1083,7 +1083,8 @@ if not vista_actual:
     st.stop()
 
 _render_sidebar_contexto_clinico(paciente_sel, vista_actual)
-render_panel_bienvenida(rol, menu, VIEW_NAV_LABELS)
+# Panel "Primeros pasos en MediCare" removido por pedido del usuario (molesto).
+# render_panel_bienvenida(rol, menu, VIEW_NAV_LABELS)
 
 render_banner_alertas_criticas_si_aplica(mi_empresa)
 render_franja_avisos_operativos(mi_empresa)
