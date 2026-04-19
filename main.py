@@ -115,7 +115,6 @@ obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", N
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
 try:
-    import os as _os
     _css_path = Path(__file__).parent / "assets" / "style.css"
     _css_mtime = _css_path.stat().st_mtime if _css_path.exists() else 0.0
     st.markdown(f"<style>{cargar_texto_asset('style.css', _mtime=_css_mtime)}</style>", unsafe_allow_html=True)
@@ -594,6 +593,8 @@ def limpiar_sesion_app():
     st.session_state.pop("mc_nav_filtro_cat", None)
     st.session_state.pop("_mc_sidebar_logo_b64", None)
     st.session_state.pop("_mc_anticolapso_secret_cached", None)
+    st.session_state.pop("_mc_professional_theme_applied", None)
+    st.session_state.pop("_mc_login_transition", None)
     st.session_state["entered_app"] = False
 
 

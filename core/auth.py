@@ -495,8 +495,10 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
 </div>
 """, unsafe_allow_html=True)
                             if err_db:
+                                _loader_ph.empty()
                                 st.error(err_db)
                             elif db_f is None:
+                                _loader_ph.empty()
                                 st.error("No se pudieron cargar los datos.")
                             else:
                                 for k, v in db_f.items():
@@ -515,6 +517,7 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
                                     st.session_state["usuarios_db"][usuario_encontrado] = user_data
                                     ok_pw, migrar_hash = password_usuario_coincide(user_data, p.strip())
                                     if user_data.get("estado", "Activo") == "Bloqueado":
+                                        _loader_ph.empty()
                                         registrar_fallo_login(u_limpio)
                                         st.error(
                                             "Tu usuario está **bloqueado**. "
@@ -542,6 +545,7 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
                                                 }
                                             )
                                             _persistir_logs_tras_rechazo_clinica()
+                                            _loader_ph.empty()
                                             st.error(
                                                 "La clinica asignada a tu usuario esta suspendida (abono o decision administrativa). "
                                                 "No podes ingresar hasta la reactivacion. Si sos personal de la clinica, avisa a tu responsable; "
@@ -561,6 +565,7 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
                                                         "Te enviamos un código de 6 dígitos. Revisá tu correo y completá el paso siguiente."
                                                     )
                                                     st.rerun()
+                                                _loader_ph.empty()
                                                 st.error(err_send)
                                             else:
                                                 # 2FA por correo solo si el usuario tiene email válido (requiere_2fa_correo).
@@ -596,6 +601,7 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
                                                 "login_ok_admin_emergencia",
                                             )
                                         else:
+                                            _loader_ph.empty()
                                             registrar_fallo_login(u_limpio)
                                             st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
                                 else:
@@ -614,6 +620,7 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
                                             "login_ok_admin_emergencia",
                                         )
                                     else:
+                                        _loader_ph.empty()
                                         registrar_fallo_login(u_limpio)
                                         st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
         st.stop()
