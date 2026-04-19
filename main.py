@@ -122,63 +122,153 @@ except Exception:
     pass
 
 # CSS CRITICO INLINE: siempre se inyecta, no depende de cache del archivo
-# Esto garantiza que los fixes mobile lleguen al navegador
 _CSS_CRITICO_MOBILE = """
-/* CRITICO MOBILE v19:20 - Este CSS se inyecta inline y no tiene cache */
+/* NUCLEAR MOBILE v19:25 - Fuerza compactacion en TODOS los componentes */
 @media (max-width: 767px) {
-    /* Marker visible */
+    /* Marker rojo grande */
     html body .block-container::before {
-        content: "CSS v19:20 CRITICO OK" !important;
+        content: "CSS v19:25 NUCLEAR" !important;
         display: block !important;
-        background: #ff4444 !important;
+        background: #ff2222 !important;
         color: white !important;
-        padding: 4px 12px !important;
-        font-size: 12px !important;
+        padding: 6px !important;
+        font-size: 11px !important;
         font-weight: bold !important;
-        border-radius: 4px !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
         text-align: center !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
     }
-    /* Compactacion nuclear */
-    html body .block-container { padding: 0.4rem !important; }
-    [data-testid="stVerticalBlock"] { gap: 0.1rem !important; }
-    [data-testid="stHorizontalBlock"] { gap: 0.1rem !important; }
-    [data-testid="stElementContainer"] { margin-bottom: 0.05rem !important; margin-top: 0 !important; }
-    .stNumberInput label, .stTextInput label, .stSelectbox label {
-        margin-bottom: -4px !important; padding-bottom: 0 !important; font-size: 12px !important;
+    /* Reset absoluto de padding y margin en el contenedor principal */
+    html body .block-container {
+        padding: 0.3rem 0.5rem !important;
+        margin: 0 !important;
     }
-    input[type="number"], input[type="text"] { min-height: 34px !important; padding: 2px 6px !important; }
-    [data-testid="stForm"] { padding: 0.4rem !important; margin-bottom: 0.3rem !important; }
-    hr { margin: 0.3rem 0 !important; }
-    h1, h2, h3 { margin: 0.2rem 0 !important; font-size: 1.1rem !important; }
-    [data-testid="stHeader"] { display: none !important; height: 0 !important; }
-    button[type="submit"] { min-height: 36px !important; margin-top: 0.3rem !important; }
-    [data-testid="stExpander"] { margin-bottom: 0.2rem !important; }
-
-    /* === FIXES ESPECIFICOS LOGIN === */
-    /* st.caption tiene margen grande por defecto */
+    /* Todos los bloques verticales: gap minimo */
+    [data-testid="stVerticalBlock"],
+    [data-testid="stVerticalBlock"] > div {
+        gap: 0.05rem !important;
+        margin: 0 !important;
+    }
+    /* Todos los bloques horizontales: gap minimo */
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.05rem !important;
+    }
+    /* Todas las columnas: sin margin extra */
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        margin-bottom: 0.1rem !important;
+        padding: 0 !important;
+    }
+    /* Todos los elementos: margin casi cero */
+    [data-testid="stElementContainer"] {
+        margin: 0.05rem 0 !important;
+        padding: 0 !important;
+    }
+    /* Todos los contenedores de elementos */
+    .element-container, [data-testid="element-container"] {
+        margin-bottom: 0.05rem !important;
+    }
+    /* Todos los markdown: sin margin */
+    [data-testid="stMarkdownContainer"] {
+        margin: 0 !important;
+    }
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    [data-testid="stMarkdownContainer"] h4 {
+        margin: 0.1rem 0 !important;
+    }
+    /* Caption: margin minimo */
     [data-testid="stCaptionContainer"] {
-        margin-top: 0.15rem !important;
-        margin-bottom: 0.15rem !important;
+        margin: 0.1rem 0 !important;
     }
-    [data-testid="stCaptionContainer"] > div {
-        margin-bottom: 0 !important;
-    }
-    /* Expander: quitar margen superior */
+    /* Expander: margin minimo */
     [data-testid="stExpander"] {
-        margin-top: 0.2rem !important;
-        margin-bottom: 0.2rem !important;
+        margin: 0.1rem 0 !important;
     }
-    /* st.radio compacto */
+    [data-testid="stExpander"] details {
+        margin: 0 !important;
+        padding: 0.3rem !important;
+    }
+    /* Formularios: padding minimo */
+    [data-testid="stForm"] {
+        padding: 0.3rem !important;
+        margin: 0.1rem 0 !important;
+        border-width: 1px !important;
+    }
+    /* Labels de inputs pegados */
+    .stNumberInput label,
+    .stTextInput label,
+    .stSelectbox label,
+    .stTextArea label,
+    .stDateInput label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stSelectbox"] label {
+        margin: 0 0 -2px 0 !important;
+        padding: 0 !important;
+        font-size: 12px !important;
+        line-height: 1.1 !important;
+    }
+    /* Inputs compactos */
+    input[type="number"],
+    input[type="text"],
+    input[type="password"],
+    textarea,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stTextInput"] input {
+        min-height: 32px !important;
+        padding: 2px 6px !important;
+        margin: 0 !important;
+    }
+    /* Botones compactos */
+    button, [data-testid="stButton"] button {
+        min-height: 34px !important;
+        padding: 4px 12px !important;
+        margin: 0.1rem 0 !important;
+    }
+    /* Radio buttons compactos */
     [data-testid="stRadio"] {
-        margin-bottom: 0.3rem !important;
+        margin: 0.1rem 0 !important;
+        padding: 0.2rem !important;
     }
-    /* st.info/st.warning/st.error compactos */
+    /* Alertas compactas */
     [data-testid="stAlert"] {
-        margin: 0.3rem 0 !important;
-        padding: 0.5rem !important;
+        margin: 0.15rem 0 !important;
+        padding: 0.4rem !important;
+    }
+    /* Tabs compactos */
+    [data-testid="stTabs"] {
+        margin: 0.1rem 0 !important;
+    }
+    /* Metricas compactas */
+    [data-testid="stMetric"] {
+        padding: 0.3rem !important;
+        margin: 0.1rem 0 !important;
+    }
+    /* Tablas compactas */
+    [data-testid="stDataFrame"] {
+        margin: 0.2rem 0 !important;
+    }
+    /* Selectbox dropdown compacto */
+    [data-testid="stSelectbox"] {
+        margin: 0.05rem 0 !important;
+    }
+    /* Ocultar header de Streamlit */
+    [data-testid="stHeader"], header[data-testid="stHeader"] {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    /* HR compacto */
+    hr {
+        margin: 0.2rem 0 !important;
+        border-width: 1px !important;
+    }
+    /* Spacers: altura minima */
+    [data-testid="stVerticalBlock"] > div:empty {
+        height: 0.1rem !important;
+        min-height: 0.1rem !important;
     }
 }
 """
