@@ -570,15 +570,16 @@ def render_mobile_sidebar_toggle() -> None:
         }
       }
 
+      // En mobile, el toggle lo maneja nuestro boton custom. Ocultar SIEMPRE
+      // los nativos para evitar superposicion y clicks que cambien aria-expanded
+      // sin actualizar nuestras clases (dejaria estados inconsistentes).
       for (var i = 0; i < openNodes.length; i += 1) {
         if (!mobile) resetToggle(openNodes[i]);
-        else if (open) hideToggle(openNodes[i]);
-        else showToggle(openNodes[i]);
+        else hideToggle(openNodes[i]);
       }
 
       for (var j = 0; j < closeNodes.length; j += 1) {
         if (!mobile) resetToggle(closeNodes[j]);
-        else if (open) showToggle(closeNodes[j]);
         else hideToggle(closeNodes[j]);
       }
     }
@@ -685,11 +686,10 @@ def render_mobile_sidebar_toggle() -> None:
         setSidebarOpen(false);
       }
       applyMobileSidebarLayout();
-      // Leer aria-expanded directo del DOM — es la fuente mas confiable
-      var sidebarEl = getSidebar();
-      var ariaVal = sidebarEl ? sidebarEl.getAttribute("aria-expanded") : null;
-      var open = ariaVal === "true"
-        || (ariaVal === null && sidebarState() === "open");
+      // En mobile la fuente de verdad son NUESTRAS clases CSS (mc-sidebar-mobile-*).
+      // aria-expanded no se actualiza cuando usamos el toggle custom, asi que
+      // leerlo dejaria el icono siempre en "abrir" aunque el sidebar este abierto.
+      var open = sidebarState() === "open";
       btn.style.display = "inline-flex";
       btn.classList.toggle("is-open", open);
       btn.innerHTML = open
