@@ -635,15 +635,18 @@ def render_mobile_sidebar_toggle() -> None:
         setSidebarOpen(false);
       }
       applyMobileSidebarLayout();
-      var state = sidebarState();
-      var open = state === "open";
+      // Leer aria-expanded directo del DOM — es la fuente mas confiable
+      var sidebarEl = getSidebar();
+      var ariaVal = sidebarEl ? sidebarEl.getAttribute("aria-expanded") : null;
+      var open = ariaVal === "true"
+        || (ariaVal === null && sidebarState() === "open");
       btn.style.display = "inline-flex";
       btn.classList.toggle("is-open", open);
       btn.innerHTML = open
-        ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&lt;</span>'
-        : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&gt;</span>';
-      btn.setAttribute("aria-label", open ? "Cerrar panel lateral de herramientas" : "Abrir panel lateral de herramientas");
-      btn.setAttribute("title", open ? "Cerrar panel" : "Abrir pacientes");
+        ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true" style="font-size:20px;line-height:1;">&#8249;</span>'
+        : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true" style="font-size:20px;line-height:1;">&#8250;</span>';
+      btn.setAttribute("aria-label", open ? "Cerrar panel lateral" : "Abrir panel lateral");
+      btn.setAttribute("title", open ? "Cerrar panel" : "Abrir panel");
     }
 
     ensureStyle();
