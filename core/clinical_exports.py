@@ -1137,7 +1137,27 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     _tabla_sec('Emergencias y traslados', ['Fecha', 'Triage', 'Motivo', 'Profesional', 'Destino'],
                ['fecha_evento', 'triage_grado', 'motivo', 'profesional', 'destino'], emergencias, [80, 80, 200, 90, 85])
 
-    if not (registros_clinicos or vits or balances or meds or materiales or emergencias):
+    estudios = sections.get('Estudios Complementarios', [])
+    _tabla_sec('Estudios complementarios', ['Fecha', 'Tipo', 'Detalle / Informe', 'Profesional'],
+               ['fecha', 'tipo', 'detalle', 'firma'], estudios, [80, 100, 240, 75])
+
+    pediatria = sections.get('Control Pediatrico', [])
+    _tabla_sec('Control pediatrico', ['Fecha', 'Peso (kg)', 'Talla (cm)', 'PC (cm)', 'IMC', 'Percentil', 'Profesional'],
+               ['fecha', 'peso', 'talla', 'pc', 'imc', 'percentil_sug', 'firma'],
+               pediatria, [80, 55, 55, 55, 45, 65, 140])
+
+    escalas = sections.get('Escalas Clinicas', [])
+    _tabla_sec('Escalas clinicas', ['Fecha', 'Escala', 'Puntaje', 'Interpretacion', 'Profesional'],
+               ['fecha', 'escala', 'puntaje', 'interpretacion', 'profesional'],
+               escalas, [80, 120, 60, 170, 75])
+
+    consentimientos = sections.get('Consentimientos', [])
+    _tabla_sec('Consentimientos informados', ['Fecha', 'Tipo documento', 'Observaciones', 'Profesional'],
+               ['fecha', 'tipo_documento', 'observaciones', 'profesional'],
+               consentimientos, [80, 140, 225, 75])
+
+    if not (registros_clinicos or vits or balances or meds or materiales or emergencias
+            or estudios or pediatria or escalas or consentimientos):
         elements.append(Spacer(1, 20))
         elements.append(Paragraph('<i>No hay registros clinicos cargados para este paciente.</i>', normal_style))
 

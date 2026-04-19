@@ -225,6 +225,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                             {
                                 "paciente": paciente_sel,
                                 "fecha": fecha_str,
+                                "tipo_documento": "Consentimiento Domiciliario",
                                 "firmante": firmante.strip() or paciente_sel.split(" - ")[0],
                                 "dni_firmante": dni_firmante.strip() or detalles.get("dni", ""),
                                 "vinculo": vinculo,
