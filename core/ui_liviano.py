@@ -586,17 +586,47 @@ def render_mobile_sidebar_toggle() -> None:
       return true;
     }
 
+    function injectMobileCloseBtn() {
+      var CLOSE_ID = "mc-sidebar-close-btn";
+      if (parentDoc.getElementById(CLOSE_ID)) return;
+      var sidebar = getSidebar();
+      if (!sidebar) return;
+      var inner = sidebar.firstElementChild;
+      if (!inner) return;
+      var btn = parentDoc.createElement("button");
+      btn.id = CLOSE_ID;
+      btn.type = "button";
+      btn.innerHTML = "&#8249; Cerrar";
+      btn.setAttribute("style", [
+        "position:fixed;top:12px;left:12px;z-index:10020;",
+        "background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);",
+        "color:#94a3b8;border:1px solid rgba(148,163,184,0.2);border-radius:10px;",
+        "padding:8px 14px;font-size:15px;font-weight:600;cursor:pointer;",
+        "display:none;"
+      ].join(""));
+      btn.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        setSidebarOpen(false);
+        applyMobileSidebarLayout();
+        parentWin.setTimeout(syncButton, 60);
+      });
+      inner.insertBefore(btn, inner.firstChild);
+    }
+
+    function syncCloseBtnVisibility(open) {
+      var btn = parentDoc.getElementById("mc-sidebar-close-btn");
+      if (!btn) return;
+      btn.style.display = (open && isMobileViewport()) ? "inline-flex" : "none";
+    }
+
     function toggleSidebar() {
       if (isMobileViewport()) {
         var opening = sidebarState() !== "open";
         setSidebarOpen(opening);
         applyMobileSidebarLayout();
-        // También presionar el boton nativo para que Streamlit actualice su estado
-        if (opening) {
-          press(getOpenControl());
-        } else {
-          press(getCloseControl());
-        }
+        injectMobileCloseBtn();
+        syncCloseBtnVisibility(opening);
         parentWin.setTimeout(syncButton, 90);
         parentWin.setTimeout(syncButton, 240);
       } else {
@@ -647,6 +677,8 @@ def render_mobile_sidebar_toggle() -> None:
         : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true" style="font-size:20px;line-height:1;">&#8250;</span>';
       btn.setAttribute("aria-label", open ? "Cerrar panel lateral" : "Abrir panel lateral");
       btn.setAttribute("title", open ? "Cerrar panel" : "Abrir panel");
+      injectMobileCloseBtn();
+      syncCloseBtnVisibility(open);
     }
 
     ensureStyle();
