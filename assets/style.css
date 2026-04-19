@@ -3790,18 +3790,20 @@ button[kind="headerNoPadding"] {
 
 /* --- MOVIL (< 768px) - OPTIMIZACION AGRESIVA --- */
 @media (max-width: 767px) {
-    /* Boton toggle sidebar: oculto en el area de contenido,
-       Streamlit lo muestra en el header cuando el sidebar esta cerrado */
+    /* Boton toggle sidebar en movil: pequeno y en esquina, no tapa contenido */
     [data-testid="stSidebarCollapsedControl"] {
         position: fixed !important;
-        top: 0.5rem !important;
-        left: 0.5rem !important;
+        top: 4px !important;
+        left: 4px !important;
         z-index: 9999 !important;
-        min-width: 40px !important;
-        min-height: 40px !important;
-        padding: 6px !important;
-        background: rgba(13,148,136,0.92) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.35) !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        padding: 4px !important;
+        border-radius: 8px !important;
+        background: rgba(13,148,136,0.85) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
     }
     
     /* Desactivar animaciones y efectos costosos */
@@ -3817,10 +3819,23 @@ button[kind="headerNoPadding"] {
         -webkit-backdrop-filter: none !important;
     }
 
-    /* Block container full width - padding-top para no quedar bajo el botón toggle */
+    /* Block container full width en movil */
     .block-container {
         max-width: 100% !important;
-        padding: 3.5rem 0.75rem 0.75rem !important;
+        padding-top: 2.8rem !important;
+        padding-left: 0.6rem !important;
+        padding-right: 0.6rem !important;
+        padding-bottom: 1rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    /* App container: no cortar contenido */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    section.main {
+        padding-left: 0 !important;
+        overflow-x: hidden !important;
     }
 
     /* Sidebar como drawer fullscreen */
