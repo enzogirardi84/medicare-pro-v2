@@ -2204,8 +2204,8 @@ hr {
     }
 
     [data-testid="stMetric"] {
-        min-height: 96px !important;
-        padding: 14px !important;
+        min-height: 0 !important;
+        padding: 10px 12px !important;
     }
 
     .mc-grid-3 {
@@ -2213,9 +2213,9 @@ hr {
     }
 
     .mc-hero {
-        padding: 16px 16px 14px;
-        border-radius: 20px;
-        margin-bottom: 0.9rem;
+        padding: 12px 14px 10px;
+        border-radius: 18px;
+        margin-bottom: 0.5rem;
     }
 
     .mc-hero-title {
