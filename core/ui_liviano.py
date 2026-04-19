@@ -239,15 +239,15 @@ def render_mobile_sidebar_toggle() -> None:
         parentDoc.head.appendChild(style);
       }
       style.textContent = [
-        "#"+BUTTON_ID+"{position:fixed;left:12px;top:12px;z-index:10015;",
-        "display:none;align-items:center;justify-content:center;width:42px;height:42px;padding:0;",
-        "border:none;border-radius:999px;background:linear-gradient(180deg,#14b8a6 0%,#2563eb 100%);",
+        "#"+BUTTON_ID+"{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:10015;",
+        "display:none;align-items:center;justify-content:center;width:34px;height:54px;padding:0;",
+        "border:none;border-radius:0 12px 12px 0;background:linear-gradient(180deg,#14b8a6 0%,#2563eb 100%);",
         "color:#f8fafc;font:900 1rem/1 'Plus Jakarta Sans',sans-serif;letter-spacing:0;",
         "box-shadow:0 10px 22px rgba(2,6,23,.24), inset 0 1px 0 rgba(255,255,255,.16);",
         "cursor:pointer;opacity:.94;}",
         "#"+BUTTON_ID+":active{opacity:1;}",
         "#"+BUTTON_ID+".is-open{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}",
-        "#"+BUTTON_ID+" .mc-mobile-sidebar-toggle-icon{display:block;line-height:1;font-size:20px;}",
+        "#"+BUTTON_ID+" .mc-mobile-sidebar-toggle-icon{display:block;line-height:1;transform:translateX(-1px);font-size:18px;}",
         "@media (max-width: 767px){#"+BUTTON_ID+"{display:inline-flex;}}",
         "@media (min-width: 768px){#"+BUTTON_ID+"{display:none !important;}}"
       ].join("");
@@ -515,8 +515,20 @@ def render_mobile_sidebar_toggle() -> None:
 
     function toggleSidebar() {
       if (isMobileViewport()) {
-        setSidebarOpen(sidebarState() !== "open");
+        var opening = sidebarState() !== "open";
+        var handled = false;
+        if (opening) {
+          handled = press(getOpenControl());
+          setSidebarOpen(true);
+        } else {
+          handled = press(getCloseControl());
+          setSidebarOpen(false);
+        }
+        if (!handled) {
+          setSidebarOpen(opening);
+        }
         applyMobileSidebarLayout();
+        parentWin.setTimeout(syncButton, 90);
       } else {
         var state = sidebarState();
         var done = false;
@@ -558,8 +570,8 @@ def render_mobile_sidebar_toggle() -> None:
       var open = state === "open";
       btn.classList.toggle("is-open", open);
       btn.innerHTML = open
-        ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&times;</span>'
-        : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&#9776;</span>';
+        ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&lt;</span>'
+        : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true">&gt;</span>';
       btn.setAttribute("aria-label", open ? "Cerrar panel lateral de herramientas" : "Abrir panel lateral de herramientas");
       btn.setAttribute("title", open ? "Cerrar panel" : "Abrir pacientes");
     }
