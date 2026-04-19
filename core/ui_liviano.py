@@ -371,7 +371,15 @@ def render_mobile_sidebar_toggle() -> None:
     }
 
     function sidebarState() {
-      // Fuente de verdad principal: aria-expanded en el sidebar
+      // En mobile las clases propias son la fuente de verdad, porque
+      // Streamlit no actualiza aria-expanded cuando usamos el toggle custom.
+      var root = getRoot();
+      if (isMobileViewport() && root) {
+        if (root.classList.contains("mc-sidebar-mobile-open")) return "open";
+        if (root.classList.contains("mc-sidebar-mobile-closed")) return "closed";
+      }
+
+      // Desktop / fallback: aria-expanded del sidebar nativo
       var sidebar = getSidebar();
       if (sidebar) {
         var expanded = sidebar.getAttribute("aria-expanded");
@@ -379,8 +387,7 @@ def render_mobile_sidebar_toggle() -> None:
         if (expanded === "false") return "closed";
       }
 
-      // Fallback: clases CSS propias
-      var root = getRoot();
+      // Ultimo fallback: clases en cualquier viewport
       if (root) {
         if (root.classList.contains("mc-sidebar-mobile-open")) return "open";
         if (root.classList.contains("mc-sidebar-mobile-closed")) return "closed";
