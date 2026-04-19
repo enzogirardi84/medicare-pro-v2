@@ -159,6 +159,10 @@ def render_emergencias(paciente_sel, mi_empresa, user):
         aviso_sin_paciente()
         return
 
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
     
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
@@ -204,7 +208,11 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     activos = [x for x in eventos if x.get("triage_grado") in {"Grado 1 - Rojo", "Grado 2 - Amarillo"}]
     traslados = [x for x in eventos if x.get("ambulancia_solicitada")]
 
-    m1, m2, m3, m4 = st.columns(4)
+    if es_movil:
+        m1, m2 = st.columns(2)
+        m3, m4 = st.columns(2)
+    else:
+        m1, m2, m3, m4 = st.columns(4)
     m1.metric("Eventos", len(eventos))
     m2.metric("Criticos activos", len(activos))
     m3.metric("Traslados", len(traslados))
@@ -216,34 +224,64 @@ def render_emergencias(paciente_sel, mi_empresa, user):
         fecha_actual = ahora()
         with st.container(border=True):
             # --- Fila 1: Triage + Categoria + Tipo ---
-            c1, c2, c3 = st.columns([1, 2, 2])
-            triage_grado = c1.selectbox(
-                "Triage",
-                ["Grado 1 - Rojo", "Grado 2 - Amarillo", "Grado 3 - Verde"],
-                index=1,
-                key="em_triage",
-            )
-            triage_info = _triage_meta(triage_grado)
-            codigo_alerta = triage_info["codigo"]
-            categoria_evento = c2.selectbox("Categoria", list(EVENTO_CATEGORIAS.keys()), key="em_cat")
-            patologias_categoria = EVENTO_CATEGORIAS.get(categoria_evento, ["Evento no clasificado"])
-            tipo_evento = c3.selectbox("Tipo / motivo presuntivo", patologias_categoria, key="em_tipo")
+            if es_movil:
+                triage_grado = st.selectbox(
+                    "Triage",
+                    ["Grado 1 - Rojo", "Grado 2 - Amarillo", "Grado 3 - Verde"],
+                    index=1,
+                    key="em_triage",
+                )
+                triage_info = _triage_meta(triage_grado)
+                codigo_alerta = triage_info["codigo"]
+                categoria_evento = st.selectbox("Categoria", list(EVENTO_CATEGORIAS.keys()), key="em_cat")
+                patologias_categoria = EVENTO_CATEGORIAS.get(categoria_evento, ["Evento no clasificado"])
+                tipo_evento = st.selectbox("Tipo / motivo presuntivo", patologias_categoria, key="em_tipo")
+            else:
+                c1, c2, c3 = st.columns([1, 2, 2])
+                triage_grado = c1.selectbox(
+                    "Triage",
+                    ["Grado 1 - Rojo", "Grado 2 - Amarillo", "Grado 3 - Verde"],
+                    index=1,
+                    key="em_triage",
+                )
+                triage_info = _triage_meta(triage_grado)
+                codigo_alerta = triage_info["codigo"]
+                categoria_evento = c2.selectbox("Categoria", list(EVENTO_CATEGORIAS.keys()), key="em_cat")
+                patologias_categoria = EVENTO_CATEGORIAS.get(categoria_evento, ["Evento no clasificado"])
+                tipo_evento = c3.selectbox("Tipo / motivo presuntivo", patologias_categoria, key="em_tipo")
 
             # --- Fila 2: Motivo (obligatorio) ---
             motivo = st.text_area("Motivo principal", height=70, placeholder="Descripcion breve del cuadro", key="em_motivo")
 
             # --- Fila 3: Signos vitales rapidos ---
-            v1, v2, v3, v4 = st.columns(4)
-            presion = v1.text_input("TA", placeholder="120/80", key="em_ta")
-            fc = v2.text_input("FC", placeholder="78", key="em_fc")
-            saturacion = v3.text_input("SaO2", placeholder="98%", key="em_sat")
-            temperatura = v4.text_input("Temp", placeholder="36.5", key="em_temp")
+            if es_movil:
+                v1, v2 = st.columns(2)
+                presion = v1.text_input("TA", placeholder="120/80", key="em_ta")
+                fc = v2.text_input("FC", placeholder="78", key="em_fc")
+                v3, v4 = st.columns(2)
+                saturacion = v3.text_input("SaO2", placeholder="98%", key="em_sat")
+                temperatura = v4.text_input("Temp", placeholder="36.5", key="em_temp")
+            else:
+                v1, v2, v3, v4 = st.columns(4)
+                presion = v1.text_input("TA", placeholder="120/80", key="em_ta")
+                fc = v2.text_input("FC", placeholder="78", key="em_fc")
+                saturacion = v3.text_input("SaO2", placeholder="98%", key="em_sat")
+                temperatura = v4.text_input("Temp", placeholder="36.5", key="em_temp")
 
             # --- Fila 4: Ambulancia ---
-            a1, a2, a3 = st.columns([1, 2, 2])
-            ambulancia_solicitada = a1.checkbox("Ambulancia", value=triage_info["prioridad"] in {"Alta", "Critica"}, key="em_amb")
-            movil = a2.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
-            destino = a3.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
+            ambulancia_solicitada = st.checkbox(
+                "Ambulancia",
+                value=triage_info["prioridad"] in {"Alta", "Critica"},
+                key="em_amb",
+            )
+            if es_movil:
+                a2, a3 = st.columns(2)
+                movil = a2.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
+                destino = a3.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
+            else:
+                a2, a3 = st.columns(2)
+                movil = a2.text_input("Movil / empresa", placeholder="Emerger / SAME", key="em_movil")
+                destino = a3.text_input("Destino", placeholder="Guardia / hospital", key="em_dest")
 
             # --- Fila 5: Profesional ---
             p1, p2 = st.columns(2)
@@ -252,14 +290,24 @@ def render_emergencias(paciente_sel, mi_empresa, user):
 
             # --- Datos adicionales (opcional) ---
             with st.expander("Mas datos (opcional)"):
-                d1, d2, d3 = st.columns(3)
-                glucemia = d1.text_input("Glucemia", placeholder="110 mg/dl", key="em_gluc")
-                dolor = d2.selectbox("Dolor EVA", [str(x) for x in range(11)], index=0, key="em_dolor")
-                conciencia = d3.selectbox("Conciencia", ["Alerta", "Somnoliento", "Confuso", "No responde"], key="em_conc")
-                e1, e2, e3 = st.columns(3)
-                tipo_traslado = e1.selectbox("Tipo traslado", ["Sin traslado confirmado", "Traslado asistencial", "Derivacion a guardia", "Traslado interhospitalario", "Alta complejidad / UTI movil", "Retorno a domicilio"], key="em_tras")
-                hora_solicitud = e2.text_input("Hora solicitud", value=fecha_actual.strftime("%H:%M"), key="em_hsol")
-                hora_arribo = e3.text_input("Hora arribo", placeholder="HH:MM", key="em_harr")
+                if es_movil:
+                    d1, d2 = st.columns(2)
+                    glucemia = d1.text_input("Glucemia", placeholder="110 mg/dl", key="em_gluc")
+                    dolor = d2.selectbox("Dolor EVA", [str(x) for x in range(11)], index=0, key="em_dolor")
+                    conciencia = st.selectbox("Conciencia", ["Alerta", "Somnoliento", "Confuso", "No responde"], key="em_conc")
+                    e1, e2 = st.columns(2)
+                    tipo_traslado = e1.selectbox("Tipo traslado", ["Sin traslado confirmado", "Traslado asistencial", "Derivacion a guardia", "Traslado interhospitalario", "Alta complejidad / UTI movil", "Retorno a domicilio"], key="em_tras")
+                    hora_solicitud = e2.text_input("Hora solicitud", value=fecha_actual.strftime("%H:%M"), key="em_hsol")
+                    hora_arribo = st.text_input("Hora arribo", placeholder="HH:MM", key="em_harr")
+                else:
+                    d1, d2, d3 = st.columns(3)
+                    glucemia = d1.text_input("Glucemia", placeholder="110 mg/dl", key="em_gluc")
+                    dolor = d2.selectbox("Dolor EVA", [str(x) for x in range(11)], index=0, key="em_dolor")
+                    conciencia = d3.selectbox("Conciencia", ["Alerta", "Somnoliento", "Confuso", "No responde"], key="em_conc")
+                    e1, e2, e3 = st.columns(3)
+                    tipo_traslado = e1.selectbox("Tipo traslado", ["Sin traslado confirmado", "Traslado asistencial", "Derivacion a guardia", "Traslado interhospitalario", "Alta complejidad / UTI movil", "Retorno a domicilio"], key="em_tras")
+                    hora_solicitud = e2.text_input("Hora solicitud", value=fecha_actual.strftime("%H:%M"), key="em_hsol")
+                    hora_arribo = e3.text_input("Hora arribo", placeholder="HH:MM", key="em_harr")
                 f1, f2 = st.columns(2)
                 hora_salida = f1.text_input("Hora salida", placeholder="HH:MM", key="em_hsal")
                 receptor = f2.text_input("Receptor / institucion", key="em_rec")
@@ -278,7 +326,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                     firma_canvas = st_canvas(
                         key="firma_emergencias",
                         background_color="#ffffff",
-                        height=120,
+                        height=90 if es_movil else 120,
                         drawing_mode="freedraw",
                         stroke_width=3,
                         stroke_color="#000000",
@@ -421,27 +469,40 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 sugerencia="Completá el formulario de evento arriba para el primer registro.",
             )
         else:
-            with lista_plegable("Eventos recientes (panel operativo)", count=len(recientes), expanded=False, height=420):
+            with lista_plegable("Eventos recientes (panel operativo)", count=len(recientes), expanded=False, height=320 if es_movil else 420):
                 for evento in recientes:
                     titulo = f"{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')} | {evento.get('tipo_evento', '')}"
                     with st.container(border=True):
-                        col_info, col_badges = st.columns([4, 2])
-                        col_info.markdown(f"#### {titulo}")
-                        col_info.markdown(evento.get("motivo", ""))
                         badges = [
                             _badge_html(evento.get("triage_grado", "S/D"), _triage_meta(evento.get("triage_grado", "")).get("clase", "")),
                             _badge_html(evento.get("prioridad", "S/D"), ""),
                             _badge_html("Ambulancia" if evento.get("ambulancia_solicitada") else "Sin movil", ""),
                         ]
-                        col_badges.markdown(" ".join(badges), unsafe_allow_html=True)
-                        col_info.caption(
-                            f"Categoria: {evento.get('categoria_evento', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')} | Matricula: {evento.get('matricula', 'S/D')} | Destino: {evento.get('destino', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')}"
-                        )
-                        if evento.get("firma_b64"):
-                            try:
-                                col_badges.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=180)
-                            except Exception as e:
-                                log_event('emergencias_error', f'Error: {e}')
+                        if es_movil:
+                            st.markdown(f"#### {titulo}")
+                            st.markdown(" ".join(badges), unsafe_allow_html=True)
+                            st.markdown(evento.get("motivo", ""))
+                            st.caption(
+                                f"Categoria: {evento.get('categoria_evento', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')} | Matricula: {evento.get('matricula', 'S/D')} | Destino: {evento.get('destino', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')}"
+                            )
+                            if evento.get("firma_b64"):
+                                try:
+                                    st.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=160)
+                                except Exception as e:
+                                    log_event('emergencias_error', f'Error: {e}')
+                        else:
+                            col_info, col_badges = st.columns([4, 2])
+                            col_info.markdown(f"#### {titulo}")
+                            col_info.markdown(evento.get("motivo", ""))
+                            col_badges.markdown(" ".join(badges), unsafe_allow_html=True)
+                            col_info.caption(
+                                f"Categoria: {evento.get('categoria_evento', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')} | Matricula: {evento.get('matricula', 'S/D')} | Destino: {evento.get('destino', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')}"
+                            )
+                            if evento.get("firma_b64"):
+                                try:
+                                    col_badges.image(base64.b64decode(evento["firma_b64"]), caption="Firma profesional", width=180)
+                                except Exception as e:
+                                    log_event('emergencias_error', f'Error: {e}')
 
     with tab_hist:
         st.markdown("### Historial, tiempos y PDF")
@@ -478,25 +539,39 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                 for x in registros
             ]
         )
-        with lista_plegable("Tabla resumen de eventos", count=len(registros), expanded=False, height=400):
-            mostrar_dataframe_con_scroll(resumen_df, height=360)
+        with lista_plegable("Tabla resumen de eventos", count=len(registros), expanded=False, height=320 if es_movil else 400):
+            mostrar_dataframe_con_scroll(resumen_df, height=280 if es_movil else 360)
 
-        with lista_plegable("Detalle y PDF por evento", count=len(registros), expanded=False, height=520):
+        with lista_plegable("Detalle y PDF por evento", count=len(registros), expanded=False, height=360 if es_movil else 520):
             for idx, evento in enumerate(registros):
                 with st.container(border=True):
-                    c1, c2 = st.columns([3, 1])
-                    c1.markdown(
-                        f"**{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')}** | {evento.get('tipo_evento', '')}"
-                    )
-                    c1.caption(
-                        f"Categoria: {evento.get('categoria_evento', 'S/D')} | Triage: {evento.get('triage_grado', 'S/D')} | Prioridad: {evento.get('prioridad', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')}"
-                    )
-                    c1.markdown(evento.get("motivo", ""))
-                    if evento.get("ambulancia_solicitada"):
-                        c1.info(
-                            f"Movil: {evento.get('movil', 'S/D')} | Solicitud: {evento.get('hora_solicitud', 'S/D')} | "
-                            f"Arribo: {evento.get('hora_arribo', 'S/D')} | Destino: {evento.get('destino', 'S/D')}"
+                    if es_movil:
+                        st.markdown(
+                            f"**{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')}** | {evento.get('tipo_evento', '')}"
                         )
+                        st.caption(
+                            f"Categoria: {evento.get('categoria_evento', 'S/D')} | Triage: {evento.get('triage_grado', 'S/D')} | Prioridad: {evento.get('prioridad', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')}"
+                        )
+                        st.markdown(evento.get("motivo", ""))
+                        if evento.get("ambulancia_solicitada"):
+                            st.info(
+                                f"Movil: {evento.get('movil', 'S/D')} | Solicitud: {evento.get('hora_solicitud', 'S/D')} | "
+                                f"Arribo: {evento.get('hora_arribo', 'S/D')} | Destino: {evento.get('destino', 'S/D')}"
+                            )
+                    else:
+                        c1, c2 = st.columns([3, 1])
+                        c1.markdown(
+                            f"**{evento.get('fecha_evento', '')} {evento.get('hora_evento', '')}** | {evento.get('tipo_evento', '')}"
+                        )
+                        c1.caption(
+                            f"Categoria: {evento.get('categoria_evento', 'S/D')} | Triage: {evento.get('triage_grado', 'S/D')} | Prioridad: {evento.get('prioridad', 'S/D')} | Traslado: {evento.get('tipo_traslado', 'S/D')} | Profesional: {evento.get('profesional', 'S/D')}"
+                        )
+                        c1.markdown(evento.get("motivo", ""))
+                        if evento.get("ambulancia_solicitada"):
+                            c1.info(
+                                f"Movil: {evento.get('movil', 'S/D')} | Solicitud: {evento.get('hora_solicitud', 'S/D')} | "
+                                f"Arribo: {evento.get('hora_arribo', 'S/D')} | Destino: {evento.get('destino', 'S/D')}"
+                            )
                     pdf_bytes = build_emergency_pdf_bytes(
                         st.session_state,
                         paciente_sel,
@@ -508,11 +583,21 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                         f"Emergencia_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
                         f"{evento.get('fecha_evento', '').replace('/','')}_{idx + 1}.pdf"
                     )
-                    c2.download_button(
-                        "Descargar PDF",
-                        data=pdf_bytes,
-                        file_name=nombre_arch,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"pdf_emerg_{idx}",
-                    )
+                    if es_movil:
+                        st.download_button(
+                            "Descargar PDF",
+                            data=pdf_bytes,
+                            file_name=nombre_arch,
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"pdf_emerg_{idx}",
+                        )
+                    else:
+                        c2.download_button(
+                            "Descargar PDF",
+                            data=pdf_bytes,
+                            file_name=nombre_arch,
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"pdf_emerg_{idx}",
+                        )

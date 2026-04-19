@@ -705,10 +705,13 @@ def _render_cortina_mar_hospitalaria(
     """
     if plan_dia_df.empty:
         return
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     suf = _cortina_mar_key_slug(paciente_sel, fecha_hoy)
     st.markdown('<p class="mc-mar-encabezado">Planilla MAR del turno</p>', unsafe_allow_html=True)
     plan_ord = plan_dia_df.reset_index(drop=True)
-    with st.container(height=520):
+    with st.container(height=340 if es_movil else 520):
         for i, (_, fila) in enumerate(plan_ord.iterrows()):
             estado = str(fila.get("Estado", "") or "").strip()
             es_pend = estado == "Pendiente"
@@ -1143,6 +1146,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         st.info("Selecciona un paciente en el menu lateral.")
         return
 
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     rol = rol or user.get("rol", "")
     nombre_usuario = _nombre_usuario(user)
     puede_prescribir = puede_accion(rol, "recetas_prescribir")
@@ -1842,7 +1848,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
         vista_guardia = st.radio(
             "Vista de administración",
-            ["Cortina empresarial", "Tarjetas (alternativa)"],
+            ["Tarjetas (alternativa)", "Cortina empresarial"] if es_movil else ["Cortina empresarial", "Tarjetas (alternativa)"],
             horizontal=True,
             index=0,
             key=f"recetas_vista_guardia_{paciente_sel}",
@@ -2005,11 +2011,11 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     _render_tabla_clinica(
                         df_plan_visible,
                         key=f"plan_{paciente_sel}",
-                        max_height=420 if not anticolapso_activo() else 320,
+                        max_height=300 if es_movil else (420 if not anticolapso_activo() else 320),
                         sticky_first_col=False,
                     )
                 else:
-                    _h_tarjetas_plan = 320 if anticolapso_activo() else 480
+                    _h_tarjetas_plan = 280 if es_movil else (320 if anticolapso_activo() else 480)
                     with st.container(height=_h_tarjetas_plan):
                         _render_dataframe_filas_tarjetas(df_plan_visible)
 
@@ -2021,7 +2027,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             _render_tabla_clinica(
                 pd.DataFrame(plan_hidratacion_rows),
                 key=f"hidra_{paciente_sel}",
-                max_height=320,
+                max_height=240 if es_movil else 320,
                 sticky_first_col=False,
             )
 
@@ -2030,12 +2036,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 _render_tabla_clinica(
                     pd.DataFrame(sabana_resumen),
                     key=f"resumen_{paciente_sel}",
-                    max_height=260,
+                    max_height=220 if es_movil else 260,
                     sticky_first_col=False,
                 )
 
         if puede_registrar_dosis:
-            if vista_guardia == "Compacta para celular":
+            if es_movil or vista_guardia == "Tarjetas (alternativa)":
                 registro_container = st.expander(
                     "Registro manual / no realizada / otro horario", expanded=False
                 )
@@ -2227,7 +2233,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 opciones=(10, 15, 20, 30, 50, 80),
             )
 
-            with st.container(height=450):
+            with st.container(height=320 if es_movil else 450):
                 for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
                     with st.container(border=True):
                         c_info, c_btn = st.columns([3, 1])
