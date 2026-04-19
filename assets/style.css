@@ -2709,38 +2709,28 @@ div[data-testid="stDataFrame"] {
 /* SIDEBAR MOVIL: fix definitivo usando aria-expanded */
 @media (max-width: 768px) {
 
-    /* 1. Sidebar CERRADO: completamente fuera de pantalla, sin franja */
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        min-width: 0px !important;
-        max-width: 0px !important;
-        width: 0px !important;
-        transform: translateX(-100vw) !important;
-        visibility: hidden !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
+    /* 1. Sidebar CERRADO: display:none, desaparece completamente del layout */
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        display: none !important;
     }
 
     /* 2. Sidebar ABIERTO: ocupa pantalla completa */
-    [data-testid="stSidebar"][aria-expanded="true"] {
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        display: block !important;
         min-width: 100vw !important;
         max-width: 100vw !important;
         width: 100vw !important;
-        visibility: visible !important;
     }
 
-    /* 3. Boton colapsar sidebar: siempre clickeable */
-    [data-testid="collapsedControl"] {
-        z-index: 999999 !important;
-    }
-
-    /* 4. Contenedor principal: sin margenes ni padding sobrante */
-    .main .block-container {
-        max-width: 100% !important;
+    /* 3. Contenedor principal: padding uniforme sin margen sobrante */
+    [data-testid="block-container"] {
         padding-left: 1rem !important;
         padding-right: 1rem !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
     }
 
+    /* 4. Sección principal sin margen izquierdo */
     [data-testid="stAppViewContainer"] > section:nth-child(2) {
         margin-left: 0 !important;
         padding-left: 0 !important;
