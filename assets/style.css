@@ -3829,6 +3829,26 @@ html.mc-equipo-liviano iframe {
         transition-duration: 0.1s !important;
     }
 
+    /* EXCEPCION: el spinner (ruedita de cargando) DEBE girar aun en mobile.
+       Reglas mas especificas + !important para sobrescribir el kill global. */
+    [data-testid="stSpinner"],
+    [data-testid="stSpinner"] *,
+    [data-testid="stSpinner"] svg,
+    [data-testid="stSpinner"] i,
+    .stSpinner,
+    .stSpinner *,
+    .stSpinner svg,
+    [data-baseweb="spinner"],
+    [data-baseweb="spinner"] *,
+    [role="progressbar"] svg,
+    .mc-spinner,
+    .mc-spinner * {
+        animation-duration: 0.85s !important;
+        animation-iteration-count: infinite !important;
+        animation-timing-function: linear !important;
+        animation-play-state: running !important;
+    }
+
     /* Desactivar blur (muy costoso en movil) */
     *, *::before, *::after {
         backdrop-filter: none !important;
