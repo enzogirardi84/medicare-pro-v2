@@ -123,11 +123,11 @@ except Exception:
 
 # CSS CRITICO INLINE: siempre se inyecta, no depende de cache del archivo
 _CSS_CRITICO_MOBILE = """
-/* NUCLEAR MOBILE v19:25 - Fuerza compactacion en TODOS los componentes */
+/* NUCLEAR MOBILE v19:30 - Fuerza compactacion en TODOS los componentes */
 @media (max-width: 767px) {
     /* Marker rojo grande */
     html body .block-container::before {
-        content: "CSS v19:25 NUCLEAR" !important;
+        content: "CSS v19:30 SIGNOS OK" !important;
         display: block !important;
         background: #ff2222 !important;
         color: white !important;
@@ -253,6 +253,29 @@ _CSS_CRITICO_MOBILE = """
     [data-testid="stSelectbox"] {
         margin: 0.05rem 0 !important;
     }
+    /* === FIXES ESPECIFICOS SIGNOS VITALES === */
+    /* stNumberInput: eliminar gap entre inputs */
+    [data-testid="stNumberInput"] {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    /* Contenedor del input number con stepper */
+    [data-testid="stNumberInput"] > div > div {
+        gap: 0.2rem !important;
+        margin: 0 !important;
+    }
+    /* Stepper buttons mas compactos */
+    [data-testid="stNumberInput"] button {
+        min-height: 28px !important;
+        min-width: 28px !important;
+        padding: 0 !important;
+        margin: 0 2px !important;
+    }
+    /* Input dentro del number_input */
+    [data-testid="stNumberInput"] input {
+        min-height: 30px !important;
+        padding: 2px 4px !important;
+    }
     /* Ocultar header de Streamlit */
     [data-testid="stHeader"], header[data-testid="stHeader"] {
         display: none !important;
@@ -269,6 +292,11 @@ _CSS_CRITICO_MOBILE = """
     [data-testid="stVerticalBlock"] > div:empty {
         height: 0.1rem !important;
         min-height: 0.1rem !important;
+    }
+    /* === ATOMICO: forzar todos los elementos en cascada === */
+    html body [data-testid="stApp"] * {
+        margin-block-start: 0 !important;
+        margin-block-end: 0 !important;
     }
 }
 """
