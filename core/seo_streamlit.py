@@ -185,6 +185,64 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
       doc.head.appendChild(s);
     }}
     s.textContent = P.schemaJson;
+
+    // ── OVERLAY DE CARGA ──────────────────────────────────────────────────
+    // Solo insertar si no existe ya
+    if (doc.getElementById('mc-loading-overlay')) return;
+
+    var overlay = doc.createElement('div');
+    overlay.id = 'mc-loading-overlay';
+    overlay.innerHTML = [
+      '<p class="mc-overlay-title">MediCare Enterprise PRO</p>',
+      '<div class="mc-spinner"></div>',
+      '<div class="mc-dots"><span></span><span></span><span></span></div>',
+      '<p class="mc-overlay-sub">Cargando...</p>'
+    ].join('');
+    doc.body.appendChild(overlay);
+
+    // Quitar overlay cuando Streamlit termine de renderizar
+    function removeOverlay() {{
+      var el = doc.getElementById('mc-loading-overlay');
+      if (!el) return;
+      el.classList.add('mc-overlay-fade-out');
+      setTimeout(function() {{
+        el.classList.add('mc-overlay-hidden');
+      }}, 450);
+    }}
+
+    // Detectar cuando el contenido principal está listo
+    function waitForContent() {{
+      // Buscar cualquier elemento renderizado por Streamlit
+      var mainContent = doc.querySelector('[data-testid="stAppViewContainer"] .block-container');
+      if (mainContent && mainContent.children.length > 0) {{
+        removeOverlay();
+        return;
+      }}
+      // Reintentar hasta que aparezca contenido
+      requestAnimationFrame(waitForContent);
+    }}
+
+    // Timeout máximo de 4s por si algo falla
+    var maxTimeout = setTimeout(removeOverlay, 4000);
+
+    // Observar cambios en el DOM
+    var observer = new MutationObserver(function() {{
+      var mainContent = doc.querySelector('[data-testid="stAppViewContainer"] .block-container');
+      if (mainContent && mainContent.children.length > 1) {{
+        clearTimeout(maxTimeout);
+        observer.disconnect();
+        removeOverlay();
+      }}
+    }});
+
+    observer.observe(doc.body, {{ childList: true, subtree: true }});
+
+    // Quitar overlay también al navegar entre módulos (reruns de Streamlit)
+    var lastHidden = false;
+    doc.addEventListener('streamlit:render', function() {{
+      removeOverlay();
+    }});
+
   }} catch (e) {{}}
 }})();
 </script>
