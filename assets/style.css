@@ -2693,14 +2693,19 @@ section.main > div {
 @media (max-width: 768px) {
     [data-testid="stHorizontalBlock"] {
         flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 0.65rem !important;
+        align-items: flex-start !important;
+        gap: 0.4rem !important;
     }
 
-    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
         width: 100% !important;
         min-width: 0 !important;
-        flex: 1 1 auto !important;
+        flex: 0 0 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        align-self: auto !important;
     }
 }
 
@@ -4267,14 +4272,31 @@ html, body {
     /* --- 5. COLUMNAS: colapsar a 1 columna en pantallas muy chicas --- */
     /* IMPORTANTE: flex-basis auto (NO 280px) para que al combinarse con
        flex-direction: column (que otro media query aplica), las columnas se
-       adapten al contenido y no generen 280px de altura vacia por columna. */
+       adapten al contenido y no generen 280px de altura vacia por columna.
+       Ademas forzamos height auto aunque Streamlit setee style="height:Xpx"
+       inline para igualar columnas (solo tiene sentido en desktop). */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: wrap !important;
+        align-items: flex-start !important;
     }
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"][style],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"][style] {
         min-width: 0 !important;
         width: 100% !important;
         flex: 0 0 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        align-self: auto !important;
+    }
+    /* Neutralizar height inline en stVerticalBlock internos si Streamlit
+       tambien les setea height para igualar columnas. */
+    [data-testid="stColumn"] > div[data-testid="stVerticalBlock"],
+    [data-testid="column"] > div[data-testid="stVerticalBlock"] {
+        height: auto !important;
+        min-height: 0 !important;
     }
 }
 
