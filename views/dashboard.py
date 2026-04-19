@@ -35,7 +35,7 @@ def _sumar_importe(registros):
 
 
 def render_dashboard(mi_empresa, rol):
-    from core.utils import headers_sugieren_equipo_liviano
+    from core.ui_liviano import headers_sugieren_equipo_liviano
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
     if es_movil:
