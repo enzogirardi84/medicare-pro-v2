@@ -35,7 +35,7 @@ def _clave_onboarding() -> str:
 
 
 def render_panel_bienvenida(rol: str, menu: list[str], etiquetas_nav: dict[str, str]) -> None:
-    from core.utils import headers_sugieren_equipo_liviano
+    from core.ui_liviano import headers_sugieren_equipo_liviano
     clave = _clave_onboarding()
     # Migrar clave vieja si existe
     if st.session_state.get("_mc_onboarding_oculto") and not st.session_state.get(clave):
