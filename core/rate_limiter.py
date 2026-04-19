@@ -108,8 +108,19 @@ class SlidingWindowRateLimiter:
             self._last_cleanup = now
 
     def _get_config(self, key: str) -> RateLimitConfig:
-        """Obtiene configuración para una clave."""
-        return self._configs.get(key, self.default_config)
+        """Obtiene configuración para una clave.
+
+        Busca primero el key exacto (con endpoint). Si no existe, cae al key
+        base sin endpoint (para que set_config(tipo, id) aplique a todos los
+        endpoints de ese id sin exigir configurarlos individualmente).
+        """
+        if key in self._configs:
+            return self._configs[key]
+        # Fallback al identificador sin endpoint: "per_user:u" a partir de "per_user:u:/path"
+        base_key = key.rsplit(":", 1)[0] if key.count(":") >= 2 else key
+        if base_key in self._configs:
+            return self._configs[base_key]
+        return self.default_config
 
     def set_config(
         self,

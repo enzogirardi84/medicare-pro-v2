@@ -321,22 +321,32 @@ class SearchablePaginator:
                         if self._matches_filter(item, field, value)
                     ]
 
+        def _get_value(item, field):
+            if isinstance(item, dict):
+                return item.get(field, "")
+            return getattr(item, field, "")
+
+        def _has_value(item, field):
+            if isinstance(item, dict):
+                return field in item
+            return hasattr(item, field)
+
         # Aplicar búsqueda
         if search_query and len(search_query) >= self.min_search_chars:
             query_lower = search_query.lower()
             result = [
                 item for item in result
                 if any(
-                    query_lower in str(getattr(item, field, "")).lower()
+                    query_lower in str(_get_value(item, field)).lower()
                     for field in self.search_fields
-                    if hasattr(item, field)
+                    if _has_value(item, field)
                 )
             ]
 
         # Ordenar
         result = sorted(
             result,
-            key=lambda x: getattr(x, sort_field, str(x)),
+            key=lambda x: str(_get_value(x, sort_field) or ""),
             reverse=not sort_asc,
         )
 

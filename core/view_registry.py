@@ -41,7 +41,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Proyecto y Roadmap": ("views.project_management", "render_project_management"),
     "Auditoria": ("views.auditoria", "render_auditoria"),
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
-    "Diagnosticos": ("views.diagnosticos", "render"),
+    "Diagnosticos": ("views.diagnosticos", "render_diagnosticos"),
 }
 
 VIEW_NAV_LABELS_BASE: Dict[str, str] = {

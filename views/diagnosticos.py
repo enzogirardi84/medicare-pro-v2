@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 
 
-def render(user=None):
+def render_diagnosticos(user=None):
     st.markdown("# 🔍 Diagnóstico del Sistema")
     st.caption("Verificación técnica completa - Solo Super Administradores")
 
