@@ -460,10 +460,11 @@ def render_login():
                         if not ok_lock:
                             st.error(lock_msg)
                         else:
-                            st.markdown("""
+                            _loader_ph = st.empty()
+                            _loader_ph.markdown("""
 <style>
 .mc-auth-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;
-background:rgba(3,6,15,0.72);backdrop-filter:blur(14px);
+background:rgba(3,6,15,0.82);backdrop-filter:blur(14px);
 -webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;
 justify-content:center;align-items:center;z-index:9999999;gap:20px;}
 .mc-auth-spinner{width:46px;height:46px;border:3px solid rgba(255,255,255,0.08);
@@ -484,6 +485,7 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
 </div>
 """, unsafe_allow_html=True)
                             db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
+                            _loader_ph.empty()
                             if err_db:
                                 st.error(err_db)
                             elif db_f is None:
