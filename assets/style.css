@@ -4228,7 +4228,7 @@ html, body {
 }
 
 /* ===== SIDEBAR MOVIL: ocultar cuando esta cerrado (controlado por clase JS) ===== */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     html:not(.mc-sidebar-mobile-open) section[data-testid="stSidebar"],
     html:not(.mc-sidebar-mobile-open) [data-testid="stSidebar"][aria-expanded="false"] {
         width: 0px !important;
