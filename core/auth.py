@@ -207,6 +207,7 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
     )
     log_event("auth", evento_log)
     guardar_datos()
+    st.session_state["_mc_login_transition"] = True
     st.rerun()
 
 
@@ -485,7 +486,14 @@ animation:mc-auth-pulse 1.6s ease-in-out infinite;}
 </div>
 """, unsafe_allow_html=True)
                             db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
-                            _loader_ph.empty()
+                            _loader_ph.markdown("""
+<style>.mc-auth-sub{animation:none !important;}</style>
+<div class="mc-auth-overlay">
+  <div class="mc-auth-spinner"></div>
+  <p class="mc-auth-title">MediCare Enterprise PRO</p>
+  <p class="mc-auth-sub">Verificando acceso...</p>
+</div>
+""", unsafe_allow_html=True)
                             if err_db:
                                 st.error(err_db)
                             elif db_f is None:
