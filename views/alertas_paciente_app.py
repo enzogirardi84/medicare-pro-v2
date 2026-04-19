@@ -1,4 +1,3 @@
-from core.alert_toasts import queue_toast
 """
 Panel de alertas desde la app paciente (Supabase tabla alertas_pacientes).
 Flujo triage: Rojo / Amarillo / Verde. Estados: Pendiente, En camino, Resuelto.
@@ -11,6 +10,7 @@ from typing import Any, Dict, List
 import pandas as pd
 import streamlit as st
 
+from core.alert_toasts import queue_toast
 from core.norm_empresa import norm_empresa_key
 from core.database import supabase
 from core.utils import es_control_total
