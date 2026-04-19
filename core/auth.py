@@ -460,8 +460,30 @@ def render_login():
                         if not ok_lock:
                             st.error(lock_msg)
                         else:
-                            with st.spinner("🔐 Verificando credenciales y cargando datos..."):
-                                db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
+                            st.markdown("""
+<style>
+.mc-auth-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;
+background:rgba(3,6,15,0.72);backdrop-filter:blur(14px);
+-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;
+justify-content:center;align-items:center;z-index:9999999;gap:20px;}
+.mc-auth-spinner{width:46px;height:46px;border:3px solid rgba(255,255,255,0.08);
+border-left-color:#14b8a6;border-top-color:#60a5fa;border-radius:50%;
+animation:mc-auth-spin 0.9s linear infinite;}
+.mc-auth-title{color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+font-size:18px;font-weight:600;letter-spacing:0.3px;margin:0;}
+.mc-auth-sub{color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+font-size:13px;font-weight:400;letter-spacing:0.4px;margin:0;
+animation:mc-auth-pulse 1.6s ease-in-out infinite;}
+@keyframes mc-auth-spin{to{transform:rotate(360deg);}}
+@keyframes mc-auth-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+</style>
+<div class="mc-auth-overlay">
+  <div class="mc-auth-spinner"></div>
+  <p class="mc-auth-title">MediCare Enterprise PRO</p>
+  <p class="mc-auth-sub">Autenticando...</p>
+</div>
+""", unsafe_allow_html=True)
+                            db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
                             if err_db:
                                 st.error(err_db)
                             elif db_f is None:
