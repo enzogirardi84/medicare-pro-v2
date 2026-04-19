@@ -4539,4 +4539,53 @@ html body .mc-spinner {
     [data-testid="stExpander"] {
         margin-bottom: 0.6rem !important;
     }
+    /* Mismo fix de heights inline que mobile pero con max-height mas alto */
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        height: auto !important;
+        min-height: 0 !important;
+        align-self: auto !important;
+    }
+}
+
+/* =====================================================================
+   MOBILE NUKE: reset agresivo de heights en descendientes de columnas.
+   Ultimo recurso para los casos donde Streamlit setea style inline en
+   elementos internos que heredan altura de la columna mas alta.
+   ===================================================================== */
+@media (max-width: 767px) {
+    /* Forzar height:auto en CUALQUIER descendant de stHorizontalBlock
+       que tenga un style="height:" inline */
+    html body [data-testid="stHorizontalBlock"] [style*="height:"] {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    /* El primer hijo de cada stColumn (contenedor interno) tambien */
+    html body [data-testid="stColumn"] > *:first-child,
+    html body [data-testid="column"] > *:first-child {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    /* Block container: padding-top final, ganamos sobre cualquier regla previa */
+    html body .block-container {
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    /* Vertical block: gap minimo */
+    html body [data-testid="stVerticalBlock"] {
+        gap: 0.25rem !important;
+    }
+    /* Element container: sin margin-bottom extra */
+    html body [data-testid="element-container"],
+    html body [data-testid="stElementContainer"],
+    html body .element-container {
+        margin-bottom: 0.12rem !important;
+    }
+    /* Markdown container: sin margen */
+    html body [data-testid="stMarkdownContainer"] {
+        margin-bottom: 0 !important;
+    }
+    html body [data-testid="stMarkdownContainer"] p:last-child {
+        margin-bottom: 0 !important;
+    }
 }
