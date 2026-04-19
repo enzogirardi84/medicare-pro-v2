@@ -704,6 +704,39 @@ div[data-testid="stElementContainer"]:has(.mc-inv-after-card)
     }
 }
 
+/* ===== BANNER INVENTARIO MINI EN MOBILE: compactar y evitar botones gigantes ===== */
+@media (max-width: 767px) {
+    /* Ocultar el boton "Ir a Inventario" del banner mini: redundante con el menu lateral */
+    .mc-inv-mini-wrap + [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) button[kind="primary"] {
+        display: none !important;
+    }
+    .mc-inv-mini-wrap + [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+        display: none !important;
+    }
+    /* Forzar layout horizontal del banner mini: chip + boton Mostrar en una fila */
+    .mc-inv-mini-wrap + [data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+    }
+    .mc-inv-mini-wrap + [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+    .mc-inv-mini-wrap + [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child {
+        flex: 0 0 auto !important;
+        min-width: 80px !important;
+    }
+    /* Boton "Mostrar" compacto en mobile */
+    .mc-inv-mini-wrap + [data-testid="stHorizontalBlock"] button {
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.78rem !important;
+        min-height: 34px !important;
+        height: auto !important;
+    }
+}
+
 /* Login / recuperación: aviso SMTP sin el bloque alto de st.warning */
 .mc-auth-smtp-strip {
     display: flex;

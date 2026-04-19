@@ -1071,7 +1071,9 @@ st.markdown("""
 
 
 # En móvil usamos solo el panel lateral izquierdo; evitamos duplicar menú y selector arriba.
-render_alerta_inventario_banda_superior(mi_empresa, menu)
+# No mostrar la alerta si ya estamos en el módulo Inventario (redundante + ocupa espacio en mobile).
+if vista_actual != "Inventario":
+    render_alerta_inventario_banda_superior(mi_empresa, menu)
 if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()

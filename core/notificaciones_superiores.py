@@ -253,6 +253,8 @@ def render_alerta_inventario_banda_superior(
     minificado = st.session_state.get(_dismiss_key) == f_inv
     if minificado:
         # Vista reducida: sin números (evita texto pegado); el detalle solo al pulsar «Mostrar».
+        # Ancla CSS: en mobile ocultamos el boton "Ir a Inventario" (redundante con el menu lateral).
+        st.markdown('<div class="mc-inv-mini-wrap" aria-hidden="true"></div>', unsafe_allow_html=True)
         if puede_ir_inventario:
             c1, c_go, c2 = st.columns([3.4, 1.45, 1.15])
         else:
