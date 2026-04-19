@@ -3790,13 +3790,18 @@ button[kind="headerNoPadding"] {
 
 /* --- MOVIL (< 768px) - OPTIMIZACION AGRESIVA --- */
 @media (max-width: 767px) {
-    /* Boton toggle del sidebar - NO fixed, mejor integrado */
+    /* Boton toggle sidebar: oculto en el area de contenido,
+       Streamlit lo muestra en el header cuando el sidebar esta cerrado */
     [data-testid="stSidebarCollapsedControl"] {
-        position: relative !important;
-        top: auto !important;
-        left: auto !important;
-        margin: 8px !important;
-        z-index: 100 !important;
+        position: fixed !important;
+        top: 0.5rem !important;
+        left: 0.5rem !important;
+        z-index: 9999 !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+        padding: 6px !important;
+        background: rgba(13,148,136,0.92) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.35) !important;
     }
     
     /* Desactivar animaciones y efectos costosos */
@@ -3812,10 +3817,10 @@ button[kind="headerNoPadding"] {
         -webkit-backdrop-filter: none !important;
     }
 
-    /* Block container full width */
+    /* Block container full width - padding-top para no quedar bajo el botón toggle */
     .block-container {
         max-width: 100% !important;
-        padding: 0.5rem 0.75rem 0.75rem !important;
+        padding: 3.5rem 0.75rem 0.75rem !important;
     }
 
     /* Sidebar como drawer fullscreen */
@@ -3874,14 +3879,14 @@ button[kind="headerNoPadding"] {
         border-radius: 16px !important;
     }
 
-    /* Columnas apilan verticalmente en pantallas chicas */
+    /* Columnas: 2 columnas por defecto en movil (no 1) */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: wrap !important;
     }
 
+    /* NO apilamos al 100% - dejamos que Streamlit maneje el ancho */
     [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-        min-width: 100% !important;
-        flex: 1 1 100% !important;
+        flex-shrink: 1 !important;
     }
 
     /* Tablas con scroll horizontal forzado */
@@ -3944,12 +3949,12 @@ button[kind="headerNoPadding"] {
         padding: 0.7rem 0.6rem !important;
     }
 
-    /* Boton toggle sidebar aun mas prominente */
+    /* Boton toggle sidebar en pantalla pequena */
     [data-testid="stSidebarCollapsedControl"] {
-        top: 8px !important;
-        left: 8px !important;
-        min-width: 48px !important;
-        min-height: 48px !important;
+        top: 0.4rem !important;
+        left: 0.4rem !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
     }
 
     /* Gap de columnas reducido */
