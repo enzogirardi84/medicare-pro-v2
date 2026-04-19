@@ -123,79 +123,59 @@ except Exception:
 
 # CSS CRITICO INLINE: siempre se inyecta, no depende de cache del archivo
 _CSS_CRITICO_MOBILE = """
-/* NUCLEAR MOBILE v19:30 - Fuerza compactacion en TODOS los componentes */
+/* MOBILE COMPACT v20 - limpia espacios muertos sin romper layouts */
 @media (max-width: 767px) {
-    /* Marker rojo grande */
     html body .block-container::before {
-        content: "CSS v19:30 SIGNOS OK" !important;
-        display: block !important;
-        background: #ff2222 !important;
-        color: white !important;
-        padding: 6px !important;
-        font-size: 11px !important;
-        font-weight: bold !important;
-        margin-bottom: 6px !important;
-        text-align: center !important;
+        content: none !important;
+        display: none !important;
     }
-    /* Reset absoluto de padding y margin en el contenedor principal */
+
     html body .block-container {
-        padding: 0.3rem 0.5rem !important;
+        padding: 0.55rem 0.72rem 0.8rem !important;
         margin: 0 !important;
     }
-    /* Todos los bloques verticales: gap minimo */
-    [data-testid="stVerticalBlock"],
-    [data-testid="stVerticalBlock"] > div {
-        gap: 0.05rem !important;
-        margin: 0 !important;
+
+    [data-testid="stVerticalBlock"] {
+        gap: 0.35rem !important;
     }
-    /* Todos los bloques horizontales: gap minimo */
+
     [data-testid="stHorizontalBlock"] {
-        gap: 0.05rem !important;
+        gap: 0.45rem !important;
+        align-items: flex-start !important;
     }
-    /* Todas las columnas: sin margin extra */
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-        margin-bottom: 0.1rem !important;
-        padding: 0 !important;
-    }
-    /* Todos los elementos: margin casi cero */
+
     [data-testid="stElementContainer"] {
-        margin: 0.05rem 0 !important;
+        margin: 0 0 0.24rem 0 !important;
         padding: 0 !important;
     }
-    /* Todos los contenedores de elementos */
+
     .element-container, [data-testid="element-container"] {
-        margin-bottom: 0.05rem !important;
+        margin-bottom: 0.24rem !important;
     }
-    /* Todos los markdown: sin margin */
-    [data-testid="stMarkdownContainer"] {
-        margin: 0 !important;
-    }
+
     [data-testid="stMarkdownContainer"] p,
     [data-testid="stMarkdownContainer"] h1,
     [data-testid="stMarkdownContainer"] h2,
     [data-testid="stMarkdownContainer"] h3,
     [data-testid="stMarkdownContainer"] h4 {
-        margin: 0.1rem 0 !important;
+        margin: 0.08rem 0 0.18rem 0 !important;
     }
-    /* Caption: margin minimo */
+
     [data-testid="stCaptionContainer"] {
-        margin: 0.1rem 0 !important;
+        margin: 0.08rem 0 0.2rem 0 !important;
     }
-    /* Expander: margin minimo */
-    [data-testid="stExpander"] {
-        margin: 0.1rem 0 !important;
-    }
+
     [data-testid="stExpander"] details {
         margin: 0 !important;
-        padding: 0.3rem !important;
+        padding: 0.5rem !important;
     }
-    /* Formularios: padding minimo */
-    [data-testid="stForm"] {
-        padding: 0.3rem !important;
-        margin: 0.1rem 0 !important;
-        border-width: 1px !important;
+
+    [data-testid="stForm"],
+    [data-testid="stExpander"] {
+        padding: 0.65rem 0.72rem !important;
+        margin: 0.2rem 0 0.55rem 0 !important;
     }
-    /* Labels de inputs pegados */
+
     .stNumberInput label,
     .stTextInput label,
     .stSelectbox label,
@@ -203,100 +183,137 @@ _CSS_CRITICO_MOBILE = """
     .stDateInput label,
     [data-testid="stNumberInput"] label,
     [data-testid="stTextInput"] label,
-    [data-testid="stSelectbox"] label {
-        margin: 0 0 -2px 0 !important;
+    [data-testid="stSelectbox"] label,
+    [data-testid="stTextArea"] label,
+    [data-testid="stDateInput"] label {
+        margin: 0 0 0.14rem 0 !important;
         padding: 0 !important;
         font-size: 12px !important;
-        line-height: 1.1 !important;
+        line-height: 1.15 !important;
     }
-    /* Inputs compactos */
+
     input[type="number"],
     input[type="text"],
     input[type="password"],
     textarea,
     [data-testid="stNumberInput"] input,
-    [data-testid="stTextInput"] input {
-        min-height: 32px !important;
-        padding: 2px 6px !important;
+    [data-testid="stTextInput"] input,
+    [data-baseweb="input"] input {
+        min-height: 36px !important;
+        padding: 4px 8px !important;
         margin: 0 !important;
     }
-    /* Botones compactos */
+
     button, [data-testid="stButton"] button {
-        min-height: 34px !important;
-        padding: 4px 12px !important;
-        margin: 0.1rem 0 !important;
+        min-height: 38px !important;
+        padding: 0.35rem 0.8rem !important;
     }
-    /* Radio buttons compactos */
-    [data-testid="stRadio"] {
-        margin: 0.1rem 0 !important;
-        padding: 0.2rem !important;
-    }
-    /* Alertas compactas */
+
     [data-testid="stAlert"] {
-        margin: 0.15rem 0 !important;
-        padding: 0.4rem !important;
+        margin: 0.18rem 0 !important;
+        padding: 0.45rem !important;
     }
-    /* Tabs compactos */
+
     [data-testid="stTabs"] {
-        margin: 0.1rem 0 !important;
+        margin: 0.14rem 0 !important;
     }
-    /* Metricas compactas */
+
     [data-testid="stMetric"] {
-        padding: 0.3rem !important;
-        margin: 0.1rem 0 !important;
+        padding: 0.45rem !important;
+        margin: 0 !important;
     }
-    /* Tablas compactas */
+
     [data-testid="stDataFrame"] {
-        margin: 0.2rem 0 !important;
+        margin: 0.24rem 0 !important;
     }
-    /* Selectbox dropdown compacto */
+
     [data-testid="stSelectbox"] {
-        margin: 0.05rem 0 !important;
+        margin: 0 !important;
     }
-    /* === FIXES ESPECIFICOS SIGNOS VITALES === */
-    /* stNumberInput: eliminar gap entre inputs */
+
     [data-testid="stNumberInput"] {
         margin: 0 !important;
         padding: 0 !important;
     }
-    /* Contenedor del input number con stepper */
-    [data-testid="stNumberInput"] > div > div {
-        gap: 0.2rem !important;
+
+    [data-testid="stNumberInput"] > div,
+    [data-testid="stTextInput"] > div,
+    [data-testid="stTextArea"] > div,
+    [data-testid="stDateInput"] > div,
+    [data-testid="stSelectbox"] > div {
         margin: 0 !important;
     }
-    /* Stepper buttons mas compactos */
+
+    [data-testid="stNumberInput"] > div > div {
+        gap: 0.25rem !important;
+        margin: 0 !important;
+        align-items: stretch !important;
+    }
+
     [data-testid="stNumberInput"] button {
-        min-height: 28px !important;
-        min-width: 28px !important;
+        min-height: 32px !important;
+        min-width: 32px !important;
         padding: 0 !important;
-        margin: 0 2px !important;
+        margin: 0 !important;
     }
-    /* Input dentro del number_input */
+
     [data-testid="stNumberInput"] input {
-        min-height: 30px !important;
-        padding: 2px 4px !important;
+        min-height: 34px !important;
+        padding: 4px 6px !important;
     }
-    /* Ocultar header de Streamlit */
+
     [data-testid="stHeader"], header[data-testid="stHeader"] {
         display: none !important;
         height: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
     }
-    /* HR compacto */
+
     hr {
-        margin: 0.2rem 0 !important;
+        margin: 0.45rem 0 !important;
         border-width: 1px !important;
     }
-    /* Spacers: altura minima */
-    [data-testid="stVerticalBlock"] > div:empty {
-        height: 0.1rem !important;
-        min-height: 0.1rem !important;
+
+    button[type="submit"] {
+        margin-top: 0.45rem !important;
     }
-    /* === ATOMICO: forzar todos los elementos en cascada === */
-    html body [data-testid="stApp"] * {
-        margin-block-start: 0 !important;
-        margin-block-end: 0 !important;
+
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"][style],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"][style] {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        align-self: flex-start !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+    }
+
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div,
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] > div,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] div[data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] div[data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] [style*="height:"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] [style*="height:"] {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"],
+    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+    }
+
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="column"] {
+        width: auto !important;
+        min-width: min(100%, 9.5rem) !important;
+        flex: 1 1 9.5rem !important;
     }
 }
 """

@@ -35,11 +35,14 @@ def _edad_desde_fnac(fnac_str):
 
 
 def render_clinica(paciente_sel, user=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+
     if not paciente_sel:
         aviso_sin_paciente()
         return
 
     user = user or {}
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     det = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
     nombre_corto = paciente_sel.split(" (")[0]
     edad = _edad_desde_fnac(det.get("fnac", ""))
@@ -69,10 +72,16 @@ def render_clinica(paciente_sel, user=None):
         "Abajo cargas un nuevo control; mas abajo el historial y el grafico. Las alertas se muestran al instante si TA, FC, saturacion o temperatura salen de rango."
     )
 
-    c_inf1, c_inf2, c_inf3 = st.columns(3)
-    c_inf1.metric("Paciente", nombre_corto[:28] + ("…" if len(nombre_corto) > 28 else ""))
-    c_inf2.metric("Edad", f"{edad} años" if edad is not None else "S/D")
-    c_inf3.metric("Obra social", (det.get("obra_social") or "S/D")[:24] or "S/D")
+    if es_movil:
+        c_inf1, c_inf2 = st.columns(2)
+        c_inf1.metric("Paciente", nombre_corto[:24] + ("..." if len(nombre_corto) > 24 else ""))
+        c_inf2.metric("Edad", f"{edad} años" if edad is not None else "S/D")
+        st.metric("Obra social", (det.get("obra_social") or "S/D")[:28] or "S/D")
+    else:
+        c_inf1, c_inf2, c_inf3 = st.columns(3)
+        c_inf1.metric("Paciente", nombre_corto[:28] + ("..." if len(nombre_corto) > 28 else ""))
+        c_inf2.metric("Edad", f"{edad} años" if edad is not None else "S/D")
+        c_inf3.metric("Obra social", (det.get("obra_social") or "S/D")[:24] or "S/D")
 
     alergias = str(det.get("alergias", "")).strip()
     if alergias:
@@ -84,19 +93,30 @@ def render_clinica(paciente_sel, user=None):
         vits_ordenados = sorted(vits, key=lambda x: _parse_fecha_hora(x.get("fecha", "")))
         ultimo = vits_ordenados[-1]
         st.markdown("##### Ultimo control registrado")
-        r1, r2, r3 = st.columns(3)
-        with r1:
+        if es_movil:
             c1, c2 = st.columns(2)
             c1.metric("T.A.", ultimo.get("TA", "-"))
             c2.metric("F.C.", f"{ultimo.get('FC', '-')} lpm")
-        with r2:
             c3, c4 = st.columns(2)
             c3.metric("F.R.", f"{ultimo.get('FR', '-')} rpm")
             c4.metric("SatO2", f"{ultimo.get('Sat', '-')} %")
-        with r3:
             c5, c6 = st.columns(2)
             c5.metric("Temp", f"{ultimo.get('Temp', '-')} C")
             c6.metric("HGT", ultimo.get("HGT", "-"))
+        else:
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                c1, c2 = st.columns(2)
+                c1.metric("T.A.", ultimo.get("TA", "-"))
+                c2.metric("F.C.", f"{ultimo.get('FC', '-')} lpm")
+            with r2:
+                c3, c4 = st.columns(2)
+                c3.metric("F.R.", f"{ultimo.get('FR', '-')} rpm")
+                c4.metric("SatO2", f"{ultimo.get('Sat', '-')} %")
+            with r3:
+                c5, c6 = st.columns(2)
+                c5.metric("Temp", f"{ultimo.get('Temp', '-')} C")
+                c6.metric("HGT", ultimo.get("HGT", "-"))
         if len(vits_ordenados) >= 2:
             try:
                 penultimo = vits_ordenados[-2]
@@ -126,17 +146,26 @@ def render_clinica(paciente_sel, user=None):
     st.divider()
     with st.form("vitales_f", clear_on_submit=True):
         st.markdown("##### Nuevo control de signos vitales")
-        col_time1, col_time2 = st.columns(2)
+        col_time1, col_time2 = st.columns([1.15, 0.85] if es_movil else 2)
         fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key="fecha_vits")
         hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_vits")
         ta = st.text_input("Tension arterial (TA)", "120/80")
-        r_s1, r_s2, r_s3 = st.columns(3)
-        fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75)
-        fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16)
-        sat = r_s3.number_input("SatO2 (%)", 70, 100, 96)
-        r_s4, r_s5 = st.columns(2)
-        temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1)
-        hgt = r_s5.text_input("HGT (mg/dL)", "110")
+        if es_movil:
+            r_s1, r_s2 = st.columns(2)
+            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75)
+            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16)
+            r_s3, r_s4 = st.columns(2)
+            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96)
+            temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1)
+            hgt = st.text_input("HGT (mg/dL)", "110")
+        else:
+            r_s1, r_s2, r_s3 = st.columns(3)
+            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75)
+            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16)
+            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96)
+            r_s4, r_s5 = st.columns(2)
+            temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1)
+            hgt = r_s5.text_input("HGT (mg/dL)", "110")
         obs = st.text_input("Observaciones (opcional)", "", placeholder="Ej.: paciente en ayunas, edema MMII...")
         if st.form_submit_button("Guardar signos vitales", use_container_width=True, type="primary"):
             hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")

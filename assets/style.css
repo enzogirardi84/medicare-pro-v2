@@ -4644,21 +4644,6 @@ html body .mc-spinner {
         overflow: hidden !important;
     }
 
-    /* Marker visual para verificar que CSS se carga */
-    html body .block-container::before {
-        content: "CSS v19:10 OK" !important;
-        display: block !important;
-        background: #51B171 !important;
-        color: white !important;
-        padding: 2px 8px !important;
-        font-size: 10px !important;
-        font-weight: bold !important;
-        border-radius: 4px !important;
-        margin-bottom: 4px !important;
-        text-align: center !important;
-        width: fit-content !important;
-    }
-
     /* Ocultar elementos con clase ocultar-movil */
     .ocultar-movil {
         display: none !important;
