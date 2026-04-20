@@ -202,7 +202,6 @@ def render_escalas_clinicas(paciente_sel, user):
                     log_event("escala_sql_insert", f"Paciente: {paciente_uuid}")
             except Exception as e:
                 log_event("error_escala_sql", str(e))
-                st.error(f"Error al guardar en SQL: {e}")
 
             # 2. Guardar en JSON (Legacy)
             nuevo = {

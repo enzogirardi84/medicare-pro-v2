@@ -139,7 +139,6 @@ def render_inventario(mi_empresa):
                         log_event("inventario_sql_insert_update", f"Item: {item_final}")
                 except Exception as e:
                     log_event("error_inventario_sql", str(e))
-                    st.error(f"Error al guardar en SQL: {e}")
 
                 # 2. Guardar en JSON (Legacy)
                 encontrado = False
@@ -241,7 +240,6 @@ def render_inventario(mi_empresa):
                         log_event("inventario_sql_update", f"Item: {item_a_editar}")
                 except Exception as e:
                     log_event("error_inventario_sql_update", str(e))
-                    st.error(f"Error al actualizar en SQL: {e}")
 
                 # 2. Actualizar en JSON (Legacy)
                 if "inventario_db" in st.session_state:
@@ -268,7 +266,6 @@ def render_inventario(mi_empresa):
                         log_event("inventario_sql_delete", f"Item: {del_item}")
                 except Exception as e:
                     log_event("error_inventario_sql_delete", str(e))
-                    st.error(f"Error al eliminar en SQL: {e}")
 
                 # 2. Eliminar en JSON (Legacy)
                 if "inventario_db" in st.session_state:

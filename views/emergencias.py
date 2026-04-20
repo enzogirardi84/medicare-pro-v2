@@ -48,7 +48,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
                         "recursos_asignados": e.get("recursos_asignados", ""),
                         "profesional": e.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(e.get("usuarios"), dict) else "Desconocido",
                         # Campos legacy que quizas no esten en SQL pero la UI espera
-                        "triage_grado": f"Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
+                        "triage_grado": "Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
                         "ambulancia_solicitada": "movil" in e.get("recursos_asignados", "").lower() or "ambulancia" in e.get("recursos_asignados", "").lower(),
                         "categoria_evento": "General",
                         "tipo_evento": "Evento",

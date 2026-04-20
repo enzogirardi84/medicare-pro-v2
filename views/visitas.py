@@ -1,7 +1,6 @@
 import urllib.parse
 from datetime import datetime, timedelta
 
-import pandas as pd
 import streamlit as st
 
 from core.alert_toasts import queue_toast

@@ -199,7 +199,6 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
                         log_event("emergencia_sql_insert", f"Paciente: {paciente_uuid}")
                 except Exception as e:
                     log_event("error_emergencia_sql", str(e))
-                    st.error(f"Error al guardar en SQL: {e}")
 
                 nuevo = {
                     "id": str(uuid4()),

@@ -263,7 +263,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                 st.session_state.get("u_actual", {}).get("nombre", "Sistema"),
                                 st.session_state.get("u_actual", {}).get("matricula", ""),
                                 (
-                                    f"Legajo editado desde admision. "
+                                    "Legajo editado desde admision. "
                                     f"Paciente anterior: {paciente_sel_admin}. Registros actualizados: {registros_actualizados}."
                                 ),
                                 empresa=detalles_actualizados.get("empresa", mi_empresa),

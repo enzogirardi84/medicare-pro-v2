@@ -28,6 +28,7 @@ from views._dashboard_bloques import (
     render_vista_operativa,
     render_listados_ejecutivos,
 )
+from core.app_logging import log_event
 
 
 def render_dashboard(mi_empresa, rol):
@@ -127,12 +128,9 @@ def render_dashboard(mi_empresa, rol):
                     emergencias.append({
                         "fecha_evento": dt.strftime("%d/%m/%Y") if pd.notnull(dt) else "",
                         "hora_evento": dt.strftime("%H:%M") if pd.notnull(dt) else "",
-                        "triage_grado": f"Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
+                        "triage_grado": "Grado 1 - Rojo" if e.get("prioridad") == "Critica" else "Grado 2 - Amarillo" if e.get("prioridad") == "Alta" else "Grado 3 - Verde",
                     })
     except Exception as e:
-
-        from core.app_logging import log_event
-
         log_event('dashboard_error', f'Error: {e}')
         
     if not emergencias:

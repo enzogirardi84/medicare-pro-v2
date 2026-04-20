@@ -149,7 +149,6 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                         log_event("facturacion_sql_insert", f"Paciente: {paciente_uuid}")
                 except Exception as e:
                     log_event("error_facturacion_sql", str(e))
-                    st.error(f"Error al guardar en SQL: {e}")
 
                 # 2. Guardar en JSON (Legacy)
                 if "facturacion_db" not in st.session_state:

@@ -235,7 +235,6 @@ def _render_plan_cuidados_enfermeria_legacy(
                             log_event("enfermeria_sql_insert", f"Paciente: {paciente_uuid}")
                     except Exception as e:
                         log_event("error_enfermeria_sql", str(e))
-                        st.error(f"Error al guardar en SQL: {e}")
 
                     nuevo = {
                         "paciente": paciente_sel,

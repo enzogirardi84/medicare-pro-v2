@@ -3,7 +3,6 @@ from collections import Counter
 from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
-import pandas as pd
 import streamlit as st
 
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio

@@ -218,7 +218,6 @@ def render_pediatria(paciente_sel, user):
                     log_event("pediatria_sql_insert", f"Paciente: {paciente_uuid}")
             except Exception as e:
                 log_event("error_pediatria_sql", str(e))
-                st.error(f"Error al guardar en SQL: {e}")
 
             # 2. Guardar en JSON (Legacy)
             if "pediatria_db" not in st.session_state:
