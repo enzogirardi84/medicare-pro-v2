@@ -632,6 +632,8 @@ def limpiar_sesion_app():
     st.session_state.pop("_mc_anticolapso_secret_cached", None)
     st.session_state.pop("_mc_professional_theme_applied", None)
     st.session_state.pop("_mc_login_transition", None)
+    st.session_state.pop("_mc_cache_headers_liviano", None)
+    st.session_state.pop("_mc_cache_ua_contexto", None)
     st.session_state["entered_app"] = False
 
 
@@ -747,7 +749,6 @@ with st.sidebar:
     st.divider()
 
     render_estabilidad_anticolapso_sidebar()
-    aplicar_politicas_anticolapso_ui()
     st.divider()
 
     menu = resolve_menu_for_role(rol, user)
@@ -756,7 +757,6 @@ with st.sidebar:
     render_sidebar_bloque_app_paciente(mi_empresa, rol)
 
     st.divider()
-    aplicar_politicas_anticolapso_ui()
     st.markdown(
         """
         <div class="mc-sidebar-section">
@@ -785,7 +785,7 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.session_state["mc_liviano_modo"] = _liv_vals[_liv_labels.index(_pick_liv)]
-    # Tras el selectbox: si anticolapso está activo, volver a fijar liviano (evita un run con modo "off").
+    # Aplicar politica una sola vez al final del bloque de configuracion de modo.
     aplicar_politicas_anticolapso_ui()
     if anticolapso_activo_fn():
         st.caption("**Estabilidad:** listas acotadas e interfaz liviana (detección automática o `MC_ANTICOLAPSO` en el servidor).")

@@ -64,22 +64,50 @@ def user_agent_sugiere_equipo_liviano(user_agent: str) -> bool:
 
 
 def user_agent_desde_contexto() -> str:
-    h = _ctx_headers()
-    return _get_header(h, "user-agent") if h else ""
+    _ck = "_mc_cache_ua_contexto"
+    try:
+        cached = st.session_state.get(_ck)
+        if cached is not None:
+            return str(cached)
+    except Exception:
+        pass
+    try:
+        h = _ctx_headers()
+        result = _get_header(h, "user-agent") if h else ""
+    except Exception:
+        result = ""
+    try:
+        st.session_state[_ck] = result
+    except Exception:
+        pass
+    return result
 
 
 def headers_sugieren_equipo_liviano() -> bool:
+    _ck = "_mc_cache_headers_liviano"
+    try:
+        cached = st.session_state.get(_ck)
+        if cached is not None:
+            return bool(cached)
+    except Exception:
+        pass
+    result = False
     try:
         headers = _ctx_headers()
-        if not headers:
-            return False
-        save = _get_header(headers, "save-data").strip().lower()
-        if save == "on":
-            return True
-        ua = _get_header(headers, "user-agent")
-        return user_agent_sugiere_equipo_liviano(ua)
+        if headers:
+            save = _get_header(headers, "save-data").strip().lower()
+            if save == "on":
+                result = True
+            else:
+                ua = _get_header(headers, "user-agent")
+                result = user_agent_sugiere_equipo_liviano(ua)
     except Exception:
-        return False
+        result = False
+    try:
+        st.session_state[_ck] = result
+    except Exception:
+        pass
+    return result
 
 
 def user_agent_es_telefono_movil_probable(user_agent: str) -> bool:
