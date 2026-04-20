@@ -49,7 +49,8 @@ def _auth_loader_markup(subtitle: str) -> str:
 .mc-auth-overlay{{position:fixed;inset:0;background:rgba(3,6,15,0.82);
 backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;
 flex-direction:column;justify-content:center;align-items:center;z-index:9999999;
-gap:16px;padding:1rem;text-align:center;}}
+gap:16px;padding:1rem;text-align:center;
+animation:mc-auth-fadeout 0.4s ease 4s forwards;}}
 .mc-auth-spinner{{display:block;flex:0 0 auto;width:46px;height:46px;
 border:3px solid rgba(255,255,255,0.08);border-left-color:#14b8a6;
 border-top-color:#60a5fa;border-radius:50%;animation:mc-auth-spin 0.9s linear infinite;
@@ -61,6 +62,7 @@ font-size:18px;font-weight:700;letter-spacing:0.2px;margin:0;}}
 font-size:13px;font-weight:500;letter-spacing:0.25px;margin:0;}}
 @keyframes mc-auth-spin{{to{{transform:rotate(360deg);}}}}
 @-webkit-keyframes mc-auth-spin{{to{{transform:rotate(360deg);}}}}
+@keyframes mc-auth-fadeout{{from{{opacity:1}}to{{opacity:0;pointer-events:none;visibility:hidden;}}}}
 @media (max-width: 767px){{
   .mc-auth-overlay{{gap:14px;padding:0.9rem;background:rgba(3,6,15,0.9);}}
   .mc-auth-spinner{{width:42px;height:42px;}}
@@ -204,7 +206,10 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
         }
     )
     log_event("auth", evento_log)
-    guardar_datos()
+    try:
+        guardar_datos(spinner=False)
+    except Exception:
+        pass
     st.session_state["_mc_login_transition"] = True
     st.rerun()
 
