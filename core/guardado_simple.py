@@ -39,7 +39,7 @@ def _load_data() -> Dict:
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except:
+    except Exception:
         return {
             "pacientes_db": [],
             "vitales_db": [],

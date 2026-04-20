@@ -138,7 +138,7 @@ class SupabaseStorage:
                 .execute()
             )
             return response.count if hasattr(response, 'count') else 0
-        except:
+        except Exception:
             return 0
 
 
