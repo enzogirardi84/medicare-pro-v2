@@ -48,11 +48,43 @@ def render_inventario(mi_empresa):
         inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
         
     stock_critico = [i for i in inv_mio if i.get("stock", 0) <= 10]
+    stock_bajo = [i for i in inv_mio if 10 < i.get("stock", 0) <= 25]
+    total_unidades = sum(int(i.get("stock", 0) or 0) for i in inv_mio)
+
+    # ── Métricas globales ──────────────────────────────────────
+    if inv_mio:
+        _mc1, _mc2, _mc3, _mc4 = st.columns(4)
+        _mc1.metric("Items en inventario", len(inv_mio))
+        _mc2.metric("🔴 Stock crítico (≤10)", len(stock_critico))
+        _mc3.metric("🟡 Stock bajo (≤25)", len(stock_bajo))
+        _mc4.metric("Unidades totales", total_unidades)
+
+    # ── Ranking insumos más consumidos ─────────────────────────
+    from collections import Counter
+    consumos_empresa = [
+        c for c in st.session_state.get("consumos_db", [])
+        if c.get("empresa") == mi_empresa
+    ]
+    if consumos_empresa:
+        _conteo_cons = Counter()
+        for c in consumos_empresa:
+            _conteo_cons[c.get("insumo", "")] += int(c.get("cantidad", 0) or 0)
+        _top5 = _conteo_cons.most_common(5)
+        if _top5:
+            with st.expander("📊 Top insumos más consumidos", expanded=False):
+                for ins, qty in _top5:
+                    stock_ins = next((i.get("stock", 0) for i in inv_mio if i.get("item", "").lower() == ins.lower()), None)
+                    _sem = " 🔴" if stock_ins is not None and stock_ins <= 10 else (" 🟡" if stock_ins is not None and stock_ins <= 25 else "")
+                    st.caption(f"**{ins}** — {qty} u. consumidas{_sem}" + (f" | stock actual: {stock_ins}" if stock_ins is not None else ""))
 
     if stock_critico:
-        with lista_plegable("Stock crítico (≤10 unidades)", count=len(stock_critico), expanded=False, height=260):
+        with lista_plegable("Stock crítico (≤10 unidades)", count=len(stock_critico), expanded=True, height=260):
             for item in stock_critico[:80]:
-                st.error(f"{item.get('item')} -> quedan {item.get('stock', 0)} unidades")
+                st.error(f"{item.get('item')} → quedan **{item.get('stock', 0)}** unidades")
+    if stock_bajo:
+        with lista_plegable("Stock bajo (≤25 unidades)", count=len(stock_bajo), expanded=False, height=200):
+            for item in stock_bajo[:80]:
+                st.warning(f"{item.get('item')} → quedan {item.get('stock', 0)} unidades")
 
     try:
         vademecum_base = cargar_json_asset("vademecum.json")
@@ -131,9 +163,34 @@ def render_inventario(mi_empresa):
 
     if inv_mio:
         df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual"})
+
+        # ── Búsqueda y filtro de criticidad ────────────────────────
+        _col_b, _col_f = st.columns([2, 1])
+        _busq_inv = _col_b.text_input(
+            "🔍 Buscar insumo",
+            placeholder="Nombre del insumo...",
+            key="inventario_busqueda",
+        ).strip().lower()
+        _filtro_crit = _col_f.selectbox(
+            "Mostrar",
+            ["Todos", "Solo críticos (≤10)", "Stock bajo (≤25)", "Stock normal (>25)"],
+            key="inventario_filtro",
+        )
+        df_filtrado = df_stock.copy()
+        if _busq_inv:
+            df_filtrado = df_filtrado[df_filtrado["Insumo"].str.lower().str.contains(_busq_inv, na=False)]
+        if _filtro_crit == "Solo críticos (≤10)":
+            df_filtrado = df_filtrado[df_filtrado["Stock Actual"] <= 10]
+        elif _filtro_crit == "Stock bajo (≤25)":
+            df_filtrado = df_filtrado[(df_filtrado["Stock Actual"] > 10) & (df_filtrado["Stock Actual"] <= 25)]
+        elif _filtro_crit == "Stock normal (>25)":
+            df_filtrado = df_filtrado[df_filtrado["Stock Actual"] > 25]
+        if _busq_inv or _filtro_crit != "Todos":
+            st.caption(f"{len(df_filtrado)} insumo(s) encontrado(s)")
+
         limite_stock = seleccionar_limite_registros(
             "Insumos a mostrar",
-            len(df_stock),
+            len(df_filtrado),
             key="inventario_limite_stock",
             default=50,
             opciones=(10, 20, 50, 100, 200, 500),
@@ -148,11 +205,11 @@ def render_inventario(mi_empresa):
             return ["background-color: #122033; color: #ffffff"] * len(row)
 
         styled = (
-            df_stock.sort_values(by="Stock Actual", ascending=True)[["Insumo", "Stock Actual"]]
+            df_filtrado.sort_values(by="Stock Actual", ascending=True)[["Insumo", "Stock Actual"]]
             .head(limite_stock)
             .style.apply(colorear_stock, axis=1)
         )
-        with lista_plegable("Tabla de stock actual", count=len(df_stock), expanded=False, height=520):
+        with lista_plegable("Tabla de stock actual", count=len(df_filtrado), expanded=False, height=520):
             st.dataframe(styled, use_container_width=True, hide_index=True, height=496)
     else:
         bloque_estado_vacio(
