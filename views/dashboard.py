@@ -243,6 +243,77 @@ def render_dashboard(mi_empresa, rol):
     fact_mes = _sumar_importe(facturacion)
     balance_actual = sum(float(x.get("balance", 0) or 0) for x in balance[-30:])
 
+    # ── Notificaciones de turno ───────────────────────────────────────────
+    _notifs = []
+
+    # 1. Pacientes sin evolución hoy
+    evoluciones = st.session_state.get("evoluciones_db", [])
+    _pacs_con_ev_hoy = {
+        e.get("paciente") for e in evoluciones
+        if parse_fecha_hora(e.get("fecha", "")).date() == hoy
+    }
+    _pacs_activos_ids = {p["paciente"] for p in pacientes if p.get("estado", "Activo") == "Activo"}
+    _sin_ev_hoy = _pacs_activos_ids - _pacs_con_ev_hoy
+    if _sin_ev_hoy:
+        _notifs.append(("⚠️", "warning", f"**{len(_sin_ev_hoy)} paciente(s) activo(s) sin evolución hoy.** Verificar antes del cierre de turno."))
+
+    # 2. Medicaciones por vencer (estado Activa con fecha de vencimiento en próximas 48hs)
+    _meds_por_vencer = []
+    for ind in indicaciones:
+        if str(ind.get("estado_receta", "Activa")).strip().lower() not in ("activa", ""):
+            continue
+        _fv_str = str(ind.get("fecha_vencimiento", "") or ind.get("hasta", "") or "").strip()
+        if not _fv_str:
+            continue
+        try:
+            _fv = parse_fecha_hora(_fv_str)
+            if _fv != datetime.min and ahora_local <= _fv <= proximas_48h_limite:
+                _meds_por_vencer.append(ind)
+        except Exception:
+            pass
+    if _meds_por_vencer:
+        _notifs.append(("💊", "warning", f"**{len(_meds_por_vencer)} medicación/es** vencen en las próximas 48hs. Revisar prescripciones."))
+
+    # 3. Estudios críticos sin resultado >7 días
+    _CRITICOS = {"Tomografia (TAC)", "Resonancia Magnetica (RMN)", "Electrocardiograma (ECG)"}
+    estudios_db = st.session_state.get("estudios_db", [])
+    _estudios_pac = [e for e in estudios_db if e.get("paciente") in _pac_ids]
+    _estudios_crit_sin_res = []
+    for e in _estudios_pac:
+        if e.get("tipo") not in _CRITICOS:
+            continue
+        if str(e.get("detalle", "")).strip().lower() not in ("", "sin resultado", "-", "s/d"):
+            continue
+        try:
+            _fe = parse_fecha_hora(e.get("fecha", ""))
+            if _fe != datetime.min and (ahora_local - _fe).days > 7:
+                _estudios_crit_sin_res.append(e)
+        except Exception:
+            pass
+    if _estudios_crit_sin_res:
+        _notifs.append(("🔬", "error", f"**{len(_estudios_crit_sin_res)} estudio(s) crítico(s)** sin resultado en más de 7 días (TAC/RMN/ECG)."))
+
+    # 4. Balances negativos severos
+    balance_db = st.session_state.get("balance_db", [])
+    _bal_severos = []
+    for _pac_id in _pacs_activos_ids:
+        _bal_pac = [b for b in balance_db if b.get("paciente") == _pac_id]
+        if len(_bal_pac) >= 3:
+            _neto3 = sum(float(b.get("balance", 0) or 0) for b in _bal_pac[-3:])
+            if _neto3 < -1500:
+                _bal_severos.append((_pac_id, _neto3))
+    if _bal_severos:
+        _notifs.append(("🔴", "error", f"**{len(_bal_severos)} paciente(s)** con balance hídrico negativo severo (>-1500ml en últimos 3 turnos)."))
+
+    if _notifs:
+        with st.expander(f"🔔 Notificaciones de turno ({len(_notifs)})", expanded=True):
+            for icono, nivel, msg in _notifs:
+                if nivel == "error":
+                    st.error(f"{icono} {msg}")
+                else:
+                    st.warning(f"{icono} {msg}")
+        st.divider()
+
     if es_movil:
         fila_1 = st.columns(2)
         fila_1[0].metric("Activos", activos)
