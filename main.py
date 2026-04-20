@@ -123,18 +123,20 @@ except Exception:
 
 st.markdown(
     """<style>
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] *,
-    [data-testid="collapsedControl"],
-    [data-testid="collapsedControl"] *,
-    [data-testid="stExpandSidebarButton"],
-    [data-testid="stExpandSidebarButton"] * {
-        display: none !important;
-        visibility: hidden !important;
-        width: 0 !important;
-        height: 0 !important;
-        pointer-events: none !important;
-        overflow: hidden !important;
+    @media (max-width: 992px) {
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stSidebarCollapsedControl"] *,
+        [data-testid="collapsedControl"],
+        [data-testid="collapsedControl"] *,
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="stExpandSidebarButton"] * {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            pointer-events: none !important;
+            overflow: hidden !important;
+        }
     }
     </style>""",
     unsafe_allow_html=True,
