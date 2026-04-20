@@ -5,6 +5,7 @@ from core.clinicas_control import login_bloqueado_por_clinica, sincronizar_clini
 from core.database import (
     completar_claves_db_session,
     guardar_datos,
+    modo_shard_activo,
     sesion_usa_monolito_legacy,
     vaciar_datos_app_en_sesion,
 )
