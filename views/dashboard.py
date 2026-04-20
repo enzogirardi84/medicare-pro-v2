@@ -17,6 +17,70 @@ from core.utils import (
     seleccionar_limite_registros,
 )
 
+_RANGOS_DASH = {
+    "FC":   {"min": 60,   "max": 100,  "crit_min": 40,   "crit_max": 130},
+    "FR":   {"min": 12,   "max": 20,   "crit_min": 8,    "crit_max": 30},
+    "Sat":  {"min": 94,   "max": 100,  "crit_min": 88,   "crit_max": 100},
+    "Temp": {"min": 36.0, "max": 37.5, "crit_min": 35.0, "crit_max": 39.0},
+    "HGT":  {"min": 70,   "max": 180,  "crit_min": 50,   "crit_max": 300},
+}
+
+
+def _estado_vital_dash(clave, valor):
+    r = _RANGOS_DASH.get(clave)
+    if r is None:
+        return "normal"
+    try:
+        v = float(str(valor).replace(",", "."))
+    except Exception:
+        return "normal"
+    if v < r["crit_min"] or v > r["crit_max"]:
+        return "critico"
+    if v < r["min"] or v > r["max"]:
+        return "alerta"
+    return "normal"
+
+
+def _estado_ta_dash(ta_str):
+    try:
+        partes = str(ta_str or "").replace("/", " ").split()
+        if len(partes) < 2:
+            return "normal"
+        sis, dia = float(partes[0]), float(partes[1])
+        if sis < 80 or sis > 180 or dia < 50 or dia > 120:
+            return "critico"
+        if sis < 90 or sis > 140 or dia < 60 or dia > 90:
+            return "alerta"
+        return "normal"
+    except Exception:
+        return "normal"
+
+
+def _evaluar_ultimo_vital(reg):
+    """Devuelve ('critico'|'alerta'|'normal', [str de problemas])"""
+    peor = "normal"
+    problemas = []
+    ta_est = _estado_ta_dash(reg.get("TA", ""))
+    if ta_est == "critico":
+        peor = "critico"
+        problemas.append(f"TA {reg.get('TA')} crítica")
+    elif ta_est == "alerta":
+        if peor != "critico":
+            peor = "alerta"
+        problemas.append(f"TA {reg.get('TA')} alterada")
+    for clave in ("FC", "FR", "Sat", "Temp", "HGT"):
+        val = reg.get(clave)
+        if val in (None, "", "-"):
+            continue
+        est = _estado_vital_dash(clave, val)
+        if est == "critico":
+            peor = "critico"
+            problemas.append(f"{clave}={val} crítico")
+        elif est == "alerta" and peor != "critico":
+            peor = "alerta"
+            problemas.append(f"{clave}={val} alterado")
+    return peor, problemas
+
 
 def _sumar_importe(registros):
     claves = ("monto", "importe", "total", "facturado", "valor")
@@ -209,6 +273,41 @@ def render_dashboard(mi_empresa, rol):
     if fact_mes:
         st.caption(f"Facturacion cargada en el sistema: ${fact_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
+    vitales_db = st.session_state.get("vitales_db", [])
+    vitales_alertas = []
+    vitales_por_pac = {}
+    for v in vitales_db:
+        pac = v.get("paciente", "")
+        if pac not in _pac_ids:
+            continue
+        ts = parse_fecha_hora(v.get("fecha", ""))
+        if pac not in vitales_por_pac or ts > vitales_por_pac[pac]["_ts"]:
+            vitales_por_pac[pac] = {**v, "_ts": ts}
+    for pac, reg in vitales_por_pac.items():
+        est, problemas = _evaluar_ultimo_vital(reg)
+        if est in ("critico", "alerta"):
+            vitales_alertas.append({
+                "paciente": pac,
+                "estado": est,
+                "fecha": reg.get("fecha", "S/D"),
+                "detalle": ", ".join(problemas),
+            })
+    vitales_alertas.sort(key=lambda x: (0 if x["estado"] == "critico" else 1))
+    n_crit_vit = sum(1 for a in vitales_alertas if a["estado"] == "critico")
+    n_alert_vit = sum(1 for a in vitales_alertas if a["estado"] == "alerta")
+
+    if vitales_alertas:
+        with st.container():
+            if n_crit_vit:
+                st.error(f"🔴 **{n_crit_vit} paciente(s) con signos vitales CRÍTICOS** en su último control")
+            if n_alert_vit:
+                st.warning(f"🟡 **{n_alert_vit} paciente(s) con signos vitales alterados** en su último control")
+            with st.expander(f"🚨 Detalle — signos vitales fuera de rango ({len(vitales_alertas)} pacientes)", expanded=bool(n_crit_vit)):
+                for item in vitales_alertas:
+                    icono = "🔴" if item["estado"] == "critico" else "🟡"
+                    nombre_corto = item["paciente"].split(" (")[0]
+                    st.markdown(f"{icono} **{nombre_corto}** — {item['detalle']} — `{item['fecha']}`")
+
     st.divider()
     st.markdown("#### Vista operativa")
 
@@ -281,6 +380,22 @@ def render_dashboard(mi_empresa, rol):
     if not urg_chart.empty:
         st.caption("Urgencias por triage (ultimos 30 dias)")
         st.bar_chart(urg_chart.set_index("Triage")["Eventos"], use_container_width=True)
+
+    evoluciones_hoy = [
+        x for x in st.session_state.get("evoluciones_db", [])
+        if x.get("paciente") in _pac_ids
+        and parse_fecha_hora(x.get("fecha", "")).date() == hoy
+    ]
+    if evoluciones_hoy:
+        evol_label = f"📝 Evoluciones de hoy ({len(evoluciones_hoy)})"
+        with st.expander(evol_label, expanded=not es_movil):
+            for ev in sorted(evoluciones_hoy, key=lambda x: parse_fecha_hora(x.get("fecha", "")), reverse=True)[:15]:
+                nombre_pac = ev.get("paciente", "?").split(" (")[0]
+                prof = ev.get("firma") or ev.get("profesional") or ev.get("firmado_por") or "S/D"
+                nota = str(ev.get("nota", "") or ev.get("texto", "") or ev.get("detalle", "")).strip()
+                hora_ev = parse_fecha_hora(ev.get("fecha", "")).strftime("%H:%M")
+                resumen = (nota[:120] + "…") if len(nota) > 120 else nota
+                st.markdown(f"**{hora_ev}** — **{nombre_pac}** — `{prof}`: {resumen or '(sin texto)'}") 
 
     st.divider()
     if not es_movil:

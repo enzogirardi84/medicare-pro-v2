@@ -12,6 +12,73 @@ from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scr
 from core.supabase_storage import guardar_signos_vitales_seguro, obtener_signos_vitales_paciente
 
 
+_RANGOS_VIT = {
+    "FC":   {"min": 60,   "max": 100,  "crit_min": 40,   "crit_max": 130,  "unidad": "lpm"},
+    "FR":   {"min": 12,   "max": 20,   "crit_min": 8,    "crit_max": 30,   "unidad": "rpm"},
+    "Sat":  {"min": 94,   "max": 100,  "crit_min": 88,   "crit_max": 100,  "unidad": "%"},
+    "Temp": {"min": 36.0, "max": 37.5, "crit_min": 35.0, "crit_max": 39.0, "unidad": "°C"},
+    "HGT":  {"min": 70,   "max": 180,  "crit_min": 50,   "crit_max": 300,  "unidad": "mg/dL"},
+}
+
+
+def _evaluar_vit(clave, valor):
+    r = _RANGOS_VIT.get(clave)
+    if r is None:
+        return None
+    try:
+        v = float(str(valor).replace(",", "."))
+    except Exception:
+        return None
+    if v < r["crit_min"] or v > r["crit_max"]:
+        return "critico"
+    if v < r["min"] or v > r["max"]:
+        return "alerta"
+    return "normal"
+
+
+def _evaluar_ta_clinica(ta_str):
+    try:
+        partes = str(ta_str or "").replace("/", " ").split()
+        if len(partes) < 2:
+            return None
+        sis, dia = float(partes[0]), float(partes[1])
+        if sis < 80 or sis > 180 or dia < 50 or dia > 120:
+            return "critico"
+        if sis < 90 or sis > 140 or dia < 60 or dia > 90:
+            return "alerta"
+        return "normal"
+    except Exception:
+        return None
+
+
+def _mostrar_alertas_vitales_preview(ta, fc, fr, sat, temp, hgt):
+    """Muestra alertas de rango DENTRO del formulario (antes de guardar)."""
+    alertas_crit = []
+    alertas_warn = []
+
+    ta_est = _evaluar_ta_clinica(ta)
+    if ta_est == "critico":
+        alertas_crit.append(f"TA {ta} — valor crítico")
+    elif ta_est == "alerta":
+        alertas_warn.append(f"TA {ta} — fuera de rango normal (90-140/60-90 mmHg)")
+
+    for clave, val in [("FC", fc), ("FR", fr), ("Sat", sat), ("Temp", temp), ("HGT", hgt)]:
+        if val is None:
+            continue
+        est = _evaluar_vit(clave, val)
+        r = _RANGOS_VIT[clave]
+        if est == "critico":
+            alertas_crit.append(f"{clave} = {val} {r['unidad']} — valor crítico (rango: {r['crit_min']}–{r['crit_max']})")
+        elif est == "alerta":
+            alertas_warn.append(f"{clave} = {val} {r['unidad']} — fuera de rango normal ({r['min']}–{r['max']})")
+
+    for msg in alertas_crit:
+        st.error(f"🔴 CRÍTICO: {msg}")
+    for msg in alertas_warn:
+        st.warning(f"🟡 Alerta: {msg}")
+    return bool(alertas_crit), bool(alertas_warn)
+
+
 def _parse_fecha_hora(fecha_str):
     try:
         return datetime.strptime(fecha_str, "%d/%m/%Y %H:%M:%S")
@@ -149,25 +216,34 @@ def render_clinica(paciente_sel, user=None):
         col_time1, col_time2 = st.columns([1.15, 0.85] if es_movil else 2)
         fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key="fecha_vits")
         hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_vits")
-        ta = st.text_input("Tension arterial (TA)", "120/80")
+        ta = st.text_input(
+            "Tension arterial (TA)",
+            "120/80",
+            help="Normal: 90-140 / 60-90 mmHg",
+        )
         if es_movil:
             r_s1, r_s2 = st.columns(2)
-            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75)
-            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16)
+            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75, help="Normal: 60-100 lpm")
+            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16, help="Normal: 12-20 rpm")
             r_s3, r_s4 = st.columns(2)
-            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96)
-            temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1)
-            hgt = st.text_input("HGT (mg/dL)", "110")
+            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96, help="Normal: ≥94%")
+            temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1, help="Normal: 36-37.5°C")
+            hgt = st.text_input("HGT (mg/dL)", "110", help="Normal: 70-180 mg/dL")
         else:
             r_s1, r_s2, r_s3 = st.columns(3)
-            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75)
-            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16)
-            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96)
+            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75, help="Normal: 60-100 lpm")
+            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16, help="Normal: 12-20 rpm")
+            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96, help="Normal: ≥94%")
             r_s4, r_s5 = st.columns(2)
-            temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1)
-            hgt = r_s5.text_input("HGT (mg/dL)", "110")
+            temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1, help="Normal: 36-37.5°C")
+            hgt = r_s5.text_input("HGT (mg/dL)", "110", help="Normal: 70-180 mg/dL")
         obs = st.text_input("Observaciones (opcional)", "", placeholder="Ej.: paciente en ayunas, edema MMII...")
-        if st.form_submit_button("Guardar signos vitales", use_container_width=True, type="primary"):
+
+        hay_critico, hay_alerta = _mostrar_alertas_vitales_preview(ta, fc, fr, sat, temp, hgt)
+
+        label_btn = "⚠️ Guardar (hay alertas)" if (hay_critico or hay_alerta) else "Guardar signos vitales"
+        btn_type = "secondary" if hay_critico else "primary"
+        if st.form_submit_button(label_btn, use_container_width=True, type=btn_type):
             hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
             fecha_str = f"{fecha_toma.strftime('%d/%m/%Y')} {hora_limpia}"
             registro = {
@@ -186,17 +262,13 @@ def render_clinica(paciente_sel, user=None):
                 registro["registrado_por"] = user.get("nombre", "")
             st.session_state["vitales_db"].append(registro)
             guardar_datos()
-            alerta = False
-            if fc > 110 or fc < 50:
-                st.error(f"ALERTA: Frecuencia cardiaca critica -> {fc} lpm")
-                alerta = True
-            if sat < 92:
-                st.error(f"ALERTA: Desaturacion -> SatO2 {sat}%")
-                alerta = True
-            if temp > 38.0:
-                st.warning(f"Fiebre detectada -> {temp} C")
-                alerta = True
-            if not alerta:
+            st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
+            st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)
+            if hay_critico:
+                queue_toast("⚠️ Signos vitales guardados — revisar valores CRÍTICOS.")
+            elif hay_alerta:
+                queue_toast("Signos vitales guardados — algunos valores fuera de rango.")
+            else:
                 queue_toast("Signos vitales guardados correctamente.")
             st.rerun()
 
