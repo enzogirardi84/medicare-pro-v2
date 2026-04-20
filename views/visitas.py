@@ -1,284 +1,44 @@
-from core.alert_toasts import queue_toast
-from datetime import datetime, timedelta
 import urllib.parse
+from datetime import datetime, timedelta
 
 import pandas as pd
 import streamlit as st
 
+from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, lista_plegable
 from core.utils import (
     ahora,
-    calcular_estado_agenda,
     es_control_total,
-    filtrar_registros_empresa,
     mapa_detalles_pacientes,
     normalizar_hora_texto,
+    obtener_direccion_real,
     obtener_profesionales_visibles,
     mostrar_dataframe_con_scroll,
-    obtener_direccion_real,
-    parse_agenda_datetime,
     seleccionar_limite_registros,
+)
+from views._visitas_whatsapp import (
+    _armar_mensaje_whatsapp_visita,
+    _etiqueta_visita_whatsapp,
+    _normalizar_telefono_whatsapp,
+    _plantillas_whatsapp_para_empresa,
+    _plantillas_whatsapp_store,
+    _visitas_para_aviso_whatsapp,
+)
+from views._visitas_agenda import (
+    _agenda_empresa,
+    _agenda_paciente,
+    _enriquecer_agenda,
+    _resumen_agenda,
+    _zona_corta,
 )
 
 GEO_DISPONIBLE = False
 try:
     from streamlit_geolocation import streamlit_geolocation
-
     GEO_DISPONIBLE = True
 except ImportError:
     GEO_DISPONIBLE = False
-
-
-def _normalizar_telefono_whatsapp(raw):
-    tel_limpio = "".join(ch for ch in str(raw or "") if ch.isdigit())
-    if not tel_limpio:
-        return ""
-    if tel_limpio.startswith("0"):
-        tel_limpio = tel_limpio.lstrip("0") or tel_limpio
-    if not tel_limpio.startswith("54"):
-        tel_limpio = "549" + tel_limpio
-    return tel_limpio
-
-
-def _matricula_profesional_por_nombre(nombre_prof):
-    if not nombre_prof:
-        return ""
-    target = str(nombre_prof).strip().lower()
-    for u in st.session_state.get("usuarios_db", {}).values():
-        if str(u.get("nombre", "")).strip().lower() == target:
-            return str(u.get("matricula", "")).strip()
-    return ""
-
-
-def _visitas_para_aviso_whatsapp(agenda_paciente, now_naive):
-    activas = [
-        x
-        for x in agenda_paciente
-        if x.get("estado_calc") in {"Pendiente", "En curso", "Vencida"} and x["_fecha_dt"] != datetime.min
-    ]
-    futuro = [x for x in activas if x["_fecha_dt"] >= now_naive]
-    resto = [x for x in activas if x["_fecha_dt"] < now_naive]
-    futuro.sort(key=lambda x: x["_fecha_dt"])
-    resto.sort(key=lambda x: x["_fecha_dt"], reverse=True)
-    return futuro + resto
-
-
-def _etiqueta_visita_whatsapp(item):
-    fh = item["_fecha_dt"].strftime("%d/%m/%Y %H:%M") if item["_fecha_dt"].year > 1900 else "Sin fecha"
-    prof = item.get("profesional") or "Sin profesional"
-    return f"{fh} — {prof} ({item.get('estado_calc', '')})"
-
-
-def _plantillas_whatsapp_store():
-    return st.session_state.setdefault("plantillas_whatsapp_db", {})
-
-
-def _plantillas_whatsapp_para_empresa(mi_empresa):
-    store = _plantillas_whatsapp_store()
-    key = str(mi_empresa or "").strip() or "_default"
-    if key not in store or not isinstance(store[key], dict):
-        store[key] = {"visita": "", "general": ""}
-    return store[key]
-
-
-def _valores_placeholders_whatsapp(mi_empresa, user, visita_dict, nombre_corto, dire_paciente):
-    quien = str(user.get("nombre", "")).strip()
-    mat_quien = str(user.get("matricula", "")).strip()
-    rol = str(user.get("rol", "")).strip()
-    if visita_dict:
-        prof = str(visita_dict.get("profesional", "")).strip() or "su equipo de salud"
-        fecha = str(visita_dict.get("fecha", "")).strip()
-        hora = normalizar_hora_texto(visita_dict.get("hora", ""), default="")
-        mat_asign = _matricula_profesional_por_nombre(prof)
-    else:
-        prof = ""
-        fecha = ""
-        hora = ""
-        mat_asign = ""
-    dom = ""
-    if dire_paciente and str(dire_paciente).strip() not in ("", "No registrada"):
-        dom = str(dire_paciente).strip()
-    return {
-        "paciente": nombre_corto,
-        "empresa": str(mi_empresa or "").strip(),
-        "fecha": fecha,
-        "hora": hora,
-        "profesional": prof,
-        "mat_profesional": mat_asign,
-        "domicilio": dom,
-        "contacto": quien,
-        "rol_contacto": rol,
-        "mat_contacto": mat_quien,
-    }
-
-
-def _aplicar_plantilla_whatsapp(plantilla, valores):
-    if not plantilla or not str(plantilla).strip():
-        return None
-    out = str(plantilla)
-    for k, v in valores.items():
-        out = out.replace("{" + k + "}", str(v) if v is not None else "")
-    return out
-
-
-def _armar_mensaje_whatsapp_visita(paciente_sel, mi_empresa, user, visita_dict, nombre_corto, dire_paciente, plantillas_empresa=None):
-    plantillas_empresa = plantillas_empresa or _plantillas_whatsapp_para_empresa(mi_empresa)
-    vals = _valores_placeholders_whatsapp(mi_empresa, user, visita_dict, nombre_corto, dire_paciente)
-    if visita_dict:
-        tpl = str(plantillas_empresa.get("visita", "")).strip()
-    else:
-        tpl = str(plantillas_empresa.get("general", "")).strip()
-    armado = _aplicar_plantilla_whatsapp(tpl, vals)
-    if armado is not None and str(armado).strip():
-        return str(armado).strip()
-
-    quien = vals["contacto"]
-    mat_quien = vals["mat_contacto"]
-    rol = vals["rol_contacto"]
-
-    if visita_dict:
-        prof = vals["profesional"]
-        fecha = vals["fecha"]
-        hora = vals["hora"]
-        mat_asign = vals["mat_profesional"]
-        lineas = [
-            f"Hola {nombre_corto},",
-            f"Le escribimos desde {mi_empresa} para confirmarle la visita domiciliaria programada.",
-            f"Fecha: {fecha}",
-            f"Hora aproximada: {hora} hs.",
-            f"Profesional asignado: {prof}",
-        ]
-        if mat_asign:
-            lineas.append(f"Matricula del profesional asignado: {mat_asign}")
-        if vals["domicilio"]:
-            lineas.append(f"Domicilio registrado: {vals['domicilio']}")
-        lineas.append("")
-        lineas.append("Ante cualquier cambio o consulta puede responder por este mismo chat.")
-        firma = f"Saludos cordiales — {quien}" if quien else "Saludos cordiales"
-        if rol:
-            firma += f" ({rol})"
-        lineas.append(firma)
-        if mat_quien:
-            lineas.append(f"Mat. quien envia el aviso: {mat_quien}")
-        return "\n".join(lineas)
-
-    lineas = [
-        f"Hola {nombre_corto},",
-        f"Nos comunicamos desde {mi_empresa} en relacion con su internacion domiciliaria.",
-        "En breve coordinamos fecha y hora de la proxima visita con el equipo asignado.",
-        "",
-        "Ante cualquier urgencia puede responder por este mismo chat.",
-    ]
-    if quien:
-        lineas.append(f"Contacto operativo: {quien}" + (f" ({rol})" if rol else ""))
-    if mat_quien:
-        lineas.append(f"Mat.: {mat_quien}")
-    return "\n".join(lineas)
-
-
-def _agenda_empresa(mi_empresa, rol):
-    # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
-    from core.db_sql import get_turnos_by_empresa
-    from core.nextgen_sync import _obtener_uuid_empresa
-    from core.utils import ahora
-    from datetime import timedelta
-    
-    agenda_sql = []
-    uso_sql = False
-    
-    try:
-        empresa_id = _obtener_uuid_empresa(mi_empresa)
-        if empresa_id:
-            # Traemos turnos desde hace 30 días hasta 60 días en el futuro
-            fecha_inicio = (ahora() - timedelta(days=30)).isoformat()
-            fecha_fin = (ahora() + timedelta(days=60)).isoformat()
-            
-            turnos_sql = get_turnos_by_empresa(empresa_id, fecha_inicio, fecha_fin)
-            uso_sql = True
-            
-            for t in turnos_sql:
-                paciente_nombre = t.get("pacientes", {}).get("nombre_completo", "") if t.get("pacientes") else ""
-                paciente_dni = t.get("pacientes", {}).get("dni", "") if t.get("pacientes") else ""
-                paciente_visual = f"{paciente_nombre} - {paciente_dni}" if paciente_nombre else ""
-                
-                profesional_nombre = t.get("usuarios", {}).get("nombre", "") if t.get("usuarios") else ""
-                
-                fecha_hora_raw = t.get("fecha_hora_programada", "")
-                fecha_str = ""
-                hora_str = ""
-                if fecha_hora_raw:
-                    parts = fecha_hora_raw[:16].split("T")
-                    if len(parts) == 2:
-                        d_parts = parts[0].split("-")
-                        if len(d_parts) == 3:
-                            fecha_str = f"{d_parts[2]}/{d_parts[1]}/{d_parts[0]}"
-                        hora_str = parts[1]
-                
-                agenda_sql.append({
-                    "id_sql": t.get("id"),
-                    "paciente": paciente_visual,
-                    "profesional": profesional_nombre,
-                    "fecha": fecha_str,
-                    "fecha_programada": fecha_str,
-                    "fecha_hora_programada": fecha_hora_raw.replace("T", " ")[:19] if fecha_hora_raw else "",
-                    "hora": hora_str,
-                    "empresa": mi_empresa,
-                    "estado": t.get("estado", "Pendiente"),
-                    "motivo": t.get("motivo", ""),
-                    "notas": t.get("notas", "")
-                })
-    except Exception as e:
-        from core.app_logging import log_event
-        log_event("visitas_sql", f"error_lectura_agenda:{type(e).__name__}")
-        
-    if uso_sql:
-        return agenda_sql
-    # ----------------------------------------------
-
-    return filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
-
-
-def _agenda_paciente(mi_empresa, paciente_sel, rol):
-    return [a for a in _agenda_empresa(mi_empresa, rol) if a.get("paciente") == paciente_sel]
-
-
-def _enriquecer_agenda(items):
-    ahora_local = ahora().replace(tzinfo=None)
-    enriquecida = []
-    for idx, item in enumerate(items):
-        registro = dict(item)
-        dt = parse_agenda_datetime(item)
-        registro["_id_local"] = idx
-        registro["_fecha_dt"] = dt
-        registro["estado_calc"] = calcular_estado_agenda(item, now=ahora_local)
-        enriquecida.append(registro)
-    return enriquecida
-
-
-def _resumen_agenda(items):
-    if not items:
-        return {"pendientes": 0, "vencidas": 0, "proximas": 0, "profesionales": 0}
-    ahora_local = ahora().replace(tzinfo=None)
-    proximas_limite = ahora_local + timedelta(hours=48)
-    pendientes = sum(1 for x in items if x["estado_calc"] in {"Pendiente", "En curso"})
-    vencidas = sum(1 for x in items if x["estado_calc"] == "Vencida")
-    proximas = sum(1 for x in items if x["_fecha_dt"] != datetime.min and ahora_local <= x["_fecha_dt"] <= proximas_limite)
-    profesionales = len({x.get("profesional", "Sin profesional") for x in items})
-    return {
-        "pendientes": pendientes,
-        "vencidas": vencidas,
-        "proximas": proximas,
-        "profesionales": profesionales,
-    }
-
-
-def _zona_corta(direccion):
-    texto = str(direccion or "").strip()
-    if not texto or texto == "No registrada":
-        return "Zona sin definir"
-    return texto.split(",")[0].strip()[:60]
-
 
 def render_visitas(paciente_sel, mi_empresa, user, rol):
     if not paciente_sel:
