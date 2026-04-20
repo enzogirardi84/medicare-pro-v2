@@ -1150,6 +1150,64 @@ def _construir_texto_indicacion(
     return " | ".join([p for p in partes if str(p).strip()])
 
 
+def _resumen_medicacion_activa(paciente_sel, mi_empresa):
+    """Bloque compacto de medicación activa con indicador de próximas a vencer."""
+    from datetime import datetime as _dt, timedelta as _td
+    todas = [
+        r for r in st.session_state.get("indicaciones_db", [])
+        if r.get("paciente") == paciente_sel
+        and r.get("empresa", mi_empresa) == mi_empresa
+    ]
+    activas = [
+        r for r in todas
+        if str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
+    ]
+    if not activas:
+        return
+
+    hoy = _dt.now().date()
+    por_vencer = []
+    vencidas = []
+    for r in activas:
+        try:
+            fecha_inicio = _dt.strptime(str(r.get("fecha", ""))[:10], "%d/%m/%Y").date()
+            dias_dur = int(r.get("dias_duracion", 0) or 0)
+            if dias_dur > 0:
+                fecha_fin = fecha_inicio + _td(days=dias_dur)
+                dias_restantes = (fecha_fin - hoy).days
+                if dias_restantes < 0:
+                    vencidas.append((r, abs(dias_restantes)))
+                elif dias_restantes <= 2:
+                    por_vencer.append((r, dias_restantes))
+        except Exception:
+            pass
+
+    with st.expander(f"📊 Medicación activa ({len(activas)} indicación/es)", expanded=bool(vencidas or por_vencer)):
+        if vencidas:
+            for r, dias in vencidas[:3]:
+                nom = (r.get("med") or "")[:60]
+                st.error(f"🔴 VENCIDA hace {dias}d: **{nom}**")
+        if por_vencer:
+            for r, dias in por_vencer:
+                nom = (r.get("med") or "")[:60]
+                label = "hoy" if dias == 0 else f"en {dias}d"
+                st.warning(f"🟡 Vence {label}: **{nom}**")
+
+        cols = st.columns([3, 2, 2, 1])
+        cols[0].caption("**Medicación**")
+        cols[1].caption("**Frecuencia**")
+        cols[2].caption("**Médico**")
+        cols[3].caption("**Días**")
+        for r in activas[:12]:
+            cols = st.columns([3, 2, 2, 1])
+            cols[0].write((r.get("med") or "")[:55])
+            cols[1].write(r.get("frecuencia") or r.get("via") or "—")
+            cols[2].write((r.get("medico_nombre") or r.get("profesional_estado") or "—")[:24])
+            cols[3].write(str(r.get("dias_duracion") or "—"))
+        if len(activas) > 12:
+            st.caption(f"... y {len(activas) - 12} más.")
+
+
 def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
@@ -1167,6 +1225,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     st.markdown("## Recetas y administración")
     st.caption(f"Profesional en sesión: **{nombre_usuario}**")
+
+    _resumen_medicacion_activa(paciente_sel, mi_empresa)
 
     try:
         vademecum_base = cargar_json_asset("vademecum.json")
@@ -1353,6 +1413,26 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         stroke_width=firma_cfg["stroke_width"],
                         stroke_color="#000000",
                         display_toolbar=firma_cfg["display_toolbar"],
+                    )
+
+            med_final_preview = med_manual.strip().title() if med_manual.strip() else med_vademecum
+            if (
+                med_final_preview
+                and med_final_preview != "-- Seleccionar del vademecum --"
+                and tipo_indicacion == "Medicacion"
+            ):
+                _nombre_norm = med_final_preview.strip().lower()
+                _activas_dup = [
+                    r for r in st.session_state.get("indicaciones_db", [])
+                    if r.get("paciente") == paciente_sel
+                    and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
+                    and _nombre_norm in str(r.get("med") or "").lower()
+                ]
+                if _activas_dup:
+                    st.warning(
+                        f"🟡 **Posible duplicado**: '{med_final_preview}' ya figura en la medicación activa "
+                        f"({'1 indicación' if len(_activas_dup) == 1 else f'{len(_activas_dup)} indicaciones'}). "
+                        "Verificá antes de prescribir."
                     )
 
             if st.button("Guardar prescripcion medica", width="stretch", type="primary"):
