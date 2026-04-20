@@ -129,19 +129,33 @@ def render_balance(paciente_sel, user):
     elif neto_3 < -800:
         st.warning(f"🟡 Balance negativo moderado: **{neto_3} ml** en los últimos 3 turnos.")
 
+    # ── Alerta de tendencia consecutiva ─────────────────────────────
+    if len(blp) >= 3:
+        _ultimos3 = list(df_temp["balance"].tail(3))
+        if all(b < 0 for b in _ultimos3):
+            st.error(f"🔴 Tendencia negativa: los últimos **3 turnos** fueron negativos ({', '.join(f'{b:+}' for b in _ultimos3)} ml). Evaluar reposición hidrosálina.")
+        elif all(b > 0 for b in _ultimos3):
+            st.warning(f"🟡 Tendencia positiva: los últimos **3 turnos** fueron positivos ({', '.join(f'{b:+}' for b in _ultimos3)} ml). Vigilar retención.")
+
     st.divider()
     st.markdown("#### Historial de balances hidricos")
 
     ultimo = df_temp["balance"].iloc[-1] if not df_temp.empty else 0
-    col_met1, col_met2, col_met3 = st.columns(3)
+    penultimo = df_temp["balance"].iloc[-2] if len(df_temp) >= 2 else None
+    _delta_shift = int(ultimo) - int(penultimo) if penultimo is not None else None
+
+    col_met1, col_met2, col_met3, col_met4 = st.columns(4)
     col_met1.metric(
         "Ultimo shift",
         f"{ultimo:+} ml",
-        delta="Retencion (alerta)" if ultimo > 0 else ("Perdida" if ultimo < 0 else "Neutro"),
+        delta=f"{_delta_shift:+} ml vs anterior" if _delta_shift is not None else None,
         delta_color="inverse",
     )
-    col_met2.metric("Total balances", len(blp))
-    col_met3.metric("Balance neto (ultimos 3 turnos)", f"{neto_3:+} ml")
+    _ult_ing = int(df_temp["ingresos"].iloc[-1]) if not df_temp.empty else 0
+    _ult_egr = int(df_temp["egresos"].iloc[-1]) if not df_temp.empty else 0
+    col_met2.metric("Ingresos último turno", f"{_ult_ing} ml")
+    col_met3.metric("Egresos último turno", f"{_ult_egr} ml")
+    col_met4.metric("Balance neto (ult. 3 turnos)", f"{neto_3:+} ml")
 
     if len(df_temp) >= 2:
         st.markdown("#### Gráficos")
@@ -182,7 +196,23 @@ def render_balance(paciente_sel, user):
                 color="#22c55e",
             )
 
-    df_bal = pd.DataFrame(blp)
+    # ── Búsqueda en historial ────────────────────────────────────────────
+    _busq_bal = st.text_input(
+        "🔍 Buscar en historial",
+        placeholder="Turno, profesional o fecha...",
+        key="balance_busqueda",
+    ).strip().lower()
+    blp_filtrado = blp
+    if _busq_bal:
+        blp_filtrado = [
+            b for b in blp
+            if _busq_bal in str(b.get("turno", "")).lower()
+            or _busq_bal in str(b.get("firma", "")).lower()
+            or _busq_bal in str(b.get("fecha", "")).lower()
+        ]
+        st.caption(f"{len(blp_filtrado)} resultado(s) para '{_busq_bal}'")
+
+    df_bal = pd.DataFrame(blp_filtrado)
     df_bal["fecha_dt"] = pd.to_datetime(df_bal["fecha"], format="%d/%m/%Y %H:%M", errors="coerce")
     df_bal = df_bal.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"], errors="ignore")
     df_bal["Ingresos"] = df_bal["ingresos"].astype(str) + " ml"
