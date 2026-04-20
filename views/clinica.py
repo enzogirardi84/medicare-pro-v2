@@ -336,7 +336,10 @@ def render_clinica(paciente_sel, user=None):
         col_tit.markdown("#### Historial de signos vitales")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_borrar_vital")
         if col_btn.button("Borrar ultimo control", use_container_width=True, disabled=not confirmar_borrado):
-            st.session_state["vitales_db"].remove(vits[-1])
+            try:
+                st.session_state["vitales_db"].remove(vits[-1])
+            except ValueError:
+                pass
             guardar_datos(spinner=True)
             queue_toast("Registro eliminado.")
             st.rerun()

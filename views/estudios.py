@@ -249,7 +249,10 @@ def render_estudios(paciente_sel, user, rol=None):
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
             ultimo_est = estudios_pac[-1]
             if not uso_sql:
-                st.session_state["estudios_db"].remove(ultimo_est)
+                try:
+                    st.session_state["estudios_db"].remove(ultimo_est)
+                except ValueError:
+                    pass
                 
             # --- ACTUALIZAR EN SQL ---
             if ultimo_est.get("id_sql"):

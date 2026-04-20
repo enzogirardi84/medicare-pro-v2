@@ -65,8 +65,10 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(mi_empresa)
         elif tab_name == "Alertas app paciente":
             render_fn(mi_empresa, user, rol)
-        elif tab_name in ("Red de Profesionales", "Mi Equipo"):
+        elif tab_name == "Red de Profesionales":
             render_fn(mi_empresa, user, rol)
+        elif tab_name == "Mi Equipo":
+            render_fn(mi_empresa, rol, user)
         elif tab_name == "Telemedicina":
             render_fn(paciente_sel)
         elif tab_name == "Dashboard":

@@ -144,7 +144,10 @@ def render_materiales(paciente_sel, mi_empresa, user):
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
         if col_btn.button("Borrar ultimo consumo", use_container_width=True, disabled=not confirmar_borrado):
             ultimo_consumo = cons_paciente[-1]
-            st.session_state["consumos_db"].remove(ultimo_consumo)
+            try:
+                st.session_state["consumos_db"].remove(ultimo_consumo)
+            except ValueError:
+                pass
             _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
             guardar_datos(spinner=True)
             queue_toast("Consumo eliminado correctamente.")

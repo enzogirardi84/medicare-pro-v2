@@ -392,7 +392,10 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_evol")
             if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
                 ultima = evs_paciente[-1]
-                st.session_state["evoluciones_db"].remove(evs_paciente[-1])
+                try:
+                    st.session_state["evoluciones_db"].remove(evs_paciente[-1])
+                except ValueError:
+                    pass
                 registrar_auditoria_legal(
                     "Evolucion Clinica",
                     paciente_sel,

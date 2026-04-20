@@ -264,7 +264,7 @@ def render_diagnosticos(user=None):
                     st.warning(f"⚡ Disco: {disk_percent}% usado - Alto")
                 else:
                     st.success(f"✅ Disco: {disk_percent}% usado")
-            except:
+            except Exception:
                 pass
             
             # Python version
@@ -275,7 +275,7 @@ def render_diagnosticos(user=None):
             try:
                 import streamlit as st_mod
                 st.caption(f"Streamlit: {st_mod.__version__}")
-            except:
+            except Exception:
                 pass
         
         with col2:

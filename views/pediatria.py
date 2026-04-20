@@ -261,7 +261,10 @@ def render_pediatria(paciente_sel, user):
         col_tit.markdown("#### Historial")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
         if col_btn.button("Borrar ultimo", use_container_width=True, disabled=not confirmar_borrado):
-            st.session_state["pediatria_db"].remove(ped[-1])
+            try:
+                st.session_state["pediatria_db"].remove(ped[-1])
+            except ValueError:
+                pass
             guardar_datos(spinner=True)
             st.rerun()
 
