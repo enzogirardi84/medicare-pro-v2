@@ -111,15 +111,37 @@ def render_pediatria(paciente_sel, user):
         ped = [x for x in st.session_state.get("pediatria_db", []) if x.get("paciente") == paciente_sel]
 
     if ped:
-        ultimo_ped = sorted(ped, key=lambda x: _parse_fecha_hora(x.get("fecha", "")), reverse=True)[0]
+        ped_ord = sorted(ped, key=lambda x: _parse_fecha_hora(x.get("fecha", "")))
+        ultimo_ped = ped_ord[-1]
+        penultimo_ped = ped_ord[-2] if len(ped_ord) >= 2 else None
+
         st.markdown("##### Resumen Actual")
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Peso", f"{ultimo_ped.get('peso', '-')} kg")
-        c2.metric("Talla", f"{ultimo_ped.get('talla', '-')} cm")
+        _delta_peso = round(float(ultimo_ped.get('peso', 0) or 0) - float(penultimo_ped.get('peso', 0) or 0), 2) if penultimo_ped else None
+        _delta_talla = round(float(ultimo_ped.get('talla', 0) or 0) - float(penultimo_ped.get('talla', 0) or 0), 1) if penultimo_ped else None
+        c1.metric("Peso", f"{ultimo_ped.get('peso', '-')} kg", delta=f"{_delta_peso:+.2f} kg" if _delta_peso is not None else None)
+        c2.metric("Talla", f"{ultimo_ped.get('talla', '-')} cm", delta=f"{_delta_talla:+.1f} cm" if _delta_talla is not None else None)
         c3.metric("IMC", f"{ultimo_ped.get('imc', '-')}")
         c4.metric("Percentil", ultimo_ped.get("percentil_sug", "-"))
 
-        df_preview = pd.DataFrame(ped)
+        # ── Alertas de percentil ─────────────────────────────────────────
+        _PERC_CRITICO = {"P3 - Bajo peso"}
+        _PERC_ALERTA = {"P97 - Sobrepeso"}
+        _perc_actual = str(ultimo_ped.get("percentil_sug", "") or "")
+        if _perc_actual in _PERC_CRITICO:
+            st.error(f"🔴 Percentil crítico: **{_perc_actual}** — IMC {ultimo_ped.get('imc', '-')}. Evaluar nutrición y seguimiento.")
+        elif _perc_actual in _PERC_ALERTA:
+            st.warning(f"🟡 Percentil elevado: **{_perc_actual}** — IMC {ultimo_ped.get('imc', '-')}. Considerar derivación nutricional.")
+        if penultimo_ped:
+            _perc_prev = str(penultimo_ped.get("percentil_sug", "") or "")
+            _orden = ["P3 - Bajo peso", "P50 - Normal", "P97 - Sobrepeso"]
+            if _perc_actual in _orden and _perc_prev in _orden:
+                if _orden.index(_perc_actual) < _orden.index(_perc_prev):
+                    st.warning(f"🟡 Tendencia de peso en descenso: {_perc_prev} → {_perc_actual}. Verificar evolución.")
+                elif _orden.index(_perc_actual) > _orden.index(_perc_prev):
+                    st.warning(f"🟡 Tendencia de peso en aumento: {_perc_prev} → {_perc_actual}. Verificar evolución.")
+
+        df_preview = pd.DataFrame(ped_ord)
         df_preview["fecha_dt"] = df_preview["fecha"].apply(_parse_fecha_hora)
         df_preview = df_preview.sort_values(by="fecha_dt")
         if len(df_preview) >= 2:
@@ -138,6 +160,14 @@ def render_pediatria(paciente_sel, user):
                     df_preview.set_index("fecha")["talla"],
                     use_container_width=True,
                     color="#818cf8",
+                )
+            if df_preview["pc"].astype(float).gt(0).sum() >= 2:
+                st.caption("Perímetro cefálico (cm)")
+                st.line_chart(
+                    df_preview.set_index("fecha")["pc"],
+                    use_container_width=True,
+                    color="#f59e0b",
+                    height=140,
                 )
             st.caption("Vista rapida para ver si el crecimiento viene acompanando la evolucion esperada.")
 
@@ -228,13 +258,30 @@ def render_pediatria(paciente_sel, user):
             st.session_state["pediatria_db"].remove(ped[-1])
             guardar_datos()
             st.rerun()
-        max_controles = min(200, len(ped))
+
+        busqueda_ped = st.text_input(
+            "🔍 Buscar en historial pediátrico",
+            placeholder="Percentil, nota, profesional o fecha...",
+            key="ped_busqueda",
+        ).strip().lower()
+        ped_filtrado = ped
+        if busqueda_ped:
+            ped_filtrado = [
+                p for p in ped
+                if busqueda_ped in str(p.get("percentil_sug", "")).lower()
+                or busqueda_ped in str(p.get("nota", "")).lower()
+                or busqueda_ped in str(p.get("firma", "")).lower()
+                or busqueda_ped in str(p.get("fecha", "")).lower()
+            ]
+            st.caption(f"{len(ped_filtrado)} resultado(s) para '{busqueda_ped}'")
+
+        max_controles = min(200, len(ped_filtrado))
         if max_controles <= 10:
             limite = max_controles
             st.caption(f"Mostrando {limite} control(es) pediatricos.")
         else:
-            limite = st.slider("Controles pediatricos a mostrar", min_value=10, max_value=max_controles, value=min(50, len(ped)), step=10)
-        df_ped = pd.DataFrame(ped[-limite:]).drop(columns=["paciente"], errors='ignore')
+            limite = st.slider("Controles pediatricos a mostrar", min_value=10, max_value=max_controles, value=min(50, len(ped_filtrado)), step=10)
+        df_ped = pd.DataFrame(ped_filtrado[-limite:]).drop(columns=["paciente"], errors='ignore')
         df_ped["fecha_dt"] = df_ped["fecha"].apply(_parse_fecha_hora)
         df_ped = df_ped.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
         with lista_plegable("Controles pediátricos (tabla)", count=len(df_ped), expanded=False, height=400):
