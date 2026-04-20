@@ -50,6 +50,7 @@ def insert_evolucion(datos_evolucion: Dict[str, Any]) -> Optional[Dict[str, Any]
             "insert_evolucion",
             lambda: supabase.table("evoluciones").insert(datos_evolucion).execute(),
         )
+        get_evoluciones_by_paciente.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_evolucion:{type(e).__name__}")
@@ -81,6 +82,7 @@ def insert_indicacion(datos_indicacion: Dict[str, Any]) -> Optional[Dict[str, An
             "insert_indicacion",
             lambda: supabase.table("indicaciones").insert(datos_indicacion).execute(),
         )
+        get_indicaciones_activas.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_indicacion:{type(e).__name__}")
@@ -96,6 +98,7 @@ def update_estado_indicacion(indicacion_id: str, nuevo_estado: str) -> bool:
             "update_indicacion",
             lambda: supabase.table("indicaciones").update({"estado": nuevo_estado}).eq("id", indicacion_id).execute(),
         )
+        get_indicaciones_activas.clear()
         return True
     except Exception as e:
         log_event("db_sql", f"error_update_indicacion:{type(e).__name__}")
@@ -127,6 +130,7 @@ def insert_estudio(datos_estudio: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_estudio",
             lambda: supabase.table("estudios").insert(datos_estudio).execute(),
         )
+        get_estudios_by_paciente.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_estudio:{type(e).__name__}")
@@ -142,6 +146,7 @@ def delete_estudio(estudio_id: str) -> bool:
             "delete_estudio",
             lambda: supabase.table("estudios").delete().eq("id", estudio_id).execute(),
         )
+        get_estudios_by_paciente.clear()
         return True
     except Exception as e:
         log_event("db_sql", f"error_delete_estudio:{type(e).__name__}")
@@ -171,6 +176,7 @@ def insert_signo_vital(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_vitales",
             lambda: supabase.table("signos_vitales").insert(datos).execute(),
         )
+        get_signos_vitales.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_vitales:{type(e).__name__}")
@@ -200,6 +206,7 @@ def insert_cuidado_enfermeria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "insert_cuidado",
             lambda: supabase.table("cuidados_enfermeria").insert(datos).execute(),
         )
+        get_cuidados_enfermeria.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_cuidado:{type(e).__name__}")
@@ -229,6 +236,7 @@ def insert_consentimiento(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_consentimiento",
             lambda: supabase.table("consentimientos").insert(datos).execute(),
         )
+        get_consentimientos_by_paciente.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_consentimiento:{type(e).__name__}")
@@ -258,6 +266,7 @@ def insert_pediatria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_pediatria",
             lambda: supabase.table("pediatria").insert(datos).execute(),
         )
+        get_pediatria_by_paciente.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_pediatria:{type(e).__name__}")
@@ -287,6 +296,7 @@ def insert_escala(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_escala",
             lambda: supabase.table("escalas_clinicas").insert(datos).execute(),
         )
+        get_escalas_by_paciente.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_escala:{type(e).__name__}")
