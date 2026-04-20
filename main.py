@@ -387,9 +387,29 @@ def _html_signos_vitales_sidebar(vitales_orden):
     return "".join(bloques)
 
 
+def _semaforo_vital_sidebar(v):
+    """Devuelve emoji de semáforo basado en valores del último registro vital."""
+    try:
+        from views.clinica import _evaluar_ta_clinica, _evaluar_vit
+        estados = [
+            _evaluar_ta_clinica(v.get("TA", "")),
+            _evaluar_vit("FC", v.get("FC")),
+            _evaluar_vit("Sat", v.get("Sat")),
+            _evaluar_vit("Temp", v.get("Temp")),
+        ]
+        if any(e == "critico" for e in estados):
+            return "🔴"
+        if any(e == "alerta" for e in estados):
+            return "🟡"
+        if any(e == "normal" for e in estados):
+            return "🟢"
+    except Exception:
+        pass
+    return "⚪"
+
+
 def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
-    vistas_clinicas = {"Recetas", "Clinica", "Evolucion", "Emergencias y Ambulancia"}
-    if not paciente_sel or vista_actual not in vistas_clinicas:
+    if not paciente_sel:
         return
 
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
@@ -425,16 +445,52 @@ def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     if alergias:
         st.sidebar.warning(f"⚠️ Alergias: {alergias}")
     else:
-        st.sidebar.caption("Alergias: sin datos.")
+        st.sidebar.caption("Sin alergias cargadas.")
 
-    st.sidebar.markdown(
-        '<p class="mc-sidebar-subhead">Últimos signos vitales</p>',
-        unsafe_allow_html=True,
-    )
+    # ── Semáforo + último vital ───────────────────────────────────
     if vitales_orden:
-        st.sidebar.markdown(_html_signos_vitales_sidebar(vitales_orden), unsafe_allow_html=True)
+        _sem = _semaforo_vital_sidebar(vitales_orden[0])
+        _fecha_v = vitales_orden[0].get("fecha", "S/D")[:16]
+        st.sidebar.markdown(
+            f'<p class="mc-sidebar-subhead">{_sem} Últimos signos vitales — {escape(_fecha_v)}</p>',
+            unsafe_allow_html=True,
+        )
+        st.sidebar.markdown(_html_signos_vitales_sidebar(vitales_orden[:1]), unsafe_allow_html=True)
     else:
-        st.sidebar.caption("Sin registros vitales recientes.")
+        st.sidebar.caption("⚪ Sin registros vitales recientes.")
+
+    # ── Última evolución ───────────────────────────────────────
+    evoluciones = st.session_state.get("evoluciones_db", [])
+    evs_pac = [e for e in evoluciones if e.get("paciente") == paciente_sel]
+    if evs_pac:
+        ultima_ev = max(evs_pac, key=lambda x: x.get("fecha", ""))
+        _prof_ev = (ultima_ev.get("firma") or "S/D")[:22]
+        _fecha_ev = ultima_ev.get("fecha", "S/D")[:16]
+        _nota_ev = str(ultima_ev.get("nota", ""))[:80].replace("\n", " ")
+        st.sidebar.caption(f"📝 Última evolución: **{_fecha_ev}** — {_prof_ev}")
+        if _nota_ev:
+            st.sidebar.caption(f"{_nota_ev}{'...' if len(str(ultima_ev.get('nota',''))) > 80 else ''}")
+    else:
+        st.sidebar.caption("📝 Sin evoluciones registradas.")
+
+    # ── Medicación activa (top 3) ──────────────────────────────
+    indicaciones = st.session_state.get("indicaciones_db", [])
+    activas = [
+        r for r in indicaciones
+        if r.get("paciente") == paciente_sel
+        and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
+        and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
+    ]
+    if activas:
+        st.sidebar.caption(f"💊 Medicación activa ({len(activas)} indicación/es):")
+        for med in activas[:3]:
+            _nom = (med.get("med") or "")[:40]
+            _frec = (med.get("frecuencia") or med.get("via") or "")[:20]
+            st.sidebar.caption(f"  • {_nom}" + (f" — {_frec}" if _frec else ""))
+        if len(activas) > 3:
+            st.sidebar.caption(f"  ... y {len(activas) - 3} más")
+    else:
+        st.sidebar.caption("💊 Sin medicación activa.")
 
     st.sidebar.caption("Diagnósticos activos")
     if patologias:
