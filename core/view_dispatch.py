@@ -53,8 +53,10 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(mi_empresa, rol)
         elif tab_name in ("Clinica", "Pediatria", "Historial", "Escalas Clinicas", "Balance"):
             render_fn(paciente_sel, user)
-        elif tab_name in ("Evolucion", "Estudios", "PDF"):
+        elif tab_name in ("Evolucion", "Estudios"):
             render_fn(paciente_sel, user, rol)
+        elif tab_name == "PDF":
+            render_fn(paciente_sel, mi_empresa, user, rol)
         elif tab_name in ("Materiales", "Emergencias y Ambulancia"):
             render_fn(paciente_sel, mi_empresa, user)
         elif tab_name in ("Recetas", "Caja"):
