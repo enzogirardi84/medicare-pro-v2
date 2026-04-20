@@ -139,16 +139,14 @@ def guardar_historial_clinico(
         
         # Guardar TODO
         _save_data(data)
-        
-        # Crear backup
-        backup_file = Path(f".streamlit/backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-        with open(backup_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        
         return True
         
     except Exception as e:
-        print(f"ERROR CRITICO guardando: {e}")
+        try:
+            from core.app_logging import log_event
+            log_event("guardado_simple", f"ERROR guardando: {e}")
+        except Exception:
+            pass
         return False
 
 def obtener_historial_paciente(paciente_id: str) -> List[Dict]:

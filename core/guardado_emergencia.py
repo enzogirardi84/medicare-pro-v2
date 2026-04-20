@@ -359,7 +359,11 @@ def obtener_signos_vitales_local(paciente_id: str) -> List[Dict]:
         return [v for v in vitales if v.get("paciente_id") == paciente_id or v.get("dni") == paciente_id]
         
     except Exception as e:
-        print(f"Error leyendo local: {e}")
+        try:
+            from core.app_logging import log_event
+            log_event("guardado_emergencia", f"Error leyendo vitales local: {e}")
+        except Exception:
+            pass
         return []
 
 
@@ -380,5 +384,9 @@ def obtener_evoluciones_local(paciente_id: str) -> List[Dict]:
         return [e for e in evoluciones if e.get("paciente_id") == paciente_id or e.get("dni") == paciente_id]
         
     except Exception as e:
-        print(f"Error leyendo local: {e}")
+        try:
+            from core.app_logging import log_event
+            log_event("guardado_emergencia", f"Error leyendo evoluciones local: {e}")
+        except Exception:
+            pass
         return []

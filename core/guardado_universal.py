@@ -92,17 +92,15 @@ def guardar_registro(
         # 5. Guardar archivo
         _save_data(data)
         
-        # 6. Crear backup con timestamp
-        backup_file = DATA_FILE.parent / f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(backup_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        
-        return True, f"Guardado en {tipo} OK (backup: {backup_file.name})"
+        return True, f"Guardado en {tipo} OK"
         
     except Exception as e:
-        # NUNCA silenciar errores - siempre reportar
         error_msg = f"ERROR CRITICO guardando {tipo}: {str(e)}"
-        print(error_msg)  # Log para debug
+        try:
+            from core.app_logging import log_event
+            log_event("guardado_universal", error_msg)
+        except Exception:
+            pass
         return False, error_msg
 
 def obtener_registros(tipo: str, paciente_id: str = None) -> List[Dict]:
@@ -119,7 +117,11 @@ def obtener_registros(tipo: str, paciente_id: str = None) -> List[Dict]:
         
         return registros
     except Exception as e:
-        print(f"ERROR leyendo registros {tipo}: {e}")
+        try:
+            from core.app_logging import log_event
+            log_event("guardado_universal", f"ERROR leyendo {tipo}: {e}")
+        except Exception:
+            pass
         return []
 
 def obtener_historial_paciente(paciente_id: str) -> List[Dict]:

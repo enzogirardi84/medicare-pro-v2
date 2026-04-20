@@ -817,7 +817,7 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
                     (paciente_id_visual, etiqueta, dni, obra_social, estado, mi_empresa)
                 )
     except Exception as e:
-        print(f"Error en lectura SQL de pacientes: {e}")
+        log_event("utils", f"Error en lectura SQL de pacientes: {type(e).__name__}: {e}")
 
     ts = session_state.get("_ultimo_guardado_ts", 0)
     cache_key = f"_mc_cache_pac_vis_{mi_empresa}_{rol_actual}_{incluir_altas}_{busqueda_norm}"
