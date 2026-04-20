@@ -133,6 +133,20 @@ try:
 except Exception:
     pass
 
+# CSS legacy para browsers viejos (Android <=8, iOS <=12, sin :has ni clamp).
+# Se activa solo cuando JS en ui_liviano.render_mc_liviano_cliente detecta browser antiguo
+# y agrega la clase `mc-legacy` al elemento <html>. En browsers modernos no tiene efecto.
+try:
+    _legacy_css_path = Path(__file__).parent / "assets" / "mobile_legacy.css"
+    if _legacy_css_path.exists():
+        _legacy_mtime = _legacy_css_path.stat().st_mtime
+        st.markdown(
+            f"<style>{cargar_texto_asset('mobile_legacy.css', _mtime=_legacy_mtime)}</style>",
+            unsafe_allow_html=True,
+        )
+except Exception:
+    pass
+
 if "_db_bootstrapped" not in st.session_state:
     # Sin precarga de PHI: monolito y multiclínica cargan la base en login / recuperación / tenant.
     inicializar_db_state(None, precargar_usuario_admin_emergencia=False)

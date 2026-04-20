@@ -208,6 +208,40 @@ def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
 
     var want = SERVER_HINT || saveData || oldAndroid || oldIOS || operaMini || oldIE || lowSpec;
     applyLiviano(!!want);
+
+    /* --- Deteccion de browser legacy (Android <=8, iOS <=12, sin CSS moderno) --- */
+    var isLegacy = false;
+    /* Android <= 8 */
+    if (av <= 8) isLegacy = true;
+    /* iOS <= 12 */
+    if (oldIOS) isLegacy = true;
+    /* Opera Mini: no soporta WebSocket completo */
+    if (operaMini) isLegacy = true;
+    /* IE / IEMobile */
+    if (oldIE) isLegacy = true;
+    /* Samsung Internet < 8 (UA: SamsungBrowser/7) */
+    var sbMatch = u.match(/SamsungBrowser\\/([0-9]+)/);
+    if (sbMatch && parseInt(sbMatch[1], 10) < 8) isLegacy = true;
+    /* UC Browser (muy limitado) */
+    if (/UCBrowser/i.test(u)) isLegacy = true;
+    /* Deteccion de capacidad: si no soporta CSS custom properties o flexbox gap */
+    try {{
+      if (typeof CSS !== "undefined" && CSS.supports) {{
+        /* :has() requiere Chrome 105+, Safari 15.4+ */
+        if (!CSS.supports("selector(:has(*))")) isLegacy = true;
+      }} else {{
+        /* No hay CSS.supports = browser muy viejo */
+        isLegacy = true;
+      }}
+    }} catch(e) {{ isLegacy = true; }}
+    /* RAM muy baja (<=1GB) o 1 core = hardware muy viejo */
+    if (typeof dm === "number" && dm <= 1) isLegacy = true;
+
+    if (isLegacy) {{
+      root.classList.add("mc-legacy");
+    }} else {{
+      root.classList.remove("mc-legacy");
+    }}
   }} catch (e) {{}}
 }})();
 </script>
