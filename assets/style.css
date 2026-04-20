@@ -4314,22 +4314,36 @@ html, body {
     }
 }
 
-/* ===== SIDEBAR MOVIL: NO tocar width - dejar que Streamlit controle apertura ===== */
+/* ===== SIDEBAR MOVIL: quitar flex-row de stAppViewContainer para eliminar espacio muerto ===== */
 @media (max-width: 992px) {
 
-    /* El sidebar nativo de Streamlit maneja su propio display/width.
-       Solo nos aseguramos que el contenido principal no tenga margen lateral. */
+    /* stAppViewContainer es flex-row con sidebar + main.
+       Al poner el sidebar en position:fixed, deja un hueco enorme.
+       Solucion: convertir a block, sidebar sale del flujo via fixed. */
+    [data-testid="stAppViewContainer"] {
+        display: block !important;
+        flex-direction: unset !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Sidebar: fuera del flujo normal del documento */
+    section[data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        z-index: 10012 !important;
+        height: 100dvh !important;
+    }
+
+    /* Main: ocupa todo el ancho disponible */
     [data-testid="stMain"],
     [data-testid="stAppViewContainer"] > section:nth-child(2) {
         width: 100% !important;
         max-width: 100% !important;
         margin-left: 0 !important;
         padding-left: 0 !important;
-    }
-
-    [data-testid="stAppViewContainer"],
-    [data-testid="stMain"] {
-        overflow-x: hidden !important;
+        flex: none !important;
     }
 }
 

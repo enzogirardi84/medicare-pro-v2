@@ -121,6 +121,25 @@ try:
 except Exception:
     pass
 
+st.markdown(
+    """<style>
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] *,
+    [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] *,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] * {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+
 # Modelo mobile unificado: se carga siempre, las @media queries internas lo activan solo en celular/tablet.
 try:
     _mobile_css_path = Path(__file__).parent / "assets" / "mobile.css"
