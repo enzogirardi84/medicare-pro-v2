@@ -3846,6 +3846,25 @@ html.mc-equipo-liviano iframe {
         min-width: 320px !important;
         max-width: 360px !important;
     }
+
+    /* Sidebar colapsado en desktop: sin espacio reservado, main ocupa todo */
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        flex: 0 0 0px !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    section[data-testid="stSidebar"][aria-expanded="false"] ~ [data-testid="stMain"],
+    section[data-testid="stSidebar"][aria-expanded="false"] ~ section[data-testid="stMain"] {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
 }
 
 /* --- TABLET (768px - 1024px) --- */
