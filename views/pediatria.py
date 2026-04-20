@@ -36,8 +36,8 @@ def render_pediatria(paciente_sel, user):
     st.markdown(
         """
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Control pediatrico y curvas</h2>
-            <p class="mc-hero-text">Peso, talla, IMC y percentiles con graficos de tendencia. Los datos se toman del legajo (sexo y fecha de nacimiento) y del historial pediatrico.</p>
+            <h2 class="mc-hero-title">Control antropometrico y curvas</h2>
+            <p class="mc-hero-text">Peso, talla, IMC y percentiles con graficos de tendencia. Admite controles pediátricos y de adultos.</p>
             <div class="mc-chip-row">
                 <span class="mc-chip">Curvas</span>
                 <span class="mc-chip">Percentiles</span>
@@ -173,14 +173,15 @@ def render_pediatria(paciente_sel, user):
 
     st.divider()
     with st.form("pedia", clear_on_submit=True):
-        st.markdown("##### Nuevo Control Pediatrico")
+        st.markdown("##### Nuevo Control")
+        tipo_ctrl = st.radio("Tipo de control", ["Pediátrico (menor)", "Adulto"], horizontal=True, key="tipo_ctrl_ped")
         col_time1, col_time2 = st.columns(2)
         fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key="fecha_ped")
         hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_ped")
         col_a, col_b = st.columns(2)
         pes = col_a.number_input("Peso Actual (kg)", min_value=0.0, format="%.2f")
         tal = col_b.number_input("Talla Actual (cm)", min_value=0.0, format="%.2f")
-        pc = col_a.number_input("Perimetro Cefalico (cm)", min_value=0.0, format="%.2f")
+        pc = col_a.number_input("Perimetro Cefalico (cm, solo pediátrico)", min_value=0.0, format="%.2f")
         desc = col_b.text_input("Descripcion / Nota (opcional)")
         if st.form_submit_button("Guardar Control", use_container_width=True, type="primary"):
             hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
@@ -190,7 +191,10 @@ def render_pediatria(paciente_sel, user):
             if eda_meses < 0:
                 eda_meses = 0.0
             imc = round(pes / ((tal / 100) ** 2), 2) if tal > 0 else 0.0
-            if se == "F":
+            es_adulto = tipo_ctrl == "Adulto"
+            if es_adulto:
+                percentil_sug = "Bajo peso" if imc < 18.5 else "Normal" if imc < 25 else "Sobrepeso" if imc < 30 else "Obesidad"
+            elif se == "F":
                 percentil_sug = "P3 - Bajo peso" if imc < 14 else "P50 - Normal" if imc < 18 else "P97 - Sobrepeso"
             else:
                 percentil_sug = "P3 - Bajo peso" if imc < 14.5 else "P50 - Normal" if imc < 18.5 else "P97 - Sobrepeso"
@@ -207,7 +211,8 @@ def render_pediatria(paciente_sel, user):
                         "perimetro_cefalico_cm": pc,
                         "percentilo_peso": percentil_sug,
                         "percentilo_talla": "",
-                        "observaciones": desc
+                        "observaciones": desc,
+                        "tipo_control": "adulto" if es_adulto else "pediatrico",
                     }
                     insert_pediatria(datos_sql)
                     log_event("pediatria_sql_insert", f"Paciente: {paciente_uuid}")
@@ -229,6 +234,7 @@ def render_pediatria(paciente_sel, user):
                 "percentil_sug": percentil_sug,
                 "nota": desc,
                 "firma": user.get("nombre", "Sistema"),
+                "tipo_control": "adulto" if es_adulto else "pediatrico",
             })
             guardar_datos(spinner=True)
             queue_toast("Guardado correctamente.")

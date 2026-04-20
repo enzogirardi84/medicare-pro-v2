@@ -339,10 +339,17 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     _tabla_sec("Estudios complementarios", ["Fecha", "Tipo", "Detalle / Informe", "Profesional"],
                ["fecha", "tipo", "detalle", "firma"], estudios, [80, 100, 240, 75])
 
-    pediatria = sections.get("Control Pediatrico", [])
-    _tabla_sec("Control pediatrico", ["Fecha", "Peso (kg)", "Talla (cm)", "PC (cm)", "IMC", "Percentil", "Profesional"],
-               ["fecha", "peso", "talla", "pc", "imc", "percentil_sug", "firma"],
-               pediatria, [80, 55, 55, 55, 45, 65, 140])
+    pediatria_all = sections.get("Control Pediatrico", [])
+    ped_menor = [r for r in pediatria_all if str(r.get("tipo_control", "pediatrico")).lower() != "adulto"]
+    ped_adulto = [r for r in pediatria_all if str(r.get("tipo_control", "")).lower() == "adulto"]
+    if ped_menor:
+        _tabla_sec("Control pediatrico", ["Fecha", "Peso (kg)", "Talla (cm)", "PC (cm)", "IMC", "Percentil", "Profesional"],
+                   ["fecha", "peso", "talla", "pc", "imc", "percentil_sug", "firma"],
+                   ped_menor, [80, 55, 55, 55, 45, 65, 140])
+    if ped_adulto:
+        _tabla_sec("Control antropometrico (adulto)", ["Fecha", "Peso (kg)", "Talla (cm)", "IMC", "Clasificacion IMC", "Profesional"],
+                   ["fecha", "peso", "talla", "imc", "percentil_sug", "firma"],
+                   ped_adulto, [80, 55, 55, 50, 120, 135])
 
     escalas = sections.get("Escalas Clinicas", [])
     _tabla_sec("Escalas clinicas", ["Fecha", "Escala", "Puntaje", "Interpretacion", "Profesional"],
