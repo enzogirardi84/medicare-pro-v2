@@ -96,6 +96,150 @@ LIVIANO_JS_TEMPLATE = """\
 </script>
 """
 
+# JS para cerrar el sidebar automáticamente en móviles al navegar (inyectado en main.py)
+MOBILE_SIDEBAR_AUTOCLOSE_JS = """
+<script>
+(function() {
+    var MOBILE_QUERY = "(max-width: 767px)";
+
+    function isMobile() {
+        try {
+            return !!(window.matchMedia && window.matchMedia(MOBILE_QUERY).matches);
+        } catch (e) {
+            return window.innerWidth <= 767;
+        }
+    }
+
+    if (isMobile()) {
+        document.documentElement.classList.add("mc-sidebar-mobile-closed");
+        document.documentElement.classList.remove("mc-sidebar-mobile-open");
+    }
+
+    function getSidebar() {
+        return document.querySelector('section[data-testid="stSidebar"]');
+    }
+
+    function getCollapseButton() {
+        return document.querySelector(
+            '[data-testid="stSidebarCollapseButton"] button, [data-testid="stSidebarCollapseButton"], [data-testid="stSidebar"] button[kind="header"]'
+        );
+    }
+
+    function getMobileSidebarBridge() {
+        try {
+            return window.parent && window.parent !== window ? window.parent : window;
+        } catch (e) {
+            return window;
+        }
+    }
+
+    function sidebarIsOpen() {
+        try {
+            var bridge = getMobileSidebarBridge();
+            if (bridge && typeof bridge.__mcSidebarMobileIsOpen === "function") {
+                return !!bridge.__mcSidebarMobileIsOpen();
+            }
+        } catch (e) {}
+
+        var sidebar = getSidebar();
+        if (!sidebar) return false;
+        var expanded = sidebar.getAttribute("aria-expanded");
+        if (expanded === "true") return true;
+        if (expanded === "false") return false;
+
+        var rect = sidebar.getBoundingClientRect();
+        return rect.width > 48 && rect.left > (-rect.width + 8);
+    }
+
+    function syncFloatingToggle() {
+        try {
+            var parentWin = window.parent && window.parent !== window ? window.parent : window;
+            if (parentWin && typeof parentWin.__mcSidebarToggleSync === "function") {
+                parentWin.__mcSidebarToggleSync();
+            }
+        } catch (e) {}
+    }
+
+    function closeSidebar() {
+        if (!isMobile() || !sidebarIsOpen()) return false;
+        try {
+            var bridge = getMobileSidebarBridge();
+            if (bridge && typeof bridge.__mcSidebarMobileClose === "function") {
+                bridge.__mcSidebarMobileClose();
+                syncFloatingToggle();
+                return true;
+            }
+        } catch (e) {}
+        var collapseBtn = getCollapseButton();
+        if (!collapseBtn) return false;
+        collapseBtn.click();
+        syncFloatingToggle();
+        return true;
+    }
+
+    function shouldCloseFromSidebarTarget(target) {
+        if (!target || !target.closest) return false;
+        if (target.closest('[data-testid="stSidebarCollapseButton"], [data-testid="stSidebar"] button[kind="header"]')) {
+            return false;
+        }
+        return !!target.closest('button, [role="button"], a, label');
+    }
+
+    function clickCameFromFloatingToggle(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest('#mc-mobile-sidebar-toggle-btn');
+    }
+
+    function setupMobileSidebar() {
+        if (window.__mcMobileSidebarAutoCloseInstalled) return;
+        window.__mcMobileSidebarAutoCloseInstalled = true;
+
+        setTimeout(function() {
+            var sidebar = getSidebar();
+            if (sidebar && sidebarIsOpen()) {
+                var closed = closeSidebar();
+                if (closed) {
+                    syncFloatingToggle();
+                }
+            }
+        }, 800);
+
+        document.addEventListener('click', function(e) {
+            if (!isMobile()) return;
+            if (clickCameFromFloatingToggle(e.target)) return;
+            var sidebar = getSidebar();
+            if (!sidebar || !sidebarIsOpen()) return;
+            if (sidebar.contains(e.target) && shouldCloseFromSidebarTarget(e.target)) {
+                window.setTimeout(closeSidebar, 180);
+                return;
+            }
+            if (!sidebar.contains(e.target)) {
+                var rect = sidebar.getBoundingClientRect();
+                if (rect.width > 50 && rect.left >= 0) {
+                    setTimeout(closeSidebar, 150);
+                }
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupMobileSidebar);
+    } else {
+        setupMobileSidebar();
+    }
+
+    window.setTimeout(syncFloatingToggle, 160);
+    window.setTimeout(syncFloatingToggle, 700);
+    window.setTimeout(syncFloatingToggle, 1800);
+
+    window.addEventListener('load', function() {
+        setupMobileSidebar();
+        syncFloatingToggle();
+    });
+})();
+</script>
+"""
+
 # JS para el toggle móvil de sidebar (sin placeholders — string literal directo)
 SIDEBAR_TOGGLE_JS = """
 <div id="mc-mobile-sidebar-toggle-anchor" style="height:0;width:0;overflow:hidden;"></div>
