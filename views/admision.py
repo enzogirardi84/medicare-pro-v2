@@ -660,6 +660,24 @@ def render_admision(mi_empresa, rol):
             unsafe_allow_html=True,
         )
 
+        # ── Vista previa de DNI duplicado FUERA del form (tiempo real) ──────
+        dni_preview = st.session_state.get("_adm_dni_preview", "").strip()
+        dni_norm_preview = _normalizar_dni(dni_preview)
+        if dni_norm_preview:
+            _dup_preview = None
+            for pid, det in mapa_detalles_pacientes(st.session_state).items():
+                if _normalizar_dni(det.get("dni", "")) == dni_norm_preview:
+                    _dup_preview = (pid, det)
+                    break
+            if _dup_preview:
+                pid_dup, det_dup = _dup_preview
+                st.error(
+                    f"⚠️ **DNI ya registrado**: {_nombre_legible(pid_dup)} — "
+                    f"Empresa: {det_dup.get('empresa', 'S/D')} — "
+                    f"Estado: {det_dup.get('estado', 'Activo')} — "
+                    f"Obra social: {det_dup.get('obra_social', 'S/D')}"
+                )
+
         with st.form("adm_form", clear_on_submit=True):
             st.markdown("##### Datos del legajo")
             col_a, col_b = st.columns(2)
@@ -667,7 +685,11 @@ def render_admision(mi_empresa, rol):
             o = col_b.text_input("Obra social / prepaga", placeholder="OSDE / PAMI / Particular")
 
             col_c, col_d = st.columns(2)
-            d = col_c.text_input("DNI del paciente *", placeholder="35123456")
+            d = col_c.text_input(
+                "DNI del paciente *",
+                placeholder="35123456",
+                key="_adm_dni_preview",
+            )
             f_nac = col_d.date_input(
                 "Fecha de nacimiento",
                 value=date(1990, 1, 1),
@@ -681,7 +703,18 @@ def render_admision(mi_empresa, rol):
 
             dir_p = st.text_input("Direccion exacta", placeholder="Calle 123, barrio, ciudad")
 
-            st.markdown("##### Alertas y antecedentes")
+            st.markdown("##### Diagnóstico y antecedentes")
+            col_diag1, col_diag2 = st.columns(2)
+            diagnostico_ingreso = col_diag1.text_input(
+                "Diagnóstico principal de ingreso",
+                placeholder="Ej: Neumonia, Fractura de cadera, ACV isémico...",
+                key="_adm_diag_ingreso",
+            )
+            motivo_ingreso = col_diag2.text_input(
+                "Motivo de consulta / ingreso",
+                placeholder="Ej: Disnea, dolor abdominal, trauma...",
+                key="_adm_motivo_ingreso",
+            )
             col_alg, col_pat = st.columns(2)
             alergias = col_alg.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
             patologias = col_pat.text_area("Patologias previas / riesgos", placeholder="Ej: DBT, HTA, marcapasos...", height=90)
@@ -691,6 +724,14 @@ def render_admision(mi_empresa, rol):
             else:
                 emp_d = mi_empresa
                 st.info(f"Paciente asignado a: {mi_empresa}")
+
+            _faltantes = []
+            if not n.strip():
+                _faltantes.append("Nombre y apellido")
+            if not d.strip():
+                _faltantes.append("DNI")
+            if _faltantes:
+                st.warning(f"⚠️ Campos obligatorios sin completar: {', '.join(_faltantes)}")
 
             if st.form_submit_button("Habilitar paciente", use_container_width=True, type="primary"):
                 campos_legajo, error_legajo = _validar_legajo(
@@ -721,6 +762,8 @@ def render_admision(mi_empresa, rol):
                             "obra_social": _texto_unilinea(o),
                             "alergias": alergias.strip(),
                             "patologias": patologias.strip(),
+                            "diagnostico_ingreso": diagnostico_ingreso.strip(),
+                            "motivo_ingreso": motivo_ingreso.strip(),
                         }
                         st.session_state["paciente_actual"] = id_p
                         registrar_auditoria_legal(
