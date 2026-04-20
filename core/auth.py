@@ -424,6 +424,7 @@ def render_login():
                                                         "auth",
                                                         "login_ok_2fa_omitido_sin_email_en_ficha",
                                                     )
+                                                _loader_ph.empty()
                                                 _completar_login_exitoso(
                                                     user_data,
                                                     u_limpio,
@@ -439,6 +440,7 @@ def render_login():
                                             user_data["usuario_login"] = "admin"
                                             aplicar_hash_tras_login_ok(user_data, p.strip(), rounds=bcrypt_rounds_config())
                                             st.session_state["usuarios_db"]["admin"] = user_data
+                                            _loader_ph.empty()
                                             _completar_login_exitoso(
                                                 user_data,
                                                 "admin",
@@ -458,6 +460,7 @@ def render_login():
                                         user_data["usuario_login"] = "admin"
                                         aplicar_hash_tras_login_ok(user_data, p.strip(), rounds=bcrypt_rounds_config())
                                         st.session_state["usuarios_db"]["admin"] = user_data
+                                        _loader_ph.empty()
                                         _completar_login_exitoso(
                                             user_data,
                                             "admin",
