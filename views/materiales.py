@@ -106,6 +106,39 @@ def render_materiales(paciente_sel, mi_empresa, user):
     if cons_paciente:
         st.divider()
         st.markdown("#### Materiales registrados para este paciente")
+
+        # ── Métricas + top insumos + último uso ────────────────────────────
+        _tot_unidades = sum(int(c.get("cantidad", 0) or 0) for c in cons_paciente)
+        _ultimo_c = max(cons_paciente, key=lambda x: x.get("fecha", ""))
+        _mc1, _mc2, _mc3 = st.columns(3)
+        _mc1.metric("Total consumos", len(cons_paciente))
+        _mc2.metric("Unidades usadas", _tot_unidades)
+        _mc3.metric("Último registro", _ultimo_c.get("fecha", "S/D")[:16])
+
+        # Top 3 insumos más usados
+        from collections import Counter
+        _conteo = Counter()
+        for c in cons_paciente:
+            _conteo[c.get("insumo", "")] += int(c.get("cantidad", 0) or 0)
+        _top3 = _conteo.most_common(3)
+        if _top3:
+            st.caption("Top insumos: " + " | ".join(f"**{k}** ({v} u.)" for k, v in _top3))
+
+        # ── Alerta uso excesivo en el turno actual ─────────────────────────
+        from datetime import datetime as _dt, timedelta as _td
+        _hace2h = _dt.now() - _td(hours=2)
+        _recientes = [
+            c for c in cons_paciente
+            if _dt.strptime(c.get("fecha", "01/01/2000 00:00"), "%d/%m/%Y %H:%M") >= _hace2h
+        ] if cons_paciente else []
+        if _recientes:
+            _cont_rec = Counter()
+            for c in _recientes:
+                _cont_rec[c.get("insumo", "")] += int(c.get("cantidad", 0) or 0)
+            for ins, qty in _cont_rec.items():
+                if qty >= 5:
+                    st.warning(f"🟡 Uso elevado en últimas 2hs: **{ins}** — {qty} unidades. Verificar si es correcto.")
+
         col_chk, col_btn = st.columns([1.2, 2.8])
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
         if col_btn.button("Borrar ultimo consumo", use_container_width=True, disabled=not confirmar_borrado):
@@ -116,14 +149,31 @@ def render_materiales(paciente_sel, mi_empresa, user):
             queue_toast("Consumo eliminado correctamente.")
             st.rerun()
 
+        # ── Búsqueda en historial ────────────────────────────────────
+        busqueda_mat = st.text_input(
+            "🔍 Buscar en materiales",
+            placeholder="Insumo, profesional o fecha...",
+            key="mat_busqueda",
+        ).strip().lower()
+
+        cons_filtrados = cons_paciente
+        if busqueda_mat:
+            cons_filtrados = [
+                c for c in cons_paciente
+                if busqueda_mat in str(c.get("insumo", "")).lower()
+                or busqueda_mat in str(c.get("firma", "")).lower()
+                or busqueda_mat in str(c.get("fecha", "")).lower()
+            ]
+            st.caption(f"{len(cons_filtrados)} resultado(s) para '{busqueda_mat}'")
+
         limite = seleccionar_limite_registros(
             "Consumos a mostrar",
-            len(cons_paciente),
+            len(cons_filtrados),
             key="materiales_limite_consumos",
             default=50,
             opciones=(10, 20, 50, 100, 200, 500),
         )
-        df_cons = pd.DataFrame(cons_paciente[-limite:])
+        df_cons = pd.DataFrame(cons_filtrados[-limite:])
         if not df_cons.empty:
             df_cons["fecha_dt"] = pd.to_datetime(df_cons["fecha"], format="%d/%m/%Y %H:%M", errors="coerce")
             df_cons = df_cons.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt", "paciente", "empresa"], errors="ignore")
