@@ -159,7 +159,28 @@ def render_clinica(paciente_sel, user=None):
     if vits:
         vits_ordenados = sorted(vits, key=lambda x: _parse_fecha_hora(x.get("fecha", "")))
         ultimo = vits_ordenados[-1]
-        st.markdown("##### Ultimo control registrado")
+
+        # ── Semáforo del último control ─────────────────────────────────
+        _estados_ult = {
+            "TA": _evaluar_ta_clinica(ultimo.get("TA", "")),
+            "FC": _evaluar_vit("FC", ultimo.get("FC")),
+            "Sat": _evaluar_vit("Sat", ultimo.get("Sat")),
+            "Temp": _evaluar_vit("Temp", ultimo.get("Temp")),
+        }
+        _hay_crit_ult = any(v == "critico" for v in _estados_ult.values())
+        _hay_alert_ult = any(v == "alerta" for v in _estados_ult.values())
+        _semaforo = "🔴 CRÍTICO" if _hay_crit_ult else ("🟡 Alerta" if _hay_alert_ult else "🟢 Normal")
+        st.markdown(f"##### Último control registrado — {ultimo.get('fecha', 'S/D')[:16]}  **{_semaforo}**")
+        if _hay_crit_ult or _hay_alert_ult:
+            _msgs = [
+                f"{k}={ultimo.get(k, '-')}" for k, est in _estados_ult.items()
+                if est in ("critico", "alerta")
+            ]
+            if _hay_crit_ult:
+                st.error(f"🔴 Valores críticos en último control: {' | '.join(_msgs)}")
+            else:
+                st.warning(f"🟡 Valores fuera de rango en último control: {' | '.join(_msgs)}")
+
         if es_movil:
             c1, c2 = st.columns(2)
             c1.metric("T.A.", ultimo.get("TA", "-"))
@@ -184,25 +205,61 @@ def render_clinica(paciente_sel, user=None):
                 c5, c6 = st.columns(2)
                 c5.metric("Temp", f"{ultimo.get('Temp', '-')} C")
                 c6.metric("HGT", ultimo.get("HGT", "-"))
+
         if len(vits_ordenados) >= 2:
             try:
                 penultimo = vits_ordenados[-2]
                 delta_fc = int(ultimo.get("FC", 0)) - int(penultimo.get("FC", 0))
-                st.caption(f"Tendencia FC respecto al control previo: {'↑' if delta_fc > 0 else '↓' if delta_fc < 0 else '→'} {abs(delta_fc)} lpm")
+                try:
+                    delta_sat = float(ultimo.get("Sat", 0)) - float(penultimo.get("Sat", 0))
+                    _sat_txt = f" | SatO2 {'\u2191' if delta_sat > 0 else '\u2193' if delta_sat < 0 else '\u2192'}{abs(delta_sat):.0f}%"
+                except Exception:
+                    _sat_txt = ""
+                try:
+                    delta_ta = float(ultimo.get("TA", 0).split("/")[0]) - float(penultimo.get("TA", 0).split("/")[0])
+                    _ta_txt = f" | TA {'\u2191' if delta_ta > 0 else '\u2193' if delta_ta < 0 else '\u2192'}{abs(delta_ta):.0f} mmHg"
+                except Exception:
+                    _ta_txt = ""
+                st.caption(
+                    f"Tendencia vs control previo — FC: {'\u2191' if delta_fc > 0 else '\u2193' if delta_fc < 0 else '\u2192'}{abs(delta_fc)} lpm"
+                    + _sat_txt
+                    + _ta_txt
+                )
             except Exception as e:
-
                 from core.app_logging import log_event
-
                 log_event('clinica_error', f'Error: {e}')
 
         if len(vits_ordenados) >= 3:
-            st.markdown("##### Evolucion reciente (F.C.)")
+            st.markdown("##### Tendencia de signos vitales")
             df_trend = pd.DataFrame(vits_ordenados[-20:])
             df_trend["_t"] = df_trend["fecha"].apply(_parse_fecha_hora)
             df_trend = df_trend[df_trend["_t"] != datetime.min]
             if len(df_trend) >= 2:
-                chart_fc = df_trend.set_index("_t")[["FC"]].rename(columns={"FC": "F.C. (lpm)"})
-                st.line_chart(chart_fc, use_container_width=True)
+                # Extraer TA sistólica numérica
+                def _ta_sis(ta_str):
+                    try:
+                        return float(str(ta_str or "").replace("/", " ").split()[0])
+                    except Exception:
+                        return None
+                df_trend["TA_sis"] = df_trend["TA"].apply(_ta_sis)
+                df_trend["FC"] = pd.to_numeric(df_trend["FC"], errors="coerce")
+                df_trend["Sat"] = pd.to_numeric(df_trend["Sat"], errors="coerce")
+                df_trend["Temp"] = pd.to_numeric(df_trend["Temp"], errors="coerce")
+                _tr = df_trend.set_index("_t")
+                _ch1, _ch2 = st.columns(2)
+                if _tr["FC"].notna().sum() >= 2:
+                    _ch1.caption("F.C. (lpm)")
+                    _ch1.line_chart(_tr[["FC"]].rename(columns={"FC": "F.C."}), use_container_width=True, height=140)
+                if _tr["Sat"].notna().sum() >= 2:
+                    _ch2.caption("SatO2 (%)")
+                    _ch2.line_chart(_tr[["Sat"]].rename(columns={"Sat": "SatO2"}), use_container_width=True, height=140)
+                _ch3, _ch4 = st.columns(2)
+                if _tr["TA_sis"].notna().sum() >= 2:
+                    _ch3.caption("TA sistólica (mmHg)")
+                    _ch3.line_chart(_tr[["TA_sis"]].rename(columns={"TA_sis": "TA sis."}), use_container_width=True, height=140)
+                if _tr["Temp"].notna().sum() >= 2:
+                    _ch4.caption("Temperatura (°C)")
+                    _ch4.line_chart(_tr[["Temp"]].rename(columns={"Temp": "Temp °C"}), use_container_width=True, height=140)
     else:
         bloque_estado_vacio(
             "Sin signos vitales",
