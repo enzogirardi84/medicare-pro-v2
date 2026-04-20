@@ -138,6 +138,25 @@ def _ultimo_evento_global(secciones: Dict[str, List[Dict[str, Any]]]) -> Optiona
     return ultimo
 
 
+def _resumen_ejecutivo_secciones(secciones: Dict[str, List[Dict[str, Any]]]) -> pd.DataFrame:
+    """Tabla compacta: sección, cantidad de registros y último evento datado."""
+    filas = []
+    for nombre, regs in sorted(secciones.items(), key=lambda x: -len(x[1])):
+        if not regs:
+            continue
+        ultimo_dt: Optional[datetime] = None
+        for reg in regs:
+            dt = parse_registro_fecha_hora(reg)
+            if dt and (ultimo_dt is None or dt > ultimo_dt):
+                ultimo_dt = dt
+        filas.append({
+            "Sección": nombre,
+            "Registros": len(regs),
+            "Último evento": ultimo_dt.strftime("%d/%m/%Y %H:%M") if ultimo_dt else "S/D",
+        })
+    return pd.DataFrame(filas)  # type: ignore[return-value]
+
+
 def _render_lazy_download(
     container: st.delta_generator.DeltaGenerator,
     key_base: str,
@@ -589,6 +608,11 @@ def render_historial(paciente_sel: str, user=None) -> None:
     patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "")).strip()
     if patologias:
         st.warning(f" Antecedentes / diagnóstico: {patologias}")
+    diag_ingreso = str(detalles.get("diagnostico_ingreso", "")).strip()
+    motivo_ingreso = str(detalles.get("motivo_ingreso", "")).strip()
+    if diag_ingreso or motivo_ingreso:
+        _txt = " | ".join(filter(None, [diag_ingreso, motivo_ingreso]))
+        st.info(f"🏥 Ingreso: **{_txt}**")
     medico_trat = str(detalles.get("medico_tratante", "") or detalles.get("medico", "")).strip()
     if medico_trat:
         st.caption(f" Médico tratante: **{medico_trat}**")
@@ -704,6 +728,11 @@ def render_historial(paciente_sel: str, user=None) -> None:
         use_container_width=True,
         height=_h_bar,
     )
+
+    df_ej = _resumen_ejecutivo_secciones(secciones)
+    if not df_ej.empty:
+        with st.expander("Resumen ejecutivo por sección", expanded=False):
+            mostrar_dataframe_con_scroll(df_ej, height=min(400, 50 + len(df_ej) * 36))
 
     with st.expander(" Línea de tiempo global", expanded=True):
         tl_cols = st.columns([1, 1, 1, 1])
