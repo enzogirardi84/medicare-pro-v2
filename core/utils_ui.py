@@ -168,7 +168,7 @@ def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20
 
 def mostrar_dataframe_con_scroll(df, height=420, border=True, hide_index=True):
     with st.container(height=height, border=border):
-        st.dataframe(df, width="stretch", hide_index=hide_index, height=height - 24)
+        st.dataframe(df, use_container_width=True, hide_index=hide_index, height=height - 24)
 
 
 def obtener_direccion_real(lat, lon):

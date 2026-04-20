@@ -155,7 +155,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "Verificá antes de prescribir."
                 )
 
-        if st.button("Guardar prescripcion medica", width="stretch", type="primary"):
+        if st.button("Guardar prescripcion medica", use_container_width=True, type="primary"):
             med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum
             if tipo_indicacion == "Medicacion" and (not med_final or med_final == "-- Seleccionar del vademecum --"):
                 st.error("Debe seleccionar o escribir un medicamento.")
@@ -283,7 +283,7 @@ def render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario,
             st.caption(f"Horario visible en la sabana diaria: {hora_papel.strftime('%H:%M')} — {int(velocidad_papel) if velocidad_papel else '?'} ml/h")
 
         if tipo_indicacion_papel == "Infusion / hidratacion":
-            if st.button("Guardar infusion (prescripcion digital)", width="stretch", type="primary", key="guardar_infusion_digital"):
+            if st.button("Guardar infusion (prescripcion digital)", use_container_width=True, type="primary", key="guardar_infusion_digital"):
                 if not medico_papel.strip() or not matricula_papel.strip():
                     st.error("Debe completar medico y matricula.")
                 else:
@@ -335,7 +335,7 @@ def render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario,
             type=["pdf", "png", "jpg", "jpeg"],
             key="adjunto_papel_receta",
         )
-        if st.button("Guardar indicacion en papel", width="stretch", key="guardar_indicacion_papel"):
+        if st.button("Guardar indicacion en papel", use_container_width=True, key="guardar_indicacion_papel"):
             if not medico_papel.strip() or not matricula_papel.strip():
                 st.error("Debe completar medico y matricula para dejar respaldo legal.")
             elif tipo_indicacion_papel == "Medicacion" and not detalle_papel.strip():

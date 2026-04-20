@@ -336,7 +336,7 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
     rapida["Hora_real"] = rapida["Hora programada"].map(_default_hora_real_cortina)
 
     ed_rap = st.data_editor(
-        rapida, hide_index=True, width="stretch",
+        rapida, hide_index=True, use_container_width=True,
         disabled=["Hora programada", "Medicamento", "Via", "Frecuencia"],
         column_config={
             "Hora programada": st.column_config.TextColumn("Prog.", width="small"),
@@ -349,7 +349,7 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
         key=f"cortina_rapida_{paciente_sel}_{fecha_hoy}",
     )
 
-    if st.button("Guardar tildes rápidos", width="stretch", type="primary", key=f"guardar_cortina_rapida_{paciente_sel}_{fecha_hoy}"):
+    if st.button("Guardar tildes rápidos", use_container_width=True, type="primary", key=f"guardar_cortina_rapida_{paciente_sel}_{fecha_hoy}"):
         n = 0
         for _, fila in ed_rap.iterrows():
             if not bool(fila.get("Dada")):
@@ -441,14 +441,14 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
                         else:
                             b1, b2 = st.columns(2)
                         with b1:
-                            if st.button("Administración realizada", key=f"mar_ok_{suf}_{i}", type="primary", width="stretch",
+                            if st.button("Administración realizada", key=f"mar_ok_{suf}_{i}", type="primary", use_container_width=True,
                                          help="Registra administración conforme a la indicación (queda firmado y auditado)."):
                                 hr_val = str(st.session_state.get(k_hr, def_h) or "").strip() or def_h
                                 if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, med_raw,
                                                                    str(fila.get("Hora programada", "") or "").strip(), "Realizada", "", hora_real_admin=hr_val):
                                     st.rerun()
                         with b2:
-                            if st.button("No administrada / suspendida", key=f"mar_no_{suf}_{i}", width="stretch",
+                            if st.button("No administrada / suspendida", key=f"mar_no_{suf}_{i}", use_container_width=True,
                                          help="Requiere motivo clínico documentado (trazabilidad legal)."):
                                 just = str(st.session_state.get(k_just, "") or "").strip()
                                 hr_val = str(st.session_state.get(k_hr, def_h) or "").strip() or def_h
@@ -499,7 +499,7 @@ def render_bloque_cortina_medicacion(plan_dia_df, columnas_tabla, paciente_sel, 
             disabled_cols = [c for c in editor_columnas if c not in ("Accion", "Hora_real", "Justificacion")]
 
             editor_df = st.data_editor(
-                pendientes_df[editor_columnas], hide_index=True, width="stretch", disabled=disabled_cols,
+                pendientes_df[editor_columnas], hide_index=True, use_container_width=True, disabled=disabled_cols,
                 column_config={
                     "Accion": st.column_config.SelectboxColumn("Acción", options=["(sin cambio)", "Realizada", "No realizada"], required=True),
                     "Hora_real": st.column_config.TextColumn("Hora real (HH:MM)", max_chars=8),
@@ -508,7 +508,7 @@ def render_bloque_cortina_medicacion(plan_dia_df, columnas_tabla, paciente_sel, 
                 key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
             )
 
-            if st.button("Guardar registro avanzado (cortina)", width="stretch", key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}"):
+            if st.button("Guardar registro avanzado (cortina)", use_container_width=True, key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}"):
                 registros_guardados = 0
                 errores = []
                 for _idx, fila in editor_df.iterrows():
@@ -592,7 +592,7 @@ def render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_ho
                         hora_real_c = st.text_input("Hora real (HH:MM)", value=_def_hr, help="No tiene que coincidir con la hora programada.")
                         accion_c = st.radio("Acción", ["Realizada", "No realizada / Suspendida"], horizontal=True)
                         justif_c = st.text_input("Justificación (obligatoria si no realizada)", placeholder="Procedimiento, intolerancia, paciente ausente…")
-                        enviar = st.form_submit_button("Guardar registro de esta medicación", width="stretch", type="primary")
+                        enviar = st.form_submit_button("Guardar registro de esta medicación", use_container_width=True, type="primary")
                         if enviar:
                             nombre_med_c = str(fila.get("Medicamento", "") or "").strip()
                             slot_c = str(fila.get("Hora programada", "") or "").strip() or "A demanda"

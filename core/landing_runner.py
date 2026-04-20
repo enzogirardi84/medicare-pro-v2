@@ -174,7 +174,7 @@ def render_publicidad_y_detener() -> None:
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
     if hasattr(st, "html"):
-        st.html(_landing_html, width="stretch")
+        st.html(_landing_html)
     else:
         st.markdown(_landing_html, unsafe_allow_html=True)
     if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
