@@ -544,9 +544,11 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
 
     spinner: None = usar `GUARDAR_DATOS_SPINNER_DEFAULT` en feature_flags; False = sin spinner; True = forzar.
     """
-    from core.feature_flags import GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS, GUARDAR_DATOS_SPINNER_DEFAULT
+    from core.feature_flags import GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS, GUARDAR_DATOS_SPINNER_DEFAULT, GUARDAR_DATOS_FORZAR_SIN_SPINNER
 
     mostrar = GUARDAR_DATOS_SPINNER_DEFAULT if spinner is None else spinner
+    if mostrar and GUARDAR_DATOS_FORZAR_SIN_SPINNER:
+        mostrar = False
     # Guardados no forzados: evita ráfagas de upserts cuando hay muchos eventos seguidos.
     # Los flujos críticos que usan spinner=True mantienen persistencia inmediata.
     if not force and not mostrar:

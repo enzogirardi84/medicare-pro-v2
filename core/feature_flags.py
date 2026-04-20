@@ -10,6 +10,11 @@ ALERTAS_APP_PACIENTE_VISIBLE = False
 # Los modulos con formularios grandes llaman `guardar_datos(spinner=True)` a proposito.
 GUARDAR_DATOS_SPINNER_DEFAULT = False
 
+# True: ignora spinner=True en guardar_datos y usa el toast silencioso en su lugar.
+# Elimina el bloqueo de pantalla en los 27 puntos de guardado critico.
+# Cambiar a False para volver al comportamiento original con spinner visible.
+GUARDAR_DATOS_FORZAR_SIN_SPINNER = True
+
 # 0 = desactivado. Si el upsert/local supera estos segundos, se emite un log tecnico (sin UI extra).
 # Ajustado a 3.5s porque con compresion gzip el guardado puede tardar ~300ms.
 GUARDAR_DATOS_LOG_LENTO_SEGUNDOS = 3.5
