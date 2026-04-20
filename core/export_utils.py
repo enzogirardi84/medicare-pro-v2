@@ -34,7 +34,7 @@ def safe_text(value):
 
     text = _repair_mojibake(text)
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\t", "    ")
-    text = unicodedata.normalize("NFKD", text)
+    text = unicodedata.normalize("NFC", text)
     text = "".join(ch for ch in text if ch == "\n" or (ord(ch) >= 32 and ch != "\x7f"))
     text = re.sub(r"[ ]{2,}", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
