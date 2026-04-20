@@ -97,10 +97,41 @@ def render_balance(paciente_sel, user):
         )
         return
 
+    # ── Resumen del día actual ───────────────────────────────────────────
+    hoy_str = ahora().strftime("%d/%m/%Y")
+    blp_hoy = [x for x in blp if str(x.get("fecha", "")).startswith(hoy_str)]
+    if blp_hoy:
+        ing_hoy = sum(x.get("ingresos", 0) for x in blp_hoy)
+        egr_hoy = sum(x.get("egresos", 0) for x in blp_hoy)
+        bal_hoy = sum(x.get("balance", 0) for x in blp_hoy)
+        st.markdown(f"##### Resumen del día — {hoy_str}")
+        _d1, _d2, _d3, _d4 = st.columns(4)
+        _d1.metric("Turnos hoy", len(blp_hoy))
+        _d2.metric("Ingresos hoy", f"{ing_hoy} ml")
+        _d3.metric("Egresos hoy", f"{egr_hoy} ml")
+        _d4.metric(
+            "Balance hoy",
+            f"{bal_hoy:+} ml",
+            delta="Retención" if bal_hoy > 500 else ("Pérdida" if bal_hoy < -500 else "Neutro"),
+            delta_color="inverse" if bal_hoy > 500 else ("normal" if bal_hoy < -500 else "off"),
+        )
+
+    # ── Alertas de balance acumulado crítico ──────────────────────────
+    df_temp = pd.DataFrame(blp)
+    neto_3 = int(df_temp["balance"].tail(3).sum()) if len(df_temp) >= 1 else 0
+    neto_total = int(df_temp["balance"].sum())
+    if neto_3 > 1500:
+        st.error(f"🔴 Balance positivo acumulado (retención): **+{neto_3} ml** en los últimos 3 turnos. Evaluar diurético.")
+    elif neto_3 < -1500:
+        st.error(f"🔴 Balance negativo acumulado (pérdida severa): **{neto_3} ml** en los últimos 3 turnos. Evaluar reposición.")
+    elif neto_3 > 800:
+        st.warning(f"🟡 Balance positivo moderado: **+{neto_3} ml** en los últimos 3 turnos.")
+    elif neto_3 < -800:
+        st.warning(f"🟡 Balance negativo moderado: **{neto_3} ml** en los últimos 3 turnos.")
+
     st.divider()
     st.markdown("#### Historial de balances hidricos")
 
-    df_temp = pd.DataFrame(blp)
     ultimo = df_temp["balance"].iloc[-1] if not df_temp.empty else 0
     col_met1, col_met2, col_met3 = st.columns(3)
     col_met1.metric(
@@ -110,22 +141,41 @@ def render_balance(paciente_sel, user):
         delta_color="inverse",
     )
     col_met2.metric("Total balances", len(blp))
-    col_met3.metric("Balance neto (ultimos 3 turnos)", f"{sum(df_temp['balance'].tail(3)):+} ml")
+    col_met3.metric("Balance neto (ultimos 3 turnos)", f"{neto_3:+} ml")
 
     if len(df_temp) >= 2:
-        st.markdown("#### Graficos rapidos")
+        st.markdown("#### Gráficos")
         df_chart = df_temp.copy()
         df_chart["etiqueta"] = df_chart["fecha"]
+
+        # Gráfico de tendencia diaria agrupada
+        try:
+            df_chart["fecha_solo"] = pd.to_datetime(df_chart["fecha"], format="%d/%m/%Y %H:%M", errors="coerce").dt.date.astype(str)
+            df_diario = df_chart.groupby("fecha_solo", sort=True).agg(
+                balance=("balance", "sum"),
+                ingresos=("ingresos", "sum"),
+                egresos=("egresos", "sum"),
+            ).tail(10)
+            col_chart0 = st.columns(1)[0]
+            col_chart0.caption("Tendencia de balance neto por día (suma de turnos)")
+            col_chart0.bar_chart(
+                df_diario[["balance"]],
+                use_container_width=True,
+                color="#6366f1",
+            )
+        except Exception:
+            pass
+
         col_chart1, col_chart2 = st.columns(2)
         with col_chart1:
-            st.caption("Ingresos vs egresos")
+            st.caption("Ingresos vs egresos (últimos 8 turnos)")
             st.bar_chart(
                 df_chart.set_index("etiqueta")[["ingresos", "egresos"]].tail(8),
                 use_container_width=True,
                 color=["#38bdf8", "#f97316"],
             )
         with col_chart2:
-            st.caption("Evolucion del shift")
+            st.caption("Evolucion del shift por turno")
             st.area_chart(
                 df_chart.set_index("etiqueta")["balance"].tail(8),
                 use_container_width=True,
