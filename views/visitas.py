@@ -333,6 +333,28 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         "Carga de tu agenda: visitas donde sos el profesional asignado y aun no estan cerradas."
     )
 
+    # ── Indicador de turnos del día ───────────────────────────────────────
+    _hoy = ahora().date()
+    _turnos_hoy = [
+        x for x in agenda_paciente
+        if x.get("_fecha_dt") and x["_fecha_dt"] != datetime.min and x["_fecha_dt"].date() == _hoy
+    ]
+    if _turnos_hoy:
+        _prox = min(_turnos_hoy, key=lambda x: x["_fecha_dt"])
+        _prox_hora = _prox["_fecha_dt"].strftime("%H:%M")
+        _prox_prof = _prox.get("profesional", "S/D")
+        st.info(f"📅 **{len(_turnos_hoy)} turno(s) hoy** — próximo a las **{_prox_hora}** con {_prox_prof}")
+    else:
+        st.caption("📅 Sin turnos agendados para hoy.")
+
+    # ── Alerta de turnos vencidos sin asistencia ──────────────────────────
+    _vencidos = [x for x in agenda_paciente if x.get("estado_calc") == "Vencida"]
+    if _vencidos:
+        st.warning(
+            f"⏰ **{len(_vencidos)} turno(s) vencido(s)** sin marcar como realizados o cancelados. "
+            "Revisá la agenda y actualizá el estado."
+        )
+
     st.subheader("Fichada Legal de Visita (GPS Real)")
     if GEO_DISPONIBLE:
         st.info("Para fichar llegada o salida, activa la ubicacion solo cuando la necesites.")
@@ -737,6 +759,12 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             df_agenda["Profesional"] = df_agenda["profesional"].fillna("Sin profesional")
             df_agenda["Estado"] = df_agenda["estado_calc"]
 
+            busqueda_ag = st.text_input(
+                "🔍 Buscar turno",
+                placeholder="Profesional, estado o fecha...",
+                key=f"agenda_busq_{paciente_sel}",
+            ).strip().lower()
+
             c_f1, c_f2 = st.columns(2)
             profesionales_disp = ["Todos"] + sorted(df_agenda["Profesional"].dropna().unique().tolist())
             estados_disp = ["Todos", "Pendiente", "En curso", "Vencida", "Realizada", "Cancelada"]
@@ -748,6 +776,14 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
                 df_filtrado = df_filtrado[df_filtrado["Profesional"] == filtro_prof]
             if filtro_estado != "Todos":
                 df_filtrado = df_filtrado[df_filtrado["Estado"] == filtro_estado]
+            if busqueda_ag:
+                mask = (
+                    df_filtrado["Profesional"].str.lower().str.contains(busqueda_ag, na=False)
+                    | df_filtrado["Estado"].str.lower().str.contains(busqueda_ag, na=False)
+                    | df_filtrado["Fecha y Hora"].str.lower().str.contains(busqueda_ag, na=False)
+                )
+                df_filtrado = df_filtrado[mask]
+                st.caption(f"{len(df_filtrado)} resultado(s) para '{busqueda_ag}'")
 
             col_g1, col_g2 = st.columns([1.1, 1])
             with col_g1:
