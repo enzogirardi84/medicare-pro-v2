@@ -174,14 +174,27 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     plantillas_evolucion = {
         "Libre": "",
         "Clinica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
+        "SOAP": "S - Subjetivo (motivo / síntomas referidos):\nO - Objetivo (signos, examen físico):\nA - Evaluación / Diagnóstico:\nP - Plan y conducta:",
         "Enfermeria": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curación:\nTolerancia al procedimiento:\nIndicaciones para el próximo control:",
         "Heridas": "Ubicación de la lesión:\nAspecto del lecho:\nExudado / olor:\nCuración aplicada:\nEvolución respecto al control previo:\n(Opcional: adjuntar foto con la cámara o un archivo debajo)",
         "Respiratorio": "Saturacion actual:\nDispositivo / flujo de oxigeno:\nTrabajo respiratorio:\nAuscultacion:\nConducta y seguimiento:",
+        "EPOC / Asma": "Disnea (escala 0-10):\nUso de musculatura accesoria:\nSaturación / FEV1 estimado:\nBroncoespasmo / sibilancias:\nMedicación broncodilatadora aplicada:\nRespuesta y plan:",
+        "Neurológico / ACV": "Nivel de conciencia (GCS):\nFuerza y sensibilidad por miembro:\nLenguaje / afasia:\nNIHSS estimado:\nImagen solicitada:\nConducta y derivación:",
+        "Post-procedimiento": "Procedimiento realizado:\nAcceso / zona intervenida:\nComplicaciones inmediatas:\nEstado hemodinámico post:\nIndicaciones y cuidados:\nPróximo control:",
+        "Seguimiento crónico": "Diagnóstico de base:\nCumplimiento del tratamiento:\nSignos / síntomas actuales:\nLaboratorio / estudios recientes:\nAjuste de medicación:\nFecha próximo control:",
         "Pediatria": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentacion / hidratacion:\nEvaluacion general:\nPlan y recomendaciones:",
         "Cuidados paliativos": "Sintomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las proximas horas:",
     }
 
     if puede_registrar:
+        evs_all = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
+        if evs_all:
+            ultima_ev = max(evs_all, key=lambda x: x.get("fecha", ""))
+            _c1, _c2, _c3 = st.columns(3)
+            _c1.metric("Última evolución", ultima_ev.get("fecha", "S/D"))
+            _c2.metric("Profesional", (ultima_ev.get("firma") or "S/D")[:28])
+            _c3.metric("Total evoluciones", len(evs_all))
+
         # Selectbox FUERA del form para que al cambiar plantilla se actualice el area de texto
         plantilla = st.selectbox(
             "Plantilla de evolucion",
@@ -195,6 +208,21 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             st.session_state["evol_plantilla_prev"] = plantilla
         if plantilla != "Libre":
             st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
+
+        st.caption("Acceso rápido:")
+        _btns = st.columns(5)
+        _acceso_rapido = [
+            ("SOAP", "SOAP"),
+            ("Enfermería", "Enfermeria"),
+            ("Heridas", "Heridas"),
+            ("EPOC", "EPOC / Asma"),
+            ("Post-proc.", "Post-procedimiento"),
+        ]
+        for idx, (label, key_pl) in enumerate(_acceso_rapido):
+            if _btns[idx].button(label, key=f"qpl_{key_pl}", use_container_width=True):
+                st.session_state["evol_nota_draft"] = plantillas_evolucion[key_pl]
+                st.session_state["evol_plantilla_prev"] = key_pl
+                st.rerun()
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
@@ -353,6 +381,22 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     if evs_paciente:
         st.divider()
         st.markdown("#### Historial de Evoluciones Clinicas")
+
+        busqueda_evol = st.text_input(
+            "🔍 Buscar en notas",
+            placeholder="Palabras clave: diagnóstico, medicamento, profesional...",
+            key=f"busq_evol_{paciente_sel}",
+        ).strip().lower()
+        if busqueda_evol:
+            evs_paciente = [
+                e for e in evs_paciente
+                if busqueda_evol in str(e.get("nota", "")).lower()
+                or busqueda_evol in str(e.get("firma", "")).lower()
+                or busqueda_evol in str(e.get("plantilla", "")).lower()
+                or busqueda_evol in str(e.get("fecha", "")).lower()
+            ]
+            st.caption(f"{len(evs_paciente)} resultado(s) para '{busqueda_evol}'")
+
         limite_evol = seleccionar_limite_registros(
             "Evoluciones a mostrar",
             len(evs_paciente),
