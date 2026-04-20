@@ -34,7 +34,7 @@ from core.export_utils import pdf_output_bytes, safe_text
 from core.utils import decodificar_base64_seguro, mapa_detalles_pacientes
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-_HISTORIAL_SQL_TTL_SECONDS = 20
+_HISTORIAL_SQL_TTL_SECONDS = 120
 
 
 def _patient_signature_bytes(session_state, paciente_sel):
@@ -101,6 +101,10 @@ def _format_sql_datetime(valor, *, default=""):
 
 
 def _patient_context(session_state, paciente_sel):
+    _ck_ctx = f"_ce_ctx_{paciente_sel}"
+    cached = session_state.get(_ck_ctx)
+    if cached is not None:
+        return cached
     detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
     nombre_visual, dni_visual = _split_patient_visual_id(paciente_sel)
     nombre = str(detalles.get("nombre") or nombre_visual).strip()
@@ -122,7 +126,7 @@ def _patient_context(session_state, paciente_sel):
         except Exception:
             empresa_id = None
             paciente_uuid = None
-    return {
+    result = {
         "nombre": nombre,
         "dni": dni,
         "empresa": empresa,
@@ -130,6 +134,11 @@ def _patient_context(session_state, paciente_sel):
         "paciente_uuid": paciente_uuid,
         "detalles": detalles,
     }
+    try:
+        session_state[_ck_ctx] = result
+    except Exception:
+        pass
+    return result
 
 
 def _record_matches_patient(record, paciente_sel, ctx):
@@ -461,6 +470,16 @@ def _collect_sql_sections(session_state, paciente_sel, ctx):
 
 
 def collect_patient_sections(session_state, paciente_sel):
+    _ck_secs = f"_ce_secs_{paciente_sel}"
+    _secs_cached = session_state.get(_ck_secs)
+    local_ts = session_state.get("_ultimo_guardado_ts", 0)
+    if (
+        _secs_cached is not None
+        and isinstance(_secs_cached, dict)
+        and _secs_cached.get("local_ts") == local_ts
+        and time.monotonic() - _secs_cached.get("ts", 0) < 30
+    ):
+        return _secs_cached["sections"]
     ctx = _patient_context(session_state, paciente_sel)
     local_sections = {
         "Auditoria de Presencia": _local_section_records(session_state, "checkin_db", paciente_sel, ctx),
@@ -481,7 +500,7 @@ def collect_patient_sections(session_state, paciente_sel):
         "Cobros y Facturacion": _local_section_records(session_state, "facturacion_db", paciente_sel, ctx),
     }
     sql_sections = _collect_sql_sections(session_state, paciente_sel, ctx)
-    return {
+    merged = {
         nombre: _merge_records(local_sections.get(nombre, []), sql_sections.get(nombre, []))
         for nombre in (
             "Auditoria de Presencia",
@@ -502,6 +521,15 @@ def collect_patient_sections(session_state, paciente_sel):
             "Cobros y Facturacion",
         )
     }
+    try:
+        session_state[_ck_secs] = {
+            "ts": time.monotonic(),
+            "local_ts": local_ts,
+            "sections": merged,
+        }
+    except Exception:
+        pass
+    return merged
 
 
 def build_patient_excel_bytes(session_state, paciente_sel):

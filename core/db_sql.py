@@ -171,6 +171,7 @@ def delete_paciente_by_id(paciente_id: str) -> bool:
 # GESTIÓN DE EVOLUCIONES
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]]:
     """Obtiene el historial de evoluciones de un paciente, ordenado por fecha."""
     if not check_supabase_connection():
@@ -212,6 +213,7 @@ def insert_evolucion(datos_evolucion: Dict[str, Any]) -> Optional[Dict[str, Any]
 # GESTIÓN DE RECETAS / INDICACIONES
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_indicaciones_activas(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene las indicaciones médicas activas para un paciente."""
     if not check_supabase_connection():
@@ -272,6 +274,7 @@ def update_estado_indicacion(indicacion_id: str, nuevo_estado: str) -> bool:
 # GESTIÓN DE ESTUDIOS MÉDICOS
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_estudios_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene los estudios médicos de un paciente."""
     if not check_supabase_connection():
@@ -325,6 +328,7 @@ def delete_estudio(estudio_id: str) -> bool:
 # SIGNOS VITALES
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]]:
     if not check_supabase_connection():
         return []
@@ -360,6 +364,7 @@ def insert_signo_vital(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # CUIDADOS DE ENFERMERÍA
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
     if not check_supabase_connection():
         return []
@@ -520,6 +525,7 @@ def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any
 # CONSENTIMIENTOS INFORMADOS
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     if not check_supabase_connection():
         return []
@@ -554,6 +560,7 @@ def insert_consentimiento(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # PEDIATRÍA
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     if not check_supabase_connection():
         return []
@@ -588,6 +595,7 @@ def insert_pediatria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # ESCALAS CLÍNICAS
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     if not check_supabase_connection():
         return []
@@ -622,6 +630,7 @@ def insert_escala(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # EMERGENCIAS
 # ==========================================
 
+@st.cache_data(ttl=90, show_spinner=False)
 def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict[str, Any]]:
     if not check_supabase_connection():
         return []
