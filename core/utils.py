@@ -11,6 +11,19 @@ import pytz
 import streamlit as st
 
 from core.norm_empresa import norm_empresa_key
+from core.password_crypto import aplicar_hash_tras_login_ok as _aplicar_hash, parece_hash_bcrypt as _parece_hash
+
+
+def password_requiere_migracion(pass_plain) -> bool:
+    s = str(pass_plain or "").strip()
+    return bool(s) and not _parece_hash(s)
+
+
+def actualizar_password_usuario(user_dict: dict, pass_plain: str) -> None:
+    try:
+        _aplicar_hash(user_dict, pass_plain)
+    except Exception:
+        pass
 
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
