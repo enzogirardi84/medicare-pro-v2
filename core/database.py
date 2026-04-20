@@ -80,23 +80,6 @@ def tenant_key_normalizado(empresa: str) -> str:
     return norm_empresa_key(empresa) or ""
 
 
-def _tenant_local_fs_key(tenant_key: str) -> str:
-    """
-    Nombre de archivo seguro bajo LOCAL_TENANTS_DIR (evita .., /, \\ y caracteres raros).
-    No sustituye tenant_key en Supabase; solo aplica al JSON local por clínica.
-    """
-    raw = (tenant_key or "").strip().lower()
-    if not raw:
-        return ""
-    s = raw.replace("..", "_").replace("/", "_").replace("\\", "_")
-    out: list[str] = []
-    for ch in s:
-        if ch.isalnum() or ch in " _-.":
-            out.append(ch)
-        else:
-            out.append("_")
-    s2 = "".join(out).strip("._ ")
-    return (s2 if s2 else "tenant")[:180]
 
 
 def sesion_usa_monolito_legacy() -> bool:
@@ -175,6 +158,7 @@ def _estructura_vacia_por_clave():
         "pediatria_db": [],
         "escalas_clinicas_db": [],
         "emergencias_db": [],
+        "diagnosticos_db": [],
     }
 
 
@@ -239,7 +223,11 @@ def procesar_guardado_pendiente() -> bool:
     ultimo = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
     if ultimo > 0 and (time.monotonic() - ultimo) < min_intervalo:
         return False
-    guardar_datos(spinner=False, force=True)
+    st.session_state["_guardar_datos_pendiente"] = False
+    try:
+        guardar_datos(spinner=False, force=True)
+    except Exception as e:
+        log_event("db", f"procesar_guardado_pendiente_error:{type(e).__name__}")
     return True
 
 
@@ -277,6 +265,7 @@ def _db_keys():
         "pediatria_db",
         "escalas_clinicas_db",
         "emergencias_db",
+        "diagnosticos_db",
     ]
 
 
@@ -546,12 +535,13 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
     """
     from core.feature_flags import GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS, GUARDAR_DATOS_SPINNER_DEFAULT, GUARDAR_DATOS_FORZAR_SIN_SPINNER
 
-    mostrar = GUARDAR_DATOS_SPINNER_DEFAULT if spinner is None else spinner
+    spinner_original = GUARDAR_DATOS_SPINNER_DEFAULT if spinner is None else spinner
+    mostrar = spinner_original
     if mostrar and GUARDAR_DATOS_FORZAR_SIN_SPINNER:
         mostrar = False
     # Guardados no forzados: evita ráfagas de upserts cuando hay muchos eventos seguidos.
-    # Los flujos críticos que usan spinner=True mantienen persistencia inmediata.
-    if not force and not mostrar:
+    # Si el caller pidió spinner=True (guardado crítico), se ejecuta siempre sin throttle.
+    if not force and not spinner_original:
         try:
             min_intervalo = float(GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS or 0)
         except Exception:
