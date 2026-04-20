@@ -6,7 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
-from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros
+from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros, parse_fecha_hora
 
 
 def _mismo_estudio(registro, objetivo):
@@ -203,6 +203,42 @@ def render_estudios(paciente_sel, user, rol=None):
         )
         return
 
+    # ── Métricas + alertas de pendientes / críticos ───────────────────────────
+    from datetime import datetime as _dt
+    _CRITICOS = {"Tomografia (TAC)", "Resonancia Magnetica (RMN)", "Electrocardiograma (ECG)"}
+    _SIN_RESULTADO = "Sin resultado"
+
+    pendientes = [
+        e for e in estudios_pac
+        if str(e.get("detalle", "")).strip().lower() in ("", "sin resultado", "-", "s/d")
+        or str(e.get("estado", "")).strip().lower() in ("pendiente", "solicitado", "")
+    ]
+    criticos_sin_respuesta = []
+    hoy_dt = _dt.now()
+    for e in pendientes:
+        if e.get("tipo") in _CRITICOS:
+            try:
+                f_est = parse_fecha_hora(e.get("fecha", ""))
+                if f_est and (hoy_dt.replace(tzinfo=None) - f_est).days > 7:
+                    criticos_sin_respuesta.append(e)
+            except Exception:
+                pass
+
+    if criticos_sin_respuesta:
+        st.error(
+            f"🔴 {len(criticos_sin_respuesta)} estudio(s) crítico(s) sin resultado en más de 7 días: "
+            + " | ".join(f"{e.get('tipo','S/D')} ({e.get('fecha','')[:10]})" for e in criticos_sin_respuesta[:3])
+        )
+    elif pendientes:
+        st.warning(f"🟡 {len(pendientes)} estudio(s) sin resultado cargado.")
+
+    _c1, _c2, _c3, _c4 = st.columns(4)
+    _c1.metric("Total estudios", len(estudios_pac))
+    _c2.metric("Sin resultado", len(pendientes))
+    _c3.metric("Críticos >7d", len(criticos_sin_respuesta))
+    _tipos_uniq = len({e.get("tipo", "") for e in estudios_pac if e.get("tipo")})
+    _c4.metric("Tipos distintos", _tipos_uniq)
+
     st.divider()
     st.markdown("#### Archivo de Estudios del Paciente")
 
@@ -255,15 +291,43 @@ def render_estudios(paciente_sel, user, rol=None):
         st.caption("La eliminacion de estudios queda reservada a medico, coordinacion o administracion total.")
 
     st.divider()
+
+    # ── Filtros: tipo + búsqueda ───────────────────────────────────
+    tipos_disponibles = sorted({e.get("tipo", "") for e in estudios_pac if e.get("tipo")})
+    _fcol1, _fcol2 = st.columns([2, 3])
+    filtro_tipo = _fcol1.selectbox(
+        "Filtrar por tipo",
+        ["Todos"] + tipos_disponibles,
+        key="est_filtro_tipo",
+    )
+    busqueda_est = _fcol2.text_input(
+        "🔍 Buscar en estudios",
+        placeholder="Palabras clave en detalle, tipo o profesional...",
+        key="est_busqueda",
+    ).strip().lower()
+
+    estudios_filtrados = estudios_pac
+    if filtro_tipo != "Todos":
+        estudios_filtrados = [e for e in estudios_filtrados if e.get("tipo") == filtro_tipo]
+    if busqueda_est:
+        estudios_filtrados = [
+            e for e in estudios_filtrados
+            if busqueda_est in str(e.get("detalle", "")).lower()
+            or busqueda_est in str(e.get("tipo", "")).lower()
+            or busqueda_est in str(e.get("firma", "")).lower()
+            or busqueda_est in str(e.get("fecha", "")).lower()
+        ]
+        st.caption(f"{len(estudios_filtrados)} resultado(s) para '{busqueda_est}'")
+
     limite_est = seleccionar_limite_registros(
         "Mostrar ultimos estudios",
-        len(estudios_pac),
+        len(estudios_filtrados),
         key="lim_estudios_tab",
         default=20,
     )
-    estudios_mostrar = estudios_pac[-limite_est:]
+    estudios_mostrar = estudios_filtrados[-limite_est:]
     cargar_multimedia = st.checkbox("Cargar imagenes y PDF adjuntos", value=False, key="cargar_estudios_adjuntos")
-    st.caption(f"Mostrando {len(estudios_mostrar)} de {len(estudios_pac)} estudios cargados.")
+    st.caption(f"Mostrando {len(estudios_mostrar)} de {len(estudios_filtrados)} estudios" + (f" (total: {len(estudios_pac)})" if len(estudios_filtrados) < len(estudios_pac) else "."))
 
     with lista_plegable("Archivo de estudios (detalle y adjuntos)", count=len(estudios_mostrar), expanded=False, height=520):
         for idx, est in enumerate(reversed(estudios_mostrar)):
