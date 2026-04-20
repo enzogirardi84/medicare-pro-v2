@@ -261,15 +261,26 @@ SIDEBAR_TOGGLE_JS = """
         parentDoc.head.appendChild(style);
       }
       style.textContent = [
+        /* Ocultar SIEMPRE los botones nativos de Streamlit >> y << para evitar duplicado */
+        "[data-testid='stSidebarCollapsedControl'],[data-testid='collapsedControl'],[data-testid='stExpandSidebarButton']{display:none !important;visibility:hidden !important;pointer-events:none !important;}",
+        /* Botón custom — estado CERRADO: botón ancho con texto */
         "#"+BUTTON_ID+"{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:10015;",
-        "display:none;align-items:center;justify-content:center;width:34px;height:54px;padding:0;",
-        "border:none;border-radius:0 12px 12px 0;background:linear-gradient(180deg,#14b8a6 0%,#2563eb 100%);",
-        "color:#f8fafc;font:900 1rem/1 'Plus Jakarta Sans',sans-serif;letter-spacing:0;",
-        "box-shadow:0 10px 22px rgba(2,6,23,.24), inset 0 1px 0 rgba(255,255,255,.16);",
-        "cursor:pointer;opacity:.94;}",
-        "#"+BUTTON_ID+":active{opacity:1;}",
-        "#"+BUTTON_ID+".is-open{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}",
-        "#"+BUTTON_ID+" .mc-mobile-sidebar-toggle-icon{display:block;line-height:1;transform:translateX(-1px);font-size:18px;}",
+        "display:none;align-items:center;justify-content:center;",
+        "width:auto;min-width:44px;height:54px;padding:0 14px 0 10px;",
+        "border:none;border-radius:0 14px 14px 0;",
+        "background:linear-gradient(135deg,#14b8a6 0%,#2563eb 100%);",
+        "color:#f8fafc;font:700 0.78rem/1 'Plus Jakarta Sans',sans-serif;letter-spacing:0.06em;",
+        "gap:6px;white-space:nowrap;",
+        "box-shadow:0 10px 22px rgba(2,6,23,.28), inset 0 1px 0 rgba(255,255,255,.16);",
+        "cursor:pointer;opacity:.96;transition:opacity 0.15s,width 0.18s;}",
+        "#"+BUTTON_ID+":active{opacity:1;transform:translateY(-50%) scale(0.97);}",
+        /* Estado ABIERTO: colapsa a flechita pequeña */
+        "#"+BUTTON_ID+".is-open{width:30px;min-width:30px;height:44px;padding:0;",
+        "background:rgba(15,23,42,0.82);border:1px solid rgba(148,163,184,0.18);",
+        "border-radius:0 10px 10px 0;box-shadow:none;gap:0;}",
+        "#"+BUTTON_ID+" .mc-btn-icon{font-size:20px;line-height:1;}",
+        "#"+BUTTON_ID+" .mc-btn-label{font-size:0.75rem;font-weight:700;letter-spacing:0.05em;}",
+        "#"+BUTTON_ID+".is-open .mc-btn-label{display:none !important;}",
         "@media (max-width: 767px){#"+BUTTON_ID+"{display:inline-flex;}}",
         "@media (min-width: 768px){#"+BUTTON_ID+"{display:none !important;}}"
       ].join("");
@@ -584,14 +595,13 @@ SIDEBAR_TOGGLE_JS = """
         }
       }
 
+      /* Siempre ocultar controles nativos — nuestro botón custom los reemplaza */
       for (var i = 0; i < openNodes.length; i += 1) {
-        if (!mobile) resetToggle(openNodes[i]);
-        else hideToggle(openNodes[i]);
+        hideToggle(openNodes[i]);
       }
-
       for (var j = 0; j < closeNodes.length; j += 1) {
-        if (!mobile) resetToggle(closeNodes[j]);
-        else hideToggle(closeNodes[j]);
+        if (mobile) hideToggle(closeNodes[j]);
+        else resetToggle(closeNodes[j]);
       }
     }
 
@@ -700,11 +710,15 @@ SIDEBAR_TOGGLE_JS = """
       var open = sidebarState() === "open";
       btn.style.display = "inline-flex";
       btn.classList.toggle("is-open", open);
-      btn.innerHTML = open
-        ? '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true" style="font-size:20px;line-height:1;">&#8249;</span>'
-        : '<span class="mc-mobile-sidebar-toggle-icon" aria-hidden="true" style="font-size:20px;line-height:1;">&#8250;</span>';
-      btn.setAttribute("aria-label", open ? "Cerrar panel lateral" : "Abrir panel lateral");
-      btn.setAttribute("title", open ? "Cerrar panel" : "Abrir panel");
+      if (open) {
+        btn.innerHTML = '<span class="mc-btn-icon" aria-hidden="true">&#8249;</span>';
+        btn.setAttribute("aria-label", "Cerrar panel lateral");
+        btn.setAttribute("title", "Cerrar panel");
+      } else {
+        btn.innerHTML = '<span class="mc-btn-icon" aria-hidden="true">&#9776;</span><span class="mc-btn-label">Pacientes</span>';
+        btn.setAttribute("aria-label", "Abrir panel de pacientes");
+        btn.setAttribute("title", "Abrir panel de pacientes");
+      }
       injectMobileCloseBtn();
       syncCloseBtnVisibility(open);
     }
