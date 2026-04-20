@@ -1119,7 +1119,137 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
             ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ]))
         elements.append(t_al)
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 8))
+
+    # ── Diagnósticos activos ──────────────────────────────────────────
+    diagnosticos_pac = [
+        d for d in session_state.get('diagnosticos_db', [])
+        if d.get('paciente') == paciente_sel
+        and str(d.get('estado', 'Activo')).strip().lower() not in ('resuelto', 'descartado', 'inactivo')
+    ]
+    if diagnosticos_pac:
+        hdr_s2 = ParagraphStyle('TH2', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, alignment=1)
+        cel_c2 = ParagraphStyle('TC2', parent=styles['Normal'], fontSize=8, alignment=1)
+        cel_l2 = ParagraphStyle('TL2', parent=styles['Normal'], fontSize=8, alignment=0)
+        diag_cabeceras = ['CIE / Código', 'Diagnóstico', 'Tipo', 'Fecha', 'Profesional']
+        diag_datos = [[Paragraph(c, hdr_s2) for c in diag_cabeceras]]
+        for d in diagnosticos_pac[:30]:
+            diag_datos.append([
+                Paragraph(_limpiar(d.get('cie') or d.get('codigo', '-')), cel_c2),
+                Paragraph(_limpiar(d.get('diagnostico') or d.get('descripcion', '-')), cel_l2),
+                Paragraph(_limpiar(d.get('tipo', '-')), cel_c2),
+                Paragraph(_limpiar(d.get('fecha', '-')), cel_c2),
+                Paragraph(_limpiar(d.get('profesional', '-')), cel_c2),
+            ])
+        t_diag = Table(diag_datos, colWidths=[70, 230, 70, 80, 90], repeatRows=1)
+        t_diag.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#374151')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#D1D5DB')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(_sec_hdr('Diagnósticos activos'))
+        elements.append(Spacer(1, 3))
+        elements.append(t_diag)
+        elements.append(Spacer(1, 10))
+
+    # ── Medicación activa (resumen al tope) ───────────────────────────
+    meds_activas = [
+        m for m in sections.get('Plan Terapeutico', [])
+        if str(m.get('estado_receta', 'Activa')).strip().lower() not in ('suspendida', 'cancelada', 'modificada')
+    ]
+    if meds_activas:
+        hdr_sm = ParagraphStyle('THm', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, alignment=1)
+        cel_cm = ParagraphStyle('TCm', parent=styles['Normal'], fontSize=8, alignment=1)
+        cel_lm = ParagraphStyle('TLm', parent=styles['Normal'], fontSize=8, alignment=0)
+        med_cab = ['Medicación / Indicación', 'Dosis / Posología', 'Vía', 'Fecha', 'Profesional']
+        med_datos = [[Paragraph(c, hdr_sm) for c in med_cab]]
+        for m in meds_activas[:20]:
+            med_nombre = m.get('med') or m.get('medicamento') or m.get('descripcion') or '-'
+            dosis = m.get('dosis') or m.get('posologia') or '-'
+            via = m.get('via') or m.get('via_administracion') or '-'
+            med_datos.append([
+                Paragraph(_limpiar(med_nombre), cel_lm),
+                Paragraph(_limpiar(dosis), cel_cm),
+                Paragraph(_limpiar(via), cel_cm),
+                Paragraph(_limpiar(m.get('fecha', '-')), cel_cm),
+                Paragraph(_limpiar(m.get('medico_nombre') or m.get('profesional', '-')), cel_cm),
+            ])
+        t_meds = Table(med_datos, colWidths=[195, 100, 60, 80, 105], repeatRows=1)
+        t_meds.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0D5A50')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#D1D5DB')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#F0FDF4'), colors.white]),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(_sec_hdr('Medicación activa'))
+        elements.append(Spacer(1, 3))
+        elements.append(t_meds)
+        elements.append(Spacer(1, 10))
+
+    # ── Últimos 5 signos vitales (mini-tabla con colores) ─────────────
+    _RANGOS_PDF = {
+        'FC':   (60, 100, 40, 130),
+        'FR':   (12, 20,  8,  30),
+        'Sat':  (94, 100, 88, 100),
+        'Temp': (36.0, 37.5, 35.0, 39.0),
+    }
+
+    def _color_vital(clave, valor):
+        r = _RANGOS_PDF.get(clave)
+        if r is None:
+            return None
+        try:
+            v = float(str(valor).replace(',', '.'))
+            if v < r[2] or v > r[3]:
+                return colors.HexColor('#FEE2E2')
+            if v < r[0] or v > r[1]:
+                return colors.HexColor('#FEF9C3')
+        except Exception:
+            pass
+        return None
+
+    vits_recientes = sorted(sections.get('Signos Vitales', []), key=lambda x: x.get('fecha', ''), reverse=True)[:5]
+    if vits_recientes:
+        hdr_sv = ParagraphStyle('THv', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.white, alignment=1)
+        cel_cv = ParagraphStyle('TCv', parent=styles['Normal'], fontSize=8, alignment=1)
+        v_cab = ['Fecha', 'T.A.', 'F.C.', 'F.R.', 'SpO2', 'Temp', 'HGT', 'Registrado por']
+        v_datos = [[Paragraph(c, hdr_sv) for c in v_cab]]
+        colores_fila = {}
+        for fi, vr in enumerate(vits_recientes, start=1):
+            fila = [Paragraph(_limpiar(vr.get('fecha', '-')), cel_cv)]
+            fila.append(Paragraph(_limpiar(vr.get('TA', '-')), cel_cv))
+            for clave in ('FC', 'FR', 'Sat', 'Temp', 'HGT'):
+                val = vr.get(clave, '-')
+                fila.append(Paragraph(_limpiar(val), cel_cv))
+                c_bg = _color_vital(clave, val)
+                if c_bg:
+                    col_idx = ('FC', 'FR', 'Sat', 'Temp', 'HGT').index(clave) + 2
+                    colores_fila[(fi, col_idx)] = c_bg
+            fila.append(Paragraph(_limpiar(vr.get('registrado_por') or vr.get('firma', '-')), cel_cv))
+            v_datos.append(fila)
+        t_vits5 = Table(v_datos, colWidths=[90, 55, 45, 45, 45, 45, 45, 110], repeatRows=1)
+        style_cmds = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#162644')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#D1D5DB')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]
+        for (fi, ci), bg in colores_fila.items():
+            style_cmds.append(('BACKGROUND', (ci, fi), (ci, fi), bg))
+        t_vits5.setStyle(TableStyle(style_cmds))
+        elements.append(_sec_hdr('Últimos 5 controles de signos vitales'))
+        elements.append(Spacer(1, 3))
+        elements.append(t_vits5)
+        elements.append(Spacer(1, 10))
+
+    elements.append(Spacer(1, 4))
 
     # ── Evoluciones y enfermería ──────────────────────────────────────
     registros_clinicos = sections.get('Procedimientos y Evoluciones', []) + sections.get('Enfermeria y Plan de Cuidados', [])
