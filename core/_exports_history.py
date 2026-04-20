@@ -28,6 +28,7 @@ except ImportError:
 
 from core.utils import mapa_detalles_pacientes
 from core._exports_helpers import collect_patient_sections
+from core.export_utils import safe_text as _safe_text
 
 
 def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
@@ -47,20 +48,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
     def _limpiar(texto):
         if texto in [None, "", "-", "S/D", "Sin datos"]:
             return "-"
-        import unicodedata
-        t = str(texto)
-        # Normalizar a NFC para compatibilidad maxima con Latin-1
-        t = unicodedata.normalize("NFC", t)
-        # Caracteres que Helvetica/Latin-1 no tiene: reemplazar manualmente
-        _MAP = {
-            "\u2013": "-", "\u2014": "-", "\u2018": "'", "\u2019": "'",
-            "\u201c": '"', "\u201d": '"', "\u2026": "...", "\u00b0": "deg",
-            "\u00ba": "o", "\u00aa": "a",
-        }
-        for k, v in _MAP.items():
-            t = t.replace(k, v)
-        # Encode Latin-1, reemplazando lo que no entre con '?'
-        t = t.encode("latin-1", errors="replace").decode("latin-1")
+        t = _safe_text(texto)
         t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
         return t.replace("\n", "<br/>")
 
@@ -83,7 +71,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         hdr_s = ParagraphStyle("TH", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8, textColor=colors.white, alignment=1)
         cel_c = ParagraphStyle("TC", parent=styles["Normal"], fontSize=8, alignment=1)
         cel_l = ParagraphStyle("TL", parent=styles["Normal"], fontSize=8, alignment=0)
-        datos = [[Paragraph(c, hdr_s) for c in cabeceras]]
+        datos = [[Paragraph(_limpiar(c), hdr_s) for c in cabeceras]]
         for reg in registros:
             fila = []
             for clave in claves:

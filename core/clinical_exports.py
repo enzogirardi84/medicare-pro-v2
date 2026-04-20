@@ -296,7 +296,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
             return
         pdf.set_font("Arial", "B", 8)
         pdf.set_x(pdf.l_margin)
-        pdf.cell(lw, lh, safe_text(label) + ":", border=0)
+        pdf.cell(lw, lh, safe_text(str(label) + ":"), border=0)
         pdf.set_font("Arial", "", 8)
         remaining = pdf.w - pdf.l_margin - pdf.r_margin - lw
         pdf.multi_cell(remaining, lh, safe_text(txt), border=0)
@@ -312,7 +312,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
                 pdf.set_xy(x_start + j * col_w, pdf.get_y())
                 pdf.set_font("Arial", "B", 8)
                 pdf.set_text_color(80, 80, 100)
-                pdf.cell(28, 5, safe_text(lbl) + ":", border=0)
+                pdf.cell(28, 5, safe_text(str(lbl) + ":"), border=0)
                 pdf.set_font("Arial", "", 8)
                 pdf.set_text_color(20, 20, 20)
                 pdf.cell(col_w - 28, 5, safe_text(val[:40]), border=0)
@@ -368,7 +368,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     pdf.set_x(38)
     pdf.set_font("Arial", "B", 8)
     pdf.set_text_color(160, 200, 255)
-    pdf.cell(0, 5, "ACTA DE EMERGENCIA Y TRASLADO", ln=True)
+    pdf.cell(0, 5, safe_text("ACTA DE EMERGENCIA Y TRASLADO"), ln=True)
     pdf.set_x(38)
     pdf.set_font("Arial", "", 7)
     pdf.set_text_color(200, 210, 230)
@@ -417,7 +417,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     if motivo_txt:
         pdf.set_x(pdf.l_margin)
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(28, 5, "Motivo:", border=0)
+        pdf.cell(28, 5, safe_text("Motivo:"), border=0)
         pdf.set_font("Arial", "", 8)
         pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin - 28, 5, safe_text(motivo_txt), border=0)
         pdf.ln(1)
@@ -506,7 +506,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
     pdf.line(110, y_base, 196, y_base)
     pdf.set_xy(110, y_base + 1)
     pdf.set_font("Arial", "B", 8)
-    pdf.cell(86, 4, "Recepcion / conformidad", align="C", ln=True)
+    pdf.cell(86, 4, safe_text("Recepcion / conformidad"), align="C", ln=True)
     pdf.set_x(110)
     pdf.set_font("Arial", "", 8)
     familiar = _v(record.get("familiar_notificado", "")) or "_______________"

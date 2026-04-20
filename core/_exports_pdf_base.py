@@ -142,7 +142,7 @@ def write_pairs(pdf, pairs):
             continue
         pdf.set_x(pdf.l_margin)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 5, f"{label_txt}:", ln=True)
+        pdf.cell(0, 5, safe_text(f"{label_txt}:"), ln=True)
         pdf.set_font("Arial", "", 9)
         write_multiline_text(pdf, value_txt, line_height=6, indent=4)
         pdf.ln(1)
