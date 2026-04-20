@@ -1,0 +1,400 @@
+/* ================================================================
+   MediCare PRO - Mobile Optimization v1 (modelo unificado)
+   Se activa automaticamente en pantallas <= 767px.
+   Estrategia:
+     1. Eliminar espacios muertos (padding/margin/gap) de Streamlit.
+     2. Apilar columnas que por defecto sobreviven en mobile.
+     3. Tipografia e inputs compactos pero legibles (min 34px tap target).
+     4. Ocultar elementos redundantes (header Streamlit, paneles desktop).
+     5. Preservar la identidad visual y componentes custom (mc-*).
+   ================================================================ */
+
+@media (max-width: 767px) {
+
+    /* ---- 1. Reset global del contenedor principal ---- */
+    html body .block-container {
+        padding: 0.5rem 0.65rem 0.9rem !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    html, body, [data-testid="stAppViewContainer"] {
+        overflow-x: hidden !important;
+    }
+
+    /* Ocultar header nativo de Streamlit en mobile (libera vertical) */
+    [data-testid="stHeader"],
+    header[data-testid="stHeader"] {
+        display: none !important;
+        height: 0 !important;
+    }
+
+    /* Toolbar superior */
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+
+    /* ---- 2. Bloques verticales y horizontales: gaps compactos ---- */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.35rem !important;
+    }
+
+    [data-testid="stVerticalBlock"] > div:empty {
+        display: none !important;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.4rem !important;
+        align-items: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* Columnas: sin heights inline de Streamlit, ancho 100% por defecto */
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        padding: 0 !important;
+        margin: 0 0 0.25rem 0 !important;
+    }
+
+    /* Subcontenedores con height inline */
+    [data-testid="stHorizontalBlock"] [style*="height:"] {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+
+    /* Metricas: mantener en grid de 2 columnas */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="column"] {
+        flex: 1 1 calc(50% - 0.4rem) !important;
+        min-width: calc(50% - 0.4rem) !important;
+    }
+
+    /* Si el form tiene muchas columnas estrechas (signos vitales), dejar 2 por fila */
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stForm"] [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+        flex: 1 1 calc(50% - 0.3rem) !important;
+        min-width: calc(50% - 0.3rem) !important;
+    }
+
+    /* ---- 3. Elementos individuales ---- */
+    [data-testid="stElementContainer"],
+    .element-container,
+    [data-testid="element-container"] {
+        margin: 0 0 0.25rem 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Markdown */
+    [data-testid="stMarkdownContainer"] {
+        margin: 0 !important;
+    }
+    [data-testid="stMarkdownContainer"] p {
+        margin: 0.12rem 0 0.22rem 0 !important;
+        line-height: 1.35 !important;
+    }
+    [data-testid="stMarkdownContainer"] h1 {
+        font-size: 1.35rem !important;
+        margin: 0.15rem 0 0.3rem 0 !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stMarkdownContainer"] h2 {
+        font-size: 1.15rem !important;
+        margin: 0.15rem 0 0.25rem 0 !important;
+        line-height: 1.2 !important;
+    }
+    [data-testid="stMarkdownContainer"] h3 {
+        font-size: 1.02rem !important;
+        margin: 0.15rem 0 0.2rem 0 !important;
+        line-height: 1.25 !important;
+    }
+    [data-testid="stMarkdownContainer"] h4,
+    [data-testid="stMarkdownContainer"] h5 {
+        font-size: 0.95rem !important;
+        margin: 0.12rem 0 0.18rem 0 !important;
+    }
+
+    [data-testid="stCaptionContainer"] {
+        margin: 0.08rem 0 0.22rem 0 !important;
+        font-size: 0.78rem !important;
+    }
+
+    hr {
+        margin: 0.4rem 0 !important;
+        border-width: 1px !important;
+    }
+
+    /* ---- 4. Formularios, expanders, alertas ---- */
+    [data-testid="stForm"] {
+        padding: 0.6rem 0.65rem 0.7rem !important;
+        margin: 0.2rem 0 0.55rem 0 !important;
+        border-width: 1px !important;
+        border-radius: 10px !important;
+    }
+
+    [data-testid="stExpander"] {
+        margin: 0.2rem 0 0.5rem 0 !important;
+    }
+    [data-testid="stExpander"] details {
+        padding: 0.5rem 0.6rem !important;
+    }
+    [data-testid="stExpander"] summary {
+        padding: 0.3rem 0 !important;
+        font-size: 0.9rem !important;
+    }
+
+    [data-testid="stAlert"] {
+        margin: 0.2rem 0 !important;
+        padding: 0.5rem 0.6rem !important;
+        font-size: 0.85rem !important;
+    }
+    [data-testid="stAlert"] p {
+        margin: 0 !important;
+    }
+
+    [data-testid="stTabs"] {
+        margin: 0.15rem 0 !important;
+    }
+    [data-testid="stTabs"] [role="tablist"] {
+        gap: 0.2rem !important;
+    }
+    [data-testid="stTabs"] [role="tab"] {
+        padding: 0.4rem 0.65rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* ---- 5. Inputs compactos y tap-friendly ---- */
+    .stNumberInput label,
+    .stTextInput label,
+    .stSelectbox label,
+    .stTextArea label,
+    .stDateInput label,
+    .stTimeInput label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stSelectbox"] label,
+    [data-testid="stTextArea"] label,
+    [data-testid="stDateInput"] label,
+    [data-testid="stTimeInput"] label,
+    [data-testid="stMultiSelect"] label,
+    [data-testid="stRadio"] label {
+        margin: 0 0 0.12rem 0 !important;
+        padding: 0 !important;
+        font-size: 12px !important;
+        line-height: 1.15 !important;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    textarea,
+    [data-baseweb="input"] input,
+    [data-baseweb="select"] > div {
+        min-height: 36px !important;
+        padding: 4px 8px !important;
+        margin: 0 !important;
+        font-size: 14px !important;
+    }
+
+    textarea {
+        min-height: 72px !important;
+    }
+
+    /* Number input con steppers */
+    [data-testid="stNumberInput"] {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [data-testid="stNumberInput"] > div > div {
+        gap: 0.25rem !important;
+        align-items: stretch !important;
+    }
+    [data-testid="stNumberInput"] button {
+        min-height: 34px !important;
+        min-width: 34px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    [data-testid="stNumberInput"] input {
+        min-height: 34px !important;
+    }
+
+    /* Date / Time pickers */
+    [data-testid="stDateInput"] input,
+    [data-testid="stTimeInput"] input {
+        min-height: 34px !important;
+        font-size: 14px !important;
+    }
+
+    /* Radio / Checkbox */
+    [data-testid="stRadio"] {
+        margin: 0.15rem 0 !important;
+        padding: 0 !important;
+    }
+    [data-testid="stRadio"] [role="radiogroup"] {
+        gap: 0.35rem !important;
+    }
+    [data-testid="stCheckbox"] {
+        margin: 0.15rem 0 !important;
+    }
+
+    /* Botones */
+    button, [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button {
+        min-height: 40px !important;
+        padding: 0.45rem 0.85rem !important;
+        font-size: 0.9rem !important;
+        margin: 0.15rem 0 !important;
+    }
+    [data-testid="stButton"] {
+        margin: 0 !important;
+    }
+
+    /* Download button */
+    [data-testid="stDownloadButton"] button {
+        min-height: 40px !important;
+        width: 100% !important;
+    }
+
+    /* ---- 6. Metricas ---- */
+    [data-testid="stMetric"] {
+        padding: 0.5rem 0.6rem !important;
+        margin: 0 !important;
+        border-radius: 10px !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.72rem !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.15rem !important;
+        line-height: 1.1 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        font-size: 0.7rem !important;
+    }
+
+    /* ---- 7. Tablas y DataFrame ---- */
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"] {
+        margin: 0.25rem 0 !important;
+        font-size: 12px !important;
+    }
+    [data-testid="stDataFrame"] {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+    }
+
+    /* ---- 8. Sidebar ---- */
+    [data-testid="stSidebar"] {
+        width: 85vw !important;
+        min-width: 85vw !important;
+    }
+    [data-testid="stSidebar"] > div {
+        padding: 0.6rem 0.7rem !important;
+    }
+
+    /* ---- 9. Componentes custom de MediCare ---- */
+    .mc-vitales-stack {
+        gap: 0.4rem !important;
+    }
+    .mc-vital-card {
+        padding: 0.55rem 0.65rem !important;
+        border-radius: 10px !important;
+    }
+    .mc-vital-card__time {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+    .mc-vital-metrics--grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 0.3rem !important;
+    }
+    .mc-vital-metric {
+        padding: 0.28rem 0.35rem !important;
+    }
+    .mc-vital-metric__label {
+        font-size: 0.66rem !important;
+        line-height: 1.05 !important;
+    }
+    .mc-vital-metric__value {
+        font-size: 0.9rem !important;
+        line-height: 1.1 !important;
+    }
+
+    /* Banner inventario mini: ocultar boton redundante */
+    .mc-inv-mini-wrap [data-testid="stButton"] {
+        display: none !important;
+    }
+
+    /* ---- 10. Pantalla de login compacta ---- */
+    .mc-login-hero,
+    .mc-login-card {
+        padding: 0.8rem 0.9rem !important;
+        margin: 0.3rem 0 !important;
+    }
+    .mc-login-hero h1,
+    .mc-login-hero h2 {
+        font-size: 1.3rem !important;
+        margin: 0 0 0.3rem 0 !important;
+    }
+    .mc-login-hero p {
+        font-size: 0.82rem !important;
+        margin: 0 0 0.4rem 0 !important;
+    }
+
+    /* ---- 11. Cartas y contenedores con borde ---- */
+    [data-testid="stContainer"],
+    .stContainer {
+        padding: 0.5rem 0.55rem !important;
+    }
+
+    /* ---- 12. Progress bars y spinners ---- */
+    [data-testid="stProgress"] {
+        margin: 0.2rem 0 !important;
+    }
+    [data-testid="stSpinner"] {
+        margin: 0.3rem 0 !important;
+    }
+
+    /* ---- 13. Ocultar elementos decorativos desktop ---- */
+    .mc-desktop-only,
+    .mc-only-desktop {
+        display: none !important;
+    }
+
+    /* ---- 14. Forzar cascada: elimina margin vertical heredado ---- */
+    [data-testid="stAppViewContainer"] main {
+        padding-top: 0 !important;
+    }
+
+    /* ---- 15. Iframes (componentes embebidos) ---- */
+    iframe {
+        max-width: 100% !important;
+    }
+
+}  /* end @media */
+
+/* ================================================================
+   Tablet (768px - 1024px): ajustes intermedios
+   ================================================================ */
+@media (min-width: 768px) and (max-width: 1024px) {
+    html body .block-container {
+        padding: 0.8rem 1rem !important;
+        max-width: 100% !important;
+    }
+    [data-testid="stVerticalBlock"] {
+        gap: 0.5rem !important;
+    }
+    [data-testid="stForm"] {
+        padding: 0.8rem !important;
+    }
+}
