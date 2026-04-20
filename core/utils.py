@@ -103,6 +103,14 @@ from core.utils_ui import (  # noqa: E402
 MAX_RAW_IMAGE_UPLOAD_MB = 20
 
 
+def decodificar_base64_seguro(valor: str) -> bytes:
+    import base64
+    try:
+        return base64.b64decode(valor) if valor else b""
+    except Exception:
+        return b""
+
+
 DEFAULT_ADMIN_USER = {
     "pass": None,  # Removed hardcoded password - use SUPERADMIN_EMERGENCY_PASSWORD from secrets
     "rol": "SuperAdmin",
