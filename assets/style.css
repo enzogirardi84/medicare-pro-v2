@@ -3764,54 +3764,20 @@ html.mc-equipo-liviano iframe {
    - Desktop: > 1024px
    ======================================================================== */
 
-/* --- CONTROLES NATIVOS DEL SIDEBAR: solo desktop/tablet --- */
-@media (min-width: 768px) {
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapseButton"],
-    button[kind="headerNoPadding"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        z-index: 999999 !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"] {
-        background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 12px !important;
-        padding: 8px 10px !important;
-        box-shadow:
-            0 6px 20px rgba(20, 184, 166, 0.45),
-            0 2px 6px rgba(0, 0, 0, 0.4) !important;
-        min-width: 44px !important;
-        min-height: 44px !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="stSidebarCollapsedControl"] svg {
-        color: #ffffff !important;
-        fill: #ffffff !important;
-        stroke: #ffffff !important;
-        width: 24px !important;
-        height: 24px !important;
-    }
-
-    [data-testid="stSidebarCollapsedControl"]:hover {
-        background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%) !important;
-        transform: scale(1.05) !important;
-    }
-
-    [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebar"] button[kind="header"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        color: #ffffff !important;
-    }
+/* --- CONTROLES NATIVOS DEL SIDEBAR: ocultos siempre — el botón custom los reemplaza --- */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapsedControl"] *,
+[data-testid="collapsedControl"],
+[data-testid="collapsedControl"] *,
+[data-testid="stExpandSidebarButton"],
+[data-testid="stExpandSidebarButton"] * {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 /* --- DESKTOP (> 1024px) --- */
