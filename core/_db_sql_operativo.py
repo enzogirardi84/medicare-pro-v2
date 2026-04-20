@@ -38,6 +38,7 @@ def insert_auditoria(datos: Dict[str, Any]) -> None:
         log_event("db_sql", f"error_insert_auditoria:{type(e).__name__}")
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[str, Any]]:
     if not _ok():
         return []
@@ -52,6 +53,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         return []
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
     """Obtiene los turnos de una empresa en un rango de fechas."""
     if not _ok():
@@ -76,6 +78,7 @@ def insert_turno(datos_turno: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_turno",
             lambda: supabase.table("turnos").insert(datos_turno).execute(),
         )
+        get_turnos_by_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_turno:{type(e).__name__}")
@@ -91,12 +94,14 @@ def update_estado_turno(turno_id: str, nuevo_estado: str) -> bool:
             "update_turno",
             lambda: supabase.table("turnos").update({"estado": nuevo_estado}).eq("id", turno_id).execute(),
         )
+        get_turnos_by_empresa.clear()
         return True
     except Exception as e:
         log_event("db_sql", f"error_update_turno:{type(e).__name__}")
         return False
 
 
+@st.cache_data(ttl=30, show_spinner=False)
 def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
     """Obtiene los registros de administración (MAR) para un rango de fechas."""
     if not _ok():
@@ -121,6 +126,7 @@ def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any
             "insert_administracion",
             lambda: supabase.table("administracion_med").insert(datos_admin).execute(),
         )
+        get_administraciones_dia.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_administracion:{type(e).__name__}")
@@ -142,6 +148,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
         return []
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[str, Any]]:
     if not _ok():
         return []
@@ -164,6 +171,8 @@ def insert_emergencia(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_emergencia",
             lambda: supabase.table("emergencias").insert(datos).execute(),
         )
+        get_emergencias_by_empresa.clear()
+        get_emergencias_by_paciente.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_emergencia:{type(e).__name__}")
@@ -181,12 +190,15 @@ def update_estado_emergencia(emergencia_id: str, nuevo_estado: str, resolucion: 
             "update_emergencia",
             lambda: supabase.table("emergencias").update(datos_update).eq("id", emergencia_id).execute(),
         )
+        get_emergencias_by_empresa.clear()
+        get_emergencias_by_paciente.clear()
         return True
     except Exception as e:
         log_event("db_sql", f"error_update_emergencia:{type(e).__name__}")
         return False
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     if not _ok():
         return []
@@ -209,12 +221,14 @@ def insert_inventario(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_inventario",
             lambda: supabase.table("inventario").insert(datos).execute(),
         )
+        get_inventario_by_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_inventario:{type(e).__name__}")
         return None
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     if not _ok():
         return []
@@ -237,12 +251,14 @@ def insert_facturacion(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_facturacion",
             lambda: supabase.table("facturacion").insert(datos).execute(),
         )
+        get_facturacion_by_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_facturacion:{type(e).__name__}")
         return None
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     if not _ok():
         return []
@@ -265,12 +281,14 @@ def insert_balance(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_balance",
             lambda: supabase.table("balance").insert(datos).execute(),
         )
+        get_balance_by_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_balance:{type(e).__name__}")
         return None
 
 
+@st.cache_data(ttl=30, show_spinner=False)
 def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str, Any]]:
     if not _ok():
         return []
@@ -293,6 +311,7 @@ def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_checkin",
             lambda: supabase.table("checkin_asistencia").insert(datos).execute(),
         )
+        get_checkins_by_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_checkin:{type(e).__name__}")
