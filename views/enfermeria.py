@@ -20,12 +20,56 @@ from core.utils import (
     ahora,
     mapa_detalles_pacientes,
     mostrar_dataframe_con_scroll,
+    parse_fecha_hora,
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
 from core.db_sql import get_cuidados_enfermeria, insert_cuidado_enfermeria
 from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 from core.app_logging import log_event
+
+
+_RIESGO_ORDEN = {"Bajo": 0, "Moderado": 1, "Alto": 2, "S/D": -1}
+
+
+def _render_contexto_clinico_enfermeria(paciente_sel, detalles):
+    """Bloque compacto con signos vitales recientes e indicaciones activas del paciente."""
+    vitales = [
+        v for v in st.session_state.get("vitales_db", [])
+        if v.get("paciente") == paciente_sel
+    ]
+    indicaciones = [
+        i for i in st.session_state.get("indicaciones_db", [])
+        if i.get("paciente") == paciente_sel
+        and str(i.get("estado_receta", "Activa")).strip() not in {"Suspendida", "Cancelada"}
+    ]
+
+    tiene_vitales = bool(vitales)
+    tiene_indicaciones = bool(indicaciones)
+    if not tiene_vitales and not tiene_indicaciones:
+        return
+
+    with st.expander("🩺 Contexto clínico del paciente", expanded=True):
+        if tiene_vitales:
+            vitales_ord = sorted(vitales, key=lambda x: parse_fecha_hora(x.get("fecha", "")), reverse=True)
+            ultimo = vitales_ord[0]
+            st.caption(f"**Últimos signos vitales** — {ultimo.get('fecha', 'S/D')}")
+            cv = st.columns(6)
+            campos = [("TA", "T.A."), ("FC", "F.C."), ("FR", "F.R."), ("Sat", "SpO2"), ("Temp", "Temp"), ("HGT", "HGT")]
+            for idx, (k, label) in enumerate(campos):
+                val = ultimo.get(k, "—")
+                cv[idx].metric(label, val if val not in (None, "", "-") else "—")
+
+        if tiene_indicaciones:
+            st.caption(f"**Medicación activa** ({len(indicaciones)} indicación/es)")
+            for ind in indicaciones[:8]:
+                med = ind.get("med") or ind.get("medicamento") or ind.get("descripcion") or "Sin detalle"
+                dosis = ind.get("dosis") or ind.get("posologia") or ""
+                via = ind.get("via") or ind.get("via_administracion") or ""
+                extras = " — ".join(filter(None, [dosis, via]))
+                st.markdown(f"• **{med}**" + (f" — {extras}" if extras else ""))
+            if len(indicaciones) > 8:
+                st.caption(f"... y {len(indicaciones) - 8} más. Ver completo en Recetas.")
 
 
 TIPOS_CUIDADO = [
@@ -67,11 +111,43 @@ def _render_plan_cuidados_enfermeria_legacy(
         ]
     )
 
+    incidentes_count = sum(1 for x in registros if x.get("incidente"))
+    curaciones_count = sum(1 for x in registros if "Curacion" in x.get("tipo_cuidado", ""))
+
+    if registros_ordenados:
+        ultimo = registros_ordenados[0]
+        riesgo_caidas_ult = ultimo.get("riesgo_caidas", "S/D")
+        riesgo_upp_ult = ultimo.get("riesgo_upp", "S/D")
+        prioridad_ult = ultimo.get("prioridad", "S/D")
+        if riesgo_caidas_ult == "Alto" or riesgo_upp_ult == "Alto":
+            partes_alerta = []
+            if riesgo_caidas_ult == "Alto":
+                partes_alerta.append("⚠️ Riesgo de CAÍDAS: Alto")
+            if riesgo_upp_ult == "Alto":
+                partes_alerta.append("⚠️ Riesgo de UPP: Alto")
+            st.error(" — ".join(partes_alerta) + " (según último registro)")
+        elif riesgo_caidas_ult == "Moderado" or riesgo_upp_ult == "Moderado" or prioridad_ult == "Alta":
+            st.warning("🟡 Riesgo moderado o prioridad alta en el último registro de enfermería.")
+
+        if incidentes_count:
+            st.error(f"🔴 {incidentes_count} incidente(s) registrado(s) para este paciente.")
+
+    try:
+        from datetime import datetime as _dt
+        last_dt = parse_fecha_hora(registros_ordenados[0].get("fecha", "")) if registros_ordenados else None
+        dias_sin_reg = (ahora().replace(tzinfo=None) - last_dt).days if last_dt and last_dt.year > 2000 else None
+    except Exception:
+        dias_sin_reg = None
+
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Registros", len(registros))
-    m2.metric("Curaciones", sum(1 for x in registros if "Curacion" in x.get("tipo_cuidado", "")))
-    m3.metric("Incidentes", sum(1 for x in registros if x.get("incidente")))
-    m4.metric("Último registro", ultimo_registro)
+    m2.metric("Curaciones", curaciones_count)
+    m3.metric("Incidentes", incidentes_count)
+    m4.metric(
+        "Días sin registro" if dias_sin_reg is not None else "Último registro",
+        f"{dias_sin_reg}d" if dias_sin_reg is not None else ultimo_registro,
+        delta_color="inverse" if (dias_sin_reg or 0) > 3 else "normal",
+    )
 
     st.caption(
         "Elegí **Nuevo registro** para cargar el turno, **Plan actual** para el resumen vigente o **Historial** para filtrar. "
@@ -210,34 +286,40 @@ def _render_plan_cuidados_enfermeria_legacy(
             )
             return
 
+        _render_contexto_clinico_enfermeria(paciente_sel, detalles)
+
         ultimo = registros_ordenados[0]
         c1, c2, c3 = st.columns(3)
-        c1.info(f"Prioridad actual: {ultimo.get('prioridad', 'S/D')}")
-        c2.info(f"Riesgo de caídas: {ultimo.get('riesgo_caidas', 'S/D')}")
-        c3.info(f"Riesgo UPP: {ultimo.get('riesgo_upp', 'S/D')}")
+        _riesgo_color = lambda r: "🔴" if r == "Alto" else "🟡" if r == "Moderado" else "🟢"
+        c1.info(f"Prioridad: {_riesgo_color(ultimo.get('prioridad',''))} {ultimo.get('prioridad', 'S/D')}")
+        c2.info(f"Caídas: {_riesgo_color(ultimo.get('riesgo_caidas',''))} {ultimo.get('riesgo_caidas', 'S/D')}")
+        c3.info(f"UPP: {_riesgo_color(ultimo.get('riesgo_upp',''))} {ultimo.get('riesgo_upp', 'S/D')}")
 
         with st.container(border=True):
-            st.markdown("#### Último plan registrado")
+            st.markdown(f"#### Último plan — {ultimo.get('fecha', 'S/D')} | Turno: {ultimo.get('turno', 'S/D')} | Prof: {ultimo.get('profesional', 'S/D')}")
             st.write(f"**Tipo de cuidado:** {ultimo.get('tipo_cuidado', 'S/D')}")
             st.write(f"**Objetivo:** {ultimo.get('objetivo', 'Sin objetivo consignado')}")
             st.write(f"**Intervención:** {ultimo.get('intervencion', 'S/D')}")
             st.write(f"**Respuesta:** {ultimo.get('respuesta', 'S/D')}")
             st.write(f"**Observaciones:** {ultimo.get('observaciones', 'S/D')}")
             if ultimo.get("zona"):
-                st.write(f"**Zona / lesión:** {ultimo.get('zona')}")
-            if ultimo.get("aspecto"):
-                st.write(f"**Aspecto:** {ultimo.get('aspecto')}")
+                st.write(f"**Zona / lesión:** {ultimo.get('zona')} — **Aspecto:** {ultimo.get('aspecto', 'S/D')}")
             if ultimo.get("incidente"):
-                st.error(f"Incidente informado: {ultimo.get('detalle_incidente', 'Sin detalle')}")
+                st.error(f"⚠️ Incidente informado: {ultimo.get('detalle_incidente', 'Sin detalle')}")
 
-        pendientes = [x for x in registros_ordenados if x.get("prioridad") == "Alta"][:8]
-        if pendientes:
-            with lista_plegable("Registros de mayor prioridad", count=len(pendientes), expanded=False, height=300):
-                for reg in pendientes:
+        evol_recientes = sorted(
+            [x for x in registros_ordenados if x.get("prioridad") in ("Alta", "Moderada")],
+            key=lambda x: (_RIESGO_ORDEN.get(x.get("prioridad", "S/D"), -1), x.get("fecha", "")),
+            reverse=True,
+        )[:8]
+        if evol_recientes:
+            with lista_plegable("Registros de prioridad Alta / Moderada", count=len(evol_recientes), expanded=False, height=300):
+                for reg in evol_recientes:
                     with st.container(border=True):
-                        st.markdown(f"**{reg.get('fecha', '')}** | {reg.get('tipo_cuidado', '')}")
+                        icono = "🔴" if reg.get("prioridad") == "Alta" else "🟡"
+                        st.markdown(f"{icono} **{reg.get('fecha', '')}** | {reg.get('tipo_cuidado', '')}")
                         st.caption(
-                            f"Turno: {reg.get('turno', 'S/D')} | Profesional: {reg.get('profesional', 'S/D')} | Riesgo UPP: {reg.get('riesgo_upp', 'S/D')}"
+                            f"Turno: {reg.get('turno', 'S/D')} | Prof: {reg.get('profesional', 'S/D')} | UPP: {reg.get('riesgo_upp', 'S/D')} | Caídas: {reg.get('riesgo_caidas', 'S/D')}"
                         )
                         st.write(reg.get("intervencion", ""))
 
