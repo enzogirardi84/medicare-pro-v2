@@ -165,7 +165,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     "operador": user.get("nombre", "Sistema"),
                     "operador_dni": user.get("dni", "S/D"),
                 })
-                guardar_datos()
+                guardar_datos(spinner=True)
                 queue_toast(f"${mon:,.2f} registrado correctamente.")
                 st.rerun()
             else:

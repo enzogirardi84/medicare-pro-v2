@@ -86,6 +86,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                         stock_actualizado = True
                         break
                 if stock_actualizado:
+                    st.session_state.setdefault("consumos_db", [])
                     st.session_state["consumos_db"].append(
                         {
                             "paciente": paciente_sel,
@@ -96,7 +97,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                             "empresa": mi_empresa,
                         }
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     queue_toast(f"{cant_usada} x {insumo_sel} registrado correctamente.")
                     st.rerun()
                 else:
@@ -145,7 +146,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
             ultimo_consumo = cons_paciente[-1]
             st.session_state["consumos_db"].remove(ultimo_consumo)
             _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast("Consumo eliminado correctamente.")
             st.rerun()
 

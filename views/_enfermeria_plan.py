@@ -270,7 +270,7 @@ def _render_plan_cuidados_enfermeria_legacy(
                         user.get("matricula", ""),
                         f"{tipo_cuidado} | Turno: {turno} | Prioridad: {prioridad}",
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     queue_toast("Registro de enfermería guardado.")
                     st.rerun()
 

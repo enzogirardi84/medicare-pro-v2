@@ -81,6 +81,7 @@ def render_asistencia(mi_empresa, user):
                     )
 
                     if col_btn.button("Forzar salida", key=f"force_out_{profesional}", use_container_width=True):
+                        st.session_state.setdefault("checkin_db", [])
                         st.session_state["checkin_db"].append(
                             {
                                 "paciente": data["paciente"],
@@ -90,7 +91,7 @@ def render_asistencia(mi_empresa, user):
                                 "empresa": mi_empresa,
                             }
                         )
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         queue_toast(f"Salida forzada registrada correctamente para {profesional}.")
                         st.rerun()
     else:

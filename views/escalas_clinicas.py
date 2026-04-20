@@ -227,7 +227,7 @@ def render_escalas_clinicas(paciente_sel, user):
                 user.get("matricula", ""),
                 f"Puntaje: {puntaje} | {resumen}",
             )
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast(f"Escala {escala} guardada.")
             st.rerun()
 

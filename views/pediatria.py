@@ -230,7 +230,7 @@ def render_pediatria(paciente_sel, user):
                 "nota": desc,
                 "firma": user.get("nombre", "Sistema"),
             })
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast("Guardado correctamente.")
             st.rerun()
 
@@ -256,7 +256,7 @@ def render_pediatria(paciente_sel, user):
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
         if col_btn.button("Borrar ultimo", use_container_width=True, disabled=not confirmar_borrado):
             st.session_state["pediatria_db"].remove(ped[-1])
-            guardar_datos()
+            guardar_datos(spinner=True)
             st.rerun()
 
         busqueda_ped = st.text_input(

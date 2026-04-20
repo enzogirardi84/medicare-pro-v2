@@ -363,6 +363,7 @@ def render_administracion_turno(
                     r["profesional_estado"] = nombre_usuario
                     r["matricula_estado"] = user.get("matricula", "")
                     r["motivo_estado"] = motivo_cambio.strip()
+                    st.session_state.setdefault("indicaciones_db", [])
                     st.session_state["indicaciones_db"].append({
                         "paciente": paciente_sel, "med": nuevo_texto_receta.strip(),
                         "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),

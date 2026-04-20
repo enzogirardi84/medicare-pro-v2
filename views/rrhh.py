@@ -254,5 +254,5 @@ def render_rrhh(mi_empresa, rol, user):
         confirmar_borrado = col_del1.checkbox("Confirmar eliminacion del fichaje", key="rrhh_conf_del_fichaje")
         if col_del2.button("Eliminar Fichaje", type="secondary", use_container_width=True, disabled=not confirmar_borrado):
             del st.session_state["checkin_db"][registro_sel[1]]
-            guardar_datos()
+            guardar_datos(spinner=True)
             st.rerun()

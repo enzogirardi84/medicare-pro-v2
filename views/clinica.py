@@ -317,8 +317,9 @@ def render_clinica(paciente_sel, user=None):
                 registro["observaciones"] = obs.strip()
             if user.get("nombre"):
                 registro["registrado_por"] = user.get("nombre", "")
+            st.session_state.setdefault("vitales_db", [])
             st.session_state["vitales_db"].append(registro)
-            guardar_datos()
+            guardar_datos(spinner=True)
             st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
             st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)
             if hay_critico:
@@ -336,7 +337,7 @@ def render_clinica(paciente_sel, user=None):
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_borrar_vital")
         if col_btn.button("Borrar ultimo control", use_container_width=True, disabled=not confirmar_borrado):
             st.session_state["vitales_db"].remove(vits[-1])
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast("Registro eliminado.")
             st.rerun()
         limite = seleccionar_limite_registros(

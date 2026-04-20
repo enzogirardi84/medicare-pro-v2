@@ -93,6 +93,7 @@ def render_estudios(paciente_sel, user, rol=None):
                     img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                     ext = ext_optimizada or "jpg"
 
+                st.session_state.setdefault("estudios_db", [])
                 st.session_state["estudios_db"].append({
                     "id": str(uuid4()),
                     "paciente": paciente_sel,
@@ -143,7 +144,7 @@ def render_estudios(paciente_sel, user, rol=None):
                     log_event("estudios_sql", f"error_dual_write:{type(e).__name__}")
                 # ----------------------------------
                 
-                guardar_datos()
+                guardar_datos(spinner=True)
                 queue_toast("Estudio guardado correctamente.")
                 st.rerun()
     else:
@@ -256,7 +257,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 delete_estudio(ultimo_est["id_sql"])
             # -------------------------
             
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast("Estudio eliminado correctamente.")
             st.rerun()
 
@@ -284,7 +285,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 delete_estudio(objetivo["id_sql"])
             # -------------------------
             
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast("Estudio eliminado correctamente.")
             st.rerun()
     else:
@@ -355,7 +356,7 @@ def render_estudios(paciente_sel, user, rol=None):
                                 e for e in st.session_state["estudios_db"]
                                 if not _mismo_estudio(e, est)
                             ]
-                            guardar_datos()
+                            guardar_datos(spinner=True)
                             st.rerun()
 
                 if cargar_multimedia:

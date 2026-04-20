@@ -67,6 +67,7 @@ def render_balance(paciente_sel, user):
                 e_perd=e_perd,
             )
 
+            st.session_state.setdefault("balance_db", [])
             st.session_state["balance_db"].append(
                 {
                     "paciente": paciente_sel,
@@ -83,7 +84,7 @@ def render_balance(paciente_sel, user):
                     "firma": user.get("nombre", "Sistema"),
                 }
             )
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
             st.rerun()
 
@@ -239,6 +240,6 @@ def render_balance(paciente_sel, user):
     confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_balance")
     if col_btn.button("Borrar ultimo balance", use_container_width=True, type="secondary", disabled=not confirmar_borrado):
         st.session_state["balance_db"].remove(blp[-1])
-        guardar_datos()
+        guardar_datos(spinner=True)
         queue_toast("Ultimo balance eliminado.")
         st.rerun()

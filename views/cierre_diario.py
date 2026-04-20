@@ -208,6 +208,7 @@ def render_cierre_diario(mi_empresa, user):
             st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
             if st.button("Guardar cierre en historial", use_container_width=True, type="primary"):
                 b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                st.session_state.setdefault("reportes_diarios_db", [])
                 st.session_state["reportes_diarios_db"].append({
                     "fecha_reporte": fecha_str,
                     "fecha_generacion": ahora().strftime("%d/%m/%Y %H:%M"),
@@ -215,7 +216,7 @@ def render_cierre_diario(mi_empresa, user):
                     "empresa": mi_empresa,
                     "pdf_base64": b64_pdf,
                 })
-                guardar_datos()
+                guardar_datos(spinner=True)
                 queue_toast(f"Cierre del dia {fecha_str} guardado exitosamente.")
                 st.rerun()
 

@@ -244,7 +244,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                             user.get("matricula", ""),
                             f"Firmante: {firmante.strip() or paciente_sel.split(' - ')[0]} | Vinculo: {vinculo}",
                         )
-                        guardar_datos()
+                        guardar_datos(spinner=True)
                         queue_toast("Consentimiento legal guardado en la historia clinica.")
                         st.rerun()
         else:

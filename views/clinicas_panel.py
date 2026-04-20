@@ -229,7 +229,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
                 f"Motivo: {motivo.strip() or 'Sin motivo consignado'}."
             )
             _registrar_cambio_clinica(user, "Suspension de clinica", row["Clinica"], key_norm, detalle)
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast(f"Clinica suspendida: {row['Clinica']}. Los usuarios de esa empresa no podran iniciar sesion.")
             st.rerun()
     with b2:
@@ -248,7 +248,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
                 key_norm,
                 "Servicio habilitado nuevamente. Accesos restaurados para coordinadores y operativos.",
             )
-            guardar_datos()
+            guardar_datos(spinner=True)
             queue_toast(f"Clinica reactivada: {row['Clinica']}.")
             st.rerun()
 

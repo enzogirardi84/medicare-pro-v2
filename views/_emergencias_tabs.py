@@ -253,7 +253,7 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
                     matricula.strip(),
                     f"{categoria_evento} | {tipo_evento} | {triage_grado} | Traslado: {tipo_traslado}",
                 )
-                guardar_datos()
+                guardar_datos(spinner=True)
                 queue_toast("Evento de emergencia guardado con trazabilidad legal.")
                 st.rerun()
 

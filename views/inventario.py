@@ -153,6 +153,7 @@ def render_inventario(mi_empresa):
                         break
 
                 if not encontrado:
+                    st.session_state.setdefault("inventario_db", [])
                     st.session_state["inventario_db"].append({"item": item_final, "stock": cantidad, "empresa": mi_empresa})
 
                 guardar_datos(spinner=True)

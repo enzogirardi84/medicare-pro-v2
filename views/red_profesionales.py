@@ -258,7 +258,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                 if not reemplazado:
                     registros.append(nuevo)
                 st.session_state["profesionales_red_db"] = registros
-                guardar_datos()
+                guardar_datos(spinner=True)
                 queue_toast("Perfil profesional guardado.")
                 st.rerun()
 
@@ -383,7 +383,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                             "estado": "Nueva",
                         }
                     )
-                    guardar_datos()
+                    guardar_datos(spinner=True)
                     queue_toast("Solicitud guardada correctamente.")
                     st.rerun()
 
