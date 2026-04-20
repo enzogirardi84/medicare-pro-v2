@@ -1,36 +1,34 @@
 import copy
 import hashlib
-import json
-import os
 import time
 from contextlib import nullcontext
-from pathlib import Path
 from typing import Optional
-from urllib.parse import urlparse
 
 import streamlit as st
 
 from core.app_logging import log_event
-from core.db_serialize import (
-    compress_payload, decompress_payload,
-    dumps_db_sorted, loads_db_payload, loads_json_any,
-)
+from core.db_serialize import dumps_db_sorted, loads_db_payload, loads_json_any
 from core.norm_empresa import norm_empresa_key
-
-try:
-    from supabase import create_client
-except ImportError:
-    create_client = None
-
-LOCAL_DB_PATH = Path(__file__).resolve().parent.parent / ".streamlit" / "local_data.json"
-LOCAL_DB_DIR = Path(__file__).resolve().parent.parent / ".streamlit" / "data_store"
-LOCAL_TENANTS_DIR = LOCAL_DB_DIR / "tenants"
-
-# Aviso si el JSON serializado supera esto (no corta el guardado; solo log + toast ocasional)
-PAYLOAD_ALERTA_BYTES = 9 * 1024 * 1024
-
-# Rendimiento multiclínica: con USE_TENANT_SHARDS en secrets, cada clínica tiene su fila/datos
-# en Supabase (o JSON local por tenant_key), reduciendo tamaño por request y riesgo de timeout.
+from core._database_local import (
+    LOCAL_DB_PATH,
+    _cargar_local,
+    _cargar_local_tenant,
+    _guardar_local,
+    _guardar_local_tenant,
+    _tenant_local_fs_key,
+)
+from core._database_supabase import (
+    PAYLOAD_ALERTA_BYTES,
+    _cargar_supabase_monolito,
+    _cargar_supabase_tenant,
+    _fijar_cache_y_hash,
+    _payload_muy_grande,
+    _supabase_execute_with_retry,
+    _upsert_supabase_monolito,
+    _upsert_supabase_tenant,
+    init_supabase,
+    supabase,
+)
 
 
 def modo_shard_activo() -> bool:
@@ -298,255 +296,6 @@ def vaciar_datos_app_en_sesion() -> None:
         "_mc_app_alerta_emp",
     ):
         st.session_state.pop(k, None)
-
-
-def _proxy_env_loopback_blackhole_activo() -> bool:
-    """
-    Detecta proxies rotos del entorno (ej. 127.0.0.1:9) que impiden cualquier salida HTTPS.
-    En ese caso forzamos a Supabase a no heredar proxies del proceso.
-    """
-    for key in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy", "http_proxy", "all_proxy"):
-        raw = str(os.environ.get(key, "") or "").strip()
-        if not raw:
-            continue
-        try:
-            parsed = urlparse(raw)
-        except Exception:
-            continue
-        host = str(parsed.hostname or "").strip().lower()
-        if host in {"127.0.0.1", "localhost", "::1"} and parsed.port == 9:
-            return True
-    return False
-
-
-@st.cache_resource
-def init_supabase():
-    if create_client is None:
-        return None
-    try:
-        url = st.secrets.get("SUPABASE_URL", "")
-        key = st.secrets.get("SUPABASE_KEY", "")
-    except Exception:
-        return None
-    if not url or "tu-proyecto-aqui" in url or not key:
-        return None
-    options = None
-    if _proxy_env_loopback_blackhole_activo():
-        try:
-            import httpx
-            from supabase.lib.client_options import SyncClientOptions
-
-            options = SyncClientOptions(
-                httpx_client=httpx.Client(
-                    trust_env=False,
-                    follow_redirects=True,
-                    http2=True,
-                    timeout=120.0,
-                )
-            )
-            log_event("db", "supabase_proxy_bypass:loopback_port_9")
-        except Exception as e:
-            log_event("db", f"supabase_proxy_bypass_error:{type(e).__name__}")
-    return create_client(url, key, options=options)
-
-
-supabase = init_supabase()
-
-
-def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay: float = 0.35):
-    """
-    Reintentos acotados para amortiguar picos de concurrencia (locks/transitorios de red).
-    No silencia el error final: lo vuelve a lanzar para respetar el flujo existente.
-    """
-    try:
-        from core.feature_flags import SUPABASE_RETRY_ATTEMPTS, SUPABASE_RETRY_BASE_DELAY_SEGUNDOS
-
-        attempts = int(SUPABASE_RETRY_ATTEMPTS or attempts)
-        base_delay = float(SUPABASE_RETRY_BASE_DELAY_SEGUNDOS or base_delay)
-    except Exception:
-        pass
-
-    last_error = None
-    tries = max(1, int(attempts or 1))
-    for intento in range(1, tries + 1):
-        try:
-            return fn()
-        except Exception as e:
-            last_error = e
-            if intento >= tries:
-                break
-            # Backoff exponencial más agresivo: primer intento rápido (0.05s), luego 0.1s, 0.2s, 0.4s
-            try:
-                espera = max(0.05, min(0.5, float(base_delay) * (1.5 ** (intento - 1))))
-            except Exception:
-                espera = 0.15
-            log_event("db", f"{op_name}_retry:{intento}/{tries}:{type(e).__name__}")
-            time.sleep(espera)
-    raise last_error
-
-
-def _payload_muy_grande(serializado_o_bytes) -> bool:
-    if isinstance(serializado_o_bytes, bytes):
-        return len(serializado_o_bytes) >= PAYLOAD_ALERTA_BYTES
-    return len(serializado_o_bytes.encode("utf-8")) >= PAYLOAD_ALERTA_BYTES
-
-
-def _guardar_local(data, payload_bytes: bytes | None = None):
-    """
-    Backup local. Si se pasa payload_bytes (mismo JSON que va a nube/hash), un solo write compacto.
-    Si no, modo legacy: shards por clave + monolito (mas lento).
-    """
-    try:
-        LOCAL_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        LOCAL_DB_DIR.mkdir(parents=True, exist_ok=True)
-        if payload_bytes is not None:
-            LOCAL_DB_PATH.write_bytes(payload_bytes)
-            return True
-        manifest = {
-            "version": 2,
-            "keys": sorted(list(data.keys())),
-            "updated_at": time.time(),
-        }
-        for key, value in data.items():
-            (LOCAL_DB_DIR / f"{key}.json").write_text(
-                json.dumps(value, ensure_ascii=False, indent=2, default=str),
-                encoding="utf-8",
-            )
-        (LOCAL_DB_DIR / "_manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        LOCAL_DB_PATH.write_text(
-            json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
-            encoding="utf-8",
-        )
-        return True
-    except Exception:
-        return False
-
-
-def _cargar_local():
-    try:
-        # Prioridad: monolito compacto (ultimo guardado rapido); si no, shards legacy.
-        if LOCAL_DB_PATH.exists():
-            raw = LOCAL_DB_PATH.read_bytes()
-            if raw.strip():
-                return loads_db_payload(raw)
-        manifest_path = LOCAL_DB_DIR / "_manifest.json"
-        if manifest_path.exists():
-            manifest = loads_json_any(manifest_path.read_bytes())
-            if not isinstance(manifest, dict):
-                manifest = {}
-            data = {}
-            for key in manifest.get("keys", []):
-                shard_path = LOCAL_DB_DIR / f"{key}.json"
-                if shard_path.exists():
-                    data[key] = loads_json_any(shard_path.read_bytes())
-            if data:
-                return data
-    except Exception:
-        return None
-    return None
-
-
-def _cargar_local_tenant(tenant_key: str):
-    try:
-        fs_key = _tenant_local_fs_key(tenant_key)
-        if not fs_key:
-            return None
-        p = LOCAL_TENANTS_DIR / f"{fs_key}.json"
-        if p.exists():
-            raw = p.read_bytes()
-            if not raw.strip():
-                return None
-            return loads_db_payload(raw)
-    except Exception:
-        return None
-    return None
-
-
-def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | None = None) -> bool:
-    try:
-        fs_key = _tenant_local_fs_key(tenant_key)
-        if not fs_key:
-            return False
-        LOCAL_TENANTS_DIR.mkdir(parents=True, exist_ok=True)
-        path = LOCAL_TENANTS_DIR / f"{fs_key}.json"
-        if payload_bytes is not None:
-            path.write_bytes(payload_bytes)
-        else:
-            path.write_text(
-                json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
-                encoding="utf-8",
-            )
-        return True
-    except Exception:
-        return False
-
-
-def _cargar_supabase_monolito():
-    response = _supabase_execute_with_retry(
-        "cargar_monolito",
-        lambda: supabase.table("medicare_db").select("datos").eq("id", 1).execute(),
-    )
-    if response.data:
-        raw = response.data[0]["datos"]
-        return decompress_payload(raw) if isinstance(raw, dict) else raw
-    return None
-
-
-def _cargar_supabase_tenant(tenant_key: str):
-    r = _supabase_execute_with_retry(
-        "cargar_tenant",
-        lambda: supabase.table("medicare_db")
-        .select("datos")
-        .eq("tenant_key", tenant_key)
-        .limit(1)
-        .execute(),
-    )
-    if r.data and len(r.data) > 0:
-        raw = r.data[0].get("datos")
-        return decompress_payload(raw) if isinstance(raw, dict) else raw
-    return None
-
-
-def _upsert_supabase_monolito(data: dict):
-    tbl = supabase.table("medicare_db")
-    payload = compress_payload(data)
-    try:
-        _supabase_execute_with_retry(
-            "upsert_monolito",
-            lambda: tbl.upsert({"id": 1, "datos": payload}, on_conflict="id").execute(),
-        )
-    except TypeError:
-        _supabase_execute_with_retry("upsert_monolito", lambda: tbl.upsert({"id": 1, "datos": payload}).execute())
-
-
-def _upsert_supabase_tenant(tenant_key: str, data: dict):
-    tbl = supabase.table("medicare_db")
-    payload = compress_payload(data)
-    try:
-        _supabase_execute_with_retry(
-            "upsert_tenant",
-            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": payload}, on_conflict="tenant_key").execute(),
-        )
-    except TypeError:
-        _supabase_execute_with_retry(
-            "upsert_tenant",
-            lambda: tbl.upsert({"tenant_key": tenant_key, "datos": payload}).execute(),
-        )
-
-
-def _fijar_cache_y_hash(data: dict) -> bytes | None:
-    """Sincroniza _db_cache, _db_cache_hash y _db_cache_ts (para TTL)."""
-    if not isinstance(data, dict):
-        return None
-    pb, _ = dumps_db_sorted(data)
-    st.session_state["_db_cache"] = loads_db_payload(pb)
-    st.session_state["_db_cache_hash"] = hashlib.sha256(pb).hexdigest()
-    st.session_state["_db_cache_ts"] = time.monotonic()
-    st.session_state["_guardar_datos_pendiente"] = False
-    return pb
 
 
 def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
