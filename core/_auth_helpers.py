@@ -204,7 +204,7 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
         }
     )
     log_event("auth", evento_log)
-    guardar_datos()
+    st.session_state["_guardar_datos_pendiente"] = True
     st.session_state["_mc_login_transition"] = True
     st.rerun()
 
