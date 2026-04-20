@@ -231,11 +231,71 @@ def render_escalas_clinicas(paciente_sel, user):
             queue_toast(f"Escala {escala} guardada.")
             st.rerun()
 
+    # ── Alerta empeoramiento vs último registro de la misma escala ──
+    registros_misma_escala = [r for r in registros if r.get("escala") == escala]
+    if len(registros_misma_escala) >= 2:
+        _sorted = sorted(registros_misma_escala, key=lambda x: x.get("fecha", ""))
+        p_prev = _sorted[-2].get("puntaje", 0)
+        p_actual = puntaje
+        # Braden y Barthel: mayor puntaje = mejor; Glasgow y EVA: menor = mejor
+        if escala in {"Braden", "Barthel"}:
+            empeoro = p_actual < p_prev
+            mejoro = p_actual > p_prev
+        else:
+            empeoro = p_actual < p_prev  # Glasgow: menor es peor; EVA: mayor es peor
+            mejoro = p_actual > p_prev
+            if escala == "EVA":
+                empeoro = p_actual > p_prev
+                mejoro = p_actual < p_prev
+        delta_val = p_actual - p_prev
+        if empeoro:
+            st.warning(
+                f" **{escala} empeoró**: anterior {p_prev} → actual {p_actual} "
+                f"({'+'  if delta_val > 0 else ''}{delta_val} pts). Revisar conducta."
+            )
+        elif mejoro:
+            st.success(
+                f" **{escala} mejoró**: anterior {p_prev} → actual {p_actual} "
+                f"({'+'  if delta_val > 0 else ''}{delta_val} pts)."
+            )
+
     st.divider()
     st.markdown("### Historial de escalas")
     if not registros:
         st.info("Todavia no hay escalas registradas para este paciente.")
         return
+
+    # ── Resumen del último puntaje por escala ─────────────────────────────
+    escalas_con_data = {}
+    for r in registros:
+        e_key = r.get("escala", "")
+        if e_key and (e_key not in escalas_con_data or r.get("fecha", "") > escalas_con_data[e_key].get("fecha", "")):
+            escalas_con_data[e_key] = r
+    if escalas_con_data:
+        _cols = st.columns(len(escalas_con_data))
+        for idx, (e_key, r) in enumerate(escalas_con_data.items()):
+            _icard = _interpretacion_visual(e_key, r.get("puntaje", 0), r.get("interpretacion") or r.get("resumen", ""))
+            _cols[idx].metric(
+                f"Último {e_key}",
+                f"{r.get('puntaje', '?')} pts",
+                delta=r.get("interpretacion") or r.get("resumen", ""),
+                delta_color="off",
+            )
+            _cols[idx].caption(r.get("fecha", "")[:16])
+
+    # ── Gráfico de evolución del puntaje por escala ──────────────────
+    df_hist = pd.DataFrame(registros)
+    if not df_hist.empty and "escala" in df_hist.columns and "puntaje" in df_hist.columns:
+        df_hist["puntaje"] = pd.to_numeric(df_hist["puntaje"], errors="coerce")
+        df_hist["fecha_dt"] = pd.to_datetime(df_hist["fecha"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+        df_hist = df_hist.dropna(subset=["fecha_dt"]).sort_values("fecha_dt")
+        escalas_presentes = [e for e in ["Glasgow", "Braden", "Barthel", "EVA"] if e in df_hist["escala"].values]
+        if escalas_presentes:
+            for e_key in escalas_presentes:
+                df_e = df_hist[df_hist["escala"] == e_key].set_index("fecha_dt")["puntaje"]
+                if len(df_e) >= 2:
+                    st.caption(f"Evolución {e_key} ({len(df_e)} registros)")
+                    st.line_chart(df_e, use_container_width=True, height=140)
 
     limite = seleccionar_limite_registros(
         "Escalas a mostrar",
