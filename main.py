@@ -154,514 +154,34 @@ if "_db_bootstrapped" not in st.session_state:
 
 VIEW_CONFIG, VIEW_NAV_LABELS = build_view_maps(alertas_app_visible=ALERTAS_APP_PACIENTE_VISIBLE)
 
-# Áreas del filtro lateral: definición en core.module_catalog (un solo lugar al agregar módulos).
-CATEGORIAS_MODULOS = categorias_navegacion_sidebar(alertas_app_visible=ALERTAS_APP_PACIENTE_VISIBLE)
-
-CATEGORIAS_ORDEN = list(CATEGORIAS_MODULOS.keys())
-
-_MC_FILTRO_TODAS = "Todas las áreas"
-
-
-def _categorias_con_modulos_en_menu(menu_set):
-    """menu_set: frozenset o set de nombres de módulo visibles (lookup O(1) por categoría)."""
-    if not menu_set:
-        return []
-    return [c for c in CATEGORIAS_ORDEN if any(m in menu_set for m in CATEGORIAS_MODULOS[c])]
-
-
-def _etiqueta_filtro_categoria(nombre):
-    if nombre == _MC_FILTRO_TODAS:
-        return f"\U0001F5C2\ufe0f  {nombre}"
-    prefijos = {
-        "Clínica": "\U0001FA7A",
-        "Gestión": "\U0001F4CA",
-        "Emergencias": "\U0001F691",
-        "Legal y documentación": "\u2696\ufe0f",
-    }
-    return f"{prefijos.get(nombre, '')}  {nombre}".strip()
-
-
-_VIEW_FN_CACHE: dict = {}
-
-
-def _get_render_fn(tab_name):
-    """Cachea render_fn en memoria de proceso para evitar import_module en cada rerun."""
-    if tab_name not in _VIEW_FN_CACHE:
-        module_name, function_name = VIEW_CONFIG[tab_name]
-        _VIEW_FN_CACHE[tab_name] = getattr(import_module(module_name), function_name)
-    return _VIEW_FN_CACHE[tab_name]
+from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401  (referenciado en módulos heredados)
+from core.sidebar_components import (
+    sidebar_brand_card as _sidebar_brand_card_fn,
+    sidebar_patient_card as _sidebar_patient_card_fn,
+    render_sidebar_contexto_clinico as _render_sidebar_contexto_clinico,
+    render_sidebar_pacientes_y_alertas as _render_sidebar_pacientes_y_alertas_fn,
+)
+from core.view_dispatch import (
+    render_current_view as _render_current_view_dispatch,
+    resolve_current_view,
+    render_module_nav as _render_module_nav_dispatch,
+    resolve_menu_for_role as _resolve_menu_for_role_dispatch,
+)
 
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, menu_set=None):
-    """menu_set: frozenset del menú ya resuelto (sidebar); evita recomputar permisos en cada rerun."""
     if menu_set is None:
         menu_set = frozenset(resolve_menu_for_role(rol, user))
-    if tab_name not in menu_set:
-        st.error("No tienes permisos para acceder a este modulo.")
-        return
-    try:
-        from core.view_helpers import aplicar_compactacion_movil_por_vista
-
-        aplicar_compactacion_movil_por_vista(tab_name)
-    except Exception:
-        pass
-    try:
-        render_fn = _get_render_fn(tab_name)
-    except Exception as exc:
-        render_carga_modulo_fallo(tab_name, exc)
-        return
-
-    try:
-        if tab_name == "Visitas y Agenda":
-            render_fn(paciente_sel, mi_empresa, user, rol)
-        elif tab_name == "Clinicas (panel global)":
-            render_fn(mi_empresa, user, rol)
-        elif tab_name == "Admision":
-            render_fn(mi_empresa, rol)
-        elif tab_name == "Clinica":
-            render_fn(paciente_sel, user)
-        elif tab_name == "Pediatria":
-            render_fn(paciente_sel, user)
-        elif tab_name == "Evolucion":
-            render_fn(paciente_sel, user, rol)
-        elif tab_name == "Estudios":
-            render_fn(paciente_sel, user, rol)
-        elif tab_name == "Materiales":
-            render_fn(paciente_sel, mi_empresa, user)
-        elif tab_name == "Recetas":
-            render_fn(paciente_sel, mi_empresa, user, rol)
-        elif tab_name == "Balance":
-            render_fn(paciente_sel, user)
-        elif tab_name == "Inventario":
-            render_fn(mi_empresa)
-        elif tab_name == "Caja":
-            render_fn(paciente_sel, mi_empresa, user, rol)
-        elif tab_name == "Emergencias y Ambulancia":
-            render_fn(paciente_sel, mi_empresa, user)
-        elif tab_name == "Alertas app paciente":
-            render_fn(mi_empresa, user, rol)
-        elif tab_name == "Red de Profesionales":
-            render_fn(mi_empresa, user, rol)
-        elif tab_name == "Escalas Clinicas":
-            render_fn(paciente_sel, user)
-        elif tab_name == "Historial":
-            render_fn(paciente_sel, user)
-        elif tab_name == "PDF":
-            render_fn(paciente_sel, mi_empresa, user, rol)
-        elif tab_name == "Telemedicina":
-            render_fn(paciente_sel)
-        elif tab_name == "Dashboard":
-            render_fn(mi_empresa, rol)
-        elif tab_name == "Cierre Diario":
-            render_fn(mi_empresa, user)
-        elif tab_name == "Mi Equipo":
-            render_fn(mi_empresa, rol, user)
-        elif tab_name == "Asistencia en Vivo":
-            render_fn(mi_empresa, user)
-        elif tab_name == "RRHH y Fichajes":
-            render_fn(mi_empresa, rol, user)
-        elif tab_name == "Proyecto y Roadmap":
-            render_fn(mi_empresa, user, rol)
-        elif tab_name == "Auditoria":
-            render_fn(mi_empresa, user)
-        elif tab_name == "Auditoria Legal":
-            render_fn(mi_empresa, user)
-        elif tab_name == "Diagnosticos":
-            render_fn(user)
-    except Exception as exc:
-        log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
-        render_modulo_fallo_ui(tab_name, exc)
-
-
-def resolve_current_view(menu, menu_set=None):
-    if not menu:
-        st.session_state.pop("modulo_actual", None)
-        return None
-    ms = menu_set if menu_set is not None else frozenset(menu)
-    vista_actual = st.session_state.get("modulo_actual", menu[0])
-    if vista_actual not in ms:
-        vista_actual = menu[0]
-    st.session_state["modulo_actual"] = vista_actual
-    return vista_actual
-
-
-def _sidebar_patient_card(paciente_sel, detalles):
-    return (
-        f'<div class="mc-patient-card">'
-        f'<div class="mc-patient-card-kicker">Paciente activo</div>'
-        f'<div class="mc-patient-card-name">{escape(paciente_sel)}</div>'
-        f'<div class="mc-patient-card-meta">'
-        f"DNI: {escape(detalles.get('dni', 'S/D'))}<br>"
-        f"OS: {escape(detalles.get('obra_social', 'S/D'))}<br>"
-        f"Empresa: {escape(detalles.get('empresa', 'S/D'))}<br>"
-        f"Estado: {escape(detalles.get('estado', 'Activo'))}"
-        f"</div>"
-        f"</div>"
-    )
-
-
-def _sidebar_brand_card(mi_empresa, user, rol, descripcion, logo_sidebar_b64):
-    logo_html = (
-        f'<div class="mc-brand-logo-shell">'
-        f'<img src="data:image/jpeg;base64,{logo_sidebar_b64}" class="mc-brand-logo" />'
-        f"</div>"
-        if logo_sidebar_b64
-        else ""
-    )
-    return (
-        f'<div class="mc-brand-card">'
-        f"{logo_html}"
-        f'<div class="mc-brand-kicker">MediCare Enterprise PRO</div>'
-        f'<div class="mc-brand-company">{escape(mi_empresa)}</div>'
-        f'<div class="mc-brand-user">{escape(user.get("nombre", ""))} <span>({escape(rol)})</span></div>'
-        f'<div class="mc-brand-copy">{escape(descripcion)}</div>'
-        f"</div>"
-    )
-
-
-def _parse_fecha_sidebar(fecha_txt):
-    s = str(fecha_txt or "").strip()
-    if not s:
-        return datetime.min
-    for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
-        try:
-            return datetime.strptime(s, fmt)
-        except Exception:
-            continue
-    return datetime.min
-
-
-def _vitales_valor_corto(registro, clave, default="S/D"):
-    raw = registro.get(clave)
-    if raw is None:
-        return default
-    s = str(raw).strip()
-    return s if s else default
-
-
-def _html_signos_vitales_sidebar(vitales_orden):
-    """Tarjetas compactas para el panel lateral (evita lista densa con backticks)."""
-    if not vitales_orden:
-        return ""
-    bloques = ['<div class="mc-vitales-stack">']
-    for v in vitales_orden:
-        fecha = escape(_vitales_valor_corto(v, "fecha", "S/D"))
-        ta = escape(_vitales_valor_corto(v, "TA"))
-        fc = escape(_vitales_valor_corto(v, "FC"))
-        fr = escape(_vitales_valor_corto(v, "FR"))
-        sat = escape(_vitales_valor_corto(v, "Sat"))
-        temp = escape(_vitales_valor_corto(v, "Temp"))
-        hgt = escape(_vitales_valor_corto(v, "HGT"))
-        bloques.append(
-            '<article class="mc-vital-card">'
-            f'<div class="mc-vital-card__time" title="Fecha y hora del control">{fecha}</div>'
-            '<div class="mc-vital-metrics mc-vital-metrics--grid">'
-            '<div class="mc-vital-metric mc-vital-metric--ta">'
-            '<div class="mc-vital-metric__label">Tensión</div>'
-            f'<div class="mc-vital-metric__value">{ta}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--fc">'
-            '<div class="mc-vital-metric__label">FC</div>'
-            f'<div class="mc-vital-metric__value">{fc}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--fr">'
-            '<div class="mc-vital-metric__label">F.R.</div>'
-            f'<div class="mc-vital-metric__value">{fr}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--sat">'
-            '<div class="mc-vital-metric__label">SatO₂</div>'
-            f'<div class="mc-vital-metric__value">{sat}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--temp">'
-            '<div class="mc-vital-metric__label">Temp</div>'
-            f'<div class="mc-vital-metric__value">{temp}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--hgt" title="Glucemia capilar (mg/dL)">'
-            '<div class="mc-vital-metric__label">HGT</div>'
-            f'<div class="mc-vital-metric__value">{hgt}</div>'
-            "</div>"
-            "</div>"
-            "</article>"
-        )
-    bloques.append("</div>")
-    return "".join(bloques)
-
-
-def _semaforo_vital_sidebar(v):
-    """Devuelve emoji de semáforo basado en valores del último registro vital."""
-    try:
-        from views.clinica import _evaluar_ta_clinica, _evaluar_vit
-        estados = [
-            _evaluar_ta_clinica(v.get("TA", "")),
-            _evaluar_vit("FC", v.get("FC")),
-            _evaluar_vit("Sat", v.get("Sat")),
-            _evaluar_vit("Temp", v.get("Temp")),
-        ]
-        if any(e == "critico" for e in estados):
-            return "🔴"
-        if any(e == "alerta" for e in estados):
-            return "🟡"
-        if any(e == "normal" for e in estados):
-            return "🟢"
-    except Exception:
-        pass
-    return "⚪"
-
-
-def _render_sidebar_contexto_clinico(paciente_sel, vista_actual):
-    if not paciente_sel:
-        return
-
-    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
-    alergias = str(detalles.get("alergias", "") or "").strip()
-    patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "") or "").strip()
-
-    # Camino caliente: evita sort completo en cada rerun; toma hasta 3 registros recientes desde el final.
-    vitales = st.session_state.get("vitales_db", [])
-    vit_cache_key = f"_mc_cache_vit_top3_{paciente_sel}"
-    vit_cached = st.session_state.get(vit_cache_key)
-    if vit_cached and vit_cached.get("id") == id(vitales) and vit_cached.get("len") == len(vitales):
-        vitales_orden = vit_cached["top3"]
-    else:
-        vitales_orden = []
-        for v in reversed(vitales):
-            if v.get("paciente") != paciente_sel:
-                continue
-            vitales_orden.append(v)
-            if len(vitales_orden) >= 3:
-                break
-        st.session_state[vit_cache_key] = {"id": id(vitales), "len": len(vitales), "top3": vitales_orden}
-
-    st.sidebar.divider()
-    st.sidebar.markdown(
-        """
-        <div class="mc-sidebar-section">
-            <div class="mc-sidebar-kicker">Contexto clínico</div>
-            <div class="mc-sidebar-title">Panel rápido del paciente</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if alergias:
-        st.sidebar.warning(f"⚠️ Alergias: {alergias}")
-    else:
-        st.sidebar.caption("Sin alergias cargadas.")
-
-    # ── Semáforo + último vital ───────────────────────────────────
-    if vitales_orden:
-        _sem = _semaforo_vital_sidebar(vitales_orden[0])
-        _fecha_v = vitales_orden[0].get("fecha", "S/D")[:16]
-        st.sidebar.markdown(
-            f'<p class="mc-sidebar-subhead">{_sem} Últimos signos vitales — {escape(_fecha_v)}</p>',
-            unsafe_allow_html=True,
-        )
-        st.sidebar.markdown(_html_signos_vitales_sidebar(vitales_orden[:1]), unsafe_allow_html=True)
-    else:
-        st.sidebar.caption("⚪ Sin registros vitales recientes.")
-
-    # ── Última evolución ───────────────────────────────────────
-    evoluciones = st.session_state.get("evoluciones_db", [])
-    evs_pac = [e for e in evoluciones if e.get("paciente") == paciente_sel]
-    if evs_pac:
-        ultima_ev = max(evs_pac, key=lambda x: x.get("fecha", ""))
-        _prof_ev = (ultima_ev.get("firma") or "S/D")[:22]
-        _fecha_ev = ultima_ev.get("fecha", "S/D")[:16]
-        _nota_ev = str(ultima_ev.get("nota", ""))[:80].replace("\n", " ")
-        st.sidebar.caption(f"📝 Última evolución: **{_fecha_ev}** — {_prof_ev}")
-        if _nota_ev:
-            st.sidebar.caption(f"{_nota_ev}{'...' if len(str(ultima_ev.get('nota',''))) > 80 else ''}")
-    else:
-        st.sidebar.caption("📝 Sin evoluciones registradas.")
-
-    # ── Medicación activa (top 3) ──────────────────────────────
-    indicaciones = st.session_state.get("indicaciones_db", [])
-    activas = [
-        r for r in indicaciones
-        if r.get("paciente") == paciente_sel
-        and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
-        and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
-    ]
-    if activas:
-        st.sidebar.caption(f"💊 Medicación activa ({len(activas)} indicación/es):")
-        for med in activas[:3]:
-            _nom = (med.get("med") or "")[:40]
-            _frec = (med.get("frecuencia") or med.get("via") or "")[:20]
-            st.sidebar.caption(f"  • {_nom}" + (f" — {_frec}" if _frec else ""))
-        if len(activas) > 3:
-            st.sidebar.caption(f"  ... y {len(activas) - 3} más")
-    else:
-        st.sidebar.caption("💊 Sin medicación activa.")
-
-    st.sidebar.caption("Diagnósticos activos")
-    if patologias:
-        st.sidebar.markdown(f"- {escape(patologias)}")
-    else:
-        st.sidebar.caption("Sin diagnósticos cargados.")
-
-
-def _render_sidebar_pacientes_y_alertas(mi_empresa, rol):
-    st.markdown(
-        """
-        <div class="mc-sidebar-section">
-            <div class="mc-sidebar-kicker">Pacientes</div>
-            <div class="mc-sidebar-title">Buscador y seleccion</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    buscar = st.text_input("Buscar Paciente", placeholder="Nombre, DNI o palabra clave", key="mc_buscar_paciente")
-    ver_altas = st.checkbox("Mostrar Pacientes de Alta", key="mc_ver_altas") if es_control_total(rol) else False
-
-    p_f = obtener_pacientes_visibles(
-        st.session_state,
-        mi_empresa,
-        rol,
-        incluir_altas=ver_altas,
-        busqueda=buscar,
-    )
-    limite_pacientes = valor_por_modo_liviano(limite_pacientes_sidebar(), 36, st.session_state)
-    if not buscar and len(p_f) > limite_pacientes:
-        st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
-        p_f = p_f[:limite_pacientes]
-
-    if not p_f and buscar:
-        st.caption("No hay pacientes que coincidan con la busqueda.")
-    elif p_f:
-        st.caption(f"{len(p_f)} paciente(s) visibles")
-
-    paciente_actual = st.session_state.get("paciente_actual")
-    opciones_ids = [item[0] for item in p_f]
-    index_actual = opciones_ids.index(paciente_actual) if paciente_actual in opciones_ids else 0
-
-    # Limpiar key obsoleto si guardó una tupla (formato viejo) — evita mismatch en selectbox
-    _stored_sel = st.session_state.get("paciente_actual_select")
-    if isinstance(_stored_sel, tuple):
-        st.session_state.pop("paciente_actual_select", None)
-
-    # Selectbox con IDs string (no tuplas) → matching estable entre reruns
-    _display_map = {item[0]: item[1] for item in p_f} if p_f else {}
-    paciente_sel = (
-        st.selectbox(
-            "Seleccionar Paciente",
-            opciones_ids,
-            index=index_actual,
-            format_func=lambda x: _display_map.get(x, x),
-            key="paciente_actual_select",
-        )
-        if p_f
-        else None
-    )
-    paciente_prev = st.session_state.get("paciente_actual")
-    if paciente_sel:
-        st.session_state["paciente_actual"] = paciente_sel
-        # Solo rerun si realmente cambió de paciente y no es la primera carga
-        if paciente_prev and paciente_sel != paciente_prev:
-            # Fuerza refresco consistente de vistas clínicas al cambiar paciente.
-            # Evita quedar con datos del paciente anterior cuando el sidebar corre fragmentado.
-            st.rerun()
-        det_sidebar = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-        st.markdown(_sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
-
-    if paciente_sel:
-        alertas = obtener_alertas_clinicas(st.session_state, paciente_sel)
-        if alertas:
-            colores = {
-                "critica": ("#7f1d1d", "#fecaca", "#ef4444"),
-                "alta": ("#78350f", "#fde68a", "#f59e0b"),
-                "media": ("#172554", "#bfdbfe", "#38bdf8"),
-            }
-            bloques = []
-            for alerta in alertas:
-                fondo, texto, borde = colores.get(alerta["nivel"], colores["media"])
-                bloques.append(
-                    f"<div class='mc-sidebar-alert-card' style='background:{fondo}; border-color:{borde};'>"
-                    f"<div class='mc-sidebar-alert-title' style='color:{texto};'>{escape(alerta['titulo'])}</div>"
-                    f"<div class='mc-sidebar-alert-body' style='color:{texto};'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
-                    "</div>"
-                )
-            st.markdown(
-                "<div class='mc-sidebar-alert-shell' style='max-height:360px; overflow-y:auto; padding-right:4px;'>"
-                "<div class='mc-sidebar-title'>Alertas clinicas</div>"
-                + "".join(bloques)
-                + "</div>",
-                unsafe_allow_html=True,
-            )
-    return paciente_sel
-
-
-# Importante: no fragmentar este bloque porque puede desincronizar el paciente activo
-# con módulos clínicos que dependen de recarga completa de estado.
+    _render_current_view_dispatch(tab_name, paciente_sel, mi_empresa, user, rol, VIEW_CONFIG, menu_set)
 
 
 def render_module_nav(menu, vista_actual, menu_set=None):
-    if not menu:
-        return None
-    menu_set = frozenset(menu) if menu_set is None else menu_set
-    st.markdown(
-        """
-        <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
-            <div class="mc-module-shell-head">
-                <span class="mc-module-shell-kicker">Navegacion</span>
-                <h3 class="mc-module-shell-title">Modulos del sistema</h3>
-                <p class="mc-module-shell-sub">Filtrá por área o mostrá todos los módulos habilitados para tu rol.</p>
-            </div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    cats_ok = _categorias_con_modulos_en_menu(menu_set)
-    filtro_opciones = [_MC_FILTRO_TODAS] + cats_ok
-
-    if "mc_nav_filtro_cat" not in st.session_state or st.session_state["mc_nav_filtro_cat"] not in filtro_opciones:
-        st.session_state["mc_nav_filtro_cat"] = _MC_FILTRO_TODAS
-
-    filtro = st.selectbox(
-        "Area del sistema",
-        filtro_opciones,
-        key="mc_nav_filtro_cat",
-        format_func=_etiqueta_filtro_categoria,
-        label_visibility="collapsed",
-    )
-
-    if filtro == _MC_FILTRO_TODAS:
-        pill_options = list(menu)
-        default_sel = vista_actual if vista_actual in menu_set else pill_options[0]
-    else:
-        mods_in_cat = [m for m in CATEGORIAS_MODULOS[filtro] if m in menu_set]
-        if not mods_in_cat:
-            st.caption("No hay módulos en esta área para tu usuario.")
-            pill_options = list(menu)
-            default_sel = vista_actual if vista_actual in menu_set else pill_options[0]
-        elif vista_actual in mods_in_cat:
-            pill_options = mods_in_cat
-            default_sel = vista_actual
-        else:
-            pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
-            default_sel = vista_actual
-
-    selected = st.pills(
-        "Modulos del sistema",
-        pill_options,
-        default=default_sel,
-        selection_mode="single",
-        format_func=lambda x: VIEW_NAV_LABELS.get(x, x),
-        label_visibility="collapsed",
-        key="module_nav_pills",
-    )
-    if selected and selected != vista_actual:
-        st.session_state["modulo_anterior"] = vista_actual
-        st.session_state["modulo_actual"] = selected
-        return selected
-    return selected or vista_actual
+    return _render_module_nav_dispatch(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
 
 
 def resolve_menu_for_role(rol, user=None):
-    if callable(obtener_modulos_permitidos):
-        menu_base = obtener_modulos_permitidos(rol, list(VIEW_CONFIG), user) or []
-    else:
-        menu_base = list(VIEW_CONFIG)
-    return [modulo for modulo in menu_base if modulo in VIEW_CONFIG]
+    return _resolve_menu_for_role_dispatch(rol, user, VIEW_CONFIG, obtener_modulos_permitidos)
+
 
 
 def limpiar_sesion_app():
@@ -793,7 +313,7 @@ with st.sidebar:
     st.divider()
 
     st.markdown(
-        _sidebar_brand_card(
+        _sidebar_brand_card_fn(
             mi_empresa,
             user,
             rol,
@@ -808,7 +328,15 @@ with st.sidebar:
     st.divider()
 
     menu = resolve_menu_for_role(rol, user)
-    paciente_sel = _render_sidebar_pacientes_y_alertas(mi_empresa, rol)
+    paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
+        mi_empresa, rol,
+        obtener_pacientes_fn=obtener_pacientes_visibles,
+        obtener_alertas_fn=obtener_alertas_clinicas,
+        mapa_detalles_fn=mapa_detalles_pacientes,
+        es_control_total_fn=es_control_total,
+        valor_por_modo_liviano_fn=valor_por_modo_liviano,
+        limite_pacientes_fn=limite_pacientes_sidebar,
+    )
 
     render_sidebar_bloque_app_paciente(mi_empresa, rol)
 
