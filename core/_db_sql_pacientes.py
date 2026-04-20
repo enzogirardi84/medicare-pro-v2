@@ -24,6 +24,7 @@ def check_supabase_connection() -> bool:
     return supabase is not None
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas: bool = False) -> List[Dict[str, Any]]:
     """Obtiene la lista de pacientes de una empresa, con paginación/búsqueda directa en SQL."""
     if not check_supabase_connection():
@@ -43,6 +44,7 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
         return []
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
     """Obtiene los detalles completos de un paciente específico."""
     if not check_supabase_connection():
@@ -58,6 +60,7 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
     """Busca una empresa por nombre exacto."""
     if not check_supabase_connection():
@@ -73,6 +76,7 @@ def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str, Any]]:
     """Busca un paciente por DNI dentro de una empresa."""
     if not check_supabase_connection() or not empresa_id or not dni:
@@ -100,6 +104,9 @@ def upsert_paciente(datos_paciente: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "upsert_paciente",
             lambda: supabase.table("pacientes").upsert(datos_paciente).execute(),
         )
+        get_pacientes_by_empresa.clear()
+        get_paciente_by_id.clear()
+        get_paciente_by_dni_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_upsert_paciente:{type(e).__name__}")
@@ -120,6 +127,9 @@ def update_paciente_by_id(paciente_id: str, datos_update: Dict[str, Any]) -> Opt
             "update_paciente",
             lambda: supabase.table("pacientes").update(payload).eq("id", paciente_id).execute(),
         )
+        get_pacientes_by_empresa.clear()
+        get_paciente_by_id.clear()
+        get_paciente_by_dni_empresa.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_update_paciente:{type(e).__name__}")
@@ -135,6 +145,9 @@ def delete_paciente_by_id(paciente_id: str) -> bool:
             "delete_paciente",
             lambda: supabase.table("pacientes").delete().eq("id", paciente_id).execute(),
         )
+        get_pacientes_by_empresa.clear()
+        get_paciente_by_id.clear()
+        get_paciente_by_dni_empresa.clear()
         return True
     except Exception as e:
         log_event("db_sql", f"error_delete_paciente:{type(e).__name__}")
