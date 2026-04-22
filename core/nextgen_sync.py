@@ -6,6 +6,7 @@ import streamlit as st
 
 from core.api_client import post_api
 from core.app_logging import log_event
+from core.empresa_config import empresa_uuid_configurada
 from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
 from core.db_sql import upsert_paciente, insert_evolucion, insert_indicacion, insert_administracion
 
@@ -36,14 +37,16 @@ def _generate_nextgen_token(empresa: str) -> str:
 def _obtener_uuid_empresa(nombre_empresa: str) -> str:
     """Busca el UUID de la empresa en la base de datos SQL. Cached 1h."""
     from core.database import supabase
-    if not supabase: return None
+    empresa_configurada = empresa_uuid_configurada(nombre_empresa)
+    if not supabase:
+        return empresa_configurada or None
     try:
         res = supabase.table("empresas").select("id").eq("nombre", nombre_empresa).limit(1).execute()
         if res.data:
             return res.data[0]["id"]
     except Exception:
         pass
-    return None
+    return empresa_configurada or None
 
 
 @st.cache_data(ttl=3600, show_spinner=False)

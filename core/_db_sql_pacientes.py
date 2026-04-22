@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from core.app_logging import log_event
+from core.empresa_config import empresa_record_configurado
 
 try:
     from core.database import supabase, _supabase_execute_with_retry
@@ -63,17 +64,18 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
     """Busca una empresa por nombre exacto."""
+    empresa_fallback = empresa_record_configurado(nombre_empresa)
     if not check_supabase_connection():
-        return None
+        return empresa_fallback
     try:
         response = _supabase_execute_with_retry(
             "get_empresa_nombre",
             lambda: supabase.table("empresas").select("*").eq("nombre", nombre_empresa).limit(1).execute(),
         )
-        return response.data[0] if response and response.data else None
+        return response.data[0] if response and response.data else empresa_fallback
     except Exception as e:
         log_event("db_sql", f"error_get_empresa_nombre:{type(e).__name__}")
-        return None
+        return empresa_fallback
 
 
 @st.cache_data(ttl=120, show_spinner=False)
