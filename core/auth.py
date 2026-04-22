@@ -171,6 +171,9 @@ def render_login():
                     "**Detalle tecnico** en la app y enviá captura a soporte.\n"
                     "- Si no hay conexión, la app puede usar **modo local** con datos ya descargados; revisá WiFi o datos móviles."
                 )
+            _aviso_exp = st.session_state.pop("_aviso_sesion_expirada", None)
+            if _aviso_exp:
+                st.warning(_aviso_exp)
             if st.session_state.pop("_mc_pwreset_url_aviso_once", False):
                 st.info(
                     "Detectamos un enlace de restablecimiento de contraseña en la URL. "
@@ -510,7 +513,7 @@ def check_inactividad():
                 st.session_state.pop("_mc_onboarding_oculto", None)
                 limpiar_estado_sesion_login_efimero()
                 vaciar_datos_app_en_sesion()
-                st.warning(f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos).")
+                st.session_state["_aviso_sesion_expirada"] = f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos)."
                 st.rerun()
             else:
                 st.session_state["ultima_actividad"] = ahora()

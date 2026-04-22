@@ -36,7 +36,7 @@ def _load_data() -> Dict:
     try:
         with open(DATA_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except:
+    except Exception:
         return {
             "pacientes": [],
             "historial": [],
@@ -133,7 +133,7 @@ def contar_registros(tipo: str) -> int:
     try:
         data = _load_data()
         return len(data.get(tipo, []))
-    except:
+    except Exception:
         return 0
 
 # Funciones específicas para compatibilidad
