@@ -1,7 +1,5 @@
 import html
-from collections import Counter
 from datetime import timedelta
-from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
@@ -13,18 +11,14 @@ from core.clinical_exports import (
     build_patient_json_bytes,
     collect_patient_sections,
 )
-from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll
+from core.utils import ahora, mapa_detalles_pacientes
 from features.historial.fechas import registro_en_rango_fechas, sort_registros_por_fecha
 from views._historial_utils import (
     LIMITES_REGISTROS,
     SECCIONES_TABLA,
-    _actividad_reciente_filas,
-    _busqueda_global_resultados,
     _dataframe_seccion_a_csv,
-    _fecha_en_rango_tl,
     _nombre_archivo_seguro,
     _registro_coincide_busqueda,
-    _resumen_ejecutivo_secciones,
     _ultimo_evento_global,
 )
 from views._historial_vitales import _render_signos_vitales_con_alertas
@@ -37,7 +31,9 @@ from views._historial_render import (
     _render_seccion_tabla,
 )
 from views._historial_paneles import (
+    render_resumen_clinico,
     render_panorama,
+    render_tarjetas_secciones,
     render_timeline,
     render_busqueda_global,
 )
@@ -96,9 +92,14 @@ def render_historial(paciente_sel: str, user=None) -> None:
     if medico_trat:
         st.caption(f" Médico tratante: **{medico_trat}**")
 
+    secciones_base = collect_patient_sections(st.session_state, paciente_sel)
+    secciones_con_datos_base = {nombre: registros for nombre, registros in secciones_base.items() if registros}
+    total_registros_base = sum(len(registros) for registros in secciones_base.values())
+    ultimo_base = _ultimo_evento_global(secciones_base)
+    render_resumen_clinico(paciente_sel, detalles, secciones_base, total_registros_base, ultimo_base)
+
     st.caption(
-        "Filtros y límite arriba · exportaciones PDF/Excel/JSON/respaldo · panorama y gráfico · línea de tiempo y búsqueda global · "
-        "al final, exploración por sección en franja horizontal (plegable)."
+        "Vista integral con PDF clinico, resumen rapido, metricas, linea de tiempo, busqueda global y detalle por modulo."
     )
 
     st.markdown("##### Opciones de visualización")
@@ -114,16 +115,31 @@ def render_historial(paciente_sel: str, user=None) -> None:
     )
     col_filt4.info(f"Hasta {limite} ítems al ver una sección.")
 
-    st.markdown("##### Exportación y resguardo")
-    r1, r2, r3, r4 = st.columns(4)
+    st.markdown(
+        """
+        <div class="mc-module-shell">
+            <div class="mc-module-shell-head">
+                <div class="mc-module-shell-kicker">Centro documental</div>
+                <h3 class="mc-module-shell-title">Guardar, imprimir o auditar la historia clinica</h3>
+                <p class="mc-module-shell-copy">
+                    El PDF clinico es la salida principal para archivo y soporte. Excel, respaldo y JSON quedan disponibles
+                    para auditoria, integracion o contingencia.
+                </p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    r1, r2, r3, r4 = st.columns([1.35, 1.0, 1.0, 0.95])
     _render_lazy_download(
         r1,
         key_base=f"historial_pdf_{paciente_sel}",
-        prepare_label="Preparar historia PDF",
-        download_label="Descargar historia PDF",
+        prepare_label="Preparar PDF clinico",
+        download_label="Descargar PDF clinico",
         build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
         file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
         mime="application/pdf",
+        unavailable_message="No se pudo generar el PDF clinico. Verifica ReportLab y los datos cargados.",
     )
     _render_lazy_download(
         r2,
@@ -155,19 +171,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
     )
 
     st.divider()
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>Respaldo y filtros</h4><p>PDF, Excel, JSON o respaldo antes de profundizar; limite por seccion y solo modulos con datos.</p></div>
-            <div class="mc-card"><h4>Panorama y linea de tiempo</h4><p>Volumen por modulo y mezcla cronologica de eventos con fecha reconocible.</p></div>
-            <div class="mc-card"><h4>Busqueda y detalle</h4><p>Texto en toda la historia y luego cada seccion en tabla o ficha segun el tipo de registro.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    secciones = collect_patient_sections(st.session_state, paciente_sel)
-    if not any(secciones.values()):
+    if not secciones_con_datos_base:
         bloque_estado_vacio(
             "Historia sin registros",
             "No se encontraron registros clínicos agregados para este paciente.",
@@ -175,6 +179,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
         )
         return
 
+    secciones = dict(secciones_base)
     if solo_con_datos:
         secciones = {k: v for k, v in secciones.items() if v}
 
@@ -190,6 +195,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
         "Panel con desplazamiento vertical: panorámica, búsqueda global y detalle por sección (scroll interno)."
     )
     render_panorama(secciones, paciente_sel)
+    render_tarjetas_secciones(secciones_con_datos_base, paciente_sel)
     render_timeline(secciones, paciente_sel, limite_timeline)
     render_busqueda_global(secciones, paciente_sel)
 

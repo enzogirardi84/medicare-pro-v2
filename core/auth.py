@@ -23,6 +23,7 @@ from core.password_crypto import (
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
+    SESSION_KEY,
     iniciar_desafio_login,
     login_email_2fa_enabled,
     mascarar_email_privado,
@@ -44,8 +45,8 @@ from core._auth_helpers import (
     _auth_set_flash,
     _auth_pop_flash,
     _auth_loader_markup,
-    _auth_strip_pwreset_url_si_hay_param,
-    _auth_strip_pwreset_query_param,
+    _auth_strip_pwreset_url_si_hay_param as _auth_strip_pwreset_url_si_hay_param_impl,
+    _auth_strip_pwreset_query_param as _auth_strip_pwreset_query_param_impl,
     _auth_strip_modulo_query_param,
     _buscar_usuario_por_login,
     _pin_coincide_tiempo_constante,
@@ -67,6 +68,34 @@ MSG_PIN_RESET_FALLIDO = (
     "No pudimos cambiar la contraseña. Revisá **usuario**, **PIN** de 4 dígitos y, en multiclínica, **empresa** "
     "como en Mi equipo."
 )
+
+
+def _auth_strip_pwreset_query_param() -> None:
+    qp = getattr(st, "query_params", None)
+    if qp is None:
+        return
+    try:
+        qp.pop("pwreset", None)
+    except Exception:
+        _auth_strip_pwreset_query_param_impl()
+
+
+def _auth_strip_pwreset_url_si_hay_param() -> bool:
+    """
+    Wrapper local para que tests y login usen el `st` del modulo `core.auth`.
+    """
+    qp = getattr(st, "query_params", None)
+    if qp is None:
+        return False
+    try:
+        if qp.get("pwreset") is None:
+            return False
+    except Exception:
+        return False
+    _auth_strip_pwreset_query_param()
+    st.session_state.pop("mc_pwreset_token", None)
+    st.session_state.pop("mc_auth_mode_radio", None)
+    return True
 
 
 def render_login():
