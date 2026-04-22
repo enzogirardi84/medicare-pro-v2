@@ -242,6 +242,16 @@ def obtener_pin_usuario(data):
     return ""
 
 
+def obtener_email_usuario(data):
+    if not isinstance(data, dict):
+        return ""
+    for clave in ("email", "mail", "correo", "correo_verificacion", "correo_recuperacion"):
+        valor = str(data.get(clave, "") or "").strip().lower()
+        if valor:
+            return valor
+    return ""
+
+
 def construir_registro_auditoria_legal(
     tipo_evento,
     paciente,
