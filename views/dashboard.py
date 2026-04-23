@@ -124,7 +124,7 @@ def render_dashboard(mi_empresa, rol):
             emg_sql = get_emergencias_by_empresa(empresa_uuid, limit=100)
             if emg_sql:
                 for e in emg_sql:
-                    dt = pd.to_datetime(e.get("fecha_llamado", ""))
+                    dt = pd.to_datetime(e.get("fecha_llamado", ""), errors="coerce")
                     emergencias.append({
                         "fecha_evento": dt.strftime("%d/%m/%Y") if pd.notnull(dt) else "",
                         "hora_evento": dt.strftime("%H:%M") if pd.notnull(dt) else "",

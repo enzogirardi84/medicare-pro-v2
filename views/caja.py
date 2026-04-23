@@ -60,7 +60,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             fact_sql = get_facturacion_by_empresa(empresa_uuid)
             if fact_sql:
                 for f in fact_sql:
-                    dt = pd.to_datetime(f.get("fecha_emision", ""))
+                    dt = pd.to_datetime(f.get("fecha_emision", ""), errors="coerce")
                     paciente_nombre = f.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(f.get("pacientes"), dict) else "N/A"
                     # Buscar el ID visual del paciente (Nombre - DNI)
                     paciente_visual = paciente_nombre

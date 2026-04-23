@@ -80,7 +80,7 @@ def render_rrhh(mi_empresa, rol, user):
             chk_sql = get_checkins_by_empresa(empresa_uuid, limit=2000)
             if chk_sql:
                 for c in chk_sql:
-                    dt = pd.to_datetime(c.get("fecha_hora", ""))
+                    dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
                     checkins.append({
                         "empresa": mi_empresa,
                         "profesional": c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido",

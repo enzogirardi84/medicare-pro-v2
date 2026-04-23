@@ -78,7 +78,7 @@ def render_pediatria(paciente_sel, user):
             ped_sql = get_pediatria_by_paciente(paciente_uuid)
             if ped_sql:
                 for p in ped_sql:
-                    dt = pd.to_datetime(p.get("fecha_registro", ""))
+                    dt = pd.to_datetime(p.get("fecha_registro", ""), errors="coerce")
                     
                     # Calcular edad en meses y IMC para mostrar
                     edad_meses = 0.0

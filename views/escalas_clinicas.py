@@ -89,7 +89,7 @@ def render_escalas_clinicas(paciente_sel, user):
             escalas_sql = get_escalas_by_paciente(paciente_uuid)
             if escalas_sql:
                 for e in escalas_sql:
-                    dt = pd.to_datetime(e.get("fecha_registro", ""))
+                    dt = pd.to_datetime(e.get("fecha_registro", ""), errors="coerce")
                     registros.append({
                         "paciente": paciente_sel,
                         "fecha": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else e.get("fecha_registro", ""),

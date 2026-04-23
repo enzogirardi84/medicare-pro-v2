@@ -160,7 +160,7 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
             chk_sql = get_checkins_by_empresa(empresa_uuid, limit=500)
             if chk_sql:
                 for c in chk_sql:
-                    dt = pd.to_datetime(c.get("fecha_hora", ""))
+                    dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
                     if pd.notnull(dt) and dt.strftime("%d/%m/%Y") == hoy_str:
                         paciente_nombre = c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A"
                         prof_nombre = c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido"

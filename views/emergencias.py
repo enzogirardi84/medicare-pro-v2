@@ -34,7 +34,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
             emergencias_sql = get_emergencias_by_paciente(paciente_uuid)
             if emergencias_sql:
                 for e in emergencias_sql:
-                    dt = pd.to_datetime(e.get("fecha_llamado", ""))
+                    dt = pd.to_datetime(e.get("fecha_llamado", ""), errors="coerce")
                     # Mapear de SQL a formato legacy para la UI
                     eventos.append({
                         "paciente": paciente_sel,
