@@ -5,7 +5,6 @@ Guarda datos inmediatamente en local_data.json
 """
 
 import streamlit as st
-import pandas as pd
 from datetime import datetime
 
 from core.guardado_universal import (
@@ -110,6 +109,7 @@ def render(paciente_sel=None, user=None):
                 'Observaciones': datos.get('observaciones', '')
             })
         
+        import pandas as pd
         df = pd.DataFrame(tabla_datos)
         
         # Tabla con formato profesional

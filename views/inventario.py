@@ -1,5 +1,4 @@
 from core.alert_toasts import queue_toast
-import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
@@ -162,6 +161,7 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
+        import pandas as pd
         df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual"})
 
         # ── Búsqueda y filtro de criticidad ────────────────────────

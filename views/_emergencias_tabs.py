@@ -2,7 +2,6 @@
 import base64
 from uuid import uuid4
 
-import pandas as pd
 import streamlit as st
 
 from core.alert_toasts import queue_toast
@@ -338,6 +337,7 @@ def _render_tab_historial(paciente_sel, mi_empresa, eventos, es_movil):
     )
 
     registros = list(reversed(eventos[-limite:]))
+    import pandas as pd
     resumen_df = pd.DataFrame(
         [
             {

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-import pandas as pd
 import streamlit as st
 
 from core.alert_toasts import queue_toast
@@ -178,6 +177,7 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
         st.info("No hay alertas con estos filtros.")
         return
 
+    import pandas as pd
     df = pd.DataFrame(rows)
     df["mapa"] = [_osm_link(r.get("latitud"), r.get("longitud")) or None for r in rows]
     show_cols = [
