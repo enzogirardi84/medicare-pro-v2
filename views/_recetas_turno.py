@@ -75,6 +75,7 @@ def render_administracion_turno(
                     None,
                 )
                 estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
+                es_inf = r.get("tipo_indicacion") == "Infusion / hidratacion"
                 plan_dia.append({
                     "OK": _estado_icono(estado_actual), "Hora programada": horario,
                     "Hora realizada": admin_reg.get("hora", "") if admin_reg else "",
@@ -83,10 +84,14 @@ def render_administracion_turno(
                     "Estado": _estado_legible(estado_actual),
                     "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                     "Registrado por": _firma_trazabilidad_admin(admin_reg) if admin_reg else "",
+                    "Solucion": r.get("solucion", "") if es_inf else "",
+                    "Volumen_ml": r.get("volumen_ml", "") if es_inf else "",
+                    "Velocidad_ml_h": r.get("velocidad_ml_h", "") if es_inf else "",
                 })
         else:
             admin_reg = next((a for a in admin_hoy if a.get("med") == nombre), None)
             estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
+            es_inf = r.get("tipo_indicacion") == "Infusion / hidratacion"
             plan_dia.append({
                 "OK": _estado_icono(estado_actual), "Hora programada": "A demanda",
                 "Hora realizada": admin_reg.get("hora", "") if admin_reg else "",
@@ -95,6 +100,9 @@ def render_administracion_turno(
                 "Estado": _estado_legible(estado_actual),
                 "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                 "Registrado por": _firma_trazabilidad_admin(admin_reg) if admin_reg else "",
+                "Solucion": r.get("solucion", "") if es_inf else "",
+                "Volumen_ml": r.get("volumen_ml", "") if es_inf else "",
+                "Velocidad_ml_h": r.get("velocidad_ml_h", "") if es_inf else "",
             })
 
     plan_dia_df = pd.DataFrame(plan_dia)
@@ -229,7 +237,8 @@ def render_administracion_turno(
                 "Indicacion": plan_dia_df.apply(
                     lambda fila: " | ".join([
                         str(fila.get("Solucion", "") or "").strip(),
-                        str(fila.get("ML/h", "") or "").strip(),
+                        f"{str(fila.get('Volumen_ml', '') or '').strip()} ml" if str(fila.get('Volumen_ml', '') or '').strip() else "",
+                        f"{str(fila.get('Velocidad_ml_h', '') or '').strip()} ml/h" if str(fila.get('Velocidad_ml_h', '') or '').strip() else "",
                         str(fila.get("Detalle / velocidad", "") or "").strip(),
                     ]).strip(" |"), axis=1,
                 ),
@@ -440,6 +449,11 @@ def render_historial_prescripciones(paciente_sel, mi_empresa, user, es_movil, re
                 info_container.caption(f"Horarios: {format_horarios_receta(r)}")
                 if r.get("tipo_indicacion") == "Infusion / hidratacion":
                     detalle_inf = []
+                    if r.get("solucion"):
+                        sol_vol = f"💧 {r.get('solucion')}"
+                        if r.get("volumen_ml") not in ("", None, 0):
+                            sol_vol += f" {r.get('volumen_ml')} ml"
+                        detalle_inf.append(sol_vol)
                     if r.get("velocidad_ml_h") not in ("", None):
                         detalle_inf.append(f"Velocidad: {r.get('velocidad_ml_h')} ml/h")
                     if r.get("alternar_con"):

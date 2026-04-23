@@ -388,6 +388,9 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
             via = escape(str(fila.get("Via", "") or "S/D"))
             freq = escape(str(fila.get("Frecuencia", "") or "S/D"))
             det = escape(str(fila.get("Detalle / velocidad", "") or "").strip() or "—")
+            solucion = escape(str(fila.get("Solucion", "") or "").strip())
+            volumen = str(fila.get("Volumen_ml", "") or "").strip()
+            velocidad = str(fila.get("Velocidad_ml_h", "") or "").strip()
             hp = escape(str(fila.get("Hora programada", "") or "—"))
             hr_reg = str(fila.get("Hora realizada", "") or "").strip()
             hr_e = escape(hr_reg if hr_reg else "—")
@@ -415,10 +418,19 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
                 else:
                     info_container, action_container = st.columns([4.4, 2.6])
                 with info_container:
+                    detalle_inf_html = ""
+                    if solucion:
+                        detalle_inf_html += f'<div class="mc-mar-detail">💧 <b>{solucion}</b>'
+                        if volumen:
+                            detalle_inf_html += f' — {volumen} ml'
+                        if velocidad:
+                            detalle_inf_html += f' @ {velocidad} ml/h'
+                        detalle_inf_html += '</div>'
                     st.markdown(
                         f'<div class="{blk}">'
                         f'<div class="mc-mar-title">{med.upper()}</div>'
                         f'<div class="mc-mar-sub">{via} · {freq}</div>'
+                        f'{detalle_inf_html}'
                         f'<div class="mc-mar-detail">{det}</div>'
                         f'<div class="mc-mar-ritmo">{ritmo_inner}</div>'
                         f"{extra_obs}</div>",
