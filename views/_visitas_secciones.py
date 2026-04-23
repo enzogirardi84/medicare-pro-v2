@@ -323,7 +323,6 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
                             "tel": tel_n,
                             "texto": txt,
                         }
-                        st.rerun()
                     queue_toast(f"Visita agendada para el {fecha_ag_str} a las {hora_limpia} hs.")
                     st.rerun()
 
