@@ -38,8 +38,9 @@ def render_notificaciones_turno(pacientes, indicaciones, ahora_local, hoy, proxi
             _fv = parse_fecha_hora(_fv_str)
             if _fv != datetime.min and ahora_local <= _fv <= proximas_48h_limite:
                 _meds_por_vencer.append(ind)
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("dashboard_alert", f"med_vencer_parse_error:{type(_exc).__name__}:{_fv_str}")
     if _meds_por_vencer:
         _notifs.append(("💊", "warning", f"**{len(_meds_por_vencer)} medicación/es** vencen en las próximas 48hs. Revisar prescripciones."))
 
@@ -56,8 +57,9 @@ def render_notificaciones_turno(pacientes, indicaciones, ahora_local, hoy, proxi
             _fe = parse_fecha_hora(e.get("fecha", ""))
             if _fe != datetime.min and (ahora_local - _fe).days > 7:
                 _estudios_crit_sin_res.append(e)
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("dashboard_alert", f"estudio_critico_parse_error:{type(_exc).__name__}:{e.get('fecha','')}")
     if _estudios_crit_sin_res:
         _notifs.append(("🔬", "error", f"**{len(_estudios_crit_sin_res)} estudio(s) crítico(s)** sin resultado en más de 7 días (TAC/RMN/ECG)."))
 
