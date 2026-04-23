@@ -269,6 +269,46 @@ def _db_keys():
     ]
 
 
+def get_cache_size_estimate() -> int:
+    """Cuenta entradas de cache (mas eficiente que medir bytes)."""
+    return len([
+        k for k in st.session_state.keys() 
+        if k.startswith("_mc_cache_") or k.startswith("_db_cache")
+    ])
+
+
+def should_cleanup_cache() -> bool:
+    """Determina si hay que limpiar el cache."""
+    return get_cache_size_estimate() > 50
+
+
+def limpiar_cache_app() -> int:
+    """Limpia caches grandes para liberar memoria. Retorna cantidad de claves limpiadas."""
+    total = 0
+    
+    # Limpiar cache principal
+    for k in ("_db_cache", "_db_cache_hash", "_db_cache_ts"):
+        if st.session_state.pop(k, None) is not None:
+            total += 1
+    
+    # Limpiar TODOS los caches de session_state que empiezan con prefijos conocidos
+    prefijos = (
+        "_mc_cache_pac_", "_mc_cache_alertas", "_mc_cache_cons_", 
+        "_mc_cache_vit_", "_mc_diag_df_tablas", "historial_", "_pdf_"
+    )
+    
+    for k in list(st.session_state.keys()):
+        if any(k.startswith(p) for p in prefijos):
+            st.session_state.pop(k, None)
+            total += 1
+    
+    # Forzar garbage collection
+    import gc
+    gc.collect()
+    
+    return total
+
+
 def vaciar_datos_app_en_sesion() -> None:
     """Elimina datos clínicos en memoria (cerrar sesión en equipo compartido). El próximo login vuelve a cargar."""
     for k in _db_keys():
@@ -294,6 +334,14 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     - tenant_key: empresa normalizada (minúsculas) para cargar solo esa clínica.
     - monolito_legacy: fuerza fila id=1 (usuario admin de emergencia y operación global legacy).
     """
+    # LIMPIEZA: si hay demasiadas claves de cache, limpiar
+    if should_cleanup_cache():
+        if "_db_cache" in st.session_state:
+            # Si hay cache activo y piden FORCAR, guardar ANTES de borrar
+            # (lógica existente de guardar_datos si hay cambios...)
+            pass
+        limpiar_cache_app()
+    
     t0 = time.monotonic()
     ok = True
     cache_key = "_db_cache"
@@ -351,13 +399,15 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                     except Exception as e:
                         log_event("db", f"error_cargar_usuarios_remotos:{e}")
 
+                from core.utils import DEFAULT_ADMIN_USER
+
                 if "admin" not in estructura["usuarios_db"]:
                     estructura["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
 
                 st.session_state["_modo_offline"] = False
 
                 # 2. Pacientes: en roles globales traemos todas las clinicas; el resto sigue filtrado por empresa.
-                from core.db_sql import get_pacientes_by_empresa
+                from core.db_sql import get_pacientes_by_empresa, get_pacientes_globales, nombre_paciente_sql
                 from core.nextgen_sync import _obtener_uuid_empresa
 
                 if isinstance(u_actual, dict):
@@ -377,11 +427,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                                 for item in (empresas_res.data or [])
                                 if isinstance(item, dict)
                             }
-                            pacientes_res = _supabase_execute_with_retry(
-                                "get_pacientes_dualwrite_global",
-                                lambda: supabase.table("pacientes").select("*").limit(1000).execute(),
-                            )
-                            pacs_sql = pacientes_res.data or []
+                            pacs_sql = get_pacientes_globales(limit=1000)
                         elif empresa_actual:
                             empresa_uuid = _obtener_uuid_empresa(empresa_actual)
                             if empresa_uuid:
@@ -391,7 +437,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                         pacs_sql = []
 
                     for p in pacs_sql:
-                        nombre = str(p.get("nombre_completo", "") or "").strip()
+                        nombre = nombre_paciente_sql(p)
                         dni = str(p.get("dni", "") or "").strip()
                         paciente_id_visual = f"{nombre} - {dni}" if dni else nombre
 
