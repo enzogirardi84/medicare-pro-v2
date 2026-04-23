@@ -206,7 +206,7 @@ def render_rrhh(mi_empresa, rol, user):
             horas_totales = 0.0
             for t in grupo["Tiempo Trabajado"]:
                 if isinstance(t, str) and "h" in t:
-                    partes = t.replace("h", "").replace("m", "").split()
+                    partes = [p.strip() for p in t.replace("h", "").replace("m", "").split() if p.strip().isdigit()]
                     if partes:
                         horas_totales += int(partes[0]) + (int(partes[1]) if len(partes) > 1 else 0) / 60.0
             resumen_rows.append({
