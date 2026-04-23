@@ -327,6 +327,42 @@ def vaciar_datos_app_en_sesion() -> None:
         st.session_state.pop(k, None)
 
 
+def get_cache_size_estimate() -> int:
+    """Estima el tamaño de cache en numero de claves relevantes."""
+    keys = 0
+    for k in st.session_state.keys():
+        if k.startswith("_db_cache") or k.startswith("_mc_cache_"):
+            keys += 1
+    return keys
+
+
+def should_cleanup_cache() -> bool:
+    """Determina si hay que limpiar caches grandes basandose en la cantidad de entradas."""
+    return get_cache_size_estimate() > 50
+
+
+def limpiar_cache_app() -> int:
+    """Limpia caches grandes para liberar memoria (L1 y L2). Retorna total limpiadas."""
+    total = 0
+    # Limpiar cache principal
+    for k in ("_db_cache", "_db_cache_hash", "_db_cache_ts"):
+        if st.session_state.pop(k, None) is not None:
+            total += 1
+    # Limpiar caches por prefijo
+    prefixes = ("_mc_cache_pac_", "_mc_cache_alertas_", "_mc_cache_cons_", "_mc_cache_vit_")
+    for key in list(st.session_state.keys()):
+        if any(key.startswith(p) for p in prefixes):
+            st.session_state.pop(key, None)
+            total += 1
+    # Clear any general historial/pdf caches si existen
+    for key in list(st.session_state.keys()):
+        if key.startswith("historial_") or key.startswith("_pdf_"):
+            st.session_state.pop(key, None)
+            total += 1
+    import gc
+    gc.collect()
+    return total
+
 def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     """
     Modo clásico: un único JSON (id=1 / local_data). La app no precarga este JSON al arranque: se llama desde login/recuperación.
