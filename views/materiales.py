@@ -130,9 +130,16 @@ def render_materiales(paciente_sel, mi_empresa, user):
         # ── Alerta uso excesivo en el turno actual ─────────────────────────
         from datetime import datetime as _dt, timedelta as _td
         _hace2h = _dt.now() - _td(hours=2)
+        def _parse_fecha_cons(fecha_str):
+            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M"):
+                try:
+                    return _dt.strptime(str(fecha_str or "").strip(), fmt)
+                except Exception:
+                    continue
+            return _dt.min
         _recientes = [
             c for c in cons_paciente
-            if _dt.strptime(c.get("fecha", "01/01/2000 00:00"), "%d/%m/%Y %H:%M") >= _hace2h
+            if _parse_fecha_cons(c.get("fecha")) >= _hace2h
         ] if cons_paciente else []
         if _recientes:
             _cont_rec = Counter()
