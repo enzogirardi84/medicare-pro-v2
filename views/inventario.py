@@ -177,6 +177,7 @@ def render_inventario(mi_empresa):
             key="inventario_filtro",
         )
         df_filtrado = df_stock.copy()
+        df_filtrado["Stock Actual"] = pd.to_numeric(df_filtrado["Stock Actual"], errors="coerce").fillna(0).astype(int)
         if _busq_inv:
             df_filtrado = df_filtrado[df_filtrado["Insumo"].str.lower().str.contains(_busq_inv, na=False)]
         if _filtro_crit == "Solo críticos (≤10)":
