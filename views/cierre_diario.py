@@ -216,6 +216,8 @@ def render_cierre_diario(mi_empresa, user):
                     "empresa": mi_empresa,
                     "pdf_base64": b64_pdf,
                 })
+                from core.database import _trim_db_list
+                _trim_db_list("reportes_diarios_db", 100)
                 guardar_datos(spinner=True)
                 queue_toast(f"Cierre del dia {fecha_str} guardado exitosamente.")
                 st.rerun()

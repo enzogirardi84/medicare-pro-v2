@@ -418,6 +418,8 @@ def registrar_auditoria_legal(
             empresa=empresa or "", usuario=usuario_ctx, modulo=modulo, criticidad=criticidad,
         )
     )
+    from core.database import _trim_db_list
+    _trim_db_list("auditoria_legal_db", 1000)
 
 
 def asegurar_usuarios_base(solo_normalizar: bool = False):

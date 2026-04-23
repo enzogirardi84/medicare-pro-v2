@@ -211,6 +211,8 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
             "A": accion_log,
         }
     )
+    from core.database import _trim_db_list
+    _trim_db_list("logs_db", 1000)
     log_event("auth", evento_log)
     try:
         guardar_datos(spinner=False)

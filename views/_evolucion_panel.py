@@ -156,6 +156,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
                     "firma_img": b64_firma,
                 })
+                from core.database import _trim_db_list
+                _trim_db_list("firmas_tactiles_db", 200)
                 guardar_datos(spinner=True)
                 queue_toast("Firma guardada correctamente.")
                 st.rerun()
