@@ -64,17 +64,30 @@ def _obtener_uuid_empresa(nombre_empresa: str) -> str:
     return empresa_configurada or None
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
 def _obtener_uuid_paciente(dni: str, empresa_id: str) -> str:
-    """Busca el UUID del paciente en la base de datos SQL. Cached 1h."""
+    """Busca el UUID del paciente en SQL. Maneja su propio cache a prueba de fallos temporales."""
+    cache_key = f"_cache_uuid_paciente_{dni}_{empresa_id}"
+
+    # 1. Revisar cache valido (menos de 1 hora)
+    if cache_key in st.session_state:
+        cached_data = st.session_state[cache_key]
+        if time.monotonic() - cached_data["ts"] < 3600:
+            return cached_data["uuid"]
+
     from core.database import supabase
-    if not supabase: return None
+    if not supabase:
+        return None
+
     try:
         res = supabase.table("pacientes").select("id").eq("dni", dni).eq("empresa_id", empresa_id).limit(1).execute()
         if res.data:
-            return res.data[0]["id"]
-    except Exception:
-        pass
+            resultado = res.data[0]["id"]
+            # 2. Guardar en cache SOLO si la consulta fue exitosa
+            st.session_state[cache_key] = {"uuid": resultado, "ts": time.monotonic()}
+            return resultado
+    except Exception as e:
+        log_event("db_error", f"Fallo al obtener UUID de paciente (no se guardara en cache): {e}")
+
     return None
 
 
