@@ -244,6 +244,8 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
+_user_base = dict(user) if isinstance(user, dict) else {}
+
 # Aplicar tema profesional solo cuando hay sesión activa (optimización de carga de login)
 if not st.session_state.get("_mc_professional_theme_applied"):
     try:
@@ -258,10 +260,10 @@ try:
 except Exception:
     pass
 
-_canon = core_utils.normalizar_usuario_sistema(dict(user))
-_merged = dict(user)
+_canon = core_utils.normalizar_usuario_sistema(dict(_user_base))
+_merged = dict(_user_base)
 for _k in ("rol", "perfil_profesional", "empresa", "nombre", "email", "pin"):
-    if _k in _canon and _canon.get(_k) != user.get(_k):
+    if _k in _canon and _canon.get(_k) != _user_base.get(_k):
         _merged[_k] = _canon[_k]
 _merged.setdefault("nombre", "Usuario sin nombre")
 _merged.setdefault("empresa", "Clinica General")

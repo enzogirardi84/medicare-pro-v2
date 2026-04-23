@@ -11,7 +11,11 @@ import pytz
 import streamlit as st
 
 from core.norm_empresa import norm_empresa_key
-from core.password_crypto import aplicar_hash_tras_login_ok as _aplicar_hash, parece_hash_bcrypt as _parece_hash
+from core.password_crypto import (
+    aplicar_hash_tras_login_ok as _aplicar_hash,
+    parece_hash_bcrypt as _parece_hash,
+    verificar_password as _verificar_password,
+)
 
 
 def password_requiere_migracion(pass_plain) -> bool:
@@ -24,6 +28,66 @@ def actualizar_password_usuario(user_dict: dict, pass_plain: str) -> None:
         _aplicar_hash(user_dict, pass_plain)
     except Exception:
         pass
+
+
+def _password_bytes(password: str) -> bytes:
+    return _password_normalizado(password).encode("utf-8")
+
+
+def _parsear_hash_pbkdf2(valor: str) -> tuple[int, str, str] | None:
+    texto = str(valor or "").strip()
+    if not texto.startswith(f"{PASSWORD_HASH_PREFIX}$"):
+        return None
+    partes = texto.split("$", 3)
+    if len(partes) != 4:
+        return None
+    _, iteraciones_txt, salt, digest = partes
+    try:
+        iteraciones = int(iteraciones_txt)
+    except Exception:
+        return None
+    if iteraciones <= 0 or not salt or not digest:
+        return None
+    return iteraciones, salt, digest
+
+
+def generar_hash_password(password: str, *, salt: str | None = None, iteraciones: int | None = None) -> str:
+    """
+    Compatibilidad legacy para imports viejos/tests.
+
+    Genera un hash PBKDF2-SHA256 autocontenido:
+    `pbkdf2_sha256$iteraciones$salt$hex_digest`
+    """
+    salt_final = str(salt or secrets.token_hex(16)).strip()
+    iter_final = int(iteraciones or PASSWORD_HASH_ITERATIONS)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        _password_bytes(password),
+        salt_final.encode("utf-8"),
+        iter_final,
+    ).hex()
+    return f"{PASSWORD_HASH_PREFIX}${iter_final}${salt_final}${digest}"
+
+
+def validar_password_guardado(almacenado: str, password_ingresado: str) -> bool:
+    """
+    Compatibilidad legacy para imports viejos/tests.
+
+    Acepta:
+    - PBKDF2 legacy generado por `generar_hash_password`
+    - bcrypt / texto plano mediante la verificación actual del sistema
+    """
+    parsed = _parsear_hash_pbkdf2(almacenado)
+    if parsed is not None:
+        iteraciones, salt, digest_guardado = parsed
+        digest_actual = hashlib.pbkdf2_hmac(
+            "sha256",
+            _password_bytes(password_ingresado),
+            salt.encode("utf-8"),
+            iteraciones,
+        ).hex()
+        return hmac.compare_digest(digest_guardado, digest_actual)
+    return _verificar_password(password_ingresado, almacenado)
 
 ARG_TZ = pytz.timezone("America/Argentina/Buenos_Aires")
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"

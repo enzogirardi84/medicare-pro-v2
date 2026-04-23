@@ -61,7 +61,6 @@ def _obtener_uuid_empresa(nombre_empresa: str) -> str:
     except Exception as e:
         log_event("db_error", f"Fallo al obtener UUID de empresa (no se guardará en caché): {e}")
         # Al no guardar en st.session_state, el sistema volverá a intentar en la próxima acción
-
     return empresa_configurada or None
 
 
