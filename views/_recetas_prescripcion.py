@@ -174,9 +174,8 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     velocidad_ml_h=velocidad_ml_h, alternar_con=alternar_con,
                     detalle_infusion=detalle_infusion, plan_hidratacion=plan_hidratacion,
                 )
-                if "indicaciones_db" not in st.session_state or not isinstance(st.session_state["indicaciones_db"], list):
-                    st.session_state["indicaciones_db"] = []
-                st.session_state["indicaciones_db"].append({
+                from core.database import guardar_json_db
+                guardar_json_db("indicaciones_db", {
                     "paciente": paciente_sel, "med": texto_receta,
                     "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"), "dias_duracion": dias,
                     "medico_nombre": medico_nombre.strip(), "medico_matricula": medico_matricula.strip(),
@@ -190,7 +189,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                     "profesional_estado": nombre_usuario, "matricula_estado": medico_matricula.strip(),
                     "origen_registro": "Prescripcion digital", "empresa": mi_empresa,
-                })
+                }, spinner=True)
                 registrar_auditoria_legal(
                     "Medicacion", paciente_sel, "Indicacion medica registrada",
                     medico_nombre.strip() or user.get("nombre", ""), medico_matricula.strip(), texto_receta,
@@ -204,7 +203,6 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "alternar_con": alternar_con, "detalle_infusion": detalle_infusion, "plan_hidratacion": plan_hidratacion,
                 })
                 st.session_state["_rx_sql_invalidar"] = True
-                guardar_datos(spinner=True)
                 queue_toast(f"Prescripcion de {med_final} guardada con firma medica.")
                 st.rerun()
 
@@ -308,9 +306,8 @@ def render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario,
                         "profesional_estado": nombre_usuario, "matricula_estado": user.get("matricula", ""),
                         "origen_registro": "Prescripcion digital de infusion", "empresa": mi_empresa,
                     }
-                    if "indicaciones_db" not in st.session_state or not isinstance(st.session_state["indicaciones_db"], list):
-                        st.session_state["indicaciones_db"] = []
-                    st.session_state["indicaciones_db"].append(reg_inf)
+                    from core.database import guardar_json_db
+                    guardar_json_db("indicaciones_db", reg_inf, spinner=True)
                     registrar_auditoria_legal(
                         "Medicacion", paciente_sel, "Infusion prescripta digitalmente",
                         medico_papel.strip(), matricula_papel.strip(), texto_inf,
@@ -325,7 +322,6 @@ def render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario,
                          "detalle_infusion": detalle_papel.strip()}
                     )
                     st.session_state["_rx_sql_invalidar"] = True
-                    guardar_datos(spinner=True)
                     queue_toast(f"Infusion {solucion_papel} {int(volumen_papel)} ml a {int(velocidad_papel or 0)} ml/h guardada.")
                     st.rerun()
             st.caption("Si tenes la orden en papel, adjuntala abajo para dejar el respaldo legal completo.")
@@ -373,9 +369,8 @@ def render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario,
                     "adjunto_papel_b64": adjunto_b64, "adjunto_papel_nombre": adjunto_nombre,
                     "adjunto_papel_tipo": adjunto_tipo, "empresa": mi_empresa,
                 }
-                if "indicaciones_db" not in st.session_state or not isinstance(st.session_state["indicaciones_db"], list):
-                    st.session_state["indicaciones_db"] = []
-                st.session_state["indicaciones_db"].append(registro)
+                from core.database import guardar_json_db
+                guardar_json_db("indicaciones_db", registro, spinner=True)
                 registrar_auditoria_legal(
                     "Medicacion", paciente_sel, "Indicacion medica en papel cargada",
                     user.get("nombre", ""), user.get("matricula", ""),
@@ -394,6 +389,5 @@ def render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario,
                      "origen": "papel", "detalle_infusion": detalle_papel.strip()}
                 )
                 st.session_state["_rx_sql_invalidar"] = True
-                guardar_datos(spinner=True)
                 queue_toast("La indicacion medica en papel quedo guardada y disponible en el historial.")
                 st.rerun()

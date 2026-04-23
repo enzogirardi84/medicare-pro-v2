@@ -656,6 +656,21 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
             st.code(type(e).__name__, language="text")
 
 
+def guardar_json_db(clave_db: str, payload: dict, *, spinner: bool = True) -> None:
+    """Agrega un registro al array JSON en session_state y persiste.
+
+    Este helper reemplaza el patron repetido en todas las vistas:
+        if "xxx_db" not in st.session_state or not isinstance(..., list):
+            st.session_state["xxx_db"] = []
+        st.session_state["xxx_db"].append(payload)
+        guardar_datos(spinner=True)
+    """
+    if clave_db not in st.session_state or not isinstance(st.session_state[clave_db], list):
+        st.session_state[clave_db] = []
+    st.session_state[clave_db].append(payload)
+    guardar_datos(spinner=spinner)
+
+
 def _guardar_datos_ejecutar():
     t0 = time.monotonic()
     ok = True

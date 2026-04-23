@@ -77,10 +77,8 @@ def registrar_administracion_dosis(
     mat_prof = str(user.get("matricula", "") or "").strip()
     login_ref = str(user.get("usuario_login", user.get("usuario", "")) or "").strip()
 
-    if "administracion_med_db" not in st.session_state or not isinstance(st.session_state["administracion_med_db"], list):
-        st.session_state["administracion_med_db"] = []
-
-    st.session_state["administracion_med_db"].append({
+    from core.database import guardar_json_db
+    guardar_json_db("administracion_med_db", {
         "paciente": paciente_sel,
         "med": nombre_med,
         "fecha": fecha_hoy,
@@ -94,7 +92,7 @@ def registrar_administracion_dosis(
         "registro_iso": ts_evento.isoformat(timespec="seconds"),
         "registro_fecha_hora": ts_evento.strftime("%d/%m/%Y %H:%M:%S"),
         "empresa": mi_empresa,
-    })
+    }, spinner=True)
     detalle_audit = (
         f"{nombre_med} | Programada: {slot} | Hora administración/registro: {hora_str} | Estado: {estado_sel}"
     )
@@ -117,7 +115,6 @@ def registrar_administracion_dosis(
         {"medicamento": nombre_med, "hora_real_administracion": hora_str,
          "firma": nombre_usuario(user), "matricula_profesional": mat_prof, "usuario_login": login_ref},
     )
-    guardar_datos(spinner=True)
     return True
 
 
