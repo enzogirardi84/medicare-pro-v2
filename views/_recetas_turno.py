@@ -130,12 +130,13 @@ def render_administracion_turno(
         '<p style="margin:0 0 0.35rem 0;font-size:0.78rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.95);">Resumen del día</p>',
         unsafe_allow_html=True,
     )
-    realizadas_count = int((plan_dia_df.get("Estado") == "Realizada").sum()) if not plan_dia_df.empty else 0
+    _tiene_estado = not plan_dia_df.empty and "Estado" in plan_dia_df.columns
+    realizadas_count = int((plan_dia_df["Estado"] == "Realizada").sum()) if _tiene_estado else 0
     no_realizadas_count = (
         int(plan_dia_df["Estado"].astype(str).str.contains("No realizada", case=False, na=False).sum())
-        if not plan_dia_df.empty else 0
+        if _tiene_estado else 0
     )
-    pendientes_count = int((plan_dia_df.get("Estado") == "Pendiente").sum()) if not plan_dia_df.empty else 0
+    pendientes_count = int((plan_dia_df["Estado"] == "Pendiente").sum()) if _tiene_estado else 0
     if es_movil:
         c_res1, c_res2 = st.columns(2)
         c_res1.metric("Realizadas", realizadas_count)
