@@ -225,8 +225,9 @@ def _save_critical_error(error_data: Dict[str, Any]):
                 **error_data
             }
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass  # No fallar si no podemos loguear
+    except Exception as _exc:
+        import logging
+        logging.getLogger("medicare").warning(f"Fallo al escribir log_local: {type(_exc).__name__}")
 
 
 # ============================================================

@@ -257,8 +257,8 @@ if not st.session_state.get("_mc_professional_theme_applied"):
 # Drena guardados agrupados por ráfaga sin bloquear formularios.
 try:
     procesar_guardado_pendiente()
-except Exception:
-    pass
+except Exception as _e:
+    log_event("main_rerun", f"procesar_guardado_pendiente_falla:{type(_e).__name__}:{_e}")
 
 _canon = core_utils.normalizar_usuario_sistema(dict(_user_base))
 _merged = dict(_user_base)

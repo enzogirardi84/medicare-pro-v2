@@ -36,8 +36,9 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
     try:
         from core.view_helpers import aplicar_compactacion_movil_por_vista
         aplicar_compactacion_movil_por_vista(tab_name)
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("view_dispatch", f"compactacion_movil_falla:{tab_name}:{type(_exc).__name__}")
     try:
         render_fn = _get_render_fn(tab_name, view_config)
     except Exception as exc:
