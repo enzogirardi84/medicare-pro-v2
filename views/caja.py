@@ -94,8 +94,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
 
     fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
 
-    total_cobrado = sum(f.get("monto", 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
-    total_pendiente = sum(f.get("monto", 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
+    total_cobrado = sum((f.get("monto") or 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
+    total_pendiente = sum((f.get("monto") or 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("Total Cobrado", f"${total_cobrado:,.2f}")
