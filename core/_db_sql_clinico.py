@@ -25,9 +25,19 @@ def _ok() -> bool:
     return supabase is not None
 
 
-@st.cache_data(ttl=90, show_spinner=False)
+def _invalidate_cache_prefix(prefix: str) -> None:
+    """Elimina del session_state todas las claves de cache que empiecen con prefix."""
+    for k in list(st.session_state.keys()):
+        if k.startswith(prefix):
+            st.session_state.pop(k, None)
+
+
 def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-    """Obtiene el historial de evoluciones de un paciente, ordenado por fecha."""
+    """Obtiene el historial de evoluciones de un paciente. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_evol_{paciente_id}_{limit}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -35,7 +45,9 @@ def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[
             "get_evoluciones",
             lambda: supabase.table("evoluciones").select("*, usuarios(nombre, matricula)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).limit(limit).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_evoluciones:{type(e).__name__}")
         return []
@@ -50,16 +62,19 @@ def insert_evolucion(datos_evolucion: Dict[str, Any]) -> Optional[Dict[str, Any]
             "insert_evolucion",
             lambda: supabase.table("evoluciones").insert(datos_evolucion).execute(),
         )
-        get_evoluciones_by_paciente.clear()
+        _invalidate_cache_prefix(f"_sql_clin_evol_{datos_evolucion.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_evolucion:{type(e).__name__}")
         return None
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_indicaciones_activas(paciente_id: str) -> List[Dict[str, Any]]:
-    """Obtiene las indicaciones médicas activas para un paciente."""
+    """Obtiene las indicaciones médicas activas para un paciente. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_ind_{paciente_id}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -67,7 +82,9 @@ def get_indicaciones_activas(paciente_id: str) -> List[Dict[str, Any]]:
             "get_indicaciones",
             lambda: supabase.table("indicaciones").select("*").eq("paciente_id", paciente_id).eq("estado", "Activa").order("fecha_indicacion", desc=True).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_indicaciones:{type(e).__name__}")
         return []
@@ -82,7 +99,7 @@ def insert_indicacion(datos_indicacion: Dict[str, Any]) -> Optional[Dict[str, An
             "insert_indicacion",
             lambda: supabase.table("indicaciones").insert(datos_indicacion).execute(),
         )
-        get_indicaciones_activas.clear()
+        _invalidate_cache_prefix(f"_sql_clin_ind_{datos_indicacion.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_indicacion:{type(e).__name__}")
@@ -98,16 +115,19 @@ def update_estado_indicacion(indicacion_id: str, nuevo_estado: str) -> bool:
             "update_indicacion",
             lambda: supabase.table("indicaciones").update({"estado": nuevo_estado}).eq("id", indicacion_id).execute(),
         )
-        get_indicaciones_activas.clear()
+        _invalidate_cache_prefix("_sql_clin_ind_")
         return True
     except Exception as e:
         log_event("db_sql", f"error_update_indicacion:{type(e).__name__}")
         return False
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_estudios_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
-    """Obtiene los estudios médicos de un paciente."""
+    """Obtiene los estudios médicos de un paciente. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_est_{paciente_id}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -115,7 +135,9 @@ def get_estudios_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
             "get_estudios",
             lambda: supabase.table("estudios").select("*").eq("paciente_id", paciente_id).order("fecha_realizacion", desc=True).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_estudios:{type(e).__name__}")
         return []
@@ -130,7 +152,7 @@ def insert_estudio(datos_estudio: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_estudio",
             lambda: supabase.table("estudios").insert(datos_estudio).execute(),
         )
-        get_estudios_by_paciente.clear()
+        _invalidate_cache_prefix(f"_sql_clin_est_{datos_estudio.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_estudio:{type(e).__name__}")
@@ -146,15 +168,19 @@ def delete_estudio(estudio_id: str) -> bool:
             "delete_estudio",
             lambda: supabase.table("estudios").delete().eq("id", estudio_id).execute(),
         )
-        get_estudios_by_paciente.clear()
+        _invalidate_cache_prefix("_sql_clin_est_")
         return True
     except Exception as e:
         log_event("db_sql", f"error_delete_estudio:{type(e).__name__}")
         return False
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """Obtiene signos vitales de un paciente. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_vit_{paciente_id}_{limit}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -162,7 +188,9 @@ def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]
             "get_vitales",
             lambda: supabase.table("signos_vitales").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).limit(limit).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_vitales:{type(e).__name__}")
         return []
@@ -176,15 +204,19 @@ def insert_signo_vital(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_vitales",
             lambda: supabase.table("signos_vitales").insert(datos).execute(),
         )
-        get_signos_vitales.clear()
+        _invalidate_cache_prefix(f"_sql_clin_vit_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_vitales:{type(e).__name__}")
         return None
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
+    """Obtiene cuidados de enfermería. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_cuid_{paciente_id}_{fecha_inicio}_{fecha_fin}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -192,7 +224,9 @@ def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str)
             "get_cuidados",
             lambda: supabase.table("cuidados_enfermeria").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).order("fecha_registro", desc=False).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_cuidados:{type(e).__name__}")
         return []
@@ -206,15 +240,19 @@ def insert_cuidado_enfermeria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]
             "insert_cuidado",
             lambda: supabase.table("cuidados_enfermeria").insert(datos).execute(),
         )
-        get_cuidados_enfermeria.clear()
+        _invalidate_cache_prefix(f"_sql_clin_cuid_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_cuidado:{type(e).__name__}")
         return None
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
+    """Obtiene consentimientos de un paciente. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_cons_{paciente_id}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -222,7 +260,9 @@ def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
             "get_consentimientos",
             lambda: supabase.table("consentimientos").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_firma", desc=True).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_consentimientos:{type(e).__name__}")
         return []
@@ -236,15 +276,19 @@ def insert_consentimiento(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_consentimiento",
             lambda: supabase.table("consentimientos").insert(datos).execute(),
         )
-        get_consentimientos_by_paciente.clear()
+        _invalidate_cache_prefix(f"_sql_clin_cons_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_consentimiento:{type(e).__name__}")
         return None
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
+    """Obtiene registros pediátricos. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_ped_{paciente_id}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -252,7 +296,9 @@ def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
             "get_pediatria",
             lambda: supabase.table("pediatria").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_pediatria:{type(e).__name__}")
         return []
@@ -266,15 +312,19 @@ def insert_pediatria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_pediatria",
             lambda: supabase.table("pediatria").insert(datos).execute(),
         )
-        get_pediatria_by_paciente.clear()
+        _invalidate_cache_prefix(f"_sql_clin_ped_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_pediatria:{type(e).__name__}")
         return None
 
 
-@st.cache_data(ttl=90, show_spinner=False)
 def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
+    """Obtiene escalas clínicas. Cache manual a prueba de fallos."""
+    cache_key = f"_sql_clin_esc_{paciente_id}"
+    cached = st.session_state.get(cache_key)
+    if cached and time.monotonic() - cached["ts"] < 90:
+        return cached["data"]
     if not _ok():
         return []
     try:
@@ -282,7 +332,9 @@ def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
             "get_escalas",
             lambda: supabase.table("escalas_clinicas").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
         )
-        return response.data if response and response.data else []
+        data = response.data if response and response.data else []
+        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        return data
     except Exception as e:
         log_event("db_sql", f"error_get_escalas:{type(e).__name__}")
         return []
@@ -296,7 +348,7 @@ def insert_escala(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             "insert_escala",
             lambda: supabase.table("escalas_clinicas").insert(datos).execute(),
         )
-        get_escalas_by_paciente.clear()
+        _invalidate_cache_prefix(f"_sql_clin_esc_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_escala:{type(e).__name__}")
