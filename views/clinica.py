@@ -209,9 +209,12 @@ def render_clinica(paciente_sel, user=None):
         if len(vits_ordenados) >= 2:
             try:
                 penultimo = vits_ordenados[-2]
-                delta_fc = int(ultimo.get("FC", 0)) - int(penultimo.get("FC", 0))
                 try:
-                    delta_sat = float(ultimo.get("Sat", 0)) - float(penultimo.get("Sat", 0))
+                    delta_fc = int(ultimo.get("FC") or 0) - int(penultimo.get("FC") or 0)
+                except Exception:
+                    delta_fc = 0
+                try:
+                    delta_sat = float(ultimo.get("Sat") or 0) - float(penultimo.get("Sat") or 0)
                     _sat_txt = f" | SatO2 {'\u2191' if delta_sat > 0 else '\u2193' if delta_sat < 0 else '\u2192'}{abs(delta_sat):.0f}%"
                 except Exception:
                     _sat_txt = ""

@@ -69,11 +69,15 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             paciente_visual = p
                             break
                             
+                    try:
+                        _monto = float(f.get("monto_total") or 0)
+                    except Exception:
+                        _monto = 0.0
                     fact_empresa.append({
                         "paciente": paciente_visual,
                         "serv": f.get("concepto", ""),
-                        "monto": float(f.get("monto_total", 0)),
-                        "metodo": f.get("observaciones", ""), # El método lo guardamos en observaciones temporalmente
+                        "monto": _monto,
+                        "metodo": f.get("observaciones", ""),
                         "estado": f.get("estado", ""),
                         "fecha": dt.strftime("%d/%m/%Y %H:%M") if pd.notnull(dt) else "",
                         "empresa": mi_empresa,
