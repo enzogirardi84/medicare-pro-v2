@@ -354,9 +354,14 @@ def collect_sql_sections(session_state, paciente_sel, ctx):
 # ---------------------------------------------------------------------------
 
 def collect_patient_sections(session_state, paciente_sel):
+    """
+    Wrapper compatible con tests viejos que monkeypatchean helpers en `core.clinical_exports`.
+    """
     _ck_secs = f"_ce_secs_{paciente_sel}"
     _secs_cached = session_state.get(_ck_secs)
     local_ts = session_state.get("_ultimo_guardado_ts", 0)
+
+    # CORRECCIÓN: Se eliminaron los espacios en "local_ts" y "ts"
     if (
         _secs_cached is not None
         and isinstance(_secs_cached, dict)

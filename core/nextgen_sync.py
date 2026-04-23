@@ -1,4 +1,5 @@
 import hashlib
+import time
 import uuid
 from typing import Any, Dict, Optional
 import jwt
@@ -6,6 +7,7 @@ import streamlit as st
 
 from core.api_client import post_api
 from core.app_logging import log_event
+from core.empresa_config import empresa_uuid_configurada
 from core.feature_flags import ENABLE_NEXTGEN_API_DUAL_WRITE
 from core.db_sql import upsert_paciente, insert_evolucion, insert_indicacion, insert_administracion
 
@@ -32,18 +34,35 @@ def _generate_nextgen_token(empresa: str) -> str:
     return jwt.encode(payload, secret, algorithm="HS256")
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
 def _obtener_uuid_empresa(nombre_empresa: str) -> str:
-    """Busca el UUID de la empresa en la base de datos SQL. Cached 1h."""
+    """Busca el UUID de la empresa en SQL. Maneja su propio caché a prueba de fallos temporales."""
+    cache_key = f"_cache_uuid_empresa_{nombre_empresa}"
+
+    # 1. Revisar si tenemos un caché válido (menos de 1 hora = 3600s)
+    if cache_key in st.session_state:
+        cached_data = st.session_state[cache_key]
+        if time.monotonic() - cached_data["ts"] < 3600:
+            return cached_data["uuid"]
+
     from core.database import supabase
-    if not supabase: return None
+
+    empresa_configurada = empresa_uuid_configurada(nombre_empresa)
+
+    if not supabase:
+        return empresa_configurada or None
+
     try:
         res = supabase.table("empresas").select("id").eq("nombre", nombre_empresa).limit(1).execute()
         if res.data:
-            return res.data[0]["id"]
-    except Exception:
-        pass
-    return None
+            resultado = res.data[0]["id"]
+            # 2. Guardar en caché SOLO si la consulta a la BD fue exitosa
+            st.session_state[cache_key] = {"uuid": resultado, "ts": time.monotonic()}
+            return resultado
+    except Exception as e:
+        log_event("db_error", f"Fallo al obtener UUID de empresa (no se guardará en caché): {e}")
+        # Al no guardar en st.session_state, el sistema volverá a intentar en la próxima acción
+
+    return empresa_configurada or None
 
 
 @st.cache_data(ttl=3600, show_spinner=False)

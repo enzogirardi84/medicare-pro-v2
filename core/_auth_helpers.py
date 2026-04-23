@@ -98,13 +98,19 @@ def _auth_strip_pwreset_url_si_hay_param() -> bool:
 
 
 def _auth_strip_pwreset_query_param() -> None:
-    qp = getattr(st, "query_params", None)
-    if qp is None:
-        return
+    # Soporte moderno para st.query_params
     try:
-        qp.pop("pwreset", None)
+        if "pwreset" in st.query_params:
+            del st.query_params["pwreset"]
     except Exception:
-        pass
+        # Fallback: API antigua (versiones muy viejas de Streamlit)
+        qp = getattr(st, "query_params", None)
+        if qp is None:
+            return
+        try:
+            qp.pop("pwreset", None)
+        except Exception:
+            pass
 
 
 def _auth_strip_modulo_query_param() -> None:
