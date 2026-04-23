@@ -391,7 +391,12 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             st.caption("Expandí para ver barras de estado, acciones rápidas, semana y tablas sin alargar toda la página.")
             st.markdown("#### Agenda inteligente")
             df_agenda = pd.DataFrame(agenda_paciente)
-            df_agenda["Fecha y Hora"] = df_agenda["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y %H:%M") if x.year > 1900 else "Sin fecha")
+            def _fmt_fecha_agenda(x):
+                try:
+                    return x.strftime("%d/%m/%Y %H:%M") if hasattr(x, "year") and x.year > 1900 else "Sin fecha"
+                except Exception:
+                    return "Sin fecha"
+            df_agenda["Fecha y Hora"] = df_agenda["_fecha_dt"].apply(_fmt_fecha_agenda)
             df_agenda["Profesional"] = df_agenda["profesional"].fillna("Sin profesional")
             df_agenda["Estado"] = df_agenda["estado_calc"]
             busqueda_ag = st.text_input("🔍 Buscar turno", placeholder="Profesional, estado o fecha...", key=f"agenda_busq_{paciente_sel}").strip().lower()
@@ -430,8 +435,13 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             accion = c_a2.selectbox("Accion", ["Marcar realizada", "Cancelar"], key=f"agenda_accion_tipo_{paciente_sel}")
             if st.button("Aplicar cambio de agenda", use_container_width=True, key=f"agenda_apply_{paciente_sel}"):
                 if seleccion != "Sin cambios":
+                    def _fmt_sel(dt):
+                        try:
+                            return dt.strftime("%d/%m/%Y %H:%M") if hasattr(dt, "year") and dt.year > 1900 else "Sin fecha"
+                        except Exception:
+                            return "Sin fecha"
                     objetivo = next(
-                        (x for x in agenda_paciente if f"{x['_fecha_dt'].strftime('%d/%m/%Y %H:%M') if x['_fecha_dt'].year > 1900 else 'Sin fecha'} | {x.get('profesional', 'Sin profesional')} | {x['estado_calc']}" == seleccion),
+                        (x for x in agenda_paciente if f"{_fmt_sel(x.get('_fecha_dt'))} | {x.get('profesional', 'Sin profesional')} | {x.get('estado_calc', '')}" == seleccion),
                         None,
                     )
                     if objetivo:
@@ -479,9 +489,24 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
                 )
             if agenda_semana:
                 df_semana = pd.DataFrame(agenda_semana)
-                df_semana["Dia"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%A") if x != datetime.min else "Sin fecha")
-                df_semana["Fecha"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%d/%m/%Y") if x != datetime.min else "Sin fecha")
-                df_semana["Hora"] = df_semana["_fecha_dt"].apply(lambda x: x.strftime("%H:%M") if x != datetime.min else "--:--")
+                def _fmt_dia(x):
+                    try:
+                        return x.strftime("%A") if hasattr(x, "strftime") and x != datetime.min else "Sin fecha"
+                    except Exception:
+                        return "Sin fecha"
+                def _fmt_fecha(x):
+                    try:
+                        return x.strftime("%d/%m/%Y") if hasattr(x, "strftime") and x != datetime.min else "Sin fecha"
+                    except Exception:
+                        return "Sin fecha"
+                def _fmt_hora(x):
+                    try:
+                        return x.strftime("%H:%M") if hasattr(x, "strftime") and x != datetime.min else "--:--"
+                    except Exception:
+                        return "--:--"
+                df_semana["Dia"] = df_semana["_fecha_dt"].apply(_fmt_dia)
+                df_semana["Fecha"] = df_semana["_fecha_dt"].apply(_fmt_fecha)
+                df_semana["Hora"] = df_semana["_fecha_dt"].apply(_fmt_hora)
                 df_semana["Profesional"] = df_semana["profesional"].fillna("Sin profesional")
                 df_semana["Zona"] = df_semana.get("zona", pd.Series(["Zona sin definir"] * len(df_semana))).fillna("Zona sin definir")
                 df_semana["Estado"] = df_semana["estado_calc"]
