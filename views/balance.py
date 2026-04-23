@@ -102,9 +102,9 @@ def render_balance(paciente_sel, user):
     hoy_str = ahora().strftime("%d/%m/%Y")
     blp_hoy = [x for x in blp if str(x.get("fecha", "")).startswith(hoy_str)]
     if blp_hoy:
-        ing_hoy = sum(x.get("ingresos", 0) for x in blp_hoy)
-        egr_hoy = sum(x.get("egresos", 0) for x in blp_hoy)
-        bal_hoy = sum(x.get("balance", 0) for x in blp_hoy)
+        ing_hoy = sum((x.get("ingresos") or 0) for x in blp_hoy)
+        egr_hoy = sum((x.get("egresos") or 0) for x in blp_hoy)
+        bal_hoy = sum((x.get("balance") or 0) for x in blp_hoy)
         st.markdown(f"##### Resumen del día — {hoy_str}")
         _d1, _d2, _d3, _d4 = st.columns(4)
         _d1.metric("Turnos hoy", len(blp_hoy))
