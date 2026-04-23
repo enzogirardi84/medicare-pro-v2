@@ -146,7 +146,7 @@ def render_inventario(mi_empresa):
                     
                 for i in st.session_state["inventario_db"]:
                     if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
-                        i["stock"] = i.get("stock", 0) + cantidad
+                        i["stock"] = int(i.get("stock") or 0) + cantidad
                         encontrado = True
                         break
 

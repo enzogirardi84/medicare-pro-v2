@@ -10,7 +10,7 @@ from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_r
 def _restaurar_stock(mi_empresa, insumo, cantidad):
     for item in st.session_state.get("inventario_db", []):
         if item.get("item") == insumo and item.get("empresa") == mi_empresa:
-            item["stock"] = item.get("stock", 0) + cantidad
+            item["stock"] = int(item.get("stock") or 0) + cantidad
             return
     if insumo and cantidad > 0:
         st.session_state.setdefault("inventario_db", []).append(
