@@ -41,6 +41,8 @@ def _registrar_cambio_clinica(user, accion: str, nombre_clinica: str, key_norm: 
             "A": f"Clinica: {accion}",
         }
     )
+    from core.database import _trim_db_list
+    _trim_db_list("logs_db", 1000)
 
 
 def _historial_eventos_clinicas(session_state, limite: int = 30):

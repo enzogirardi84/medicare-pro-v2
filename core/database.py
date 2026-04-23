@@ -656,7 +656,14 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
             st.code(type(e).__name__, language="text")
 
 
-def guardar_json_db(clave_db: str, payload: dict, *, spinner: bool = True) -> None:
+def _trim_db_list(clave_db: str, max_items: int) -> None:
+    """Recorta una lista JSON en session_state a max_items (mantiene los mas recientes)."""
+    lst = st.session_state.get(clave_db)
+    if isinstance(lst, list) and len(lst) > max_items:
+        st.session_state[clave_db] = lst[-max_items:]
+
+
+def guardar_json_db(clave_db: str, payload: dict, *, spinner: bool = True, max_items: int = 500) -> None:
     """Agrega un registro al array JSON en session_state y persiste.
 
     Este helper reemplaza el patron repetido en todas las vistas:
@@ -664,10 +671,15 @@ def guardar_json_db(clave_db: str, payload: dict, *, spinner: bool = True) -> No
             st.session_state["xxx_db"] = []
         st.session_state["xxx_db"].append(payload)
         guardar_datos(spinner=True)
+
+    Args:
+        max_items: Limite maximo de elementos en la lista (recorta los mas antiguos).
+                   Usar 500 para datos clinicos, 1000 para operativos.
     """
     if clave_db not in st.session_state or not isinstance(st.session_state[clave_db], list):
         st.session_state[clave_db] = []
     st.session_state[clave_db].append(payload)
+    _trim_db_list(clave_db, max_items)
     guardar_datos(spinner=spinner)
 
 

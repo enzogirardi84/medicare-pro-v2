@@ -242,6 +242,8 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
                 if "emergencias_db" not in st.session_state:
                     st.session_state["emergencias_db"] = []
                 st.session_state["emergencias_db"].append(nuevo)
+                from core.database import _trim_db_list
+                _trim_db_list("emergencias_db", 500)
 
                 registrar_auditoria_legal(
                     "Emergencia",

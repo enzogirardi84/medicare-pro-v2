@@ -235,6 +235,8 @@ def render_pediatria(paciente_sel, user):
                 "firma": user.get("nombre", "Sistema"),
                 "tipo_control": "adulto" if es_adulto else "pediatrico",
             })
+            from core.database import _trim_db_list
+            _trim_db_list("pediatria_db", 500)
             guardar_datos(spinner=True)
             queue_toast("Guardado correctamente.")
             st.rerun()

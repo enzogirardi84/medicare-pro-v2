@@ -104,6 +104,8 @@ def render_estudios(paciente_sel, user, rol=None):
                     "extension": ext,
                     "firma": user.get("nombre", "Sistema"),
                 })
+                from core.database import _trim_db_list
+                _trim_db_list("estudios_db", 200)
                 
                 # --- NUEVO CÓDIGO SQL Y STORAGE ---
                 from core.database import supabase

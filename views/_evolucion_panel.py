@@ -255,6 +255,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         "firma": user.get("nombre", "Sistema"),
                         "plantilla": plantilla,
                     })
+                    from core.database import _trim_db_list
+                    _trim_db_list("evoluciones_db", 500)
 
                     raw_foto = None
                     if archivo_foto is not None:
@@ -274,6 +276,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             "base64_foto": base64_foto,
                             "firma": user.get("nombre", "Sistema"),
                         })
+                        _trim_db_list("fotos_heridas_db", 100)
 
                     registrar_auditoria_legal(
                         "Evolucion Clinica",

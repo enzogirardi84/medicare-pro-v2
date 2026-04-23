@@ -328,6 +328,8 @@ def render_clinica(paciente_sel, user=None):
                     registro["registrado_por"] = user.get("nombre", "")
                 st.session_state.setdefault("vitales_db", [])
                 st.session_state["vitales_db"].append(registro)
+                from core.database import _trim_db_list
+                _trim_db_list("vitales_db", 1000)
                 guardar_datos(spinner=True)
                 st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
                 st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)

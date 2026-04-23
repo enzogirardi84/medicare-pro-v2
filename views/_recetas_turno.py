@@ -388,6 +388,8 @@ def render_administracion_turno(
                         "motivo_estado": f"Reemplaza indicacion previa. Motivo: {motivo_cambio.strip()}".strip(),
                         "origen_registro": "Prescripcion digital", "empresa": r.get("empresa", mi_empresa),
                     })
+                    from core.database import _trim_db_list
+                    _trim_db_list("indicaciones_db", 500)
                     registrar_auditoria_legal("Medicacion", paciente_sel, "Indicacion modificada",
                         user.get("nombre", ""), user.get("matricula", ""),
                         f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta.strip()} | Motivo: {motivo_cambio.strip()}")

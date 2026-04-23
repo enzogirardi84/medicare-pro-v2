@@ -92,6 +92,8 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
                         "empresa": mi_empresa,
                         "gps": f"{lat_str},{lon_str}"
                     })
+                    from core.database import _trim_db_list
+                    _trim_db_list("checkin_db", 1000)
                     guardar_datos(spinner=True)
                     queue_toast("Llegada registrada.")
                     st.rerun()
@@ -136,6 +138,8 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
                         "empresa": mi_empresa,
                         "gps": f"{lat_str},{lon_str}"
                     })
+                    from core.database import _trim_db_list
+                    _trim_db_list("checkin_db", 1000)
                     guardar_datos(spinner=True)
                     queue_toast("Salida registrada.")
                     st.rerun()
@@ -277,6 +281,8 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
                         "creado_por": user.get("nombre", ""),
                         "creado_en": ahora().strftime("%d/%m/%Y %H:%M:%S"),
                     })
+                    from core.database import _trim_db_list
+                    _trim_db_list("agenda_db", 500)
                     try:
                         from core.db_sql import insert_turno
                         from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente

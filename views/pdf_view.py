@@ -236,6 +236,8 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                                 "matricula_profesional": user.get("matricula", ""),
                             }
                         )
+                        from core.database import _trim_db_list
+                        _trim_db_list("consentimientos_db", 200)
                         registrar_auditoria_legal(
                             "Consentimiento",
                             paciente_sel,

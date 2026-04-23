@@ -217,6 +217,8 @@ def render_escalas_clinicas(paciente_sel, user):
             if "escalas_clinicas_db" not in st.session_state:
                 st.session_state["escalas_clinicas_db"] = []
             st.session_state["escalas_clinicas_db"].append(nuevo)
+            from core.database import _trim_db_list
+            _trim_db_list("escalas_clinicas_db", 500)
             
             registrar_auditoria_legal(
                 "Escala Clinica",

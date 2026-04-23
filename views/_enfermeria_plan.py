@@ -260,6 +260,8 @@ def _render_plan_cuidados_enfermeria_legacy(
                     if "cuidados_enfermeria_db" not in st.session_state:
                         st.session_state["cuidados_enfermeria_db"] = []
                     st.session_state["cuidados_enfermeria_db"].append(nuevo)
+                    from core.database import _trim_db_list
+                    _trim_db_list("cuidados_enfermeria_db", 500)
 
                     registrar_auditoria_legal(
                         "Enfermeria",
