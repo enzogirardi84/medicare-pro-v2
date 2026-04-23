@@ -134,8 +134,9 @@ def semaforo_vital_sidebar(v):
             return "🟡"
         if any(e == "normal" for e in estados):
             return "🟢"
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("sidebar_vital_error", f"semaforo_fallo:{type(_exc).__name__}")
     return "⚪"
 
 
