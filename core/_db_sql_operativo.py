@@ -49,8 +49,10 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
     """Obtiene auditoría de empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_aud_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 60:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 60:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -70,8 +72,10 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
     """Obtiene los turnos de una empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_turn_{empresa_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 60:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 60:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -123,8 +127,10 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
     """Obtiene registros MAR. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_adm_{paciente_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 30:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 30:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -160,8 +166,10 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
     """Obtiene emergencias de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_emerg_p_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -181,8 +189,10 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
     """Obtiene emergencias de empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_emerg_e_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 60:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 60:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -237,8 +247,10 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     """Obtiene inventario de empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_inv_{empresa_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 120:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 120:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -273,8 +285,10 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     """Obtiene facturación de empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_fact_{empresa_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 120:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 120:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -309,8 +323,10 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     """Obtiene balance de empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_bal_{empresa_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 120:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 120:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -345,8 +361,10 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
     """Obtiene checkins de empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_op_chk_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 30:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 30:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:

@@ -36,8 +36,10 @@ def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[
     """Obtiene el historial de evoluciones de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_evol_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -73,8 +75,10 @@ def get_indicaciones_activas(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene las indicaciones médicas activas para un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_ind_{paciente_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -126,8 +130,10 @@ def get_estudios_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene los estudios médicos de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_est_{paciente_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -179,8 +185,10 @@ def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]
     """Obtiene signos vitales de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_vit_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -215,8 +223,10 @@ def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str)
     """Obtiene cuidados de enfermería. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_cuid_{paciente_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -251,8 +261,10 @@ def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene consentimientos de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_cons_{paciente_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -287,8 +299,10 @@ def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene registros pediátricos. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_ped_{paciente_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:
@@ -323,8 +337,10 @@ def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene escalas clínicas. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_esc_{paciente_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 90:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 90:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not _ok():
         return []
     try:

@@ -82,8 +82,10 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
     """Obtiene pacientes. Cache manual a prueba de fallos."""
     cache_key = f"_sql_pac_list_{empresa_id}_{hash(busqueda)}_{int(incluir_altas)}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 30:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 30:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return []
     attempts = (
@@ -114,8 +116,10 @@ def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
     """Lista global para administradores. Cache manual a prueba de fallos."""
     cache_key = f"_sql_pac_global_{limit}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 60:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 60:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return []
     limit = max(1, min(int(limit or 1000), 2000))
@@ -148,8 +152,10 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
     """Obtiene detalles completos de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_pac_id_{paciente_id}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 120:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 120:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return None
     try:
@@ -170,8 +176,10 @@ def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
     empresa_fallback = empresa_record_configurado(nombre_empresa)
     cache_key = f"_sql_pac_emp_n_{nombre_empresa}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 3600:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 3600:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return empresa_fallback
     try:
@@ -191,8 +199,10 @@ def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str,
     """Busca un paciente por DNI dentro de una empresa. Cache manual a prueba de fallos."""
     cache_key = f"_sql_pac_dni_{empresa_id}_{dni}"
     cached = st.session_state.get(cache_key)
-    if cached and time.monotonic() - cached["ts"] < 120:
-        return cached["data"]
+    if cached:
+        if time.monotonic() - cached["ts"] < 120:
+            return cached["data"]
+        st.session_state.pop(cache_key, None)
     if not check_supabase_connection() or not empresa_id or not dni:
         return None
     try:
