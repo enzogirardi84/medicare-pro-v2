@@ -4864,7 +4864,7 @@ html body .mc-loader-cristal-spinner {
         visibility: visible !important;
         pointer-events: auto !important;
         overflow: hidden !important;
-        z-index: 1002 !important;
+        z-index: 1000000 !important;
         background: var(--bg-sidebar, #090e1a) !important;
         border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
         box-shadow: 12px 0 32px rgba(2, 6, 18, 0.28) !important;
@@ -4942,7 +4942,7 @@ html body .mc-loader-cristal-spinner {
     }
 
     .block-container {
-        max-width: none !important;
+        max-width: 1500px !important;
         padding-left: 1.5rem !important;
         padding-right: 1.5rem !important;
     }
