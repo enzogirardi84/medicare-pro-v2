@@ -198,7 +198,25 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
 
     function contentReady() {{
       var mainContent = getMainContent();
-      return !!(mainContent && mainContent.children && mainContent.children.length > 0);
+      return !!(mainContent && mainContent.querySelector && mainContent.querySelector('*'));
+    }}
+
+    function disableDesktopSidebarArtifacts() {{
+      if (!parentWin.matchMedia || !parentWin.matchMedia('(min-width: 768px)').matches) return;
+      var appView = doc.querySelector('[data-testid="stAppViewContainer"]');
+      if (!appView) return;
+
+      Array.prototype.forEach.call(appView.children || [], function(node) {{
+        if (!node || !node.matches) return;
+        if (node.matches('section[data-testid="stSidebar"], section[data-testid="stMain"]')) return;
+        node.setAttribute('data-mc-desktop-sidebar-artifact', 'true');
+      }});
+
+      Array.prototype.forEach.call(appView.querySelectorAll('[role="separator"]'), function(node) {{
+        if (!node || !node.closest) return;
+        if (node.closest('section[data-testid="stMain"]')) return;
+        node.setAttribute('data-mc-desktop-sidebar-artifact', 'true');
+      }});
     }}
 
     function ensureOverlay() {{
@@ -226,10 +244,23 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
       }}, 450);
     }}
 
+    function refreshDesktopUiGuards() {{
+      disableDesktopSidebarArtifacts();
+
+      if (!contentReady()) return false;
+
+      if (parentWin.__mcLoadingOverlayTimer) {{
+        parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
+        parentWin.__mcLoadingOverlayTimer = null;
+      }}
+
+      removeOverlay();
+      return true;
+    }}
+
     ensureOverlay();
 
-    if (contentReady()) {{
-      removeOverlay();
+    if (refreshDesktopUiGuards()) {{
       return;
     }}
 
@@ -247,16 +278,11 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
 
     if (parentWin.MutationObserver && doc.body) {{
       var observer = new parentWin.MutationObserver(function() {{
-        if (contentReady()) {{
-          if (parentWin.__mcLoadingOverlayTimer) {{
-            parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
-            parentWin.__mcLoadingOverlayTimer = null;
-          }}
+        if (refreshDesktopUiGuards()) {{
           try {{
             observer.disconnect();
           }} catch (e) {{}}
           parentWin.__mcLoadingOverlayObserver = null;
-          removeOverlay();
         }}
       }});
       observer.observe(doc.body, {{ childList: true, subtree: true }});
@@ -264,12 +290,7 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
     }}
 
     function waitForContent() {{
-      if (contentReady()) {{
-        if (parentWin.__mcLoadingOverlayTimer) {{
-          parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
-          parentWin.__mcLoadingOverlayTimer = null;
-        }}
-        removeOverlay();
+      if (refreshDesktopUiGuards()) {{
         return;
       }}
       if (parentWin.requestAnimationFrame) {{
@@ -280,12 +301,12 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
     waitForContent();
 
     if (!parentWin.__mcLoadingOverlayRenderHookInstalled) {{
-      doc.addEventListener('streamlit:render', removeOverlay);
+      doc.addEventListener('streamlit:render', refreshDesktopUiGuards);
       parentWin.__mcLoadingOverlayRenderHookInstalled = true;
     }}
 
     if (!parentWin.__mcLoadingOverlayLoadHookInstalled) {{
-      parentWin.addEventListener('load', removeOverlay);
+      parentWin.addEventListener('load', refreshDesktopUiGuards);
       parentWin.__mcLoadingOverlayLoadHookInstalled = true;
     }}
 
