@@ -71,17 +71,21 @@ def user_agent_desde_contexto() -> str:
         cached = st.session_state.get(_ck)
         if cached is not None:
             return str(cached)
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("ui_liviano", f"ua_cache_read_fallo:{type(_exc).__name__}")
     try:
         h = _ctx_headers()
         result = _get_header(h, "user-agent") if h else ""
-    except Exception:
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("ui_liviano", f"ua_header_fallo:{type(_exc).__name__}")
         result = ""
     try:
         st.session_state[_ck] = result
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("ui_liviano", f"ua_cache_write_fallo:{type(_exc).__name__}")
     return result
 
 
@@ -91,8 +95,9 @@ def headers_sugieren_equipo_liviano() -> bool:
         cached = st.session_state.get(_ck)
         if cached is not None:
             return bool(cached)
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("ui_liviano", f"liviano_cache_read_fallo:{type(_exc).__name__}")
     result = False
     try:
         headers = _ctx_headers()
@@ -103,12 +108,15 @@ def headers_sugieren_equipo_liviano() -> bool:
             else:
                 ua = _get_header(headers, "user-agent")
                 result = user_agent_sugiere_equipo_liviano(ua)
-    except Exception:
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("ui_liviano", f"liviano_header_fallo:{type(_exc).__name__}")
         result = False
     try:
         st.session_state[_ck] = result
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("ui_liviano", f"liviano_cache_write_fallo:{type(_exc).__name__}")
     return result
 
 
