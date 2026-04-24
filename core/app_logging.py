@@ -22,8 +22,10 @@ class MemoryLogHandler(logging.Handler):
                 "name": record.name,
             }
             _log_buffer.append(entry)
-        except Exception:
-            pass  # No fallar por logging
+        except Exception as _exc:
+            # Silencioso por diseño: el logging no debe fallar la app
+            import logging as _logging
+            _logging.getLogger("app_logging").debug(f"fallo_emit:{type(_exc).__name__}")
 
 
 def _setup_memory_handler() -> None:

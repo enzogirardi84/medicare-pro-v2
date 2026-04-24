@@ -101,8 +101,9 @@ class TieredCacheManager:
             if hasattr(obj, "memory_usage"):
                 try:
                     return int(obj.memory_usage(index=True, deep=True).sum())
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    import logging
+                    logging.getLogger("cache_manager").debug(f"fallo_memory_usage:{type(_exc).__name__}")
             return sys.getsizeof(obj)
         except Exception:
             return 0

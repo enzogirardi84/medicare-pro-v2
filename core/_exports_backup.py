@@ -16,6 +16,7 @@ from core._exports_pdf_base import (
     write_multiline_text,
     write_pairs,
 )
+from core.app_logging import log_event
 
 
 def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
@@ -31,8 +32,8 @@ def build_backup_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=
     pdf = RespaldoClinicoPDF(empresa, pie_paciente)
     try:
         pdf.alias_nb_pages()
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("exports_backup", f"fallo_alias_nb_pages:{type(_exc).__name__}")
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.set_left_margin(14)
     pdf.set_right_margin(14)

@@ -73,8 +73,9 @@ def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay
         from core.feature_flags import SUPABASE_RETRY_ATTEMPTS, SUPABASE_RETRY_BASE_DELAY_SEGUNDOS
         attempts = int(SUPABASE_RETRY_ATTEMPTS or attempts)
         base_delay = float(SUPABASE_RETRY_BASE_DELAY_SEGUNDOS or base_delay)
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("database.supabase").debug(f"fallo_cargar_feature_flags:{type(_exc).__name__}")
     last_error = None
     tries = max(1, int(attempts or 1))
     for intento in range(1, tries + 1):
