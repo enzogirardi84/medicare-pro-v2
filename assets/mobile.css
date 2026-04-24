@@ -376,7 +376,24 @@
         padding-top: 0 !important;
     }
 
-    /* ---- 15. Iframes (componentes embebidos) ---- */
+    /* ---- 15. Pills de navegación (st.pills) ---- */
+    [data-testid="stPills"] {
+        flex-wrap: wrap !important;
+        gap: 0.3rem !important;
+    }
+    [data-testid="stPills"] [role="button"],
+    [data-testid="stPills"] button {
+        font-size: 0.8rem !important;
+        padding: 0.35rem 0.6rem !important;
+        min-height: 34px !important;
+        max-width: 100% !important;
+        white-space: normal !important;
+        line-height: 1.2 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* ---- 16. Iframes (componentes embebidos) ---- */
     iframe {
         max-width: 100% !important;
     }
