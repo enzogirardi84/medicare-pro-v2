@@ -118,8 +118,9 @@ try:
     _css_path = Path(__file__).parent / "assets" / "style.css"
     _css_mtime = _css_path.stat().st_mtime if _css_path.exists() else 0.0
     st.markdown(f"<style>{cargar_texto_asset('style.css', _mtime=_css_mtime)}</style>", unsafe_allow_html=True)
-except Exception:
-    pass
+except Exception as _exc:
+    from core.app_logging import log_event
+    log_event("main_css_load", f"fallo_carga_css:{type(_exc).__name__}:{_exc}")
 
 st.markdown(
     """<style>
@@ -151,8 +152,9 @@ try:
             f"<style>{cargar_texto_asset('mobile.css', _mtime=_mobile_mtime)}</style>",
             unsafe_allow_html=True,
         )
-except Exception:
-    pass
+except Exception as _exc:
+    from core.app_logging import log_event
+    log_event("main_css_load", f"fallo_carga_mobile_css:{type(_exc).__name__}:{_exc}")
 
 # CSS legacy para browsers viejos (Android <=8, iOS <=12, sin :has ni clamp).
 # Se activa solo cuando JS en ui_liviano.render_mc_liviano_cliente detecta browser antiguo
@@ -165,8 +167,9 @@ try:
             f"<style>{cargar_texto_asset('mobile_legacy.css', _mtime=_legacy_mtime)}</style>",
             unsafe_allow_html=True,
         )
-except Exception:
-    pass
+except Exception as _exc:
+    from core.app_logging import log_event
+    log_event("main_css_load", f"fallo_carga_legacy_css:{type(_exc).__name__}:{_exc}")
 
 if "_db_bootstrapped" not in st.session_state:
     # Sin precarga de PHI: monolito y multiclínica cargan la base en login / recuperación / tenant.
@@ -452,8 +455,9 @@ def _render_mobile_nav(menu, vista_actual, menu_set):
     try:
         ua = ui_liv.user_agent_desde_contexto()
         es_tablet = ui_liv.user_agent_es_tablet_probable(ua)
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("main_mobile_nav", f"fallo_deteccion_tablet:{type(_exc).__name__}:{_exc}")
 
     with st.expander("☰ Menú de navegación", expanded=False):
         st.caption("Seleccioná un módulo para navegar rápidamente:")
@@ -481,9 +485,10 @@ def _render_mobile_patient_selector(mi_empresa, rol):
     try:
         ua = ui_liv.user_agent_desde_contexto()
         es_tablet = ui_liv.user_agent_es_tablet_probable(ua)
-    except Exception:
-        pass
-    
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("main_mobile_patient", f"fallo_deteccion_tablet:{type(_exc).__name__}:{_exc}")
+
     from core.utils import obtener_pacientes_visibles, mapa_detalles_pacientes
     
     with st.expander("👤 Selector de Paciente (Tocá para buscar)", expanded=(st.session_state.get("paciente_actual") is None)):

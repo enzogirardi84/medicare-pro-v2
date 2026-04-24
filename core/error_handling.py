@@ -261,8 +261,8 @@ def safe_operation(
             try:
                 import streamlit as st
                 st.error(f"{error_message}: {str(e)}")
-            except Exception:
-                pass  # Si Streamlit no está disponible
+            except Exception as _exc:
+                logger.warning(f"Fallo al mostrar st.error en manejador de errores: {type(_exc).__name__}:{_exc}")
         
         return fallback_value
 

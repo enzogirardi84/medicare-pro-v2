@@ -543,6 +543,10 @@ def check_inactividad():
                 limpiar_estado_sesion_login_efimero()
                 vaciar_datos_app_en_sesion()
                 st.session_state["_aviso_sesion_expirada"] = f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos)."
-                st.rerun()
+                # Guard: evitar tormenta de reruns en móviles con red lenta
+                _ult_rerun_exp = st.session_state.get("_ult_rerun_expiracion_ts", 0)
+                if (ahora().timestamp() - _ult_rerun_exp) > 5:
+                    st.session_state["_ult_rerun_expiracion_ts"] = ahora().timestamp()
+                    st.rerun()
             else:
                 st.session_state["ultima_actividad"] = ahora()
