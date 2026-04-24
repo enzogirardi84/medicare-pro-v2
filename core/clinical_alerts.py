@@ -765,6 +765,6 @@ def check_prescription_alerts(
 
 def acknowledge_clinical_alert(alert_id: str, note: Optional[str] = None) -> bool:
     """Reconoce una alerta clínica."""
-    from core.utils import ahora
+    from core.utils_fechas import ahora
     user = st.session_state.get("u_actual", {}).get("username", "system")
     return get_alert_engine().acknowledge_alert(alert_id, user, note)
