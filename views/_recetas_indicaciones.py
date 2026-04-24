@@ -6,7 +6,7 @@ from datetime import datetime as _dt, timedelta as _td
 
 import streamlit as st
 
-from views._recetas_utils import resumen_plan_hidratacion
+from views._recetas_utils import resumen_plan_hidratacion, texto_indicacion_visible, valor_ml_h_legible
 
 
 def construir_texto_indicacion(
@@ -24,14 +24,15 @@ def construir_texto_indicacion(
 ):
     if tipo_indicacion == "Infusion / hidratacion":
         partes = []
+        velocidad_legible = valor_ml_h_legible(velocidad_ml_h)
         titulo = solucion.strip() or "Infusion endovenosa"
         if volumen_ml:
             titulo = f"{titulo} {int(volumen_ml)} ml"
+        if velocidad_legible:
+            partes.append(f"Velocidad: {velocidad_legible} ml/h")
         partes.append(titulo)
         if via:
             partes.append(f"Via: {via}")
-        if velocidad_ml_h not in ("", None):
-            partes.append(f"Velocidad: {velocidad_ml_h} ml/h")
         if alternar_con:
             partes.append(f"Alternar con: {alternar_con}")
         if dias:

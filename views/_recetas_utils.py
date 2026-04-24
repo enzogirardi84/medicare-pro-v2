@@ -127,14 +127,29 @@ def extraer_nombre_medicacion(texto):
     return str(texto or "").split(" | ")[0].strip()
 
 
+def valor_ml_h_legible(valor):
+    if valor in ("", None):
+        return ""
+    texto = str(valor).strip()
+    if not texto:
+        return ""
+    try:
+        numero = float(texto.replace(",", "."))
+    except (TypeError, ValueError):
+        return texto
+    if numero.is_integer():
+        return str(int(numero))
+    return f"{numero}".rstrip("0").rstrip(".")
+
+
 def resumen_plan_hidratacion(plan_hidratacion):
     if not plan_hidratacion:
         return ""
     partes = []
     for item in plan_hidratacion:
         hora = item.get("Hora sugerida", "")
-        velocidad = item.get("Velocidad (ml/h)", "")
-        if hora and velocidad != "":
+        velocidad = valor_ml_h_legible(item.get("Velocidad (ml/h)", item.get("ML/h", "")))
+        if hora and velocidad:
             partes.append(f"{hora}: {velocidad} ml/h")
     return " | ".join(partes)
 
@@ -143,13 +158,71 @@ def detalle_horario_infusion(registro, horario):
     plan = registro.get("plan_hidratacion", []) or []
     for item in plan:
         if item.get("Hora sugerida") == horario:
-            velocidad = item.get("Velocidad (ml/h)")
-            if velocidad not in ("", None):
+            velocidad = valor_ml_h_legible(item.get("Velocidad (ml/h)", item.get("ML/h", "")))
+            if velocidad:
                 return f"{velocidad} ml/h"
-    velocidad = registro.get("velocidad_ml_h")
-    if velocidad not in ("", None):
+    velocidad = valor_ml_h_legible(registro.get("velocidad_ml_h")) or velocidad_ml_h_desde_texto(registro.get("med", ""))
+    if velocidad:
         return f"{velocidad} ml/h"
     return registro.get("detalle_infusion", "")
+
+
+def normalizar_plan_hidratacion(plan_hidratacion=None, registro=None):
+    if registro:
+        velocidad = valor_ml_h_legible(registro.get("velocidad_ml_h", ""))
+        return [{
+            "Medicacion": registro.get("med", ""),
+            "Hora sugerida": registro.get("hora_inicio", ""),
+            "Solucion": registro.get("solucion", ""),
+            "Volumen (ml)": registro.get("volumen_ml", ""),
+            "ML/h": velocidad,
+            "Detalle": "",
+        }]
+    if not plan_hidratacion:
+        return []
+    filas = []
+    for item in plan_hidratacion:
+        if not isinstance(item, dict):
+            continue
+        fila = dict(item)
+        velocidad = valor_ml_h_legible(item.get("ML/h", item.get("Velocidad (ml/h)", "")))
+        fila["ML/h"] = velocidad
+        if "Velocidad (ml/h)" in fila:
+            fila["Velocidad (ml/h)"] = velocidad
+        fila.setdefault("Detalle", "")
+        filas.append(fila)
+    return filas
+
+
+def ritmo_infusion_ml_h(registro, horario=None):
+    plan = registro.get("plan_hidratacion", []) or []
+    if horario:
+        for item in plan:
+            if item.get("Hora sugerida") == horario:
+                velocidad = valor_ml_h_legible(item.get("Velocidad (ml/h)", item.get("ML/h", "")))
+                if velocidad:
+                    return f"{velocidad} ml/h"
+    velocidad = valor_ml_h_legible(registro.get("velocidad_ml_h")) or velocidad_ml_h_desde_texto(registro.get("med", ""))
+    if velocidad:
+        return f"{velocidad} ml/h"
+    return ""
+
+
+def texto_indicacion_visible(registro):
+    med = str(registro.get("med", "") or "").strip()
+    velocidad = valor_ml_h_legible(registro.get("velocidad_ml_h")) or velocidad_ml_h_desde_texto(med)
+    if velocidad and "Velocidad:" in med:
+        partes = [parte.strip() for parte in med.split("|") if parte.strip()]
+        partes = [parte for parte in partes if not parte.lower().startswith("velocidad:")]
+        return " | ".join([f"Velocidad: {velocidad} ml/h"] + partes)
+    return med
+
+
+def velocidad_ml_h_desde_texto(texto):
+    m = re.search(r"Velocidad:\s*(\d+(?:\.\d+)?)", str(texto or ""))
+    if m:
+        return valor_ml_h_legible(m.group(1))
+    return ""
 
 
 def nombre_usuario(user):
