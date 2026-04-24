@@ -187,7 +187,7 @@ MOBILE_SIDEBAR_AUTOCLOSE_JS = """
 
     function clickCameFromFloatingToggle(target) {
         if (!target || !target.closest) return false;
-        return !!target.closest('#mc-mobile-sidebar-toggle-btn');
+        return !!target.closest('#mc-mobile-sidebar-toggle-btn-v2');
     }
 
     function setupMobileSidebar() {
@@ -250,8 +250,14 @@ SIDEBAR_TOGGLE_JS = """
     var parentDoc = parentWin.document || document;
     if (!parentDoc || !parentDoc.body) return;
 
-    var STYLE_ID = "mc-mobile-sidebar-toggle-style";
-    var BUTTON_ID = "mc-mobile-sidebar-toggle-btn";
+    // Invalidar cache: remover elementos viejos del DOM para forzar recreación
+    var oldStyle = parentDoc.getElementById("mc-mobile-sidebar-toggle-style");
+    if (oldStyle) oldStyle.remove();
+    var oldBtn = parentDoc.getElementById("mc-mobile-sidebar-toggle-btn");
+    if (oldBtn) oldBtn.remove();
+
+    var STYLE_ID = "mc-mobile-sidebar-toggle-style-v2";
+    var BUTTON_ID = "mc-mobile-sidebar-toggle-btn-v2";
 
     function ensureStyle() {
       var style = parentDoc.getElementById(STYLE_ID);
