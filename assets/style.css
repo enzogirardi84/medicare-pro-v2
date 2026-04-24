@@ -2851,46 +2851,88 @@ div[data-testid="stDataFrame"] {
 }
 
 /* ===== SIDEBAR FIJO DESKTOP/TABLET (>= 768px) ===== */
-/* El sidebar permanece montado permanentemente para evitar unmounts/remounts */
+/* Usando position: sticky para mejor compatibilidad con Streamlit */
 @media (min-width: 768px) {
-    /* Sidebar fijo a la izquierda ocupando 100% del alto */
+    /* Asegurar que el AppViewContainer tenga altura completa para sticky */
+    [data-testid="stAppViewContainer"] {
+        min-height: 100vh !important;
+        display: flex !important;
+        flex-direction: row !important;
+        margin-left: 0 !important;
+    }
+
+    /* El sidebar debe ser sticky y mantenerse visible */
     [data-testid="stSidebar"] {
-        position: fixed !important;
-        left: 0 !important;
+        position: sticky !important;
+        position: -webkit-sticky !important;
         top: 0 !important;
+        left: 0 !important;
         height: 100vh !important;
-        height: 100dvh !important; /* Dynamic viewport height para móviles modernos */
-        width: 21rem !important; /* Ancho estándar de Streamlit sidebar */
+        height: 100dvh !important;
+        width: 21rem !important;
         min-width: 21rem !important;
         max-width: 21rem !important;
+        flex-shrink: 0 !important;
+        align-self: flex-start !important;
         z-index: 100 !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         background: var(--bg-sidebar, #090e1a) !important;
         border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
         box-shadow: 4px 0 24px rgba(2, 6, 18, 0.35) !important;
+        transform: none !important;
+        transition: none !important;
     }
 
-    /* Contenedor interno del sidebar */
+    /* Contenedor interno del sidebar - scroll independiente */
     [data-testid="stSidebar"] > div:first-child {
         height: 100% !important;
         min-height: 100% !important;
+        max-height: 100vh !important;
+        overflow-y: auto !important;
         background: transparent !important;
     }
 
-    /* Ajuste crucial: El contenedor principal debe compensar el ancho del sidebar */
-    /* para que el contenido no quede tapado por el sidebar fijo */
-    [data-testid="stAppViewContainer"] {
-        margin-left: 21rem !important; /* Mismo ancho que el sidebar */
+    /* Forzar visibilidad del sidebar - nunca colapsar */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"][aria-hidden="false"],
+    [data-testid="stSidebar"][aria-hidden="true"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        transform: none !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
-    /* Sección principal (main content) ajustada */
-    [data-testid="stAppViewContainer"] > section.main,
+    /* Ocultar completamente el botón de colapsar y su espacio */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Ajustar el espacio que ocupaba el botón colapsado */
+    .stApp > header {
+        display: none !important;
+    }
+
+    /* Sección principal (main content) debe ocupar el resto del espacio */
+    [data-testid="stAppViewContainer"] > section[data-testid="stAppViewContent"],
+    [data-testid="stAppViewContainer"] > section:last-child,
     section.main {
+        flex: 1 !important;
+        min-width: 0 !important;
+        max-width: none !important;
         margin-left: 0 !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        max-width: calc(100% - 21rem) !important;
+        overflow-x: hidden !important;
     }
 
     /* Contenedor de bloques ajustado */
@@ -2898,23 +2940,6 @@ div[data-testid="stDataFrame"] {
         max-width: 100% !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
-    }
-
-    /* Forzar que el sidebar permanezca visible en desktop/tablet */
-    /* Evita que Streamlit lo colapse automáticamente */
-    [data-testid="stSidebar"][aria-hidden="false"],
-    [data-testid="stSidebar"][aria-hidden="true"] {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        transform: none !important;
-    }
-
-    /* Ocultar botón de colapsar sidebar en desktop */
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
-        display: none !important;
-        visibility: hidden !important;
     }
 }
 
@@ -2925,19 +2950,24 @@ div[data-testid="stDataFrame"] {
 
     /* 1. RESET: Anular estilos de desktop para sidebar */
     [data-testid="stSidebar"] {
-        position: relative !important; /* Reset de fixed */
+        position: relative !important; /* Reset de sticky */
         left: auto !important;
         top: auto !important;
         height: auto !important;
         width: 85vw !important; /* Ancho drawer mobile */
         min-width: 280px !important;
         max-width: 90vw !important;
+        flex-shrink: 1 !important;
+        align-self: auto !important;
         z-index: 999999 !important; /* Por encima de todo */
         box-shadow: 8px 0 32px rgba(2, 6, 18, 0.55) !important;
+        transform: none !important;
+        transition: transform 0.3s ease !important;
     }
 
-    /* 2. RESET: Anular margin-left del contenedor principal */
+    /* 2. RESET: Anular flex y margin del contenedor principal */
     [data-testid="stAppViewContainer"] {
+        display: block !important; /* Reset de flex */
         margin-left: 0 !important;
         width: 100% !important;
     }
