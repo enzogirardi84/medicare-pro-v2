@@ -142,7 +142,8 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
 (function() {{
   const P = {js_payload};
   try {{
-    const doc = window.parent && window.parent.document;
+    const parentWin = window.parent || window;
+    const doc = parentWin && parentWin.document;
     if (!doc) return;
     doc.documentElement.lang = 'es';
     function setMeta(name, content, isProp) {{
@@ -188,61 +189,105 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
     s.textContent = P.schemaJson;
 
     // ── OVERLAY DE CARGA ──────────────────────────────────────────────────
-    // Solo insertar si no existe ya
-    if (doc.getElementById('mc-loading-overlay')) return;
+    function getMainContent() {{
+      return (
+        doc.querySelector('[data-testid="stMainBlockContainer"]') ||
+        doc.querySelector('[data-testid="stAppViewContainer"] [data-testid="stMain"] .block-container')
+      );
+    }}
 
-    var overlay = doc.createElement('div');
-    overlay.id = 'mc-loading-overlay';
-    overlay.innerHTML = [
-      '<p class="mc-overlay-title">MediCare Enterprise PRO</p>',
-      '<div class="mc-spinner"></div>',
-      '<div class="mc-dots"><span></span><span></span><span></span></div>',
-      '<p class="mc-overlay-sub">Cargando...</p>'
-    ].join('');
-    doc.body.appendChild(overlay);
+    function contentReady() {{
+      var mainContent = getMainContent();
+      return !!(mainContent && mainContent.children && mainContent.children.length > 0);
+    }}
 
-    // Quitar overlay cuando Streamlit termine de renderizar
+    function ensureOverlay() {{
+      var existing = doc.getElementById('mc-loading-overlay');
+      if (existing) return existing;
+      var overlay = doc.createElement('div');
+      overlay.id = 'mc-loading-overlay';
+      overlay.innerHTML = [
+        '<p class="mc-overlay-title">MediCare Enterprise PRO</p>',
+        '<div class="mc-spinner"></div>',
+        '<div class="mc-dots"><span></span><span></span><span></span></div>',
+        '<p class="mc-overlay-sub">Cargando...</p>'
+      ].join('');
+      doc.body.appendChild(overlay);
+      return overlay;
+    }}
+
     function removeOverlay() {{
       var el = doc.getElementById('mc-loading-overlay');
       if (!el) return;
       el.classList.add('mc-overlay-fade-out');
-      setTimeout(function() {{
-        el.classList.add('mc-overlay-hidden');
+      parentWin.setTimeout(function() {{
+        var current = doc.getElementById('mc-loading-overlay');
+        if (current) current.classList.add('mc-overlay-hidden');
       }}, 450);
     }}
 
-    // Detectar cuando el contenido principal está listo
+    ensureOverlay();
+
+    if (contentReady()) {{
+      removeOverlay();
+      return;
+    }}
+
+    if (parentWin.__mcLoadingOverlayTimer) {{
+      parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
+    }}
+    parentWin.__mcLoadingOverlayTimer = parentWin.setTimeout(removeOverlay, 4000);
+
+    if (parentWin.__mcLoadingOverlayObserver) {{
+      try {{
+        parentWin.__mcLoadingOverlayObserver.disconnect();
+      }} catch (e) {{}}
+      parentWin.__mcLoadingOverlayObserver = null;
+    }}
+
+    if (parentWin.MutationObserver && doc.body) {{
+      var observer = new parentWin.MutationObserver(function() {{
+        if (contentReady()) {{
+          if (parentWin.__mcLoadingOverlayTimer) {{
+            parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
+            parentWin.__mcLoadingOverlayTimer = null;
+          }}
+          try {{
+            observer.disconnect();
+          }} catch (e) {{}}
+          parentWin.__mcLoadingOverlayObserver = null;
+          removeOverlay();
+        }}
+      }});
+      observer.observe(doc.body, {{ childList: true, subtree: true }});
+      parentWin.__mcLoadingOverlayObserver = observer;
+    }}
+
     function waitForContent() {{
-      // Buscar cualquier elemento renderizado por Streamlit
-      var mainContent = doc.querySelector('[data-testid="stAppViewContainer"] .block-container');
-      if (mainContent && mainContent.children.length > 0) {{
+      if (contentReady()) {{
+        if (parentWin.__mcLoadingOverlayTimer) {{
+          parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
+          parentWin.__mcLoadingOverlayTimer = null;
+        }}
         removeOverlay();
         return;
       }}
-      // Reintentar hasta que aparezca contenido
-      requestAnimationFrame(waitForContent);
+      if (parentWin.requestAnimationFrame) {{
+        parentWin.requestAnimationFrame(waitForContent);
+      }}
     }}
 
-    // Timeout máximo de 4s por si algo falla
-    var maxTimeout = setTimeout(removeOverlay, 4000);
+    waitForContent();
 
-    // Observar cambios en el DOM
-    var observer = new MutationObserver(function() {{
-      var mainContent = doc.querySelector('[data-testid="stAppViewContainer"] .block-container');
-      if (mainContent && mainContent.children.length > 1) {{
-        clearTimeout(maxTimeout);
-        observer.disconnect();
-        removeOverlay();
-      }}
-    }});
+    if (!parentWin.__mcLoadingOverlayRenderHookInstalled) {{
+      doc.addEventListener('streamlit:render', removeOverlay);
+      parentWin.__mcLoadingOverlayRenderHookInstalled = true;
+    }}
 
-    observer.observe(doc.body, {{ childList: true, subtree: true }});
-
-    // Quitar overlay también al navegar entre módulos (reruns de Streamlit)
-    var lastHidden = false;
-    doc.addEventListener('streamlit:render', function() {{
-      removeOverlay();
-    }});
+    if (!parentWin.__mcLoadingOverlayLoadHookInstalled) {{
+      parentWin.addEventListener('load', removeOverlay);
+      parentWin.__mcLoadingOverlayLoadHookInstalled = true;
+    }}
 
   }} catch (e) {{}}
 }})();
