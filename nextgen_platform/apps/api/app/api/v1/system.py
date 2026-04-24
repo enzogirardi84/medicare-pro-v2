@@ -48,8 +48,9 @@ def _acquire_tenant_lock(lock_key: str, ttl_seconds: int = 30) -> bool:
 def _release_tenant_lock(lock_key: str) -> None:
     try:
         redis_client.delete(lock_key)
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("api.system").debug(f"fallo_release_lock:{type(_exc).__name__}")
 
 
 def _circuit_open(key: str) -> bool:
@@ -62,8 +63,9 @@ def _circuit_open(key: str) -> bool:
 def _open_circuit(key: str, seconds: int = 120) -> None:
     try:
         redis_client.setex(key, max(30, seconds), "1")
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("api.system").debug(f"fallo_open_circuit:{type(_exc).__name__}")
 
 
 def _normalize_and_validate_change_ticket(change_ticket: str | None) -> str | None:
