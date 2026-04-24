@@ -377,20 +377,37 @@
     }
 
     /* ---- 15. Pills de navegación (st.pills) ---- */
-    [data-testid="stPills"] {
-        flex-wrap: wrap !important;
-        gap: 0.3rem !important;
+    /* Mayor especificidad para sobreescribir style.css */
+    html body [data-testid="stAppViewContainer"] [data-testid="stPills"] {
+        width: 100% !important;
     }
-    [data-testid="stPills"] [role="button"],
-    [data-testid="stPills"] button {
-        font-size: 0.8rem !important;
-        padding: 0.35rem 0.6rem !important;
-        min-height: 34px !important;
+    html body [data-testid="stAppViewContainer"] [data-testid="stPills"] [role="listbox"] {
+        display: flex !important;
+        flex-wrap: wrap !important;          /* Cambiar de nowrap a wrap */
+        gap: 0.35rem !important;            /* Espacio entre botones */
+        overflow-x: visible !important;      /* Quitar scroll horizontal */
+        overflow-y: visible !important;
+        padding: 0.15rem 0 !important;
+    }
+    html body [data-testid="stAppViewContainer"] [data-testid="stPills"] [role="option"] {
+        flex: 1 1 auto !important;          /* Que crezcan según contenido */
+        min-width: unset !important;
         max-width: 100% !important;
-        white-space: normal !important;
+        white-space: normal !important;       /* Permitir saltos de línea */
+        font-size: 0.78rem !important;      /* Texto más pequeño */
+        padding: 0.4rem 0.7rem !important;   /* Padding compacto */
+        min-height: 36px !important;        /* Altura mínima */
         line-height: 1.2 !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
+        word-break: break-word !important;   /* Romper palabras largas */
+    }
+    html body [data-testid="stAppViewContainer"] [data-testid="stPills"] [role="option"] p,
+    html body [data-testid="stAppViewContainer"] [data-testid="stPills"] [role="option"] span {
+        font-size: 0.78rem !important;
+        white-space: normal !important;
+        line-height: 1.2 !important;
+        word-break: break-word !important;
     }
 
     /* ---- 16. Iframes (componentes embebidos) ---- */
