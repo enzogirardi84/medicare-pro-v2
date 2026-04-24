@@ -41,8 +41,9 @@ jobs:
           project_dir: nextgen_platform
           compose_file: infra/docker/docker-compose.yml
           healthcheck_url: http://localhost:8000/health
-          max_attempts: "30"
-          sleep_seconds: "3"
+          max_attempts: "60"
+          sleep_seconds: "5"
+          initial_delay_seconds: "10"
 
       - name: Run smoke integration contracts
         env:
