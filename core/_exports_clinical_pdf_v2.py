@@ -41,8 +41,8 @@ class ClinicalPDFv2(FPDF):
         self._paciente = paciente
         self._metadata = metadata or {}
         self._page_count = 0
-        self.set_auto_page_break(auto=True, margin=20)
-        self.set_margins(15, 15, 15)
+        self.set_auto_page_break(auto=True, margin=12)  # Reducido de 20 a 12
+        self.set_margins(12, 12, 12)  # Márgenes más compactos
     
     def header(self):
         """Header mejorado con branding."""
@@ -174,18 +174,18 @@ def header_portada_v2(pdf: ClinicalPDFv2, empresa: str, titulo: str, paciente_da
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 6, safe_text("Documento de Historia Clínica Integral"), ln=True)
     
-    # Info del paciente en caja
+    # Info del paciente en caja (más compacta)
     pdf.set_fill_color(248, 250, 252)
-    pdf.rect(15, 90, pdf.w - 30, 45, "F")
+    pdf.rect(15, 85, pdf.w - 30, 38, "F")
     
-    pdf.set_xy(20, 95)
-    pdf.set_font("Arial", "B", 12)
+    pdf.set_xy(18, 88)
+    pdf.set_font("Arial", "B", 11)
     pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6, safe_text("DATOS DEL PACIENTE"), ln=True)
+    pdf.cell(0, 5, safe_text("DATOS DEL PACIENTE"), ln=True)
     
-    # Detalles del paciente
-    pdf.set_xy(20, 105)
-    pdf.set_font("Arial", "", 10)
+    # Detalles del paciente (más compactos)
+    pdf.set_xy(18, 95)
+    pdf.set_font("Arial", "", 9)
     pdf.set_text_color(71, 85, 105)
     
     nombre = paciente_data.get("nombre", "S/D")
@@ -193,27 +193,19 @@ def header_portada_v2(pdf: ClinicalPDFv2, empresa: str, titulo: str, paciente_da
     fnac = paciente_data.get("fnac", "S/D")
     os = paciente_data.get("obra_social", "S/D")
     
-    pdf.cell(0, 5, safe_text(f"Nombre: {nombre}"), ln=True)
-    pdf.cell(0, 5, safe_text(f"DNI: {dni}"), ln=True)
-    pdf.cell(0, 5, safe_text(f"Fecha de Nacimiento: {fnac}"), ln=True)
-    pdf.cell(0, 5, safe_text(f"Obra Social: {os}"), ln=True)
+    pdf.cell(0, 4, safe_text(f"Nombre: {nombre}"), ln=True)
+    pdf.cell(0, 4, safe_text(f"DNI: {dni}  |  Nac.: {fnac}"), ln=True)
+    pdf.cell(0, 4, safe_text(f"Obra Social: {os}"), ln=True)
     
-    # Info del documento
-    pdf.set_xy(20, 145)
-    pdf.set_font("Arial", "B", 10)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 6, safe_text("INFORMACIÓN DEL DOCUMENTO"), ln=True)
-    
-    pdf.set_xy(20, 155)
-    pdf.set_font("Arial", "", 9)
-    pdf.set_text_color(71, 85, 105)
+    # Info del documento (compacta)
+    pdf.set_xy(18, 112)
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(100, 116, 139)
     
     fecha_gen = datetime.now().strftime("%d/%m/%Y %H:%M")
-    pdf.cell(0, 5, safe_text(f"Fecha de generación: {fecha_gen}"), ln=True)
-    pdf.cell(0, 5, safe_text(f"Generado por: Medicare Pro v2.0"), ln=True)
-    pdf.cell(0, 5, safe_text(f"Empresa: {empresa}"), ln=True)
+    pdf.cell(0, 4, safe_text(f"Generado: {fecha_gen}  |  Sistema: Medicare Pro v2.0  |  Empresa: {empresa}"), ln=True)
     
-    # QR de verificación
+    # QR de verificación (más arriba)
     qr_bytes = generar_qr_verificacion({
         "paciente": nombre,
         "dni": dni,
@@ -261,15 +253,15 @@ def render_timeline_clinico(pdf: ClinicalPDFv2, sections: dict):
     # Ordenar por fecha
     eventos_timeline.sort(key=lambda x: x["fecha"], reverse=True)
     
-    # Mostrar últimos 10 eventos
-    pdf.set_font("Arial", "B", 11)
+    # Mostrar últimos 6 eventos (más compacto)
+    pdf.set_font("Arial", "B", 10)
     pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 8, safe_text("LÍNEA DE TIEMPO CLÍNICA RECIENTE"), ln=True)
-    pdf.ln(2)
+    pdf.cell(0, 6, safe_text("LÍNEA DE TIEMPO CLÍNICA (Últimos eventos)"), ln=True)
+    pdf.ln(1)
     
-    pdf.set_font("Arial", "", 9)
+    pdf.set_font("Arial", "", 8)
     
-    for i, evento in enumerate(eventos_timeline[:10]):
+    for i, evento in enumerate(eventos_timeline[:6]):
         # Color según tipo
         colores_tipo = {
             "Emergencias y Ambulancia": (239, 68, 68),
@@ -279,26 +271,20 @@ def render_timeline_clinico(pdf: ClinicalPDFv2, sections: dict):
         }
         color = colores_tipo.get(evento["tipo"], (100, 116, 139))
         
-        # Círculo de color
-        pdf.set_fill_color(*color)
-        pdf.ellipse(pdf.l_margin, pdf.get_y() + 1, 3, 3, "F")
-        
-        # Texto
-        pdf.set_x(pdf.l_margin + 8)
+        # Todo en una línea compacta
+        pdf.set_x(pdf.l_margin)
         pdf.set_text_color(*color)
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(35, 5, safe_text(str(evento["fecha"])[:10]), ln=0)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(22, 4, safe_text(str(evento["fecha"])[:10]), ln=0)
         
-        pdf.set_text_color(71, 85, 105)
-        pdf.set_font("Arial", "", 9)
-        pdf.cell(50, 5, safe_text(evento["tipo"][:25]), ln=0)
+        pdf.set_text_color(100, 116, 139)
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(50, 4, safe_text(f"[{evento['tipo'][:20]}]"), ln=0)
         
         pdf.set_text_color(15, 23, 42)
-        pdf.multi_cell(0, 5, safe_text(evento["descripcion"]))
-        
-        pdf.ln(1)
+        pdf.cell(0, 4, safe_text(evento["descripcion"][:45]), ln=True)
     
-    pdf.ln(5)
+    pdf.ln(3)
 
 
 def render_signos_vitales_grafico(pdf: ClinicalPDFv2, vitales: list):
@@ -346,34 +332,38 @@ def render_signos_vitales_grafico(pdf: ClinicalPDFv2, vitales: list):
 
 
 def render_alergias_y_alertas(pdf: ClinicalPDFv2, detalles: dict):
-    """Renderiza sección destacada de alergias y alertas."""
+    """Renderiza sección destacada de alergias y alertas (compacta)."""
     alergias = detalles.get("alergias", "")
     patologias = detalles.get("patologias", "")
     
     if not alergias and not patologias:
         return
     
-    # Caja de alerta
+    y_start = pdf.get_y()
+    
+    # Caja de alerta más compacta
     pdf.set_fill_color(254, 242, 242)
     pdf.set_draw_color(239, 68, 68)
-    pdf.rect(pdf.l_margin, pdf.get_y(), pdf.w - pdf.l_margin - pdf.r_margin, 35, "FD")
+    pdf.rect(pdf.l_margin, y_start, pdf.w - pdf.l_margin - pdf.r_margin, 20, "FD")
     
-    pdf.set_xy(pdf.l_margin + 5, pdf.get_y() + 5)
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_xy(pdf.l_margin + 4, y_start + 3)
+    pdf.set_font("Arial", "B", 9)
     pdf.set_text_color(239, 68, 68)
-    pdf.cell(0, 6, safe_text("⚠️ ALERGIAS Y ALERTAS CLÍNICAS"), ln=True)
+    pdf.cell(0, 4, safe_text("⚠️ ALERGIAS Y ALERTAS CLÍNICAS"), ln=True)
     
-    pdf.set_x(pdf.l_margin + 5)
-    pdf.set_font("Arial", "", 10)
+    pdf.set_x(pdf.l_margin + 4)
+    pdf.set_font("Arial", "", 8)
     pdf.set_text_color(127, 29, 29)
     
+    y_text = pdf.get_y()
     if alergias:
-        pdf.cell(0, 5, safe_text(f"Alergias: {alergias}"), ln=True)
+        pdf.cell(0, 4, safe_text(f"Alergias: {alergias}"), ln=True)
     
     if patologias:
-        pdf.cell(0, 5, safe_text(f"Patologías/Riesgos: {patologias}"), ln=True)
+        pdf.set_x(pdf.l_margin + 4)
+        pdf.cell(0, 4, safe_text(f"Patologías: {patologias}"), ln=True)
     
-    pdf.ln(40)
+    pdf.ln(22)  # Espacio fijo para la caja
 
 
 def build_clinical_pdf_v2(
@@ -440,42 +430,62 @@ def build_clinical_pdf_v2(
     if sections.get("Signos Vitales"):
         render_signos_vitales_grafico(pdf, sections["Signos Vitales"])
     
-    # ========== PÁGINAS SIGUIENTES: DETALLE POR MÓDULO ==========
+    # ========== PÁGINAS SIGUIENTES: DETALLE POR MÓDULO (COMPACTO) ==========
     for section_name, records in sections.items():
         if not records or section_name == "Signos Vitales":
             continue
         
-        if pdf.get_y() > 200:
+        # Verificar espacio disponible - más conservador
+        if pdf.get_y() > 240:  # Más espacio antes de salto de página
             pdf.add_page()
         
+        # Título de sección compacto
         section_title_backup(pdf, section_name.upper())
         
-        # Info de cantidad
-        pdf.set_font("Arial", "I", 9)
+        # Info de cantidad en misma línea
+        pdf.set_font("Arial", "I", 8)
         pdf.set_text_color(100, 116, 139)
-        pdf.cell(0, 5, safe_text(f"{len(records)} registro(s) en este módulo"), ln=True)
-        pdf.ln(2)
+        pdf.cell(0, 4, safe_text(f"({len(records)} registro(s))"), ln=True)
+        pdf.ln(1)  # Menos espacio
         
-        # Mostrar registros recientes (últimos 3)
-        from core._exports_pdf_base import backup_latest_record, backup_rows_from_record, write_pairs
+        # Mostrar registros recientes (últimos 2 para más compacto)
+        from core._exports_pdf_base import backup_latest_record, backup_rows_from_record
+        from core._exports_pdf_base import write_multiline_text
         
-        for i, record in enumerate(sorted(records, key=lambda x: x.get("fecha", ""), reverse=True)[:3]):
-            if i > 0:
-                pdf.ln(3)
-            
-            # Fecha del registro
+        for i, record in enumerate(sorted(records, key=lambda x: x.get("fecha", ""), reverse=True)[:2]):
+            # Fecha del registro en línea compacta
             fecha_reg = record.get("fecha", record.get("fecha_evento", "S/D"))
-            pdf.set_font("Arial", "B", 9)
+            pdf.set_font("Arial", "B", 8)
             pdf.set_text_color(20, 184, 166)
-            pdf.cell(0, 5, safe_text(f"Registro del {fecha_reg}"), ln=True)
+            pdf.cell(0, 4, safe_text(f"📅 {fecha_reg}"), ln=True)
             
-            # Datos del registro
-            pdf.set_font("Arial", "", 9)
+            # Datos del registro en formato compacto de pares
+            pdf.set_font("Arial", "", 8)
             pdf.set_text_color(0, 0, 0)
             filas = backup_rows_from_record(record)
-            write_pairs(pdf, filas[:12])  # Limitar a 12 campos
+            
+            # Escribir campos en formato más compacto
+            for label, value in filas[:10]:  # Limitar a 10 campos
+                if value in [None, "", "S/D"]:
+                    continue
+                pdf.set_font("Arial", "B", 7)
+                pdf.cell(0, 3, safe_text(f"{label}:")[:40], ln=True)
+                pdf.set_font("Arial", "", 8)
+                # Limitar texto largo
+                val_str = str(value)[:80]
+                if len(str(value)) > 80:
+                    val_str += "..."
+                write_multiline_text(pdf, val_str, line_height=3, indent=2)
+            
+            if i == 0 and len(records) > 1:
+                pdf.ln(2)  # Separador entre registros
         
-        pdf.ln(5)
+        # Línea divisoria fina entre módulos
+        pdf.set_draw_color(200, 200, 200)
+        pdf.set_line_width(0.2)
+        y_line = pdf.get_y()
+        pdf.line(pdf.l_margin, y_line, pdf.w - pdf.r_margin, y_line)
+        pdf.ln(3)
     
     # ========== PÁGINA FINAL: FIRMAS Y LEGAL ==========
     pdf.add_page()
