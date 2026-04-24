@@ -4414,6 +4414,14 @@ html, body {
     opacity: 1 !important;
     transition: opacity 0.4s ease-out !important;
     pointer-events: all !important;
+    /* Fallback: ocultar automáticamente después de 5s si JS no remueve el overlay */
+    animation: mc-overlay-auto-hide 5.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes mc-overlay-auto-hide {
+    0%   { opacity: 1; pointer-events: all; }
+    90%  { opacity: 1; pointer-events: all; }
+    100% { opacity: 0; pointer-events: none; visibility: hidden; }
 }
 
 #mc-loading-overlay.mc-overlay-fade-out {
