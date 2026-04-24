@@ -2917,6 +2917,28 @@ div[data-testid="stDataFrame"] {
         pointer-events: none !important;
     }
 
+    /* Ocultar barra de redimensionamiento del sidebar */
+    [data-testid="stSidebar"] + div,
+    [data-testid="stSidebar"] ~ div[class*="resize"],
+    div[class*="resize"][style*="cursor: col-resize"],
+    div[class*="resizer"],
+    [data-testid="stSidebar"] [class*="resizer"],
+    [data-testid="stSidebar"] [class*="resize-handle"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        cursor: default !important;
+    }
+
+    /* Deshabilitar resize en el sidebar */
+    [data-testid="stSidebar"] {
+        resize: none !important;
+        pointer-events: auto !important;
+    }
+
     /* Ajustar el espacio que ocupaba el botón colapsado */
     .stApp > header {
         display: none !important;
