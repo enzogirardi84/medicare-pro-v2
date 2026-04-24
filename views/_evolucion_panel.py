@@ -392,10 +392,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             key=f"limite_evol_{paciente_sel}",
             default=20,
         )
-        if puede_borrar:
-            col_chk, col_btn = st.columns([1.2, 2.8])
-            confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_evol")
-            if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
+        col_chk, col_btn = st.columns([1.2, 2.8])
+        confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_evol")
+        if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
+            if not evs_paciente:
+                st.error("No hay evoluciones para borrar.")
+            else:
                 ultima = evs_paciente[-1]
                 try:
                     st.session_state["evoluciones_db"].remove(evs_paciente[-1])
@@ -407,23 +409,16 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     "Borrado de evolucion",
                     user.get("nombre", ""),
                     user.get("matricula", ""),
-                    f"Se elimino la evolucion del {ultima.get('fecha', 'S/D')}.",
+                    f"Evolucion borrada | Fecha: {ultima.get('fecha', 'S/D')}",
+                    referencia=f"EVOL|{ultima.get('fecha', 'S/D')}",
+                    empresa=mi_empresa,
+                    usuario=user if isinstance(user, dict) else None,
+                    modulo="Evolucion",
+                    criticidad="alta",
                 )
                 guardar_datos(spinner=True)
+                queue_toast("Evolucion borrada.")
                 st.rerun()
-        else:
-            st.caption("El borrado de evoluciones queda reservado a medico, coordinacion o administracion total.")
-
-        with lista_plegable(
-            "Ver historial de evoluciones",
-            count=min(limite_evol, len(evs_paciente)),
-            expanded=False,
-            height=None,
-        ):
-            st.caption(
-                f"Mostrando {limite_evol} de {len(evs_paciente)} evoluciones. "
-                "El panel interno tiene scroll propio."
-            )
             _historial_evoluciones_scroll_interno(list(reversed(evs_paciente[-limite_evol:])))
     else:
         bloque_estado_vacio(
