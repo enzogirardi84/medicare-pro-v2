@@ -4814,3 +4814,143 @@ html body .mc-loader-cristal-spinner {
         margin-top: 0.5rem !important;
     }
 }
+
+/* =====================================================================
+   SIDEBAR FIJO FINAL (desktop/tablet)
+   Override final para unificar el layout principal sin afectar mobile.
+   - >= 768px: sidebar fijo, siempre montado/visible
+   - < 768px: sigue la lógica actual del drawer/toggle móvil
+   ===================================================================== */
+:root {
+    --mc-fixed-sidebar-width-tablet: 300px;
+    --mc-fixed-sidebar-width-desktop: 340px;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    html {
+        --mc-fixed-sidebar-width: var(--mc-fixed-sidebar-width-tablet);
+    }
+}
+
+@media (min-width: 1025px) {
+    html {
+        --mc-fixed-sidebar-width: var(--mc-fixed-sidebar-width-desktop);
+    }
+}
+
+@media (min-width: 768px) {
+    [data-testid="stAppViewContainer"] {
+        display: block !important;
+        min-height: 100vh !important;
+        overflow-x: hidden !important;
+    }
+
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"][aria-expanded="false"],
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: var(--mc-fixed-sidebar-width) !important;
+        min-width: var(--mc-fixed-sidebar-width) !important;
+        max-width: var(--mc-fixed-sidebar-width) !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        overflow: hidden !important;
+        z-index: 1002 !important;
+        background: var(--bg-sidebar, #090e1a) !important;
+        border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
+        box-shadow: 12px 0 32px rgba(2, 6, 18, 0.28) !important;
+        resize: none !important;
+    }
+
+    section[data-testid="stSidebar"] > div[data-testid="stSidebarContent"] {
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100vh !important;
+        max-height: 100dvh !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    section[data-testid="stSidebar"] > div:not([data-testid="stSidebarContent"]) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] *,
+    [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] *,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] *,
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapseButton"] *,
+    [data-testid="stSidebar"] button[kind="header"],
+    button[kind="headerNoPadding"],
+    #mc-mobile-sidebar-toggle-btn,
+    #mc-mobile-sidebar-toggle-btn-v2 {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
+
+    [data-testid="stMain"],
+    section[data-testid="stMain"],
+    [data-testid="stAppViewContainer"] > section[data-testid="stMain"] {
+        margin-left: var(--mc-fixed-sidebar-width) !important;
+        width: calc(100% - var(--mc-fixed-sidebar-width)) !important;
+        max-width: calc(100% - var(--mc-fixed-sidebar-width)) !important;
+        min-width: 0 !important;
+        padding-left: 0 !important;
+        flex: none !important;
+    }
+
+    [data-testid="stMain"] > div,
+    section[data-testid="stMain"] > div,
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stMain"] .block-container {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .block-container {
+        max-width: none !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    .block-container {
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+    }
+}
