@@ -115,6 +115,7 @@ jobs:
           REDIS_URL: "redis://localhost:6379/0"
           TESTING: "true"
           DATABASE_URL: "sqlite:///:memory:"
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest tests/ \
             --verbose \
