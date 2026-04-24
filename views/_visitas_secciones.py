@@ -32,7 +32,7 @@ try:
     from streamlit_geolocation import streamlit_geolocation
     GEO_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: geolocación es opcional para fichadas
 
 
 def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):

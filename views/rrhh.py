@@ -18,7 +18,7 @@ try:
     from fpdf import FPDF
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: fpdf es opcional para PDFs
 
 
 def _obtener_dt(fecha_hora):

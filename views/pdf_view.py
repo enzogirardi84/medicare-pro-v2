@@ -30,7 +30,7 @@ try:
 
     CANVAS_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: canvas es opcional para firmas
 
 
 def _render_lazy_download(container, key_base, prepare_label, download_label, build_fn, file_name, mime, unavailable_message=None):

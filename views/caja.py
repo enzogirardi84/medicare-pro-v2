@@ -17,7 +17,7 @@ try:
     from fpdf import FPDF
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: fpdf es opcional para comprobantes
 
 
 def render_caja(paciente_sel, mi_empresa, user, rol):

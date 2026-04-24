@@ -353,7 +353,7 @@ def render_clinica(paciente_sel, user=None):
             try:
                 st.session_state["vitales_db"].remove(vits[-1])
             except ValueError:
-                pass
+                pass  # Intencional: item ya fue removido por otra operación concurrente
             guardar_datos(spinner=True)
             queue_toast("Registro eliminado.")
             st.rerun()

@@ -258,7 +258,7 @@ def render_estudios(paciente_sel, user, rol=None):
                     try:
                         st.session_state["estudios_db"].remove(ultimo_est)
                     except ValueError:
-                        pass
+                        pass  # Intencional: item ya fue removido por otra operación concurrente
                 
                 # --- ACTUALIZAR EN SQL ---
                 if ultimo_est.get("id_sql"):

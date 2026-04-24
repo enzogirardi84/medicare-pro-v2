@@ -159,7 +159,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                 try:
                     st.session_state["consumos_db"].remove(ultimo_consumo)
                 except ValueError:
-                    pass
+                    pass  # Intencional: item ya fue removido por otra operación concurrente
                 _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
                 guardar_datos(spinner=True)
                 queue_toast("Consumo eliminado correctamente.")

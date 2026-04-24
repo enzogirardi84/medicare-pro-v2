@@ -19,14 +19,14 @@ try:
     from fpdf import FPDF  # noqa: F401
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: fpdf es opcional para recetas
 
 CANVAS_DISPONIBLE = False
 try:
     from streamlit_drawable_canvas import st_canvas  # noqa: F401
     CANVAS_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: canvas es opcional para firmas
 
 
 # ---------------------------------------------------------------------------

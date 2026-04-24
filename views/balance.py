@@ -245,7 +245,7 @@ def render_balance(paciente_sel, user):
         try:
             st.session_state["balance_db"].remove(blp[-1])
         except ValueError:
-            pass
+            pass  # Intencional: item ya fue removido por otra operación concurrente
         guardar_datos(spinner=True)
         queue_toast("Ultimo balance eliminado.")
         st.rerun()

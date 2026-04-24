@@ -25,7 +25,7 @@ try:
     from streamlit_drawable_canvas import st_canvas
     CANVAS_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: canvas es opcional para firmas
 
 
 def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):

@@ -268,7 +268,7 @@ def render_pediatria(paciente_sel, user):
                 try:
                     st.session_state["pediatria_db"].remove(ped[-1])
                 except ValueError:
-                    pass
+                    pass  # Intencional: item ya fue removido por otra operación concurrente
                 guardar_datos(spinner=True)
                 st.rerun()
 

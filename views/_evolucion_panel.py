@@ -402,7 +402,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 try:
                     st.session_state["evoluciones_db"].remove(evs_paciente[-1])
                 except ValueError:
-                    pass
+                    pass  # Intencional: item ya fue removido por otra operación concurrente
                 registrar_auditoria_legal(
                     "Evolucion Clinica",
                     paciente_sel,
