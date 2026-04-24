@@ -4433,12 +4433,16 @@ html, body {
     display: none !important;
 }
 
+body:has([data-testid="stMainBlockContainer"] *) #mc-loading-overlay,
+body:has([data-testid="stMain"] .block-container *) #mc-loading-overlay,
 body:has([data-testid="stMainBlockContainer"] > *) #mc-loading-overlay {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
 }
 
+body:has([data-testid="stMainBlockContainer"] *) #mc-loading-overlay:not(.mc-overlay-hidden),
+body:has([data-testid="stMain"] .block-container *) #mc-loading-overlay:not(.mc-overlay-hidden),
 body:has([data-testid="stMainBlockContainer"] > *) #mc-loading-overlay:not(.mc-overlay-hidden) {
     display: none !important;
 }
@@ -5127,7 +5131,36 @@ html body .mc-loader-cristal-spinner {
         -webkit-overflow-scrolling: touch !important;
     }
 
+    section[data-testid="stSidebar"]::after {
+        content: "" !important;
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: 12px !important;
+        height: 100% !important;
+        background: transparent !important;
+        pointer-events: auto !important;
+        cursor: default !important;
+        z-index: 3 !important;
+    }
+
     section[data-testid="stSidebar"] > div:not([data-testid="stSidebarContent"]) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    [data-testid="stAppViewContainer"] > [role="separator"],
+    [data-testid="stAppViewContainer"] > [data-mc-desktop-sidebar-artifact="true"],
+    section[data-testid="stSidebar"] [role="separator"],
+    section[data-testid="stSidebar"] [data-mc-desktop-sidebar-artifact="true"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
