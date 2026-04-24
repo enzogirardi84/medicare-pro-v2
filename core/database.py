@@ -502,8 +502,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 st.session_state["_guardar_datos_pendiente"] = False
                 
                 return estructura
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("db_guardar", f"fallo_guardado_{source}:{type(_exc).__name__}:{_exc}")
         # ------------------------------
 
         if shard and not monolito_legacy and not tenant_key:
@@ -605,8 +606,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             from core.perf_metrics import record_perf
 
             record_perf("db.cargar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("db_cargar", f"fallo_record_perf:{type(_exc).__name__}:{_exc}")
 
 
 def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
