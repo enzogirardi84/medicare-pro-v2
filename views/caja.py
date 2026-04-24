@@ -168,6 +168,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     "operador": user.get("nombre", "Sistema"),
                     "operador_dni": user.get("dni", "S/D"),
                 })
+                from core.database import _trim_db_list
+                _trim_db_list("facturacion_db", 500)
                 guardar_datos(spinner=True)
                 queue_toast(f"${mon:,.2f} registrado correctamente.")
                 st.rerun()

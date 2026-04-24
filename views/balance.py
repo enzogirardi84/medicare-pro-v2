@@ -84,6 +84,8 @@ def render_balance(paciente_sel, user):
                     "firma": user.get("nombre", "Sistema"),
                 }
             )
+            from core.database import _trim_db_list
+            _trim_db_list("balance_db", 500)
             guardar_datos(spinner=True)
             queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
             st.rerun()
