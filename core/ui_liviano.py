@@ -194,7 +194,10 @@ def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
 def render_mobile_sidebar_toggle() -> None:
     """
     Boton flotante cliente-side para abrir/cerrar la sidebar en telefonos.
-    Inyectado directamente via st.markdown (sin iframe) para evitar cache agresiva
-    de components.html en Safari/Chrome iOS que impide actualizar estilos.
+    Usa st.html (sin iframe) cuando este disponible; fallback a components.v1.html.
+    st.markdown NO ejecuta <script>, por eso se evita.
     """
-    st.markdown(SIDEBAR_TOGGLE_JS, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(SIDEBAR_TOGGLE_JS)
+    else:
+        components.html(SIDEBAR_TOGGLE_JS, height=0, width=0)
