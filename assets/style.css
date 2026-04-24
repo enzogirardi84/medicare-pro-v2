@@ -5077,7 +5077,7 @@ html body .mc-loader-cristal-spinner {
 
 @media (min-width: 768px) {
     [data-testid="stAppViewContainer"] {
-        display: block !important;
+        display: flex !important;
         min-height: 100vh !important;
         overflow-x: hidden !important;
     }
