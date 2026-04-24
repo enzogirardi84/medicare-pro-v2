@@ -19,6 +19,7 @@ from views._recetas_utils import (
     nombre_usuario,
     parse_hora_hhmm,
     texto_corto,
+    valor_ml_h_legible,
 )
 
 try:
@@ -43,6 +44,15 @@ def _cortina_mar_key_slug(paciente_sel: str, fecha_hoy: str) -> str:
     p = re.sub(r"[^\w\-]", "_", str(paciente_sel))[:44]
     f = str(fecha_hoy).replace("/", "_").replace(" ", "_")
     return f"{p}_{f}"
+
+
+def _frecuencia_guardia_visible(freq):
+    freq_txt = str(freq or "").strip()
+    if not freq_txt:
+        return ""
+    if "ml/h" in freq_txt.lower():
+        return freq_txt
+    return texto_corto(freq_txt, fallback="", max_len=24)
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +155,7 @@ def construir_matriz_registro_24h(plan_dia_df):
         via = str(r.get("Via", "") or "").strip() or "S/D"
         freq = str(r.get("Frecuencia", "") or "").strip() or "S/D"
         detalle = str(r.get("Detalle / velocidad", "") or "").strip()
+        ml_h = valor_ml_h_legible(r.get("ML/h", r.get("Velocidad_ml_h", "")))
         hp = str(r.get("Hora programada", "") or "").strip()
         estado_txt = str(r.get("Estado", "") or "").strip().lower()
         if "realizada" in estado_txt and "no realizada" not in estado_txt:
@@ -156,7 +167,7 @@ def construir_matriz_registro_24h(plan_dia_df):
 
         fila_key = (med, via, freq, detalle)
         if fila_key not in row_by_key:
-            row_dict = {"Medicacion": med, "Via": via, "Frecuencia": freq, "Detalle": detalle}
+            row_dict = {"Medicacion": med, "Via": via, "Frecuencia": freq, "Detalle": detalle, "ML/h": ml_h}
             for h in horas_mar:
                 row_dict[h] = ""
             row_dict["A demanda"] = ""
@@ -165,6 +176,8 @@ def construir_matriz_registro_24h(plan_dia_df):
 
         mat_idx = row_by_key[fila_key]
         row_dict = matriz_registro_rows[mat_idx]
+        if ml_h and not str(row_dict.get("ML/h", "") or "").strip():
+            row_dict["ML/h"] = ml_h
 
         col = None
         if hp.lower() == "a demanda":
@@ -211,7 +224,7 @@ def tabla_guardia_operativa(plan_dia_df):
         lambda fila: " | ".join(
             parte for parte in [
                 texto_corto(fila.get("Via", ""), fallback="", max_len=18),
-                texto_corto(fila.get("Frecuencia", ""), fallback="", max_len=24),
+                _frecuencia_guardia_visible(fila.get("Frecuencia", "")),
             ] if parte
         ) or "S/D",
         axis=1,
@@ -239,7 +252,7 @@ def tabla_guardia_detallada(plan_dia_df):
         lambda fila: " | ".join(
             parte for parte in [
                 texto_corto(fila.get("Via", ""), fallback="", max_len=18),
-                texto_corto(fila.get("Frecuencia", ""), fallback="", max_len=24),
+                _frecuencia_guardia_visible(fila.get("Frecuencia", "")),
             ] if parte
         ) or "S/D",
         axis=1,

@@ -27,6 +27,7 @@ from views._recetas_utils import (
     etiqueta_receta as _etiqueta_receta,
     render_tabla_clinica as _render_tabla_clinica,
     render_dataframe_filas_tarjetas as _render_dataframe_filas_tarjetas,
+    ritmo_infusion_ml_h as _ritmo_infusion_ml_h,
 )
 from views._recetas_mar import (
     registrar_administracion_dosis as _registrar_administracion_dosis,
@@ -37,6 +38,20 @@ from views._recetas_mar import (
     render_sabana_compacta as _render_sabana_compacta,
     render_cortina_mar_hospitalaria as _render_cortina_mar_hospitalaria,
 )
+
+
+def _frecuencia_visible_con_ritmo(frecuencia, ritmo):
+    frecuencia_txt = str(frecuencia or "").strip()
+    ritmo_txt = str(ritmo or "").strip()
+    if not ritmo_txt:
+        return frecuencia_txt or "S/D"
+    if not frecuencia_txt:
+        return ritmo_txt
+    if ritmo_txt.lower() in frecuencia_txt.lower() or "ml/h" in frecuencia_txt.lower():
+        return frecuencia_txt
+    if frecuencia_txt.lower().startswith("infusion continua"):
+        return f"{frecuencia_txt} a {ritmo_txt}"
+    return f"{frecuencia_txt} | {ritmo_txt}"
 
 
 def render_administracion_turno(
@@ -59,12 +74,13 @@ def render_administracion_turno(
         partes = med_texto.split(" | ")
         nombre = _extraer_nombre_medicacion(med_texto)
         via_texto = partes[1].replace("Via: ", "") if len(partes) > 1 and "Via:" in partes[1] else r.get("via", "")
-        frecuencia_texto = r.get("frecuencia") or (partes[2] if len(partes) > 2 else "")
+        frecuencia_texto = str(r.get("frecuencia") or (partes[2] if len(partes) > 2 else "") or "").strip()
+        frecuencia_resumen = _frecuencia_visible_con_ritmo(frecuencia_texto, _ritmo_infusion_ml_h(r))
         horarios = obtener_horarios_receta(r)
         horarios_legibles = format_horarios_receta(r)
         sabana_resumen.append({
             "Medicamento": nombre, "Via": via_texto or "S/D",
-            "Frecuencia": frecuencia_texto or "S/D", "Horarios": horarios_legibles,
+            "Frecuencia": frecuencia_resumen, "Horarios": horarios_legibles,
             "Estado": r.get("estado_receta", "Activa"),
         })
         if horarios:
@@ -76,11 +92,12 @@ def render_administracion_turno(
                 )
                 estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
                 es_inf = r.get("tipo_indicacion") == "Infusion / hidratacion"
+                frecuencia_visible = _frecuencia_visible_con_ritmo(frecuencia_texto or "S/D", _ritmo_infusion_ml_h(r, horario))
                 plan_dia.append({
                     "OK": _estado_icono(estado_actual), "Hora programada": horario,
                     "Hora realizada": admin_reg.get("hora", "") if admin_reg else "",
                     "Medicamento": nombre, "Detalle / velocidad": _detalle_horario_infusion(r, horario),
-                    "Via": via_texto or "S/D", "Frecuencia": frecuencia_texto or "S/D",
+                    "Via": via_texto or "S/D", "Frecuencia": frecuencia_visible,
                     "Estado": _estado_legible(estado_actual),
                     "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                     "Registrado por": _firma_trazabilidad_admin(admin_reg) if admin_reg else "",
@@ -92,11 +109,12 @@ def render_administracion_turno(
             admin_reg = next((a for a in admin_hoy if a.get("med") == nombre), None)
             estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
             es_inf = r.get("tipo_indicacion") == "Infusion / hidratacion"
+            frecuencia_visible = _frecuencia_visible_con_ritmo(frecuencia_texto or "A demanda", _ritmo_infusion_ml_h(r))
             plan_dia.append({
                 "OK": _estado_icono(estado_actual), "Hora programada": "A demanda",
                 "Hora realizada": admin_reg.get("hora", "") if admin_reg else "",
                 "Medicamento": nombre, "Detalle / velocidad": _detalle_horario_infusion(r, ""),
-                "Via": via_texto or "S/D", "Frecuencia": frecuencia_texto or "A demanda",
+                "Via": via_texto or "S/D", "Frecuencia": frecuencia_visible,
                 "Estado": _estado_legible(estado_actual),
                 "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                 "Registrado por": _firma_trazabilidad_admin(admin_reg) if admin_reg else "",

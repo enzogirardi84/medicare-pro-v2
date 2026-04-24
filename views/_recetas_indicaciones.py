@@ -106,7 +106,7 @@ def resumen_medicacion_activa(paciente_sel, mi_empresa):
         cols[3].caption("**Días**")
         for r in activas[:12]:
             cols = st.columns([3, 2, 2, 1])
-            cols[0].write((r.get("med") or "")[:55])
+            cols[0].write(texto_indicacion_visible(r))
             cols[1].write(r.get("frecuencia") or r.get("via") or "—")
             cols[2].write((r.get("medico_nombre") or r.get("profesional_estado") or "—")[:24])
             cols[3].write(str(r.get("dias_duracion") or "—"))

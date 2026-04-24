@@ -169,7 +169,7 @@ def clasificar_inventario_alerta(
         empresa_uuid = _obtener_uuid_empresa(emp)
         if empresa_uuid:
             inv_sql = get_inventario_by_empresa(empresa_uuid)
-            if inv_sql:
+            if isinstance(inv_sql, Sequence) and not isinstance(inv_sql, (str, bytes, bytearray)) and inv_sql:
                 for i in inv_sql:
                     item = i.get("nombre", "")
                     stock = i.get("stock_actual", 0)
