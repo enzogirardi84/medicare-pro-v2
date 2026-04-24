@@ -324,8 +324,9 @@ class QueryOptimizer:
             try:
                 compressed = st.session_state[compressed_key]
                 return self._compressor.decompress(compressed)
-            except Exception:
-                pass
+            except Exception as _exc:
+                import logging
+                logging.getLogger("query_optimizer").debug(f"fallo_decompress:{type(_exc).__name__}")
         
         # Fallback a normal
         return st.session_state.get(key)
@@ -371,8 +372,9 @@ def compress_large_data(data: Any, threshold_kb: int = 10) -> Tuple[Any, bool]:
         if len(pickled) > threshold_kb * 1024:
             compressed = compressor.compress(data)
             return compressed, True
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("query_optimizer").debug(f"fallo_compress:{type(_exc).__name__}")
     return data, False
 
 
@@ -381,6 +383,7 @@ def decompress_if_needed(data: Any) -> Any:
     if isinstance(data, bytes):
         try:
             return DataCompressor.decompress(data)
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("query_optimizer").debug(f"fallo_decompress_if_needed:{type(_exc).__name__}")
     return data
