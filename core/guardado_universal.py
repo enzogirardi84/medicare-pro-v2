@@ -100,7 +100,8 @@ def guardar_registro(
             from core.app_logging import log_event
             log_event("guardado_universal", error_msg)
         except Exception:
-            pass
+            import logging
+            logging.getLogger("guardado_universal").error(error_msg)
         return False, error_msg
 
 def obtener_registros(tipo: str, paciente_id: str = None) -> List[Dict]:
@@ -121,7 +122,8 @@ def obtener_registros(tipo: str, paciente_id: str = None) -> List[Dict]:
             from core.app_logging import log_event
             log_event("guardado_universal", f"ERROR leyendo {tipo}: {e}")
         except Exception:
-            pass
+            import logging
+            logging.getLogger("guardado_universal").error(f"ERROR leyendo {tipo}: {e}")
         return []
 
 def obtener_historial_paciente(paciente_id: str) -> List[Dict]:

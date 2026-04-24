@@ -702,14 +702,16 @@ def _guardar_datos_ejecutar():
                 dt = time.monotonic() - t0
                 if dt >= um:
                     log_event("db", f"guardar_lento:{dt:.2f}s")
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("database").debug(f"fallo_log_lento:{type(_exc).__name__}")
         try:
             from core.perf_metrics import record_perf
 
             record_perf("db.guardar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("database").debug(f"fallo_record_perf:{type(_exc).__name__}")
 
 
 def _guardar_datos_ejecutar_core():
