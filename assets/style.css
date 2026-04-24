@@ -4434,16 +4434,14 @@ html, body {
 }
 
 body:has([data-testid="stMainBlockContainer"] *) #mc-loading-overlay,
-body:has([data-testid="stMain"] .block-container *) #mc-loading-overlay,
-body:has([data-testid="stMainBlockContainer"] > *) #mc-loading-overlay {
+body:has([data-testid="stMain"] .block-container *) #mc-loading-overlay {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
 }
 
 body:has([data-testid="stMainBlockContainer"] *) #mc-loading-overlay:not(.mc-overlay-hidden),
-body:has([data-testid="stMain"] .block-container *) #mc-loading-overlay:not(.mc-overlay-hidden),
-body:has([data-testid="stMainBlockContainer"] > *) #mc-loading-overlay:not(.mc-overlay-hidden) {
+body:has([data-testid="stMain"] .block-container *) #mc-loading-overlay:not(.mc-overlay-hidden) {
     display: none !important;
 }
 
@@ -5158,9 +5156,8 @@ html body .mc-loader-cristal-spinner {
     }
 
     [data-testid="stAppViewContainer"] > [role="separator"],
-    [data-testid="stAppViewContainer"] > [data-mc-desktop-sidebar-artifact="true"],
     section[data-testid="stSidebar"] [role="separator"],
-    section[data-testid="stSidebar"] [data-mc-desktop-sidebar-artifact="true"] {
+    [data-mc-desktop-sidebar-artifact="true"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
