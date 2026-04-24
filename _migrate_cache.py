@@ -1,8 +1,11 @@
 """Migrar @st.cache_data a cache manual en funciones SQL getter."""
 import re, time, sys
+from pathlib import Path
 
 def migrate_clinico():
-    path = r"c:\programa de salud optimizado\core\_db_sql_clinico.py"
+    # Obtiene la ruta base dinámicamente desde donde se ejecuta el script
+    BASE_DIR = Path(__file__).resolve().parent
+    path = BASE_DIR / "core" / "_db_sql_clinico.py"
     src = open(path, encoding="utf-8", errors="replace").read()
 
     functions = [

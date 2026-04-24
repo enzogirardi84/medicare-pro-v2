@@ -17,7 +17,7 @@ import json
 import os
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set
 from enum import Enum, auto
 
@@ -124,7 +124,13 @@ class AuditTrail:
     """
     
     def __init__(self, secret_key: Optional[str] = None):
-        self._secret = secret_key or os.getenv("AUDIT_SECRET_KEY", "default-secret-change-in-prod")
+        self._secret = secret_key or os.getenv("AUDIT_SECRET_KEY")
+        if not self._secret:
+            raise ValueError(
+                "ERROR CRÍTICO: 'AUDIT_SECRET_KEY' no está configurada en el entorno. "
+                "Esta clave es obligatoria para la firma digital de registros de auditoría. "
+                "Configúrala como variable de entorno antes de iniciar la aplicación."
+            )
         self._entries: List[AuditEntry] = []
         self._last_hash = "0" * 64  # Genesis hash
     
@@ -201,7 +207,7 @@ class AuditTrail:
         
         # Crear datos de entrada (sin campos de firma)
         entry_id = str(uuid.uuid4())
-        timestamp = datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         entry_data = {
             "id": entry_id,
@@ -414,7 +420,7 @@ class DataRetentionPolicy:
     def should_delete(cls, data_type: str, created_at: datetime) -> bool:
         """Determina si datos deben ser eliminados según política."""
         retention_days = cls.RETENTION_PERIODS.get(data_type, 365)
-        cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
         return created_at < cutoff_date
     
     @classmethod

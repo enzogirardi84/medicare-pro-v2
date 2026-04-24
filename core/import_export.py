@@ -560,7 +560,7 @@ class DataExporter:
                     pdf.set_font("Arial", "", 12)
                     pdf.multi_cell(0, 5, evo["diagnostico"])
             
-            return pdf.output(dest="S").encode("latin-1")
+            return pdf.output(dest="S").encode("utf-8")
             
         except ImportError:
             # Fallback a texto

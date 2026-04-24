@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import pickle
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -142,7 +141,7 @@ class DistributedCache:
     - Multi-tier: Redis (L1) + Local (L2)
     - Circuit breaker para tolerancia a fallos
     - Invalidación por pub/sub
-    - Serialización pickle/JSON
+    - Serialización JSON (seguro, no pickle)
     """
     
     def __init__(
@@ -201,22 +200,14 @@ class DistributedCache:
         return full_key
     
     def _serialize(self, value: Any) -> bytes:
-        """Serializa valor para Redis."""
-        try:
-            return pickle.dumps(value)
-        except Exception:
-            # Fallback a JSON
-            return json.dumps(value).encode()
+        """Serializa valor para Redis usando formato seguro JSON."""
+        return json.dumps(value).encode('utf-8')
     
     def _deserialize(self, data: bytes) -> Any:
-        """Deserializa valor de Redis."""
-        try:
-            return pickle.loads(data)
-        except Exception:
-            try:
-                return json.loads(data.decode())
-            except Exception:
-                return data
+        """Deserializa valor de Redis de forma segura con JSON."""
+        if not data:
+            return None
+        return json.loads(data.decode('utf-8'))
     
     def get(self, key: str, default: Any = None) -> Any:
         """

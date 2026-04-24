@@ -266,12 +266,13 @@ NOTA MEJORADA:"""
             raise ValueError(f"Provider no soportado: {self.provider}")
     
     def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> str:
-        """Llama API de OpenAI."""
+        """Llama API de OpenAI (v1.0+)."""
         try:
-            import openai
-            openai.api_key = LLM_API_KEY
+            from openai import OpenAI
+            # Instanciar el cliente es obligatorio en v1.0+
+            client = OpenAI(api_key=LLM_API_KEY, timeout=30.0)
             
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=[
                     {"role": "system", "content": "Eres un asistente médico profesional."},

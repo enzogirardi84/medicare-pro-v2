@@ -292,20 +292,49 @@ class BackupManager:
                 self._backup_session_state(dest_dir / "session_state.json")
     
     def _backup_supabase(self, dest_file: Path):
-        """Backup de Supabase usando pg_dump."""
+        """Backup de Supabase usando pg_dump de forma segura (sin exponer password)."""
         import subprocess
+        import re
         
         db_url = os.getenv("DATABASE_URL", "")
         if not db_url:
             log_event("backup_error", "DATABASE_URL not set for Supabase backup")
             return
         
+        # Parse DATABASE_URL para extraer componentes de forma segura
+        # postgresql://user:pass@host:port/dbname
         try:
+            match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(\w+)', db_url)
+            if not match:
+                log_event("backup_error", "Invalid DATABASE_URL format")
+                return
+            
+            db_user, db_password, db_host, db_port, db_name = match.groups()
+        except Exception as e:
+            log_event("backup_error", f"Failed to parse DATABASE_URL: {e}")
+            return
+        
+        try:
+            # Copiamos el entorno actual para no afectarlo globalmente
+            env = os.environ.copy()
+            # Pasamos la contraseña de forma segura vía PGPASSWORD (no visible en ps)
+            env["PGPASSWORD"] = db_password
+            
+            # Llamamos a pg_dump sin la contraseña en los argumentos visibles
             result = subprocess.run(
-                ["pg_dump", "-Fc", db_url, "-f", str(dest_file)],
+                [
+                    "pg_dump", 
+                    "-h", db_host, 
+                    "-p", db_port,
+                    "-U", db_user,
+                    "-d", db_name,
+                    "-Fc",  # Formato custom comprimido
+                    "-f", str(dest_file)
+                ],
                 capture_output=True,
                 text=True,
-                timeout=300
+                timeout=300,
+                env=env  # Entorno con PGPASSWORD
             )
             
             if result.returncode == 0:

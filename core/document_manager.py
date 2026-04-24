@@ -304,9 +304,9 @@ class DocumentManager:
     def _extract_pdf_text(self, pdf_data: bytes) -> Optional[str]:
         """Extrae texto de PDF usando OCR básico."""
         try:
-            # Intentar PyPDF2 primero
-            import PyPDF2
-            reader = PyPDF2.PdfReader(io.BytesIO(pdf_data))
+            # Intentar pypdf (reemplazo seguro de PyPDF2)
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(pdf_data))
             text = ""
             for page in reader.pages:
                 text += page.extract_text() or ""
