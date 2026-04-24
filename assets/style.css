@@ -2803,25 +2803,31 @@ section.main > div {
     [data-testid="stPills"] [role="listbox"] {
         flex-wrap: wrap !important;
         overflow-x: visible !important;
-        row-gap: 0.5rem !important;
+        row-gap: 0.4rem !important;
+        gap: 0.35rem !important;
     }
 
     [data-testid="stPills"] [role="option"] {
-        flex: 1 1 calc(50% - 0.35rem) !important;
-        min-width: calc(50% - 0.35rem) !important;
+        flex: 1 1 auto !important;        /* Flexible según contenido */
+        min-width: unset !important;       /* Sin ancho mínimo forzado */
         max-width: 100% !important;
-        white-space: normal !important;
-        text-align: center !important;
-        justify-content: center !important;
-        align-items: center !important;
-        min-height: 50px !important;
+        white-space: normal !important;    /* Permitir saltos de línea */
+        text-align: left !important;       /* Alineación natural */
+        justify-content: flex-start !important;
+        min-height: 40px !important;
+        padding: 0.4rem 0.7rem !important;
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+        word-break: break-word !important;
     }
 
     [data-testid="stPills"] [role="option"] p,
     [data-testid="stPills"] [role="option"] span {
-        font-size: 0.8rem !important;
-        line-height: 1.22 !important;
-        text-align: center !important;
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+        text-align: left !important;
+        white-space: normal !important;
+        word-break: break-word !important;
     }
 }
 
