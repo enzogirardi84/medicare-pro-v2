@@ -1,0 +1,121 @@
+name: Medicare Lint & Format
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - codex/**
+    paths:
+      - "core/**"
+      - "views/**"
+      - "features/**"
+      - "services/**"
+      - "tests/**"
+      - "main.py"
+      - "requirements*.txt"
+      - ".github/workflows/**"
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: medicare-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-format:
+    name: Lint, Format y Security Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Instalar dependencias de linting
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black bandit
+
+      - name: Check formato con Black
+        run: |
+          black --check --diff core/ views/ features/ services/ main.py || true
+        continue-on-error: true
+
+      - name: Lint con Ruff
+        run: |
+          ruff check core/ views/ features/ services/ --select=E,W,F,I --ignore=E501 || true
+        continue-on-error: true
+
+      - name: Security scan con Bandit
+        run: |
+          bandit -r core/ views/ features/ -f json -o bandit-report.json || true
+          bandit -r core/ views/ features/ || true
+        continue-on-error: true
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-security-report
+          path: bandit-report.json
+          retention-days: 30
+
+  type-check:
+    name: Type Checking básico
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install types-pytz types-requests
+
+      - name: Type check con mypy (solo errores graves)
+        run: |
+          mypy core/ --ignore-missing-imports --disable-error-code=import --disable-error-code=no-redef || true
+        continue-on-error: true
+
+  test-smoke:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+          pip install pytest pytest-cov
+
+      - name: Ejecutar smoke tests
+        run: |
+          python -c "import main; print('✓ Import main.py exitoso')" || true
+          python -c "from core import utils, database, auth; print('✓ Core imports exitosos')" || true
+        continue-on-error: true

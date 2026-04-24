@@ -9,7 +9,6 @@ from core.utils import (
     construir_registro_auditoria_legal,
     decodificar_base64_seguro,
     filtrar_registros_empresa,
-    generar_hash_password,
     limite_archivo_mb,
     modo_celular_viejo_activo,
     normalizar_usuario_sistema,
@@ -18,9 +17,9 @@ from core.utils import (
     preparar_imagen_clinica_bytes,
     rol_ve_datos_todas_las_clinicas,
     validar_archivo_bytes,
-    validar_password_guardado,
     valor_por_modo_liviano,
 )
+from core.password_crypto import hash_password as generar_hash_password, verificar_password as validar_password_guardado
 from PIL import Image
 
 
