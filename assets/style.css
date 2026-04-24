@@ -4425,6 +4425,16 @@ html, body {
     display: none !important;
 }
 
+body:has([data-testid="stMainBlockContainer"] > *) #mc-loading-overlay {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+body:has([data-testid="stMainBlockContainer"] > *) #mc-loading-overlay:not(.mc-overlay-hidden) {
+    display: none !important;
+}
+
 /* Logo / título dentro del overlay */
 #mc-loading-overlay .mc-overlay-title {
     font-family: 'Inter', -apple-system, sans-serif;
