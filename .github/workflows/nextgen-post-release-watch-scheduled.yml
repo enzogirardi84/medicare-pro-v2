@@ -63,7 +63,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect monitoring configuration
+        id: config
+        run: |
+          set -euo pipefail
+          if [ -n "${{ secrets.NEXTGEN_POST_RELEASE_BASE_URL }}" ]; then
+            echo "base_url_configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_url_configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip scheduled run when monitoring is not configured
+        if: ${{ github.event_name == 'schedule' && steps.config.outputs.base_url_configured != 'true' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Scheduled staging watch"
+            echo ""
+            echo "- Result: skipped"
+            echo "- Reason: secret \`NEXTGEN_POST_RELEASE_BASE_URL\` is not configured."
+            echo "- Action: configure the secret in repo \`Settings > Secrets and variables > Actions\` to enable this monitor."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Validate required secret
+        if: ${{ github.event_name != 'schedule' || steps.config.outputs.base_url_configured == 'true' }}
         run: |
           set -euo pipefail
           if [ -z "${{ secrets.NEXTGEN_POST_RELEASE_BASE_URL }}" ]; then
@@ -72,6 +95,7 @@ jobs:
           fi
 
       - name: Run staged watch verification
+        if: ${{ steps.config.outputs.base_url_configured == 'true' }}
         env:
           POST_RELEASE_MODE: watch
           BASE_URL: ${{ secrets.NEXTGEN_POST_RELEASE_BASE_URL }}
@@ -110,6 +134,7 @@ jobs:
           nextgen_platform/scripts/post_release_http_verify.sh
 
       - name: Publish summary
+        if: ${{ steps.config.outputs.base_url_configured == 'true' }}
         env:
           POST_RELEASE_REPORT_PATH: nextgen_platform/ci_artifacts/post-release-report.csv
         run: |
@@ -155,6 +180,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce latency guardrail
+        if: ${{ steps.config.outputs.base_url_configured == 'true' }}
         env:
           SCHEDULE_FAIL_ON_BREACH: ${{ secrets.NEXTGEN_POST_RELEASE_FAIL_ON_LATENCY_BREACH }}
         run: |
