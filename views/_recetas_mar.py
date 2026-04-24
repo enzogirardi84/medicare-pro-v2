@@ -77,10 +77,8 @@ def registrar_administracion_dosis(
     mat_prof = str(user.get("matricula", "") or "").strip()
     login_ref = str(user.get("usuario_login", user.get("usuario", "")) or "").strip()
 
-    if "administracion_med_db" not in st.session_state or not isinstance(st.session_state["administracion_med_db"], list):
-        st.session_state["administracion_med_db"] = []
-
-    st.session_state["administracion_med_db"].append({
+    from core.database import guardar_json_db
+    guardar_json_db("administracion_med_db", {
         "paciente": paciente_sel,
         "med": nombre_med,
         "fecha": fecha_hoy,
@@ -94,7 +92,7 @@ def registrar_administracion_dosis(
         "registro_iso": ts_evento.isoformat(timespec="seconds"),
         "registro_fecha_hora": ts_evento.strftime("%d/%m/%Y %H:%M:%S"),
         "empresa": mi_empresa,
-    })
+    }, spinner=True)
     detalle_audit = (
         f"{nombre_med} | Programada: {slot} | Hora administración/registro: {hora_str} | Estado: {estado_sel}"
     )
@@ -117,7 +115,6 @@ def registrar_administracion_dosis(
         {"medicamento": nombre_med, "hora_real_administracion": hora_str,
          "firma": nombre_usuario(user), "matricula_profesional": mat_prof, "usuario_login": login_ref},
     )
-    guardar_datos(spinner=True)
     return True
 
 
@@ -391,6 +388,9 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
             via = escape(str(fila.get("Via", "") or "S/D"))
             freq = escape(str(fila.get("Frecuencia", "") or "S/D"))
             det = escape(str(fila.get("Detalle / velocidad", "") or "").strip() or "—")
+            solucion = escape(str(fila.get("Solucion", "") or "").strip())
+            volumen = str(fila.get("Volumen_ml", "") or "").strip()
+            velocidad = str(fila.get("Velocidad_ml_h", "") or "").strip()
             hp = escape(str(fila.get("Hora programada", "") or "—"))
             hr_reg = str(fila.get("Hora realizada", "") or "").strip()
             hr_e = escape(hr_reg if hr_reg else "—")
@@ -418,10 +418,19 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
                 else:
                     info_container, action_container = st.columns([4.4, 2.6])
                 with info_container:
+                    detalle_inf_html = ""
+                    if solucion:
+                        detalle_inf_html += f'<div class="mc-mar-detail">💧 <b>{solucion}</b>'
+                        if volumen:
+                            detalle_inf_html += f' — {volumen} ml'
+                        if velocidad:
+                            detalle_inf_html += f' @ {velocidad} ml/h'
+                        detalle_inf_html += '</div>'
                     st.markdown(
                         f'<div class="{blk}">'
                         f'<div class="mc-mar-title">{med.upper()}</div>'
                         f'<div class="mc-mar-sub">{via} · {freq}</div>'
+                        f'{detalle_inf_html}'
                         f'<div class="mc-mar-detail">{det}</div>'
                         f'<div class="mc-mar-ritmo">{ritmo_inner}</div>'
                         f"{extra_obs}</div>",

@@ -83,8 +83,9 @@ def resumen_medicacion_activa(paciente_sel, mi_empresa):
                     vencidas.append((r, abs(dias_restantes)))
                 elif dias_restantes <= 2:
                     por_vencer.append((r, dias_restantes))
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("recetas_indicaciones", f"parse_fecha_vencimiento_error:{type(_exc).__name__}:{r.get('fecha','')}")
 
     with st.expander(f"📊 Medicación activa ({len(activas)} indicación/es)", expanded=bool(vencidas or por_vencer)):
         if vencidas:

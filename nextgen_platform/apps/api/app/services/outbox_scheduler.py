@@ -17,15 +17,17 @@ def _run_loop() -> None:
             tenants = db.scalars(select(Tenant.id)).all()
             for tenant_id in tenants:
                 flush_outbox_for_tenant(db, tenant_id=tenant_id, limit=settings.outbox_flush_batch_size)
-        except Exception:
+        except Exception as _exc:
             # Scheduler defensivo: nunca tumbar proceso API.
-            pass
+            import logging
+            logging.getLogger("outbox_scheduler").warning(f"fallo_flush_cycle:{type(_exc).__name__}")
         finally:
             try:
                 if db is not None:
                     db.close()
-            except Exception:
-                pass
+            except Exception as _exc:
+                import logging
+                logging.getLogger("outbox_scheduler").debug(f"fallo_db_close:{type(_exc).__name__}")
         time.sleep(max(5, int(settings.outbox_auto_flush_interval_seconds)))
 
 

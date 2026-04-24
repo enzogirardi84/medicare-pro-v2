@@ -42,7 +42,11 @@ def _visitas_para_aviso_whatsapp(agenda_paciente, now_naive):
 
 
 def _etiqueta_visita_whatsapp(item):
-    fh = item["_fecha_dt"].strftime("%d/%m/%Y %H:%M") if item["_fecha_dt"].year > 1900 else "Sin fecha"
+    _dt = item.get("_fecha_dt")
+    try:
+        fh = _dt.strftime("%d/%m/%Y %H:%M") if hasattr(_dt, "year") and _dt.year > 1900 else "Sin fecha"
+    except Exception:
+        fh = "Sin fecha"
     prof = item.get("profesional") or "Sin profesional"
     return f"{fh} — {prof} ({item.get('estado_calc', '')})"
 

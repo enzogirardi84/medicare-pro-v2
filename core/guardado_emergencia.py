@@ -363,7 +363,8 @@ def obtener_signos_vitales_local(paciente_id: str) -> List[Dict]:
             from core.app_logging import log_event
             log_event("guardado_emergencia", f"Error leyendo vitales local: {e}")
         except Exception:
-            pass
+            import logging
+            logging.getLogger("guardado_emergencia").error(f"Error leyendo vitales local: {e}")
         return []
 
 
@@ -388,5 +389,6 @@ def obtener_evoluciones_local(paciente_id: str) -> List[Dict]:
             from core.app_logging import log_event
             log_event("guardado_emergencia", f"Error leyendo evoluciones local: {e}")
         except Exception:
-            pass
+            import logging
+            logging.getLogger("guardado_emergencia").error(f"Error leyendo evoluciones local: {e}")
         return []

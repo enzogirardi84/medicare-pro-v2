@@ -10,6 +10,7 @@ import pandas as pd
 
 from core.export_utils import safe_text
 from core.utils import decodificar_base64_seguro, mapa_detalles_pacientes
+from core.app_logging import log_event
 
 _HISTORIAL_SQL_TTL_SECONDS = 120
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -84,8 +85,8 @@ def patient_context(session_state, paciente_sel):
     }
     try:
         session_state[_ck_ctx] = result
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("exports_helpers", f"fallo_cache_contexto:{type(_exc).__name__}")
     return result
 
 
@@ -354,9 +355,14 @@ def collect_sql_sections(session_state, paciente_sel, ctx):
 # ---------------------------------------------------------------------------
 
 def collect_patient_sections(session_state, paciente_sel):
+    """
+    Wrapper compatible con tests viejos que monkeypatchean helpers en `core.clinical_exports`.
+    """
     _ck_secs = f"_ce_secs_{paciente_sel}"
     _secs_cached = session_state.get(_ck_secs)
     local_ts = session_state.get("_ultimo_guardado_ts", 0)
+
+    # CORRECCIÓN: Se eliminaron los espacios en "local_ts" y "ts"
     if (
         _secs_cached is not None
         and isinstance(_secs_cached, dict)
@@ -397,8 +403,8 @@ def collect_patient_sections(session_state, paciente_sel):
     }
     try:
         session_state[_ck_secs] = {"ts": time.monotonic(), "local_ts": local_ts, "sections": merged}
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("exports_helpers", f"fallo_cache_secciones:{type(_exc).__name__}")
     return merged
 
 

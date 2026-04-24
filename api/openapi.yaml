@@ -1,0 +1,1197 @@
+openapi: 3.0.3
+info:
+  title: Medicare Pro API
+  description: |
+    API REST para Medicare Pro - Sistema de Gestión Clínica.
+    
+    ## Características
+    - Autenticación JWT
+    - Rate limiting
+    - Paginación
+    - Webhooks para eventos
+    
+    ## Versiones
+    - v1: Versión actual estable
+    
+  version: 1.0.0
+  contact:
+    name: Soporte Medicare Pro
+    email: soporte@medicare.local
+  license:
+    name: Proprietary
+    
+servers:
+  - url: https://api.medicare.local/v1
+    description: Producción
+  - url: https://staging-api.medicare.local/v1
+    description: Staging
+  - url: http://localhost:8000/v1
+    description: Desarrollo local
+
+# ============ SEGURIDAD ============
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT de autenticación
+    
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API Key para servicios internos
+
+  # ============ SCHEMAS ============
+  schemas:
+    # Errores
+    Error:
+      type: object
+      properties:
+        error_code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Datos inválidos"
+        details:
+          type: object
+          example: {"field": "email", "reason": "formato inválido"}
+        timestamp:
+          type: string
+          format: date-time
+    
+    # Paginación
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        total_pages:
+          type: integer
+          example: 8
+        has_next:
+          type: boolean
+          example: true
+        has_prev:
+          type: boolean
+          example: false
+    
+    # Usuarios
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - nombre
+        - rol
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          example: "doctor@clinica.com"
+        nombre:
+          type: string
+          example: "Dr. Juan Pérez"
+        rol:
+          type: string
+          enum: [admin, medico, enfermera, recepcionista]
+          example: "medico"
+        matricula:
+          type: string
+          example: "MP-12345"
+        empresa:
+          type: string
+          example: "Clínica Central"
+        activo:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    UserCreate:
+      type: object
+      required:
+        - email
+        - nombre
+        - rol
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        nombre:
+          type: string
+        rol:
+          type: string
+          enum: [admin, medico, enfermera, recepcionista]
+        password:
+          type: string
+          minLength: 8
+        matricula:
+          type: string
+        empresa:
+          type: string
+    
+    # Pacientes
+    Paciente:
+      type: object
+      required:
+        - id
+        - dni
+        - nombre
+        - apellido
+      properties:
+        id:
+          type: string
+          format: uuid
+        dni:
+          type: string
+          example: "12345678"
+        nombre:
+          type: string
+          example: "María"
+        apellido:
+          type: string
+          example: "González"
+        fecha_nacimiento:
+          type: string
+          format: date
+          example: "1985-06-15"
+        sexo:
+          type: string
+          enum: [M, F, O]
+          example: "F"
+        telefono:
+          type: string
+          example: "+54 11 5555-1234"
+        email:
+          type: string
+          format: email
+        direccion:
+          type: string
+        obra_social:
+          type: string
+          example: "OSDE"
+        numero_afiliado:
+          type: string
+        alergias:
+          type: array
+          items:
+            type: string
+        medicamentos_actuales:
+          type: array
+          items:
+            type: string
+        empresa:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    PacienteCreate:
+      type: object
+      required:
+        - dni
+        - nombre
+        - apellido
+      properties:
+        dni:
+          type: string
+          minLength: 7
+        nombre:
+          type: string
+        apellido:
+          type: string
+        fecha_nacimiento:
+          type: string
+          format: date
+        sexo:
+          type: string
+          enum: [M, F, O]
+        telefono:
+          type: string
+        email:
+          type: string
+          format: email
+        direccion:
+          type: string
+        obra_social:
+          type: string
+        numero_afiliado:
+          type: string
+    
+    # Evoluciones
+    Evolucion:
+      type: object
+      required:
+        - id
+        - paciente_id
+        - fecha
+        - medico_id
+        - nota
+      properties:
+        id:
+          type: string
+          format: uuid
+        paciente_id:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date-time
+        medico_id:
+          type: string
+          format: uuid
+        medico_nombre:
+          type: string
+        nota:
+          type: string
+          example: "Paciente refiere dolor leve en zona lumbar..."
+        diagnostico:
+          type: string
+        tratamiento:
+          type: string
+        proxima_cita:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+    
+    EvolucionCreate:
+      type: object
+      required:
+        - paciente_id
+        - nota
+      properties:
+        paciente_id:
+          type: string
+          format: uuid
+        nota:
+          type: string
+          minLength: 10
+        diagnostico:
+          type: string
+        tratamiento:
+          type: string
+        proxima_cita:
+          type: string
+          format: date
+    
+    # Signos Vitales
+    SignosVitales:
+      type: object
+      required:
+        - id
+        - paciente_id
+        - fecha
+        - profesional_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        paciente_id:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date-time
+        profesional_id:
+          type: string
+          format: uuid
+        presion_arterial:
+          type: string
+          example: "120/80"
+        frecuencia_cardiaca:
+          type: integer
+          example: 72
+        frecuencia_respiratoria:
+          type: integer
+          example: 16
+        temperatura:
+          type: number
+          example: 36.5
+        saturacion_o2:
+          type: integer
+          example: 98
+        peso:
+          type: number
+          example: 70.5
+        talla:
+          type: number
+          example: 1.75
+        imc:
+          type: number
+          example: 23.0
+        glucemia:
+          type: number
+        observaciones:
+          type: string
+    
+    # Recetas
+    Receta:
+      type: object
+      required:
+        - id
+        - paciente_id
+        - medico_id
+        - fecha
+        - medicamentos
+      properties:
+        id:
+          type: string
+          format: uuid
+        paciente_id:
+          type: string
+          format: uuid
+        medico_id:
+          type: string
+          format: uuid
+        fecha:
+          type: string
+          format: date-time
+        medicamentos:
+          type: array
+          items:
+            type: object
+            properties:
+              nombre:
+                type: string
+              dosis:
+                type: string
+              frecuencia:
+                type: string
+              duracion:
+                type: string
+        observaciones:
+          type: string
+        vigencia_dias:
+          type: integer
+          example: 30
+    
+    # Estudios
+    Estudio:
+      type: object
+      required:
+        - id
+        - paciente_id
+        - tipo
+        - fecha_solicitud
+      properties:
+        id:
+          type: string
+          format: uuid
+        paciente_id:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [laboratorio, imagen, otros]
+        descripcion:
+          type: string
+        fecha_solicitud:
+          type: string
+          format: date-time
+        fecha_resultado:
+          type: string
+          format: date-time
+        resultado:
+          type: string
+        archivo_url:
+          type: string
+          format: uri
+        estado:
+          type: string
+          enum: [pendiente, completado, cancelado]
+    
+    # Login/Auth
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "dr.perez"
+        password:
+          type: string
+          format: password
+          example: "SecurePass123!"
+        pin:
+          type: string
+          example: "1234"
+    
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+        expires_at:
+          type: string
+          format: date-time
+        requires_2fa:
+          type: boolean
+    
+    # Webhook
+    WebhookEvent:
+      type: object
+      properties:
+        event_type:
+          type: string
+          enum: [paciente.created, paciente.updated, evolucion.created, receta.created]
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          type: object
+
+  # ============ RESPONSES ============
+  responses:
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "NOT_FOUND"
+            message: "El recurso solicitado no existe"
+    
+    Unauthorized:
+      description: No autorizado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "UNAUTHORIZED"
+            message: "Credenciales inválidas o token expirado"
+    
+    Forbidden:
+      description: Prohibido - sin permisos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "FORBIDDEN"
+            message: "No tiene permisos para esta acción"
+    
+    ValidationError:
+      description: Error de validación
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "VALIDATION_ERROR"
+            message: "Datos de entrada inválidos"
+            details:
+              field: "email"
+              reason: "Formato inválido"
+    
+    RateLimit:
+      description: Límite de requests excedido
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+# ============ PATHS ============
+paths:
+  # === AUTENTICACIÓN ===
+  /auth/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Iniciar sesión
+      description: Autentica usuario y retorna token JWT
+      security: []  # No requiere auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Cuenta bloqueada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/logout:
+    post:
+      tags:
+        - Autenticación
+      summary: Cerrar sesión
+      responses:
+        '200':
+          description: Logout exitoso
+  
+  /auth/refresh:
+    post:
+      tags:
+        - Autenticación
+      summary: Refrescar token
+      description: Obtiene nuevo token JWT antes de expiración
+      responses:
+        '200':
+          description: Token refrescado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  # === USUARIOS ===
+  /users:
+    get:
+      tags:
+        - Usuarios
+      summary: Listar usuarios
+      description: Obtiene lista paginada de usuarios
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: rol
+          in: query
+          schema:
+            type: string
+            enum: [admin, medico, enfermera, recepcionista]
+        - name: empresa
+          in: query
+          schema:
+            type: string
+        - name: activo
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    
+    post:
+      tags:
+        - Usuarios
+      summary: Crear usuario
+      description: Crea nuevo usuario (solo admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  
+  /users/{user_id}:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener usuario
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Datos del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - Usuarios
+      summary: Actualizar usuario
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - Usuarios
+      summary: Eliminar/Desactivar usuario
+      description: Desactiva usuario (no elimina datos históricos)
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Usuario desactivado
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # === PACIENTES ===
+  /pacientes:
+    get:
+      tags:
+        - Pacientes
+      summary: Listar pacientes
+      description: Busca y lista pacientes con filtros
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda por nombre, apellido o DNI
+          schema:
+            type: string
+        - name: empresa
+          in: query
+          schema:
+            type: string
+        - name: obra_social
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lista de pacientes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Paciente'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    
+    post:
+      tags:
+        - Pacientes
+      summary: Crear paciente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PacienteCreate'
+      responses:
+        '201':
+          description: Paciente creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paciente'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  
+  /pacientes/{paciente_id}:
+    get:
+      tags:
+        - Pacientes
+      summary: Obtener paciente
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Datos del paciente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paciente'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - Pacientes
+      summary: Actualizar paciente
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PacienteCreate'
+      responses:
+        '200':
+          description: Paciente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Paciente'
+    
+    delete:
+      tags:
+        - Pacientes
+      summary: Eliminar paciente
+      description: Solo marca como inactivo, no elimina registros clínicos
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Paciente eliminado
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # === EVOLUCIONES ===
+  /pacientes/{paciente_id}/evoluciones:
+    get:
+      tags:
+        - Evoluciones
+      summary: Listar evoluciones de paciente
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: desde
+          in: query
+          description: Fecha inicial (ISO 8601)
+          schema:
+            type: string
+            format: date
+        - name: hasta
+          in: query
+          description: Fecha final (ISO 8601)
+          schema:
+            type: string
+            format: date
+        - name: medico_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de evoluciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Evolucion'
+    
+    post:
+      tags:
+        - Evoluciones
+      summary: Crear evolución
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvolucionCreate'
+      responses:
+        '201':
+          description: Evolución creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evolucion'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # === SIGNOS VITALES ===
+  /pacientes/{paciente_id}/vitales:
+    get:
+      tags:
+        - Signos Vitales
+      summary: Obtener historial de signos vitales
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Últimos N registros
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Lista de signos vitales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignosVitales'
+    
+    post:
+      tags:
+        - Signos Vitales
+      summary: Registrar signos vitales
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignosVitales'
+      responses:
+        '201':
+          description: Signos vitales registrados
+
+  # === RECETAS ===
+  /pacientes/{paciente_id}/recetas:
+    get:
+      tags:
+        - Recetas
+      summary: Listar recetas de paciente
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: vigentes
+          in: query
+          description: Solo recetas vigentes
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Lista de recetas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Receta'
+    
+    post:
+      tags:
+        - Recetas
+      summary: Crear receta
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Receta'
+      responses:
+        '201':
+          description: Receta creada
+
+  # === ESTUDIOS ===
+  /pacientes/{paciente_id}/estudios:
+    get:
+      tags:
+        - Estudios
+      summary: Listar estudios
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tipo
+          in: query
+          schema:
+            type: string
+            enum: [laboratorio, imagen, otros]
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [pendiente, completado, cancelado]
+      responses:
+        '200':
+          description: Lista de estudios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estudio'
+    
+    post:
+      tags:
+        - Estudios
+      summary: Solicitar estudio
+      parameters:
+        - name: paciente_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Estudio'
+      responses:
+        '201':
+          description: Estudio solicitado
+
+  # === REPORTES ===
+  /reportes/estadisticas:
+    get:
+      tags:
+        - Reportes
+      summary: Estadísticas del sistema
+      description: Datos agregados para dashboard
+      parameters:
+        - name: empresa
+          in: query
+          schema:
+            type: string
+        - name: desde
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: hasta
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Estadísticas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_pacientes:
+                    type: integer
+                  total_evoluciones:
+                    type: integer
+                  pacientes_nuevos:
+                    type: integer
+                  evoluciones_por_medico:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        medico_id:
+                          type: string
+                        medico_nombre:
+                          type: string
+                        count:
+                          type: integer
+
+  # === WEBHOOKS ===
+  /webhooks:
+    post:
+      tags:
+        - Webhooks
+      summary: Registrar webhook
+      description: "Suscribe URL para recibir eventos"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - events
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://mi-sistema.com/webhook"
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum: [paciente.created, paciente.updated, evolucion.created, receta.created]
+                secret:
+                  type: string
+                  description: Secreto para verificar firma HMAC
+      responses:
+        '201':
+          description: Webhook registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhook_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [active, pending]
+
+# ============ TAGS ============
+tags:
+  - name: Autenticación
+    description: Login, logout y gestión de tokens
+  - name: Usuarios
+    description: Gestión de usuarios del sistema
+  - name: Pacientes
+    description: CRUD de pacientes
+  - name: Evoluciones
+    description: Notas de evolución clínica
+  - name: Signos Vitales
+    description: Registro de constantes vitales
+  - name: Recetas
+    description: Prescripciones médicas
+  - name: Estudios
+    description: Solicitud y resultados de estudios
+  - name: Reportes
+    description: Estadísticas y reportes
+  - name: Webhooks
+    description: Integraciones webhook

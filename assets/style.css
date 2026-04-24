@@ -2581,6 +2581,12 @@ hr {
     --mc-safe-bottom: env(safe-area-inset-bottom, 0px);
     --mc-safe-left: env(safe-area-inset-left, 0px);
     --mc-safe-right: env(safe-area-inset-right, 0px);
+    /* Botón sidebar móvil — estilo Liquid Glass iOS 26 */
+    --mc-glass-bg: rgba(255, 255, 255, 0.06);
+    --mc-glass-border: rgba(255, 255, 255, 0.10);
+    --mc-glass-blur: blur(18px) saturate(1.8);
+    --mc-glass-shadow: 0 8px 28px rgba(2, 6, 23, 0.30);
+    --mc-glass-opacity: 0.78;
 }
 
 /* Contenedor principal Streamlit: no recortar altura; el scroll vertical lo lleva body/html. */
@@ -2625,6 +2631,58 @@ section.main > div {
         height: auto !important;
         min-height: 0 !important;
         padding: 0 !important;
+    }
+}
+
+/* ========== Botón sidebar móvil: Liquid Glass iOS 26 translúcido ========== */
+/* Este CSS override fuerza el estilo glass incluso si el JS inyectado está cacheado */
+@media (max-width: 767px) {
+    #mc-mobile-sidebar-toggle-btn,
+    #mc-mobile-sidebar-toggle-btn-v2 {
+        position: fixed !important;
+        left: 12px !important;
+        top: 12px !important;
+        transform: none !important;
+        -webkit-transform: translateZ(0) !important;
+        transform: translateZ(0) !important;
+        border-radius: 14px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        padding: 0 14px 0 12px !important;
+        background: var(--mc-glass-bg) !important;
+        backdrop-filter: var(--mc-glass-blur) !important;
+        -webkit-backdrop-filter: var(--mc-glass-blur) !important;
+        border: 1px solid var(--mc-glass-border) !important;
+        color: #f8fafc !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        box-shadow: var(--mc-glass-shadow) !important;
+        opacity: var(--mc-glass-opacity) !important;
+        cursor: pointer !important;
+        z-index: 10015 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        white-space: nowrap !important;
+        transition: opacity 0.15s, transform 0.18s, background 0.2s !important;
+    }
+    #mc-mobile-sidebar-toggle-btn:active,
+    #mc-mobile-sidebar-toggle-btn-v2:active {
+        opacity: 1 !important;
+        transform: scale(0.96) !important;
+    }
+    /* Estado abierto: flechita pequeña */
+    #mc-mobile-sidebar-toggle-btn.is-open,
+    #mc-mobile-sidebar-toggle-btn-v2.is-open {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        gap: 0 !important;
     }
 }
 
@@ -2745,25 +2803,31 @@ section.main > div {
     [data-testid="stPills"] [role="listbox"] {
         flex-wrap: wrap !important;
         overflow-x: visible !important;
-        row-gap: 0.5rem !important;
+        row-gap: 0.4rem !important;
+        gap: 0.35rem !important;
     }
 
     [data-testid="stPills"] [role="option"] {
-        flex: 1 1 calc(50% - 0.35rem) !important;
-        min-width: calc(50% - 0.35rem) !important;
+        flex: 1 1 auto !important;        /* Flexible según contenido */
+        min-width: unset !important;       /* Sin ancho mínimo forzado */
         max-width: 100% !important;
-        white-space: normal !important;
-        text-align: center !important;
-        justify-content: center !important;
-        align-items: center !important;
-        min-height: 50px !important;
+        white-space: normal !important;    /* Permitir saltos de línea */
+        text-align: left !important;       /* Alineación natural */
+        justify-content: flex-start !important;
+        min-height: 40px !important;
+        padding: 0.4rem 0.7rem !important;
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+        word-break: break-word !important;
     }
 
     [data-testid="stPills"] [role="option"] p,
     [data-testid="stPills"] [role="option"] span {
-        font-size: 0.8rem !important;
-        line-height: 1.22 !important;
-        text-align: center !important;
+        font-size: 0.78rem !important;
+        line-height: 1.2 !important;
+        text-align: left !important;
+        white-space: normal !important;
+        word-break: break-word !important;
     }
 }
 
@@ -2786,10 +2850,149 @@ div[data-testid="stDataFrame"] {
     line-height: 1.5 !important;
 }
 
+/* ===== SIDEBAR FIJO DESKTOP/TABLET (>= 768px) ===== */
+/* Usando position: sticky para mejor compatibilidad con Streamlit */
+@media (min-width: 768px) {
+    /* Asegurar que el AppViewContainer tenga altura completa para sticky */
+    [data-testid="stAppViewContainer"] {
+        min-height: 100vh !important;
+        display: flex !important;
+        flex-direction: row !important;
+        margin-left: 0 !important;
+    }
+
+    /* El sidebar debe ser sticky y mantenerse visible */
+    [data-testid="stSidebar"] {
+        position: sticky !important;
+        position: -webkit-sticky !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        width: 21rem !important;
+        min-width: 21rem !important;
+        max-width: 21rem !important;
+        flex-shrink: 0 !important;
+        align-self: flex-start !important;
+        z-index: 100 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        background: var(--bg-sidebar, #090e1a) !important;
+        border-right: 1px solid rgba(148, 163, 184, 0.12) !important;
+        box-shadow: 4px 0 24px rgba(2, 6, 18, 0.35) !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    /* Contenedor interno del sidebar - scroll independiente */
+    [data-testid="stSidebar"] > div:first-child {
+        height: 100% !important;
+        min-height: 100% !important;
+        max-height: 100vh !important;
+        overflow-y: auto !important;
+        background: transparent !important;
+    }
+
+    /* Forzar visibilidad del sidebar - nunca colapsar */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"][aria-hidden="false"],
+    [data-testid="stSidebar"][aria-hidden="true"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        transform: none !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Ocultar completamente el botón de colapsar y su espacio */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Ocultar barra de redimensionamiento del sidebar */
+    [data-testid="stSidebar"] + div,
+    [data-testid="stSidebar"] ~ div[class*="resize"],
+    div[class*="resize"][style*="cursor: col-resize"],
+    div[class*="resizer"],
+    [data-testid="stSidebar"] [class*="resizer"],
+    [data-testid="stSidebar"] [class*="resize-handle"] {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        cursor: default !important;
+    }
+
+    /* Deshabilitar resize en el sidebar */
+    [data-testid="stSidebar"] {
+        resize: none !important;
+        pointer-events: auto !important;
+    }
+
+    /* Ajustar el espacio que ocupaba el botón colapsado */
+    .stApp > header {
+        display: none !important;
+    }
+
+    /* Sección principal (main content) debe ocupar el resto del espacio */
+    [data-testid="stAppViewContainer"] > section[data-testid="stAppViewContent"],
+    [data-testid="stAppViewContainer"] > section:last-child,
+    section.main {
+        flex: 1 !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin-left: 0 !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Contenedor de bloques ajustado */
+    .block-container {
+        max-width: 100% !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
+
 /* ===== OPTIMIZACIONES MÓVILES Y TABLETS ===== */
 
 /* SIDEBAR MOVIL LEGACY: mantenemos solo ajustes internos, no layout ni visibilidad */
 @media (max-width: 768px) {
+
+    /* 1. RESET: Anular estilos de desktop para sidebar */
+    [data-testid="stSidebar"] {
+        position: relative !important; /* Reset de sticky */
+        left: auto !important;
+        top: auto !important;
+        height: auto !important;
+        width: 85vw !important; /* Ancho drawer mobile */
+        min-width: 280px !important;
+        max-width: 90vw !important;
+        flex-shrink: 1 !important;
+        align-self: auto !important;
+        z-index: 999999 !important; /* Por encima de todo */
+        box-shadow: 8px 0 32px rgba(2, 6, 18, 0.55) !important;
+        transform: none !important;
+        transition: transform 0.3s ease !important;
+    }
+
+    /* 2. RESET: Anular flex y margin del contenedor principal */
+    [data-testid="stAppViewContainer"] {
+        display: block !important; /* Reset de flex */
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
 
     /* 3. Contenedor principal: padding uniforme sin margen sobrante */
     [data-testid="block-container"] {
@@ -2799,11 +3002,22 @@ div[data-testid="stDataFrame"] {
         overflow-x: hidden !important;
     }
 
-    /* 4. Sección principal sin margen izquierdo */
-    [data-testid="stAppViewContainer"] > section:nth-child(2) {
+    /* 4. Sección principal sin margen izquierdo y ancho completo */
+    [data-testid="stAppViewContainer"] > section.main,
+    section.main {
         margin-left: 0 !important;
         padding-left: 0 !important;
+        padding-right: 0 !important;
         width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* 5. Asegurar que el botón de colapsar sidebar esté visible en mobile */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    button[kind="header"] {
+        display: flex !important;
+        visibility: visible !important;
     }
     
     /* Botones más grandes para touch */
@@ -2849,11 +3063,24 @@ div[data-testid="stDataFrame"] {
     }
 }
 
-/* Tablets: sidebar ancho intermedio */
+/* Tablets: ajustes específicos para sidebar fijo */
 @media (min-width: 769px) and (max-width: 1024px) {
+    /* Sidebar ligeramente más ancho en tablets para mejor usabilidad */
     [data-testid="stSidebar"] {
+        width: 300px !important;
         min-width: 300px !important;
-        max-width: 320px !important;
+        max-width: 300px !important;
+    }
+
+    /* Ajustar margin-left del contenedor principal para el nuevo ancho */
+    [data-testid="stAppViewContainer"] {
+        margin-left: 300px !important;
+    }
+
+    /* Sección principal ajustada */
+    [data-testid="stAppViewContainer"] > section.main,
+    section.main {
+        max-width: calc(100% - 300px) !important;
     }
 }
 

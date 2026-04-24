@@ -1,8 +1,25 @@
-"""Logging de aplicación sin datos clínicos ni identificadores de paciente."""
+"""Logging de aplicación sin datos clínicos ni identificadores de paciente.
+
+Ahora con soporte para logging estructurado JSON y correlation IDs.
+"""
 
 import logging
+import sys
 from collections import deque
 from typing import Dict, List, Any
+
+# Intentar importar observabilidad
+JSON_LOGGING_AVAILABLE = False
+try:
+    from core.observability import (
+        StructuredLogFormatter,
+        get_correlation_id,
+        set_correlation_id,
+        init_observability_for_session,
+    )
+    JSON_LOGGING_AVAILABLE = True
+except ImportError:
+    pass
 
 _LOGGER = logging.getLogger("medicare.app")
 
@@ -16,14 +33,22 @@ class MemoryLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
             entry: Dict[str, Any] = {
-                "timestamp": self.formatter.formatTime(record) if self.formatter else record.asctime,
+                "timestamp": self.formatter.formatTime(record) if self.formatter else getattr(record, 'asctime', ''),
                 "level": record.levelname,
                 "message": self.format(record) if self.formatter else record.getMessage(),
                 "name": record.name,
             }
+            # Agregar correlation_id si está disponible
+            if JSON_LOGGING_AVAILABLE:
+                try:
+                    entry["correlation_id"] = get_correlation_id()
+                except:
+                    entry["correlation_id"] = "none"
             _log_buffer.append(entry)
-        except Exception:
-            pass  # No fallar por logging
+        except Exception as _exc:
+            # Silencioso por diseño: el logging no debe fallar la app
+            import logging as _logging
+            _logging.getLogger("app_logging").debug(f"fallo_emit:{type(_exc).__name__}")
 
 
 def _setup_memory_handler() -> None:
@@ -35,8 +60,14 @@ def _setup_memory_handler() -> None:
     
     handler = MemoryLogHandler()
     handler.setLevel(logging.WARNING)  # Solo WARNING y superior
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
+    
+    # Usar formatter JSON si está disponible
+    if JSON_LOGGING_AVAILABLE:
+        handler.setFormatter(StructuredLogFormatter())
+    else:
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+    
     _LOGGER.addHandler(handler)
     _log_buffer = deque(maxlen=100)
 

@@ -3,13 +3,79 @@ from datetime import date, datetime
 import streamlit as st
 
 from core.utils import es_control_total
-from views._admision_utils import NON_PATIENT_DB_KEYS
+from views._admision_utils import (
+    NON_PATIENT_DB_KEYS,
+    _existe_dni_en_legajos as _existe_dni_en_legajos_impl,
+    _listar_pacientes_gestion as _listar_pacientes_gestion_impl,
+    _normalizar_campos_legajo,
+    _normalizar_dni as _normalizar_dni_impl,
+    _paciente_id as _paciente_id_impl,
+    _texto_unilinea,
+)
 from views._admision_secciones import (
     DB_LABELS,
-    _render_admision_gestion,
     _render_admision_alta,
+    _render_admision_gestion,
 )
 
+
+def _normalizar_dni(valor):
+    return _normalizar_dni_impl(valor)
+
+
+def _paciente_id(nombre, dni):
+    return _paciente_id_impl(nombre, dni)
+
+
+def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False, empresa_filtro=""):
+    return _listar_pacientes_gestion_impl(
+        mi_empresa,
+        rol,
+        busqueda=busqueda,
+        incluir_altas=incluir_altas,
+        empresa_filtro=empresa_filtro,
+    )
+
+
+def _existe_dni_en_legajos(dni, mi_empresa, rol, excluir_paciente=None):
+    return _existe_dni_en_legajos_impl(
+        dni,
+        mi_empresa,
+        rol,
+        excluir_paciente=excluir_paciente,
+    )
+
+
+def _validar_legajo(nombre, dni, empresa, mi_empresa, rol, excluir_paciente=None):
+    campos = _normalizar_campos_legajo(nombre, dni, empresa)
+    if not campos["nombre"] or not campos["dni"]:
+        return campos, "Nombre y DNI son obligatorios."
+    if not campos["empresa"]:
+        return campos, "La clinica / empresa es obligatoria."
+    if _existe_dni_en_legajos(campos["dni"], mi_empresa, rol, excluir_paciente=excluir_paciente):
+        return campos, "Ya existe otro paciente con ese DNI."
+    return campos, ""
+
+
+def _buscar_coincidencias_legajo(busqueda, mi_empresa, rol):
+    consulta = _texto_unilinea(busqueda)
+    if not consulta:
+        return []
+    coincidencias = {
+        item["id"]: item
+        for item in _listar_pacientes_gestion(
+            mi_empresa,
+            rol,
+            busqueda=consulta,
+            incluir_altas=True,
+        )
+    }
+    dni_norm = _normalizar_dni(consulta)
+    if dni_norm and dni_norm != consulta:
+        for item in _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=True):
+            if dni_norm and dni_norm in _normalizar_dni(item.get("dni", "")):
+                coincidencias[item["id"]] = item
+    return list(coincidencias.values())
 
 
 def render_admision(mi_empresa, rol):

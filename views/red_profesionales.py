@@ -383,6 +383,8 @@ def render_red_profesionales(mi_empresa, user, rol):
                             "estado": "Nueva",
                         }
                     )
+                    from core.database import _trim_db_list
+                    _trim_db_list("solicitudes_servicios_db", 500)
                     guardar_datos(spinner=True)
                     queue_toast("Solicitud guardada correctamente.")
                     st.rerun()

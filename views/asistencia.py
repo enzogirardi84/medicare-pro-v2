@@ -2,7 +2,6 @@ from core.alert_toasts import queue_toast
 from datetime import datetime
 from html import escape
 
-import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
@@ -100,6 +99,7 @@ def render_asistencia(mi_empresa, user):
     st.divider()
     st.markdown("#### Auditoria de movimientos del dia")
     if chks_hoy:
+        import pandas as pd
         df_chks = pd.DataFrame(chks_hoy).drop(columns=["empresa"], errors="ignore")
         df_chks = df_chks.rename(
             columns={

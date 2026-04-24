@@ -1,5 +1,4 @@
 from core.alert_toasts import queue_toast
-import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
@@ -147,7 +146,7 @@ def render_inventario(mi_empresa):
                     
                 for i in st.session_state["inventario_db"]:
                     if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
-                        i["stock"] = i.get("stock", 0) + cantidad
+                        i["stock"] = int(i.get("stock") or 0) + cantidad
                         encontrado = True
                         break
 
@@ -155,6 +154,8 @@ def render_inventario(mi_empresa):
                     st.session_state.setdefault("inventario_db", [])
                     st.session_state["inventario_db"].append({"item": item_final, "stock": cantidad, "empresa": mi_empresa})
 
+                from core.database import _trim_db_list
+                _trim_db_list("inventario_db", 1000)
                 guardar_datos(spinner=True)
                 queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
                 st.rerun()
@@ -162,6 +163,7 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
+        import pandas as pd
         df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual"})
 
         # ── Búsqueda y filtro de criticidad ────────────────────────
@@ -177,6 +179,7 @@ def render_inventario(mi_empresa):
             key="inventario_filtro",
         )
         df_filtrado = df_stock.copy()
+        df_filtrado["Stock Actual"] = pd.to_numeric(df_filtrado["Stock Actual"], errors="coerce").fillna(0).astype(int)
         if _busq_inv:
             df_filtrado = df_filtrado[df_filtrado["Insumo"].str.lower().str.contains(_busq_inv, na=False)]
         if _filtro_crit == "Solo críticos (≤10)":

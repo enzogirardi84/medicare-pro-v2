@@ -78,7 +78,7 @@ def render_pediatria(paciente_sel, user):
             ped_sql = get_pediatria_by_paciente(paciente_uuid)
             if ped_sql:
                 for p in ped_sql:
-                    dt = pd.to_datetime(p.get("fecha_registro", ""))
+                    dt = pd.to_datetime(p.get("fecha_registro", ""), errors="coerce")
                     
                     # Calcular edad en meses y IMC para mostrar
                     edad_meses = 0.0
@@ -235,6 +235,8 @@ def render_pediatria(paciente_sel, user):
                 "firma": user.get("nombre", "Sistema"),
                 "tipo_control": "adulto" if es_adulto else "pediatrico",
             })
+            from core.database import _trim_db_list
+            _trim_db_list("pediatria_db", 500)
             guardar_datos(spinner=True)
             queue_toast("Guardado correctamente.")
             st.rerun()
@@ -260,12 +262,15 @@ def render_pediatria(paciente_sel, user):
         col_tit.markdown("#### Historial")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
         if col_btn.button("Borrar ultimo", use_container_width=True, disabled=not confirmar_borrado):
-            try:
-                st.session_state["pediatria_db"].remove(ped[-1])
-            except ValueError:
-                pass
-            guardar_datos(spinner=True)
-            st.rerun()
+            if not ped:
+                st.error("No hay registros para borrar.")
+            else:
+                try:
+                    st.session_state["pediatria_db"].remove(ped[-1])
+                except ValueError:
+                    pass  # Intencional: item ya fue removido por otra operación concurrente
+                guardar_datos(spinner=True)
+                st.rerun()
 
         busqueda_ped = st.text_input(
             "🔍 Buscar en historial pediátrico",

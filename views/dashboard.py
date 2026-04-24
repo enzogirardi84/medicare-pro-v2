@@ -124,7 +124,7 @@ def render_dashboard(mi_empresa, rol):
             emg_sql = get_emergencias_by_empresa(empresa_uuid, limit=100)
             if emg_sql:
                 for e in emg_sql:
-                    dt = pd.to_datetime(e.get("fecha_llamado", ""))
+                    dt = pd.to_datetime(e.get("fecha_llamado", ""), errors="coerce")
                     emergencias.append({
                         "fecha_evento": dt.strftime("%d/%m/%Y") if pd.notnull(dt) else "",
                         "hora_evento": dt.strftime("%H:%M") if pd.notnull(dt) else "",
@@ -168,7 +168,8 @@ def render_dashboard(mi_empresa, rol):
     ]
     pendientes_hoy = [x for x in agenda_enriquecida if x["_fecha_dt"].date() == hoy and x["estado_calc"] in {"Pendiente", "En curso", "Vencida"}]
     proximas_48 = [x for x in agenda_enriquecida if x["_fecha_dt"] != datetime.min and ahora_local <= x["_fecha_dt"] <= proximas_48h_limite]
-    urgencias_30 = [x for x in emergencias if parse_fecha_hora(f"{x.get('fecha_evento', '')} {x.get('hora_evento', '')}") >= hace_30_dias]
+    _fe_urg = lambda x: parse_fecha_hora(f"{x.get('fecha_evento', '')} {x.get('hora_evento', '')}")
+    urgencias_30 = [x for x in emergencias if _fe_urg(x) not in (None, datetime.min) and _fe_urg(x) >= hace_30_dias]
     meds_suspendidas = [x for x in indicaciones if str(x.get("estado_receta", "Activa")) in {"Suspendida", "Modificada"}]
     fact_mes = _sumar_importe(facturacion)
     balance_actual = sum(float(x.get("balance", 0) or 0) for x in balance[-30:])

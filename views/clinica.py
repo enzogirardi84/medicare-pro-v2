@@ -209,9 +209,12 @@ def render_clinica(paciente_sel, user=None):
         if len(vits_ordenados) >= 2:
             try:
                 penultimo = vits_ordenados[-2]
-                delta_fc = int(ultimo.get("FC", 0)) - int(penultimo.get("FC", 0))
                 try:
-                    delta_sat = float(ultimo.get("Sat", 0)) - float(penultimo.get("Sat", 0))
+                    delta_fc = int(ultimo.get("FC") or 0) - int(penultimo.get("FC") or 0)
+                except Exception:
+                    delta_fc = 0
+                try:
+                    delta_sat = float(ultimo.get("Sat") or 0) - float(penultimo.get("Sat") or 0)
                     _sat_txt = f" | SatO2 {'\u2191' if delta_sat > 0 else '\u2193' if delta_sat < 0 else '\u2192'}{abs(delta_sat):.0f}%"
                 except Exception:
                     _sat_txt = ""
@@ -285,7 +288,7 @@ def render_clinica(paciente_sel, user=None):
             r_s3, r_s4 = st.columns(2)
             sat = r_s3.number_input("SatO2 (%)", 70, 100, 96, help="Normal: ≥94%")
             temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1, help="Normal: 36-37.5°C")
-            hgt = st.text_input("HGT (mg/dL)", "110", help="Normal: 70-180 mg/dL")
+            hgt = st.number_input("HGT (mg/dL)", 0, 999, 110, step=1, help="Normal: 70-180 mg/dL")
         else:
             r_s1, r_s2, r_s3 = st.columns(3)
             fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75, help="Normal: 60-100 lpm")
@@ -293,7 +296,7 @@ def render_clinica(paciente_sel, user=None):
             sat = r_s3.number_input("SatO2 (%)", 70, 100, 96, help="Normal: ≥94%")
             r_s4, r_s5 = st.columns(2)
             temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1, help="Normal: 36-37.5°C")
-            hgt = r_s5.text_input("HGT (mg/dL)", "110", help="Normal: 70-180 mg/dL")
+            hgt = r_s5.number_input("HGT (mg/dL)", 0, 999, 110, step=1, help="Normal: 70-180 mg/dL")
         obs = st.text_input("Observaciones (opcional)", "", placeholder="Ej.: paciente en ayunas, edema MMII...")
 
         hay_critico, hay_alerta = _mostrar_alertas_vitales_preview(ta, fc, fr, sat, temp, hgt)
@@ -301,34 +304,45 @@ def render_clinica(paciente_sel, user=None):
         label_btn = "⚠️ Guardar (hay alertas)" if (hay_critico or hay_alerta) else "Guardar signos vitales"
         btn_type = "secondary" if hay_critico else "primary"
         if st.form_submit_button(label_btn, use_container_width=True, type=btn_type):
-            hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
-            fecha_str = f"{fecha_toma.strftime('%d/%m/%Y')} {hora_limpia}"
-            registro = {
-                "paciente": paciente_sel,
-                "TA": ta,
-                "FC": fc,
-                "FR": fr,
-                "Sat": sat,
-                "Temp": temp,
-                "HGT": hgt,
-                "fecha": fecha_str,
-            }
-            if obs.strip():
-                registro["observaciones"] = obs.strip()
-            if user.get("nombre"):
-                registro["registrado_por"] = user.get("nombre", "")
-            st.session_state.setdefault("vitales_db", [])
-            st.session_state["vitales_db"].append(registro)
-            guardar_datos(spinner=True)
-            st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
-            st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)
-            if hay_critico:
-                queue_toast("⚠️ Signos vitales guardados — revisar valores CRÍTICOS.")
-            elif hay_alerta:
-                queue_toast("Signos vitales guardados — algunos valores fuera de rango.")
+            ta_limpia = str(ta or "").strip()
+            if ta_limpia and not (
+                "/" in ta_limpia
+                and len(ta_limpia.replace("/", "").replace(" ", "")) >= 4
+                and all(p.isdigit() for p in ta_limpia.replace(" ", "").split("/") if p)
+                and len([p for p in ta_limpia.replace(" ", "").split("/") if p]) == 2
+            ):
+                st.error("Formato de Tensión Arterial inválido. Use ###/### (ej: 120/80).")
             else:
-                queue_toast("Signos vitales guardados correctamente.")
-            st.rerun()
+                hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
+                fecha_str = f"{fecha_toma.strftime('%d/%m/%Y')} {hora_limpia}"
+                registro = {
+                    "paciente": paciente_sel,
+                    "TA": ta,
+                    "FC": fc,
+                    "FR": fr,
+                    "Sat": sat,
+                    "Temp": temp,
+                    "HGT": hgt,
+                    "fecha": fecha_str,
+                }
+                if obs.strip():
+                    registro["observaciones"] = obs.strip()
+                if user.get("nombre"):
+                    registro["registrado_por"] = user.get("nombre", "")
+                st.session_state.setdefault("vitales_db", [])
+                st.session_state["vitales_db"].append(registro)
+                from core.database import _trim_db_list
+                _trim_db_list("vitales_db", 1000)
+                guardar_datos(spinner=True)
+                st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
+                st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)
+                if hay_critico:
+                    queue_toast("⚠️ Signos vitales guardados — revisar valores CRÍTICOS.")
+                elif hay_alerta:
+                    queue_toast("Signos vitales guardados — algunos valores fuera de rango.")
+                else:
+                    queue_toast("Signos vitales guardados correctamente.")
+                st.rerun()
 
     if vits:
         st.divider()
@@ -339,7 +353,7 @@ def render_clinica(paciente_sel, user=None):
             try:
                 st.session_state["vitales_db"].remove(vits[-1])
             except ValueError:
-                pass
+                pass  # Intencional: item ya fue removido por otra operación concurrente
             guardar_datos(spinner=True)
             queue_toast("Registro eliminado.")
             st.rerun()

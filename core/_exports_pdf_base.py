@@ -10,6 +10,7 @@ from fpdf import FPDF
 
 from core.export_utils import safe_text
 from core._exports_helpers import collect_patient_sections
+from core.app_logging import log_event
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
@@ -29,8 +30,8 @@ def insert_logo(pdf_obj, y_offset: float = 8.0):
             try:
                 pdf_obj.image(str(ruta), x=10, y=y_offset, w=26)
                 return
-            except Exception:
-                pass
+            except Exception as _exc:
+                log_event("exports_pdf", f"fallo_insert_logo:{type(_exc).__name__}:{ruta.name}")
 
 
 def pdf_header_oscuro(pdf, empresa, titulo, subtitulo="", badge_txt="", badge_rgb=(60, 80, 120)):
@@ -43,8 +44,8 @@ def pdf_header_oscuro(pdf, empresa, titulo, subtitulo="", badge_txt="", badge_rg
         if ruta.exists():
             try:
                 pdf.image(str(ruta), x=8, y=5, w=26)
-            except Exception:
-                pass
+            except Exception as _exc:
+                log_event("exports_pdf", f"fallo_header_logo:{type(_exc).__name__}:{ruta.name}")
             break
     pdf.set_xy(38, 7)
     pdf.set_font("Arial", "B", 14)

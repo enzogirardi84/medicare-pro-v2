@@ -118,8 +118,9 @@ try:
     _css_path = Path(__file__).parent / "assets" / "style.css"
     _css_mtime = _css_path.stat().st_mtime if _css_path.exists() else 0.0
     st.markdown(f"<style>{cargar_texto_asset('style.css', _mtime=_css_mtime)}</style>", unsafe_allow_html=True)
-except Exception:
-    pass
+except Exception as _exc:
+    from core.app_logging import log_event
+    log_event("main_css_load", f"fallo_carga_css:{type(_exc).__name__}:{_exc}")
 
 st.markdown(
     """<style>
@@ -151,8 +152,9 @@ try:
             f"<style>{cargar_texto_asset('mobile.css', _mtime=_mobile_mtime)}</style>",
             unsafe_allow_html=True,
         )
-except Exception:
-    pass
+except Exception as _exc:
+    from core.app_logging import log_event
+    log_event("main_css_load", f"fallo_carga_mobile_css:{type(_exc).__name__}:{_exc}")
 
 # CSS legacy para browsers viejos (Android <=8, iOS <=12, sin :has ni clamp).
 # Se activa solo cuando JS en ui_liviano.render_mc_liviano_cliente detecta browser antiguo
@@ -165,8 +167,9 @@ try:
             f"<style>{cargar_texto_asset('mobile_legacy.css', _mtime=_legacy_mtime)}</style>",
             unsafe_allow_html=True,
         )
-except Exception:
-    pass
+except Exception as _exc:
+    from core.app_logging import log_event
+    log_event("main_css_load", f"fallo_carga_legacy_css:{type(_exc).__name__}:{_exc}")
 
 if "_db_bootstrapped" not in st.session_state:
     # Sin precarga de PHI: monolito y multiclínica cargan la base en login / recuperación / tenant.
@@ -244,6 +247,8 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
+_user_base = dict(user) if isinstance(user, dict) else {}
+
 # Aplicar tema profesional solo cuando hay sesión activa (optimización de carga de login)
 if not st.session_state.get("_mc_professional_theme_applied"):
     try:
@@ -255,13 +260,13 @@ if not st.session_state.get("_mc_professional_theme_applied"):
 # Drena guardados agrupados por ráfaga sin bloquear formularios.
 try:
     procesar_guardado_pendiente()
-except Exception:
-    pass
+except Exception as _e:
+    log_event("main_rerun", f"procesar_guardado_pendiente_falla:{type(_e).__name__}:{_e}")
 
-_canon = core_utils.normalizar_usuario_sistema(dict(user))
-_merged = dict(user)
+_canon = core_utils.normalizar_usuario_sistema(dict(_user_base))
+_merged = dict(_user_base)
 for _k in ("rol", "perfil_profesional", "empresa", "nombre", "email", "pin"):
-    if _k in _canon and _canon.get(_k) != user.get(_k):
+    if _k in _canon and _canon.get(_k) != _user_base.get(_k):
         _merged[_k] = _canon[_k]
 _merged.setdefault("nombre", "Usuario sin nombre")
 _merged.setdefault("empresa", "Clinica General")
@@ -450,8 +455,9 @@ def _render_mobile_nav(menu, vista_actual, menu_set):
     try:
         ua = ui_liv.user_agent_desde_contexto()
         es_tablet = ui_liv.user_agent_es_tablet_probable(ua)
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("main_mobile_nav", f"fallo_deteccion_tablet:{type(_exc).__name__}:{_exc}")
 
     with st.expander("☰ Menú de navegación", expanded=False):
         st.caption("Seleccioná un módulo para navegar rápidamente:")
@@ -479,9 +485,10 @@ def _render_mobile_patient_selector(mi_empresa, rol):
     try:
         ua = ui_liv.user_agent_desde_contexto()
         es_tablet = ui_liv.user_agent_es_tablet_probable(ua)
-    except Exception:
-        pass
-    
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("main_mobile_patient", f"fallo_deteccion_tablet:{type(_exc).__name__}:{_exc}")
+
     from core.utils import obtener_pacientes_visibles, mapa_detalles_pacientes
     
     with st.expander("👤 Selector de Paciente (Tocá para buscar)", expanded=(st.session_state.get("paciente_actual") is None)):
@@ -561,6 +568,63 @@ vista_actual = resolve_current_view(menu, menu_set)
 _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
 render_mobile_sidebar_toggle()
+
+# CSS glass inline para botón sidebar móvil — se inyecta en cada rerun para evitar cache del navegador
+st.markdown(
+    """
+<style>
+@media (max-width: 767px) {
+    #mc-mobile-sidebar-toggle-btn-v2,
+    #mc-mobile-sidebar-toggle-btn {
+        position: fixed !important;
+        left: 12px !important;
+        top: 12px !important;
+        transform: none !important;
+        border-radius: 14px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        padding: 0 14px 0 12px !important;
+        background: rgba(255,255,255,0.06) !important;
+        backdrop-filter: blur(18px) saturate(1.8) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(1.8) !important;
+        -webkit-transform: translateZ(0) !important;
+        transform: translateZ(0) !important;
+        border: 1px solid rgba(255, 255, 255, 0.10) !important;
+        color: #f8fafc !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        box-shadow: 0 8px 28px rgba(2,6,23,.30) !important;
+        opacity: 0.78 !important;
+        cursor: pointer !important;
+        z-index: 10015 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        white-space: nowrap !important;
+        transition: opacity 0.15s, transform 0.18s !important;
+    }
+    #mc-mobile-sidebar-toggle-btn-v2:active,
+    #mc-mobile-sidebar-toggle-btn:active {
+        opacity: 1 !important;
+        transform: scale(0.96) !important;
+    }
+    #mc-mobile-sidebar-toggle-btn-v2.is-open,
+    #mc-mobile-sidebar-toggle-btn.is-open {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        gap: 0 !important;
+    }
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 # Inyectar JS para cerrar el sidebar automáticamente en móviles
 st.markdown(MOBILE_SIDEBAR_AUTOCLOSE_JS, unsafe_allow_html=True)

@@ -58,8 +58,9 @@ def try_acquire_cache_build_lock(key: str) -> bool:
 def release_cache_build_lock(key: str) -> None:
     try:
         redis_client.delete(_cache_build_lock_key(key))
-    except redis.RedisError:
-        pass
+    except redis.RedisError as _exc:
+        import logging
+        logging.getLogger("cache").debug(f"fallo_release_lock:{type(_exc).__name__}")
 
 
 def set_json_cache(key: str, value: Any, ttl_seconds: int, resource: str) -> None:

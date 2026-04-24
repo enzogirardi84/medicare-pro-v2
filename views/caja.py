@@ -17,7 +17,7 @@ try:
     from fpdf import FPDF
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: fpdf es opcional para comprobantes
 
 
 def render_caja(paciente_sel, mi_empresa, user, rol):
@@ -60,7 +60,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             fact_sql = get_facturacion_by_empresa(empresa_uuid)
             if fact_sql:
                 for f in fact_sql:
-                    dt = pd.to_datetime(f.get("fecha_emision", ""))
+                    dt = pd.to_datetime(f.get("fecha_emision", ""), errors="coerce")
                     paciente_nombre = f.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(f.get("pacientes"), dict) else "N/A"
                     # Buscar el ID visual del paciente (Nombre - DNI)
                     paciente_visual = paciente_nombre
@@ -69,11 +69,15 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             paciente_visual = p
                             break
                             
+                    try:
+                        _monto = float(f.get("monto_total") or 0)
+                    except Exception:
+                        _monto = 0.0
                     fact_empresa.append({
                         "paciente": paciente_visual,
                         "serv": f.get("concepto", ""),
-                        "monto": float(f.get("monto_total", 0)),
-                        "metodo": f.get("observaciones", ""), # El método lo guardamos en observaciones temporalmente
+                        "monto": _monto,
+                        "metodo": f.get("observaciones", ""),
                         "estado": f.get("estado", ""),
                         "fecha": dt.strftime("%d/%m/%Y %H:%M") if pd.notnull(dt) else "",
                         "empresa": mi_empresa,
@@ -90,8 +94,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
 
     fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
 
-    total_cobrado = sum(f.get("monto", 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
-    total_pendiente = sum(f.get("monto", 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
+    total_cobrado = sum((f.get("monto") or 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
+    total_pendiente = sum((f.get("monto") or 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("Total Cobrado", f"${total_cobrado:,.2f}")
@@ -164,6 +168,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     "operador": user.get("nombre", "Sistema"),
                     "operador_dni": user.get("dni", "S/D"),
                 })
+                from core.database import _trim_db_list
+                _trim_db_list("facturacion_db", 500)
                 guardar_datos(spinner=True)
                 queue_toast(f"${mon:,.2f} registrado correctamente.")
                 st.rerun()

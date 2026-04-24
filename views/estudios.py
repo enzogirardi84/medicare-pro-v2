@@ -104,6 +104,8 @@ def render_estudios(paciente_sel, user, rol=None):
                     "extension": ext,
                     "firma": user.get("nombre", "Sistema"),
                 })
+                from core.database import _trim_db_list
+                _trim_db_list("estudios_db", 200)
                 
                 # --- NUEVO CÓDIGO SQL Y STORAGE ---
                 from core.database import supabase
@@ -222,8 +224,9 @@ def render_estudios(paciente_sel, user, rol=None):
                 f_est = parse_fecha_hora(e.get("fecha", ""))
                 if f_est and (hoy_dt.replace(tzinfo=None) - f_est).days > 7:
                     criticos_sin_respuesta.append(e)
-            except Exception:
-                pass
+            except Exception as _exc:
+                from core.app_logging import log_event
+                log_event("estudios_fecha_parse", f"fallo_parse_fecha_critica:{e.get('tipo','S/D')}:{e.get('fecha','')}:{type(_exc).__name__}")
 
     if criticos_sin_respuesta:
         st.error(
@@ -247,22 +250,25 @@ def render_estudios(paciente_sel, user, rol=None):
         col_del1, col_del1_chk = st.columns([3, 1.2])
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
-            ultimo_est = estudios_pac[-1]
-            if not uso_sql:
-                try:
-                    st.session_state["estudios_db"].remove(ultimo_est)
-                except ValueError:
-                    pass
+            if not estudios_pac:
+                st.error("No hay estudios para borrar.")
+            else:
+                ultimo_est = estudios_pac[-1]
+                if not uso_sql:
+                    try:
+                        st.session_state["estudios_db"].remove(ultimo_est)
+                    except ValueError:
+                        pass  # Intencional: item ya fue removido por otra operación concurrente
                 
-            # --- ACTUALIZAR EN SQL ---
-            if ultimo_est.get("id_sql"):
-                from core.db_sql import delete_estudio
-                delete_estudio(ultimo_est["id_sql"])
-            # -------------------------
-            
-            guardar_datos(spinner=True)
-            queue_toast("Estudio eliminado correctamente.")
-            st.rerun()
+                # --- ACTUALIZAR EN SQL ---
+                if ultimo_est.get("id_sql"):
+                    from core.db_sql import delete_estudio
+                    delete_estudio(ultimo_est["id_sql"])
+                # -------------------------
+                
+                guardar_datos(spinner=True)
+                queue_toast("Estudio eliminado correctamente.")
+                st.rerun()
 
         st.markdown("**Selecciona el estudio que quieres eliminar:**")
         opciones = []

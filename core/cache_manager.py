@@ -66,6 +66,80 @@ class TieredCacheManager:
         self._hit_count = 0
         self._miss_count = 0
         self._eviction_count = 0
+        # Memory limit heuristic (bytes). Tunable.
+        self._memory_limit_bytes = 150 * 1024 * 1024  # 150 MB
+
+    def _estimate_object_size(self, obj, seen=None) -> int:
+        """Estimate memory size of a Python object recursively (best effort).
+        This is a conservative estimate and may over/under estimate for complex
+        objects. Used to trigger memory-based eviction.
+        """
+        if obj is None:
+            return 0
+        if seen is None:
+            seen = set()
+        oid = id(obj)
+        if oid in seen:
+            return 0
+        seen.add(oid)
+        try:
+            import sys
+            if isinstance(obj, (str, bytes, int, float, bool)):
+                return sys.getsizeof(obj)
+            if isinstance(obj, dict):
+                size = sys.getsizeof(obj)
+                for k, v in obj.items():
+                    size += self._estimate_object_size(k, seen)
+                    size += self._estimate_object_size(v, seen)
+                return size
+            if isinstance(obj, (list, tuple, set)):
+                size = sys.getsizeof(obj)
+                for it in obj:
+                    size += self._estimate_object_size(it, seen)
+                return size
+            # Try pandas-like objects
+            if hasattr(obj, "memory_usage"):
+                try:
+                    return int(obj.memory_usage(index=True, deep=True).sum())
+                except Exception as _exc:
+                    import logging
+                    logging.getLogger("cache_manager").debug(f"fallo_memory_usage:{type(_exc).__name__}")
+            return sys.getsizeof(obj)
+        except Exception:
+            return 0
+
+    def _estimate_cache_size_bytes(self) -> int:
+        """Estimate total memory usage of in-memory L1 y L2 caches."""
+        total = 0
+        # L1 cache
+        for k, entry in self._l1_cache.items():
+            total += self._estimate_object_size(k)
+            if isinstance(entry, CacheEntry):
+                total += self._estimate_object_size(entry.value)
+        # L2 cache (session_state)
+        l2 = st.session_state.get("_tiered_cache_l2", {})
+        if isinstance(l2, dict):
+            for key, value in l2.items():
+                total += self._estimate_object_size(key)
+                if isinstance(value, CacheEntry):
+                    total += self._estimate_object_size(value.value)
+                else:
+                    total += self._estimate_object_size(value)
+        return int(total)
+
+    def _maybe_enforce_memory_limit(self) -> None:
+        """Evict caches if memory usage exceeds the configured limit."""
+        try:
+            size = self._estimate_cache_size_bytes()
+            if size <= self._memory_limit_bytes:
+                return
+            # Evict everything for safety (hard cleanup)
+            self._l1_cache.clear()
+            st.session_state["_tiered_cache_l2"] = {}
+            self._eviction_count += 1
+            log_event("cache_memory_cleanup", f"size={size} bytes, cleared l1/l2")
+        except Exception as _exc:
+            log_event("cache_manager_cleanup", f"fallo_cleanup_memoria:{type(_exc).__name__}:{_exc}")
 
     def _generate_key(
         self,
@@ -99,6 +173,8 @@ class TieredCacheManager:
 
             # Limpieza L2 en session_state
             self._cleanup_l2()
+            # Enforce memory limit after cleanup
+            self._maybe_enforce_memory_limit()
 
     def _cleanup_l2(self):
         """Limpia entradas L2 expiradas."""

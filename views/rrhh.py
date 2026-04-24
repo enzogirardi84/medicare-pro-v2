@@ -18,7 +18,7 @@ try:
     from fpdf import FPDF
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: fpdf es opcional para PDFs
 
 
 def _obtener_dt(fecha_hora):
@@ -80,7 +80,7 @@ def render_rrhh(mi_empresa, rol, user):
             chk_sql = get_checkins_by_empresa(empresa_uuid, limit=2000)
             if chk_sql:
                 for c in chk_sql:
-                    dt = pd.to_datetime(c.get("fecha_hora", ""))
+                    dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
                     checkins.append({
                         "empresa": mi_empresa,
                         "profesional": c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido",
@@ -206,7 +206,7 @@ def render_rrhh(mi_empresa, rol, user):
             horas_totales = 0.0
             for t in grupo["Tiempo Trabajado"]:
                 if isinstance(t, str) and "h" in t:
-                    partes = t.replace("h", "").replace("m", "").split()
+                    partes = [p.strip() for p in t.replace("h", "").replace("m", "").split() if p.strip().isdigit()]
                     if partes:
                         horas_totales += int(partes[0]) + (int(partes[1]) if len(partes) > 1 else 0) / 60.0
             resumen_rows.append({

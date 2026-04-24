@@ -10,7 +10,7 @@ from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_r
 def _restaurar_stock(mi_empresa, insumo, cantidad):
     for item in st.session_state.get("inventario_db", []):
         if item.get("item") == insumo and item.get("empresa") == mi_empresa:
-            item["stock"] = item.get("stock", 0) + cantidad
+            item["stock"] = int(item.get("stock") or 0) + cantidad
             return
     if insumo and cantidad > 0:
         st.session_state.setdefault("inventario_db", []).append(
@@ -97,6 +97,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
                             "empresa": mi_empresa,
                         }
                     )
+                    from core.database import _trim_db_list
+                    _trim_db_list("consumos_db", 1000)
                     guardar_datos(spinner=True)
                     queue_toast(f"{cant_usada} x {insumo_sel} registrado correctamente.")
                     st.rerun()
@@ -128,9 +130,16 @@ def render_materiales(paciente_sel, mi_empresa, user):
         # ── Alerta uso excesivo en el turno actual ─────────────────────────
         from datetime import datetime as _dt, timedelta as _td
         _hace2h = _dt.now() - _td(hours=2)
+        def _parse_fecha_cons(fecha_str):
+            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M"):
+                try:
+                    return _dt.strptime(str(fecha_str or "").strip(), fmt)
+                except Exception:
+                    continue
+            return _dt.min
         _recientes = [
             c for c in cons_paciente
-            if _dt.strptime(c.get("fecha", "01/01/2000 00:00"), "%d/%m/%Y %H:%M") >= _hace2h
+            if _parse_fecha_cons(c.get("fecha")) >= _hace2h
         ] if cons_paciente else []
         if _recientes:
             _cont_rec = Counter()
@@ -143,15 +152,18 @@ def render_materiales(paciente_sel, mi_empresa, user):
         col_chk, col_btn = st.columns([1.2, 2.8])
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
         if col_btn.button("Borrar ultimo consumo", use_container_width=True, disabled=not confirmar_borrado):
-            ultimo_consumo = cons_paciente[-1]
-            try:
-                st.session_state["consumos_db"].remove(ultimo_consumo)
-            except ValueError:
-                pass
-            _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
-            guardar_datos(spinner=True)
-            queue_toast("Consumo eliminado correctamente.")
-            st.rerun()
+            if not cons_paciente:
+                st.error("No hay consumos para borrar.")
+            else:
+                ultimo_consumo = cons_paciente[-1]
+                try:
+                    st.session_state["consumos_db"].remove(ultimo_consumo)
+                except ValueError:
+                    pass  # Intencional: item ya fue removido por otra operación concurrente
+                _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
+                guardar_datos(spinner=True)
+                queue_toast("Consumo eliminado correctamente.")
+                st.rerun()
 
         # ── Búsqueda en historial ────────────────────────────────────
         busqueda_mat = st.text_input(

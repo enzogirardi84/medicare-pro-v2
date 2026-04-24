@@ -5,7 +5,6 @@ Guarda datos inmediatamente en local_data.json
 """
 
 import streamlit as st
-import pandas as pd
 from datetime import datetime
 
 from core.guardado_universal import (
@@ -55,7 +54,7 @@ def render(paciente_sel=None, user=None):
         
         with col3:
             temp = st.number_input("🌡️ Temperatura", 34.0, 42.0, 36.5, step=0.1, key="temp_emer")
-            glucemia = st.text_input("🩸 Glucemia", placeholder="110", key="hgt_emer")
+            glucemia = st.number_input("🩸 Glucemia (mg/dL)", 0, 999, 110, step=1, key="hgt_emer")
         
         observaciones = st.text_area("📝 Observaciones", key="obs_emer")
         
@@ -66,25 +65,33 @@ def render(paciente_sel=None, user=None):
         )
         
         if submitted:
-            with st.spinner("Guardando..."):
-                exito, mensaje = guardar_signos_vitales(
-                    paciente_id=paciente_id,
-                    paciente_nombre=paciente_nombre,
-                    tension_arterial=ta,
-                    frecuencia_cardiaca=fc,
-                    frecuencia_respiratoria=fr,
-                    temperatura=temp,
-                    saturacion_oxigeno=sat,
-                    glucemia=glucemia,
-                    observaciones=observaciones
-                )
-            
-            if exito:
-                from core.alert_toasts import queue_toast
-                queue_toast(f"✅ {mensaje}")
-                st.rerun()
+            ta_limpia = str(ta or "").strip()
+            if ta_limpia and not (
+                "/" in ta_limpia
+                and len(ta_limpia.replace("/", "").replace(" ", "")) >= 4
+                and all(p.isdigit() for p in ta_limpia.replace(" ", "").split("/") if p)
+                and len([p for p in ta_limpia.replace(" ", "").split("/") if p]) == 2
+            ):
+                st.error("Formato de Tensión Arterial inválido. Use ###/### (ej: 120/80).")
             else:
-                st.error(f"❌ {mensaje}")
+                with st.spinner("Guardando..."):
+                    exito, mensaje = guardar_signos_vitales(
+                        paciente_id=paciente_id,
+                        paciente_nombre=paciente_nombre,
+                        tension_arterial=ta,
+                        frecuencia_cardiaca=fc,
+                        frecuencia_respiratoria=fr,
+                        temperatura=temp,
+                        saturacion_oxigeno=sat,
+                        glucemia=int(glucemia) if glucemia is not None else None,
+                        observaciones=observaciones,
+                    )
+                if exito:
+                    from core.alert_toasts import queue_toast
+                    queue_toast(f"✅ {mensaje}")
+                    st.rerun()
+                else:
+                    st.error(f"❌ {mensaje}")
     
     # === TABLA DE SIGNOS VITALES GUARDADOS ===
     st.markdown("---")
@@ -110,6 +117,7 @@ def render(paciente_sel=None, user=None):
                 'Observaciones': datos.get('observaciones', '')
             })
         
+        import pandas as pd
         df = pd.DataFrame(tabla_datos)
         
         # Tabla con formato profesional

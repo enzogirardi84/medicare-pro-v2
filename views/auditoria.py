@@ -14,7 +14,7 @@ try:
     from fpdf import FPDF
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: fpdf es opcional para PDFs
 
 
 def _texto_busqueda_log(reg):
@@ -71,7 +71,7 @@ def render_auditoria(mi_empresa, user):
                 logs_sql = get_auditoria_by_empresa(empresa_uuid, limit=1000)
                 if logs_sql:
                     for log in logs_sql:
-                        dt = pd.to_datetime(log.get("fecha_evento", ""))
+                        dt = pd.to_datetime(log.get("fecha_evento", ""), errors="coerce")
                         logs_empresa.append({
                             "fecha": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else "",
                             "modulo": log.get("modulo", ""),

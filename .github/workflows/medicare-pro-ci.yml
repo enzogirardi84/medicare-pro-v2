@@ -1,0 +1,365 @@
+name: Medicare Pro CI/CD
+
+on:
+  push:
+    branches: [main, develop, "feature/**", "codex/**"]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente de deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  PYTHON_VERSION: "3.11"
+  POETRY_VERSION: "1.7.1"
+  NODE_VERSION: "20"
+
+jobs:
+  # ============================================================
+  # FASE 1: LINT Y FORMATO
+  # ============================================================
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install ruff black isort mypy
+
+      - name: Run Ruff (linter)
+        run: |
+          ruff check core/ views/ tests/ --output-format=github
+        continue-on-error: true
+
+      - name: Run Black (format check)
+        run: |
+          black --check core/ views/ tests/ || echo "⚠️ Formato incorrecto - ejecutar 'black .' localmente"
+        continue-on-error: true
+
+      - name: Run isort (import sort check)
+        run: |
+          isort --check-only core/ views/ tests/
+        continue-on-error: true
+
+      - name: Run MyPy (type check)
+        run: |
+          mypy core/ --ignore-missing-imports --warn-unreachable || true
+        continue-on-error: true
+
+  # ============================================================
+  # FASE 2: TESTS
+  # ============================================================
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Run tests
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: "true"
+          DATABASE_URL: sqlite:///:memory:
+        run: |
+          pytest tests/ \
+            --verbose \
+            --cov=core \
+            --cov=views \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-py${{ matrix.python-version }}
+          path: |
+            test-results.xml
+            coverage.xml
+
+  # ============================================================
+  # FASE 3: TESTS DE SEGURIDAD
+  # ============================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Bandit (security linter)
+        run: |
+          pip install bandit
+          bandit -r core/ views/ -f json -o bandit-results.json || true
+          bandit -r core/ views/ -ll || true
+
+      - name: Run Safety (dependency check)
+        run: |
+          pip install safety
+          safety check -r requirements.txt || true
+
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan
+          path: bandit-results.json
+
+  # ============================================================
+  # FASE 4: TESTS DE INTEGRACIÓN
+  # ============================================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: medicare_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/medicare_test
+          REDIS_URL: redis://localhost:6379/0
+          TESTING: "true"
+        run: |
+          pytest tests/test_integration_*.py -v --tb=short
+
+  # ============================================================
+  # FASE 5: BUILD
+  # ============================================================
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build dependencies
+        run: |
+          pip install build wheel
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-package
+          path: dist/
+
+  # ============================================================
+  # FASE 6: DEPLOY A STAGING
+  # ============================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, integration-tests]
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.medicare.local
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to Staging..."
+          # Aquí iría el comando real de deploy
+          # Ejemplo: rsync, scp, o API de plataforma de hosting
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # curl -f https://staging.medicare.local/health || exit 1
+
+  # ============================================================
+  # FASE 7: DEPLOY CANARIO A PRODUCCIÓN (5%)
+  # ============================================================
+  deploy-production-canary:
+    name: Deploy Canary (5%)
+    runs-on: ubuntu-latest
+    needs: [build, integration-tests]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production-canary
+      url: https://medicare.local
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Canary (5% traffic)
+        run: |
+          echo "Deploying canary to 5% of production..."
+          # Comando de deploy canario
+
+      - name: Wait for stabilization
+        run: sleep 300  # 5 minutos
+
+      - name: Monitor canary metrics
+        run: |
+          echo "Checking error rates..."
+          # curl /metrics endpoint y verificar
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "Canary failed! Rolling back..."
+          # Comando de rollback
+
+  # ============================================================
+  # FASE 8: DEPLOY COMPLETO A PRODUCCIÓN
+  # ============================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-production-canary
+    if: github.ref == 'refs/heads/main' && success()
+    environment:
+      name: production
+      url: https://medicare.local
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production (100%)
+        run: |
+          echo "Deploying to 100% of production..."
+
+      - name: Post-deploy smoke tests
+        run: |
+          echo "Running post-deploy smoke tests..."
+          # curl -f https://medicare.local/api/health
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Deploy to production successful!"
+          # Enviar notificación a Slack/Teams
+
+  # ============================================================
+  # FASE 9: GENERAR RELEASE NOTES
+  # ============================================================
+  release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main' && success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        run: |
+          echo "## Release $(date +%Y-%m-%d)" > release_notes.md
+          echo "" >> release_notes.md
+          git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD >> release_notes.md
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md

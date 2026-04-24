@@ -98,13 +98,19 @@ def _auth_strip_pwreset_url_si_hay_param() -> bool:
 
 
 def _auth_strip_pwreset_query_param() -> None:
-    qp = getattr(st, "query_params", None)
-    if qp is None:
-        return
+    # Soporte moderno para st.query_params
     try:
-        qp.pop("pwreset", None)
+        if "pwreset" in st.query_params:
+            del st.query_params["pwreset"]
     except Exception:
-        pass
+        # Fallback: API antigua (versiones muy viejas de Streamlit)
+        qp = getattr(st, "query_params", None)
+        if qp is None:
+            return
+        try:
+            qp.pop("pwreset", None)
+        except Exception as _exc:
+            log_event("auth", f"fallo_strip_pwreset:{type(_exc).__name__}")
 
 
 def _auth_strip_modulo_query_param() -> None:
@@ -125,8 +131,8 @@ def _auth_strip_modulo_query_param() -> None:
         if not effective:
             return
         qp.pop("modulo", None)
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("auth", f"fallo_strip_modulo:{type(_exc).__name__}")
 
 
 def _buscar_usuario_por_login(login_texto: str):
@@ -205,11 +211,13 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
             "A": accion_log,
         }
     )
+    from core.database import _trim_db_list
+    _trim_db_list("logs_db", 1000)
     log_event("auth", evento_log)
     try:
         guardar_datos(spinner=False)
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("auth", f"fallo_guardar_post_login:{type(_exc).__name__}:{_exc}")
     st.session_state["_mc_login_transition"] = True
     st.rerun()
 

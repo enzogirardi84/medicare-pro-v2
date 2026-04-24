@@ -22,11 +22,14 @@ def build_patient_excel_bytes(session_state, paciente_sel):
         import openpyxl
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
         engine = "openpyxl"
-    except Exception:
+    except Exception as e_openpyxl:
         try:
             import xlsxwriter  # noqa: F401
             engine = "xlsxwriter"
-        except Exception:
+        except Exception as e_xlsx:
+            # MEJORA: Registro explícito del fallo de las librerías
+            from core.app_logging import log_event
+            log_event("export_error", f"Fallo motores Excel. openpyxl: {e_openpyxl} | xlsxwriter: {e_xlsx}")
             return None
 
     sheets = {}

@@ -253,8 +253,9 @@ async def import_patients_csv(
     db.commit()
     try:
         redis_client.delete(import_cb_strikes_key)
-    except redis.RedisError:
-        pass
+    except redis.RedisError as _exc:
+        import logging
+        logging.getLogger("api.patients").debug(f"fallo_redis_delete_strikes:{type(_exc).__name__}")
     return {"status": "queued", "task_id": task_id, "import_job_id": str(job.id)}
 
 

@@ -26,8 +26,9 @@ _state = {
 def _marker_set(ttl_seconds: int) -> None:
     try:
         redis_client.setex(_SELF_HEAL_MARKER_KEY, max(30, ttl_seconds), "1")
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_marker_set:{type(_exc).__name__}")
 
 
 def _marker_is_set() -> bool:
@@ -40,8 +41,9 @@ def _marker_is_set() -> bool:
 def _marker_clear() -> None:
     try:
         redis_client.delete(_SELF_HEAL_MARKER_KEY)
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_marker_clear:{type(_exc).__name__}")
 
 
 def _last_change_ts() -> float:
@@ -57,15 +59,17 @@ def _last_change_ts() -> float:
 def _set_last_change_ts() -> None:
     try:
         redis_client.set(_SELF_HEAL_LAST_CHANGE_TS_KEY, str(time.time()))
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_set_ts:{type(_exc).__name__}")
 
 
 def _clear_last_change_ts() -> None:
     try:
         redis_client.delete(_SELF_HEAL_LAST_CHANGE_TS_KEY)
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_clear_ts:{type(_exc).__name__}")
 
 
 def _cooldown_elapsed() -> bool:
@@ -104,8 +108,9 @@ def _probe_dependencies() -> tuple[bool, bool]:
         try:
             if db is not None:
                 db.close()
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("self_heal").debug(f"fallo_db_close:{type(_exc).__name__}")
 
     try:
         redis_ok = bool(redis_client.ping())
@@ -238,5 +243,6 @@ def start_self_heal_autopilot() -> None:
     try:
         loop = asyncio.get_event_loop()
         loop.create_task(_loop())
-    except RuntimeError:
-        pass
+    except RuntimeError as _exc:
+        import logging
+        logging.getLogger("self_heal").warning(f"fallo_start_loop:{type(_exc).__name__}")

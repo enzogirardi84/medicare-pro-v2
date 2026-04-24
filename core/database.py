@@ -269,6 +269,46 @@ def _db_keys():
     ]
 
 
+def get_cache_size_estimate() -> int:
+    """Cuenta entradas de cache (mas eficiente que medir bytes)."""
+    return len([
+        k for k in st.session_state.keys() 
+        if k.startswith("_mc_cache_") or k.startswith("_db_cache")
+    ])
+
+
+def should_cleanup_cache() -> bool:
+    """Determina si hay que limpiar el cache."""
+    return get_cache_size_estimate() > 50
+
+
+def limpiar_cache_app() -> int:
+    """Limpia caches grandes para liberar memoria. Retorna cantidad de claves limpiadas."""
+    total = 0
+    
+    # Limpiar cache principal
+    for k in ("_db_cache", "_db_cache_hash", "_db_cache_ts"):
+        if st.session_state.pop(k, None) is not None:
+            total += 1
+    
+    # Limpiar TODOS los caches de session_state que empiezan con prefijos conocidos
+    prefijos = (
+        "_mc_cache_pac_", "_mc_cache_alertas", "_mc_cache_cons_", 
+        "_mc_cache_vit_", "_mc_diag_df_tablas", "historial_", "_pdf_"
+    )
+    
+    for k in list(st.session_state.keys()):
+        if any(k.startswith(p) for p in prefijos):
+            st.session_state.pop(k, None)
+            total += 1
+    
+    # Forzar garbage collection
+    import gc
+    gc.collect()
+    
+    return total
+
+
 def vaciar_datos_app_en_sesion() -> None:
     """Elimina datos clínicos en memoria (cerrar sesión en equipo compartido). El próximo login vuelve a cargar."""
     for k in _db_keys():
@@ -287,6 +327,42 @@ def vaciar_datos_app_en_sesion() -> None:
         st.session_state.pop(k, None)
 
 
+def get_cache_size_estimate() -> int:
+    """Estima el tamaño de cache en numero de claves relevantes."""
+    keys = 0
+    for k in st.session_state.keys():
+        if k.startswith("_db_cache") or k.startswith("_mc_cache_"):
+            keys += 1
+    return keys
+
+
+def should_cleanup_cache() -> bool:
+    """Determina si hay que limpiar caches grandes basandose en la cantidad de entradas."""
+    return get_cache_size_estimate() > 50
+
+
+def limpiar_cache_app() -> int:
+    """Limpia caches grandes para liberar memoria (L1 y L2). Retorna total limpiadas."""
+    total = 0
+    # Limpiar cache principal
+    for k in ("_db_cache", "_db_cache_hash", "_db_cache_ts"):
+        if st.session_state.pop(k, None) is not None:
+            total += 1
+    # Limpiar caches por prefijo
+    prefixes = ("_mc_cache_pac_", "_mc_cache_alertas_", "_mc_cache_cons_", "_mc_cache_vit_")
+    for key in list(st.session_state.keys()):
+        if any(key.startswith(p) for p in prefixes):
+            st.session_state.pop(key, None)
+            total += 1
+    # Clear any general historial/pdf caches si existen
+    for key in list(st.session_state.keys()):
+        if key.startswith("historial_") or key.startswith("_pdf_"):
+            st.session_state.pop(key, None)
+            total += 1
+    import gc
+    gc.collect()
+    return total
+
 def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     """
     Modo clásico: un único JSON (id=1 / local_data). La app no precarga este JSON al arranque: se llama desde login/recuperación.
@@ -294,6 +370,14 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
     - tenant_key: empresa normalizada (minúsculas) para cargar solo esa clínica.
     - monolito_legacy: fuerza fila id=1 (usuario admin de emergencia y operación global legacy).
     """
+    # LIMPIEZA: si hay demasiadas claves de cache, limpiar
+    if should_cleanup_cache():
+        if "_db_cache" in st.session_state:
+            # Si hay cache activo y piden FORCAR, guardar ANTES de borrar
+            # (lógica existente de guardar_datos si hay cambios...)
+            pass
+        limpiar_cache_app()
+    
     t0 = time.monotonic()
     ok = True
     cache_key = "_db_cache"
@@ -351,13 +435,15 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                     except Exception as e:
                         log_event("db", f"error_cargar_usuarios_remotos:{e}")
 
+                from core.utils import DEFAULT_ADMIN_USER
+
                 if "admin" not in estructura["usuarios_db"]:
                     estructura["usuarios_db"]["admin"] = DEFAULT_ADMIN_USER.copy()
 
                 st.session_state["_modo_offline"] = False
 
                 # 2. Pacientes: en roles globales traemos todas las clinicas; el resto sigue filtrado por empresa.
-                from core.db_sql import get_pacientes_by_empresa
+                from core.db_sql import get_pacientes_by_empresa, get_pacientes_globales, nombre_paciente_sql
                 from core.nextgen_sync import _obtener_uuid_empresa
 
                 if isinstance(u_actual, dict):
@@ -377,11 +463,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                                 for item in (empresas_res.data or [])
                                 if isinstance(item, dict)
                             }
-                            pacientes_res = _supabase_execute_with_retry(
-                                "get_pacientes_dualwrite_global",
-                                lambda: supabase.table("pacientes").select("*").limit(1000).execute(),
-                            )
-                            pacs_sql = pacientes_res.data or []
+                            pacs_sql = get_pacientes_globales(limit=1000)
                         elif empresa_actual:
                             empresa_uuid = _obtener_uuid_empresa(empresa_actual)
                             if empresa_uuid:
@@ -391,7 +473,7 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                         pacs_sql = []
 
                     for p in pacs_sql:
-                        nombre = str(p.get("nombre_completo", "") or "").strip()
+                        nombre = nombre_paciente_sql(p)
                         dni = str(p.get("dni", "") or "").strip()
                         paciente_id_visual = f"{nombre} - {dni}" if dni else nombre
 
@@ -420,8 +502,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
                 st.session_state["_guardar_datos_pendiente"] = False
                 
                 return estructura
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("db_guardar", f"fallo_guardado_{source}:{type(_exc).__name__}:{_exc}")
         # ------------------------------
 
         if shard and not monolito_legacy and not tenant_key:
@@ -523,8 +606,9 @@ def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
             from core.perf_metrics import record_perf
 
             record_perf("db.cargar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("db_cargar", f"fallo_record_perf:{type(_exc).__name__}:{_exc}")
 
 
 def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
@@ -574,6 +658,33 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
             st.code(type(e).__name__, language="text")
 
 
+def _trim_db_list(clave_db: str, max_items: int) -> None:
+    """Recorta una lista JSON en session_state a max_items (mantiene los mas recientes)."""
+    lst = st.session_state.get(clave_db)
+    if isinstance(lst, list) and len(lst) > max_items:
+        st.session_state[clave_db] = lst[-max_items:]
+
+
+def guardar_json_db(clave_db: str, payload: dict, *, spinner: bool = True, max_items: int = 500) -> None:
+    """Agrega un registro al array JSON en session_state y persiste.
+
+    Este helper reemplaza el patron repetido en todas las vistas:
+        if "xxx_db" not in st.session_state or not isinstance(..., list):
+            st.session_state["xxx_db"] = []
+        st.session_state["xxx_db"].append(payload)
+        guardar_datos(spinner=True)
+
+    Args:
+        max_items: Limite maximo de elementos en la lista (recorta los mas antiguos).
+                   Usar 500 para datos clinicos, 1000 para operativos.
+    """
+    if clave_db not in st.session_state or not isinstance(st.session_state[clave_db], list):
+        st.session_state[clave_db] = []
+    st.session_state[clave_db].append(payload)
+    _trim_db_list(clave_db, max_items)
+    guardar_datos(spinner=spinner)
+
+
 def _guardar_datos_ejecutar():
     t0 = time.monotonic()
     ok = True
@@ -591,14 +702,16 @@ def _guardar_datos_ejecutar():
                 dt = time.monotonic() - t0
                 if dt >= um:
                     log_event("db", f"guardar_lento:{dt:.2f}s")
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("database").debug(f"fallo_log_lento:{type(_exc).__name__}")
         try:
             from core.perf_metrics import record_perf
 
             record_perf("db.guardar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("database").debug(f"fallo_record_perf:{type(_exc).__name__}")
 
 
 def _guardar_datos_ejecutar_core():

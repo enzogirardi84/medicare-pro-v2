@@ -2,7 +2,6 @@
 import base64
 from uuid import uuid4
 
-import pandas as pd
 import streamlit as st
 
 from core.alert_toasts import queue_toast
@@ -26,7 +25,7 @@ try:
     from streamlit_drawable_canvas import st_canvas
     CANVAS_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: canvas es opcional para firmas
 
 
 def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
@@ -243,6 +242,8 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
                 if "emergencias_db" not in st.session_state:
                     st.session_state["emergencias_db"] = []
                 st.session_state["emergencias_db"].append(nuevo)
+                from core.database import _trim_db_list
+                _trim_db_list("emergencias_db", 500)
 
                 registrar_auditoria_legal(
                     "Emergencia",
@@ -338,6 +339,7 @@ def _render_tab_historial(paciente_sel, mi_empresa, eventos, es_movil):
     )
 
     registros = list(reversed(eventos[-limite:]))
+    import pandas as pd
     resumen_df = pd.DataFrame(
         [
             {

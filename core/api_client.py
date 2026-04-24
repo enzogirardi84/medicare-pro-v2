@@ -71,8 +71,8 @@ def request_with_retry(method: str, endpoint: str, max_retries: int = 3, **kwarg
                 payload = resp.json()
                 code = payload.get("error", {}).get("code")
                 retry_after_body = int(payload.get("error", {}).get("details", {}).get("retry_after_seconds", 0))
-            except Exception:
-                pass
+            except Exception as _exc:
+                log_event("api_client", f"fallo_parse_retry_body:{type(_exc).__name__}")
 
             retry_after_header = int(resp.headers.get("retry-after", "0"))
             retry_after = max(retry_after_header, retry_after_body, 1)

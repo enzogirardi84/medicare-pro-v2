@@ -260,6 +260,8 @@ def _render_plan_cuidados_enfermeria_legacy(
                     if "cuidados_enfermeria_db" not in st.session_state:
                         st.session_state["cuidados_enfermeria_db"] = []
                     st.session_state["cuidados_enfermeria_db"].append(nuevo)
+                    from core.database import _trim_db_list
+                    _trim_db_list("cuidados_enfermeria_db", 500)
 
                     registrar_auditoria_legal(
                         "Enfermeria",
@@ -372,7 +374,7 @@ def cargar_registros_enfermeria(paciente_sel, mi_empresa):
             cuidados_sql = get_cuidados_enfermeria(paciente_uuid, fecha_inicio, fecha_fin)
             if cuidados_sql:
                 for c in cuidados_sql:
-                    dt = pd.to_datetime(c.get("fecha_registro", ""))
+                    dt = pd.to_datetime(c.get("fecha_registro", ""), errors="coerce")
                     registros.append({
                         "paciente": paciente_sel,
                         "empresa": mi_empresa,

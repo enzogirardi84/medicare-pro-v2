@@ -84,6 +84,8 @@ def render_balance(paciente_sel, user):
                     "firma": user.get("nombre", "Sistema"),
                 }
             )
+            from core.database import _trim_db_list
+            _trim_db_list("balance_db", 500)
             guardar_datos(spinner=True)
             queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
             st.rerun()
@@ -102,9 +104,9 @@ def render_balance(paciente_sel, user):
     hoy_str = ahora().strftime("%d/%m/%Y")
     blp_hoy = [x for x in blp if str(x.get("fecha", "")).startswith(hoy_str)]
     if blp_hoy:
-        ing_hoy = sum(x.get("ingresos", 0) for x in blp_hoy)
-        egr_hoy = sum(x.get("egresos", 0) for x in blp_hoy)
-        bal_hoy = sum(x.get("balance", 0) for x in blp_hoy)
+        ing_hoy = sum((x.get("ingresos") or 0) for x in blp_hoy)
+        egr_hoy = sum((x.get("egresos") or 0) for x in blp_hoy)
+        bal_hoy = sum((x.get("balance") or 0) for x in blp_hoy)
         st.markdown(f"##### Resumen del día — {hoy_str}")
         _d1, _d2, _d3, _d4 = st.columns(4)
         _d1.metric("Turnos hoy", len(blp_hoy))
@@ -178,8 +180,9 @@ def render_balance(paciente_sel, user):
                 use_container_width=True,
                 color="#6366f1",
             )
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("balance_charts", f"fallo_render_graficos:{type(_exc).__name__}:{_exc}")
 
         col_chart1, col_chart2 = st.columns(2)
         with col_chart1:
@@ -242,7 +245,7 @@ def render_balance(paciente_sel, user):
         try:
             st.session_state["balance_db"].remove(blp[-1])
         except ValueError:
-            pass
+            pass  # Intencional: item ya fue removido por otra operación concurrente
         guardar_datos(spinner=True)
         queue_toast("Ultimo balance eliminado.")
         st.rerun()

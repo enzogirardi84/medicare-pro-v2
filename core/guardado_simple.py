@@ -146,7 +146,8 @@ def guardar_historial_clinico(
             from core.app_logging import log_event
             log_event("guardado_simple", f"ERROR guardando: {e}")
         except Exception:
-            pass
+            import logging
+            logging.getLogger("guardado_simple").error(f"ERROR guardando: {e}")
         return False
 
 def obtener_historial_paciente(paciente_id: str) -> List[Dict]:

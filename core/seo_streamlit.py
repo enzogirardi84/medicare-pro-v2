@@ -76,8 +76,9 @@ def resolve_public_site_url() -> str:
             raw = st.secrets.get(key, "")
             if raw:
                 return str(raw).strip().rstrip("/")
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("seo_streamlit").debug(f"fallo_secrets_url:{type(_exc).__name__}")
     for key in _URL_KEYS:
         raw = os.environ.get(key, "").strip()
         if raw:

@@ -408,8 +408,9 @@ def get_client_identifier() -> str:
         ctx = st.runtime.scriptrunner.get_script_run_ctx()
         if ctx and hasattr(ctx, 'session_id'):
             parts.append(f"session:{ctx.session_id[:8]}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        import logging
+        logging.getLogger("rate_limiter").debug(f"fallo_get_session_id:{type(_exc).__name__}")
 
     if not parts:
         return "anonymous"

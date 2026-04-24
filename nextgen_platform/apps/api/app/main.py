@@ -224,8 +224,9 @@ async def request_guardrails_middleware(request: Request, call_next):
                             redis_client.expire(strikes_key, max(settings.api_payload_reject_window_seconds, 5))
                         if strikes >= max(settings.api_payload_reject_threshold, 1):
                             redis_client.setex(blocked_key, max(settings.api_payload_reject_block_seconds, 5), "1")
-                    except redis.RedisError:
-                        pass
+                    except redis.RedisError as _exc:
+                        import logging
+                        logging.getLogger("api.main").debug(f"fallo_redis_strikes:{type(_exc).__name__}")
                 response = JSONResponse(
                     status_code=413,
                     content=_error_payload(
@@ -239,8 +240,9 @@ async def request_guardrails_middleware(request: Request, call_next):
                 response.headers["x-error-code"] = "payload_too_large"
                 _set_standard_response_headers(response)
                 return response
-        except ValueError:
-            pass
+        except ValueError as _exc:
+            import logging
+            logging.getLogger("api.main").debug(f"fallo_parse_content_length:{type(_exc).__name__}")
     max_inflight = max(settings.api_max_inflight_requests, 1)
     regular_capacity = max(max_inflight - _priority_slots, 1)
     is_priority = _is_priority_request(request.url.path)
@@ -382,8 +384,9 @@ def readiness():
         try:
             if db is not None:
                 db.close()
-        except Exception:
-            pass
+        except Exception as _exc:
+            import logging
+            logging.getLogger("api.main").debug(f"fallo_db_close_health:{type(_exc).__name__}")
     try:
         redis_ok = bool(redis_client.ping())
     except Exception:

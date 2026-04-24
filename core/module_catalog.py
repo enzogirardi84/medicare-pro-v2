@@ -63,5 +63,5 @@ def categorias_navegacion_sidebar(*, alertas_app_visible: bool) -> Dict[str, Lis
         try:
             cats["Emergencias"].remove(ALERTAS_APP_PACIENTE_MODULO)
         except (KeyError, ValueError):
-            pass
+            pass  # Intencional: item no existe o ya fue removido
     return cats

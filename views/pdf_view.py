@@ -30,7 +30,7 @@ try:
 
     CANVAS_DISPONIBLE = True
 except ImportError:
-    pass
+    pass  # Intencional: canvas es opcional para firmas
 
 
 def _render_lazy_download(container, key_base, prepare_label, download_label, build_fn, file_name, mime, unavailable_message=None):
@@ -236,6 +236,8 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                                 "matricula_profesional": user.get("matricula", ""),
                             }
                         )
+                        from core.database import _trim_db_list
+                        _trim_db_list("consentimientos_db", 200)
                         registrar_auditoria_legal(
                             "Consentimiento",
                             paciente_sel,

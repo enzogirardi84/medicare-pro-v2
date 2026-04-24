@@ -180,9 +180,10 @@ def clasificar_inventario_alerta(
                 agotados.sort(key=lambda x: x[0].lower())
                 bajos.sort(key=lambda x: (x[1], x[0].lower()))
                 return agotados, bajos
-    except Exception:
-        pass
-        
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("notificaciones", f"fallo_inventario_sql:{type(_exc).__name__}")
+
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not isinstance(inventario_db, list):
         return agotados, bajos
