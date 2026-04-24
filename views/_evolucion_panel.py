@@ -9,6 +9,13 @@ from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.guardado_universal import guardar_registro
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
+from core.ui_components import (
+    badge,
+    timeline_item,
+    medical_card,
+    status_dot,
+    text_gradient,
+)
 from core.utils import (
     ahora,
     firma_a_base64,
@@ -40,25 +47,50 @@ CANVAS_DISPONIBLE = bool(st_canvas)
 def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_iframe_px: int = 520):
     """
     Historial en iframe con altura fija: el scroll vive adentro (Streamlit suele romper overflow en st.markdown).
+    USA NUEVO SISTEMA DE TIMELINE CLÍNICO con componentes mc-*.
     """
-    bloques = []
+    timeline_items = []
     for i, ev in enumerate(evs_mas_recientes_primero):
-        fecha = html.escape(str(ev.get("fecha", "")))
-        firma = html.escape(str(ev.get("firma", "")))
-        nota = html.escape(str(ev.get("nota", "")))
+        fecha = str(ev.get("fecha", ""))
+        firma = str(ev.get("firma", ""))
+        nota = str(ev.get("nota", ""))
         plantilla = ev.get("plantilla")
-        margen = "0" if i == len(evs_mas_recientes_primero) - 1 else "0 0 12px 0"
-        bloques.append(
-            f'<div class="mc-evol-card" style="margin:{margen};">'
-            f'<div class="mc-evol-meta"><b>{fecha}</b> | <b>{firma}</b></div>'
-        )
+        es_urgente = ev.get("urgente", False) or "urgente" in nota.lower()
+        
+        # Determinar status del item
+        status = "critico" if es_urgente else "normal"
+        
+        # Construir contenido
+        contenido = nota[:300] + "..." if len(nota) > 300 else nota
         if plantilla:
-            bloques.append(
-                f'<div class="mc-evol-plant">Plantilla: {html.escape(str(plantilla))}</div>'
-            )
-        bloques.append(f'<div class="mc-evol-body">{nota}</div></div>')
-    cards_html = "".join(bloques)
-
+            contenido = f'<span class="mc-badge mc-badge-info">{html.escape(str(plantilla))}</span><br>{contenido}'
+        
+        timeline_items.append({
+            "date": fecha,
+            "title": f"Evolución - {html.escape(firma)}",
+            "content": contenido,
+            "status": status,
+        })
+    
+    # Construir timeline HTML con las nuevas clases CSS
+    timeline_html = []
+    timeline_html.append('<div class="mc-timeline">')
+    for item in timeline_items:
+        status_class = item["status"] if item["status"] in ["critico", "mejora"] else ""
+        timeline_html.append(f'''
+        <div class="mc-timeline-item {status_class}">
+            <div class="mc-timeline-header">
+                <span class="mc-timeline-date">{item["date"]}</span>
+            </div>
+            <h4 class="mc-timeline-title">{item["title"]}</h4>
+            <div class="mc-timeline-content">{item["content"]}</div>
+        </div>
+        ''')
+    timeline_html.append('</div>')
+    
+    timeline_str = "\n".join(timeline_html)
+    
+    # Incluir todas las clases CSS del sistema de componentes
     doc = f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"/>
 <style>
@@ -66,18 +98,104 @@ def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_ifra
   .mc-evol-scroll {{
     height:100%; box-sizing:border-box; overflow-y:auto; overflow-x:hidden;
     -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
-    padding:14px 16px; border:1px solid rgba(148,163,184,0.4); border-radius:10px;
-    background:rgba(30,41,59,0.5); scrollbar-gutter:stable;
+    padding:16px; border:1px solid rgba(148,163,184,0.4); border-radius:10px;
+    background:rgba(30,41,59,0.5);
   }}
-  .mc-evol-card {{
-    border:1px solid rgba(148,163,184,0.28); border-radius:8px; padding:12px 14px;
-    background:rgba(15,23,42,0.65);
+  /* Timeline clínico */
+  .mc-timeline {{
+    position: relative;
+    padding-left: 1.5rem;
   }}
-  .mc-evol-meta {{ color:#e2e8f0; font-size:14px; }}
-  .mc-evol-plant {{ font-size:12px; color:#94a3b8; margin-top:6px; }}
-  .mc-evol-body {{ color:#cbd5e1; font-size:14px; margin-top:10px; white-space:pre-wrap; word-break:break-word; }}
+  .mc-timeline::before {{
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #3b82f6 0%, #22c55e 50%, #94a3b8 100%);
+    border-radius: 2px;
+  }}
+  .mc-timeline-item {{
+    position: relative;
+    padding-bottom: 1.25rem;
+    padding-left: 1rem;
+  }}
+  .mc-timeline-item::before {{
+    content: "";
+    position: absolute;
+    left: -1.625rem;
+    top: 0.25rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 2px solid #0f172a;
+    box-shadow: 0 0 0 2px #3b82f6;
+  }}
+  .mc-timeline-item.critico::before {{
+    background: #ef4444;
+    box-shadow: 0 0 0 2px #ef4444;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }}
+  @keyframes pulse-dot {{
+    0%, 100% {{ box-shadow: 0 0 0 2px #ef4444, 0 0 0 4px rgba(239, 68, 68, 0.3); }}
+    50% {{ box-shadow: 0 0 0 2px #ef4444, 0 0 0 8px rgba(239, 68, 68, 0.1); }}
+  }}
+  .mc-timeline-header {{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }}
+  .mc-timeline-date {{
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+  }}
+  .mc-timeline-title {{
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin: 0 0 0.5rem 0;
+  }}
+  .mc-timeline-content {{
+    font-size: 0.85rem;
+    color: #94a3b8;
+    line-height: 1.6;
+    background: rgba(30, 41, 59, 0.4);
+    padding: 0.75rem;
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }}
+  /* Badges */
+  .mc-badge {{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    margin-bottom: 0.5rem;
+  }}
+  .mc-badge-info {{
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.25);
+  }}
+  /* Scrollbar */
+  ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
+  ::-webkit-scrollbar-track {{ background: rgba(15, 23, 42, 0.5); border-radius: 3px; }}
+  ::-webkit-scrollbar-thumb {{ background: rgba(100, 116, 139, 0.5); border-radius: 3px; }}
 </style></head><body>
-<div class="mc-evol-scroll">{cards_html}</div>
+<div class="mc-evol-scroll">{timeline_str}</div>
 </body></html>"""
 
     components.html(doc, height=altura_iframe_px, scrolling=False)
