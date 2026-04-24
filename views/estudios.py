@@ -249,22 +249,25 @@ def render_estudios(paciente_sel, user, rol=None):
         col_del1, col_del1_chk = st.columns([3, 1.2])
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
-            ultimo_est = estudios_pac[-1]
-            if not uso_sql:
-                try:
-                    st.session_state["estudios_db"].remove(ultimo_est)
-                except ValueError:
-                    pass
+            if not estudios_pac:
+                st.error("No hay estudios para borrar.")
+            else:
+                ultimo_est = estudios_pac[-1]
+                if not uso_sql:
+                    try:
+                        st.session_state["estudios_db"].remove(ultimo_est)
+                    except ValueError:
+                        pass
                 
-            # --- ACTUALIZAR EN SQL ---
-            if ultimo_est.get("id_sql"):
-                from core.db_sql import delete_estudio
-                delete_estudio(ultimo_est["id_sql"])
-            # -------------------------
-            
-            guardar_datos(spinner=True)
-            queue_toast("Estudio eliminado correctamente.")
-            st.rerun()
+                # --- ACTUALIZAR EN SQL ---
+                if ultimo_est.get("id_sql"):
+                    from core.db_sql import delete_estudio
+                    delete_estudio(ultimo_est["id_sql"])
+                # -------------------------
+                
+                guardar_datos(spinner=True)
+                queue_toast("Estudio eliminado correctamente.")
+                st.rerun()
 
         st.markdown("**Selecciona el estudio que quieres eliminar:**")
         opciones = []

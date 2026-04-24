@@ -152,15 +152,18 @@ def render_materiales(paciente_sel, mi_empresa, user):
         col_chk, col_btn = st.columns([1.2, 2.8])
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
         if col_btn.button("Borrar ultimo consumo", use_container_width=True, disabled=not confirmar_borrado):
-            ultimo_consumo = cons_paciente[-1]
-            try:
-                st.session_state["consumos_db"].remove(ultimo_consumo)
-            except ValueError:
-                pass
-            _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
-            guardar_datos(spinner=True)
-            queue_toast("Consumo eliminado correctamente.")
-            st.rerun()
+            if not cons_paciente:
+                st.error("No hay consumos para borrar.")
+            else:
+                ultimo_consumo = cons_paciente[-1]
+                try:
+                    st.session_state["consumos_db"].remove(ultimo_consumo)
+                except ValueError:
+                    pass
+                _restaurar_stock(mi_empresa, ultimo_consumo.get("insumo"), int(ultimo_consumo.get("cantidad", 0) or 0))
+                guardar_datos(spinner=True)
+                queue_toast("Consumo eliminado correctamente.")
+                st.rerun()
 
         # ── Búsqueda en historial ────────────────────────────────────
         busqueda_mat = st.text_input(

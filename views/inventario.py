@@ -154,6 +154,8 @@ def render_inventario(mi_empresa):
                     st.session_state.setdefault("inventario_db", [])
                     st.session_state["inventario_db"].append({"item": item_final, "stock": cantidad, "empresa": mi_empresa})
 
+                from core.database import _trim_db_list
+                _trim_db_list("inventario_db", 1000)
                 guardar_datos(spinner=True)
                 queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
                 st.rerun()

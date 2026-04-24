@@ -137,9 +137,8 @@ class TieredCacheManager:
             st.session_state["_tiered_cache_l2"] = {}
             self._eviction_count += 1
             log_event("cache_memory_cleanup", f"size={size} bytes, cleared l1/l2")
-        except Exception:
-            # Silently ignore cleanup issues to avoid breaking app
-            pass
+        except Exception as _exc:
+            log_event("cache_manager_cleanup", f"fallo_cleanup_memoria:{type(_exc).__name__}:{_exc}")
 
     def _generate_key(
         self,

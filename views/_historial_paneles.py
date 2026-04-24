@@ -49,7 +49,7 @@ def _ultimo_registro(registros: List[Dict[str, Any]]) -> Optional[Dict[str, Any]
         if dt and (mejor_dt is None or dt > mejor_dt):
             mejor_dt = dt
             mejor = registro
-    return mejor or registros[-1]
+    return mejor or (registros[-1] if registros else {})
 
 
 def _fecha_registro_legible(registro: Optional[Dict[str, Any]]) -> str:
