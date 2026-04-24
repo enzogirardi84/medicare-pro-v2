@@ -242,6 +242,7 @@ MOBILE_SIDEBAR_AUTOCLOSE_JS = """
 
 # JS para el toggle móvil de sidebar (sin placeholders — string literal directo)
 SIDEBAR_TOGGLE_JS = """
+<!-- rev-2026-04-23-02 -->
 <div id="mc-mobile-sidebar-toggle-anchor" style="height:0;width:0;overflow:hidden;"></div>
 <script>
 (function() {

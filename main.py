@@ -564,6 +564,61 @@ _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
 render_mobile_sidebar_toggle()
 
+# CSS glass inline para botón sidebar móvil — se inyecta en cada rerun para evitar cache del navegador
+st.markdown(
+    """
+<style>
+@media (max-width: 767px) {
+    #mc-mobile-sidebar-toggle-btn-v2,
+    #mc-mobile-sidebar-toggle-btn {
+        position: fixed !important;
+        left: 12px !important;
+        top: 12px !important;
+        transform: none !important;
+        border-radius: 14px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        padding: 0 14px 0 12px !important;
+        background: rgba(255,255,255,0.08) !important;
+        backdrop-filter: blur(16px) saturate(1.6) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(1.6) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #f8fafc !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.06em !important;
+        box-shadow: 0 8px 28px rgba(2,6,23,.30) !important;
+        opacity: 0.82 !important;
+        cursor: pointer !important;
+        z-index: 10015 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        white-space: nowrap !important;
+        transition: opacity 0.15s, transform 0.18s !important;
+    }
+    #mc-mobile-sidebar-toggle-btn-v2:active,
+    #mc-mobile-sidebar-toggle-btn:active {
+        opacity: 1 !important;
+        transform: scale(0.96) !important;
+    }
+    #mc-mobile-sidebar-toggle-btn-v2.is-open,
+    #mc-mobile-sidebar-toggle-btn.is-open {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        gap: 0 !important;
+    }
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 # Inyectar JS para cerrar el sidebar automáticamente en móviles
 st.markdown(MOBILE_SIDEBAR_AUTOCLOSE_JS, unsafe_allow_html=True)
 
