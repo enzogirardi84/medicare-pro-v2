@@ -1,3 +1,8 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 norecursedirs = [".git", ".venv", "venv", "env", "__pycache__", ".pytest_cache"]
+filterwarnings = [
+    "ignore::pytest.PytestUnknownMarkWarning",
+]
+addopts = ["--import-mode=importlib"]
