@@ -224,8 +224,9 @@ def render_estudios(paciente_sel, user, rol=None):
                 f_est = parse_fecha_hora(e.get("fecha", ""))
                 if f_est and (hoy_dt.replace(tzinfo=None) - f_est).days > 7:
                     criticos_sin_respuesta.append(e)
-            except Exception:
-                pass
+            except Exception as _exc:
+                from core.app_logging import log_event
+                log_event("estudios_fecha_parse", f"fallo_parse_fecha_critica:{e.get('tipo','S/D')}:{e.get('fecha','')}:{type(_exc).__name__}")
 
     if criticos_sin_respuesta:
         st.error(

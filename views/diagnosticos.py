@@ -255,28 +255,12 @@ def render_diagnosticos(user=None):
             
             # Disco
             try:
-                import psutil
-                disk = psutil.disk_usage('.')
-                disk_percent = disk.percent
-                if disk_percent > 90:
-                    st.error(f"⚠️ Disco: {disk_percent}% usado - CRÍTICO")
-                elif disk_percent > 80:
-                    st.warning(f"⚡ Disco: {disk_percent}% usado - Alto")
-                else:
-                    st.success(f"✅ Disco: {disk_percent}% usado")
-            except Exception:
-                pass
-            
-            # Python version
-            import sys
-            st.caption(f"Python: {sys.version.split()[0]}")
-            
-            # Streamlit version
             try:
                 import streamlit as st_mod
                 st.caption(f"Streamlit: {st_mod.__version__}")
-            except Exception:
-                pass
+            except Exception as _exc:
+                from core.app_logging import log_event
+                log_event("diagnosticos_sistema", f"fallo_version_streamlit:{type(_exc).__name__}")
         
         with col2:
             st.markdown("#### 🔐 Variables de Entorno")

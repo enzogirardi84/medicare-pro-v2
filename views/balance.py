@@ -180,8 +180,9 @@ def render_balance(paciente_sel, user):
                 use_container_width=True,
                 color="#6366f1",
             )
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("balance_charts", f"fallo_render_graficos:{type(_exc).__name__}:{_exc}")
 
         col_chart1, col_chart2 = st.columns(2)
         with col_chart1:
