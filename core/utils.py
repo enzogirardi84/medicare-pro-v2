@@ -26,8 +26,9 @@ def password_requiere_migracion(pass_plain) -> bool:
 def actualizar_password_usuario(user_dict: dict, pass_plain: str) -> None:
     try:
         _aplicar_hash(user_dict, pass_plain)
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("utils", f"fallo_actualizar_password:{type(_exc).__name__}")
 
 
 def _password_bytes(password: str) -> bytes:
@@ -254,8 +255,9 @@ def obtener_emergency_password() -> str | None:
         pwd = st.secrets.get("SUPERADMIN_EMERGENCY_PASSWORD", None)
         if pwd and str(pwd).strip():
             return str(pwd).strip()
-    except Exception:
-        pass
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("utils", f"fallo_secrets_emergency_password:{type(_exc).__name__}")
     return None
 
 # Logins que pueden usar la SUPERADMIN_EMERGENCY_PASSWORD desde secrets si el hash en base no coincide (recuperación).
@@ -479,6 +481,7 @@ def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
             from core.clinicas_control import sincronizar_clinicas_desde_datos
 
             sincronizar_clinicas_desde_datos(st.session_state)
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("utils", f"fallo_sincronizar_clinicas:{type(_exc).__name__}:{_exc}")
         st.session_state["db_inicializada"] = True

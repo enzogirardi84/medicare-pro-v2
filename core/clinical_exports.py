@@ -7,6 +7,7 @@ from fpdf import FPDF
 
 from core.export_utils import pdf_output_bytes, safe_text
 from core.utils import decodificar_base64_seguro, mapa_detalles_pacientes
+from core.app_logging import log_event
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 
@@ -97,8 +98,8 @@ def collect_patient_sections(session_state, paciente_sel):
     }
     try:
         session_state[_ck_secs] = {"ts": time.monotonic(), "local_ts": local_ts, "sections": merged}
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("clinical_exports", f"fallo_cache_secciones:{type(_exc).__name__}")
     return merged
 
 
@@ -288,8 +289,8 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
                 tmp.write(firma_bytes)
                 tmp_path = tmp.name
             pdf.image(tmp_path, x=30, y=210, w=60)
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("clinical_exports", f"fallo_firma_consentimiento:{type(_exc).__name__}")
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -410,8 +411,8 @@ def build_prescription_pdf_bytes(session_state, paciente_sel, mi_empresa, record
             pdf.set_x(90)
             pdf.cell(0, 6, safe_text(f"Fecha de firma: {record.get('fecha', 'S/D')}"), ln=True)
             pdf.ln(34)
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("clinical_exports", f"fallo_firma_medica:{type(_exc).__name__}")
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -539,8 +540,8 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
         if ruta.exists():
             try:
                 pdf.image(str(ruta), x=8, y=logo_y, w=logo_w)
-            except Exception:
-                pass
+            except Exception as _exc:
+                log_event("clinical_exports", f"fallo_logo_pdf:{type(_exc).__name__}:{ruta.name}")
             break
 
     # Empresa + título en blanco
@@ -667,8 +668,8 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
             pdf.set_font("Arial", "", 8)
             pdf.cell(0, 5, safe_text(f"Mat: {prof_mat}"), ln=True)
             pdf.ln(20)
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("clinical_exports", f"fallo_firma_profesional:{type(_exc).__name__}")
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)

@@ -109,8 +109,8 @@ def _auth_strip_pwreset_query_param() -> None:
             return
         try:
             qp.pop("pwreset", None)
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("auth", f"fallo_strip_pwreset:{type(_exc).__name__}")
 
 
 def _auth_strip_modulo_query_param() -> None:
@@ -131,8 +131,8 @@ def _auth_strip_modulo_query_param() -> None:
         if not effective:
             return
         qp.pop("modulo", None)
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("auth", f"fallo_strip_modulo:{type(_exc).__name__}")
 
 
 def _buscar_usuario_por_login(login_texto: str):
@@ -216,8 +216,8 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
     log_event("auth", evento_log)
     try:
         guardar_datos(spinner=False)
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("auth", f"fallo_guardar_post_login:{type(_exc).__name__}:{_exc}")
     st.session_state["_mc_login_transition"] = True
     st.rerun()
 
