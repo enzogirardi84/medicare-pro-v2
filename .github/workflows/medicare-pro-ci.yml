@@ -112,9 +112,9 @@ jobs:
 
       - name: Run tests
         env:
-          REDIS_URL: redis://localhost:6379/0
+          REDIS_URL: "redis://localhost:6379/0"
           TESTING: "true"
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
         run: |
           pytest tests/ \
             --verbose \
@@ -211,8 +211,8 @@ jobs:
 
       - name: Run integration tests
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/medicare_test
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: "postgresql://test:test@localhost:5432/medicare_test"
+          REDIS_URL: "redis://localhost:6379/0"
           TESTING: "true"
         run: |
           pytest tests/test_integration_*.py -v --tb=short
