@@ -5436,3 +5436,329 @@ html body .mc-loader-cristal-spinner {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* =====================================================================
+   ESTILOS DE IMPRESIÓN - Documentos Médicos Profesionales
+   Oculta UI de Streamlit, muestra solo contenido relevante
+   ===================================================================== */
+
+@media print {
+    /* Ocultar elementos de UI de Streamlit */
+    header[data-testid="stHeader"],
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarCollapsedControl"],
+    .stButton > button,
+    [data-testid="stTabs"] button,
+    .stSelectbox,
+    .stTextInput,
+    .stTextArea,
+    [data-testid="stCheckbox"],
+    [data-testid="stRadio"],
+    [data-testid="stFileUploaderDropzone"],
+    [data-testid="stExpanderToggleIcon"],
+    footer,
+    iframe,
+    .mc-toast-container,
+    .mc-sidebar-search,
+    #MainMenu,
+    .stDeployButton,
+    .stSpinner,
+    [data-testid="stNotificationContent"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Resetear layout para impresión */
+    [data-testid="stAppViewContainer"] {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    [data-testid="stMain"] {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    
+    .block-container {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    
+    /* Estilos base para impresión */
+    body {
+        background: white !important;
+        color: #1a1a1a !important;
+        font-family: Georgia, "Times New Roman", serif !important;
+        font-size: 11pt !important;
+        line-height: 1.6 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Header de documento médico */
+    .mc-print-header {
+        text-align: center;
+        border-bottom: 2px solid #1a365d;
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .mc-print-logo {
+        max-height: 60px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .mc-print-clinic-name {
+        font-size: 18pt;
+        font-weight: bold;
+        color: #1a365d;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .mc-print-clinic-info {
+        font-size: 9pt;
+        color: #4a5568;
+        margin-top: 0.25rem;
+    }
+    
+    /* Título del documento */
+    .mc-print-title {
+        font-size: 16pt;
+        font-weight: bold;
+        text-align: center;
+        margin: 1.5rem 0;
+        color: #1a1a1a;
+        text-transform: uppercase;
+        border-bottom: 1px solid #cbd5e0;
+        padding-bottom: 0.5rem;
+    }
+    
+    /* Información del paciente */
+    .mc-print-patient-info {
+        background: #f7fafc !important;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .mc-print-patient-info h3 {
+        font-size: 12pt;
+        color: #2d3748;
+        margin: 0 0 0.75rem 0;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 0.25rem;
+    }
+    
+    .mc-print-field {
+        display: inline-block;
+        margin-right: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .mc-print-field-label {
+        font-weight: bold;
+        color: #4a5568;
+        font-size: 9pt;
+    }
+    
+    .mc-print-field-value {
+        color: #1a1a1a;
+        font-size: 10pt;
+    }
+    
+    /* Secciones del documento */
+    .mc-print-section {
+        margin-bottom: 1.5rem;
+        page-break-inside: avoid;
+    }
+    
+    .mc-print-section-title {
+        font-size: 12pt;
+        font-weight: bold;
+        color: #2d3748;
+        border-bottom: 1px solid #cbd5e0;
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+    }
+    
+    /* Contenido de evoluciones */
+    .mc-print-evolution {
+        margin-bottom: 1rem;
+        padding-left: 1rem;
+        border-left: 3px solid #cbd5e0;
+    }
+    
+    .mc-print-evolution-date {
+        font-weight: bold;
+        color: #4a5568;
+        font-size: 10pt;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mc-print-evolution-author {
+        font-style: italic;
+        color: #718096;
+        font-size: 9pt;
+        margin-bottom: 0.5rem;
+    }
+    
+    .mc-print-evolution-text {
+        text-align: justify;
+        color: #1a1a1a;
+    }
+    
+    /* Tablas para impresión */
+    .mc-print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 10pt;
+    }
+    
+    .mc-print-table th {
+        background: #edf2f7 !important;
+        border: 1px solid #cbd5e0;
+        padding: 0.5rem;
+        text-align: left;
+        font-weight: bold;
+        color: #2d3748;
+    }
+    
+    .mc-print-table td {
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem;
+        color: #1a1a1a;
+    }
+    
+    .mc-print-table tr:nth-child(even) {
+        background: #f7fafc !important;
+    }
+    
+    /* Receta médica específica */
+    .mc-print-receta {
+        border: 2px solid #1a365d;
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+    
+    .mc-print-receta-logo {
+        float: left;
+        margin-right: 1rem;
+        max-height: 50px;
+    }
+    
+    .mc-print-rp {
+        font-size: 14pt;
+        font-weight: bold;
+        color: #1a365d;
+        margin: 1rem 0 0.5rem 0;
+    }
+    
+    /* Firma y sello */
+    .mc-print-signature-section {
+        margin-top: 3rem;
+        page-break-inside: avoid;
+    }
+    
+    .mc-print-signature-line {
+        border-top: 1px solid #1a1a1a;
+        width: 250px;
+        margin-top: 2rem;
+        padding-top: 0.5rem;
+    }
+    
+    .mc-print-signature-name {
+        font-weight: bold;
+        font-size: 10pt;
+    }
+    
+    .mc-print-signature-title {
+        font-size: 9pt;
+        color: #4a5568;
+    }
+    
+    .mc-print-signature-matricula {
+        font-size: 8pt;
+        color: #718096;
+    }
+    
+    /* Footer de página */
+    .mc-print-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 0.5rem;
+        font-size: 8pt;
+        color: #718096;
+        text-align: center;
+    }
+    
+    /* Saltos de página */
+    .mc-print-page-break {
+        page-break-before: always;
+    }
+    
+    .mc-print-avoid-break {
+        page-break-inside: avoid;
+    }
+    
+    /* Códigos y diagnósticos */
+    .mc-print-cie10 {
+        font-family: "Courier New", monospace;
+        background: #edf2f7 !important;
+        padding: 0.125rem 0.375rem;
+        border-radius: 3px;
+        font-size: 9pt;
+    }
+    
+    /* Badges para impresión (sin color) */
+    .mc-badge,
+    .mc-badge-critical,
+    .mc-badge-warning,
+    .mc-badge-success,
+    .mc-badge-info {
+        border: 1px solid #718096 !important;
+        padding: 0.125rem 0.375rem !important;
+        font-size: 8pt !important;
+        background: none !important;
+        color: #1a1a1a !important;
+    }
+    
+    /* Links */
+    a {
+        color: #1a1a1a !important;
+        text-decoration: none !important;
+    }
+    
+    a::after {
+        content: "" !important;
+    }
+    
+    /* Ajustes de página */
+    @page {
+        margin: 2cm;
+        size: A4;
+    }
+    
+    /* Mostrar URLs de links importantes */
+    a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 8pt;
+        color: #718096;
+    }
+    
+    /* Ocultar elementos con clase no-print */
+    .no-print,
+    .mc-no-print {
+        display: none !important;
+    }
+}
