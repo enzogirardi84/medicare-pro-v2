@@ -122,7 +122,6 @@ def inyectar_redirect_apex_si_configurado(*, canonical_url: Optional[str] = None
 def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
     """
     Inserta meta description, Open Graph, Twitter Card, canonical, lang=es y JSON-LD.
-    Depende de que el iframe de components pueda acceder a window.parent.document (Streamlit típico).
     """
     import streamlit as st
 
@@ -187,44 +186,6 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
       doc.head.appendChild(s);
     }}
     s.textContent = P.schemaJson;
-      }} catch (e) {{}}
-      parentWin.__mcLoadingOverlayObserver = null;
-    }}
-
-    if (parentWin.MutationObserver && doc.body) {{
-      var observer = new parentWin.MutationObserver(function() {{
-        if (refreshDesktopUiGuards()) {{
-          try {{
-            observer.disconnect();
-          }} catch (e) {{}}
-          parentWin.__mcLoadingOverlayObserver = null;
-        }}
-      }});
-      observer.observe(doc.body, {{ childList: true, subtree: true }});
-      parentWin.__mcLoadingOverlayObserver = observer;
-    }}
-
-    function waitForContent() {{
-      if (refreshDesktopUiGuards()) {{
-        return;
-      }}
-      if (parentWin.requestAnimationFrame) {{
-        parentWin.requestAnimationFrame(waitForContent);
-      }}
-    }}
-
-    waitForContent();
-
-    if (!parentWin.__mcLoadingOverlayRenderHookInstalled) {{
-      doc.addEventListener('streamlit:render', refreshDesktopUiGuards);
-      parentWin.__mcLoadingOverlayRenderHookInstalled = true;
-    }}
-
-    if (!parentWin.__mcLoadingOverlayLoadHookInstalled) {{
-      parentWin.addEventListener('load', refreshDesktopUiGuards);
-      parentWin.__mcLoadingOverlayLoadHookInstalled = true;
-    }}
-
   }} catch (e) {{}}
 }})();
 </script>
