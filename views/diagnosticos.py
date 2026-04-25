@@ -255,6 +255,22 @@ def render_diagnosticos(user=None):
             
             # Disco
             try:
+                import psutil
+                disk = psutil.disk_usage('/')
+                disk_percent = disk.percent
+                disk_used = disk.used / (1024**3)
+                disk_total = disk.total / (1024**3)
+                if disk_percent > 90:
+                    st.error(f"⚠️ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) - CRÍTICO")
+                elif disk_percent > 75:
+                    st.warning(f"⚡ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) - Alto")
+                else:
+                    st.success(f"✅ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB)")
+            except ImportError:
+                st.info("ℹ️ Instalar `psutil` para ver uso de disco")
+            except Exception as e:
+                st.info(f"ℹ️ Disco: no disponible ({type(e).__name__})")
+            
             try:
                 import streamlit as st_mod
                 st.caption(f"Streamlit: {st_mod.__version__}")

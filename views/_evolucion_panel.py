@@ -3,8 +3,6 @@ import base64
 import html
 
 import streamlit as st
-import streamlit.components.v1 as components
-
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.guardado_universal import guardar_registro
@@ -198,7 +196,7 @@ def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_ifra
 <div class="mc-evol-scroll">{timeline_str}</div>
 </body></html>"""
 
-    components.html(doc, height=altura_iframe_px, scrolling=False)
+    st.html(doc, height=altura_iframe_px, scrolling=False)
 
 
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):

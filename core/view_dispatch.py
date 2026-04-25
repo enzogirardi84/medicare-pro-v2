@@ -198,7 +198,6 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
                     if st.button(label, key=f"navbtn_{opt}", use_container_width=True, type=tipo):
                         selected = opt
                         break
-
     if selected and selected != vista_actual:
         st.session_state["modulo_anterior"] = vista_actual
         st.session_state["modulo_actual"] = selected

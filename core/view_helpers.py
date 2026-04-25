@@ -6,9 +6,6 @@ import re
 from typing import Iterator, Optional
 
 import streamlit as st
-import streamlit.components.v1 as components
-
-
 @contextmanager
 def lista_plegable(
     titulo: str,
@@ -371,7 +368,7 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
         unsafe_allow_html=True,
     )
 
-    components.html(
+    st.html(
         f"""
         <script>
         (function() {{
@@ -391,7 +388,4 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
           }} catch (e) {{}}
         }})();
         </script>
-        """,
-        height=0,
-        width=0,
-    )
+        """)

@@ -12,8 +12,6 @@ import re
 from typing import Any, Mapping
 
 import streamlit as st
-import streamlit.components.v1 as components
-
 from core._ui_liviano_js import LIVIANO_JS_TEMPLATE, SIDEBAR_TOGGLE_JS
 
 
@@ -195,7 +193,7 @@ def render_mc_liviano_cliente(modo: str, server_hint: bool) -> None:
     server_js = "true" if server_hint else "false"
 
     html = LIVIANO_JS_TEMPLATE.format(modo_js=modo_js, server_js=server_js)
-    components.html(html, height=0, width=0)
+    st.html(html)
 
 
 
@@ -208,4 +206,4 @@ def render_mobile_sidebar_toggle() -> None:
     if hasattr(st, "html"):
         st.html(SIDEBAR_TOGGLE_JS)
     else:
-        components.html(SIDEBAR_TOGGLE_JS, height=0, width=0)
+        st.html(SIDEBAR_TOGGLE_JS)

@@ -171,6 +171,25 @@ except Exception as _exc:
     from core.app_logging import log_event
     log_event("main_css_load", f"fallo_carga_legacy_css:{type(_exc).__name__}:{_exc}")
 
+# Kill-switch final: debe ir despues de assets/style.css, porque style.css tambien
+# define #mc-loading-overlay con !important y si carga despues vuelve a tapar el main.
+st.session_state.pop("_mc_login_transition", None)
+st.markdown(
+    """<style>
+    #mc-loading-overlay,
+    #mc-login-transition-overlay,
+    .mc-loading-overlay,
+    .mc-login-transition-overlay {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -9999 !important;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+
 if "_db_bootstrapped" not in st.session_state:
     # Sin precarga de PHI: monolito y multiclínica cargan la base en login / recuperación / tenant.
     inicializar_db_state(None, precargar_usuario_admin_emergencia=False)
