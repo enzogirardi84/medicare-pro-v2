@@ -3056,26 +3056,22 @@ div[data-testid="stDataFrame"] {
     }
 }
 
-/* Tablets: ajustes específicos para sidebar fijo */
+/* Tablets: ajustes de sidebar — DESHABILITADOS para evitar conflicto con layout nativo de Streamlit.
+   En desktop/tablet Streamlit maneja el sidebar correctamente sin margin-left manual.
 @media (min-width: 769px) and (max-width: 1024px) {
-    /* Sidebar ligeramente más ancho en tablets para mejor usabilidad */
     [data-testid="stSidebar"] {
         width: 300px !important;
         min-width: 300px !important;
         max-width: 300px !important;
     }
-
-    /* Ajustar margin-left del contenedor principal para el nuevo ancho */
     [data-testid="stAppViewContainer"] {
         margin-left: 300px !important;
     }
-
-    /* Sección principal ajustada */
     [data-testid="stAppViewContainer"] > section.main,
     section.main {
         max-width: calc(100% - 300px) !important;
     }
-}
+} */
 
 /* Touch-friendly targets en todos los dispositivos táctiles */
 @media (hover: none) and (pointer: coarse) {
