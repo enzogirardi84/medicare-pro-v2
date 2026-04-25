@@ -114,6 +114,24 @@ descripcion_acceso_rol = getattr(
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
 valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
 
+# CSS kill-switch de emergencia: oculta overlays de carga que pudieran tapar la pantalla
+# en Streamlit Cloud si el JavaScript de seo_streamlit.py aun no se actualizo o hay cache.
+st.markdown(
+    """<style>
+    #mc-loading-overlay,
+    #mc-login-transition-overlay,
+    .mc-loading-overlay,
+    .mc-login-transition-overlay {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -9999 !important;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+
 try:
     _css_path = Path(__file__).parent / "assets" / "style.css"
     _css_mtime = _css_path.stat().st_mtime if _css_path.exists() else 0.0
