@@ -28,6 +28,7 @@ def _get_render_fn(tab_name, view_config):
 
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_config, menu_set=None):
+    st.write(f"DEBUG: render_current_view iniciado para {tab_name}")
     if menu_set is None:
         menu_set = frozenset(resolve_menu_for_role(rol, user, view_config))
     if tab_name not in menu_set:
@@ -87,6 +88,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
     except Exception as exc:
         log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
         render_modulo_fallo_ui(tab_name, exc)
+    st.write(f"DEBUG: render_current_view finalizado para {tab_name}")
 
 
 def resolve_current_view(menu, menu_set=None):

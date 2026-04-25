@@ -686,10 +686,12 @@ if mostrar_atajo or paciente_sel:
 from core.alert_toasts import render_queued_toasts
 render_queued_toasts()
 
+st.write(f"DEBUG MAIN: render_current_view va a ejecutarse con vista_actual={vista_actual}")
 t0_view = time.monotonic()
 ok_view = True
 try:
     render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol, menu_set)
+    st.write("DEBUG MAIN: render_current_view termino")
 except Exception:
     ok_view = False
     raise
