@@ -39,7 +39,7 @@ import streamlit as st
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_redirect_apex_si_configurado
 
-APP_BUILD_TAG = "Build 2026-04-13 fast-path landing (imports diferidos)"
+APP_BUILD_TAG = "Build 2026-04-24 fix: overlays + syntax + navigation"
 
 st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="collapsed")
 inyectar_redirect_apex_si_configurado()
@@ -538,8 +538,8 @@ def _render_mobile_patient_selector(mi_empresa, rol):
     return None
 
 
-# Overlay de transicion post-login: DESHABILITADO temporalmente — causaba pantalla azul
-# en Streamlit Cloud porque la animacion CSS no ocultaba el overlay correctamente.
+# Overlay de transicion post-login: DESHABILITADO permanentemente — causaba pantalla azul/negro
+# en Streamlit Cloud porque el overlay CSS no se ocultaba correctamente en entornos sandboxed.
 # if st.session_state.pop("_mc_login_transition", False):
 #     st.markdown("...", unsafe_allow_html=True)
 
@@ -614,12 +614,13 @@ st.markdown(MOBILE_SIDEBAR_AUTOCLOSE_JS, unsafe_allow_html=True)
 # Alerta de stock removida por pedido del usuario (molesta; el stock bajo se ve en Inventario).
 # Se mantienen las demas notificaciones del sistema mas abajo.
 # render_alerta_inventario_banda_superior(mi_empresa, menu)
-st.write(f"DEBUG: vista_actual={vista_actual}, menu={menu}, menu_set={menu_set}")
+
 if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()
+
 vista_actual = render_module_nav(menu, vista_actual, menu_set)
-st.write(f"DEBUG: despues render_module_nav vista_actual={vista_actual}")
+
 if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
@@ -690,9 +691,12 @@ t0_view = time.monotonic()
 ok_view = True
 try:
     render_current_view(vista_actual, paciente_sel, mi_empresa, user, rol, menu_set)
-except Exception:
+except Exception as exc:
     ok_view = False
-    raise
+    log_event("main", f"render_current_view_fallo:{vista_actual}:{type(exc).__name__}:{exc}")
+    st.error(f"Error al cargar el modulo '{vista_actual}': {type(exc).__name__}")
+    st.caption(f"Detalle técnico: {exc}")
+    # No hacer raise — mostrar error al usuario y continuar para que no quede pantalla negra
 finally:
     record_perf(f"ui.modulo.{vista_actual}", (time.monotonic() - t0_view) * 1000.0, ok=ok_view)
 
