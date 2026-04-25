@@ -49,6 +49,15 @@
 | `core/utils_pacientes.py` | `mapa_detalles_pacientes`, `asegurar_detalles_pacientes_en_sesion`, `_clave_paciente_visible`, `obtener_pacientes_visibles`, `obtener_alertas_clinicas`, `obtener_profesionales_visibles` | Type hints exhaustivos en parámetros y retornos |
 | `core/observability.py` | `format`, `log_user_action`, `log_security_event` | Reemplazado `datetime.utcnow()` deprecado por `datetime.now(timezone.utc)` (3 ocurrencias) |
 
+#### Hotfix post-push: Compatibilidad Python 3.9 en CI
+
+| Archivo | Qué se hizo | Por qué |
+|---|---|---|
+| `core/utils.py` | Agregado `from __future__ import annotations` al inicio | PEP 604 `str \| None` no es nativo en Python 3.9 sin este import |
+| `core/database.py` | Agregado `from __future__ import annotations` al inicio | Idem — evita `SyntaxError` en CI |
+| `core/nav_helpers.py` | Agregado `from __future__ import annotations` al inicio | Idem — `set[str] \| frozenset[str]` |
+| `core/utils_pacientes.py` | Agregado `from __future__ import annotations` al inicio | Idem — `list[str] \| None` |
+
 ### FASE 2: Optimización de Rendimiento (Caching)
 
 | Archivo | Qué se hizo |
