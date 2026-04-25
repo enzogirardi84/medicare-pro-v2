@@ -539,29 +539,10 @@ def _render_mobile_patient_selector(mi_empresa, rol):
     return None
 
 
-# Overlay de transicion post-login: cubre el flash negro entre reruns
-if st.session_state.pop("_mc_login_transition", False):
-    st.markdown("""
-<style>
-#mc-login-transition-overlay{position:fixed;top:0;left:0;width:100vw;height:100vh;
-background:#030609;display:flex;flex-direction:column;justify-content:center;
-align-items:center;z-index:9999999;gap:16px;
-animation:mc-tr-fadeout 0.55s ease 0.7s forwards;}
-@keyframes mc-tr-fadeout{from{opacity:1}to{opacity:0;pointer-events:none;visibility:hidden;}}
-.mc-tr-spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,0.06);
-border-left-color:#14b8a6;border-top-color:#60a5fa;border-radius:50%;
-animation:mc-tr-spin 0.9s linear infinite;-webkit-animation:mc-tr-spin 0.9s linear infinite;
-transform-origin:center center;will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
-.mc-tr-text{color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-font-size:13px;font-weight:500;letter-spacing:0.3px;}
-@keyframes mc-tr-spin{to{transform:rotate(360deg);}}
-@-webkit-keyframes mc-tr-spin{to{transform:rotate(360deg);}}
-</style>
-<div id="mc-login-transition-overlay">
-  <div class="mc-tr-spinner mc-spinner"></div>
-  <span class="mc-tr-text">Cargando sistema...</span>
-</div>
-""", unsafe_allow_html=True)
+# Overlay de transicion post-login: DESHABILITADO temporalmente — causaba pantalla azul
+# en Streamlit Cloud porque la animacion CSS no ocultaba el overlay correctamente.
+# if st.session_state.pop("_mc_login_transition", False):
+#     st.markdown("...", unsafe_allow_html=True)
 
 menu_set = frozenset(menu)
 vista_actual = resolve_current_view(menu, menu_set)
