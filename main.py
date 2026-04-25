@@ -376,6 +376,17 @@ with st.sidebar:
             vaciar_datos_app_en_sesion()
             st.rerun()
 
+    st.divider()
+    paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
+        mi_empresa, rol,
+        obtener_pacientes_fn=obtener_pacientes_visibles,
+        obtener_alertas_fn=obtener_alertas_clinicas,
+        mapa_detalles_fn=mapa_detalles_pacientes,
+        es_control_total_fn=es_control_total,
+        valor_por_modo_liviano_fn=valor_por_modo_liviano,
+        limite_pacientes_fn=limite_pacientes_sidebar,
+    )
+
 # === Navegación móvil simplificada ===
 # En pantallas pequeñas (móviles), el sidebar de Streamlit se comporta mal.
 # Mostramos un menú expandible en el área principal para navegación rápida.
@@ -574,7 +585,6 @@ if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
 
-paciente_sel = None
 _render_sidebar_contexto_clinico(paciente_sel, vista_actual)
 # Panel "Primeros pasos en MediCare" removido por pedido del usuario (molesto).
 # render_panel_bienvenida(rol, menu, VIEW_NAV_LABELS)
