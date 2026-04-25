@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Funciones de pacientes visibles, alertas clínicas y profesionales.
 
 Extraído de core/utils.py.

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Helpers para la navegación por categorías en el sidebar de módulos."""
 from core.module_catalog import categorias_navegacion_sidebar
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
