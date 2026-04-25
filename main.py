@@ -491,6 +491,7 @@ def _render_mobile_patient_selector(mi_empresa, rol):
 # if st.session_state.pop("_mc_login_transition", False):
 #     st.markdown("...", unsafe_allow_html=True)
 
+menu = resolve_menu_for_role(rol, user)
 menu_set = frozenset(menu)
 vista_actual = resolve_current_view(menu, menu_set)
 
