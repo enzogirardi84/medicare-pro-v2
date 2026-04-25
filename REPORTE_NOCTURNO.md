@@ -57,6 +57,7 @@
 | `core/database.py` | Agregado `from __future__ import annotations` al inicio | Idem — evita `SyntaxError` en CI |
 | `core/nav_helpers.py` | Agregado `from __future__ import annotations` al inicio | Idem — `set[str] \| frozenset[str]` |
 | `core/utils_pacientes.py` | Agregado `from __future__ import annotations` al inicio | Idem — `list[str] \| None` |
+| `core/database.py` | **Import `Any` faltante:** agregado `from typing import Any, Optional` | El archivo usaba `Any` en `_normalizar_blob_datos`, `_coleccion_fresca_como`, `obtener_estado_guardado`, etc., pero solo importaba `Optional`. Causaba `NameError` al cargar el módulo en producción (Streamlit Cloud). |
 
 ### FASE 2: Optimización de Rendimiento (Caching)
 
