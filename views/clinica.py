@@ -215,16 +215,19 @@ def render_clinica(paciente_sel, user=None):
                     delta_fc = 0
                 try:
                     delta_sat = float(ultimo.get("Sat") or 0) - float(penultimo.get("Sat") or 0)
-                    _sat_txt = f" | SatO2 {'\u2191' if delta_sat > 0 else '\u2193' if delta_sat < 0 else '\u2192'}{abs(delta_sat):.0f}%"
+                    _arrow_sat = "\u2191" if delta_sat > 0 else "\u2193" if delta_sat < 0 else "\u2192"
+                    _sat_txt = f" | SatO2 {_arrow_sat}{abs(delta_sat):.0f}%"
                 except Exception:
                     _sat_txt = ""
                 try:
                     delta_ta = float(ultimo.get("TA", 0).split("/")[0]) - float(penultimo.get("TA", 0).split("/")[0])
-                    _ta_txt = f" | TA {'\u2191' if delta_ta > 0 else '\u2193' if delta_ta < 0 else '\u2192'}{abs(delta_ta):.0f} mmHg"
+                    _arrow_ta = "\u2191" if delta_ta > 0 else "\u2193" if delta_ta < 0 else "\u2192"
+                    _ta_txt = f" | TA {_arrow_ta}{abs(delta_ta):.0f} mmHg"
                 except Exception:
                     _ta_txt = ""
+                _arrow_fc = "\u2191" if delta_fc > 0 else "\u2193" if delta_fc < 0 else "\u2192"
                 st.caption(
-                    f"Tendencia vs control previo — FC: {'\u2191' if delta_fc > 0 else '\u2193' if delta_fc < 0 else '\u2192'}{abs(delta_fc)} lpm"
+                    f"Tendencia vs control previo — FC: {_arrow_fc}{abs(delta_fc)} lpm"
                     + _sat_txt
                     + _ta_txt
                 )
