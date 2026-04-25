@@ -2851,9 +2851,10 @@ div[data-testid="stDataFrame"] {
 }
 
 /* ===== SIDEBAR FIJO DESKTOP/TABLET (>= 768px) ===== */
-/* Usando position: sticky para mejor compatibilidad con Streamlit */
+/* DESHABILITADO: position: sticky con display:flex rompe layout de Streamlit 1.36+ en desktop,
+   causando que el área principal quede vacía/negra. Streamlit maneja sidebar nativamente bien. */
+/*
 @media (min-width: 768px) {
-    /* Asegurar que el AppViewContainer tenga altura completa para sticky */
     [data-testid="stAppViewContainer"] {
         min-height: 100vh !important;
         display: flex !important;
@@ -2861,7 +2862,6 @@ div[data-testid="stDataFrame"] {
         margin-left: 0 !important;
     }
 
-    /* El sidebar debe ser sticky y mantenerse visible */
     [data-testid="stSidebar"] {
         position: sticky !important;
         position: -webkit-sticky !important;
@@ -2884,7 +2884,6 @@ div[data-testid="stDataFrame"] {
         transition: none !important;
     }
 
-    /* Contenedor interno del sidebar - scroll independiente */
     [data-testid="stSidebar"] > div:first-child {
         height: 100% !important;
         min-height: 100% !important;
@@ -2893,7 +2892,6 @@ div[data-testid="stDataFrame"] {
         background: transparent !important;
     }
 
-    /* Forzar visibilidad del sidebar - nunca colapsar */
     [data-testid="stSidebar"],
     [data-testid="stSidebar"][aria-hidden="false"],
     [data-testid="stSidebar"][aria-hidden="true"] {
@@ -2905,7 +2903,6 @@ div[data-testid="stDataFrame"] {
         margin-right: 0 !important;
     }
 
-    /* Ocultar completamente el botón de colapsar y su espacio */
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"],
     [data-testid="stExpandSidebarButton"] {
@@ -2917,7 +2914,6 @@ div[data-testid="stDataFrame"] {
         pointer-events: none !important;
     }
 
-    /* Ocultar barra de redimensionamiento del sidebar */
     [data-testid="stSidebar"] + div,
     [data-testid="stSidebar"] ~ div[class*="resize"],
     div[class*="resize"][style*="cursor: col-resize"],
@@ -2933,18 +2929,15 @@ div[data-testid="stDataFrame"] {
         cursor: default !important;
     }
 
-    /* Deshabilitar resize en el sidebar */
     [data-testid="stSidebar"] {
         resize: none !important;
         pointer-events: auto !important;
     }
 
-    /* Ajustar el espacio que ocupaba el botón colapsado */
     .stApp > header {
         display: none !important;
     }
 
-    /* Sección principal (main content) debe ocupar el resto del espacio */
     [data-testid="stAppViewContainer"] > section[data-testid="stAppViewContent"],
     [data-testid="stAppViewContainer"] > section:last-child,
     section.main {
@@ -2957,13 +2950,13 @@ div[data-testid="stDataFrame"] {
         overflow-x: hidden !important;
     }
 
-    /* Contenedor de bloques ajustado */
     .block-container {
         max-width: 100% !important;
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
     }
 }
+*/
 
 /* ===== OPTIMIZACIONES MÓVILES Y TABLETS ===== */
 
@@ -5090,6 +5083,10 @@ html body .mc-loader-cristal-spinner {
     }
 }
 
+/* Sidebar fijo desktop: DESHABILITADO — causaba pantalla vacía en PC.
+   Streamlit maneja el sidebar nativamente en desktop sin problemas.
+   El layout fijo solo era necesario para móviles con drawer custom. */
+/*
 @media (min-width: 768px) {
     [data-testid="stAppViewContainer"] {
         display: flex !important;
@@ -5221,6 +5218,16 @@ html body .mc-loader-cristal-spinner {
         max-width: 100% !important;
     }
 
+    .block-container {
+        max-width: 1500px !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+*/
+
+/* Desktop: mantener padding de block-container sin forzar sidebar fijo */
+@media (min-width: 768px) {
     .block-container {
         max-width: 1500px !important;
         padding-left: 1.5rem !important;
