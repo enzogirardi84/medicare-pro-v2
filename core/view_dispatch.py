@@ -165,20 +165,21 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
             default_sel = vista_actual
 
-    # Fallback: st.pills puede no existir en versiones antiguas de Streamlit Cloud
+    # Navegación primaria con st.radio (máxima compatibilidad, CSS lo estiliza como tarjetas).
+    # st.pills es mejora progresiva para Streamlit >= 1.40.
     selected = None
     try:
-        selected = st.pills(
+        selected = st.radio(
             "Modulos del sistema",
             pill_options,
-            default=default_sel,
-            selection_mode="single",
+            index=pill_options.index(default_sel) if default_sel in pill_options else 0,
+            horizontal=True,
             format_func=lambda x: view_nav_labels.get(x, x),
             label_visibility="collapsed",
-            key="module_nav_pills",
+            key="module_nav_radio",
         )
-    except Exception as _pill_exc:
-        log_event("ui", f"pills_fallo:{type(_pill_exc).__name__}")
+    except Exception as _radio_exc:
+        log_event("ui", f"radio_fallo:{type(_radio_exc).__name__}")
         try:
             selected = st.radio(
                 "Modulos del sistema",
@@ -186,11 +187,10 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
                 index=pill_options.index(default_sel) if default_sel in pill_options else 0,
                 format_func=lambda x: view_nav_labels.get(x, x),
                 label_visibility="collapsed",
-                key="module_nav_radio_fallback",
+                key="module_nav_radio_v",
             )
-        except Exception as _radio_exc:
-            st.error(f"Error al mostrar navegacion: {type(_radio_exc).__name__}")
-            log_event("ui", f"radio_fallo_tambien:{type(_radio_exc).__name__}")
+        except Exception as _radio2_exc:
+            log_event("ui", f"radio2_fallo:{type(_radio2_exc).__name__}")
             # Fallback último: botones individuales
             cols = st.columns(min(3, len(pill_options)))
             for i, opt in enumerate(pill_options):

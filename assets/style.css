@@ -975,7 +975,7 @@ div[data-testid="stAlert"] {
     border: 1px solid rgba(148, 163, 184, 0.12) !important;
     box-shadow: 0 16px 44px rgba(2, 6, 18, 0.45) !important;
     overflow: hidden !important;
-    background: transparent !important;
+    background: rgba(14, 23, 42, 0.55) !important;  /* sutil para que sea visible en tema oscuro */
 }
 
 div[data-testid="stAlert"] > div {
@@ -4406,16 +4406,21 @@ html, body {
     inset: 0 !important;
     z-index: 99999 !important;
     background: linear-gradient(135deg, #03060f 0%, #060d1f 50%, #03060f 100%) !important;
-    display: flex !important;
+    display: none !important;           /* por defecto oculto: evita pantalla azul/negro */
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 1.5rem !important;
-    opacity: 1 !important;
+    opacity: 0 !important;
     transition: opacity 0.4s ease-out !important;
+    pointer-events: none !important;
+}
+
+/* Clase para mostrar el overlay cuando JS lo necesite */
+#mc-loading-overlay.mc-overlay-visible {
+    display: flex !important;
+    opacity: 1 !important;
     pointer-events: all !important;
-    /* Fallback: ocultar automáticamente después de 5s si JS no remueve el overlay */
-    animation: mc-overlay-auto-hide 5.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes mc-overlay-auto-hide {
