@@ -1,6 +1,73 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
 
+/* ═══════════════════════════════════════════════════
+   💎 iOS FLUID EXPERIENCE — Global Reset
+   ═══════════════════════════════════════════════════ */
+
+/* Fuente Apple nativa (SF Pro, -apple-system) */
+html, body, .stApp, [data-testid="stAppViewContainer"],
+[data-testid="stVerticalBlock"], p, span, h1, h2, h3, h4, h5, h6,
+button, input, select, textarea, label, div {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Plus Jakarta Sans', sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Scroll suave global */
+html {
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+/* Transiciones fluidas en todos los elementos */
+* {
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Fade-in suave al cargar contenido (evita parpadeos blancos) */
+@keyframes mc-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+[data-testid="stVerticalBlock"] > div,
+[data-testid="stAppViewContainer"] > section.main,
+[data-testid="stTabs"] [role="tabpanel"],
+[data-testid="stExpander"] > details > div {
+    animation: mc-fade-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) both !important;
+}
+
+/* Minimalismo: ocultar líneas divisorias agresivas */
+[data-testid="stHorizontalRule"],
+hr,
+.stDivider,
+[data-testid="stDivider"] {
+    opacity: 0.08 !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    margin: 1.2rem 0 !important;
+}
+
+/* Fondo global glassmorphism suave */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(180deg, #0b1020 0%, #0f172a 100%) !important;
+}
+
+/* Contenedores principales: glassmorphism */
+[data-testid="stVerticalBlock"] > div > div[data-testid="stContainer"],
+[data-testid="stVerticalBlock"] > div > div[class*="st-emotion"] {
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(10px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
 :root {
     --bg-app: #0b1020;
     --bg-app-soft: #121a2e;
