@@ -656,7 +656,8 @@ if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()
 
-vista_actual = render_module_nav(menu, vista_actual, menu_set)
+with st.expander("📂 Navegador de Módulos", expanded=False):
+    vista_actual = render_module_nav(menu, vista_actual, menu_set)
 
 if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
@@ -711,14 +712,11 @@ if mostrar_atajo or paciente_sel:
             st.rerun()
     elif paciente_sel:
         det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-        st.markdown(
-            f"""
-            <div class="mc-callout">
-                <strong>Paciente activo:</strong> {escape(paciente_sel)}<br>
-                Empresa: {escape(det_actual.get('empresa', mi_empresa))} | DNI: {escape(det_actual.get('dni', 'S/D'))} | Estado: {escape(det_actual.get('estado', 'Activo'))}
-            </div>
-            """,
-            unsafe_allow_html=True,
+        st.info(
+            f"**Paciente activo:** {escape(paciente_sel)}  \n"
+            f"Empresa: {escape(det_actual.get('empresa', mi_empresa))} | "
+            f"DNI: {escape(det_actual.get('dni', 'S/D'))} | "
+            f"Estado: {escape(det_actual.get('estado', 'Activo'))}"
         )
 
 from core.alert_toasts import render_queued_toasts
