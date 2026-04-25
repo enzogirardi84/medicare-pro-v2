@@ -96,7 +96,7 @@ def inyectar_redirect_apex_si_configurado(*, canonical_url: Optional[str] = None
     if not pair:
         return
     apex, www_host = pair
-    import streamlit.components.v1 as components
+    import streamlit as st
 
     payload = json.dumps({"apex": apex, "wwwHost": www_host}, ensure_ascii=False)
     html = f"""
@@ -116,7 +116,7 @@ def inyectar_redirect_apex_si_configurado(*, canonical_url: Optional[str] = None
 }})();
 </script>
 """
-    components.html(html, height=0, scrolling=False)
+    st.html(html)
 
 
 def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
@@ -124,7 +124,7 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
     Inserta meta description, Open Graph, Twitter Card, canonical, lang=es y JSON-LD.
     Depende de que el iframe de components pueda acceder a window.parent.document (Streamlit típico).
     """
-    import streamlit.components.v1 as components
+    import streamlit as st
 
     canon = (canonical_url or resolve_public_site_url() or "").strip().rstrip("/")
     schema = schema_software_application(canonical_url=canon)
@@ -187,91 +187,6 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
       doc.head.appendChild(s);
     }}
     s.textContent = P.schemaJson;
-
-    // ── OVERLAY DE CARGA ──────────────────────────────────────────────────
-    function getMainContent() {{
-      return (
-        doc.querySelector('[data-testid="stMainBlockContainer"]') ||
-        doc.querySelector('[data-testid="stAppViewContainer"] [data-testid="stMain"] .block-container')
-      );
-    }}
-
-    function contentReady() {{
-      var mainContent = getMainContent();
-      return !!(mainContent && mainContent.querySelector && mainContent.querySelector('*'));
-    }}
-
-    function disableDesktopSidebarArtifacts() {{
-      if (!parentWin.matchMedia || !parentWin.matchMedia('(min-width: 768px)').matches) return;
-      var appView = doc.querySelector('[data-testid="stAppViewContainer"]');
-      if (!appView) return;
-
-      Array.prototype.forEach.call(appView.children || [], function(node) {{
-        if (!node || !node.matches) return;
-        if (node.matches('section[data-testid="stSidebar"], section[data-testid="stMain"]')) return;
-        node.setAttribute('data-mc-desktop-sidebar-artifact', 'true');
-      }});
-
-      Array.prototype.forEach.call(appView.querySelectorAll('[role="separator"]'), function(node) {{
-        if (!node || !node.closest) return;
-        if (node.closest('section[data-testid="stMain"]')) return;
-        node.setAttribute('data-mc-desktop-sidebar-artifact', 'true');
-      }});
-    }}
-
-    function ensureOverlay() {{
-      var existing = doc.getElementById('mc-loading-overlay');
-      if (existing) return existing;
-      var overlay = doc.createElement('div');
-      overlay.id = 'mc-loading-overlay';
-      overlay.innerHTML = [
-        '<p class="mc-overlay-title">MediCare Enterprise PRO</p>',
-        '<div class="mc-spinner"></div>',
-        '<div class="mc-dots"><span></span><span></span><span></span></div>',
-        '<p class="mc-overlay-sub">Cargando...</p>'
-      ].join('');
-      doc.body.appendChild(overlay);
-      return overlay;
-    }}
-
-    function removeOverlay() {{
-      var el = doc.getElementById('mc-loading-overlay');
-      if (!el) return;
-      el.classList.add('mc-overlay-fade-out');
-      parentWin.setTimeout(function() {{
-        var current = doc.getElementById('mc-loading-overlay');
-        if (current) current.classList.add('mc-overlay-hidden');
-      }}, 450);
-    }}
-
-    function refreshDesktopUiGuards() {{
-      disableDesktopSidebarArtifacts();
-
-      if (!contentReady()) return false;
-
-      if (parentWin.__mcLoadingOverlayTimer) {{
-        parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
-        parentWin.__mcLoadingOverlayTimer = null;
-      }}
-
-      removeOverlay();
-      return true;
-    }}
-
-    ensureOverlay();
-
-    if (refreshDesktopUiGuards()) {{
-      return;
-    }}
-
-    if (parentWin.__mcLoadingOverlayTimer) {{
-      parentWin.clearTimeout(parentWin.__mcLoadingOverlayTimer);
-    }}
-    parentWin.__mcLoadingOverlayTimer = parentWin.setTimeout(removeOverlay, 4000);
-
-    if (parentWin.__mcLoadingOverlayObserver) {{
-      try {{
-        parentWin.__mcLoadingOverlayObserver.disconnect();
       }} catch (e) {{}}
       parentWin.__mcLoadingOverlayObserver = null;
     }}
@@ -314,4 +229,4 @@ def inyectar_head_seo(*, canonical_url: Optional[str] = None) -> None:
 }})();
 </script>
 """
-    components.html(html, height=0, scrolling=False)
+    st.html(html)
