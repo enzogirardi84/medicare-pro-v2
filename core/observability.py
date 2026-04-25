@@ -15,7 +15,7 @@ import sys
 import time
 import uuid
 from contextvars import ContextVar
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
@@ -30,7 +30,7 @@ class StructuredLogFormatter(logging.Formatter):
     
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),
@@ -295,7 +295,7 @@ def log_user_action(action: str, user_id: str, details: Dict[str, Any]):
             'action': action,
             'user_id': user_id,
             'details': details,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', ''),
             'correlation_id': get_correlation_id()
         }
     })
@@ -314,7 +314,7 @@ def log_security_event(event_type: str, severity: str, details: Dict[str, Any]):
             'event_type': event_type,
             'severity': severity,
             'details': details,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat().replace('+00:00', ''),
             'correlation_id': get_correlation_id()
         }
     })

@@ -13,12 +13,12 @@ from core.utils_roles import (
 )
 
 
-def mapa_detalles_pacientes(session_state) -> dict:
+def mapa_detalles_pacientes(session_state: dict) -> dict:
     m = session_state.get("detalles_pacientes_db")
     return m if isinstance(m, dict) else {}
 
 
-def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
+def asegurar_detalles_pacientes_en_sesion(session_state: dict) -> dict:
     m = session_state.get("detalles_pacientes_db")
     if not isinstance(m, dict):
         m = {}
@@ -26,7 +26,7 @@ def asegurar_detalles_pacientes_en_sesion(session_state) -> dict:
     return m
 
 
-def _clave_paciente_visible(paciente_id, dni, empresa):
+def _clave_paciente_visible(paciente_id: str, dni: str, empresa: str) -> tuple:
     dni_txt = str(dni or "").strip()
     empresa_key = norm_empresa_key(empresa) or ""
     if dni_txt and empresa_key:
@@ -34,7 +34,13 @@ def _clave_paciente_visible(paciente_id, dni, empresa):
     return ("paciente_id", str(paciente_id or "").strip().lower())
 
 
-def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_altas=False, busqueda=""):
+def obtener_pacientes_visibles(
+    session_state: dict,
+    mi_empresa: str,
+    rol_actual: str,
+    incluir_altas: bool = False,
+    busqueda: str = "",
+) -> list[tuple]:
     busqueda_norm = str(busqueda or "").strip().lower()
 
     from core.db_sql import get_pacientes_by_empresa
@@ -95,7 +101,7 @@ def obtener_pacientes_visibles(session_state, mi_empresa, rol_actual, incluir_al
     return pacientes_visibles
 
 
-def obtener_alertas_clinicas(session_state, paciente_sel):
+def obtener_alertas_clinicas(session_state: dict, paciente_sel: str) -> list[dict]:
     if not paciente_sel:
         return []
 
@@ -180,7 +186,12 @@ def obtener_alertas_clinicas(session_state, paciente_sel):
     return alertas_result
 
 
-def obtener_profesionales_visibles(session_state, mi_empresa, rol_actual, roles_validos=None):
+def obtener_profesionales_visibles(
+    session_state: dict,
+    mi_empresa: str,
+    rol_actual: str,
+    roles_validos: list[str] | None = None,
+) -> list[dict]:
     roles_validos_normalizados = (
         {str(rol).strip().lower() for rol in roles_validos if rol} if roles_validos else None
     )

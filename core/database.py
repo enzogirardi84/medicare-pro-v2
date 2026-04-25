@@ -92,10 +92,11 @@ _DB_KEYS_DICT = frozenset(
 )
 
 
-def _normalizar_blob_datos(data):
+def _normalizar_blob_datos(data: Any) -> dict | None:
     """
     Supabase / backup local pueden devolver None, dict, o en casos raros string JSON.
     Cualquier otro tipo (lista vacía como raíz, número) se trata como inválido para no tumbar la app.
+    Retorna dict normalizado o None si no es válido.
     """
     if data is None:
         return None
@@ -118,13 +119,14 @@ def _normalizar_blob_datos(data):
     return None
 
 
-def _coleccion_db_tipo_valido(key: str, value) -> bool:
+def _coleccion_db_tipo_valido(key: str, value: Any) -> bool:
     if key in _DB_KEYS_DICT:
         return isinstance(value, dict)
     return isinstance(value, list)
 
 
-def _estructura_vacia_por_clave():
+def _estructura_vacia_por_clave() -> dict[str, dict | list]:
+    """Plantilla de estructuras vacías por clave de base de datos."""
     return {
         "usuarios_db": {},
         "pacientes_db": [],
@@ -162,7 +164,7 @@ def _estructura_vacia_por_clave():
     }
 
 
-def _coleccion_fresca_como(default):
+def _coleccion_fresca_como(default: Any) -> Any:
     """Plantilla solo usa dict/list vacíos; evita deepcopy en el camino caliente."""
     if isinstance(default, dict):
         return {}
@@ -171,7 +173,7 @@ def _coleccion_fresca_como(default):
     return copy.deepcopy(default)
 
 
-def completar_claves_db_session():
+def completar_claves_db_session() -> None:
     """Rellena colecciones faltantes y corrige tipos inválidos (shards viejos o JSON parcial por tenant)."""
     plantilla = _estructura_vacia_por_clave()
     for k, default in plantilla.items():
@@ -186,7 +188,7 @@ def completar_claves_db_session():
         # evoluciones_db, vitales_db, etc. antes de guardar, causando perdida de datos.
 
 
-def _registrar_estado_guardado(estado, detalle="", guardado_nube=False, guardado_local=False):
+def _registrar_estado_guardado(estado: str, detalle: str = "", guardado_nube: bool = False, guardado_local: bool = False) -> None:
     st.session_state["_ultimo_guardado_estado"] = estado
     st.session_state["_ultimo_guardado_detalle"] = str(detalle or "").strip()
     st.session_state["_ultimo_guardado_ts"] = time.time()
@@ -194,7 +196,8 @@ def _registrar_estado_guardado(estado, detalle="", guardado_nube=False, guardado
     st.session_state["_ultimo_guardado_local"] = bool(guardado_local)
 
 
-def obtener_estado_guardado():
+def obtener_estado_guardado() -> dict[str, Any]:
+    """Retorna el estado del último guardado como dict."""
     return {
         "estado": st.session_state.get("_ultimo_guardado_estado", ""),
         "detalle": st.session_state.get("_ultimo_guardado_detalle", ""),
@@ -270,64 +273,6 @@ def _db_keys():
 
 
 def get_cache_size_estimate() -> int:
-    """Cuenta entradas de cache (mas eficiente que medir bytes)."""
-    return len([
-        k for k in st.session_state.keys() 
-        if k.startswith("_mc_cache_") or k.startswith("_db_cache")
-    ])
-
-
-def should_cleanup_cache() -> bool:
-    """Determina si hay que limpiar el cache."""
-    return get_cache_size_estimate() > 50
-
-
-def limpiar_cache_app() -> int:
-    """Limpia caches grandes para liberar memoria. Retorna cantidad de claves limpiadas."""
-    total = 0
-    
-    # Limpiar cache principal
-    for k in ("_db_cache", "_db_cache_hash", "_db_cache_ts"):
-        if st.session_state.pop(k, None) is not None:
-            total += 1
-    
-    # Limpiar TODOS los caches de session_state que empiezan con prefijos conocidos
-    prefijos = (
-        "_mc_cache_pac_", "_mc_cache_alertas", "_mc_cache_cons_", 
-        "_mc_cache_vit_", "_mc_diag_df_tablas", "historial_", "_pdf_"
-    )
-    
-    for k in list(st.session_state.keys()):
-        if any(k.startswith(p) for p in prefijos):
-            st.session_state.pop(k, None)
-            total += 1
-    
-    # Forzar garbage collection
-    import gc
-    gc.collect()
-    
-    return total
-
-
-def vaciar_datos_app_en_sesion() -> None:
-    """Elimina datos clínicos en memoria (cerrar sesión en equipo compartido). El próximo login vuelve a cargar."""
-    for k in _db_keys():
-        st.session_state.pop(k, None)
-    for k in (
-        "_db_cache",
-        "_db_cache_hash",
-        "_modo_offline",
-        "_aviso_offline_mostrado",
-        "_ultimo_toast_guardado",
-        "_db_monolito_sesion",
-        "_mc_app_alerta_fetch",
-        "_mc_app_alerta_ts",
-        "_mc_app_alerta_emp",
-    ):
-        st.session_state.pop(k, None)
-
-
-def get_cache_size_estimate() -> int:
     """Estima el tamaño de cache en numero de claves relevantes."""
     keys = 0
     for k in st.session_state.keys():
@@ -363,7 +308,25 @@ def limpiar_cache_app() -> int:
     gc.collect()
     return total
 
-def cargar_datos(force=False, tenant_key=None, monolito_legacy: bool = False):
+
+def vaciar_datos_app_en_sesion() -> None:
+    """Elimina datos clínicos en memoria (cerrar sesión en equipo compartido). El próximo login vuelve a cargar."""
+    for k in _db_keys():
+        st.session_state.pop(k, None)
+    for k in (
+        "_db_cache",
+        "_db_cache_hash",
+        "_modo_offline",
+        "_aviso_offline_mostrado",
+        "_ultimo_toast_guardado",
+        "_db_monolito_sesion",
+        "_mc_app_alerta_fetch",
+        "_mc_app_alerta_ts",
+        "_mc_app_alerta_emp",
+    ):
+        st.session_state.pop(k, None)
+
+def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_legacy: bool = False) -> dict | None:
     """
     Modo clásico: un único JSON (id=1 / local_data). La app no precarga este JSON al arranque: se llama desde login/recuperación.
     Modo shard (USE_TENANT_SHARDS en secrets): una fila por tenant_key; carga bajo demanda por tenant o monolito legacy.

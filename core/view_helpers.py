@@ -75,7 +75,7 @@ def aviso_registro_clinico_legal() -> None:
     )
 
 
-def bloque_mc_grid_tarjetas(items):
+def bloque_mc_grid_tarjetas(items: list[tuple[str, str]]) -> None:
     """
     Renderiza una fila de tarjetas .mc-card dentro de .mc-grid-3.
     items: lista de (titulo, descripcion), hasta 6 pares.

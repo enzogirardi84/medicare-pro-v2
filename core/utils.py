@@ -18,7 +18,7 @@ from core.password_crypto import (
 )
 
 
-def password_requiere_migracion(pass_plain) -> bool:
+def password_requiere_migracion(pass_plain: str | None) -> bool:
     s = str(pass_plain or "").strip()
     return bool(s) and not _parece_hash(s)
 
@@ -284,11 +284,13 @@ def logins_clave_default_superadmin() -> frozenset[str]:
     return frozenset(s)
 
 
-def _password_normalizado(password):
+def _password_normalizado(password: str | None) -> str:
+    """Normaliza una contraseña: strip y fallback a vacío."""
     return str(password or "").strip()
 
 
-def obtener_password_usuario(data):
+def obtener_password_usuario(data: dict | None) -> str:
+    """Extrae la contraseña de un dict usuario probando varias claves."""
     if not isinstance(data, dict):
         return ""
     for clave in ("pass", "password", "clave", "contrasena", "contraseña"):
@@ -298,7 +300,8 @@ def obtener_password_usuario(data):
     return ""
 
 
-def obtener_pin_usuario(data):
+def obtener_pin_usuario(data: dict | None) -> str:
+    """Extrae el PIN de un dict usuario probando varias claves."""
     if not isinstance(data, dict):
         return ""
     for clave in ("pin", "ping", "codigo_pin", "codigo"):
@@ -308,7 +311,8 @@ def obtener_pin_usuario(data):
     return ""
 
 
-def obtener_email_usuario(data):
+def obtener_email_usuario(data: dict | None) -> str:
+    """Extrae el email de un dict usuario probando varias claves."""
     if not isinstance(data, dict):
         return ""
     for clave in ("email", "mail", "correo", "correo_verificacion", "correo_recuperacion"):
@@ -319,20 +323,20 @@ def obtener_email_usuario(data):
 
 
 def construir_registro_auditoria_legal(
-    tipo_evento,
-    paciente,
-    accion,
-    actor,
-    matricula="",
-    detalle="",
-    referencia="",
-    extra=None,
-    empresa="",
-    usuario=None,
-    modulo="",
-    criticidad="media",
-    fecha_evento=None,
-):
+    tipo_evento: str,
+    paciente: str,
+    accion: str,
+    actor: str,
+    matricula: str = "",
+    detalle: str = "",
+    referencia: str = "",
+    extra: dict | None = None,
+    empresa: str = "",
+    usuario: dict | None = None,
+    modulo: str = "",
+    criticidad: str = "media",
+    fecha_evento: datetime | None = None,
+) -> dict:
     extra = dict(extra or {})
     usuario = normalizar_usuario_sistema(usuario or {}) if isinstance(usuario, dict) else {}
     fecha_evento = fecha_evento or ahora()
@@ -370,19 +374,19 @@ def construir_registro_auditoria_legal(
 
 
 def registrar_auditoria_legal(
-    tipo_evento,
-    paciente,
-    accion,
-    actor,
-    matricula="",
-    detalle="",
-    referencia="",
-    extra=None,
-    empresa=None,
-    usuario=None,
-    modulo="",
-    criticidad="media",
-):
+    tipo_evento: str,
+    paciente: str,
+    accion: str,
+    actor: str,
+    matricula: str = "",
+    detalle: str = "",
+    referencia: str = "",
+    extra: dict | None = None,
+    empresa: str | None = None,
+    usuario: dict | None = None,
+    modulo: str = "",
+    criticidad: str = "media",
+) -> None:
     extra = dict(extra or {})
     usuario_ctx = usuario if isinstance(usuario, dict) else st.session_state.get("user", {})
     if empresa is None:
@@ -424,7 +428,7 @@ def registrar_auditoria_legal(
     _trim_db_list("auditoria_legal_db", 1000)
 
 
-def asegurar_usuarios_base(solo_normalizar: bool = False):
+def asegurar_usuarios_base(solo_normalizar: bool = False) -> None:
     st.session_state.setdefault("usuarios_db", {})
     if not solo_normalizar:
         if "admin" not in st.session_state["usuarios_db"]:
@@ -443,7 +447,7 @@ def asegurar_usuarios_base(solo_normalizar: bool = False):
         st.session_state["usuarios_db"][login] = usuario_normalizado
 
 
-def inicializar_db_state(db, precargar_usuario_admin_emergencia: bool = True):
+def inicializar_db_state(db: dict | None, precargar_usuario_admin_emergencia: bool = True) -> None:
     if "db_inicializada" not in st.session_state:
         claves_base = {
             "usuarios_db": {"admin": DEFAULT_ADMIN_USER.copy()},
