@@ -149,15 +149,26 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
             default_sel = vista_actual
 
-    selected = st.pills(
-        "Modulos del sistema",
-        pill_options,
-        default=default_sel,
-        selection_mode="single",
-        format_func=lambda x: view_nav_labels.get(x, x),
-        label_visibility="collapsed",
-        key="module_nav_pills",
-    )
+    try:
+        selected = st.pills(
+            "Modulos del sistema",
+            pill_options,
+            default=default_sel,
+            selection_mode="single",
+            format_func=lambda x: view_nav_labels.get(x, x),
+            label_visibility="collapsed",
+            key="module_nav_pills",
+        )
+    except Exception as _pill_exc:
+        st.error(f"[DEBUG] st.pills fallo ({type(_pill_exc).__name__}), usando st.radio como fallback")
+        selected = st.radio(
+            "Modulos del sistema",
+            pill_options,
+            index=pill_options.index(default_sel) if default_sel in pill_options else 0,
+            format_func=lambda x: view_nav_labels.get(x, x),
+            label_visibility="collapsed",
+            key="module_nav_radio_fallback",
+        )
     if selected and selected != vista_actual:
         st.session_state["modulo_anterior"] = vista_actual
         st.session_state["modulo_actual"] = selected
