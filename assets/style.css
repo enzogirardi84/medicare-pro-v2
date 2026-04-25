@@ -1234,9 +1234,19 @@ label,
     cursor: pointer !important;
 }
 
-/* Ocultar el círculo nativo del radio */
-[data-testid="stRadio"] label input[type="radio"] {
+/* Ocultar TODOS los indicadores de radio (input nativo + iconos SVG de Streamlit) */
+[data-testid="stRadio"] label input[type="radio"],
+[data-testid="stRadio"] label svg,
+[data-testid="stRadio"] label [role="radio"],
+[data-testid="stRadio"] label > div:first-child {
     display: none !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
 }
 
 /* Hover suave */
