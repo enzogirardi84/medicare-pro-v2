@@ -614,10 +614,12 @@ st.markdown(MOBILE_SIDEBAR_AUTOCLOSE_JS, unsafe_allow_html=True)
 # Alerta de stock removida por pedido del usuario (molesta; el stock bajo se ve en Inventario).
 # Se mantienen las demas notificaciones del sistema mas abajo.
 # render_alerta_inventario_banda_superior(mi_empresa, menu)
+st.write(f"DEBUG: vista_actual={vista_actual}, menu={menu}, menu_set={menu_set}")
 if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()
 vista_actual = render_module_nav(menu, vista_actual, menu_set)
+st.write(f"DEBUG: despues render_module_nav vista_actual={vista_actual}")
 if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
