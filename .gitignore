@@ -6,6 +6,7 @@ __pycache__/
 .streamlit/secrets.toml
 .streamlit/secrets_fixed.toml
 .streamlit/secrets.toml.py
+.streamlit/*.bak.local
 
 .pytest_cache/
 .mypy_cache/
