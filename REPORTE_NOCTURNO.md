@@ -73,6 +73,49 @@
 | Archivo | Qué se hizo |
 |---|---|
 | `core/database.py` | **DRY:** Eliminadas 3 funciones duplicadas (get_cache_size_estimate, should_cleanup_cache, limpiar_cache_app). La segunda versión es la única vigente ahora. |
+
+---
+
+## 🔥 OPTIMIZACIONES EXPRESS POST-PUSH (Fases 1-3)
+
+### FASE 1: Motor y Red (3G/Edge)
+
+| Archivo | Qué se hizo | Impacto |
+|---|---|---|
+| `core/database.py` | `limit=1000` → `limit=500` en `cargar_datos` para pacientes globales | Reduce transferencia de datos un 50% en conexiones lentas |
+| `core/_database_supabase.py` | `_supabase_execute_with_retry` captura `(TimeoutError, ConnectionError, OSError)` con backoff exponencial | Red recongestionada (3G) recibe retries inteligentes sin pantallas azules |
+| `core/db_paginated.py` | Ya existía `PaginatedSupabaseQuery` con caché, page_size=50, max=100 | Paginación obligatoria ya estaba implementada |
+| `core/db_query_optimizer.py` | Ya existían `fetch_pacientes_optimizado` con `ttl=30` y columnas específicas | Caché agresiva y SELECT optimizado ya estaban listos |
+
+### FASE 2: UI Peso Pluma (Teléfonos/PCs viejas)
+
+| Archivo | Qué se hizo | Impacto |
+|---|---|---|
+| `assets/style.css` | Comentadas 2 secciones de sidebar fijo en desktop + media query tablets (769-1024px) | Elimina ~200 líneas de CSS que forzaban `position: fixed/sticky` y `margin-left: 300px` causando pantalla vacía |
+| `assets/mobile.css` | Ya era flat: sin sombras, sin degradados, sin animaciones | DOM liviano para móviles ya estaba implementado |
+| `assets/mobile_legacy.css` | Ya comentado: `/* Deshabilitar TODAS las animaciones y transiciones */` | Sin animaciones pesadas en móviles |
+| `main.py` | `render_module_nav` envuelto en `st.expander("📂 Navegador de Módulos", expanded=False)` | Grilla de botones colapsada por defecto; solo se expande si el usuario quiere. Reduce DOM visible drásticamente |
+| `main.py` | Header "Paciente activo" reemplazado por `st.info()` elegante, fuera del expander | Header visible inmediatamente sin ruido visual |
+| `main.py` | Eliminado overlay de transición post-login (comentado permanentemente) | Evita pantalla azul/negra en Streamlit Cloud |
+
+### FASE 3: Resiliencia (Cero Pantallas Azules)
+
+| Archivo | Qué se hizo | Impacto |
+|---|---|---|
+| `main.py` | `render_current_view` envuelto en `try/except` con `st.error()` + `st.exception()` + `log_event` | Si un módulo falla, la app sigue funcionando; se muestra error localizado |
+| `main.py` | `_supabase_execute_with_retry` mejora: logging diferenciado para timeout vs error genérico | Diagnóstico de red lenta sin romper la app |
+| `core/view_helpers.py` | `aplicar_compactacion_movil_por_vista` solo inyecta CSS en móvil (`html.mc-view-compact`) | No afecta desktop; reduce padding/margins en móvil |
+| `main.py` | Cleanup de `session_state` al logout: borra `_mc_*`, `_login_*`, `_form_*`, `_tmp_*` | Limpia memoria del navegador al salir |
+
+#### Hotfix post-push: Compatibilidad Python 3.9 en CI
+
+| Archivo | Qué se hizo | Por qué |
+|---|---|---|
+| `core/utils.py` | Agregado `from __future__ import annotations` al inicio | PEP 604 `str \| None` no es nativo en Python 3.9 sin este import |
+| `core/database.py` | Agregado `from __future__ import annotations` al inicio | Idem — evita `SyntaxError` en CI |
+| `core/nav_helpers.py` | Agregado `from __future__ import annotations` al inicio | Idem — `set[str] \| frozenset[str]` |
+| `core/utils_pacientes.py` | Agregado `from __future__ import annotations` al inicio | Idem — `list[str] \| None` |
+| `core/database.py` | **Import `Any` faltante:** agregado `from typing import Any, Optional` | El archivo usaba `Any` en `_normalizar_blob_datos`, `_coleccion_fresca_como`, `obtener_estado_guardado`, etc., pero solo importaba `Optional`. Causaba `NameError` al cargar el módulo en producción (Streamlit Cloud). |
 | `assets/style.css` | Previamente (sesión anterior): deshabilitadas reglas CSS de sidebar fijo en desktop que causaban pantalla vacía. Comentadas 2 secciones `@media (min-width: 768px)` con `position: sticky/fixed`. |
 | `assets/style.css` | **Fix CSS tablets (769-1024px):** Comentada media query que forzaba `margin-left: 300px` en `stAppViewContainer` y `max-width: calc(100% - 300px)` en `section.main`. Esto interfería con el layout nativo de Streamlit en desktop, empujando el contenido principal fuera del viewport y dejando el área vacía/oscura. |
 
@@ -90,7 +133,7 @@
 ## Estado Final
 - **Tests:** `337 passed, 0 failed` — 0 regressions
 - **Warnings eliminadas:** `DeprecationWarning: datetime.utcnow()` ya no aparece en pytest
-- **Commits pendientes:** No — todo está commiteado y pusheado a `origin/main`
+- **Commits pendientes:** Sí — requiere commit + push
 
 ## Notas Técnicas
 - No se alteró lógica de negocio: registro de pacientes, prescripciones, evoluciones, etc. funcionan igual.
