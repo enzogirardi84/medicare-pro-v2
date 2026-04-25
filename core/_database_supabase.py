@@ -81,6 +81,17 @@ def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay
     for intento in range(1, tries + 1):
         try:
             return fn()
+        except (TimeoutError, ConnectionError, OSError) as e:
+            last_error = e
+            if intento >= tries:
+                log_event("db", f"{op_name}_timeout_finalizado:{type(e).__name__}:{e}")
+                break
+            try:
+                espera = max(0.05, min(0.5, float(base_delay) * (1.5 ** (intento - 1))))
+            except Exception:
+                espera = 0.15
+            log_event("db", f"{op_name}_retry_timeout:{intento}/{tries}:{type(e).__name__}")
+            time.sleep(espera)
         except Exception as e:
             last_error = e
             if intento >= tries:

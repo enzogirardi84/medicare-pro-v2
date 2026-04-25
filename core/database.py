@@ -428,7 +428,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                                 for item in (empresas_res.data or [])
                                 if isinstance(item, dict)
                             }
-                            pacs_sql = get_pacientes_globales(limit=1000)
+                            pacs_sql = get_pacientes_globales(limit=500)
                         elif empresa_actual:
                             empresa_uuid = _obtener_uuid_empresa(empresa_actual)
                             if empresa_uuid:
