@@ -21,13 +21,26 @@ _VIEW_FN_CACHE: dict = {}
 
 
 def _get_render_fn(tab_name, view_config):
+    """Obtiene la función render del módulo. Maneja errores con mensaje visible."""
     if tab_name not in _VIEW_FN_CACHE:
-        module_name, function_name = view_config[tab_name]
-        _VIEW_FN_CACHE[tab_name] = getattr(import_module(module_name), function_name)
+        try:
+            module_name, function_name = view_config[tab_name]
+        except KeyError:
+            st.error(f"Modulo '{tab_name}' no encontrado en la configuracion de vistas. Contacte al administrador.")
+            log_event("view_dispatch", f"modulo_no_configurado:{tab_name}")
+            raise
+        try:
+            mod = import_module(module_name)
+            _VIEW_FN_CACHE[tab_name] = getattr(mod, function_name)
+        except Exception as exc:
+            st.error(f"Error al cargar el modulo '{tab_name}': {type(exc).__name__}")
+            log_event("view_dispatch", f"import_fallo:{tab_name}:{type(exc).__name__}:{exc}")
+            raise
     return _VIEW_FN_CACHE[tab_name]
 
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_config, menu_set=None):
+    """Renderiza la vista activa. Captura errores y muestra UI de fallback."""
     if menu_set is None:
         menu_set = frozenset(resolve_menu_for_role(rol, user, view_config))
     if tab_name not in menu_set:
@@ -37,7 +50,6 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
         from core.view_helpers import aplicar_compactacion_movil_por_vista
         aplicar_compactacion_movil_por_vista(tab_name)
     except Exception as _exc:
-        from core.app_logging import log_event
         log_event("view_dispatch", f"compactacion_movil_falla:{tab_name}:{type(_exc).__name__}")
     try:
         render_fn = _get_render_fn(tab_name, view_config)
@@ -90,6 +102,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
 
 
 def resolve_current_view(menu, menu_set=None):
+    """Determina qué módulo debe mostrarse según sesión y permisos."""
     if not menu:
         st.session_state.pop("modulo_actual", None)
         return None
@@ -102,6 +115,7 @@ def resolve_current_view(menu, menu_set=None):
 
 
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
+    """Renderiza la navegación de módulos. Fallback st.radio si st.pills falla."""
     if not menu:
         return None
     menu_set = frozenset(menu) if menu_set is None else menu_set
@@ -149,15 +163,42 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
             default_sel = vista_actual
 
-    selected = st.pills(
-        "Modulos del sistema",
-        pill_options,
-        default=default_sel,
-        selection_mode="single",
-        format_func=lambda x: view_nav_labels.get(x, x),
-        label_visibility="collapsed",
-        key="module_nav_pills",
-    )
+    # Fallback: st.pills puede no existir en versiones antiguas de Streamlit Cloud
+    selected = None
+    try:
+        selected = st.pills(
+            "Modulos del sistema",
+            pill_options,
+            default=default_sel,
+            selection_mode="single",
+            format_func=lambda x: view_nav_labels.get(x, x),
+            label_visibility="collapsed",
+            key="module_nav_pills",
+        )
+    except Exception as _pill_exc:
+        log_event("ui", f"pills_fallo:{type(_pill_exc).__name__}")
+        try:
+            selected = st.radio(
+                "Modulos del sistema",
+                pill_options,
+                index=pill_options.index(default_sel) if default_sel in pill_options else 0,
+                format_func=lambda x: view_nav_labels.get(x, x),
+                label_visibility="collapsed",
+                key="module_nav_radio_fallback",
+            )
+        except Exception as _radio_exc:
+            st.error(f"Error al mostrar navegacion: {type(_radio_exc).__name__}")
+            log_event("ui", f"radio_fallo_tambien:{type(_radio_exc).__name__}")
+            # Fallback último: botones individuales
+            cols = st.columns(min(3, len(pill_options)))
+            for i, opt in enumerate(pill_options):
+                with cols[i % len(cols)]:
+                    label = view_nav_labels.get(opt, opt)
+                    tipo = "primary" if opt == default_sel else "secondary"
+                    if st.button(label, key=f"navbtn_{opt}", use_container_width=True, type=tipo):
+                        selected = opt
+                        break
+
     if selected and selected != vista_actual:
         st.session_state["modulo_anterior"] = vista_actual
         st.session_state["modulo_actual"] = selected
@@ -166,6 +207,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
 
 def resolve_menu_for_role(rol, user, view_config, obtener_modulos_fn=None):
+    """Devuelve la lista de módulos visibles para el rol del usuario."""
     if callable(obtener_modulos_fn):
         menu_base = obtener_modulos_fn(rol, list(view_config), user) or []
     else:
