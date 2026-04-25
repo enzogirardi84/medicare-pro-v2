@@ -42,7 +42,6 @@ from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_re
 APP_BUILD_TAG = "Build 2026-04-13 fast-path landing (imports diferidos)"
 
 st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="collapsed")
-st.write("DEBUG: main.py iniciado - test de renderizado")
 inyectar_redirect_apex_si_configurado()
 if not st.session_state.get("_mc_seo_head_inyectado"):
     inyectar_head_seo()
