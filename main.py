@@ -656,8 +656,7 @@ if not vista_actual:
     st.warning("No hay modulos habilitados para este usuario. Revisa el rol asignado o la configuracion de permisos.")
     st.stop()
 
-with st.expander("📂 Navegador de Módulos", expanded=False):
-    vista_actual = render_module_nav(menu, vista_actual, menu_set)
+vista_actual = render_module_nav(menu, vista_actual, menu_set)
 
 if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")

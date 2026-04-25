@@ -1214,27 +1214,46 @@ label,
     background: rgba(20, 184, 166, 0.18) !important;
 }
 
-/* ── Radio buttons (navegación de módulos) ── */
+/* ═══════════════════════════════════════════
+   iOS 26 GLASSMORPHISM — Navegación de Módulos
+   ═══════════════════════════════════════════ */
+
+/* Container: glass background + blur */
 [data-testid="stRadio"] [role="radiogroup"] {
-    gap: 1.1rem !important;
+    gap: 0.85rem !important;
     flex-wrap: wrap !important;
     justify-content: center !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 28px !important;
+    padding: 1.2rem 1rem !important;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
+/* Pills: iOS 26 style */
 [data-testid="stRadio"] label {
-    background: linear-gradient(180deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.96) 100%) !important;
-    border: 1px solid rgba(148, 163, 184, 0.12) !important;
-    border-radius: 16px !important;
-    padding: 1.05rem 1.6rem !important;
-    min-height: 3.8rem !important;
-    min-width: 150px !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 28px !important;
+    padding: 0.9rem 1.4rem !important;
+    min-height: 3.2rem !important;
+    min-width: 140px !important;
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
     justify-content: center !important;
-    transition: all 0.18s ease !important;
+    align-items: center !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: pointer !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
 }
 
-/* Ocultar TODOS los indicadores de radio (input nativo + iconos SVG de Streamlit) */
+/* Ocultar todo ruido nativo de radio */
 [data-testid="stRadio"] label input[type="radio"],
 [data-testid="stRadio"] label svg,
 [data-testid="stRadio"] label [role="radio"],
@@ -1247,34 +1266,38 @@ label,
     padding: 0 !important;
     position: absolute !important;
     pointer-events: none !important;
+    clip: rect(0, 0, 0, 0) !important;
 }
 
-/* Hover suave */
+/* Hover: lift + glass glow */
 [data-testid="stRadio"] label:hover {
-    background: linear-gradient(180deg, rgba(51, 65, 85, 0.92) 0%, rgba(30, 41, 59, 0.96) 100%) !important;
-    border-color: rgba(148, 163, 184, 0.25) !important;
-    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-    transform: translateY(-2px) !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    transform: translateY(-3px) scale(1.03) !important;
 }
 
-/* Activo / seleccionado */
+/* Activo: iOS pastel teal glow */
 [data-testid="stRadio"] label:has(input:checked) {
-    background: linear-gradient(135deg, rgba(13, 148, 136, 0.42) 0%, rgba(37, 99, 235, 0.32) 100%) !important;
+    background: rgba(45, 212, 191, 0.18) !important;
     border-color: rgba(45, 212, 191, 0.45) !important;
     box-shadow:
-        0 12px 28px rgba(13, 148, 136, 0.22),
-        0 0 0 1px rgba(20, 184, 166, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-    transform: translateY(-1px) !important;
+        0 0 0 3px rgba(45, 212, 191, 0.15),
+        0 8px 24px rgba(45, 212, 191, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+    transform: translateY(-2px) scale(1.02) !important;
 }
 
-/* Texto más grande y centrado */
+/* Texto: clean, semibold, centered */
 [data-testid="stRadio"] label p {
-    font-size: 1.08rem !important;
-    font-weight: 700 !important;
-    color: #f1f5f9 !important;
+    font-size: 0.98rem !important;
+    font-weight: 600 !important;
+    color: #e2e8f0 !important;
     margin: 0 !important;
     text-align: center !important;
+    letter-spacing: 0.01em !important;
 }
 
 [data-testid="stCheckbox"] label {
