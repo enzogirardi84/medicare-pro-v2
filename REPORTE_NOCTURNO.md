@@ -91,6 +91,7 @@
 
 | Archivo | Qué se hizo | Impacto |
 |---|---|---|
+| `assets/style.css` | **Transformación iOS Fluid Experience:** fuente Apple nativa, scroll suave, transiciones fluidas cubic-bezier, fade-in global, glassmorphism contenedores | App se siente como nativa de iPhone/Mac |
 | `assets/style.css` | Comentadas 2 secciones de sidebar fijo en desktop + media query tablets (769-1024px) | Elimina ~200 líneas de CSS que forzaban `position: fixed/sticky` y `margin-left: 300px` causando pantalla vacía |
 | `assets/mobile.css` | Ya era flat: sin sombras, sin degradados, sin animaciones | DOM liviano para móviles ya estaba implementado |
 | `assets/mobile_legacy.css` | Ya comentado: `/* Deshabilitar TODAS las animaciones y transiciones */` | Sin animaciones pesadas en móviles |
