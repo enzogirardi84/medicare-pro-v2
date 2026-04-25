@@ -574,6 +574,7 @@ if not vista_actual:
     st.warning("No se pudo resolver un modulo visible para este usuario.")
     st.stop()
 
+paciente_sel = None
 _render_sidebar_contexto_clinico(paciente_sel, vista_actual)
 # Panel "Primeros pasos en MediCare" removido por pedido del usuario (molesto).
 # render_panel_bienvenida(rol, menu, VIEW_NAV_LABELS)
