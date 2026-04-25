@@ -64,6 +64,7 @@
 |---|---|
 | `core/database.py` | **DRY:** Eliminadas 3 funciones duplicadas (get_cache_size_estimate, should_cleanup_cache, limpiar_cache_app). La segunda versión es la única vigente ahora. |
 | `assets/style.css` | Previamente (sesión anterior): deshabilitadas reglas CSS de sidebar fijo en desktop que causaban pantalla vacía. Comentadas 2 secciones `@media (min-width: 768px)` con `position: sticky/fixed`. |
+| `assets/style.css` | **Fix CSS tablets (769-1024px):** Comentada media query que forzaba `margin-left: 300px` en `stAppViewContainer` y `max-width: calc(100% - 300px)` en `section.main`. Esto interfería con el layout nativo de Streamlit en desktop, empujando el contenido principal fuera del viewport y dejando el área vacía/oscura. |
 
 ### FASE 4: Blindaje de Seguridad
 
@@ -79,7 +80,7 @@
 ## Estado Final
 - **Tests:** `337 passed, 0 failed` — 0 regressions
 - **Warnings eliminadas:** `DeprecationWarning: datetime.utcnow()` ya no aparece en pytest
-- **Commits pendientes:** Sí — requiere commit + push
+- **Commits pendientes:** No — todo está commiteado y pusheado a `origin/main`
 
 ## Notas Técnicas
 - No se alteró lógica de negocio: registro de pacientes, prescripciones, evoluciones, etc. funcionan igual.
