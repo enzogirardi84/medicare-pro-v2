@@ -2,9 +2,12 @@
 Configuración para ambiente de testing (CI/CD, tests unitarios).
 """
 
+from dataclasses import dataclass
+
 from config.environment import Environment
 
 
+@dataclass
 class TestingConfig(Environment):
     """Configuración para testing automatizado."""
     

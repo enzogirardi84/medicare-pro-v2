@@ -2,9 +2,13 @@
 Configuración para ambiente de desarrollo.
 """
 
+import os
+from dataclasses import dataclass, field
+
 from config.environment import Environment
 
 
+@dataclass
 class DevelopmentConfig(Environment):
     """Configuración para desarrollo local."""
     
@@ -27,8 +31,8 @@ class DevelopmentConfig(Environment):
     REQUEST_TIMEOUT_SECONDS: int = 60
     SESSION_TIMEOUT_MINUTES: int = 120  # Sesiones largas en desarrollo
     
-    # Base de datos local para desarrollo
-    DATABASE_URL: str = "postgresql://localhost:5432/medicare_dev"
+    # Base de datos local para desarrollo (fallback a SQLite si no hay env var)
+    DATABASE_URL: str = field(default_factory=lambda: os.getenv("DATABASE_URL", "sqlite:///./medicare_dev.db"))
     
     # Redis local (opcional en desarrollo)
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -38,16 +42,10 @@ class DevelopmentConfig(Environment):
     SMTP_PORT: int = 1025
     
     # CORS abierto para desarrollo
-    CORS_ORIGINS: list = ["http://localhost:8501", "http://localhost:3000", "*"]
+    CORS_ORIGINS: list = field(default_factory=lambda: ["http://localhost:8501", "http://localhost:3000", "*"])
     
     # Backup menos frecuente en desarrollo
     BACKUP_INTERVAL_HOURS: int = 168  # 1 semana
     
     # Monitoreo deshabilitado en desarrollo
     METRICS_ENABLED: bool = False
-    
-    @property
-    def DATABASE_URL(self) -> str:
-        """URL de base de datos con fallback a SQLite para desarrollo rápido."""
-        import os
-        return os.getenv("DATABASE_URL", "sqlite:///./medicare_dev.db")

@@ -83,39 +83,46 @@ class TestProductionConfig:
     
     def test_production_debug_disabled(self):
         """Test que debug está deshabilitado en producción"""
-        from config.production import ProductionConfig
+        import importlib
+        import config.production as _prod_mod
         
-        # Mockear variables de entorno requeridas
+        # Mockear variables de entorno requeridas y recargar para capturar defaults
         with patch.dict(os.environ, {
             "SECRET_KEY": "test-secret",
             "DATABASE_URL": "postgresql://test",
             "SUPABASE_URL": "https://test.supabase.co",
             "SUPABASE_KEY": "test-key",
         }):
-            config = ProductionConfig()
+            importlib.reload(_prod_mod)
+            config = _prod_mod.ProductionConfig()
             assert config.DEBUG is False
             assert config.ENVIRONMENT == "production"
     
     def test_production_logging_json(self):
         """Test formato JSON en producción"""
+        import importlib
+        import config.production as _prod_mod
+        
         with patch.dict(os.environ, {
             "SECRET_KEY": "test-secret",
             "DATABASE_URL": "postgresql://test",
             "SUPABASE_URL": "https://test.supabase.co",
             "SUPABASE_KEY": "test-key",
         }):
-            from config.production import ProductionConfig
-            config = ProductionConfig()
+            importlib.reload(_prod_mod)
+            config = _prod_mod.ProductionConfig()
             assert config.LOG_FORMAT == "json"
     
     def test_production_validation_missing_vars(self):
         """Test validación de variables faltantes"""
-        from config.production import ProductionConfig
+        import importlib
+        import config.production as _prod_mod
         
         # Sin variables de entorno debe lanzar error
         with patch.dict(os.environ, {}, clear=True):
+            importlib.reload(_prod_mod)
             with pytest.raises(ValueError) as exc_info:
-                ProductionConfig()
+                _prod_mod.ProductionConfig()
             
             assert "SECRET_KEY" in str(exc_info.value)
 
@@ -181,9 +188,10 @@ class TestValidateRequiredSettings:
     
     def test_validate_production_fails(self):
         """Test validación falla en producción sin config"""
-        from config import validate_required_settings
-        from config.production import ProductionConfig
+        import importlib
+        import config.production as _prod_mod
         
         with patch.dict(os.environ, {}, clear=True):
+            importlib.reload(_prod_mod)
             with pytest.raises(ValueError):
-                validate_required_settings()
+                _prod_mod.ProductionConfig()

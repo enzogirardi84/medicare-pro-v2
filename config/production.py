@@ -6,9 +6,12 @@ NUNCA commitear secrets reales - usar variables de entorno.
 """
 
 import os
+from dataclasses import dataclass, field
+
 from config.environment import Environment
 
 
+@dataclass
 class ProductionConfig(Environment):
     """Configuración para producción."""
     
@@ -54,8 +57,8 @@ class ProductionConfig(Environment):
     EMAIL_FROM: str = os.getenv("EMAIL_FROM", "noreply@medicare.com")
     
     # Hosts permitidos (restringir en producción)
-    ALLOWED_HOSTS: list = os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_HOSTS") else []
-    CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
+    ALLOWED_HOSTS: list = field(default_factory=lambda: os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_HOSTS") else [])
+    CORS_ORIGINS: list = field(default_factory=lambda: os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else [])
     
     # Performance optimizado
     MAX_WORKERS: int = int(os.getenv("MAX_WORKERS", "8"))
