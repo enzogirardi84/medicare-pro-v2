@@ -89,24 +89,26 @@ class InputSanitizer:
         
         value = str(value).strip()
         
-        # Detectar ataques
-        if cls.detect_sql_injection(value):
-            raise SecurityError(f"Posible ataque SQL injection detectado: {value[:50]}...")
-        
-        if not allow_html and cls.detect_xss(value):
-            raise SecurityError(f"Posible ataque XSS detectado: {value[:50]}...")
-        
+        # Cuando se permite HTML, limpiar primero con bleach para que comillas
+        # dentro de atributos HTML no generen falsos positivos de SQL injection.
         if allow_html:
-            # Permitir HTML seguro con bleach
-            return clean(
+            cleaned = clean(
                 value,
                 tags=cls.ALLOWED_TAGS,
                 attributes=cls.ALLOWED_ATTRIBUTES,
                 strip=True
             )
-        else:
-            # Escapar HTML completamente
-            return html.escape(value)
+            return cleaned
+        
+        # Detectar ataques en texto plano
+        if cls.detect_sql_injection(value):
+            raise SecurityError(f"Posible ataque SQL injection detectado: {value[:50]}...")
+        
+        if cls.detect_xss(value):
+            raise SecurityError(f"Posible ataque XSS detectado: {value[:50]}...")
+        
+        # Escapar HTML completamente
+        return html.escape(value)
     
     @classmethod
     def sanitize_dict(

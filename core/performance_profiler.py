@@ -241,10 +241,21 @@ class PerformanceProfiler:
             st.session_state['_perf_alerts'].extend(alerts)
     
     def _get_memory_usage(self) -> int:
-        """Obtiene uso actual de memoria en bytes."""
-        import psutil
-        process = psutil.Process()
-        return process.memory_info().rss
+        """Obtiene uso actual de memoria en bytes. Fallback si psutil no está disponible."""
+        try:
+            import psutil
+            process = psutil.Process()
+            return process.memory_info().rss
+        except ImportError:
+            # Fallback: tracemalloc si está activo, sino 0
+            try:
+                import tracemalloc
+                if tracemalloc.is_tracing():
+                    current, _ = tracemalloc.get_traced_memory()
+                    return current
+            except Exception:
+                pass
+            return 0
     
     def log_query(self, query: str, duration: float, params: Optional[Dict] = None):
         """

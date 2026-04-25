@@ -731,8 +731,9 @@ try:
 except Exception as exc:
     ok_view = False
     log_event("main", f"render_current_view_fallo:{vista_actual}:{type(exc).__name__}:{exc}")
-    st.error(f"Error al cargar el modulo '{vista_actual}': {type(exc).__name__}")
-    st.caption(f"Detalle técnico: {exc}")
+    st.error(f"Error critico al cargar el modulo **{vista_actual}**: {exc}")
+    st.exception(exc)
+    st.caption(f"Detalle tecnico: {type(exc).__name__}: {exc}")
     # No hacer raise — mostrar error al usuario y continuar para que no quede pantalla negra
 finally:
     record_perf(f"ui.modulo.{vista_actual}", (time.monotonic() - t0_view) * 1000.0, ok=ok_view)

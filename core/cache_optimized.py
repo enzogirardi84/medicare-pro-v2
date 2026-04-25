@@ -209,6 +209,22 @@ def get_app_config(tenant_id: Optional[str] = None) -> Dict[str, Any]:
     return CacheManagerOptimized.get_app_config_cached(_tenant_id=tenant_id)
 
 
+class SessionStateManager:
+    """Helper para inicializar y gestionar estado de paginación en session_state."""
+
+    @staticmethod
+    def init_pagination_state(prefix: str, session_state=None) -> dict:
+        """Inicializa claves de paginación para un prefijo dado."""
+        if session_state is None:
+            import streamlit as st
+            session_state = st.session_state
+        page_key = f"{prefix}_page"
+        size_key = f"{prefix}_page_size"
+        session_state[page_key] = 1
+        session_state[size_key] = 50
+        return session_state
+
+
 def init_pagination(table_name: str = "pacientes") -> Dict[str, Any]:
     """Inicializa estado de paginación para una tabla."""
     return SessionStateManager.init_pagination_state(prefix=table_name)

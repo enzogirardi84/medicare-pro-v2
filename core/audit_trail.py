@@ -318,10 +318,16 @@ class AuditTrail:
             results = [e for e in results if e.resource_type == resource_type]
         
         if start_time:
-            results = [e for e in results if e.timestamp >= start_time]
+            start_dt = datetime.fromisoformat(start_time)
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=timezone.utc)
+            results = [e for e in results if datetime.fromisoformat(e.timestamp).replace(tzinfo=None) >= start_dt.replace(tzinfo=None)]
         
         if end_time:
-            results = [e for e in results if e.timestamp <= end_time]
+            end_dt = datetime.fromisoformat(end_time)
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=timezone.utc)
+            results = [e for e in results if datetime.fromisoformat(e.timestamp).replace(tzinfo=None) <= end_dt.replace(tzinfo=None)]
         
         return results[-limit:]
     

@@ -10,15 +10,24 @@ Monitoreo crítico para sistema de salud:
 - Error rates tracking
 """
 import time
-import psutil
 from typing import Dict, Any, Optional, List, Callable
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 import streamlit as st
 
 from core.app_logging import log_event
-from core.config_secure import get_settings
+
+
+def _get_settings():
+    """Import lazy de get_settings para evitar ValidationError en tests."""
+    from core.config_secure import get_settings
+    return get_settings()
 
 
 class ComponentStatus(Enum):
@@ -132,7 +141,7 @@ class HealthCheckEnhanced:
         start = time.time()
         
         try:
-            settings = get_settings()
+            settings = _get_settings()
             redis_url = settings.redis_url
             
             if not redis_url:

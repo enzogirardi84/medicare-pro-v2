@@ -98,8 +98,9 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(paciente_sel, mi_empresa, user, rol)
     except Exception as exc:
         log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
+        st.error(f"Error critico en el modulo **{tab_name}**: {exc}")
+        st.exception(exc)
         render_modulo_fallo_ui(tab_name, exc)
-    st.write(f"DEBUG: render_current_view finalizado para {tab_name}")
 
 
 def resolve_current_view(menu, menu_set=None):

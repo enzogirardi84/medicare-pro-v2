@@ -18,7 +18,12 @@ from functools import wraps
 import streamlit as st
 
 from core.app_logging import log_event
-from core.config_secure import get_settings
+
+
+def _get_settings():
+    """Import lazy de get_settings para evitar ValidationError en tests."""
+    from core.config_secure import get_settings
+    return get_settings()
 
 
 class RateLimitStrategy(Enum):
@@ -68,7 +73,7 @@ class DistributedRateLimiter:
     def _init_redis(self) -> None:
         """Inicializa conexión Redis si está disponible."""
         try:
-            settings = get_settings()
+            settings = _get_settings()
             redis_url = settings.redis_url
             
             if redis_url:
@@ -159,7 +164,7 @@ class DistributedRateLimiter:
             except Exception:
                 pass  # Fallback a local
         
-        return self._check_sliding_window_local(key, config, now)
+        return self._check_sliding_window_local(key, action, config, now)
     
     def _check_sliding_window_redis(
         self,
@@ -224,6 +229,7 @@ class DistributedRateLimiter:
     def _check_sliding_window_local(
         self,
         key: str,
+        action: str,
         config: RateLimitConfig,
         now: float
     ) -> RateLimitStatus:

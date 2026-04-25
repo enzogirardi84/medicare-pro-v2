@@ -121,11 +121,11 @@ class TestLoginFlow:
         from core.cache_optimized import SessionStateManager
         
         # Inicializar paginación
-        state = SessionStateManager.init_pagination_state("pacientes")
+        state = SessionStateManager.init_pagination_state("pacientes", session_state=mock_session)
         
-        assert "pacientes_page" in mock_session
-        assert mock_session["pacientes_page"] == 1
-        assert mock_session["pacientes_page_size"] == 50
+        assert "pacientes_page" in state
+        assert state["pacientes_page"] == 1
+        assert state["pacientes_page_size"] == 50
 
 
 class TestPatientCRUD:

@@ -29,7 +29,7 @@ def validar_token_reset(token: str) -> str | None:
         expected_sig = hashlib.sha256(payload.encode()).hexdigest()[:16]
         if not secrets.compare_digest(sig, expected_sig):
             return None
-        if int(time.time()) - int(ts) > int(ttl):
+        if time.time() - float(ts) > float(ttl):
             return None
         return usuario
     except Exception:

@@ -403,7 +403,7 @@ class ClinicalRiskPredictor:
         if vital_signs.get("saturacion_o2"):
             sat = vital_signs["saturacion_o2"]
             if sat < 90:
-                score += 30
+                score += 70
                 factors.append("Hipoxemia severa (Sat <90%)")
                 recommendations.append("URGENTE: Administrar O2, buscar causa")
             elif sat < 94:
@@ -563,7 +563,7 @@ class VitalSignAnomalyDetector:
         
         # Rangos críticos específicos
         critical_ranges = {
-            "saturacion_o2": (85, None),  # < 85% es crítico
+            "saturacion_o2": (90, None),  # < 90% es critico
             "temperatura": (None, 35),    # < 35°C hipotermia severa
             "frecuencia_cardiaca": (40, 150),
         }

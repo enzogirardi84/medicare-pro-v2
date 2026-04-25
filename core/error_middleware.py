@@ -133,6 +133,7 @@ class ErrorMiddleware:
             severity=custom_exc.severity,
             details={
                 **custom_exc.details,
+                "context": context,
                 "traceback": traceback.format_exc(),
                 "error_count": self._error_counts[error_key]
             },
