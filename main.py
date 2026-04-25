@@ -359,111 +359,22 @@ if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
 with st.sidebar:
-    st.caption(
-        "Al **volver a la publicidad** o **cerrar sesión** se borran los datos clínicos en memoria "
-        "de este navegador (recomendado en equipos compartidos)."
-    )
-    if st.button("Volver a la Publicidad", use_container_width=True):
-        from core.database import vaciar_datos_app_en_sesion
-        from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
-
-        st.session_state.entered_app = False
-        st.session_state["logeado"] = False
-        for _k in ("u_actual", "paciente_actual", "modulo_actual", "modulo_anterior", "ultima_actividad"):
-            st.session_state.pop(_k, None)
-        limpiar_estado_sesion_login_efimero()
-        vaciar_datos_app_en_sesion()
-        st.rerun()
-    st.divider()
-
-    st.markdown(
-        _sidebar_brand_card_fn(
-            mi_empresa,
-            user,
-            rol,
-            descripcion_acceso_rol(rol, user),
-            logo_sidebar_b64,
-        ),
-        unsafe_allow_html=True,
-    )
-    st.divider()
-
-    render_estabilidad_anticolapso_sidebar()
-    st.divider()
-
-    menu = resolve_menu_for_role(rol, user)
-    paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
-        mi_empresa, rol,
-        obtener_pacientes_fn=obtener_pacientes_visibles,
-        obtener_alertas_fn=obtener_alertas_clinicas,
-        mapa_detalles_fn=mapa_detalles_pacientes,
-        es_control_total_fn=es_control_total,
-        valor_por_modo_liviano_fn=valor_por_modo_liviano,
-        limite_pacientes_fn=limite_pacientes_sidebar,
-    )
-
-    render_sidebar_bloque_app_paciente(mi_empresa, rol)
-
-    st.divider()
-    st.markdown(
-        """
-        <div class="mc-sidebar-section">
-            <div class="mc-sidebar-kicker">Rendimiento</div>
-            <div class="mc-sidebar-title">Equipos viejos o lentos</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    _liv_opts = [
-        ("Automático (detectar)", "auto"),
-        ("Modo liviano siempre", "on"),
-        ("Modo completo siempre", "off"),
-    ]
-    _liv_labels = [x[0] for x in _liv_opts]
-    _liv_vals = [x[1] for x in _liv_opts]
-    st.session_state.setdefault("mc_liviano_modo", "auto")
-    _cur_liv = st.session_state["mc_liviano_modo"]
-    _idx_liv = _liv_vals.index(_cur_liv) if _cur_liv in _liv_vals else 0
-    _pick_liv = st.selectbox(
-        "Modo interfaz",
-        _liv_labels,
-        index=_idx_liv,
-        key="mc_liviano_select_ui",
-        help="Automático: adapta sombras y animaciones según el equipo (navegador, RAM, Save-Data). En móviles viejos o con poco recurso se fuerza interfaz liviana.",
-        label_visibility="collapsed",
-    )
-    st.session_state["mc_liviano_modo"] = _liv_vals[_liv_labels.index(_pick_liv)]
-    # Aplicar politica una sola vez al final del bloque de configuracion de modo.
-    aplicar_politicas_anticolapso_ui()
-    if anticolapso_activo_fn():
-        st.caption("**Estabilidad:** listas acotadas e interfaz liviana (detección automática o `MC_ANTICOLAPSO` en el servidor).")
-    st.caption("En «Automático» el aspecto se ajusta al dispositivo sin controles extra en la barra lateral.")
-
-    if st.button("Cerrar Sesion", use_container_width=True):
-        limpiar_sesion_app()
-        st.rerun()
-    estado_guardado = obtener_estado_guardado()
-    estado_clave = str(estado_guardado.get("estado", "") or "").strip().lower()
-    timestamp_guardado = estado_guardado.get("timestamp")
-    if timestamp_guardado:
-        hora_guardado = datetime.fromtimestamp(timestamp_guardado).strftime("%H:%M:%S")
-        if estado_clave == "nube":
-            st.caption(f"Guardado: nube {hora_guardado}")
-        elif estado_clave == "local":
-            st.caption(f"Guardado: local {hora_guardado}")
-        elif estado_clave == "error":
-            st.caption(f"Guardado: error {hora_guardado}")
-        elif estado_clave == "sin_cambios":
-            st.caption(f"Sin cambios pendientes {hora_guardado}")
-        elif estado_clave == "pendiente":
-            st.caption(f"Guardado pendiente {hora_guardado}")
-    detalle_guardado = str(estado_guardado.get("detalle", "") or "").strip()
-    if detalle_guardado and estado_clave in {"local", "error"}:
-        st.caption(detalle_guardado)
-    st.caption(APP_BUILD_TAG)
-    if es_control_total(rol):
-        with st.expander("Notas de version (admin)", expanded=False):
-            st.markdown(MC_APP_CHANGELOG)
+    # ─── Solo dos botones de acción principales iOS ───
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Guardar", use_container_width=True, key="sidebar_guardar"):
+            guardar_datos(spinner=True)
+    with col2:
+        if st.button("Abrir", use_container_width=True, key="sidebar_abrir"):
+            from core.database import vaciar_datos_app_en_sesion
+            from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
+            st.session_state.entered_app = False
+            st.session_state["logeado"] = False
+            for _k in ("u_actual", "paciente_actual", "modulo_actual", "modulo_anterior", "ultima_actividad"):
+                st.session_state.pop(_k, None)
+            limpiar_estado_sesion_login_efimero()
+            vaciar_datos_app_en_sesion()
+            st.rerun()
 
 # === Navegación móvil simplificada ===
 # En pantallas pequeñas (móviles), el sidebar de Streamlit se comporta mal.

@@ -73,6 +73,48 @@ hr,
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08) !important;
 }
 
+/* ═══════════════════════════════════════════════════
+   📐 SIDEBAR FIJO iOS — Ancho estático 300px
+   ═══════════════════════════════════════════════════ */
+
+[data-testid="stSidebar"] {
+    min-width: 300px !important;
+    max-width: 300px !important;
+    width: 300px !important;
+    background: linear-gradient(180deg, #0b1020 0%, #0f172a 100%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-testid="stSidebar"] .stButton > button {
+    border-radius: 12px !important;
+    background: rgba(20, 184, 166, 0.15) !important;
+    border: 1px solid rgba(20, 184, 166, 0.25) !important;
+    color: #5eead4 !important;
+    font-weight: 600 !important;
+    font-size: 0.92rem !important;
+    padding: 0.65rem 1rem !important;
+    transition: transform 0.15s ease, background 0.15s ease !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(20, 184, 166, 0.25) !important;
+    transform: translateY(-1px) !important;
+}
+
+[data-testid="stSidebar"] .stButton > button:active {
+    transform: scale(0.96) !important;
+    background: rgba(20, 184, 166, 0.35) !important;
+}
+
+/* Sidebar collapsed control — botón de hamburguesa iOS */
+[data-testid="stSidebarCollapsedControl"] {
+    background: rgba(20, 184, 166, 0.12) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(20, 184, 166, 0.2) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
 :root {
     --bg-app: #0b1020;
     --bg-app-soft: #121a2e;
