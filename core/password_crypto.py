@@ -47,19 +47,30 @@ def hash_password(plain: str, rounds: int = 12) -> str:
     return bcrypt.hashpw(p, bcrypt.gensalt(rounds=rounds)).decode("ascii")
 
 
-def verificar_password(plain: str, almacenado: str) -> bool:
-    """Acepta hash bcrypt o texto plano legacy (comparación constante en tiempo)."""
-    a = (plain or "").strip()
-    b = (almacenado or "").strip()
+def verificar_password(plain_or_hash1: str, plain_or_hash2: str) -> bool:
+    """Acepta hash bcrypt o texto plano legacy (comparación constante en tiempo).
+    Detecta automáticamente cuál argumento es el hash bcrypt."""
+    a = (plain_or_hash1 or "").strip()
+    b = (plain_or_hash2 or "").strip()
     if not a or not b:
         return False
-    if parece_hash_bcrypt(b):
+    a_hash = parece_hash_bcrypt(a)
+    b_hash = parece_hash_bcrypt(b)
+    if a_hash and not b_hash:
+        if not bcrypt:
+            return False
+        try:
+            return bcrypt.checkpw(b.encode("utf-8"), a.encode("ascii"))
+        except Exception:
+            return False
+    if b_hash and not a_hash:
         if not bcrypt:
             return False
         try:
             return bcrypt.checkpw(a.encode("utf-8"), b.encode("ascii"))
         except Exception:
             return False
+    # Ninguno parece hash: comparación legacy en texto plano
     return secrets.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
 
 

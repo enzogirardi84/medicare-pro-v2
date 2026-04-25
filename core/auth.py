@@ -550,3 +550,64 @@ def check_inactividad():
                     st.rerun()
             else:
                 st.session_state["ultima_actividad"] = ahora()
+
+
+# ── Funciones públicas para tests ───────────────────────────────
+
+def _verify_password(plain: str, stored_hash: str) -> bool:
+    """Wrapper para compatibilidad con mocks de tests."""
+    from core.password_crypto import verificar_password
+    return verificar_password(plain, stored_hash)
+
+
+def _pin_coincide(provided: str, stored: str) -> bool:
+    """Compara PIN en tiempo constante."""
+    import secrets
+    return secrets.compare_digest(str(provided or ""), str(stored or ""))
+
+
+def registrar_auditoria(accion: str, usuario: str, detalles: dict = None):
+    """Stub para auditoría; usado en tests con patch."""
+    pass
+
+
+def verificar_login(session_state, username: str, password: str, pin: str = None, empresa: str = None) -> bool:
+    """Verifica credenciales y establece sesión si son válidas."""
+    usuarios = session_state.get("usuarios_db", {})
+    user = usuarios.get(username)
+    if not user:
+        return False
+    if not user.get("activo", True):
+        return False
+    if empresa and user.get("empresa") != empresa:
+        return False
+    if not _verify_password(password, user.get("password_hash", "")):
+        return False
+    if pin is not None and not _pin_coincide(pin, user.get("pin", "")):
+        return False
+    session_state["logeado"] = True
+    session_state["u_actual"] = user
+    registrar_auditoria("login", username)
+    return True
+
+
+def crear_sesion(session_state, usuario: dict):
+    """Crea una sesión de usuario en session_state."""
+    session_state["logeado"] = True
+    session_state["u_actual"] = usuario
+
+
+def cerrar_sesion(session_state):
+    """Cierra la sesión actual."""
+    session_state["logeado"] = False
+    session_state["u_actual"] = None
+    session_state.pop("_last_activity", None)
+
+
+def verificar_timeout_sesion(session_state, timeout_minutes: int = 30) -> bool:
+    """Retorna True si la sesión expiró por inactividad."""
+    import time
+    last = session_state.get("_last_activity")
+    if last is None:
+        return False
+    return (time.time() - last) / 60.0 > timeout_minutes

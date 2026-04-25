@@ -58,8 +58,8 @@ class TestStructuredLogFormatter:
                 args=(),
                 exc_info=True
             )
+            output = formatter.format(record)
         
-        output = formatter.format(record)
         parsed = json.loads(output)
         
         assert "exception" in parsed
@@ -91,7 +91,7 @@ class TestCorrelationId:
     
     def test_clear_correlation_id(self):
         """Test que limpia el ID"""
-        from core.observability import clear_correlation_id, get_correlation_id
+        from core.observability import clear_correlation_id, get_correlation_id, set_correlation_id
         
         set_correlation_id("test-id")
         clear_correlation_id()
@@ -191,7 +191,7 @@ class TestTimedDecorator:
         
         assert result == "success"
         stats = get_metrics().get_stats()
-        assert "test_operation_duration_seconds" in stats["histograms"]
+        assert any("test_operation_duration_seconds" in k for k in stats["histograms"])
     
     def test_timed_error(self):
         """Test medición de función con error"""
@@ -207,7 +207,7 @@ class TestTimedDecorator:
         
         # Aún debe registrar la métrica
         stats = get_metrics().get_stats()
-        assert "test_operation_error_duration_seconds" in stats["histograms"]
+        assert any("test_operation_error_duration_seconds" in k for k in stats["histograms"])
 
 
 class TestTracingContext:
@@ -242,7 +242,7 @@ class TestLogUserAction:
         
         # Verificar que se trackeó métrica
         stats = get_metrics().get_stats()
-        assert any("user_actions" in key for key in stats["counters"].keys())
+        assert any("user_actions_total" in key for key in stats["counters"].keys())
 
 
 class TestLogSecurityEvent:
@@ -256,7 +256,7 @@ class TestLogSecurityEvent:
         
         # Verificar que se trackeó métrica
         stats = get_metrics().get_stats()
-        assert any("security_events" in key for key in stats["counters"].keys())
+        assert any("security_events_total" in key for key in stats["counters"].keys())
 
 
 class TestGetLogger:

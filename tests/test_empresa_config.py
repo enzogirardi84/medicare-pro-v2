@@ -43,7 +43,7 @@ def test_empresa_uuid_configurada_prioriza_secrets_sobre_env(monkeypatch):
 
 
 def test_obtener_uuid_empresa_usa_fallback_configurado_si_no_hay_supabase(monkeypatch):
-    nextgen_sync._obtener_uuid_empresa.clear()
+    monkeypatch.setattr(st, "session_state", {})
     monkeypatch.setattr(st, "secrets", _EmptySecrets())
     monkeypatch.setattr("core.database.supabase", None, raising=False)
 
@@ -51,7 +51,7 @@ def test_obtener_uuid_empresa_usa_fallback_configurado_si_no_hay_supabase(monkey
 
 
 def test_get_empresa_by_nombre_devuelve_registro_sintetico_si_no_hay_supabase(monkeypatch):
-    db_sql_pacientes.get_empresa_by_nombre.clear()
+    monkeypatch.setattr(st, "session_state", {})
     monkeypatch.setattr(st, "secrets", _EmptySecrets())
     monkeypatch.setattr(db_sql_pacientes, "supabase", None)
 

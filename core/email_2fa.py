@@ -267,3 +267,13 @@ def texto_ayuda_email_2fa_config() -> str | None:
         "tras la contraseña te pediremos un código de 6 dígitos. "
         "Sin email en ficha, el ingreso sigue solo con contraseña hasta que coordinación cargue el correo."
     )
+
+
+def generar_codigo_2fa() -> str:
+    """Genera código numérico de 6 dígitos para 2FA por correo."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def verificar_codigo_2fa(codigo_ingresado: str, codigo_real: str) -> bool:
+    """Verifica código 2FA en tiempo constante."""
+    return secrets.compare_digest(str(codigo_ingresado or ""), str(codigo_real or ""))

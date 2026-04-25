@@ -15,3 +15,23 @@ def email_formato_aceptable(valor: str) -> bool:
     if len(s) < 5 or len(s) > 254 or "@" not in s:
         return False
     return bool(_EMAIL_RE.match(s))
+
+
+def validar_dni(dni: str) -> bool:
+    """Valida que el DNI sea numérico y tenga al menos 7 dígitos."""
+    s = (dni or "").strip()
+    return s.isdigit() and len(s) >= 7
+
+
+def validar_telefono(telefono: str) -> bool:
+    """Valida formato básico de teléfono (7+ dígitos, permite +, espacios, guiones)."""
+    s = (telefono or "").strip()
+    if len(s) < 7:
+        return False
+    # Permite +, espacios, guiones, paréntesis, dígitos
+    return bool(re.match(r"^[\d\s\+\-\(\)]+$", s))
+
+
+def validar_email(email: str) -> bool:
+    """Alias público de email_formato_aceptable para tests."""
+    return email_formato_aceptable(email)

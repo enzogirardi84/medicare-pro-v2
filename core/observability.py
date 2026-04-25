@@ -46,7 +46,17 @@ class StructuredLogFormatter(logging.Formatter):
         
         # Agregar exception info si existe
         if record.exc_info:
-            log_data['exception'] = self.formatException(record.exc_info)
+            if isinstance(record.exc_info, tuple):
+                log_data['exception'] = self.formatException(record.exc_info)
+            elif record.exc_info is True:
+                import sys
+                exc_info = sys.exc_info()
+                if exc_info[0] is not None:
+                    log_data['exception'] = self.formatException(exc_info)
+                else:
+                    log_data['exception'] = 'exc_info_present'
+            else:
+                log_data['exception'] = 'exc_info_present'
         
         return json.dumps(log_data, ensure_ascii=False, default=str)
 
@@ -291,7 +301,7 @@ def log_user_action(action: str, user_id: str, details: Dict[str, Any]):
     })
     
     # También trackear como métrica
-    track_metric('user_actions', 1, tags={'action': action, 'user_id': user_id[:8]})
+    track_metric('user_actions_total', 1, tags={'action': action, 'user_id': user_id[:8]})
 
 
 def log_security_event(event_type: str, severity: str, details: Dict[str, Any]):
@@ -310,7 +320,7 @@ def log_security_event(event_type: str, severity: str, details: Dict[str, Any]):
     })
     
     # Métrica de seguridad
-    track_metric('security_events', 1, tags={'event_type': event_type, 'severity': severity})
+    track_metric('security_events_total', 1, tags={'event_type': event_type, 'severity': severity})
 
 
 # Funciones de utilidad para Streamlit
