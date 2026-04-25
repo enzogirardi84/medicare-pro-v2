@@ -20,13 +20,18 @@ html {
     -webkit-overflow-scrolling: touch !important;
 }
 
-/* Transiciones fluidas en todos los elementos */
-* {
-    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* Transiciones selectivas SOLO en elementos interactivos (elimina lag de clics) */
+.stButton > button,
+.stDownloadButton > button,
+.stLinkButton > a,
+[data-testid="stRadio"] label,
+[data-testid="stCheckbox"] label,
+[data-testid="stExpander"] > details > summary,
+[data-testid="stTabs"] [role="tablist"] button {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.2s ease,
+                box-shadow 0.2s ease !important;
 }
 
 /* Fade-in suave al cargar contenido (evita parpadeos blancos) */
@@ -1146,7 +1151,7 @@ label,
 .stButton > button:hover,
 .stDownloadButton > button:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 16px 36px rgba(2, 6, 23, 0.32), 0 0 0 1px rgba(96, 165, 250, 0.2), var(--shadow-inset) !important;
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.22), 0 0 0 1px rgba(96, 165, 250, 0.15), var(--shadow-inset) !important;
 }
 
 .stButton > button[kind="primary"],
@@ -1401,7 +1406,7 @@ hr {
     border-radius: var(--radius-hero);
     padding: 1.5rem 1.75rem 1.35rem;
     margin: 0 0 1.35rem 0;
-    box-shadow: var(--shadow-soft), 0 0 0 1px rgba(20, 184, 166, 0.12), var(--shadow-inset);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(20, 184, 166, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .mc-hero-title {
@@ -1687,16 +1692,17 @@ hr {
     font-weight: 700 !important;
 }
 
-[data-testid="stPills"] [role="option"][aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(13, 148, 136, 0.34) 0%, rgba(37, 99, 235, 0.22) 100%) !important;
+[data-testid="stPills"] label:has(input:checked) {
+    background: linear-gradient(145deg, rgba(20, 184, 166, 0.3) 0%, rgba(13, 148, 136, 0.2) 100%) !important;
+    border-color: rgba(20, 184, 166, 0.5) !important;
     box-shadow:
-        0 16px 36px rgba(13, 148, 136, 0.16),
-        0 0 0 1px rgba(20, 184, 166, 0.42),
-        var(--shadow-inset) !important;
+        0 8px 20px rgba(2, 6, 23, 0.22),
+        0 0 0 1px rgba(20, 184, 166, 0.3), var(--shadow-inset) !important;
+    font-weight: 700 !important;
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
-[data-testid="stPills"] [role="option"] p,
 [data-testid="stPills"] [role="option"] span {
     color: inherit !important;
     font-size: 0.9rem !important;
