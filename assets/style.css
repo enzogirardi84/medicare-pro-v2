@@ -107,15 +107,27 @@ hr,
     background: rgba(20, 184, 166, 0.35) !important;
 }
 
-/* Sidebar collapsed control — botón de hamburguesa iOS */
+/* Sidebar collapsed control — botón de hamburguesa iOS flotante */
 [data-testid="stSidebarCollapsedControl"] {
+    position: fixed !important;
+    top: 15px !important;
+    left: 15px !important;
+    z-index: 999999 !important;
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    background: rgba(20, 184, 166, 0.12) !important;
-    border-radius: 8px !important;
-    border: 1px solid rgba(20, 184, 166, 0.2) !important;
-    backdrop-filter: blur(8px) !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border-radius: 50% !important;
+    width: 45px !important;
+    height: 45px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
 }
 
 /* Botón colapsar dentro del sidebar — visible siempre */
@@ -126,6 +138,13 @@ button[kind="headerNoPadding"] {
     opacity: 1 !important;
     width: auto !important;
     height: auto !important;
+    pointer-events: auto !important;
+}
+
+/* Asegurar que no haya capas bloqueando clicks en el área del botón */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stSidebarCollapsedControl"] * {
+    pointer-events: auto !important;
 }
 
 :root {
