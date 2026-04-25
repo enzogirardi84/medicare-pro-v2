@@ -6078,18 +6078,6 @@ html body .mc-loader-cristal-spinner {
     a {
         color: #1a1a1a !important;
         text-decoration: none !important;
-    }
-    
-    a::after {
-        content: "" !important;
-    }
-    
-    /* Ajustes de página */
-    @page {
-        margin: 2cm;
-        size: A4;
-    }
-    
     /* Mostrar URLs de links importantes */
     a[href]:after {
         content: " (" attr(href) ")";
