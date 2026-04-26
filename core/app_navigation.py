@@ -211,6 +211,47 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                     display: none !important;
                 }
             }
+
+            /* =========================================================
+               PARCHE DE ESCRITORIO (PC): ANTI-APLASTAMIENTO
+               ========================================================= */
+            @media (min-width: 769px) {
+                /* 1. Detectar la fila gigante del menú (>8 cols) y PERMITIR SALTO DE LÍNEA */
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) {
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    gap: 12px !important;
+                    justify-content: flex-start !important;
+                }
+
+                /* 2. Destruir ancho porcentual de Streamlit. Forzar mínimo 160px por botón */
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) > div[data-testid="column"] {
+                    flex: 0 0 calc(16.66% - 12px) !important;
+                    min-width: 160px !important;
+                    max-width: 250px !important;
+                    width: auto !important;
+                    padding: 0 !important;
+                }
+
+                /* 3. Ajustar el botón para PC: Icono al lado del texto */
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) button {
+                    width: 100% !important;
+                    height: 60px !important;
+                    flex-direction: row !important;
+                    justify-content: flex-start !important;
+                    padding: 0 15px !important;
+                }
+
+                /* 4. Prohibir la caída vertical del texto */
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) button p,
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) button div {
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    margin: 0 0 0 8px !important;
+                    font-size: 0.9rem !important;
+                }
+            }
             </style>
             """,
             unsafe_allow_html=True,
