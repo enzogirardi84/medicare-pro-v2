@@ -100,92 +100,88 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* 6. GRILLA INTELIGENTE: grid 3x3 SOLO para bloques con >5 columnas (modulos) */
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
-        display: grid !important;
-        grid-template-columns: repeat(6, 1fr) !important;
-        gap: 8px !important;
-        padding: 5px !important;
-    }
-
     /* =========================================================
-       REPARACION DE ESCRITORIO (PC) - Evitar aplastamiento
+       6. LAYOUT MAESTRO PARA MODULOS (Bloques con >5 columnas)
        ========================================================= */
-    @media (min-width: 769px) {
-        /* 1. Grilla 6xN para PC */
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
-            display: grid !important;
-            grid-template-columns: repeat(6, 1fr) !important;
-            gap: 12px !important;
-            padding: 10px 0 !important;
-        }
-        /* 2. FIX: Obligar columna a usar todo el espacio de su celda */
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
-            width: 100% !important;
-            min-width: 100% !important;
-            max-width: 100% !important;
-        }
-        /* 3. Estética Premium PC: Icono al lado del texto, sin comprimir */
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
-            height: 55px !important;
-            display: flex !important;
-            flex-direction: row !important;
-            gap: 8px !important;
-            font-size: 0.85rem !important;
-            border-radius: 16px !important;
-            white-space: nowrap !important;
-            padding: 0 15px !important;
-            justify-content: flex-start !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
-            font-size: 0.85rem !important;
-            margin: 0 !important;
-        }
+
+    /* --- VISTA ESCRITORIO (PC) --- */
+    /* Flexbox Wrap permite que las columnas fluyan sin aplastarse */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+        padding: 5px 0 !important;
     }
 
+    /* Forzar que entren exactamente 6 botones por fila en PC (16.6%) */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
+        flex: 1 1 calc(16% - 12px) !important;
+        min-width: calc(16% - 12px) !important;
+        max-width: calc(16% - 12px) !important;
+        width: 100% !important;
+    }
+
+    /* Estética de Cápsulas Premium para PC (Horizontales) */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
+        border-radius: 16px !important;
+        height: 55px !important;
+        padding: 0 15px !important;
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    /* ANTI-MATRIX: Forzar texto en una sola línea blanca */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p,
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button div {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        margin: 0 !important;
+        font-size: 0.85rem !important;
+        color: #ffffff !important;
+        font-weight: 500 !important;
+    }
+
+    /* --- VISTA MÓVIL (Teléfonos) --- */
     @media (max-width: 768px) {
-        /* 1. Ultra-Compact Grid 3x3 para modulos */
+        /* Grilla 3x3 Súper Compacta para Celular */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
             display: grid !important;
             grid-template-columns: repeat(3, 1fr) !important;
             gap: 4px !important;
             padding: 2px !important;
         }
+
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
-            width: 100% !important;
             min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
             padding: 0 !important;
         }
 
-        /* 2. Capsulas ultra-compactas */
+        /* Botones Achatados para Celular (Verticales) */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
-            height: 45px !important;
-            min-height: 45px !important;
+            height: 50px !important;
             padding: 2px !important;
             border-radius: 12px !important;
-            display: flex !important;
             flex-direction: column !important;
-            align-items: center !important;
             justify-content: center !important;
+            align-items: center !important;
             gap: 2px !important;
-            background-color: #1e293b !important;
-            border: 1px solid rgba(255,255,255,0.15) !important;
-        }
-        /* BALA DE PLATA: forzar blanco absoluto en TODO elemento interno del boton */
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button,
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button * {
-            color: #ffffff !important;
-            fill: #ffffff !important;
-            font-weight: 500 !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
-            margin: 0 !important;
-            padding: 0 !important;
-            font-size: 0.6rem !important;
-            line-height: 1 !important;
         }
 
-        /* 3. Bloques pequenos (login, forms) vuelven a 100% ancho */
+        /* Ajuste de Texto para Celular */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
+            font-size: 0.6rem !important;
+        }
+
+        /* Protección para Login y Bloques Pequeños (Vuelven al 100%) */
         div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) {
             display: flex !important;
             flex-direction: column !important;
@@ -193,25 +189,9 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) > div[data-testid="column"] {
             width: 100% !important;
             min-width: 100% !important;
+            max-width: 100% !important;
             margin-bottom: 1rem !important;
         }
-    }
-
-    /* 7. Estética cápsula compacta — solo para modulos (bloques con >5 columnas) en escritorio */
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
-        border-radius: 18px !important;
-        height: 65px !important;
-        padding: 5px !important;
-        font-size: 0.7rem !important;
-        background-color: #1e293b !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        white-space: normal !important;
-        line-height: 1.1 !important;
-        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
