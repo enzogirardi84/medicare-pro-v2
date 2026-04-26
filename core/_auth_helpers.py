@@ -219,7 +219,8 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
     except Exception as _exc:
         log_event("auth", f"fallo_guardar_post_login:{type(_exc).__name__}:{_exc}")
     # Spinner visual durante transición login → dashboard (evita pantalla negra/vacía)
-    st.info("🏥 Sincronizando con MediCare... Sus datos se están cargando.", icon="⏳")
+    with st.spinner("Sincronizando con MediCare... Sus datos se están cargando."):
+        pass
     st.session_state["_mc_login_transition"] = True
     st.rerun()
 

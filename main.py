@@ -434,7 +434,7 @@ def _render_mobile_nav(menu, vista_actual, menu_set):
         from core.app_logging import log_event
         log_event("main_mobile_nav", f"fallo_deteccion_tablet:{type(_exc).__name__}:{_exc}")
 
-    with st.expander("☰ Menú de navegación", expanded=False):
+    with st.expander("Menú de navegación", expanded=False):
         st.caption("Seleccioná un módulo para navegar rápidamente:")
         # En tablets usar más columnas, en móvil solo 2
         cols_count = 3 if es_tablet else 2
@@ -466,8 +466,8 @@ def _render_mobile_patient_selector(mi_empresa, rol):
 
     from core.utils import obtener_pacientes_visibles, mapa_detalles_pacientes
     
-    with st.expander("👤 Selector de Paciente (Tocá para buscar)", expanded=(st.session_state.get("paciente_actual") is None)):
-        st.caption("🔍 Buscá por nombre, DNI o empresa:")
+    with st.expander("Selector de Paciente (Tocá para buscar)", expanded=(st.session_state.get("paciente_actual") is None)):
+        st.caption("Buscá por nombre, DNI o empresa:")
         buscar = st.text_input("Buscar", placeholder="Nombre, DNI o palabra clave", key="mc_buscar_paciente_mobile")
         
         p_f = obtener_pacientes_visibles(
@@ -506,7 +506,7 @@ def _render_mobile_patient_selector(mi_empresa, rol):
         # Mostrar info del paciente seleccionado
         if paciente_sel:
             det = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-            st.success(f"👤 {paciente_sel}")
+            st.success(f"{paciente_sel}")
             st.caption(f"DNI: {det.get('dni', 'S/D')} | OS: {det.get('obra_social', 'S/D')}")
         
         return paciente_sel
