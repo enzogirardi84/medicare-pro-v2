@@ -106,23 +106,38 @@ st.markdown("""
         min-height: 2.5rem !important;
     }
 
-    /* 7. Media Query exclusivo para telefonos moviles (grid 2x2, compactacion) */
+    /* 7. REGLAS EXCLUSIVAS PARA MOVILES (ROMPER EL EFECTO CORTINA) */
     @media (max-width: 768px) {
+        /* 1. Interceptar el contenedor base y forzar Flexbox con saltos de linea */
         div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
             flex-wrap: wrap !important;
-            gap: 0.5rem !important;
+            gap: 10px !important;
         }
-        div[data-testid="column"] {
-            min-width: 48% !important;
-            flex: 1 1 48% !important;
-            width: 48% !important;
+
+        /* 2. OBLIGAR cada columna a ocupar exactamente 50% de la pantalla (Grid 2x2 real) */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+            width: calc(50% - 10px) !important;
+            min-width: calc(50% - 10px) !important;
+            flex: 0 0 calc(50% - 10px) !important;
+            display: block !important;
         }
+
+        /* 3. Estilizar botones como Capsulas compactas tipo iOS */
         div[data-testid="stButton"] > button {
-            padding: 0.3rem 0.5rem !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 2.5rem !important;
+            padding: 0.4rem 0.2rem !important;
             font-size: 0.75rem !important;
-            min-height: 2.2rem !important;
-            border-radius: 12px !important;
+            border-radius: 16px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }
+
+        /* 4. Compactar contenedores para ahorrar espacio vertical */
         div[data-testid="stVerticalBlockBorderWrapper"] {
             padding: 0.5rem !important;
         }
