@@ -99,51 +99,39 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* 6. Botones compactos (modulos mas pequeños) */
-    div[data-testid="stButton"] > button {
-        padding: 0.25rem 0.5rem !important;
-        font-size: 0.85rem !important;
-        min-height: 2.5rem !important;
+    /* 6. BENTO GRID — Contenedor Flex de alta densidad */
+    div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
     }
 
-    /* 7. REGLAS EXCLUSIVAS PARA MOVILES (ROMPER EL EFECTO CORTINA) */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+        flex: 1 1 calc(33% - 10px) !important;
+        min-width: calc(33% - 10px) !important;
+        max-width: calc(16% - 10px) !important;
+    }
+
     @media (max-width: 768px) {
-        /* 1. Interceptar el contenedor base y forzar Flexbox con saltos de linea */
-        div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            gap: 10px !important;
-        }
-
-        /* 2. OBLIGAR cada columna a ocupar exactamente 50% de la pantalla (Grid 2x2 real) */
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            width: calc(50% - 10px) !important;
-            min-width: calc(50% - 10px) !important;
-            flex: 0 0 calc(50% - 10px) !important;
-            display: block !important;
+            max-width: calc(33% - 10px) !important;
         }
+    }
 
-        /* 3. Estilizar botones como Capsulas compactas tipo iOS */
-        div[data-testid="stButton"] > button {
-            width: 100% !important;
-            height: auto !important;
-            min-height: 2.5rem !important;
-            padding: 0.4rem 0.2rem !important;
-            font-size: 0.75rem !important;
-            border-radius: 16px !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-        }
-
-        /* 4. Compactar contenedores para ahorrar espacio vertical */
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            padding: 0.5rem !important;
-        }
-        h1, h2, h3 {
-            font-size: 1.2rem !important;
-        }
+    /* 7. Estética Bento Apple — botones compactos y redondeados */
+    div[data-testid="stButton"] > button {
+        border-radius: 18px !important;
+        height: 60px !important;
+        padding: 5px !important;
+        font-size: 0.7rem !important;
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 </style>
 """, unsafe_allow_html=True)

@@ -155,13 +155,12 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
             default_sel = vista_actual
 
-    # Navegación nativa con botones reales en grid (no st.radio).
+    # Navegación nativa con botones reales en un solo bloque de columnas
+    # (el CSS Bento Flex organiza el layout: 6 por fila en PC, 3 en móvil).
     selected = None
-    cols_per_row = 6
-    rows = [pill_options[i : i + cols_per_row] for i in range(0, len(pill_options), cols_per_row)]
-    for row in rows:
-        cols = st.columns(len(row))
-        for c, opt in zip(cols, row):
+    if pill_options:
+        cols = st.columns(len(pill_options))
+        for c, opt in zip(cols, pill_options):
             with c:
                 label = view_nav_labels.get(opt, opt)
                 tipo = "primary" if opt == default_sel else "secondary"
