@@ -11,6 +11,7 @@ from urllib.parse import quote_plus
 import streamlit as st
 
 from core.app_logging import log_event
+from core.app_mobile import cliente_es_movil_probable
 from core.nav_helpers import (
     MC_FILTRO_TODAS,
     categorias_con_modulos_en_menu,
@@ -94,18 +95,42 @@ def resolve_current_view(menu, menu_set=None):
 
 
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
-    """Renderiza la navegación de módulos en un solo bloque de columnas.
+    """Renderiza la navegación de módulos.
 
-    - Un solo st.columns(len(modulos)) para que CSS Grid pueda controlar el layout.
-    - Escritorio: 6 columnas horizontales.
-    - Móvil: 3 columnas compactas (grilla 3xN).
-    - CSS inyectado vía st.markdown con @media queries.
+    - Escritorio: grilla CSS Grid con st.columns (6 col horizontales).
+    - Móvil: cortina st.expander con botones verticales al 100%.
     - Botones usan on_click callback (sin st.rerun() manual) para evitar crasheos en móviles.
     """
     if not modulos:
         return
 
-    # CSS Maestro: Grid adaptativo + estética Bento
+    def cambiar_modulo_callback(modulo_seleccionado):
+        st.session_state["modulo_actual"] = modulo_seleccionado
+
+    es_movil = cliente_es_movil_probable()
+
+    if es_movil:
+        # ── CORTINA MÓVIL: expander colapsable con lista vertical de botones ──
+        with st.expander("☰ Navegar a otro módulo", expanded=False):
+            for modulo in modulos:
+                nombre_raw = str(modulo)
+                if not nombre_raw:
+                    continue
+                label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+                icono, texto = _split_icon_label(label)
+                btn_label = f"{icono} {texto}".strip()
+                tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+                st.button(
+                    btn_label,
+                    key=f"nav_exp_{nombre_raw}",
+                    use_container_width=True,
+                    type=tipo,
+                    on_click=cambiar_modulo_callback,
+                    args=(nombre_raw,),
+                )
+        return
+
+    # ── ESCRITORIO: CSS Grid maestro con marcador hermano adyacente ──
     if not st.session_state.get("_mc_nav_css_master"):
         st.markdown(
             """
@@ -191,9 +216,6 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             unsafe_allow_html=True,
         )
         st.session_state["_mc_nav_css_master"] = True
-
-    def cambiar_modulo_callback(modulo_seleccionado):
-        st.session_state["modulo_actual"] = modulo_seleccionado
 
     # Marcador posicionado justo antes del bloque de columnas para que el CSS
     # atrape el siguiente element-container vía Adjacent Sibling Combinator (+)
