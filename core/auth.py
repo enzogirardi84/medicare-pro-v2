@@ -265,9 +265,9 @@ def render_login():
                     p1 = st.text_input("Nueva contraseña", type="password")
                     p2 = st.text_input("Repetir nueva contraseña", type="password")
                 if modo_auth == "login":
-                    submit = st.form_submit_button("Ingresar al sistema", use_container_width=True)
+                    submit = st.form_submit_button("Ingresar al sistema")
                 else:
-                    submit = st.form_submit_button("Guardar nueva contraseña", use_container_width=True)
+                    submit = st.form_submit_button("Guardar nueva contraseña")
                 if submit and modo_auth == "pin_new":
                     if not u.strip():
                         st.warning("Ingresá tu usuario (login).")

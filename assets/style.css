@@ -1220,15 +1220,21 @@ label,
 
 .stButton > button,
 .stDownloadButton > button {
-    min-height: 48px !important;
+    min-height: 40px !important;
     border-radius: var(--radius-md) !important;
-    font-weight: 800 !important;
+    font-weight: 700 !important;
     border: none !important;
     background: linear-gradient(180deg, rgba(24, 38, 63, 0.96) 0%, rgba(17, 28, 48, 0.96) 100%) !important;
     color: #f8fafc !important;
     box-shadow: var(--shadow-card), var(--shadow-inset) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.25s ease !important;
     letter-spacing: 0.01em !important;
+    width: auto !important;
+    min-width: 120px !important;
+    max-width: 280px !important;
+    padding: 0.45rem 1.1rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
 .stButton > button:hover,
@@ -1243,6 +1249,12 @@ label,
     border: none !important;
     color: #ffffff !important;
     box-shadow: 0 14px 36px rgba(13, 148, 136, 0.28) !important;
+    width: auto !important;
+    min-width: 120px !important;
+    max-width: 320px !important;
+    padding: 0.5rem 1.4rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
 .stDownloadButton > button {
