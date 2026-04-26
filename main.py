@@ -124,7 +124,6 @@ if "_db_bootstrapped" not in st.session_state:
 VIEW_CONFIG, VIEW_NAV_LABELS = build_view_maps(alertas_app_visible=ALERTAS_APP_PACIENTE_VISIBLE)
 
 from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401  (referenciado en módulos heredados)
-from core._ui_liviano_js import MOBILE_SIDEBAR_AUTOCLOSE_JS
 from core.sidebar_components import (
     sidebar_brand_card as _sidebar_brand_card_fn,
     sidebar_patient_card as _sidebar_patient_card_fn,
@@ -228,10 +227,6 @@ anticolapso_activo_fn = _ac.anticolapso_activo
 limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
 render_estabilidad_anticolapso_sidebar = _ac.render_estabilidad_anticolapso_sidebar
 
-ui_liv = import_module("core.ui_liviano")
-headers_sugieren_equipo_liviano = ui_liv.headers_sugieren_equipo_liviano
-render_mc_liviano_cliente = ui_liv.render_mc_liviano_cliente
-render_mobile_sidebar_toggle = ui_liv.render_mobile_sidebar_toggle
 
 _onb = import_module("core.onboarding")
 render_panel_bienvenida = _onb.render_panel_bienvenida
@@ -414,13 +409,6 @@ menu = resolve_menu_for_role(rol, user)
 menu_set = frozenset(menu)
 vista_actual = resolve_current_view(menu, menu_set)
 
-_mc_srv_liviano = headers_sugieren_equipo_liviano()
-render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
-render_mobile_sidebar_toggle()
-
-
-# Inyectar JS para cerrar el sidebar automáticamente en móviles
-st.markdown(MOBILE_SIDEBAR_AUTOCLOSE_JS, unsafe_allow_html=True)
 
 
 # Alerta de stock removida por pedido del usuario (molesta; el stock bajo se ve en Inventario).
