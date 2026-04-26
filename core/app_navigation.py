@@ -94,114 +94,60 @@ def resolve_current_view(menu, menu_set=None):
 
 
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
-    """Renderiza una grilla HTML/CSS de módulos sin usar st.columns.
+    """Renderiza la navegación de módulos usando chunking nativo (st.columns + st.button).
 
-    - PC: botones tipo cápsula 150-170px, icono + texto horizontal.
-    - Móvil: 3 botones por fila, icono arriba y texto abajo.
-    - Navegación por query param ?modulo=Nombre+Modulo.
+    - PC: 6 botones por fila nativa de Streamlit.
+    - Móvil: 3 botones por fila para evitar saturación del DOM.
+    - Sin CSS Grid / Flexbox agresivo sobre stHorizontalBlock.
     """
-    st.markdown(
-        """
-    <style>
-    .mod-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 150px));
-        gap: 10px;
-        margin: 14px 0 28px 0;
-        align-items: stretch;
-    }
-    .mod-card {
-        height: 58px;
-        padding: 0 14px;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 9px;
-        border-radius: 15px;
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        background: rgba(15, 23, 42, 0.92);
-        color: #ffffff !important;
-        text-decoration: none !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-        transition: all 0.15s ease;
-        overflow: hidden;
-    }
-    .mod-card:hover {
-        border-color: rgba(56, 189, 248, 0.75);
-        background: rgba(30, 41, 59, 0.98);
-        transform: translateY(-1px);
-    }
-    .mod-card.active {
-        border-color: #38bdf8;
-        background: linear-gradient(135deg, rgba(14,165,233,0.28), rgba(15,23,42,0.95));
-        box-shadow: 0 0 0 1px rgba(56,189,248,0.35);
-    }
-    .mod-icon {
-        font-size: 18px;
-        line-height: 1;
-        flex: 0 0 auto;
-    }
-    .mod-text {
-        font-size: 13px;
-        font-weight: 600;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        min-width: 0;
-        color: #ffffff !important;
-    }
-    @media (max-width: 640px) {
-        .mod-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-        }
-        .mod-card {
-            height: 66px;
-            padding: 8px 6px;
-            flex-direction: column;
-            justify-content: center;
-            text-align: center;
-            gap: 5px;
-        }
-        .mod-icon {
-            font-size: 18px;
-        }
-        .mod-text {
-            font-size: 10.5px;
-            max-width: 100%;
-            color: #ffffff !important;
-        }
-    }
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
+    from core.app_mobile import cliente_es_movil_probable
 
-    cards = []
-    for modulo in modulos:
-        nombre_raw = str(modulo)
-        if not nombre_raw:
-            continue
-        label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-        icono, texto = _split_icon_label(label)
-        active = " active" if nombre_raw == modulo_actual else ""
-        url = "?modulo=" + quote_plus(nombre_raw)
-        cards.append(
-            f'<a class="mod-card{active}" href="{url}" target="_self" title="{html.escape(nombre_raw)}">'
-            f'<span class="mod-icon">{html.escape(icono)}</span>'
-            f'<span class="mod-text">{html.escape(texto)}</span>'
-            f"</a>"
-        )
+    if not modulos:
+        return
 
-    if cards:
+    es_movil = cliente_es_movil_probable()
+    columnas_por_fila = 3 if es_movil else 6
+
+    # CSS mínimo e inofensivo: solo estética de botón, nunca layout de bloques
+    if not st.session_state.get("_mc_nav_btn_css_inyectado"):
         st.markdown(
-            '<div class="mod-grid">' + "\n".join(cards) + "</div>",
+            """
+            <style>
+            div[data-testid="stButton"] > button {
+                border-radius: 12px;
+                min-height: 55px;
+                white-space: pre-wrap !important;
+            }
+            </style>
+            """,
             unsafe_allow_html=True,
         )
+        st.session_state["_mc_nav_btn_css_inyectado"] = True
+
+    for i in range(0, len(modulos), columnas_por_fila):
+        fila_modulos = modulos[i : i + columnas_por_fila]
+        cols = st.columns(columnas_por_fila)
+        for j, modulo in enumerate(fila_modulos):
+            nombre_raw = str(modulo)
+            if not nombre_raw:
+                continue
+            label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+            icono, texto = _split_icon_label(label)
+            btn_label = f"{icono} {texto}".strip()
+            tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+            with cols[j]:
+                if st.button(
+                    btn_label,
+                    key=f"nav_grid_{nombre_raw}",
+                    use_container_width=True,
+                    type=tipo,
+                ):
+                    st.session_state["modulo_actual"] = nombre_raw
+                    st.rerun()
 
 
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
-    """Renderiza la navegación de módulos con filtro por categoría + grilla HTML."""
+    """Renderiza la navegación de módulos con filtro por categoría + botonera nativa (st.columns)."""
     if not menu:
         return None
     menu_set = frozenset(menu) if menu_set is None else menu_set
