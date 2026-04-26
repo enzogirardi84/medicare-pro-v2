@@ -117,6 +117,69 @@ def render_login():
         st.markdown(
             """
             <style>
+            /* =========================================================
+               REDISEÑO PREMIUM: PANTALLA DE LOGIN (Soft-UI)
+               ========================================================= */
+
+            /* 1. Tarjeta principal del Formulario (Efecto Glass/Elevado) */
+            div[data-testid="stForm"] {
+                background: linear-gradient(145deg, #111827, #1f2937) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                border-radius: 24px !important;
+                padding: 35px 25px !important;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+            }
+
+            /* 2. Cajas de Texto (Inputs de Usuario y Contraseña) */
+            div[data-testid="stTextInput"] input {
+                border-radius: 14px !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                background-color: rgba(0, 0, 0, 0.2) !important;
+                padding: 14px 18px !important;
+                font-size: 1rem !important;
+                color: #ffffff !important;
+                transition: all 0.3s ease !important;
+            }
+
+            /* Efecto al hacer clic en el input (Focus) */
+            div[data-testid="stTextInput"] input:focus {
+                border-color: #0ea5e9 !important;
+                box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2) !important;
+                background-color: rgba(0, 0, 0, 0.4) !important;
+            }
+
+            /* 3. Botón de "Ingresar al sistema" (Gradiente y Pill-shape) */
+            div[data-testid="stForm"] div[data-testid="stButton"] > button {
+                background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+                color: white !important;
+                border-radius: 50px !important;
+                border: none !important;
+                font-weight: 700 !important;
+                font-size: 1.05rem !important;
+                letter-spacing: 0.5px !important;
+                height: 55px !important;
+                margin-top: 15px !important;
+                transition: all 0.3s ease !important;
+                box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
+            }
+
+            /* Efecto Hover del botón de ingreso */
+            div[data-testid="stForm"] div[data-testid="stButton"] > button:hover {
+                transform: translateY(-3px) !important;
+                box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5) !important;
+                filter: brightness(1.1);
+            }
+
+            /* 4. Estilizar la caja superior de "Acceso a MediCare" */
+            div[data-testid="stVerticalBlockBorderWrapper"]:has(h3) {
+                border-radius: 20px !important;
+                border: 1px solid rgba(14, 165, 233, 0.2) !important;
+                background: rgba(14, 165, 233, 0.05) !important;
+            }
+
+            /* =========================================================
+               AJUSTES MÓVILES COMPACTOS
+               ========================================================= */
             @media (max-width: 767px) {
                 .block-container {
                     padding-top: 0.35rem !important;
