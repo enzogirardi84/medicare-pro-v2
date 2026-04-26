@@ -101,87 +101,80 @@ st.markdown("""
     }
 
     /* =========================================================
-       6. LAYOUT MAESTRO PARA MODULOS (Bloques con >5 columnas)
+       6. LAYOUT MAESTRO AUTO-RESPONSIVO (Grilla Dinámica)
        ========================================================= */
 
-    /* --- VISTA ESCRITORIO (PC) --- */
-    /* Flexbox Wrap permite que las columnas fluyan sin aplastarse */
+    /* --- VISTA GLOBAL (Escritorio por defecto) --- */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
-        display: flex !important;
-        flex-wrap: wrap !important;
+        display: grid !important;
+        /* MAGIA: Crea tantas columnas como entren, cada una de mínimo 140px */
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
         gap: 12px !important;
-        padding: 5px 0 !important;
+        padding: 10px 0 !important;
     }
 
-    /* Forzar que entren exactamente 6 botones por fila en PC (16.6%) */
+    /* DESTRUIR EL ANCHO EN LÍNEA DE STREAMLIT */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
-        flex: 1 1 calc(16% - 12px) !important;
-        min-width: calc(16% - 12px) !important;
-        max-width: calc(16% - 12px) !important;
         width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
     }
 
-    /* Estética de Cápsulas Premium para PC (Horizontales) */
+    /* Estética de las Cápsulas Premium */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
-        border-radius: 16px !important;
+        width: 100% !important;
         height: 55px !important;
-        padding: 0 15px !important;
+        border-radius: 16px !important;
         background-color: #1e293b !important;
         border: 1px solid rgba(255,255,255,0.15) !important;
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        gap: 8px !important;
-        width: 100% !important;
+        padding: 0 15px !important;
+        transition: all 0.2s ease !important;
     }
 
-    /* ANTI-MATRIX: Forzar texto en una sola línea blanca */
+    /* Texto siempre visible y forzado a blanco */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p,
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button div {
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button div,
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        margin: 0 !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        margin: 0 !important;
-        font-size: 0.85rem !important;
-        color: #ffffff !important;
-        font-weight: 500 !important;
     }
 
-    /* --- VISTA MÓVIL (Teléfonos) --- */
+    /* --- VISTA MÓVIL (Celulares) --- */
     @media (max-width: 768px) {
-        /* Grilla 3x3 Súper Compacta para Celular */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
-            display: grid !important;
+            /* Forzar 3 columnas exactas en teléfonos */
             grid-template-columns: repeat(3, 1fr) !important;
-            gap: 4px !important;
-            padding: 2px !important;
+            gap: 6px !important;
+            padding: 5px !important;
         }
 
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
-            min-width: 0 !important;
-            max-width: 100% !important;
-            width: 100% !important;
-            padding: 0 !important;
-        }
-
-        /* Botones Achatados para Celular (Verticales) */
+        /* En celular, el icono va arriba y el texto abajo */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
-            height: 50px !important;
-            padding: 2px !important;
-            border-radius: 12px !important;
+            height: 55px !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
+            padding: 2px !important;
+            border-radius: 12px !important;
             gap: 2px !important;
         }
 
-        /* Ajuste de Texto para Celular */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
-            font-size: 0.6rem !important;
+            font-size: 0.65rem !important;
         }
 
-        /* Protección para Login y Bloques Pequeños (Vuelven al 100%) */
+        /* Proteger pantallas pequeñas (Login, etc.) */
         div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) {
             display: flex !important;
             flex-direction: column !important;
