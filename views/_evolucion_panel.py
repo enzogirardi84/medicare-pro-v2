@@ -417,8 +417,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         st.components.v1.html(
             f"""
             <style>
+            body {{ background: #0e1117; color: #f1f5f9; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }}
             .mc-clinical-timeline {{
-                font-family: 'Segoe UI', system-ui, sans-serif;
                 max-width: 100%;
                 padding: 0.5rem;
             }}
@@ -426,131 +426,129 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 1rem;
-                padding-bottom: 0.75rem;
-                border-bottom: 2px solid #e2e8f0;
+                margin-bottom: 0.75rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid #334155;
             }}
             .mc-timeline-header h2 {{
                 margin: 0;
-                color: #1e293b;
-                font-size: 1.25rem;
+                color: #f1f5f9;
+                font-size: 1.1rem;
                 font-weight: 600;
             }}
             .mc-timeline-count {{
-                background: #e0e7ff;
-                color: #3730a3;
-                padding: 0.25rem 0.75rem;
+                background: #312e81;
+                color: #e0e7ff;
+                padding: 0.2rem 0.6rem;
                 border-radius: 9999px;
-                font-size: 0.875rem;
+                font-size: 0.8rem;
                 font-weight: 500;
             }}
             .mc-timeline-container {{
                 position: relative;
-                padding-left: 1.5rem;
+                padding-left: 1.25rem;
             }}
             .mc-timeline-container::before {{
                 content: '';
                 position: absolute;
-                left: 0.5rem;
+                left: 0.375rem;
                 top: 0;
                 bottom: 0;
                 width: 2px;
-                background: #cbd5e1;
+                background: #475569;
             }}
             .mc-timeline-item {{
                 position: relative;
-                margin-bottom: 1.5rem;
-                padding: 1rem;
-                background: #f8fafc;
-                border-radius: 0.75rem;
-                border-left: 4px solid #64748b;
-                margin-left: 0.5rem;
+                margin-bottom: 0.75rem;
+                padding: 0.65rem 0.85rem;
+                background: #1e293b;
+                border-radius: 0.5rem;
+                border-left: 3px solid #64748b;
+                margin-left: 0.35rem;
             }}
             .mc-timeline-item.critico {{
-                border-left-color: #dc2626;
-                background: #fef2f2;
+                border-left-color: #ef4444;
+                background: #450a0a;
             }}
             .mc-timeline-item.normal {{
-                border-left-color: #059669;
-                background: #f0fdf4;
+                border-left-color: #10b981;
+                background: #064e3b;
             }}
             .mc-timeline-item::before {{
                 content: '';
                 position: absolute;
-                left: -1.75rem;
-                top: 1.25rem;
-                width: 0.75rem;
-                height: 0.75rem;
+                left: -1.55rem;
+                top: 1rem;
+                width: 0.6rem;
+                height: 0.6rem;
                 border-radius: 50%;
                 background: currentColor;
-                border: 2px solid white;
+                border: 2px solid #0e1117;
                 box-shadow: 0 0 0 2px currentColor;
             }}
-            .mc-timeline-item.critico::before {{
-                color: #dc2626;
-            }}
-            .mc-timeline-item.normal::before {{
-                color: #059669;
-            }}
+            .mc-timeline-item.critico::before {{ color: #ef4444; }}
+            .mc-timeline-item.normal::before {{ color: #10b981; }}
             .mc-timeline-date {{
-                font-size: 0.8rem;
-                color: #64748b;
-                margin-bottom: 0.25rem;
+                font-size: 0.75rem;
+                color: #94a3b8;
+                margin-bottom: 0.2rem;
                 font-weight: 500;
             }}
             .mc-timeline-title-text {{
-                font-size: 1rem;
+                font-size: 0.9rem;
                 font-weight: 600;
-                color: #1e293b;
-                margin-bottom: 0.5rem;
+                color: #f8fafc;
+                margin-bottom: 0.35rem;
             }}
             .mc-evolution-type {{
                 display: inline-block;
-                background: #e0e7ff;
-                color: #3730a3;
-                padding: 0.2rem 0.5rem;
+                background: #312e81;
+                color: #e0e7ff;
+                padding: 0.15rem 0.45rem;
                 border-radius: 0.25rem;
-                font-size: 0.8rem;
-                margin-bottom: 0.5rem;
+                font-size: 0.75rem;
+                margin-bottom: 0.35rem;
                 font-weight: 500;
             }}
             .mc-evolution-note {{
-                color: #334155;
-                font-size: 0.9rem;
-                line-height: 1.5;
-                margin-bottom: 0.5rem;
+                color: #cbd5e1;
+                font-size: 0.85rem;
+                line-height: 1.4;
+                margin-bottom: 0.35rem;
             }}
             .mc-signature-badge {{
                 display: inline-block;
-                background: #d1fae5;
-                color: #065f46;
-                padding: 0.15rem 0.5rem;
+                background: #064e3b;
+                color: #d1fae5;
+                padding: 0.12rem 0.4rem;
                 border-radius: 0.25rem;
-                font-size: 0.75rem;
-                margin-right: 0.25rem;
+                font-size: 0.7rem;
+                margin-right: 0.2rem;
             }}
             .mc-urgency-badge {{
                 display: inline-block;
-                background: #fee2e2;
-                color: #991b1b;
-                padding: 0.15rem 0.5rem;
+                background: #7f1d1d;
+                color: #fecaca;
+                padding: 0.12rem 0.4rem;
                 border-radius: 0.25rem;
-                font-size: 0.75rem;
+                font-size: 0.7rem;
                 font-weight: 600;
             }}
             .mc-empty-timeline {{
                 text-align: center;
-                padding: 2rem;
-                color: #64748b;
+                padding: 1.5rem;
+                color: #94a3b8;
             }}
             </style>
-            <div style="height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+            <div style="height: 320px; overflow-y: auto; border: 1px solid #334155; border-radius: 0.5rem;">
                 {html_historial}
             </div>
             """,
             height=330,
             scrolling=True,
         )
+
+        st.markdown("<br>", unsafe_allow_html=True)
 
         # Expanders individuales para cada evolución (más reciente primero)
         st.markdown("**Detalle por evolución**", unsafe_allow_html=True)
