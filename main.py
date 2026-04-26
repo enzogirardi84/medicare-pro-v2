@@ -101,68 +101,83 @@ st.markdown("""
     }
 
     /* =========================================================
-       6. RESCATE DE MÓDULOS: BOTONES VISIBLES Y ESTIRADOS
+       6. LAYOUT TITANIO: FLEXBOX ESTRICTO (Anti-Inline Styles)
        ========================================================= */
 
-    /* 1. Forzar Grid Automático (Solo detecta el bloque si tiene más de 10 módulos) */
+    /* 1. Contenedor Maestro: Flexbox con Wrap (permite saltar renglón) */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-        gap: 12px !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        justify-content: flex-start !important;
         padding: 10px 0 !important;
     }
 
-    /* 2. La celda ocupa el 100% */
+    /* 2. LA BALA DE CAÑÓN: Destruir los anchos matemáticos de Streamlit */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) > div[data-testid="column"] {
-        width: 100% !important;
-        min-width: 100% !important;
+        /* OBLIGAMOS a cada columna a medir exactamente 150px en PC, ni más ni menos */
+        flex: 0 0 150px !important;
+        width: 150px !important;
+        min-width: 150px !important;
+        max-width: 150px !important;
         padding: 0 !important;
     }
 
-    /* 3. Forzar la expansión total de los botones (Destruye el auto-shrink de Streamlit) */
+    /* 3. Estirar el botón para que llene sus 150px exactos */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"],
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button {
         width: 100% !important;
-        min-width: 100% !important;
-        height: 100% !important;
-        min-height: 60px !important;
+        height: 55px !important;
+        min-height: 55px !important;
     }
 
-    /* 4. Estética de las Cápsulas */
+    /* 4. Estética de las Cápsulas Premium para Escritorio */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button {
         border-radius: 12px !important;
         background-color: #1e293b !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
         display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
         align-items: center !important;
-        padding: 5px !important;
-        transition: transform 0.2s !important;
+        padding: 0 12px !important;
+        gap: 8px !important;
     }
 
-    /* 5. RESCATE DEL TEXTO: Forzar visibilidad y permitir salto de línea */
+    /* 5. TEXTO: En 1 sola línea siempre. Si es muy largo, pone '...' */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button * {
         color: #ffffff !important;
         fill: #ffffff !important;
         font-size: 13px !important;
-        font-weight: 600 !important;
-        text-align: center !important;
-        white-space: pre-wrap !important;
-        visibility: visible !important;
-        display: block !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
         margin: 0 !important;
-        line-height: 1.2 !important;
     }
 
     /* --- VISTA MÓVIL (Celulares) --- */
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) {
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 6px !important;
+        /* En celular, forzamos 3 botones por fila calculando el 33% */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) > div[data-testid="column"] {
+            flex: 0 0 calc(33.333% - 7px) !important;
+            width: calc(33.333% - 7px) !important;
+            min-width: calc(33.333% - 7px) !important;
+            max-width: calc(33.333% - 7px) !important;
         }
+
+        /* Botones apilados (icono arriba, texto abajo) */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button {
+            flex-direction: column !important;
+            justify-content: center !important;
+            padding: 5px 2px !important;
+            height: 55px !important;
+            gap: 2px !important;
+        }
+
+        /* Letra más chica en el celular */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button * {
-            font-size: 10px !important;
+            font-size: 10.5px !important;
         }
     }
 </style>
