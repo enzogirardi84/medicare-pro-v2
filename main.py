@@ -131,15 +131,21 @@ st.markdown("""
             align-items: center !important;
             justify-content: center !important;
             gap: 2px !important;
+            background-color: #1e293b !important;
+            border: 1px solid rgba(255,255,255,0.15) !important;
+        }
+        /* BALA DE PLATA: forzar blanco absoluto en TODO elemento interno del boton */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button,
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button * {
             color: #ffffff !important;
+            fill: #ffffff !important;
+            font-weight: 500 !important;
         }
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
             margin: 0 !important;
             padding: 0 !important;
             font-size: 0.6rem !important;
             line-height: 1 !important;
-            color: #ffffff !important;
-            font-weight: 500 !important;
         }
 
         /* 3. Bloques pequenos (login, forms) vuelven a 100% ancho */
@@ -422,13 +428,18 @@ st.markdown("""
 </style>
 <div class="btn-flotante-pacientes" onclick="
     var doc = window.parent.document || window.document;
-    var btn = doc.querySelector('header button') ||
-              doc.querySelector('[data-testid=\\'collapsedControl\\']') ||
-              doc.querySelector('[data-testid=\\'baseButton-header\\']');
+    var btn = doc.querySelector('[aria-label=\\'View sidebar\\']') ||
+              doc.querySelector('[aria-label=\\'Expand sidebar\\']') ||
+              doc.querySelector('[data-testid=\\'collapsedControl\\']');
     if(btn) {
         btn.click();
     } else {
-        alert('Aviso: El menú lateral de Streamlit no está visible en el DOM.');
+        var headerBtns = doc.querySelectorAll('header button');
+        if(headerBtns.length > 0) {
+            headerBtns[0].click();
+        } else {
+            console.log('Boton de menu no encontrado en el DOM');
+        }
     }
 ">
     ☰ Pacientes
