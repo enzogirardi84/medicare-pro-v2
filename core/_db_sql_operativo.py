@@ -70,14 +70,9 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         return []
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
-    """Obtiene los turnos de una empresa. Cache manual a prueba de fallos. TTL corto (30s) por alta dinamicidad."""
-    cache_key = f"_sql_op_turn_{empresa_id}_{fecha_inicio}_{fecha_fin}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 30:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene los turnos de una empresa. Cache @st.cache_data (60s)."""
     if not _ok():
         return []
     try:
@@ -85,13 +80,10 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
             "get_turnos",
             lambda: supabase.table("turnos").select("*, pacientes(nombre_completo, dni), usuarios(nombre)").eq("empresa_id", empresa_id).gte("fecha_hora_programada", fecha_inicio).lte("fecha_hora_programada", fecha_fin).order("fecha_hora_programada", desc=False).execute(),
         )
-        data = getattr(response, "data", None) or []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        return data
+        return getattr(response, "data", None) or []
     except Exception as e:
         log_event("db_sql", f"error_get_turnos:{type(e).__name__}:{e}")
         print(f"Error detallado Supabase get_turnos: {str(e)}")
-        st.error("Error al cargar turnos desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -105,6 +97,10 @@ def insert_turno(datos_turno: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             lambda: supabase.table("turnos").insert(datos_turno).execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_turn_{datos_turno.get('empresa_id', '')}")
+        try:
+            get_turnos_by_empresa.clear()
+        except Exception:
+            pass
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_turno:{type(e).__name__}")
@@ -373,14 +369,9 @@ def insert_balance(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 
+@st.cache_data(ttl=60, show_spinner=False)
 def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str, Any]]:
-    """Obtiene checkins de empresa. Cache manual a prueba de fallos. TTL corto (30s) por alta dinamicidad."""
-    cache_key = f"_sql_op_chk_{empresa_id}_{limit}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 30:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene checkins de empresa. Cache @st.cache_data (60s)."""
     if not _ok():
         return []
     try:
@@ -388,13 +379,10 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
             "get_checkins",
             lambda: supabase.table("checkin_asistencia").select("*, pacientes(nombre_completo), usuarios(nombre)").eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute(),
         )
-        data = getattr(response, "data", None) or []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        return data
+        return getattr(response, "data", None) or []
     except Exception as e:
         log_event("db_sql", f"error_get_checkins:{type(e).__name__}:{e}")
         print(f"Error detallado Supabase get_checkins: {str(e)}")
-        st.error("Error al cargar checkins desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -407,6 +395,10 @@ def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             lambda: supabase.table("checkin_asistencia").insert(datos).execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_chk_{datos.get('empresa_id', '')}")
+        try:
+            get_checkins_by_empresa.clear()
+        except Exception:
+            pass
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_checkin:{type(e).__name__}")
