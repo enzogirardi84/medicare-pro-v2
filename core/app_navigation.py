@@ -135,17 +135,18 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     st.markdown(
         """
         <style>
-        /* Estética Premium simple para botones de navegación */
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"],
-        div[data-testid="stHorizontalBlock"] button[kind="primary"] {
+        /* Estética Premium simple para botones de navegación
+           (solo filas anchas de módulos: >=4 columnas) */
+        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"],
+        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="primary"] {
             background-color: #1e293b !important;
             border: 1px solid rgba(255,255,255,0.15) !important;
             border-radius: 14px !important;
             transition: all 0.2s ease !important;
             height: 52px !important;
         }
-        div[data-testid="stHorizontalBlock"] button[kind="secondary"] p,
-        div[data-testid="stHorizontalBlock"] button[kind="primary"] p {
+        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"] p,
+        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="primary"] p {
             color: #ffffff !important;
             white-space: nowrap !important;
             overflow: hidden !important;

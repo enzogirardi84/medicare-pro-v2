@@ -237,12 +237,19 @@ if st.session_state.get("_modo_offline"):
 # ============================================================
 # SIDEBAR
 # ============================================================
-with st.sidebar:
-    if st.button("Cerrar sesión", use_container_width=True, key="sidebar_logout"):
-        for _key in ("u_actual", "modulo_actual", "paciente_actual"):
-            st.session_state.pop(_key, None)
-        st.rerun()
+def _logout_callback():
+    for _key in ("u_actual", "modulo_actual", "paciente_actual"):
+        st.session_state.pop(_key, None)
+    st.session_state["_mc_logout_requested"] = True
 
+
+with st.sidebar:
+    st.button(
+        "Cerrar sesión",
+        use_container_width=True,
+        key="sidebar_logout",
+        on_click=_logout_callback,
+    )
     st.divider()
 
     paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
@@ -255,6 +262,10 @@ with st.sidebar:
         valor_por_modo_liviano_fn=valor_por_modo_liviano,
         limite_pacientes_fn=limite_pacientes_sidebar,
     )
+
+# Rerun limpio tras logout (fuera del contexto del botón para evitar desconexión websocket)
+if st.session_state.pop("_mc_logout_requested", False):
+    st.rerun()
 
 # ============================================================
 # MENÚ Y NAVEGACIÓN
@@ -282,7 +293,7 @@ paciente_mobile = render_mobile_patient_selector(
 if paciente_mobile:
     paciente_sel = paciente_mobile
 
-# Grilla de módulos responsive (HTML/CSS, sin st.columns ni st.pills)
+# Grilla de módulos responsive (chunking nativo st.columns + CSS simple)
 vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
 
 if not vista_actual:
@@ -308,20 +319,22 @@ mostrar_atajo = (
 )
 
 if mostrar_atajo or paciente_sel:
+    def _swap_modulo_callback(cur, ant):
+        st.session_state["modulo_actual"] = ant
+        st.session_state["modulo_anterior"] = cur
+
     if mostrar_atajo and paciente_sel:
         col_nav, col_call = st.columns([1, 4])
         with col_nav:
             etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
-            if st.button(
+            st.button(
                 "← Anterior",
                 help=f"Volver a: {etiqueta_ant}",
                 use_container_width=True,
                 key="mc_atajo_modulo_anterior",
-            ):
-                cur = vista_actual
-                st.session_state["modulo_actual"] = modulo_anterior
-                st.session_state["modulo_anterior"] = cur
-                st.rerun()
+                on_click=_swap_modulo_callback,
+                args=(vista_actual, modulo_anterior),
+            )
         with col_call:
             det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
             with st.container(border=True):
@@ -333,15 +346,13 @@ if mostrar_atajo or paciente_sel:
                 )
     elif mostrar_atajo:
         etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
-        if st.button(
+        st.button(
             f"← Volver a {etiqueta_ant}",
             use_container_width=False,
             key="mc_atajo_modulo_anterior_solo",
-        ):
-            cur = vista_actual
-            st.session_state["modulo_actual"] = modulo_anterior
-            st.session_state["modulo_anterior"] = cur
-            st.rerun()
+            on_click=_swap_modulo_callback,
+            args=(vista_actual, modulo_anterior),
+        )
     elif paciente_sel:
         det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
         with st.container(border=True):
