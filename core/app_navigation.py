@@ -155,6 +155,12 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                             min-height: 55px;
                             white-space: pre-wrap !important;
                         }
+                        [data-testid="stSidebar"] button[kind="headerNoPadding"],
+                        [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
+                        [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] {
+                            display: none !important;
+                            visibility: hidden !important;
+                        }
                     `;
                     document.head.appendChild(style);
                 }
