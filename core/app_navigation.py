@@ -110,15 +110,15 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
         st.markdown(
             """
             <style>
-            /* ATRAPAR el bloque gigante de botones */
-            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+            /* ATRAPAR el bloque maestro usando el ANCLA INVISIBLE */
+            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] {
                 display: grid !important;
                 gap: 8px !important;
                 padding: 5px 0 !important;
             }
 
             /* DESTRUIR el ancho inline que inyecta Streamlit */
-            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
+            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
                 width: 100% !important;
                 min-width: 100% !important;
                 max-width: 100% !important;
@@ -126,13 +126,13 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             }
 
             /* ESTÉTICA COMÚN (Botones Oscuros Premium) */
-            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button {
+            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button {
                 background-color: #1e293b !important;
                 border: 1px solid rgba(255,255,255,0.15) !important;
                 transition: all 0.2s !important;
             }
             /* Letras blancas forzadas y en una línea */
-            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button * {
+            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button * {
                 color: #ffffff !important;
                 fill: #ffffff !important;
                 white-space: nowrap !important;
@@ -143,10 +143,10 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
 
             /* VISTA ESCRITORIO (PC) - 6 Columnas Horizontales */
             @media (min-width: 769px) {
-                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] {
                     grid-template-columns: repeat(6, 1fr) !important;
                 }
-                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button {
+                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button {
                     height: 55px !important;
                     border-radius: 16px !important;
                     display: flex !important;
@@ -159,11 +159,11 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
 
             /* VISTA MÓVIL (Teléfono) - 3 Columnas Compactas */
             @media (max-width: 768px) {
-                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] {
                     grid-template-columns: repeat(3, 1fr) !important;
                     gap: 5px !important;
                 }
-                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button {
+                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button {
                     height: 60px !important;
                     border-radius: 14px !important;
                     display: flex !important;
@@ -172,7 +172,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                     justify-content: center !important;
                     padding: 2px !important;
                 }
-                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button p {
+                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button p {
                     font-size: 0.65rem !important;
                     margin-top: 3px !important;
                 }
@@ -191,6 +191,9 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
 
     def cambiar_modulo_callback(modulo_seleccionado):
         st.session_state["modulo_actual"] = modulo_seleccionado
+
+    # Ancla invisible para que el CSS atrape el bloque maestro tras cualquier rerun
+    st.markdown('<span id="menu-grilla-maestra"></span>', unsafe_allow_html=True)
 
     cols = st.columns(len(modulos))
 
