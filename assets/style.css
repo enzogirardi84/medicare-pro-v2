@@ -28,6 +28,10 @@ html {
 [data-testid="stCheckbox"] label,
 [data-testid="stExpander"] > details > summary,
 [data-testid="stTabs"] [role="tablist"] button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4em !important;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                 background-color 0.2s ease,
@@ -2812,7 +2816,7 @@ section.main > div {
     padding-top: 1.2rem !important;
     padding-left: max(1rem, var(--mc-safe-left)) !important;
     padding-right: max(1rem, var(--mc-safe-right)) !important;
-    padding-bottom: max(1.2rem, var(--mc-safe-bottom)) !important;
+    padding-bottom: max(3rem, var(--mc-safe-bottom)) !important;
 }
 
 /* MOBILE: padding-top minimo. NO usar safe-area-inset-top aca porque el
@@ -2823,7 +2827,7 @@ section.main > div {
     html body .stApp .block-container,
     html body [data-testid="stAppViewContainer"] .block-container {
         padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
+        padding-bottom: max(5rem, var(--mc-safe-bottom)) !important;
     }
     /* Eliminar padding-top extra en stApp / stMain (si los hay) */
     html body [data-testid="stAppViewContainer"],
@@ -2895,7 +2899,7 @@ section.main > div {
 @media (min-width: 768px) and (max-width: 1024px) {
     html body .block-container {
         padding-top: 0.9rem !important;
-        padding-bottom: 0.9rem !important;
+        padding-bottom: max(4rem, var(--mc-safe-bottom)) !important;
     }
 }
 

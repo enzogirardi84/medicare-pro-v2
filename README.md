@@ -188,6 +188,14 @@ CACHE_MAX_L1 = 100
 CACHE_MAX_L2 = 1000
 ```
 
+## UX y Persistencia de la Barra Lateral
+
+La barra lateral está configurada para permanecer **expandida y fija** en escritorio y tablet, evitando que se colapse accidentalmente mientras se programa o navega entre módulos. Esto mejora la productividad del administrador y mantiene siempre visible el selector de pacientes y las acciones principales.
+
+- `initial_sidebar_state="expanded"` en `main.py`
+- CSS personalizado que oculta el botón de colapsar en `desktop/tablet`
+- Padding inferior aumentado en móvil/tablet para que botones flotantes no tapen contenido
+
 ## Nota
 
 Este proyecto esta preparado para compararse con una version anterior sin reemplazarla.

@@ -41,7 +41,7 @@ from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_re
 
 APP_BUILD_TAG = "Build 2026-04-24 fix: overlays + syntax + navigation"
 
-st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="expanded")
 inyectar_redirect_apex_si_configurado()
 if not st.session_state.get("_mc_seo_head_inyectado"):
     inyectar_head_seo()
@@ -205,6 +205,22 @@ st.markdown(
         z-index: -9999 !important;
     }
     </style>""",
+    unsafe_allow_html=True,
+)
+
+# Sidebar persistente: forzar expandido y ocultar botón de colapsar en desktop/tablet
+st.markdown(
+    """
+    <style>
+        [data-testid="sidebarNavView"] {
+            display: block !important;
+        }
+        /* Bloquea el botón de colapsar para que no se guarde accidentalmente */
+        button[kind="headerNoSpacing"] {
+            display: none !important;
+        }
+    </style>
+    """,
     unsafe_allow_html=True,
 )
 

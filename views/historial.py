@@ -38,6 +38,11 @@ from views._historial_paneles import (
     render_busqueda_global,
 )
 
+@st.cache_data(ttl=120)
+def _cached_collect_patient_sections(paciente_sel: str):
+    """Cache de secciones del paciente para acelerar transiciones entre módulos."""
+    return collect_patient_sections(st.session_state, paciente_sel)
+
 def render_historial(paciente_sel: str, user=None) -> None:
     if not paciente_sel:
         aviso_sin_paciente()
@@ -92,7 +97,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
     if medico_trat:
         st.caption(f" Médico tratante: **{medico_trat}**")
 
-    secciones_base = collect_patient_sections(st.session_state, paciente_sel)
+    secciones_base = _cached_collect_patient_sections(paciente_sel)
     secciones_con_datos_base = {nombre: registros for nombre, registros in secciones_base.items() if registros}
     total_registros_base = sum(len(registros) for registros in secciones_base.values())
     ultimo_base = _ultimo_evento_global(secciones_base)
