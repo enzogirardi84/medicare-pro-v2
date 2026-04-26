@@ -8,31 +8,55 @@ import streamlit as st
 
 
 def aplicar_css_base() -> None:
-    """CSS general: fondo oscuro, inputs, métricas y navegación por clases propias."""
+    """CSS general: fondo oscuro, inputs, métricas, navegación y loader premium."""
     st.markdown(
         """
         <style>
             /* =========================================================
-               REPARACIÓN DEL LOADER Y FONDO RAÍZ
+               FONDO RAÍZ Y HEADER
                ========================================================= */
-            /* 1. Forzar fondo azul noche oscuro instantáneamente */
             .stApp {
                 background-color: #0f172a !important;
             }
-            /* Hacer transparente la barra superior para que no tape nada */
             .stApp > header {
                 background-color: transparent !important;
                 z-index: 999998 !important;
             }
-            /* 2. Rescatar la barra de estado y animación de carga superior */
-            div[data-testid="stStatusWidget"],
-            .stSpinner {
+
+            /* =========================================================
+               MEJORA PREMIUM DEL LOADER (STATUS WIDGET Y SPINNER)
+               ========================================================= */
+            /* 1. La píldora superior derecha de "Running..." */
+            div[data-testid="stStatusWidget"] {
                 z-index: 999999 !important;
                 visibility: visible !important;
                 overflow: visible !important;
-                padding-top: 15px !important;
+                background: rgba(15, 23, 42, 0.75) !important;
+                backdrop-filter: blur(12px) !important;
+                -webkit-backdrop-filter: blur(12px) !important;
+                border: 1px solid rgba(14, 165, 233, 0.3) !important;
+                border-radius: 50px !important;
+                padding: 4px 16px !important;
+                box-shadow: 0 4px 20px rgba(14, 165, 233, 0.15) !important;
+                top: 15px !important;
+                right: 15px !important;
+                transition: all 0.3s ease !important;
             }
-            /* 3. Asegurar que popups/toasts de carga no queden escondidos */
+
+            /* 2. Forzar que el texto del loader sea blanco y elegante */
+            div[data-testid="stStatusWidget"] label,
+            div[data-testid="stStatusWidget"] div {
+                color: #ffffff !important;
+                font-weight: 500 !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* 3. Colorear la rueda circular de carga (Spinner) */
+            .stSpinner > div > div {
+                border-color: rgba(14, 165, 233, 0.2) !important;
+                border-top-color: #0ea5e9 !important;
+            }
+
             div[data-testid="stToastContainer"] {
                 z-index: 999999 !important;
             }
@@ -50,6 +74,7 @@ def aplicar_css_base() -> None:
                 border-radius: 14px !important;
                 border: 1px solid rgba(255, 255, 255, 0.10) !important;
                 background-color: rgba(255, 255, 255, 0.035) !important;
+                color: #ffffff !important;
             }
 
             /* Métricas sidebar */
