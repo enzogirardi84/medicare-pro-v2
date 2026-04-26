@@ -14,8 +14,13 @@ from core.db_serialize import compress_payload, decompress_payload, dumps_db_sor
 
 try:
     from supabase import create_client
+    try:
+        from supabase import APIError as _SupabaseAPIError
+    except ImportError:
+        _SupabaseAPIError = Exception
 except ImportError:
     create_client = None
+    _SupabaseAPIError = Exception
 
 PAYLOAD_ALERTA_BYTES = 9 * 1024 * 1024
 
@@ -38,13 +43,19 @@ def _proxy_env_loopback_blackhole_activo() -> bool:
 @st.cache_resource
 def init_supabase():
     if create_client is None:
+        log_event("db", "supabase_client_not_installed")
+        st.error("Error de conexión con el servidor de datos: módulo Supabase no disponible.")
         return None
     try:
         url = st.secrets.get("SUPABASE_URL", "")
         key = st.secrets.get("SUPABASE_KEY", "")
-    except Exception:
+    except Exception as e:
+        log_event("db", f"supabase_secrets_error:{type(e).__name__}:{e}")
+        st.error("Error de conexión con el servidor de datos: credenciales no configuradas en secrets.")
         return None
     if not url or "tu-proyecto-aqui" in url or not key:
+        log_event("db", "supabase_secrets_empty_or_placeholder")
+        st.error("Error de conexión con el servidor de datos: credenciales de Supabase vacías o con placeholder.")
         return None
     options = None
     if _proxy_env_loopback_blackhole_activo():
@@ -62,7 +73,18 @@ def init_supabase():
             log_event("db", "supabase_proxy_bypass:loopback_port_9")
         except Exception as e:
             log_event("db", f"supabase_proxy_bypass_error:{type(e).__name__}")
-    return create_client(url, key, options=options)
+    try:
+        client = create_client(url, key, options=options)
+        log_event("db", "supabase_init_ok")
+        return client
+    except _SupabaseAPIError as e:
+        log_event("db", f"supabase_init_apierror:{e}")
+        st.error("Error de conexión con el servidor de datos: el servidor de Supabase no responde.")
+        return None
+    except Exception as e:
+        log_event("db", f"supabase_init_exception:{type(e).__name__}:{e}")
+        st.error("Error de conexión con el servidor de datos: no se pudo inicializar el cliente.")
+        return None
 
 
 supabase = init_supabase()
@@ -91,6 +113,18 @@ def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay
             except Exception:
                 espera = 0.15
             log_event("db", f"{op_name}_retry_timeout:{intento}/{tries}:{type(e).__name__}")
+            time.sleep(espera)
+        except _SupabaseAPIError as e:
+            last_error = e
+            err_msg = str(getattr(e, "message", e))[:200]
+            if intento >= tries:
+                log_event("db", f"{op_name}_apierror_finalizado:{type(e).__name__}:{err_msg}")
+                break
+            try:
+                espera = max(0.05, min(0.5, float(base_delay) * (1.5 ** (intento - 1))))
+            except Exception:
+                espera = 0.15
+            log_event("db", f"{op_name}_retry_apierror:{intento}/{tries}:{err_msg}")
             time.sleep(espera)
         except Exception as e:
             last_error = e
