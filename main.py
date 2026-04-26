@@ -135,6 +135,14 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
+# Inicialización segura de variables críticas (evita KeyError en reruns parciales)
+for _guard_key, _guard_default in (
+    ("modulo_actual", None),
+    ("paciente_actual", None),
+):
+    if _guard_key not in st.session_state:
+        st.session_state[_guard_key] = _guard_default
+
 # ============================================================
 # TEMA PROFESIONAL POSLOGIN
 # ============================================================
@@ -287,7 +295,7 @@ components.html(
 # ============================================================
 with st.sidebar:
     if st.button("Cerrar sesión", use_container_width=True, key="sidebar_logout"):
-        for _key in ("u_actual", "modulo_actual", "paciente_seleccionado"):
+        for _key in ("u_actual", "modulo_actual", "paciente_actual"):
             st.session_state.pop(_key, None)
         st.rerun()
 
