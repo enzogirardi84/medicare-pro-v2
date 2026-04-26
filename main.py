@@ -20,7 +20,6 @@ from core.app_navigation import (
     resolve_menu_for_role,
 )
 from core.app_performance import (
-    guardar_datos_seguro,
     procesar_guardado_pendiente_seguro,
     render_metricas_admin_sidebar,
 )
@@ -28,7 +27,6 @@ from core.app_session import (
     eliminar_overlay_residual,
     inicializar_db_state_seguro,
     limpiar_sesion_app,
-    reset_total_app,
 )
 from core.app_theme import aplicar_css_base
 from core.app_mobile import cliente_es_movil_probable, render_mobile_patient_selector
@@ -270,14 +268,10 @@ components.html(
 # SIDEBAR
 # ============================================================
 with st.sidebar:
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Guardar", use_container_width=True, key="sidebar_guardar"):
-            guardar_datos_seguro(spinner=True)
-    with col2:
-        if st.button("Abrir", use_container_width=True, key="sidebar_abrir"):
-            reset_total_app()
-            st.rerun()
+    if st.button("Cerrar sesión", use_container_width=True, key="sidebar_logout"):
+        for _key in ("u_actual", "modulo_actual", "paciente_seleccionado"):
+            st.session_state.pop(_key, None)
+        st.rerun()
 
     st.divider()
 
