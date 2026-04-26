@@ -94,7 +94,14 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     vitales = st.session_state.get("vitales_db", [])
     vit_cache_key = f"_mc_cache_vit_top3_{paciente_sel}"
     vit_cached = st.session_state.get(vit_cache_key)
-    if vit_cached and vit_cached.get("id") == id(vitales) and vit_cached.get("len") == len(vitales):
+    # Clave de cache basada en contenido (len + fecha último) en vez de id() que cambia en cada rerun
+    _vit_last_fecha = ""
+    for v in reversed(vitales):
+        if v.get("paciente") == paciente_sel:
+            _vit_last_fecha = str(v.get("fecha", ""))
+            break
+    _vit_cache_hash = f"{len(vitales)}:{_vit_last_fecha}"
+    if vit_cached and vit_cached.get("hash") == _vit_cache_hash:
         vitales_orden = vit_cached["top3"]
     else:
         vitales_orden = []
@@ -104,7 +111,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
             vitales_orden.append(v)
             if len(vitales_orden) >= 3:
                 break
-        st.session_state[vit_cache_key] = {"id": id(vitales), "len": len(vitales), "top3": vitales_orden}
+        st.session_state[vit_cache_key] = {"hash": _vit_cache_hash, "top3": vitales_orden}
 
     st.sidebar.divider()
     st.sidebar.write("**Contexto clínico**")
@@ -227,8 +234,8 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
     paciente_prev = st.session_state.get("paciente_actual")
     if paciente_sel:
         st.session_state["paciente_actual"] = paciente_sel
-        if paciente_prev and paciente_sel != paciente_prev:
-            st.rerun()
+        # El selectbox de Streamlit ya dispara rerun nativo al cambiar;
+        # st.rerun() adicional causa doble recarga innecesaria.
         det_sidebar = mapa_detalles_fn(st.session_state).get(paciente_sel, {})
         sidebar_patient_card(paciente_sel, det_sidebar)
 

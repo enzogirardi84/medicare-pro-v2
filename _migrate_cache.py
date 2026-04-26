@@ -21,7 +21,22 @@ def migrate_clinico():
 
     for fname, ttl, cache_expr, ret_type, empty in functions:
         # Find decorator + function definition
-        pat = rf'@st\.cache_data\(ttl={ttl}, show_spinner=False\)\n(def {fname}\([^)]*\)\s*->\s*{re.escape(ret_type)}:\s*\n)(\s+""".*?"""\s*\n)?(\s+if not _ok\(\):\s*\n\s+return {re.escape(empty)}\s*\n)(\s+try:\s*\n\s+response = _supabase_execute_with_retry\(\s*\n\s+"([^"]+)",\s*\n\s+lambda: supabase\.table\("([^"]+)"\)\.select\("([^"]*)"\)(.*?),\s*\n\s+\)\s*\n)(\s+return response\.data if response and response\.data else {re.escape(empty)}\s*\n)(\s+except Exception as e:\s*\n\s+log_event\("db_sql", f"error_([^"]+):\{type\(e\)\.\__name__\}\"\)\s*\n\s+return {re.escape(empty)}\s*\n)'
+        pat = (
+            r'@st\.cache_data\(ttl=__TTL__, show_spinner=False\)\n'
+            r'(def __FNAME__\([^)]*\)\s*->\s*__RET_TYPE__:\s*\n)'
+            r'(\s+""".*?"""\s*\n)?'
+            r'(\s+if not _ok\(\):\s*\n\s+return __EMPTY__\s*\n)'
+            r'(\s+try:\s*\n\s+response = _supabase_execute_with_retry\(\s*\n\s+"([^"]+)",\s*\n\s+lambda: supabase\.table\("([^"]+)"\)\.select\("([^"]*)"\)(.*?),\s*\n\s+\)\s*\n)'
+            r'(\s+return response\.data if response and response\.data else __EMPTY__\s*\n)'
+            r'(\s+except Exception as e:\s*\n\s+log_event\("db_sql", f"error_([^"]+):\\{type\(e\)\\.\\__name__\}\"\)\s*\n\s+return __EMPTY__\s*\n)'
+        )
+        pat = (
+            pat
+            .replace('__TTL__', re.escape(str(ttl)))
+            .replace('__FNAME__', re.escape(fname))
+            .replace('__RET_TYPE__', re.escape(ret_type))
+            .replace('__EMPTY__', re.escape(empty))
+        )
         m = re.search(pat, src, re.DOTALL)
         if not m:
             print(f"SKIP {fname}: pattern no match")

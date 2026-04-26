@@ -611,7 +611,7 @@ class ComplianceMonitor:
                         st.write(f"**Estándar:** {v.standard}")
                         st.write(f"**Severidad:** {v.severity}")
                         st.write(f"**Recurso:** {v.affected_resource}")
-                        st.write(f**Detectado:** {v.detected_at[:16]}")
+                        st.write(f"**Detectado:** {v.detected_at[:16]}")
                         
                         if v.remediation_required:
                             st.error(f"⏰ Resolución requerida antes de: {v.remediation_deadline[:16]}")
