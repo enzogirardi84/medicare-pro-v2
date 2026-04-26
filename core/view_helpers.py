@@ -230,44 +230,46 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
             html.mc-view-compact [data-testid="stDataEditor"] {
                 margin: 0.22rem 0 !important;
             }
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stCheckbox"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stRadio"]),
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
-                flex-direction: row !important;
-                flex-wrap: wrap !important;
-                align-items: flex-start !important;
-                gap: 0.45rem !important;
-            }
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stCheckbox"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stRadio"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stCheckbox"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stRadio"]) > [data-testid="column"],
-            html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="column"] {
-                width: auto !important;
-                min-width: min(100%, 9.4rem) !important;
-                flex: 1 1 9.4rem !important;
-                height: auto !important;
-                min-height: 0 !important;
-                max-height: none !important;
-                align-self: flex-start !important;
-                padding: 0 !important;
-                margin-bottom: 0 !important;
+            @supports selector(:has(*)) {
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stCheckbox"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stRadio"]),
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
+                  flex-direction: row !important;
+                  flex-wrap: wrap !important;
+                  align-items: flex-start !important;
+                  gap: 0.45rem !important;
+              }
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stCheckbox"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stRadio"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stCheckbox"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stRadio"]) > [data-testid="column"],
+              html.mc-view-compact [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="column"] {
+                  width: auto !important;
+                  min-width: min(100%, 9.4rem) !important;
+                  flex: 1 1 9.4rem !important;
+                  height: auto !important;
+                  min-height: 0 !important;
+                  max-height: none !important;
+                  align-self: flex-start !important;
+                  padding: 0 !important;
+                  margin-bottom: 0 !important;
+              }
             }
             html.mc-view-compact [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] [style*="height:"],
             html.mc-view-compact [data-testid="stHorizontalBlock"] > [data-testid="column"] [style*="height:"],
@@ -285,33 +287,35 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
                 height: auto !important;
                 min-height: 0 !important;
             }
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]),
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]),
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]),
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]),
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]),
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]),
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) {
-                flex-direction: column !important;
-                gap: 0.32rem !important;
-            }
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) > [data-testid="stColumn"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="column"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="column"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="column"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="column"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="column"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="column"],
-            html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) > [data-testid="column"] {
-                width: 100% !important;
-                min-width: 0 !important;
-                flex: 1 1 100% !important;
+            @supports selector(:has(*)) {
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]),
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]),
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]),
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]),
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]),
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]),
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) {
+                  flex-direction: column !important;
+                  gap: 0.32rem !important;
+              }
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) > [data-testid="stColumn"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="column"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="column"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="column"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="column"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="column"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="column"],
+              html.mc-view-recetas [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) > [data-testid="column"] {
+                  width: 100% !important;
+                  min-width: 0 !important;
+                  flex: 1 1 100% !important;
+              }
             }
             html.mc-view-recetas [data-testid="stTextArea"] textarea {
                 min-height: 68px !important;
@@ -321,39 +325,41 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
                 height: auto !important;
             }
 
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]),
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]),
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]),
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]),
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]),
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) {
-                flex-direction: column !important;
-                gap: 0.32rem !important;
-            }
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="column"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="column"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="column"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="column"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="column"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="column"] {
-                width: 100% !important;
-                min-width: 0 !important;
-                flex: 1 1 100% !important;
-            }
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
-                flex-direction: row !important;
-                gap: 0.4rem !important;
-            }
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"],
-            html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="column"] {
-                min-width: 0 !important;
-                flex: 1 1 calc(50% - 0.2rem) !important;
+            @supports selector(:has(*)) {
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]),
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]),
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]),
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]),
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]),
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) {
+                  flex-direction: column !important;
+                  gap: 0.32rem !important;
+              }
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) > [data-testid="column"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stNumberInput"]) > [data-testid="column"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stSelectbox"]) > [data-testid="column"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stDateInput"]) > [data-testid="column"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTimeInput"]) > [data-testid="column"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stTextArea"]) > [data-testid="column"] {
+                  width: 100% !important;
+                  min-width: 0 !important;
+                  flex: 1 1 100% !important;
+              }
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
+                  flex-direction: row !important;
+                  gap: 0.4rem !important;
+              }
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="stColumn"],
+              html.mc-view-emergencias-y-ambulancia [data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) > [data-testid="column"] {
+                  min-width: 0 !important;
+                  flex: 1 1 calc(50% - 0.2rem) !important;
+              }
             }
             html.mc-view-emergencias-y-ambulancia [data-testid="stTextArea"] textarea {
                 min-height: 60px !important;

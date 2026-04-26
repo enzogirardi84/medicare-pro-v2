@@ -289,16 +289,30 @@ def should_cleanup_cache() -> bool:
 
 
 def limpiar_cache_app() -> int:
-    """Limpia caches grandes para liberar memoria (L1 y L2). Retorna total limpiadas."""
+    """Limpia caches grandes para liberar memoria (L1 y L2). Retorna total limpiadas.
+
+    Protege flags de setup de una sola vez para evitar reinyecciones innecesarias.
+    """
     total = 0
-    # Limpiar cache principal
+    # Flags criticos de setup que NO deben borrarse (se setean una vez por sesion)
+    protected = frozenset({
+        "_mc_seo_head_inyectado",
+        "_mc_professional_theme_applied",
+        "_mc_mobile_mode",
+        "_mc_sidebar_logo_b64",
+    })
+    # Limpiar cache principal y variantes
     for k in ("_db_cache", "_db_cache_hash", "_db_cache_ts"):
         if st.session_state.pop(k, None) is not None:
             total += 1
-    # Limpiar caches por prefijo
-    prefixes = ("_mc_cache_pac_", "_mc_cache_alertas_", "_mc_cache_cons_", "_mc_cache_vit_")
+    # Limpiar todas las caches _mc_cache_* (pacientes, alertas, consentimientos, vitales, etc.)
     for key in list(st.session_state.keys()):
-        if any(key.startswith(p) for p in prefixes):
+        if key.startswith("_mc_cache_") and key not in protected:
+            st.session_state.pop(key, None)
+            total += 1
+    # Limpiar fetch de alertas y otros _mc_ transitorios
+    for key in list(st.session_state.keys()):
+        if key.startswith("_mc_alertas_fetch_") and key not in protected:
             st.session_state.pop(key, None)
             total += 1
     # Clear any general historial/pdf caches si existen

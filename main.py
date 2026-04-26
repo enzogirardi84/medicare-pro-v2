@@ -179,9 +179,18 @@ if not isinstance(user, dict) or not user:
 # ============================================================
 # IMPORTS PESADOS SOLO CON SESIÓN VÁLIDA
 # ============================================================
-from core.database import completar_claves_db_session
+from core.database import completar_claves_db_session, should_cleanup_cache, limpiar_cache_app
 
 completar_claves_db_session()
+
+# Limpieza automatica de caches si crecieron demasiado
+if should_cleanup_cache():
+    try:
+        n = limpiar_cache_app()
+        if n > 0:
+            log_event("main_cache", f"limpieza_automatica:{n}_entradas")
+    except Exception as exc:
+        log_event("main_cache", f"limpieza_automatica_falla:{type(exc).__name__}:{exc}")
 
 # ============================================================
 # CONTEXTO USUARIO
