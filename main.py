@@ -99,31 +99,23 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* 6. BENTO GRID — Contenedor Flex de alta densidad */
+    /* 6. OPCION NUCLEAR: CSS Grid inquebrantable para modulos */
     div[data-testid="stHorizontalBlock"] {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        justify-content: flex-start !important;
+        display: grid !important;
+        grid-template-columns: repeat(6, 1fr) !important;
         gap: 8px !important;
+        padding: 5px !important;
     }
-
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-        flex: 1 1 calc(33% - 10px) !important;
-        min-width: calc(33% - 10px) !important;
-        max-width: calc(16% - 10px) !important;
-    }
-
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            max-width: calc(33% - 10px) !important;
+        div[data-testid="stHorizontalBlock"] {
+            grid-template-columns: repeat(3, 1fr) !important;
         }
     }
 
-    /* 7. Estética Bento Apple — botones compactos y redondeados */
+    /* 7. Estética cápsula compacta — icono arriba, texto abajo */
     div[data-testid="stButton"] > button {
         border-radius: 18px !important;
-        height: 60px !important;
+        height: 65px !important;
         padding: 5px !important;
         font-size: 0.7rem !important;
         background-color: #1e293b !important;
@@ -132,6 +124,8 @@ st.markdown("""
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
+        white-space: normal !important;
+        line-height: 1.1 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -357,94 +351,35 @@ if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
 # ─── Botón flotante 'Pacientes' para togglear sidebar en móvil (FAB) ───
-st.components.v1.html("""
+st.markdown("""
 <style>
-    .floating-patients-btn {
+    .btn-flotante-pacientes {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 999999;
+        background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+        color: white !important;
+        padding: 12px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.2);
         display: none;
     }
     @media (max-width: 768px) {
-        .floating-patients-btn {
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 10000;
-            padding: 10px 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            font-family: system-ui, -apple-system, sans-serif;
-            color: #fff;
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-            border: none;
-            border-radius: 50px;
-            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-        .floating-patients-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
-        }
-        .floating-patients-btn:active {
-            transform: translateY(0);
-        }
-        .floating-patients-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            flex-shrink: 0;
-        }
+        .btn-flotante-pacientes { display: block; }
     }
 </style>
-<button class="floating-patients-btn" id="mc-fab-patients" title="Pacientes">
-    <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-    Pacientes
-</button>
-<script>
-    (function() {
-        var btn = document.getElementById('mc-fab-patients');
-        if (!btn) return;
-        btn.addEventListener('click', function() {
-            var doc = window.parent.document;
-            var togglers = [
-                'button[aria-label*="sidebar" i]',
-                'button[aria-label*="Expand" i]',
-                'button[aria-label*="Collapse" i]',
-                '[data-testid="stSidebarCollapsedControl"]',
-                '[data-testid="stBaseButton-headerNoPadding"]',
-                'header button[kind="header"]',
-                '.stApp > header button'
-            ];
-            var target = null;
-            for (var i = 0; i < togglers.length; i++) {
-                target = doc.querySelector(togglers[i]);
-                if (target) break;
-            }
-            if (target && target.click) {
-                target.click();
-            } else {
-                var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-                if (sidebar) {
-                    var style = sidebar.style;
-                    if (style.transform && style.transform.indexOf('translateX') !== -1 && style.transform.indexOf('-100%') !== -1) {
-                        style.transform = 'translateX(0)';
-                    } else {
-                        style.transform = 'translateX(-100%)';
-                    }
-                }
-            }
-        });
-    })();
-</script>
-""", height=0)
+<div class="btn-flotante-pacientes" onclick="
+    var sidebarBtn = document.querySelector('[data-testid=\\'collapsedControl\\']');
+    if(sidebarBtn) { sidebarBtn.click(); }
+">
+    ≡ Pacientes
+</div>
+""", unsafe_allow_html=True)
 
 with st.sidebar:
     # ─── Solo dos botones de acción principales iOS ───
