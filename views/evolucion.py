@@ -3,7 +3,6 @@ import streamlit as st
 from core.utils import puede_accion
 from core.view_helpers import aviso_sin_paciente
 from views._evolucion_panel import (
-    _historial_evoluciones_scroll_interno,
     _render_panel_evolucion_clinica,
     CANVAS_DISPONIBLE,
     get_canvas,
