@@ -1,7 +1,6 @@
 import base64
 import sys
 import time
-from datetime import datetime
 from html import escape
 from importlib import import_module
 from pathlib import Path
