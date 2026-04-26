@@ -120,32 +120,36 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 white-space: pre-wrap !important;
             }
             @media (max-width: 768px) {
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(3):last-child) {
+                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) {
                     display: flex !important;
                     flex-direction: row !important;
-                    flex-wrap: nowrap !important;
+                    flex-wrap: wrap !important;
                     gap: 4px !important;
+                    padding: 2px !important;
                 }
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(3):last-child) > div[data-testid="column"] {
-                    width: 33.33% !important;
-                    min-width: 33.33% !important;
-                    max-width: 33.33% !important;
-                    flex: 1 1 33.33% !important;
+                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) > div[data-testid="column"] {
+                    width: calc(33.33% - 4px) !important;
+                    min-width: calc(33.33% - 4px) !important;
+                    max-width: calc(33.33% - 4px) !important;
+                    flex: 0 0 calc(33.33% - 4px) !important;
                     padding: 0 !important;
                 }
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(3):last-child) div[data-testid="stButton"] > button {
+                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) div[data-testid="stButton"] > button {
                     width: 100% !important;
-                    min-height: 50px !important;
-                    height: 100% !important;
+                    height: 55px !important;
+                    min-height: 55px !important;
                     padding: 2px !important;
-                    font-size: 0.65rem !important;
-                    white-space: pre-wrap !important;
-                    line-height: 1.1 !important;
+                    border-radius: 14px !important;
                     display: flex !important;
                     flex-direction: column !important;
                     justify-content: center !important;
                     align-items: center !important;
-                    border-radius: 12px !important;
+                    white-space: pre-wrap !important;
+                    line-height: 1 !important;
+                }
+                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) div[data-testid="stButton"] > button p {
+                    font-size: 0.65rem !important;
+                    margin: 2px 0 0 0 !important;
                 }
             }
             </style>

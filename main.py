@@ -246,20 +246,19 @@ components.html(
     <script>
         const doc = window.parent.document;
         const btnPacientes = doc.getElementById('btn-flotante-pacientes');
-        if (btnPacientes && !btnPacientes.dataset.mcBound) {
-            btnPacientes.dataset.mcBound = "1";
+        if (btnPacientes) {
             btnPacientes.addEventListener('click', function(e) {
-                e.preventDefault();           // Detiene recarga de página
-                e.stopPropagation();          // Detiene event bubbling hacia Streamlit
-                e.stopImmediatePropagation(); // Aísla completamente el clic
+                e.preventDefault();
+                e.stopPropagation();
 
-                const sidebarBtn = doc.querySelector('[data-testid="collapsedControl"]');
+                const sidebarBtn = doc.querySelector('header [data-testid="collapsedControl"]') ||
+                                   doc.querySelector('header button');
                 if (sidebarBtn) {
                     sidebarBtn.click();
                 } else {
-                    console.log("No se encontró el botón del menú lateral");
+                    console.log("Menú lateral no encontrado en el header.");
                 }
-            });
+            }, true);
         }
     </script>
     """,
