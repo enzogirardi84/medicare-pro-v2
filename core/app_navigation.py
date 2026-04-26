@@ -109,54 +109,73 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     es_movil = cliente_es_movil_probable()
     columnas_por_fila = 3 if es_movil else 6
 
-    # CSS: fuerza horizontalidad en móviles para filas de 3 columnas
-    if not st.session_state.get("_mc_nav_btn_css_inyectado"):
-        st.markdown(
+    # Inyecta CSS base de botón + JS que fuerza grilla 3x3 en filas con botones (sin :has() ni @media)
+    if es_movil and not st.session_state.get("_mc_nav_js_fix_v1"):
+        st.components.v1.html(
             """
-            <style>
-            div[data-testid="stButton"] > button {
-                border-radius: 12px;
-                min-height: 55px;
-                white-space: pre-wrap !important;
-            }
-            @media (max-width: 768px) {
-                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) {
-                    display: flex !important;
-                    flex-direction: row !important;
-                    flex-wrap: wrap !important;
-                    gap: 4px !important;
-                    padding: 2px !important;
+            <script>
+            (function() {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .mc-nav-row {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        flex-wrap: wrap !important;
+                        gap: 4px !important;
+                        padding: 2px !important;
+                    }
+                    .mc-nav-row > div[data-testid="column"] {
+                        width: calc(33.33% - 4px) !important;
+                        min-width: calc(33.33% - 4px) !important;
+                        max-width: calc(33.33% - 4px) !important;
+                        flex: 0 0 calc(33.33% - 4px) !important;
+                        padding: 0 !important;
+                    }
+                    .mc-nav-row div[data-testid="stButton"] > button {
+                        width: 100% !important;
+                        height: 55px !important;
+                        min-height: 55px !important;
+                        padding: 2px !important;
+                        border-radius: 14px !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        white-space: pre-wrap !important;
+                        line-height: 1 !important;
+                    }
+                    .mc-nav-row div[data-testid="stButton"] > button p {
+                        font-size: 0.65rem !important;
+                        margin: 2px 0 0 0 !important;
+                    }
+                    div[data-testid="stButton"] > button {
+                        border-radius: 12px;
+                        min-height: 55px;
+                        white-space: pre-wrap !important;
+                    }
+                `;
+                document.head.appendChild(style);
+
+                function fixNavRows() {
+                    document.querySelectorAll('div[data-testid="stHorizontalBlock"]').forEach(function(row) {
+                        const cols = row.querySelectorAll(':scope > div[data-testid="column"]');
+                        const hasBtn = row.querySelector('div[data-testid="stButton"]');
+                        if (cols.length === 3 && hasBtn && !row.classList.contains('mc-nav-row')) {
+                            row.classList.add('mc-nav-row');
+                        }
+                    });
                 }
-                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) > div[data-testid="column"] {
-                    width: calc(33.33% - 4px) !important;
-                    min-width: calc(33.33% - 4px) !important;
-                    max-width: calc(33.33% - 4px) !important;
-                    flex: 0 0 calc(33.33% - 4px) !important;
-                    padding: 0 !important;
-                }
-                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) div[data-testid="stButton"] > button {
-                    width: 100% !important;
-                    height: 55px !important;
-                    min-height: 55px !important;
-                    padding: 2px !important;
-                    border-radius: 14px !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    justify-content: center !important;
-                    align-items: center !important;
-                    white-space: pre-wrap !important;
-                    line-height: 1 !important;
-                }
-                div[data-testid="stHorizontalBlock"]:has(div[data-testid="stButton"]) div[data-testid="stButton"] > button p {
-                    font-size: 0.65rem !important;
-                    margin: 2px 0 0 0 !important;
-                }
-            }
-            </style>
+
+                fixNavRows();
+                const observer = new MutationObserver(fixNavRows);
+                observer.observe(document.body, { childList: true, subtree: true });
+            })();
+            </script>
             """,
-            unsafe_allow_html=True,
+            height=0,
+            width=0,
         )
-        st.session_state["_mc_nav_btn_css_inyectado"] = True
+        st.session_state["_mc_nav_js_fix_v1"] = True
 
     for i in range(0, len(modulos), columnas_por_fila):
         fila_modulos = modulos[i : i + columnas_por_fila]
