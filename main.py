@@ -784,52 +784,44 @@ def procesar_query_params_navegacion(menu_set):
 
 def render_module_nav_grid(menu, vista_actual, menu_set=None):
     """
-    Navegación principal sin st.columns.
-    Más estable que pelear contra los estilos inline de Streamlit.
+    Navegación principal via st.pills — evita recarga de página y pérdida de sesión.
     """
     if menu_set is None:
         menu_set = frozenset(menu)
 
     if not menu:
-        st.markdown(
-            '<div class="mc-module-empty">No hay módulos disponibles.</div>',
-            unsafe_allow_html=True,
-        )
+        st.info("No hay módulos disponibles.")
         return vista_actual
 
-    cards = []
+    pill_options = [m for m in menu if m in menu_set]
 
-    for modulo in menu:
-        if modulo not in menu_set:
-            continue
+    if not pill_options:
+        st.info("No hay módulos disponibles.")
+        return vista_actual
 
-        label = VIEW_NAV_LABELS.get(modulo, modulo)
-        icono, texto = _split_icon_label(label)
+    key_pills = "mc_nav_pills"
 
-        active = " active" if modulo == vista_actual else ""
-        url = "?modulo=" + quote_plus(str(modulo))
+    # Sincronizar widget con el módulo actual (ej. navegación via sidebar o atajo)
+    current_val = st.session_state.get(key_pills)
+    if current_val not in pill_options:
+        st.session_state[key_pills] = vista_actual if vista_actual in pill_options else pill_options[0]
 
-        cards.append(
-            f'<a class="mc-module-card{active}"'
-            f' href="{url}"'
-            f' target="_self"'
-            f' title="{escape(str(label))}">'
-            f'<span class="mc-module-icon">{escape(str(icono))}</span>'
-            f'<span class="mc-module-text">{escape(str(texto))}</span>'
-            f'</a>'
-        )
+    def _on_nav_change():
+        selected = st.session_state.get(key_pills)
+        if selected and selected != st.session_state.get("modulo_actual"):
+            st.session_state["modulo_anterior"] = st.session_state.get("modulo_actual")
+            st.session_state["modulo_actual"] = selected
 
-    html_nav = (
-        '<div class="mc-module-nav-wrap">'
-        '<div class="mc-module-nav-grid">'
-        f'{"".join(cards)}'
-        '</div>'
-        '</div>'
+    selected = st.pills(
+        "",
+        options=pill_options,
+        format_func=lambda x: VIEW_NAV_LABELS.get(x, x),
+        key=key_pills,
+        label_visibility="collapsed",
+        on_change=_on_nav_change,
     )
 
-    st.markdown(html_nav, unsafe_allow_html=True)
-
-    return vista_actual
+    return selected or vista_actual
 
 
 # ============================================================
