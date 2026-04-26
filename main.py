@@ -248,7 +248,9 @@ components.html(
         const btnPacientes = doc.getElementById('btn-flotante-pacientes');
         if (btnPacientes && !btnPacientes.dataset.mcBound) {
             btnPacientes.dataset.mcBound = "1";
-            btnPacientes.addEventListener('click', function() {
+            btnPacientes.addEventListener('click', function(e) {
+                e.preventDefault();   // Evita recarga/submit fantasma en móviles
+                e.stopPropagation();  // Evita que el evento burbujee y dispare otros listeners
                 const sidebarBtn =
                     doc.querySelector('button[kind="header"]') ||
                     doc.querySelector('[data-testid="collapsedControl"]') ||

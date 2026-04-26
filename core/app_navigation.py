@@ -99,6 +99,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     - PC: 6 botones por fila nativa de Streamlit.
     - Móvil: 3 botones por fila para evitar saturación del DOM.
     - Sin CSS Grid / Flexbox agresivo sobre stHorizontalBlock.
+    - Usa on_click callback (sin st.rerun() manual) para evitar desconexión de websocket.
     """
     from core.app_mobile import cliente_es_movil_probable
 
@@ -136,14 +137,13 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             btn_label = f"{icono} {texto}".strip()
             tipo = "primary" if nombre_raw == modulo_actual else "secondary"
             with cols[j]:
-                if st.button(
+                st.button(
                     btn_label,
                     key=f"nav_grid_{nombre_raw}",
                     use_container_width=True,
                     type=tipo,
-                ):
-                    st.session_state["modulo_actual"] = nombre_raw
-                    st.rerun()
+                    on_click=lambda m=nombre_raw: st.session_state.__setitem__("modulo_actual", m),
+                )
 
 
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
