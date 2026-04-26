@@ -115,59 +115,65 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             """
             <script>
             (function() {
-                const style = document.createElement('style');
-                style.textContent = `
-                    .mc-nav-row {
-                        display: flex !important;
-                        flex-direction: row !important;
-                        flex-wrap: wrap !important;
-                        gap: 4px !important;
-                        padding: 2px !important;
-                    }
-                    .mc-nav-row > div[data-testid="column"] {
-                        width: calc(33.33% - 4px) !important;
-                        min-width: calc(33.33% - 4px) !important;
-                        max-width: calc(33.33% - 4px) !important;
-                        flex: 0 0 calc(33.33% - 4px) !important;
-                        padding: 0 !important;
-                    }
-                    .mc-nav-row div[data-testid="stButton"] > button {
-                        width: 100% !important;
-                        height: 55px !important;
-                        min-height: 55px !important;
-                        padding: 2px !important;
-                        border-radius: 14px !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        justify-content: center !important;
-                        align-items: center !important;
-                        white-space: pre-wrap !important;
-                        line-height: 1 !important;
-                    }
-                    .mc-nav-row div[data-testid="stButton"] > button p {
-                        font-size: 0.65rem !important;
-                        margin: 2px 0 0 0 !important;
-                    }
-                    div[data-testid="stButton"] > button {
-                        border-radius: 12px;
-                        min-height: 55px;
-                        white-space: pre-wrap !important;
-                    }
-                `;
-                document.head.appendChild(style);
+                if (!document.getElementById('mc-nav-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'mc-nav-style';
+                    style.textContent = `
+                        .mc-nav-row {
+                            display: flex !important;
+                            flex-direction: row !important;
+                            flex-wrap: wrap !important;
+                            gap: 4px !important;
+                            padding: 2px !important;
+                        }
+                        .mc-nav-row > div[data-testid="column"] {
+                            width: calc(33.33% - 4px) !important;
+                            min-width: calc(33.33% - 4px) !important;
+                            max-width: calc(33.33% - 4px) !important;
+                            flex: 0 0 calc(33.33% - 4px) !important;
+                            padding: 0 !important;
+                        }
+                        .mc-nav-row div[data-testid="stButton"] > button {
+                            width: 100% !important;
+                            height: 55px !important;
+                            min-height: 55px !important;
+                            padding: 2px !important;
+                            border-radius: 14px !important;
+                            display: flex !important;
+                            flex-direction: column !important;
+                            justify-content: center !important;
+                            align-items: center !important;
+                            white-space: pre-wrap !important;
+                            line-height: 1 !important;
+                        }
+                        .mc-nav-row div[data-testid="stButton"] > button p {
+                            font-size: 0.65rem !important;
+                            margin: 2px 0 0 0 !important;
+                        }
+                        div[data-testid="stButton"] > button {
+                            border-radius: 12px;
+                            min-height: 55px;
+                            white-space: pre-wrap !important;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
 
                 function fixNavRows() {
-                    document.querySelectorAll('div[data-testid="stHorizontalBlock"]').forEach(function(row) {
-                        const cols = row.querySelectorAll(':scope > div[data-testid="column"]');
-                        const hasBtn = row.querySelector('div[data-testid="stButton"]');
-                        if (cols.length === 3 && hasBtn && !row.classList.contains('mc-nav-row')) {
+                    var blocks = document.querySelectorAll('div[data-testid="stHorizontalBlock"]');
+                    for (var i = 0; i < blocks.length; i++) {
+                        var row = blocks[i];
+                        var cols = row.querySelectorAll(':scope > div[data-testid="column"]');
+                        var hasBtn = row.querySelector('div[data-testid="stButton"]');
+                        if (cols.length === 3 && hasBtn && row.classList && !row.classList.contains('mc-nav-row')) {
                             row.classList.add('mc-nav-row');
                         }
-                    });
+                    }
                 }
 
                 fixNavRows();
-                const observer = new MutationObserver(fixNavRows);
+                setInterval(fixNavRows, 300);
+                var observer = new MutationObserver(fixNavRows);
                 observer.observe(document.body, { childList: true, subtree: true });
             })();
             </script>
