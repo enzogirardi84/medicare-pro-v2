@@ -65,8 +65,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_auditoria:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_auditoria: {str(e)}")
-        st.error("Error al cargar auditoría desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_auditoria_by_empresa: {str(e)}")
         return []
 
 
@@ -143,8 +142,7 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_administraciones:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_administraciones: {str(e)}")
-        st.error("Error al cargar administraciones desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_administraciones_dia: {str(e)}")
         return []
 
 
@@ -184,8 +182,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_emergencias_paciente: {str(e)}")
-        st.error("Error al cargar emergencias del paciente desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_emergencias_by_paciente: {str(e)}")
         return []
 
 
@@ -209,8 +206,7 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_emergencias: {str(e)}")
-        st.error("Error al cargar emergencias desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_emergencias_by_empresa: {str(e)}")
         return []
 
 
@@ -269,8 +265,7 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_inventario:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_inventario: {str(e)}")
-        st.error("Error al cargar inventario desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_inventario_by_empresa: {str(e)}")
         return []
 
 
@@ -309,8 +304,7 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_facturacion:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_facturacion: {str(e)}")
-        st.error("Error al cargar facturación desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_facturacion_by_empresa: {str(e)}")
         return []
 
 
@@ -349,8 +343,7 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_balance:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_balance: {str(e)}")
-        st.error("Error al cargar balance desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_balance_by_empresa: {str(e)}")
         return []
 
 

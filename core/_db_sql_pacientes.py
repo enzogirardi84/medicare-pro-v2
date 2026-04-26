@@ -32,7 +32,7 @@ def check_supabase_connection() -> bool:
     ok = supabase is not None
     if not ok and not st.session_state.get("_db_conn_error_shown"):
         st.session_state["_db_conn_error_shown"] = True
-        st.error("Error de conexión con el servidor de datos: no se pudo establecer enlace con Supabase. Los datos se cargarán desde caché local si están disponibles.")
+        print("Error Supabase en check_supabase_connection: cliente no inicializado. Datos desde cache local.")
     return ok
 
 
@@ -113,8 +113,7 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
             last_error = e
     if last_error is not None:
         log_event("db_sql", f"error_get_pacientes:{type(last_error).__name__}:{last_error}")
-        print(f"Error detallado Supabase get_pacientes: {str(last_error)}")
-        st.error("Error al cargar la lista de pacientes desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_pacientes_by_empresa: {str(last_error)}")
     return []
 
 
@@ -151,8 +150,7 @@ def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
             last_error = e
     if last_error is not None:
         log_event("db_sql", f"error_get_pacientes_globales:{type(last_error).__name__}:{last_error}")
-        print(f"Error detallado Supabase get_pacientes_globales: {str(last_error)}")
-        st.error("Error al cargar pacientes globales desde el servidor. Mostrando datos de caché o lista vacía.")
+        print(f"Error Supabase en get_pacientes_globales: {str(last_error)}")
     return []
 
 
@@ -176,8 +174,7 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_paciente_id:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_paciente_by_id: {str(e)}")
-        st.error("Error al cargar datos del paciente desde el servidor. Reintentá en unos segundos.")
+        print(f"Error Supabase en get_paciente_by_id: {str(e)}")
         return None
 
 
@@ -227,8 +224,7 @@ def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str,
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_paciente_dni_empresa:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_paciente_by_dni_empresa: {str(e)}")
-        st.error("Error al buscar paciente por DNI en el servidor. Reintentá en unos segundos.")
+        print(f"Error Supabase en get_paciente_by_dni_empresa: {str(e)}")
         return None
 
 
