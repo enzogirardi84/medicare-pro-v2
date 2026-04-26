@@ -244,34 +244,51 @@ components.html(
     <script>
         (function() {
             var doc = window.parent.document;
-            var btnPacientes = doc.getElementById('btn-flotante-pacientes');
-            if (!btnPacientes || btnPacientes.dataset.mcToggle) return;
-            btnPacientes.dataset.mcToggle = "1";
-            btnPacientes.addEventListener('click', function(e) {
+            var btn = doc.getElementById('btn-flotante-pacientes');
+            if (!btn || btn.dataset.mcToggle) return;
+            btn.dataset.mcToggle = "1";
+            btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // Sidebar cerrado: botón hamburguesa en header
-                var openBtn = doc.querySelector('header [data-testid="collapsedControl"]') ||
-                              doc.querySelector('[data-testid="collapsedControl"]');
+                // 1. Abrir: botón hamburguesa visible cuando sidebar está cerrado
+                var openBtn = doc.querySelector('[data-testid="collapsedControl"]') ||
+                              doc.querySelector('header button');
                 if (openBtn) {
                     openBtn.click();
                     return;
                 }
 
-                // Sidebar abierto: buscar botón de cierre dentro del sidebar
-                var sidebar = doc.querySelector('section[data-testid="stSidebar"]') ||
-                              doc.querySelector('[data-testid="stSidebar"]');
+                // 2. Cerrar: botón X / flecha dentro del sidebar
+                var sidebar = doc.querySelector('[data-testid="stSidebar"]');
                 if (sidebar) {
-                    var closeBtn = sidebar.querySelector('button') ||
-                                   sidebar.querySelector('[kind="header"]');
-                    if (closeBtn) {
-                        closeBtn.click();
-                        return;
+                    var selectors = [
+                        'button[kind="iconButton"]',
+                        'button[kind="secondary"]',
+                        'button[kind="header"]',
+                        'button',
+                        '[data-testid="stSidebarCollapseButton"]',
+                        '[data-testid="baseButton-secondary"]'
+                    ];
+                    for (var s = 0; s < selectors.length; s++) {
+                        var closeBtn = sidebar.querySelector(selectors[s]);
+                        if (closeBtn) {
+                            closeBtn.click();
+                            return;
+                        }
                     }
                 }
 
-                console.log("No se encontró control del menú lateral.");
+                // 3. Fallback: clic en el overlay de fondo (cierra sidebar en móvil)
+                var overlay = doc.querySelector('[data-testid="stAppViewContainer"]') ||
+                              doc.querySelector('div[role="dialog"]');
+                if (overlay) {
+                    var evt = new MouseEvent('click', { bubbles: true });
+                    overlay.dispatchEvent(evt);
+                    return;
+                }
+
+                console.log("[PacientesBtn] No se encontró control del sidebar.");
             }, true);
         })();
     </script>
