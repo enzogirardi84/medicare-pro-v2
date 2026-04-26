@@ -3,6 +3,7 @@ import base64
 import html
 
 import streamlit as st
+from core._exports_history import build_history_pdf_bytes
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.guardado_universal import guardar_registro
@@ -54,149 +55,74 @@ def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_ifra
         nota = str(ev.get("nota", ""))
         plantilla = ev.get("plantilla")
         es_urgente = ev.get("urgente", False) or "urgente" in nota.lower()
-        
+
         # Determinar status del item
         status = "critico" if es_urgente else "normal"
-        
-        # Construir contenido
-        contenido = nota[:300] + "..." if len(nota) > 300 else nota
-        if plantilla:
-            contenido = f'<span class="mc-badge mc-badge-info">{html.escape(str(plantilla))}</span><br>{contenido}'
-        
-        timeline_items.append({
-            "date": fecha,
-            "title": f"Evolución - {html.escape(firma)}",
-            "content": contenido,
-            "status": status,
-        })
-    
-    # Construir timeline HTML con las nuevas clases CSS
-    timeline_html = []
-    timeline_html.append('<div class="mc-timeline">')
-    for item in timeline_items:
-        status_class = item["status"] if item["status"] in ["critico", "mejora"] else ""
-        timeline_html.append(f'''
-        <div class="mc-timeline-item {status_class}">
-            <div class="mc-timeline-header">
-                <span class="mc-timeline-date">{item["date"]}</span>
-            </div>
-            <h4 class="mc-timeline-title">{item["title"]}</h4>
-            <div class="mc-timeline-content">{item["content"]}</div>
-        </div>
-        ''')
-    timeline_html.append('</div>')
-    
-    timeline_str = "\n".join(timeline_html)
-    
-    # Incluir todas las clases CSS del sistema de componentes
-    doc = f"""<!DOCTYPE html>
-<html lang="es"><head><meta charset="utf-8"/>
-<style>
-  html, body {{ margin:0; height:100%; background:#0f172a; font-family:system-ui,-apple-system,sans-serif; }}
-  .mc-evol-scroll {{
-    height:100%; box-sizing:border-box; overflow-y:auto; overflow-x:hidden;
-    -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
-    padding:16px; border:1px solid rgba(148,163,184,0.4); border-radius:10px;
-    background:rgba(30,41,59,0.5);
-  }}
-  /* Timeline clínico */
-  .mc-timeline {{
-    position: relative;
-    padding-left: 1.5rem;
-  }}
-  .mc-timeline::before {{
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(180deg, #3b82f6 0%, #22c55e 50%, #94a3b8 100%);
-    border-radius: 2px;
-  }}
-  .mc-timeline-item {{
-    position: relative;
-    padding-bottom: 1.25rem;
-    padding-left: 1rem;
-  }}
-  .mc-timeline-item::before {{
-    content: "";
-    position: absolute;
-    left: -1.625rem;
-    top: 0.25rem;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #3b82f6;
-    border: 2px solid #0f172a;
-    box-shadow: 0 0 0 2px #3b82f6;
-  }}
-  .mc-timeline-item.critico::before {{
-    background: #ef4444;
-    box-shadow: 0 0 0 2px #ef4444;
-    animation: pulse-dot 2s ease-in-out infinite;
-  }}
-  @keyframes pulse-dot {{
-    0%, 100% {{ box-shadow: 0 0 0 2px #ef4444, 0 0 0 4px rgba(239, 68, 68, 0.3); }}
-    50% {{ box-shadow: 0 0 0 2px #ef4444, 0 0 0 8px rgba(239, 68, 68, 0.1); }}
-  }}
-  .mc-timeline-header {{
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
-  }}
-  .mc-timeline-date {{
-    font-size: 0.75rem;
-    color: #64748b;
-    font-weight: 500;
-  }}
-  .mc-timeline-title {{
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #f1f5f9;
-    margin: 0 0 0.5rem 0;
-  }}
-  .mc-timeline-content {{
-    font-size: 0.85rem;
-    color: #94a3b8;
-    line-height: 1.6;
-    background: rgba(30, 41, 59, 0.4);
-    padding: 0.75rem;
-    border-radius: 6px;
-    border-left: 3px solid #3b82f6;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }}
-  /* Badges */
-  .mc-badge {{
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    border: 1px solid transparent;
-    margin-bottom: 0.5rem;
-  }}
-  .mc-badge-info {{
-    background: rgba(59, 130, 246, 0.12);
-    color: #3b82f6;
-    border-color: rgba(59, 130, 246, 0.25);
-  }}
-  /* Scrollbar */
-  ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
-  ::-webkit-scrollbar-track {{ background: rgba(15, 23, 42, 0.5); border-radius: 3px; }}
-  ::-webkit-scrollbar-thumb {{ background: rgba(100, 116, 139, 0.5); border-radius: 3px; }}
-</style></head><body>
-<div class="mc-evol-scroll">{timeline_str}</div>
-</body></html>"""
 
-    st.html(doc, height=altura_iframe_px, scrolling=False)
+        # Fecha formateada para timeline
+        fecha_display = fecha[:16] if len(fecha) >= 16 else fecha
+
+        # Contenido del timeline item
+        contenido = []
+        if plantilla:
+            contenido.append(f'<span class="mc-evolution-type">{html.escape(str(plantilla))}</span>')
+
+        if nota and nota.strip():
+            # Truncar notas muy largas para el timeline
+            nota_display = nota[:150] + "..." if len(nota) > 150 else nota
+            contenido.append(f'<div class="mc-evolution-note">{html.escape(nota_display)}</div>')
+
+        # Firma indicator
+        if firma and firma.strip():
+            contenido.append('<span class="mc-signature-badge">✓ Firmado digitalmente</span>')
+
+        # Urgencia badge
+        if es_urgente:
+            contenido.append('<span class="mc-urgency-badge">URGENTE</span>')
+
+        content_html = "\n".join(contenido) if contenido else "<em>Sin detalles adicionales</em>"
+
+        timeline_items.append(
+            timeline_item(
+                date=fecha_display,
+                title=f"Evolución #{len(evs_mas_recientes_primero) - i}",
+                content=content_html,
+                status=status,
+            )
+        )
+
+    if not timeline_items:
+        return '<div class="mc-empty-timeline"><h3>No hay evoluciones registradas</h3><p>El historial clínico está vacío. Registra la primera evolución usando el formulario.</p></div>'
+
+    timeline_html = "\n".join(timeline_items)
+
+    return f"""
+    <div class="mc-clinical-timeline">
+        <div class="mc-timeline-header">
+            <h2>Historial de Evoluciones</h2>
+            <span class="mc-timeline-count">{len(timeline_items)} registros</span>
+        </div>
+        <div class="mc-timeline-container">
+            {timeline_html}
+        </div>
+    </div>
+    """
+
+
+def _generar_pdf_historia_clinica(paciente_sel):
+    """Genera bytes del PDF de historia clínica usando build_history_pdf_bytes."""
+    detalles = st.session_state.get("db", {})
+    mi_empresa = detalles.get("empresa", "")
+    profesional = st.session_state.get("user", "")
+    if isinstance(profesional, dict):
+        profesional = profesional.get("nombre", "") or profesional.get("username", "")
+    try:
+        return build_history_pdf_bytes(
+            st.session_state, paciente_sel, mi_empresa, profesional=profesional
+        )
+    except Exception as exc:
+        st.error(f"Error generando PDF: {exc}")
+        return None
 
 
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
@@ -298,7 +224,6 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             st.session_state["evol_plantilla_prev"] = plantilla
         if plantilla != "Libre":
             st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
-
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
@@ -448,7 +373,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         st.markdown("#### Historial de Evoluciones Clinicas")
 
         busqueda_evol = st.text_input(
-            "🔍 Buscar en notas",
+            "Buscar en notas",
             placeholder="Palabras clave: diagnóstico, medicamento, profesional...",
             key=f"busq_evol_{paciente_sel}",
         ).strip().lower()
@@ -468,8 +393,214 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             key=f"limite_evol_{paciente_sel}",
             default=20,
         )
+
+        # Botón para descargar PDF de historia clínica
+        c1, c2 = st.columns([0.7, 0.3])
+        with c1:
+            st.markdown(f"**{len(evs_paciente)} evolución(es)**")
+        with c2:
+            if st.button("Descargar PDF", key=f"btn_pdf_historial_{paciente_sel}", type="primary"):
+                pdf_bytes = _generar_pdf_historia_clinica(paciente_sel)
+                if pdf_bytes:
+                    st.download_button(
+                        label="Descargar PDF",
+                        data=pdf_bytes,
+                        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
+                        mime="application/pdf",
+                        key=f"download_pdf_historial_{paciente_sel}",
+                    )
+
+        # Timeline resumen (iframe)
+        html_historial = _historial_evoluciones_scroll_interno(
+            list(reversed(evs_paciente[-limite_evol:])), altura_iframe_px=320
+        )
+        st.components.v1.html(
+            f"""
+            <style>
+            .mc-clinical-timeline {{
+                font-family: 'Segoe UI', system-ui, sans-serif;
+                max-width: 100%;
+                padding: 0.5rem;
+            }}
+            .mc-timeline-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 2px solid #e2e8f0;
+            }}
+            .mc-timeline-header h2 {{
+                margin: 0;
+                color: #1e293b;
+                font-size: 1.25rem;
+                font-weight: 600;
+            }}
+            .mc-timeline-count {{
+                background: #e0e7ff;
+                color: #3730a3;
+                padding: 0.25rem 0.75rem;
+                border-radius: 9999px;
+                font-size: 0.875rem;
+                font-weight: 500;
+            }}
+            .mc-timeline-container {{
+                position: relative;
+                padding-left: 1.5rem;
+            }}
+            .mc-timeline-container::before {{
+                content: '';
+                position: absolute;
+                left: 0.5rem;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #cbd5e1;
+            }}
+            .mc-timeline-item {{
+                position: relative;
+                margin-bottom: 1.5rem;
+                padding: 1rem;
+                background: #f8fafc;
+                border-radius: 0.75rem;
+                border-left: 4px solid #64748b;
+                margin-left: 0.5rem;
+            }}
+            .mc-timeline-item.critico {{
+                border-left-color: #dc2626;
+                background: #fef2f2;
+            }}
+            .mc-timeline-item.normal {{
+                border-left-color: #059669;
+                background: #f0fdf4;
+            }}
+            .mc-timeline-item::before {{
+                content: '';
+                position: absolute;
+                left: -1.75rem;
+                top: 1.25rem;
+                width: 0.75rem;
+                height: 0.75rem;
+                border-radius: 50%;
+                background: currentColor;
+                border: 2px solid white;
+                box-shadow: 0 0 0 2px currentColor;
+            }}
+            .mc-timeline-item.critico::before {{
+                color: #dc2626;
+            }}
+            .mc-timeline-item.normal::before {{
+                color: #059669;
+            }}
+            .mc-timeline-date {{
+                font-size: 0.8rem;
+                color: #64748b;
+                margin-bottom: 0.25rem;
+                font-weight: 500;
+            }}
+            .mc-timeline-title-text {{
+                font-size: 1rem;
+                font-weight: 600;
+                color: #1e293b;
+                margin-bottom: 0.5rem;
+            }}
+            .mc-evolution-type {{
+                display: inline-block;
+                background: #e0e7ff;
+                color: #3730a3;
+                padding: 0.2rem 0.5rem;
+                border-radius: 0.25rem;
+                font-size: 0.8rem;
+                margin-bottom: 0.5rem;
+                font-weight: 500;
+            }}
+            .mc-evolution-note {{
+                color: #334155;
+                font-size: 0.9rem;
+                line-height: 1.5;
+                margin-bottom: 0.5rem;
+            }}
+            .mc-signature-badge {{
+                display: inline-block;
+                background: #d1fae5;
+                color: #065f46;
+                padding: 0.15rem 0.5rem;
+                border-radius: 0.25rem;
+                font-size: 0.75rem;
+                margin-right: 0.25rem;
+            }}
+            .mc-urgency-badge {{
+                display: inline-block;
+                background: #fee2e2;
+                color: #991b1b;
+                padding: 0.15rem 0.5rem;
+                border-radius: 0.25rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }}
+            .mc-empty-timeline {{
+                text-align: center;
+                padding: 2rem;
+                color: #64748b;
+            }}
+            </style>
+            <div style="height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+                {html_historial}
+            </div>
+            """,
+            height=330,
+            scrolling=True,
+        )
+
+        # Expanders individuales para cada evolución (más reciente primero)
+        st.markdown("**Detalle por evolución**")
+        total_evs = len(evs_paciente)
+        for idx, ev in enumerate(reversed(evs_paciente[-limite_evol:])):
+            ev_num = total_evs - idx
+            fecha = str(ev.get("fecha", ""))[:16]
+            plantilla = ev.get("plantilla", "Sin plantilla")
+            nota = str(ev.get("nota", ""))
+            firma = str(ev.get("firma", ""))
+            es_urgente = ev.get("urgente", False) or "urgente" in nota.lower()
+
+            with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}"):
+                if es_urgente:
+                    st.error("Marcada como URGENTE")
+                st.markdown(f"**Fecha:** `{fecha}`")
+                if plantilla:
+                    st.markdown(f"**Plantilla:** {plantilla}")
+                if nota:
+                    st.markdown("**Nota:**")
+                    st.markdown(nota)
+                if firma and firma.strip():
+                    st.success("Firmado digitalmente")
+
+                # Botón borrar esta evolución específica
+                btn_key = f"borrar_ev_especifica_{ev_num}_{idx}_{paciente_sel}"
+                if st.button("Borrar esta evolución", key=btn_key, type="secondary"):
+                    real_idx = (total_evs - 1) - idx
+                    if 0 <= real_idx < len(evs_paciente):
+                        ev_borrada = evs_paciente.pop(real_idx)
+                        st.session_state["db"]["evoluciones_db"] = evs_paciente
+                        guardar_datos()
+                        st.toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
+                        try:
+                            registrar_auditoria_legal(
+                                "EVOLUCION_BORRADA",
+                                paciente_sel,
+                                detalles={
+                                    "fecha": ev_borrada.get("fecha"),
+                                    "plantilla": ev_borrada.get("plantilla"),
+                                    "responsable": user.get("nombre", ""),
+                                },
+                            )
+                        except Exception:
+                            pass
+                        st.rerun()
+
+        # Botón tradicional: Borrar última evolución
         col_chk, col_btn = st.columns([1.2, 2.8])
-        confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_evol")
+        confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
         if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
             if not evs_paciente:
                 st.error("No hay evoluciones para borrar.")
@@ -478,7 +609,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 try:
                     st.session_state["evoluciones_db"].remove(evs_paciente[-1])
                 except ValueError:
-                    pass  # Intencional: item ya fue removido por otra operación concurrente
+                    pass
                 registrar_auditoria_legal(
                     "Evolucion Clinica",
                     paciente_sel,
@@ -495,7 +626,6 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 guardar_datos(spinner=True)
                 queue_toast("Evolucion borrada.")
                 st.rerun()
-            _historial_evoluciones_scroll_interno(list(reversed(evs_paciente[-limite_evol:])))
     else:
         bloque_estado_vacio(
             "Sin evoluciones todavía",
