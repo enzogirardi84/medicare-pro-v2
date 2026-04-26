@@ -22,6 +22,43 @@ from core.nav_helpers import (
 _VIEW_FN_CACHE: dict = {}
 
 
+def _split_icon_label(label: str):
+    """Separa icono y texto. Ejemplo: '📍 Visitas' -> ('📍', 'Visitas')"""
+    label = str(label or "").strip()
+    if not label:
+        return "▣", ""
+    partes = label.split(maxsplit=1)
+    if len(partes) == 2:
+        posible_icono, texto = partes
+        if not posible_icono.replace("_", "").isalnum():
+            return posible_icono, texto
+    return "▣", label
+
+
+def procesar_query_params_navegacion(menu_set):
+    """Procesa links tipo ?modulo=Dashboard."""
+    qp = getattr(st, "query_params", None)
+    if qp is None:
+        return
+    try:
+        raw_mod = qp.get("modulo")
+        if raw_mod is None:
+            return
+        modulo_nuevo = str(raw_mod[0] if isinstance(raw_mod, list) else raw_mod).strip()
+        if modulo_nuevo and modulo_nuevo in menu_set:
+            modulo_actual = st.session_state.get("modulo_actual")
+            if modulo_actual != modulo_nuevo:
+                st.session_state["modulo_anterior"] = modulo_actual
+                st.session_state["modulo_actual"] = modulo_nuevo
+        try:
+            del st.query_params["modulo"]
+        except Exception:
+            pass
+        st.rerun()
+    except Exception as exc:
+        log_event("main_nav", f"query_params_nav_error:{type(exc).__name__}:{exc}")
+
+
 def _get_render_fn(tab_name, view_config):
     """Obtiene la función render del módulo. Maneja errores con mensaje visible."""
     if tab_name not in _VIEW_FN_CACHE:
@@ -207,18 +244,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             continue
 
         label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-
-        # Extraer emoji/icono del inicio del label si existe
-        icono = ""
-        texto = label
-        for i, ch in enumerate(label):
-            if ord(ch) > 127:
-                icono += ch
-            else:
-                texto = label[i:].strip()
-                break
-        if not icono:
-            icono = "▣"
+        icono, texto = _split_icon_label(label)
 
         active = " active" if nombre_raw == modulo_actual else ""
         url = "?modulo=" + quote_plus(nombre_raw)
