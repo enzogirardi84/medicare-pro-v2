@@ -68,6 +68,13 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
         from core.app_logging import log_event
         log_event("visitas_sql", f"error_dual_write_checkin_{tipo.lower()}:{type(e).__name__}")
 
+    if tipo == "LLEGADA":
+        st.session_state["guardia_activa"] = True
+        st.session_state["guardia_inicio"] = ahora().isoformat()
+    elif tipo == "SALIDA":
+        st.session_state["guardia_activa"] = False
+        st.session_state["guardia_fin"] = ahora().isoformat()
+
     if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
         st.session_state["checkin_db"] = []
     st.session_state["checkin_db"].append({
@@ -127,6 +134,7 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
     st.markdown("#### Control de Horas de Guardia (Hoy)")
     hoy_str = ahora().strftime("%d/%m/%Y")
     fichadas_hoy = []
+    chk_sql = None
     try:
         from core.db_sql import get_checkins_by_empresa
         from core.nextgen_sync import _obtener_uuid_empresa
@@ -155,6 +163,8 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
             c for c in st.session_state.get("checkin_db", [])
             if c.get("paciente") == paciente_sel and c.get("profesional") == nombre_usuario and c.get("fecha_hora", "").startswith(hoy_str)
         ]
+    if not fichadas_hoy and chk_sql is None:
+        st.info("Sincronización con servidor en pausa (Modo Local). Los registros se guardarán en la sesión actual.")
     if fichadas_hoy:
         fichadas_hoy = sorted(fichadas_hoy, key=lambda x: pd.to_datetime(x["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce"))
         llegada_time = None
