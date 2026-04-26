@@ -125,15 +125,18 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
 
     st.divider()
     st.subheader("Contacto y ubicacion")
-    st.markdown(
-        """
-        <div class="mc-grid-3">
-            <div class="mc-card"><h4>GPS legal</h4><p>El fichaje queda asociado a la direccion detectada para mejorar trazabilidad y auditoria.</p></div>
-            <div class="mc-card"><h4>Agenda inteligente</h4><p>El sistema remarca pendientes, en curso y vencidas sin expandir listas enormes.</p></div>
-            <div class="mc-card"><h4>WhatsApp</h4><p>El aviso con fecha, hora y datos del profesional se arma en la seccion superior de esta misma pantalla.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    c_gps, c_agenda, c_wpp = st.columns(3)
+    with c_gps:
+        with st.container(border=True):
+            st.write("📍 **GPS legal**")
+            st.caption("El fichaje queda asociado a la direccion detectada para mejorar trazabilidad y auditoria.")
+    with c_agenda:
+        with st.container(border=True):
+            st.write("📅 **Agenda inteligente**")
+            st.caption("El sistema remarca pendientes, en curso y vencidas sin expandir listas enormes.")
+    with c_wpp:
+        with st.container(border=True):
+            st.write("💬 **WhatsApp**")
+            st.caption("El aviso con fecha, hora y datos del profesional se arma en la seccion superior de esta misma pantalla.")
     if dire_paciente and dire_paciente != "No registrada":
         st.info(f"Domicilio: {dire_paciente}")

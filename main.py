@@ -452,20 +452,11 @@ if mostrar_atajo or paciente_sel:
                 st.rerun()
         with col_call:
             det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-            st.markdown(
-                f"""
-                <div class="mc-dynamic-island">
-                    <span class="mc-dynamic-island-dot"></span>
-                    <span class="mc-dynamic-island-text">
-                        <strong>{escape(paciente_sel)}</strong>
-                        <span class="mc-dynamic-island-meta">
-                            {escape(det_actual.get('empresa', mi_empresa))} · DNI {escape(det_actual.get('dni', 'S/D'))} · {escape(det_actual.get('estado', 'Activo'))}
-                        </span>
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            with st.container(border=True):
+                st.write(f"**{escape(paciente_sel)}**")
+                st.caption(
+                    f"{escape(det_actual.get('empresa', mi_empresa))}  ·  DNI {escape(det_actual.get('dni', 'S/D'))}  ·  {escape(det_actual.get('estado', 'Activo'))}"
+                )
     elif mostrar_atajo:
         etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
         if st.button(
@@ -479,20 +470,11 @@ if mostrar_atajo or paciente_sel:
             st.rerun()
     elif paciente_sel:
         det_actual = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-        st.markdown(
-            f"""
-            <div class="mc-dynamic-island">
-                <span class="mc-dynamic-island-dot"></span>
-                <span class="mc-dynamic-island-text">
-                    <strong>{escape(paciente_sel)}</strong>
-                    <span class="mc-dynamic-island-meta">
-                        {escape(det_actual.get('empresa', mi_empresa))} · DNI {escape(det_actual.get('dni', 'S/D'))} · {escape(det_actual.get('estado', 'Activo'))}
-                    </span>
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.write(f"**{escape(paciente_sel)}**")
+            st.caption(
+                f"{escape(det_actual.get('empresa', mi_empresa))}  ·  DNI {escape(det_actual.get('dni', 'S/D'))}  ·  {escape(det_actual.get('estado', 'Activo'))}"
+            )
 
 from core.alert_toasts import render_queued_toasts
 render_queued_toasts()

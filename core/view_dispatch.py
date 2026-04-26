@@ -121,18 +121,8 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     if not menu:
         return None
     menu_set = frozenset(menu) if menu_set is None else menu_set
-    st.markdown(
-        """
-        <section class="mc-module-shell" aria-label="Navegacion principal de modulos">
-            <div class="mc-module-shell-head">
-                <span class="mc-module-shell-kicker">Navegacion</span>
-                <h3 class="mc-module-shell-title">Modulos del sistema</h3>
-                <p class="mc-module-shell-sub">Filtrá por área o mostrá todos los módulos habilitados para tu rol.</p>
-            </div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.subheader("Panel de Módulos del Sistema")
+    st.caption("Filtrá por área o mostrá todos los módulos habilitados para tu rol.")
 
     cats_ok = categorias_con_modulos_en_menu(menu_set)
     filtro_opciones = [MC_FILTRO_TODAS] + cats_ok

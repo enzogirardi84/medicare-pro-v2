@@ -15,18 +15,15 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 
 def sidebar_patient_card(paciente_sel, detalles):
-    return (
-        f'<div class="mc-patient-card">'
-        f'<div class="mc-patient-card-kicker">Paciente activo</div>'
-        f'<div class="mc-patient-card-name">{escape(paciente_sel)}</div>'
-        f'<div class="mc-patient-card-meta">'
-        f"DNI: {escape(detalles.get('dni', 'S/D'))}<br>"
-        f"OS: {escape(detalles.get('obra_social', 'S/D'))}<br>"
-        f"Empresa: {escape(detalles.get('empresa', 'S/D'))}<br>"
-        f"Estado: {escape(detalles.get('estado', 'Activo'))}"
-        f"</div>"
-        f"</div>"
-    )
+    with st.container(border=True):
+        st.write(f"**Paciente activo**")
+        st.write(f"{escape(paciente_sel)}")
+        st.caption(
+            f"DNI: {escape(detalles.get('dni', 'S/D'))}  |  "
+            f"OS: {escape(detalles.get('obra_social', 'S/D'))}  |  "
+            f"Empresa: {escape(detalles.get('empresa', 'S/D'))}  |  "
+            f"Estado: {escape(detalles.get('estado', 'Activo'))}"
+        )
 
 
 def sidebar_brand_card(mi_empresa, user, rol, descripcion, logo_sidebar_b64):
@@ -52,71 +49,12 @@ def sidebar_brand_card(mi_empresa, user, rol, descripcion, logo_sidebar_b64):
 # Signos vitales en sidebar
 # ---------------------------------------------------------------------------
 
-def _parse_fecha_sidebar(fecha_txt):
-    s = str(fecha_txt or "").strip()
-    if not s:
-        return datetime.min
-    for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
-        try:
-            return datetime.strptime(s, fmt)
-        except Exception:
-            continue
-    return datetime.min
-
-
 def _vitales_valor_corto(registro, clave, default="S/D"):
     raw = registro.get(clave)
     if raw is None:
         return default
     s = str(raw).strip()
     return s if s else default
-
-
-def html_signos_vitales_sidebar(vitales_orden):
-    if not vitales_orden:
-        return ""
-    bloques = ['<div class="mc-vitales-stack">']
-    for v in vitales_orden:
-        fecha = escape(_vitales_valor_corto(v, "fecha", "S/D"))
-        ta = escape(_vitales_valor_corto(v, "TA"))
-        fc = escape(_vitales_valor_corto(v, "FC"))
-        fr = escape(_vitales_valor_corto(v, "FR"))
-        sat = escape(_vitales_valor_corto(v, "Sat"))
-        temp = escape(_vitales_valor_corto(v, "Temp"))
-        hgt = escape(_vitales_valor_corto(v, "HGT"))
-        bloques.append(
-            '<article class="mc-vital-card">'
-            f'<div class="mc-vital-card__time" title="Fecha y hora del control">{fecha}</div>'
-            '<div class="mc-vital-metrics mc-vital-metrics--grid">'
-            '<div class="mc-vital-metric mc-vital-metric--ta">'
-            '<div class="mc-vital-metric__label">Tensión</div>'
-            f'<div class="mc-vital-metric__value">{ta}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--fc">'
-            '<div class="mc-vital-metric__label">FC</div>'
-            f'<div class="mc-vital-metric__value">{fc}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--fr">'
-            '<div class="mc-vital-metric__label">F.R.</div>'
-            f'<div class="mc-vital-metric__value">{fr}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--sat">'
-            '<div class="mc-vital-metric__label">SatO₂</div>'
-            f'<div class="mc-vital-metric__value">{sat}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--temp">'
-            '<div class="mc-vital-metric__label">Temp</div>'
-            f'<div class="mc-vital-metric__value">{temp}</div>'
-            "</div>"
-            '<div class="mc-vital-metric mc-vital-metric--hgt" title="Glucemia capilar (mg/dL)">'
-            '<div class="mc-vital-metric__label">HGT</div>'
-            f'<div class="mc-vital-metric__value">{hgt}</div>'
-            "</div>"
-            "</div>"
-            "</article>"
-        )
-    bloques.append("</div>")
-    return "".join(bloques)
 
 
 def semaforo_vital_sidebar(v):
@@ -169,15 +107,8 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         st.session_state[vit_cache_key] = {"id": id(vitales), "len": len(vitales), "top3": vitales_orden}
 
     st.sidebar.divider()
-    st.sidebar.markdown(
-        """
-        <div class="mc-sidebar-section">
-            <div class="mc-sidebar-kicker">Contexto clínico</div>
-            <div class="mc-sidebar-title">Panel rápido del paciente</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.sidebar.write("**Contexto clínico**")
+    st.sidebar.caption("Panel rápido del paciente")
     if alergias:
         st.sidebar.warning(f"⚠️ Alergias: {alergias}")
     else:
@@ -186,11 +117,16 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     if vitales_orden:
         _sem = semaforo_vital_sidebar(vitales_orden[0])
         _fecha_v = vitales_orden[0].get("fecha", "S/D")[:16]
-        st.sidebar.markdown(
-            f'<p class="mc-sidebar-subhead">{_sem} Últimos signos vitales — {escape(_fecha_v)}</p>',
-            unsafe_allow_html=True,
-        )
-        st.sidebar.markdown(html_signos_vitales_sidebar(vitales_orden[:1]), unsafe_allow_html=True)
+        st.sidebar.caption(f"{_sem} Últimos signos vitales — {escape(_fecha_v)}")
+        v = vitales_orden[0]
+        c1, c2, c3 = st.sidebar.columns(3)
+        c1.metric("TA", _vitales_valor_corto(v, "TA"))
+        c2.metric("FC", _vitales_valor_corto(v, "FC"))
+        c3.metric("FR", _vitales_valor_corto(v, "FR"))
+        c4, c5, c6 = st.sidebar.columns(3)
+        c4.metric("SatO₂", _vitales_valor_corto(v, "Sat"))
+        c5.metric("Temp", _vitales_valor_corto(v, "Temp"))
+        c6.metric("HGT", _vitales_valor_corto(v, "HGT"))
     else:
         st.sidebar.caption("⚪ Sin registros vitales recientes.")
 
@@ -227,7 +163,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
 
     st.sidebar.caption("Diagnósticos activos")
     if patologias:
-        st.sidebar.markdown(f"- {escape(patologias)}")
+        st.sidebar.write(f"- {escape(patologias)}")
     else:
         st.sidebar.caption("Sin diagnósticos cargados.")
 
@@ -294,30 +230,19 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
         if paciente_prev and paciente_sel != paciente_prev:
             st.rerun()
         det_sidebar = mapa_detalles_fn(st.session_state).get(paciente_sel, {})
-        st.markdown(sidebar_patient_card(paciente_sel, det_sidebar), unsafe_allow_html=True)
+        sidebar_patient_card(paciente_sel, det_sidebar)
 
     if paciente_sel:
         alertas = obtener_alertas_fn(st.session_state, paciente_sel)
         if alertas:
-            colores = {
-                "critica": ("#7f1d1d", "#fecaca", "#ef4444"),
-                "alta": ("#78350f", "#fde68a", "#f59e0b"),
-                "media": ("#172554", "#bfdbfe", "#38bdf8"),
-            }
-            bloques = []
+            st.write("**Alertas clinicas**")
             for alerta in alertas:
-                fondo, texto, borde = colores.get(alerta["nivel"], colores["media"])
-                bloques.append(
-                    f"<div class='mc-sidebar-alert-card' style='background:{fondo}; border-color:{borde};'>"
-                    f"<div class='mc-sidebar-alert-title' style='color:{texto};'>{escape(alerta['titulo'])}</div>"
-                    f"<div class='mc-sidebar-alert-body' style='color:{texto};'>{escape(alerta['detalle']).replace(chr(10), '<br>')}</div>"
-                    "</div>"
-                )
-            st.markdown(
-                "<div class='mc-sidebar-alert-shell' style='max-height:360px; overflow-y:auto; padding-right:4px;'>"
-                "<div class='mc-sidebar-title'>Alertas clinicas</div>"
-                + "".join(bloques)
-                + "</div>",
-                unsafe_allow_html=True,
-            )
+                nivel = str(alerta.get("nivel", "media")).lower()
+                msg = f"**{escape(alerta['titulo'])}**  \n{escape(alerta['detalle'])}"
+                if nivel == "critica":
+                    st.error(msg)
+                elif nivel == "alta":
+                    st.warning(msg)
+                else:
+                    st.info(msg)
     return paciente_sel
