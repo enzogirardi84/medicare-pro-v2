@@ -200,22 +200,7 @@ def _historial_evoluciones_scroll_interno(evs_mas_recientes_primero, altura_ifra
 
 
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
-    st.markdown(
-        """
-        <div class="mc-hero">
-            <h2 class="mc-hero-title">Evolución clínica</h2>
-            <p class="mc-hero-text">Nota de evolución, fotos clínicas y firma opcional. Cada profesional utiliza la plantilla de su área.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    bloque_mc_grid_tarjetas(
-        [
-            ("Notas", "Plantilla según área profesional."),
-            ("Imágenes", "Foto clínica opcional."),
-            ("Firma", "Opcional: foto o lienzo."),
-        ]
-    )
+    st.markdown("##### Evolución clínica")
 
     if CANVAS_DISPONIBLE:
         st.markdown("##### Firma Digital del Paciente / Familiar")
