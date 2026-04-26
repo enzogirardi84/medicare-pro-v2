@@ -256,12 +256,12 @@ def vital_sign_badge(tipo: str, valor: str, unidad: str, es_normal: bool = True)
     Badge para signo vital con indicador de estado.
     """
     status = "success" if es_normal else "critical"
-    icono = {"presion": "🫀", "frecuencia": "💓", "temperatura": "🌡️", "saturacion": "🫁"}.get(tipo, "📊")
+    icono = {"presion": "cardiology", "frecuencia": "monitor_heart", "temperatura": "thermometer", "saturacion": "air"}.get(tipo, "monitoring")
     
     return f'''
     <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;
                 background:rgba(30,41,59,0.6);border-radius:8px;margin:0.25rem;">
-        <span>{icono}</span>
+        <span style="font-family:'Material Symbols Rounded',sans-serif;font-size:1.15rem;opacity:0.9;">{icono}</span>
         <span style="font-weight:600;">{html.escape(valor)} {html.escape(unidad)}</span>
         {status_dot(status)}
     </div>
@@ -306,12 +306,12 @@ def styled_button(
     Nota: Para usar con st.button(), envolver el output en markdown.
     """
     icons = {
-        "primary": "▶️",
-        "secondary": "⚙️",
-        "danger": "⚠️",
-        "save": "💾",
-        "download": "📥",
-        "view": "👁️",
+        "primary": "play_arrow",
+        "secondary": "settings",
+        "danger": "warning",
+        "save": "save",
+        "download": "download",
+        "view": "visibility",
     }
     
     icon_str = icon or icons.get(variant, "")

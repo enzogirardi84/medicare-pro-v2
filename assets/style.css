@@ -66,15 +66,15 @@ hr,
     background: linear-gradient(180deg, #0b1020 0%, #0f172a 100%) !important;
 }
 
-/* Contenedores principales: glassmorphism */
+/* Contenedores principales: glassmorphism avanzado */
 [data-testid="stVerticalBlock"] > div > div[data-testid="stContainer"],
 [data-testid="stVerticalBlock"] > div > div[class*="st-emotion"] {
-    border-radius: 20px !important;
-    background: rgba(255, 255, 255, 0.03) !important;
-    backdrop-filter: blur(10px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--glass-base) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -85,20 +85,25 @@ hr,
     min-width: 300px !important;
     max-width: 300px !important;
     width: 300px !important;
-    background: linear-gradient(180deg, #0b1020 0%, #0f172a 100%) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background: linear-gradient(180deg, rgba(11, 16, 32, 0.85) 0%, rgba(15, 23, 42, 0.90) 100%) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.20) !important;
 }
 
 [data-testid="stSidebar"] .stButton > button {
-    border-radius: 12px !important;
-    background: rgba(20, 184, 166, 0.15) !important;
-    border: 1px solid rgba(20, 184, 166, 0.25) !important;
+    border-radius: var(--radius-md) !important;
+    background: rgba(20, 184, 166, 0.12) !important;
+    border: none !important;
     color: #5eead4 !important;
     font-weight: 600 !important;
-    font-size: 0.92rem !important;
-    padding: 0.65rem 1rem !important;
-    transition: transform 0.15s ease, background 0.15s ease !important;
-    backdrop-filter: blur(8px) !important;
+    font-size: 0.88rem !important;
+    padding: 0.55rem 0.9rem !important;
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+    backdrop-filter: blur(10px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
 }
 
 [data-testid="stSidebar"] .stButton > button:hover {
@@ -154,12 +159,12 @@ button[kind="headerNoPadding"] {
 :root {
     --bg-app: #0b1020;
     --bg-app-soft: #121a2e;
-    --bg-sidebar: #090e1a;
-    --bg-card: rgba(22, 32, 52, 0.92);
-    --bg-card-strong: #1a2740;
-    --bg-input: #2d3a52;
-    --border-col: rgba(148, 163, 184, 0.14);
-    --border-col-strong: rgba(20, 184, 166, 0.35);
+    --bg-sidebar: rgba(9, 14, 26, 0.82);
+    --bg-card: rgba(22, 32, 52, 0.72);
+    --bg-card-strong: rgba(26, 39, 64, 0.85);
+    --bg-input: rgba(45, 58, 82, 0.65);
+    --border-col: rgba(148, 163, 184, 0.10);
+    --border-col-strong: rgba(20, 184, 166, 0.30);
     --text-main: #f1f5f9;
     --text-muted: #94a3b8;
     --accent: #14b8a6;
@@ -169,13 +174,17 @@ button[kind="headerNoPadding"] {
     --danger: #f87171;
     --warning: #fbbf24;
     --info: #60a5fa;
-    /* Sombras más suaves (menos borde “duro”, más profundidad difusa) */
-    --shadow-soft: 0 28px 56px rgba(2, 6, 18, 0.48);
-    --shadow-card: 0 20px 48px rgba(2, 6, 18, 0.36), 0 0 0 1px rgba(148, 163, 184, 0.09);
-    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    /* Sombras difusas tipo visionOS (sin bordes duros, solo profundidad) */
+    --shadow-soft: 0 32px 64px rgba(2, 6, 18, 0.42);
+    --shadow-card: 0 24px 56px rgba(2, 6, 18, 0.28), 0 0 0 1px rgba(148, 163, 184, 0.06);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --radius-lg: 24px;
-    --radius-md: 17px;
+    --radius-md: 20px;
+    --radius-sm: 14px;
     --radius-hero: 28px;
+    --glass-base: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-blur: blur(20px) saturate(180%);
 }
 
 html, body, .stApp {
@@ -1110,10 +1119,12 @@ div[data-testid="stForm"],
 div[data-testid="stVerticalBlock"] > div[style*="border"],
 div[data-testid="stExpander"],
 div[data-testid="stFileUploader"] {
-    background: linear-gradient(180deg, rgba(26, 36, 56, 0.92) 0%, rgba(17, 24, 40, 0.97) 100%) !important;
+    background: linear-gradient(180deg, rgba(26, 36, 56, 0.65) 0%, rgba(17, 24, 40, 0.72) 100%) !important;
     border: none !important;
     border-radius: var(--radius-lg) !important;
     box-shadow: var(--shadow-card), var(--shadow-inset) !important;
+    backdrop-filter: blur(16px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
 }
 
 div[data-testid="stForm"] {
@@ -1121,7 +1132,9 @@ div[data-testid="stForm"] {
     max-width: 420px !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    border-radius: 14px !important;
+    border-radius: var(--radius-md) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
 }
 
 /* Alertas: no pisar el color semantico de Streamlit; solo marco, sombra y tipografia */
@@ -1225,10 +1238,10 @@ label,
     border-radius: var(--radius-md) !important;
     font-weight: 700 !important;
     border: none !important;
-    background: linear-gradient(180deg, rgba(24, 38, 63, 0.96) 0%, rgba(17, 28, 48, 0.96) 100%) !important;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.72) 0%, rgba(22, 32, 52, 0.78) 100%) !important;
     color: #f8fafc !important;
     box-shadow: var(--shadow-card), var(--shadow-inset) !important;
-    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.25s ease !important;
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
     letter-spacing: 0.01em !important;
     width: auto !important;
     min-width: 120px !important;
@@ -1236,12 +1249,21 @@ label,
     padding: 0.45rem 1.1rem !important;
     margin-left: auto !important;
     margin-right: auto !important;
+    backdrop-filter: blur(10px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
 }
 
 .stButton > button:hover,
 .stDownloadButton > button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.22), 0 0 0 1px rgba(96, 165, 250, 0.15), var(--shadow-inset) !important;
+    transform: translateY(-1px) scale(1.01) !important;
+    box-shadow: 0 12px 32px rgba(2, 6, 23, 0.25), 0 0 0 1px rgba(96, 165, 250, 0.12), var(--shadow-inset) !important;
+    background: linear-gradient(180deg, rgba(38, 50, 72, 0.78) 0%, rgba(28, 40, 62, 0.84) 100%) !important;
+}
+
+.stButton > button:active,
+.stDownloadButton > button:active {
+    transform: scale(0.96) !important;
+    box-shadow: 0 2px 8px rgba(2, 6, 23, 0.15), var(--shadow-inset) !important;
 }
 
 .stButton > button[kind="primary"],
@@ -1256,6 +1278,17 @@ label,
     padding: 0.5rem 1.4rem !important;
     margin-left: auto !important;
     margin-right: auto !important;
+}
+
+.stButton > button[kind="primary"]:hover,
+.stForm [data-testid="stFormSubmitButton"] button:hover {
+    transform: translateY(-1px) scale(1.01) !important;
+    box-shadow: 0 18px 44px rgba(13, 148, 136, 0.35) !important;
+}
+
+.stButton > button[kind="primary"]:active,
+.stForm [data-testid="stFormSubmitButton"] button:active {
+    transform: scale(0.96) !important;
 }
 
 .stDownloadButton > button {
@@ -1498,9 +1531,11 @@ label,
 }
 
 /* Texto: centrado, icono + label en una línea */
+/* La primera palabra es un icono Material Symbols Rounded; el resto es texto normal */
 [data-testid="stRadio"] label p {
+    font-family: 'Material Symbols Rounded', 'Inter', -apple-system, sans-serif !important;
     font-size: 0.72rem !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     color: #f1f5f9 !important;
     margin: 0 !important;
     text-align: center !important;
@@ -1510,19 +1545,20 @@ label,
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     max-width: 100% !important;
+    font-variation-settings: 'OPSZ' 20, 'wght' 400 !important;
 }
 
-/* ── PC / Monitores grandes: 6 columnas ── */
+/* ── PC / Monitores grandes: 5-6 columnas ── */
 @media (min-width: 1024px) {
     [data-testid="stRadio"] [role="radiogroup"] {
         grid-template-columns: repeat(6, 1fr) !important;
         gap: 0.35rem !important;
         padding: 0.45rem !important;
-        border-radius: 16px !important;
+        border-radius: var(--radius-md) !important;
     }
     [data-testid="stRadio"] label {
         aspect-ratio: 1 / 0.72 !important;
-        border-radius: 14px !important;
+        border-radius: var(--radius-sm) !important;
         padding: 0.22rem 0.18rem !important;
     }
     [data-testid="stRadio"] label p {
@@ -1530,17 +1566,17 @@ label,
     }
 }
 
-/* ── Tablets: 4 columnas ── */
+/* ── Tablets: 3-4 columnas ── */
 @media (min-width: 768px) and (max-width: 1023px) {
     [data-testid="stRadio"] [role="radiogroup"] {
         grid-template-columns: repeat(4, 1fr) !important;
         gap: 0.35rem !important;
         padding: 0.45rem !important;
-        border-radius: 16px !important;
+        border-radius: var(--radius-md) !important;
     }
     [data-testid="stRadio"] label {
         aspect-ratio: 1 / 0.78 !important;
-        border-radius: 14px !important;
+        border-radius: var(--radius-sm) !important;
         padding: 0.22rem 0.18rem !important;
     }
     [data-testid="stRadio"] label p {
@@ -1851,34 +1887,40 @@ hr {
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
-    padding: 0.45rem 1.05rem 0.45rem 0.55rem;
+    padding: 0.42rem 1.1rem 0.42rem 0.55rem;
     margin: 0.35rem 0 0.6rem;
     border-radius: 999px;
     background:
-        linear-gradient(180deg, rgba(30, 41, 59, 0.60) 0%, rgba(15, 23, 42, 0.78) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+        linear-gradient(180deg, rgba(38, 50, 72, 0.55) 0%, rgba(20, 30, 48, 0.72) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow:
-        0 6px 24px rgba(0, 0, 0, 0.22),
+        0 12px 40px rgba(0, 0, 0, 0.30),
         0 0 0 1px rgba(255, 255, 255, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(18px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+        inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(24px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
     color: #e2e8f0;
     font-size: 0.8rem;
     font-weight: 500;
     line-height: 1.3;
     max-width: 100%;
     flex-wrap: wrap;
-    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.25s ease;
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
     animation: mc-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .mc-dynamic-island:hover {
-    transform: translateY(-1px) scale(1.01);
+    transform: translateY(-2px) scale(1.02);
     box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.28),
-        0 0 0 1px rgba(255, 255, 255, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.10);
+        0 16px 48px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    background:
+        linear-gradient(180deg, rgba(45, 58, 82, 0.60) 0%, rgba(24, 36, 56, 0.78) 100%);
+}
+
+.mc-dynamic-island:active {
+    transform: scale(0.96) !important;
 }
 
 .mc-dynamic-island-dot {
@@ -2275,17 +2317,17 @@ hr {
 .mc-patient-card {
     margin: 0.55rem 0 0.7rem;
     padding: 0.85rem 0.95rem 0.8rem;
-    border-radius: 18px;
+    border-radius: var(--radius-md);
     background:
-        linear-gradient(180deg, rgba(30, 41, 59, 0.50) 0%, rgba(15, 23, 42, 0.68) 100%);
+        linear-gradient(180deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.72) 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow:
-        0 4px 20px rgba(0, 0, 0, 0.20),
+        0 8px 28px rgba(0, 0, 0, 0.22),
         0 0 0 1px rgba(255, 255, 255, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(14px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
-    transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.25s ease;
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .mc-patient-card:hover {
@@ -6662,4 +6704,36 @@ input[type="number"] {
 /* Columnas sin padding excesivo */
 [data-testid="column"] {
     padding: 0 0.3rem !important;
+}
+
+/* Inputs y selects: glassmorphism sutil */
+[data-baseweb="input"],
+[data-baseweb="select"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(8px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Tabs: transiciones fluidas iOS */
+[data-testid="stTabs"] [role="tab"] {
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+    border-radius: 10px !important;
+}
+
+[data-testid="stTabs"] [role="tab"]:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-testid="stTabs"] [role="tab"]:active {
+    transform: scale(0.96) !important;
+}
+
+/* Material Symbols Rounded en badges de signos vitales */
+.mc-vital-badge-icon {
+    font-family: 'Material Symbols Rounded', sans-serif !important;
+    font-size: 1.1rem !important;
+    font-variation-settings: 'OPSZ' 20, 'wght' 400 !important;
+    opacity: 0.9;
 }
