@@ -243,9 +243,8 @@ def update_estado_emergencia(emergencia_id: str, nuevo_estado: str, resolucion: 
         return False
 
 
-@st.cache_data(ttl=300)
 def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
-    """Obtiene inventario de empresa. Cache manual a prueba de fallos."""
+    """Obtiene inventario de empresa. Cache manual a prueba de fallos (TTL 120s)."""
     cache_key = f"_sql_op_inv_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
