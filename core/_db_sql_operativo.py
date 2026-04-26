@@ -50,7 +50,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
     cache_key = f"_sql_op_aud_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 60:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -65,6 +65,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_auditoria:{type(e).__name__}")
+        st.error("Error al cargar auditoría desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -73,7 +74,7 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
     cache_key = f"_sql_op_turn_{empresa_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 60:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -88,6 +89,7 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_turnos:{type(e).__name__}")
+        st.error("Error al cargar turnos desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -128,7 +130,7 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
     cache_key = f"_sql_op_adm_{paciente_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 30:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -143,6 +145,7 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_administraciones:{type(e).__name__}")
+        st.error("Error al cargar administraciones desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -167,7 +170,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
     cache_key = f"_sql_op_emerg_p_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -182,6 +185,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}")
+        st.error("Error al cargar emergencias del paciente desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -190,7 +194,7 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
     cache_key = f"_sql_op_emerg_e_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 60:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -205,6 +209,7 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias:{type(e).__name__}")
+        st.error("Error al cargar emergencias desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -244,11 +249,11 @@ def update_estado_emergencia(emergencia_id: str, nuevo_estado: str, resolucion: 
 
 
 def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
-    """Obtiene inventario de empresa. Cache manual a prueba de fallos (TTL 120s)."""
+    """Obtiene inventario de empresa. Cache manual a prueba de fallos (TTL 300s)."""
     cache_key = f"_sql_op_inv_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 120:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -263,6 +268,7 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_inventario:{type(e).__name__}")
+        st.error("Error al cargar inventario desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -286,7 +292,7 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_op_fact_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 120:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -301,6 +307,7 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_facturacion:{type(e).__name__}")
+        st.error("Error al cargar facturación desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -324,7 +331,7 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_op_bal_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 120:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -339,6 +346,7 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_balance:{type(e).__name__}")
+        st.error("Error al cargar balance desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
@@ -362,7 +370,7 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
     cache_key = f"_sql_op_chk_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 30:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -377,6 +385,7 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_checkins:{type(e).__name__}")
+        st.error("Error al cargar checkins desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 

@@ -29,7 +29,11 @@ except ImportError:
 
 
 def check_supabase_connection() -> bool:
-    return supabase is not None
+    ok = supabase is not None
+    if not ok and not st.session_state.get("_db_conn_error_shown"):
+        st.session_state["_db_conn_error_shown"] = True
+        st.error("Error de conexión con el servidor de datos: no se pudo establecer enlace con Supabase. Los datos se cargarán desde caché local si están disponibles.")
+    return ok
 
 
 def _invalidate_cache_prefix(prefix: str) -> None:
@@ -83,7 +87,7 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
     cache_key = f"_sql_pac_list_{empresa_id}_{hash(busqueda)}_{int(incluir_altas)}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 30:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
@@ -109,6 +113,7 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
             last_error = e
     if last_error is not None:
         log_event("db_sql", f"error_get_pacientes:{type(last_error).__name__}")
+        st.error("Error al cargar la lista de pacientes desde el servidor. Mostrando datos de caché o lista vacía.")
     return []
 
 
@@ -117,7 +122,7 @@ def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
     cache_key = f"_sql_pac_global_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 60:
+        if time.monotonic() - cached["ts"] < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
@@ -145,6 +150,7 @@ def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
             last_error = e
     if last_error is not None:
         log_event("db_sql", f"error_get_pacientes_globales:{type(last_error).__name__}")
+        st.error("Error al cargar pacientes globales desde el servidor. Mostrando datos de caché o lista vacía.")
     return []
 
 
@@ -168,6 +174,7 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_paciente_id:{type(e).__name__}")
+        st.error("Error al cargar datos del paciente desde el servidor. Reintentá en unos segundos.")
         return None
 
 
@@ -192,6 +199,7 @@ def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_empresa_nombre:{type(e).__name__}")
+        st.warning("Error al cargar datos de la empresa desde el servidor. Se usarán datos locales.")
         return empresa_fallback
 
 
@@ -215,6 +223,7 @@ def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str,
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_paciente_dni_empresa:{type(e).__name__}")
+        st.error("Error al buscar paciente por DNI en el servidor. Reintentá en unos segundos.")
         return None
 
 
