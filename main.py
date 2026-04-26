@@ -252,10 +252,10 @@ components.html(
 
                 // 1. Verificar si el sidebar está abierto actualmente
                 const sidebar = doc.querySelector('[data-testid="stSidebar"]');
-                const estaAbierto = sidebar && sidebar.getAttribute('aria-expanded') === 'true';
+                const estaAbierta = sidebar && sidebar.getAttribute('aria-expanded') === 'true';
 
-                if (estaAbierto) {
-                    // 2. ACCIÓN DE CERRAR: Buscar el botón de colapsar o simular clic en el fondo
+                if (estaAbierta) {
+                    // ACCIÓN: CERRAR
                     const btnCerrar = doc.querySelector('[aria-label="Collapse sidebar"]') ||
                                       (sidebar ? sidebar.querySelector('button') : null);
 
@@ -263,15 +263,15 @@ components.html(
                         btnCerrar.click();
                     } else {
                         // Plan B: Hacer clic en el overlay gris que pone Streamlit
-                        const overlay = doc.querySelector('[data-testid="stSidebar"] + div');
-                        if (overlay) overlay.click();
+                        const fondoGris = doc.querySelector('[data-testid="stSidebar"] + div');
+                        if (fondoGris) fondoGris.click();
                     }
                 } else {
-                    // 3. ACCIÓN DE ABRIR: Buscar el menú hamburguesa en el header
+                    // ACCIÓN: ABRIR
                     const header = doc.querySelector('header');
                     if (header) {
-                        const btnAbrir = header.querySelector('button');
-                        if (btnAbrir) btnAbrir.click();
+                        const btnMenu = header.querySelector('button');
+                        if (btnMenu) btnMenu.click();
                     }
                 }
             });

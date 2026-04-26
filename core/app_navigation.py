@@ -94,120 +94,123 @@ def resolve_current_view(menu, menu_set=None):
 
 
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
-    """Renderiza la navegación de módulos usando chunking nativo (st.columns + st.button).
+    """Renderiza la navegación de módulos en un solo bloque de columnas.
 
-    - PC: 6 botones por fila nativa de Streamlit.
-    - Móvil: 3 botones por fila para evitar saturación del DOM.
-    - Sin CSS Grid / Flexbox agresivo sobre stHorizontalBlock.
-    - Usa on_click callback (sin st.rerun() manual) para evitar desconexión de websocket.
+    - Un solo st.columns(len(modulos)) para que CSS Grid pueda controlar el layout.
+    - Escritorio: 6 columnas horizontales.
+    - Móvil: 3 columnas compactas (grilla 3xN).
+    - CSS inyectado vía st.markdown con @media queries.
+    - Botones usan on_click callback (sin st.rerun() manual) para evitar crasheos en móviles.
     """
-    from core.app_mobile import cliente_es_movil_probable
-
     if not modulos:
         return
 
-    es_movil = cliente_es_movil_probable()
-    columnas_por_fila = 3 if es_movil else 6
-
-    # Inyecta CSS base de botón + JS que fuerza grilla 3x3 en filas con botones (sin :has() ni @media)
-    if es_movil and not st.session_state.get("_mc_nav_js_fix_v1"):
-        st.components.v1.html(
+    # CSS Maestro: Grid adaptativo + estética Bento
+    if not st.session_state.get("_mc_nav_css_master"):
+        st.markdown(
             """
-            <script>
-            (function() {
-                if (!document.getElementById('mc-nav-style')) {
-                    const style = document.createElement('style');
-                    style.id = 'mc-nav-style';
-                    style.textContent = `
-                        .mc-nav-row {
-                            display: flex !important;
-                            flex-direction: row !important;
-                            flex-wrap: wrap !important;
-                            gap: 4px !important;
-                            padding: 2px !important;
-                        }
-                        .mc-nav-row > div[data-testid="column"] {
-                            width: calc(33.33% - 4px) !important;
-                            min-width: calc(33.33% - 4px) !important;
-                            max-width: calc(33.33% - 4px) !important;
-                            flex: 0 0 calc(33.33% - 4px) !important;
-                            padding: 0 !important;
-                        }
-                        .mc-nav-row div[data-testid="stButton"] > button {
-                            width: 100% !important;
-                            height: 55px !important;
-                            min-height: 55px !important;
-                            padding: 2px !important;
-                            border-radius: 14px !important;
-                            display: flex !important;
-                            flex-direction: column !important;
-                            justify-content: center !important;
-                            align-items: center !important;
-                            white-space: pre-wrap !important;
-                            line-height: 1 !important;
-                        }
-                        .mc-nav-row div[data-testid="stButton"] > button p {
-                            font-size: 0.65rem !important;
-                            margin: 2px 0 0 0 !important;
-                        }
-                        div[data-testid="stButton"] > button {
-                            border-radius: 12px;
-                            min-height: 55px;
-                            white-space: pre-wrap !important;
-                        }
-                        [data-testid="stSidebar"] button[kind="headerNoPadding"],
-                        [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
-                        [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] {
-                            display: none !important;
-                            visibility: hidden !important;
-                        }
-                    `;
-                    document.head.appendChild(style);
+            <style>
+            /* ATRAPAR el bloque gigante de botones */
+            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+                display: grid !important;
+                gap: 8px !important;
+                padding: 5px 0 !important;
+            }
+
+            /* DESTRUIR el ancho inline que inyecta Streamlit */
+            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            /* ESTÉTICA COMÚN (Botones Oscuros Premium) */
+            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button {
+                background-color: #1e293b !important;
+                border: 1px solid rgba(255,255,255,0.15) !important;
+                transition: all 0.2s !important;
+            }
+            /* Letras blancas forzadas y en una línea */
+            div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button * {
+                color: #ffffff !important;
+                fill: #ffffff !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                margin: 0 !important;
+            }
+
+            /* VISTA ESCRITORIO (PC) - 6 Columnas Horizontales */
+            @media (min-width: 769px) {
+                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+                    grid-template-columns: repeat(6, 1fr) !important;
+                }
+                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button {
+                    height: 55px !important;
+                    border-radius: 16px !important;
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    justify-content: flex-start !important;
+                    padding: 0 15px !important;
+                }
+            }
+
+            /* VISTA MÓVIL (Teléfono) - 3 Columnas Compactas */
+            @media (max-width: 768px) {
+                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+                    grid-template-columns: repeat(3, 1fr) !important;
+                    gap: 5px !important;
+                }
+                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button {
+                    height: 60px !important;
+                    border-radius: 14px !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    padding: 2px !important;
+                }
+                div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) button p {
+                    font-size: 0.65rem !important;
+                    margin-top: 3px !important;
                 }
 
-                function fixNavRows() {
-                    var blocks = document.querySelectorAll('div[data-testid="stHorizontalBlock"]');
-                    for (var i = 0; i < blocks.length; i++) {
-                        var row = blocks[i];
-                        var cols = row.querySelectorAll(':scope > div[data-testid="column"]');
-                        var hasBtn = row.querySelector('div[data-testid="stButton"]');
-                        if (cols.length === 3 && hasBtn && row.classList && !row.classList.contains('mc-nav-row')) {
-                            row.classList.add('mc-nav-row');
-                        }
-                    }
+                /* Ocultar las flechas nativas (<<) de cerrar sidebar */
+                [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
+                [data-testid="stSidebar"] button[kind="headerNoPadding"] {
+                    display: none !important;
                 }
-
-                fixNavRows();
-                setInterval(fixNavRows, 300);
-                var observer = new MutationObserver(fixNavRows);
-                observer.observe(document.body, { childList: true, subtree: true });
-            })();
-            </script>
+            }
+            </style>
             """,
-            height=0,
-            width=0,
+            unsafe_allow_html=True,
         )
-        st.session_state["_mc_nav_js_fix_v1"] = True
+        st.session_state["_mc_nav_css_master"] = True
 
-    for i in range(0, len(modulos), columnas_por_fila):
-        fila_modulos = modulos[i : i + columnas_por_fila]
-        cols = st.columns(columnas_por_fila)
-        for j, modulo in enumerate(fila_modulos):
-            nombre_raw = str(modulo)
-            if not nombre_raw:
-                continue
-            label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-            icono, texto = _split_icon_label(label)
-            btn_label = f"{icono} {texto}".strip()
-            tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-            with cols[j]:
-                st.button(
-                    btn_label,
-                    key=f"nav_grid_{nombre_raw}",
-                    use_container_width=True,
-                    type=tipo,
-                    on_click=lambda m=nombre_raw: st.session_state.__setitem__("modulo_actual", m),
-                )
+    def cambiar_modulo_callback(modulo_seleccionado):
+        st.session_state["modulo_actual"] = modulo_seleccionado
+
+    cols = st.columns(len(modulos))
+
+    for i, modulo in enumerate(modulos):
+        nombre_raw = str(modulo)
+        if not nombre_raw:
+            continue
+        label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+        icono, texto = _split_icon_label(label)
+        btn_label = f"{icono} {texto}".strip()
+        tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+        with cols[i]:
+            st.button(
+                btn_label,
+                key=f"nav_btn_{nombre_raw}",
+                use_container_width=True,
+                type=tipo,
+                on_click=cambiar_modulo_callback,
+                args=(nombre_raw,),
+            )
 
 
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
