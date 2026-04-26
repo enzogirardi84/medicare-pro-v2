@@ -1117,10 +1117,11 @@ div[data-testid="stFileUploader"] {
 }
 
 div[data-testid="stForm"] {
-    padding: 0.9rem 1.1rem 0.8rem !important;
-    max-width: 520px !important;
+    padding: 0.5rem 0.8rem 0.5rem !important;
+    max-width: 420px !important;
     margin-left: auto !important;
     margin-right: auto !important;
+    border-radius: 14px !important;
 }
 
 /* Alertas: no pisar el color semantico de Streamlit; solo marco, sombra y tipografia */
@@ -1388,14 +1389,14 @@ label,
 /* Grid estricto: tarjetas tipo biblioteca de apps iOS */
 [data-testid="stRadio"] [role="radiogroup"] {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
-    gap: 0.35rem !important;
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)) !important;
+    gap: 0.25rem !important;
     background: rgba(255, 255, 255, 0.02) !important;
     backdrop-filter: blur(20px) saturate(180%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 16px !important;
-    padding: 0.45rem !important;
+    border-radius: 14px !important;
+    padding: 0.3rem !important;
     box-shadow:
         0 4px 16px rgba(0, 0, 0, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
@@ -1407,11 +1408,11 @@ label,
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    aspect-ratio: 1 / 0.75 !important;
+    aspect-ratio: 1 / 0.7 !important;
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: 14px !important;
-    padding: 0.2rem 0.15rem !important;
+    border-radius: 12px !important;
+    padding: 0.15rem 0.1rem !important;
     min-height: unset !important;
     min-width: unset !important;
     box-shadow:
@@ -6567,4 +6568,98 @@ html body .mc-loader-cristal-spinner {
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.25);
     margin: 0 auto 0.75rem;
+}
+
+/* ═══════════════════════════════════════════
+   OVERRIDES COMPACTOS GLOBALES — iOS Native
+   ═══════════════════════════════════════════ */
+
+/* Forzar padding compacto en block-container */
+.block-container {
+    padding-top: 0.3rem !important;
+    padding-bottom: 0.4rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+/* Formularios ultra-compactos */
+div[data-testid="stForm"] {
+    padding: 0.4rem 0.6rem 0.35rem !important;
+    max-width: 380px !important;
+}
+
+div[data-testid="stForm"] > div {
+    gap: 0.2rem !important;
+}
+
+/* Inputs y selects compactos */
+[data-baseweb="input"] > div,
+[data-baseweb="select"] > div {
+    min-height: 36px !important;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"] {
+    min-height: 36px !important;
+    padding: 0.3rem 0.6rem !important;
+}
+
+/* VerticalBlock gaps ultra-reducidos */
+[data-testid="stVerticalBlock"] {
+    gap: 0.25rem !important;
+}
+
+[data-testid="stVerticalBlock"] > div {
+    margin-bottom: 0.15rem !important;
+}
+
+/* Element containers sin aire */
+[data-testid="element-container"],
+.element-container {
+    margin-bottom: 0.15rem !important;
+    padding: 0.1rem 0 !important;
+}
+
+/* Shell de módulos compacto */
+.mc-module-shell {
+    padding: 0.5rem 0.6rem 0.4rem !important;
+    margin-bottom: 0.4rem !important;
+}
+
+.mc-module-shell-head {
+    padding: 0.35rem 0.5rem !important;
+    margin-bottom: 0.2rem !important;
+}
+
+/* Hero compacto */
+.mc-hero {
+    padding: 12px 14px 10px !important;
+    margin-bottom: 0.4rem !important;
+}
+
+/* Alertas y callouts compactos */
+[data-testid="stAlert"] > div {
+    padding: 0.5rem 0.7rem !important;
+}
+
+/* Sidebar padding reducido */
+[data-testid="stSidebar"] .block-container {
+    padding: 0.3rem 0.4rem !important;
+}
+
+/* Tabs compactos */
+[data-testid="stTabs"] [role="tablist"] {
+    gap: 0.15rem !important;
+    margin-bottom: 0.3rem !important;
+}
+
+[data-testid="stTabs"] [role="tab"] {
+    padding: 0.3rem 0.6rem !important;
+    min-height: 32px !important;
+}
+
+/* Columnas sin padding excesivo */
+[data-testid="column"] {
+    padding: 0 0.3rem !important;
 }
