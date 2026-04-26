@@ -607,6 +607,25 @@ def _render_mobile_patient_selector(mi_empresa, rol):
 
 menu = resolve_menu_for_role(rol, user)
 menu_set = frozenset(menu)
+
+# Navegación via grilla HTML: procesar ?modulo= desde links <a> sin st.columns
+qp = getattr(st, "query_params", None)
+if qp is not None:
+    try:
+        raw_mod = qp.get("modulo")
+        if raw_mod is not None:
+            effective = str(raw_mod[0] if isinstance(raw_mod, list) else raw_mod).strip()
+            if effective and effective in menu_set:
+                st.session_state["modulo_anterior"] = st.session_state.get("modulo_actual")
+                st.session_state["modulo_actual"] = effective
+            try:
+                del st.query_params["modulo"]
+            except Exception:
+                pass
+            st.rerun()
+    except Exception:
+        pass
+
 vista_actual = resolve_current_view(menu, menu_set)
 
 

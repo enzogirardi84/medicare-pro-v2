@@ -4,7 +4,9 @@ Extraído de main.py para mantenerlo liviano.
 Contiene: render_current_view, resolve_current_view, render_module_nav,
 resolve_menu_for_role y helpers de navegación mobile.
 """
+import html
 from importlib import import_module
+from urllib.parse import quote_plus
 
 import streamlit as st
 
@@ -116,6 +118,125 @@ def resolve_current_view(menu, menu_set=None):
     return vista_actual
 
 
+def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
+    """Renderiza una grilla HTML/CSS de módulos sin usar st.columns.
+
+    - PC: botones tipo cápsula 150-170px, icono + texto horizontal.
+    - Móvil: 3 botones por fila, icono arriba y texto abajo.
+    - Navegación por query param ?modulo=Nombre+Modulo.
+    """
+    st.markdown(
+        """
+    <style>
+    .mod-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 150px));
+        gap: 10px;
+        margin: 14px 0 28px 0;
+        align-items: stretch;
+    }
+    .mod-card {
+        height: 58px;
+        padding: 0 14px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 9px;
+        border-radius: 15px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.92);
+        color: #ffffff !important;
+        text-decoration: none !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+        transition: all 0.15s ease;
+        overflow: hidden;
+    }
+    .mod-card:hover {
+        border-color: rgba(56, 189, 248, 0.75);
+        background: rgba(30, 41, 59, 0.98);
+        transform: translateY(-1px);
+    }
+    .mod-card.active {
+        border-color: #38bdf8;
+        background: linear-gradient(135deg, rgba(14,165,233,0.28), rgba(15,23,42,0.95));
+        box-shadow: 0 0 0 1px rgba(56,189,248,0.35);
+    }
+    .mod-icon {
+        font-size: 18px;
+        line-height: 1;
+        flex: 0 0 auto;
+    }
+    .mod-text {
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+    @media (max-width: 640px) {
+        .mod-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .mod-card {
+            height: 66px;
+            padding: 8px 6px;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            gap: 5px;
+        }
+        .mod-icon {
+            font-size: 18px;
+        }
+        .mod-text {
+            font-size: 10.5px;
+            max-width: 100%;
+        }
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    cards = []
+    for modulo in modulos:
+        nombre_raw = str(modulo)
+        if not nombre_raw:
+            continue
+
+        label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+
+        # Extraer emoji/icono del inicio del label si existe
+        icono = ""
+        texto = label
+        for i, ch in enumerate(label):
+            if ord(ch) > 127:
+                icono += ch
+            else:
+                texto = label[i:].strip()
+                break
+        if not icono:
+            icono = "▣"
+
+        active = " active" if nombre_raw == modulo_actual else ""
+        url = "?modulo=" + quote_plus(nombre_raw)
+
+        cards.append(
+            f'<a class="mod-card{active}" href="{url}" target="_self" title="{html.escape(nombre_raw)}">'
+            f'<span class="mod-icon">{html.escape(icono)}</span>'
+            f'<span class="mod-text">{html.escape(texto)}</span>'
+            f"</a>"
+        )
+
+    if cards:
+        st.markdown(
+            '<div class="mod-grid">' + "\n".join(cards) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     """Renderiza la navegación de módulos. Fallback st.radio si st.pills falla."""
     if not menu:
@@ -155,22 +276,9 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
             default_sel = vista_actual
 
-    # Navegación nativa con botones reales en un solo bloque de columnas
-    # (el CSS Bento Flex organiza el layout: 6 por fila en PC, 3 en móvil).
-    selected = None
-    if pill_options:
-        cols = st.columns(len(pill_options))
-        for c, opt in zip(cols, pill_options):
-            with c:
-                label = view_nav_labels.get(opt, opt)
-                tipo = "primary" if opt == default_sel else "secondary"
-                if st.button(label, key=f"navbtn_{opt}", use_container_width=True, type=tipo):
-                    selected = opt
-    if selected and selected != vista_actual:
-        st.session_state["modulo_anterior"] = vista_actual
-        st.session_state["modulo_actual"] = selected
-        return selected
-    return selected or vista_actual
+    # Grilla HTML/CSS responsive sin st.columns (evita anclajes angostos de Streamlit).
+    render_modulos_grid(pill_options, default_sel, view_nav_labels)
+    return default_sel
 
 
 def resolve_menu_for_role(rol, user, view_config, obtener_modulos_fn=None):
