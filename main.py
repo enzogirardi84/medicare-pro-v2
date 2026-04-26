@@ -5,7 +5,6 @@ from importlib import import_module
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from core.app_bootstrap import insert_repo_root_on_path
 
@@ -234,61 +233,6 @@ if st.session_state.get("_modo_offline"):
         "Modo local activo. Los cambios se guardan en este equipo "
         "hasta configurar Supabase correctamente."
     )
-
-# ============================================================
-# BOTÓN FLOTANTE PACIENTES (móvil)
-# ============================================================
-st.markdown(
-    """
-    <div id="btn-flotante-pacientes">
-        ☰ Pacientes
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-components.html(
-    """
-    <script>
-        const doc = window.parent.document || window.document;
-        const btnPacientes = doc.getElementById('btn-flotante-pacientes');
-
-        if (btnPacientes) {
-            btnPacientes.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // 1. Verificar si el sidebar está abierto actualmente
-                const sidebar = doc.querySelector('[data-testid="stSidebar"]');
-                const estaAbierta = sidebar && sidebar.getAttribute('aria-expanded') === 'true';
-
-                if (estaAbierta) {
-                    // ACCIÓN: CERRAR
-                    const btnCerrar = doc.querySelector('[aria-label="Collapse sidebar"]') ||
-                                      (sidebar ? sidebar.querySelector('button') : null);
-
-                    if (btnCerrar) {
-                        btnCerrar.click();
-                    } else {
-                        // Plan B: Hacer clic en el overlay gris que pone Streamlit
-                        const fondoGris = doc.querySelector('[data-testid="stSidebar"] + div');
-                        if (fondoGris) fondoGris.click();
-                    }
-                } else {
-                    // ACCIÓN: ABRIR
-                    const header = doc.querySelector('header');
-                    if (header) {
-                        const btnMenu = header.querySelector('button');
-                        if (btnMenu) btnMenu.click();
-                    }
-                }
-            });
-        }
-    </script>
-    """,
-    height=0,
-    width=0,
-)
 
 # ============================================================
 # SIDEBAR

@@ -76,45 +76,6 @@ def aplicar_css_base() -> None:
                 overflow: hidden !important;
             }
 
-            /* =============================
-               BOTÓN FLOTANTE PACIENTES (Glassmorphism)
-               ============================= */
-            #btn-flotante-pacientes {
-                position: fixed;
-                bottom: 40px;
-                left: 0;
-                z-index: 999999;
-                background: rgba(14, 165, 233, 0.55) !important;
-                backdrop-filter: blur(14px) saturate(140%);
-                -webkit-backdrop-filter: blur(14px) saturate(140%);
-                color: #ffffff !important;
-                padding: 12px 18px 12px 12px;
-                border-radius: 0 24px 24px 0;
-                font-weight: 700 !important;
-                font-size: 15px !important;
-                box-shadow: 2px 6px 18px rgba(0,0,0,0.35),
-                            inset 0 1px 0 rgba(255,255,255,0.25);
-                cursor: pointer;
-                border: 1px solid rgba(255,255,255,0.35);
-                border-left: none;
-                display: none;
-                transition: all 0.25s ease;
-            }
-            #btn-flotante-pacientes:hover {
-                background: rgba(14, 165, 233, 0.75) !important;
-                padding-left: 16px;
-                box-shadow: 3px 8px 22px rgba(0,0,0,0.45),
-                            inset 0 1px 0 rgba(255,255,255,0.35);
-            }
-
-            /* =============================
-               MÓVIL
-               ============================= */
-            @media (max-width: 768px) {
-                #btn-flotante-pacientes {
-                    display: block;
-                }
-            }
         </style>
         """,
         unsafe_allow_html=True,
