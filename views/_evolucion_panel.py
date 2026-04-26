@@ -370,7 +370,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
     if evs_paciente:
         st.divider()
-        st.markdown("#### Historial de Evoluciones Clinicas")
+        st.markdown("#### Historial de Evoluciones Clinicas", unsafe_allow_html=True)
 
         busqueda_evol = st.text_input(
             "Buscar en notas",
@@ -553,7 +553,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         )
 
         # Expanders individuales para cada evolución (más reciente primero)
-        st.markdown("**Detalle por evolución**")
+        st.markdown("**Detalle por evolución**", unsafe_allow_html=True)
         total_evs = len(evs_paciente)
         for idx, ev in enumerate(reversed(evs_paciente[-limite_evol:])):
             ev_num = total_evs - idx
@@ -566,12 +566,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}"):
                 if es_urgente:
                     st.error("Marcada como URGENTE")
-                st.markdown(f"**Fecha:** `{fecha}`")
+                st.markdown(f"**Fecha:** `{fecha}`", unsafe_allow_html=True)
                 if plantilla:
-                    st.markdown(f"**Plantilla:** {plantilla}")
+                    st.markdown(f"**Plantilla:** {plantilla}", unsafe_allow_html=True)
                 if nota:
-                    st.markdown("**Nota:**")
-                    st.markdown(nota)
+                    st.markdown("**Nota:**", unsafe_allow_html=True)
+                    st.markdown(nota, unsafe_allow_html=True)
                 if firma and firma.strip():
                     st.success("Firmado digitalmente")
 

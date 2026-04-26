@@ -132,7 +132,7 @@ def timeline_item(
             <span class="mc-timeline-date">{html.escape(date)}</span>
             <h4 class="mc-timeline-title">{html.escape(title)}</h4>
         </div>
-        <div class="mc-timeline-content">{html.escape(content)}</div>
+        <div class="mc-timeline-content">{content}</div>
     </div>
     '''
 
