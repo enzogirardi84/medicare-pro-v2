@@ -1,0 +1,14 @@
+﻿fix(ui): protocolo hackeo DOM - FAB visual sin onclick + inyector JS iframe + blanco universal sin :has()
+
+- Agrega import streamlit.components.v1 as components
+- Reemplaza FAB anterior por solucion de 2 partes:
+  1) st.markdown inyecta div #btn-flotante-pacientes + CSS visual sin onclick
+     (evade sanitizacion DOMPurify que eliminaba atributos onclick)
+  2) components.html(height=0,width=0) ejecuta JS en iframe accediendo a
+     window.parent.document, busca div por ID y adjunta addEventListener.
+     Rompe sandbox porque JS corre en iframe, DOMPurify no lo toca.
+- CSS blanco universal agregado en bloque FAB (sin :has()):
+  div[data-testid=column] div[data-testid=stButton] > button p/div
+  color: #ffffff !important; font-weight: 600 !important
+  Compatible con Safari iOS antiguo que no soporta :has()
+- FAB visual: background 0.95 opacidad, font-weight 700, font-size 15px

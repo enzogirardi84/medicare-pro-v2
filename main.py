@@ -107,6 +107,42 @@ st.markdown("""
         gap: 8px !important;
         padding: 5px !important;
     }
+
+    /* =========================================================
+       REPARACION DE ESCRITORIO (PC) - Evitar aplastamiento
+       ========================================================= */
+    @media (min-width: 769px) {
+        /* 1. Grilla 6xN para PC */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+            display: grid !important;
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 12px !important;
+            padding: 10px 0 !important;
+        }
+        /* 2. FIX: Obligar columna a usar todo el espacio de su celda */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+        }
+        /* 3. Estética Premium PC: Icono al lado del texto, sin comprimir */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
+            height: 55px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 8px !important;
+            font-size: 0.85rem !important;
+            border-radius: 16px !important;
+            white-space: nowrap !important;
+            padding: 0 15px !important;
+            justify-content: flex-start !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
+            font-size: 0.85rem !important;
+            margin: 0 !important;
+        }
+    }
+
     @media (max-width: 768px) {
         /* 1. Ultra-Compact Grid 3x3 para modulos */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
