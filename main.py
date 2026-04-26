@@ -131,12 +131,15 @@ st.markdown("""
             align-items: center !important;
             justify-content: center !important;
             gap: 2px !important;
+            color: #ffffff !important;
         }
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
             margin: 0 !important;
             padding: 0 !important;
             font-size: 0.6rem !important;
             line-height: 1 !important;
+            color: #ffffff !important;
+            font-weight: 500 !important;
         }
 
         /* 3. Bloques pequenos (login, forms) vuelven a 100% ancho */
@@ -165,6 +168,7 @@ st.markdown("""
         justify-content: center !important;
         white-space: normal !important;
         line-height: 1.1 !important;
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -398,17 +402,17 @@ st.markdown("""
         bottom: 40px;
         left: 0;
         z-index: 999999;
-        background: rgba(14, 165, 233, 0.3) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: rgba(14, 165, 233, 0.4) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         color: white !important;
-        padding: 10px 15px 10px 10px;
-        border-radius: 0 20px 20px 0;
+        padding: 12px 18px 12px 12px;
+        border-radius: 0 24px 24px 0;
         font-weight: 600;
-        font-size: 13px;
-        box-shadow: 2px 4px 12px rgba(0,0,0,0.2);
+        font-size: 14px;
+        box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
         cursor: pointer;
-        border: 1px solid rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
         border-left: none;
         display: none;
     }
@@ -417,13 +421,14 @@ st.markdown("""
     }
 </style>
 <div class="btn-flotante-pacientes" onclick="
-    var sidebarBtn = window.parent.document.querySelector('[data-testid=\\'collapsedControl\\']') ||
-                     window.parent.document.querySelector('button[kind=\\'header\\']') ||
-                     window.document.querySelector('[data-testid=\\'collapsedControl\\']');
-    if(sidebarBtn) {
-        sidebarBtn.click();
+    var doc = window.parent.document || window.document;
+    var btn = doc.querySelector('header button') ||
+              doc.querySelector('[data-testid=\\'collapsedControl\\']') ||
+              doc.querySelector('[data-testid=\\'baseButton-header\\']');
+    if(btn) {
+        btn.click();
     } else {
-        console.log('Menu lateral no encontrado');
+        alert('Aviso: El menú lateral de Streamlit no está visible en el DOM.');
     }
 ">
     ☰ Pacientes
