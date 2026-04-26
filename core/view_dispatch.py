@@ -157,7 +157,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
     # Navegación nativa con botones reales en grid (no st.radio).
     selected = None
-    cols_per_row = 5
+    cols_per_row = 6
     rows = [pill_options[i : i + cols_per_row] for i in range(0, len(pill_options), cols_per_row)]
     for row in rows:
         cols = st.columns(len(row))

@@ -167,22 +167,11 @@ def render_login():
         if es_movil:
             col = st.container()
         else:
-            _, col, _ = st.columns([0.9, 1.35, 0.9])
+            _, col, _ = st.columns([1, 1.5, 1])
         with col:
-            st.markdown(
-                "<div style='text-align:center;margin-bottom:0.35rem'>"
-                "<span style='font-size:0.72rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;"
-                "color:#2dd4bf'>Plataforma clínica</span></div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                "<h2 style='text-align:center;margin:0 0 0.15rem;font-size:1.55rem;font-weight:800;"
-                "letter-spacing:-0.03em;background:linear-gradient(120deg,#5eead4,#60a5fa,#a5b4fc);"
-                "-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent'>"
-                "MediCare Enterprise PRO</h2>"
-                "<p style='text-align:center;margin:0 0 0.3rem;font-size:0.88rem;color:#94a3b8'>V9.12 · Acceso institucional</p>",
-                unsafe_allow_html=True,
-            )
+            with st.container(border=True):
+                st.markdown("<div style='text-align:center'>### 🔐 Acceso a MediCare</div>", unsafe_allow_html=True)
+                st.caption("V9.12 · Acceso institucional")
             intro_login = (
                 "Ingresá con el usuario y la contraseña asignados por tu clínica."
                 if es_movil

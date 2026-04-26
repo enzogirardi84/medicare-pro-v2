@@ -87,6 +87,24 @@ st.markdown("""
         padding: 10px !important;
         border: 1px solid rgba(255, 255, 255, 0.05) !important;
     }
+
+    /* 5. Sidebar metrics compactos (evita truncamiento de signos vitales) */
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
+        font-size: 1.2rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        font-size: 0.8rem !important;
+    }
+    [data-testid="stSidebar"] div[data-testid="column"] {
+        padding: 0 !important;
+    }
+
+    /* 6. Botones compactos (modulos mas pequeños) */
+    div[data-testid="stButton"] > button {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.85rem !important;
+        min-height: 2.5rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
