@@ -242,22 +242,38 @@ st.markdown(
 components.html(
     """
     <script>
-        const doc = window.parent.document;
-        const btnPacientes = doc.getElementById('btn-flotante-pacientes');
-        if (btnPacientes) {
+        (function() {
+            var doc = window.parent.document;
+            var btnPacientes = doc.getElementById('btn-flotante-pacientes');
+            if (!btnPacientes || btnPacientes.dataset.mcToggle) return;
+            btnPacientes.dataset.mcToggle = "1";
             btnPacientes.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
 
-                const sidebarBtn = doc.querySelector('header [data-testid="collapsedControl"]') ||
-                                   doc.querySelector('header button');
-                if (sidebarBtn) {
-                    sidebarBtn.click();
-                } else {
-                    console.log("Menú lateral no encontrado en el header.");
+                // Sidebar cerrado: botón hamburguesa en header
+                var openBtn = doc.querySelector('header [data-testid="collapsedControl"]') ||
+                              doc.querySelector('[data-testid="collapsedControl"]');
+                if (openBtn) {
+                    openBtn.click();
+                    return;
                 }
+
+                // Sidebar abierto: buscar botón de cierre dentro del sidebar
+                var sidebar = doc.querySelector('section[data-testid="stSidebar"]') ||
+                              doc.querySelector('[data-testid="stSidebar"]');
+                if (sidebar) {
+                    var closeBtn = sidebar.querySelector('button') ||
+                                   sidebar.querySelector('[kind="header"]');
+                    if (closeBtn) {
+                        closeBtn.click();
+                        return;
+                    }
+                }
+
+                console.log("No se encontró control del menú lateral.");
             }, true);
-        }
+        })();
     </script>
     """,
     height=0,
