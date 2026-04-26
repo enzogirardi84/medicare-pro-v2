@@ -12,6 +12,31 @@ def aplicar_css_base() -> None:
     st.markdown(
         """
         <style>
+            /* =========================================================
+               REPARACIÓN DEL LOADER Y FONDO RAÍZ
+               ========================================================= */
+            /* 1. Forzar fondo azul noche oscuro instantáneamente */
+            .stApp {
+                background-color: #0f172a !important;
+            }
+            /* Hacer transparente la barra superior para que no tape nada */
+            .stApp > header {
+                background-color: transparent !important;
+                z-index: 999998 !important;
+            }
+            /* 2. Rescatar la barra de estado y animación de carga superior */
+            div[data-testid="stStatusWidget"],
+            .stSpinner {
+                z-index: 999999 !important;
+                visibility: visible !important;
+                overflow: visible !important;
+                padding-top: 15px !important;
+            }
+            /* 3. Asegurar que popups/toasts de carga no queden escondidos */
+            div[data-testid="stToastContainer"] {
+                z-index: 999999 !important;
+            }
+
             /* =============================
                BASE VISUAL GENERAL
                ============================= */
