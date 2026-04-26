@@ -97,7 +97,7 @@ def resolve_current_view(menu, menu_set=None):
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     """Renderiza la navegación de módulos.
 
-    - Escritorio: grilla CSS Grid con st.columns (6 col horizontales).
+    - Escritorio: filas de 6 botones nativas (st.columns) + CSS simple para estética.
     - Móvil: cortina st.expander con botones verticales al 100%.
     - Botones usan on_click callback (sin st.rerun() manual) para evitar crasheos en móviles.
     """
@@ -130,157 +130,60 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 )
         return
 
-    # ── ESCRITORIO: CSS Grid maestro con marcador hermano adyacente ──
-    if not st.session_state.get("_mc_nav_css_master"):
+    # ── ESCRITORIO: chunking nativo en filas de 6 + CSS simple de estética ──
+    if not st.session_state.get("_mc_nav_css_simple"):
         st.markdown(
             """
             <style>
-            /* 1. Atrapa la fila de columnas que está JUSTO DESPUÉS del marcador */
-            div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="stHorizontalBlock"] {
-                display: flex !important;
-                flex-wrap: wrap !important;
-                flex-direction: row !important;
-                gap: 8px !important;
-                padding: 5px 0 !important;
-                justify-content: flex-start !important;
-            }
-
-            /* 2. Estética Premium Base */
-            div.element-container:has(#marcador-menu-maestro) + div.element-container button {
+            /* Estética Premium simple para botones de navegación */
+            div[data-testid="stHorizontalBlock"] button[kind="secondary"],
+            div[data-testid="stHorizontalBlock"] button[kind="primary"] {
                 background-color: #1e293b !important;
                 border: 1px solid rgba(255,255,255,0.15) !important;
-                transition: all 0.2s !important;
-                width: 100% !important;
+                border-radius: 14px !important;
+                transition: all 0.2s ease !important;
+                height: 52px !important;
             }
-            div.element-container:has(#marcador-menu-maestro) + div.element-container button * {
+            div[data-testid="stHorizontalBlock"] button[kind="secondary"] p,
+            div[data-testid="stHorizontalBlock"] button[kind="primary"] p {
                 color: #ffffff !important;
-                fill: #ffffff !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
-                margin: 0 !important;
             }
-
-            /* 3. VISTA ESCRITORIO (PC) - 6 Columnas */
-            @media (min-width: 769px) {
-                div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="column"] {
-                    flex: 0 0 calc(16.666% - 8px) !important;
-                    width: calc(16.666% - 8px) !important;
-                    min-width: calc(16.666% - 8px) !important;
-                    padding: 0 !important;
-                }
-                div.element-container:has(#marcador-menu-maestro) + div.element-container button {
-                    height: 55px !important;
-                    border-radius: 16px !important;
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: center !important;
-                    justify-content: flex-start !important;
-                    padding: 0 15px !important;
-                }
-            }
-
-            /* 4. VISTA MÓVIL (Celular) - 3 Columnas Achatadas */
-            @media (max-width: 768px) {
-                div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="stHorizontalBlock"] {
-                    gap: 5px !important;
-                }
-                div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="column"] {
-                    flex: 0 0 calc(33.333% - 5px) !important;
-                    width: calc(33.333% - 5px) !important;
-                    min-width: calc(33.333% - 5px) !important;
-                    padding: 0 !important;
-                }
-                div.element-container:has(#marcador-menu-maestro) + div.element-container button {
-                    height: 60px !important;
-                    border-radius: 12px !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    padding: 2px !important;
-                }
-                div.element-container:has(#marcador-menu-maestro) + div.element-container button p {
-                    font-size: 0.65rem !important;
-                    margin-top: 3px !important;
-                }
-
-                /* Ocultar las flechas nativas (<<) de cerrar sidebar */
-                [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
-                [data-testid="stSidebar"] button[kind="headerNoPadding"] {
-                    display: none !important;
-                }
-            }
-
-            /* =========================================================
-               PARCHE DE ESCRITORIO (PC): ANTI-APLASTAMIENTO
-               ========================================================= */
-            @media (min-width: 769px) {
-                /* 1. Detectar la fila gigante del menú (>8 cols) y PERMITIR SALTO DE LÍNEA */
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) {
-                    display: flex !important;
-                    flex-wrap: wrap !important;
-                    gap: 12px !important;
-                    justify-content: flex-start !important;
-                }
-
-                /* 2. Destruir ancho porcentual de Streamlit. Forzar mínimo 160px por botón */
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) > div[data-testid="column"] {
-                    flex: 0 0 calc(16.66% - 12px) !important;
-                    min-width: 160px !important;
-                    max-width: 250px !important;
-                    width: auto !important;
-                    padding: 0 !important;
-                }
-
-                /* 3. Ajustar el botón para PC: Icono al lado del texto */
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) button {
-                    width: 100% !important;
-                    height: 60px !important;
-                    flex-direction: row !important;
-                    justify-content: flex-start !important;
-                    padding: 0 15px !important;
-                }
-
-                /* 4. Prohibir la caída vertical del texto */
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) button p,
-                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(8)) button div {
-                    white-space: nowrap !important;
-                    overflow: hidden !important;
-                    text-overflow: ellipsis !important;
-                    margin: 0 0 0 8px !important;
-                    font-size: 0.9rem !important;
-                }
+            /* Ocultar flechas nativas de cerrar sidebar en móvil */
+            [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
+            [data-testid="stSidebar"] button[kind="headerNoPadding"] {
+                display: none !important;
             }
             </style>
             """,
             unsafe_allow_html=True,
         )
-        st.session_state["_mc_nav_css_master"] = True
+        st.session_state["_mc_nav_css_simple"] = True
 
-    # Marcador posicionado justo antes del bloque de columnas para que el CSS
-    # atrape el siguiente element-container vía Adjacent Sibling Combinator (+)
-    st.markdown('<div id="marcador-menu-maestro"></div>', unsafe_allow_html=True)
-
-    cols = st.columns(len(modulos))
-
-    for i, modulo in enumerate(modulos):
-        nombre_raw = str(modulo)
-        if not nombre_raw:
-            continue
-        label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-        icono, texto = _split_icon_label(label)
-        btn_label = f"{icono} {texto}".strip()
-        tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-        with cols[i]:
-            st.button(
-                btn_label,
-                key=f"nav_btn_{nombre_raw}",
-                use_container_width=True,
-                type=tipo,
-                on_click=cambiar_modulo_callback,
-                args=(nombre_raw,),
-            )
+    # Renderizar en filas de 6 columnas nativas de Streamlit
+    chunk_size = 6
+    for i in range(0, len(modulos), chunk_size):
+        fila_modulos = modulos[i:i + chunk_size]
+        cols = st.columns(chunk_size)
+        for j, modulo in enumerate(fila_modulos):
+            nombre_raw = str(modulo)
+            if not nombre_raw:
+                continue
+            label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+            icono, texto = _split_icon_label(label)
+            btn_label = f"{icono} {texto}".strip()
+            tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+            with cols[j]:
+                st.button(
+                    btn_label,
+                    key=f"nav_btn_{nombre_raw}",
+                    use_container_width=True,
+                    type=tipo,
+                    on_click=cambiar_modulo_callback,
+                    args=(nombre_raw,),
+                )
 
 
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
