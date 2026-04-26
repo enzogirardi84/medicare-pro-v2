@@ -41,6 +41,50 @@ from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_re
 APP_BUILD_TAG = "Build 2026-04-24 fix: overlays + syntax + navigation"
 
 st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="expanded")
+
+# CSS estético premium: bordes redondeados, iluminación sutil. NO modifica display/width/margin/padding.
+st.markdown("""
+<style>
+    /* 1. Botones Redondeados (Estilo Capsula/Moderno) */
+    .stButton > button {
+        border-radius: 24px !important;
+        border: 1px solid rgba(14, 165, 233, 0.5) !important;
+        transition: all 0.2s ease-in-out !important;
+        background-color: transparent !important;
+        font-weight: 500 !important;
+    }
+
+    /* Efecto Hover en Botones (Levantamiento e Iluminacion) */
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25) !important;
+        background-color: rgba(14, 165, 233, 0.1) !important;
+        border-color: #0ea5e9 !important;
+        color: #fff !important;
+    }
+
+    /* 2. Tarjetas y Contenedores (Bordes Curvos y Fondo Premium) */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 16px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background-color: #121b2b !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* 3. Inputs de Texto y Selectores Redondeados */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* 4. Estilizar las alertas y mensajes de info */
+    [data-testid="stAlert"] {
+        border-radius: 12px !important;
+        border: none !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 inyectar_redirect_apex_si_configurado()
 if not st.session_state.get("_mc_seo_head_inyectado"):
     inyectar_head_seo()
