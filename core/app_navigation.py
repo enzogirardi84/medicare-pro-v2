@@ -110,29 +110,24 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
         st.markdown(
             """
             <style>
-            /* ATRAPAR el bloque maestro usando el ANCLA INVISIBLE */
-            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] {
-                display: grid !important;
+            /* 1. Atrapa la fila de columnas que está JUSTO DESPUÉS del marcador */
+            div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="stHorizontalBlock"] {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                flex-direction: row !important;
                 gap: 8px !important;
                 padding: 5px 0 !important;
+                justify-content: flex-start !important;
             }
 
-            /* DESTRUIR el ancho inline que inyecta Streamlit */
-            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-                width: 100% !important;
-                min-width: 100% !important;
-                max-width: 100% !important;
-                padding: 0 !important;
-            }
-
-            /* ESTÉTICA COMÚN (Botones Oscuros Premium) */
-            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button {
+            /* 2. Estética Premium Base */
+            div.element-container:has(#marcador-menu-maestro) + div.element-container button {
                 background-color: #1e293b !important;
                 border: 1px solid rgba(255,255,255,0.15) !important;
                 transition: all 0.2s !important;
+                width: 100% !important;
             }
-            /* Letras blancas forzadas y en una línea */
-            div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button * {
+            div.element-container:has(#marcador-menu-maestro) + div.element-container button * {
                 color: #ffffff !important;
                 fill: #ffffff !important;
                 white-space: nowrap !important;
@@ -141,12 +136,15 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 margin: 0 !important;
             }
 
-            /* VISTA ESCRITORIO (PC) - 6 Columnas Horizontales */
+            /* 3. VISTA ESCRITORIO (PC) - 6 Columnas */
             @media (min-width: 769px) {
-                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] {
-                    grid-template-columns: repeat(6, 1fr) !important;
+                div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="column"] {
+                    flex: 0 0 calc(16.666% - 8px) !important;
+                    width: calc(16.666% - 8px) !important;
+                    min-width: calc(16.666% - 8px) !important;
+                    padding: 0 !important;
                 }
-                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button {
+                div.element-container:has(#marcador-menu-maestro) + div.element-container button {
                     height: 55px !important;
                     border-radius: 16px !important;
                     display: flex !important;
@@ -157,22 +155,27 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 }
             }
 
-            /* VISTA MÓVIL (Teléfono) - 3 Columnas Compactas */
+            /* 4. VISTA MÓVIL (Celular) - 3 Columnas Achatadas */
             @media (max-width: 768px) {
-                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) > div[data-testid="stHorizontalBlock"] {
-                    grid-template-columns: repeat(3, 1fr) !important;
+                div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="stHorizontalBlock"] {
                     gap: 5px !important;
                 }
-                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button {
+                div.element-container:has(#marcador-menu-maestro) + div.element-container div[data-testid="column"] {
+                    flex: 0 0 calc(33.333% - 5px) !important;
+                    width: calc(33.333% - 5px) !important;
+                    min-width: calc(33.333% - 5px) !important;
+                    padding: 0 !important;
+                }
+                div.element-container:has(#marcador-menu-maestro) + div.element-container button {
                     height: 60px !important;
-                    border-radius: 14px !important;
+                    border-radius: 12px !important;
                     display: flex !important;
                     flex-direction: column !important;
                     align-items: center !important;
                     justify-content: center !important;
                     padding: 2px !important;
                 }
-                div[data-testid="stVerticalBlock"]:has(#menu-grilla-maestra) button p {
+                div.element-container:has(#marcador-menu-maestro) + div.element-container button p {
                     font-size: 0.65rem !important;
                     margin-top: 3px !important;
                 }
@@ -192,8 +195,9 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     def cambiar_modulo_callback(modulo_seleccionado):
         st.session_state["modulo_actual"] = modulo_seleccionado
 
-    # Ancla invisible para que el CSS atrape el bloque maestro tras cualquier rerun
-    st.markdown('<span id="menu-grilla-maestra"></span>', unsafe_allow_html=True)
+    # Marcador posicionado justo antes del bloque de columnas para que el CSS
+    # atrape el siguiente element-container vía Adjacent Sibling Combinator (+)
+    st.markdown('<div id="marcador-menu-maestro"></div>', unsafe_allow_html=True)
 
     cols = st.columns(len(modulos))
 
