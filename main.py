@@ -34,6 +34,7 @@ def _insert_repo_root_on_path() -> Path:
 REPO_ROOT = _insert_repo_root_on_path()
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.seo_streamlit import PAGE_TITLE_PUBLIC, inyectar_head_seo, inyectar_redirect_apex_si_configurado
@@ -399,52 +400,63 @@ logo_sidebar_b64 = st.session_state[_logo_ck]
 if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
-# ─── Botón flotante 'Pacientes' para togglear sidebar en móvil (Glass Tab) ───
+# ─── Botón flotante 'Pacientes' (SOLUCIÓN DEFINITIVA CON BYPASS) ───
+
+# 1. Botón visual inyectado directo en DOM (sin onclick — evita sanitización DOMPurify)
 st.markdown("""
 <style>
-    /* Diseño de Pestaña de Cristal Pegada al Borde */
-    .btn-flotante-pacientes {
+    #btn-flotante-pacientes {
         position: fixed;
         bottom: 40px;
         left: 0;
         z-index: 999999;
-        background: rgba(14, 165, 233, 0.4) !important;
+        background: rgba(14, 165, 233, 0.95) !important;
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        color: white !important;
+        color: #ffffff !important;
         padding: 12px 18px 12px 12px;
         border-radius: 0 24px 24px 0;
-        font-weight: 600;
-        font-size: 14px;
-        box-shadow: 2px 4px 12px rgba(0,0,0,0.3);
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        box-shadow: 2px 4px 12px rgba(0,0,0,0.5);
         cursor: pointer;
-        border: 1px solid rgba(255,255,255,0.3);
+        border: 1px solid rgba(255,255,255,0.4);
         border-left: none;
         display: none;
     }
     @media (max-width: 768px) {
-        .btn-flotante-pacientes { display: block; }
+        #btn-flotante-pacientes { display: block; }
+    }
+    /* FORZAR LETRAS BLANCAS UNIVERSAL (evade :has en Safari iOS antiguo) */
+    div[data-testid="column"] div[data-testid="stButton"] > button p,
+    div[data-testid="column"] div[data-testid="stButton"] > button div {
+        color: #ffffff !important;
+        font-weight: 600 !important;
     }
 </style>
-<div class="btn-flotante-pacientes" onclick="
-    var doc = window.parent.document || window.document;
-    var btn = doc.querySelector('[aria-label=\\'View sidebar\\']') ||
-              doc.querySelector('[aria-label=\\'Expand sidebar\\']') ||
-              doc.querySelector('[data-testid=\\'collapsedControl\\']');
-    if(btn) {
-        btn.click();
-    } else {
-        var headerBtns = doc.querySelectorAll('header button');
-        if(headerBtns.length > 0) {
-            headerBtns[0].click();
-        } else {
-            console.log('Boton de menu no encontrado en el DOM');
-        }
-    }
-">
+<div id="btn-flotante-pacientes">
     ☰ Pacientes
 </div>
 """, unsafe_allow_html=True)
+
+# 2. Inyector de evento JS desde iframe (rompe sandbox, DOMPurify no toca esto)
+components.html("""
+<script>
+    const doc = window.parent.document;
+    const btnPacientes = doc.getElementById('btn-flotante-pacientes');
+    if (btnPacientes) {
+        btnPacientes.addEventListener('click', function() {
+            const sidebarBtn = doc.querySelector('[data-testid="collapsedControl"]') ||
+                               doc.querySelector('header button');
+            if (sidebarBtn) {
+                sidebarBtn.click();
+            } else {
+                console.log("No se encontro el menu lateral nativo de Streamlit");
+            }
+        });
+    }
+</script>
+""", height=0, width=0)
 
 with st.sidebar:
     # ─── Solo dos botones de acción principales iOS ───
