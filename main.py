@@ -526,7 +526,7 @@ _mc_srv_liviano = headers_sugieren_equipo_liviano()
 render_mc_liviano_cliente(st.session_state.get("mc_liviano_modo", "auto"), _mc_srv_liviano)
 render_mobile_sidebar_toggle()
 
-# CSS glass inline para botón sidebar móvil — se inyecta en cada rerun para evitar cache del navegador
+# CSS limpio para botón sidebar móvil — estilo sólido Modern Enterprise
 st.markdown(
     """
 <style>
@@ -536,24 +536,17 @@ st.markdown(
         position: fixed !important;
         left: 12px !important;
         top: 12px !important;
-        transform: none !important;
-        border-radius: 14px !important;
+        border-radius: 8px !important;
         height: 44px !important;
         min-width: 44px !important;
         padding: 0 14px 0 12px !important;
-        background: rgba(255,255,255,0.06) !important;
-        backdrop-filter: blur(18px) saturate(1.8) !important;
-        -webkit-backdrop-filter: blur(18px) saturate(1.8) !important;
-        -webkit-transform: translateZ(0) !important;
-        transform: translateZ(0) !important;
-        border: 1px solid rgba(255, 255, 255, 0.10) !important;
+        background: #1e293b !important;
+        border: 1px solid #334155 !important;
         color: #f8fafc !important;
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-family: system-ui, sans-serif !important;
         font-size: 0.78rem !important;
         font-weight: 700 !important;
-        letter-spacing: 0.06em !important;
-        box-shadow: 0 8px 28px rgba(2,6,23,.30) !important;
-        opacity: 0.78 !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
         cursor: pointer !important;
         z-index: 10015 !important;
         display: inline-flex !important;
@@ -561,12 +554,12 @@ st.markdown(
         justify-content: center !important;
         gap: 6px !important;
         white-space: nowrap !important;
-        transition: opacity 0.15s, transform 0.18s !important;
+        transition: opacity 0.15s, background-color 0.2s !important;
     }
     #mc-mobile-sidebar-toggle-btn-v2:active,
     #mc-mobile-sidebar-toggle-btn:active {
         opacity: 1 !important;
-        transform: scale(0.96) !important;
+        background-color: #27354f !important;
     }
     #mc-mobile-sidebar-toggle-btn-v2.is-open,
     #mc-mobile-sidebar-toggle-btn.is-open {
