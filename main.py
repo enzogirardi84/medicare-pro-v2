@@ -101,89 +101,68 @@ st.markdown("""
     }
 
     /* =========================================================
-       6. LAYOUT MAESTRO AUTO-RESPONSIVO (Grilla Dinámica)
+       6. RESCATE DE MÓDULOS: BOTONES VISIBLES Y ESTIRADOS
        ========================================================= */
 
-    /* --- VISTA GLOBAL (Escritorio por defecto) --- */
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+    /* 1. Forzar Grid Automático (Solo detecta el bloque si tiene más de 10 módulos) */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) {
         display: grid !important;
-        /* MAGIA: Crea tantas columnas como entren, cada una de mínimo 140px */
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
         gap: 12px !important;
         padding: 10px 0 !important;
     }
 
-    /* DESTRUIR EL ANCHO EN LÍNEA DE STREAMLIT */
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
+    /* 2. La celda ocupa el 100% */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) > div[data-testid="column"] {
         width: 100% !important;
         min-width: 100% !important;
-        max-width: 100% !important;
         padding: 0 !important;
     }
 
-    /* Estética de las Cápsulas Premium */
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
+    /* 3. Forzar la expansión total de los botones (Destruye el auto-shrink de Streamlit) */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"],
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button {
         width: 100% !important;
-        height: 55px !important;
-        border-radius: 16px !important;
-        background-color: #1e293b !important;
-        border: 1px solid rgba(255,255,255,0.15) !important;
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        padding: 0 15px !important;
-        transition: all 0.2s ease !important;
+        min-width: 100% !important;
+        height: 100% !important;
+        min-height: 60px !important;
     }
 
-    /* Texto siempre visible y forzado a blanco */
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p,
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button div,
-    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button * {
+    /* 4. Estética de las Cápsulas */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button {
+        border-radius: 12px !important;
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 5px !important;
+        transition: transform 0.2s !important;
+    }
+
+    /* 5. RESCATE DEL TEXTO: Forzar visibilidad y permitir salto de línea */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button * {
         color: #ffffff !important;
         fill: #ffffff !important;
-        font-size: 0.85rem !important;
-        font-weight: 500 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        white-space: pre-wrap !important;
+        visibility: visible !important;
+        display: block !important;
         margin: 0 !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        line-height: 1.2 !important;
     }
 
     /* --- VISTA MÓVIL (Celulares) --- */
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
-            /* Forzar 3 columnas exactas en teléfonos */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) {
             grid-template-columns: repeat(3, 1fr) !important;
             gap: 6px !important;
-            padding: 5px !important;
         }
-
-        /* En celular, el icono va arriba y el texto abajo */
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
-            height: 55px !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: center !important;
-            padding: 2px !important;
-            border-radius: 12px !important;
-            gap: 2px !important;
-        }
-
-        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
-            font-size: 0.65rem !important;
-        }
-
-        /* Proteger pantallas pequeñas (Login, etc.) */
-        div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) {
-            display: flex !important;
-            flex-direction: column !important;
-        }
-        div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) > div[data-testid="column"] {
-            width: 100% !important;
-            min-width: 100% !important;
-            max-width: 100% !important;
-            margin-bottom: 1rem !important;
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(10)) div[data-testid="stButton"] > button * {
+            font-size: 10px !important;
         }
     }
 </style>
