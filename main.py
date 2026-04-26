@@ -99,21 +99,31 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* 6. OPCION NUCLEAR: CSS Grid inquebrantable para modulos */
-    div[data-testid="stHorizontalBlock"] {
+    /* 6. GRILLA INTELIGENTE: grid 3x3 SOLO para bloques con >5 columnas (modulos) */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
         display: grid !important;
         grid-template-columns: repeat(6, 1fr) !important;
         gap: 8px !important;
         padding: 5px !important;
     }
     @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"] {
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
             grid-template-columns: repeat(3, 1fr) !important;
+        }
+        /* Bloques pequenos (login, forms) vuelven a 100% ancho */
+        div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) {
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) > div[data-testid="column"] {
+            width: 100% !important;
+            min-width: 100% !important;
+            margin-bottom: 1rem !important;
         }
     }
 
-    /* 7. Estética cápsula compacta — icono arriba, texto abajo */
-    div[data-testid="stButton"] > button {
+    /* 7. Estética cápsula compacta — solo para modulos (bloques con >5 columnas) */
+    div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
         border-radius: 18px !important;
         height: 65px !important;
         padding: 5px !important;
