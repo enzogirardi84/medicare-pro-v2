@@ -77,127 +77,42 @@ def aplicar_css_base() -> None:
             }
 
             /* =============================
-               NAVEGACIÓN DE MÓDULOS (clases propias)
-               ============================= */
-            .mc-module-nav-wrap {
-                width: 100%;
-                margin: 8px 0 26px 0;
-            }
-            .mc-module-nav-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(150px, 150px));
-                gap: 10px;
-                justify-content: start;
-                align-items: stretch;
-            }
-            .mc-module-card {
-                height: 58px;
-                padding: 0 13px;
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                gap: 8px;
-                border-radius: 16px;
-                border: 1px solid rgba(148, 163, 184, 0.32);
-                background: rgba(15, 23, 42, 0.88);
-                color: #ffffff !important;
-                text-decoration: none !important;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.18);
-                transition: all 0.16s ease;
-                overflow: hidden;
-            }
-            .mc-module-card:hover {
-                border-color: rgba(56, 189, 248, 0.85);
-                background: rgba(30, 41, 59, 0.98);
-                transform: translateY(-1px);
-                box-shadow: 0 8px 20px rgba(14,165,233,0.14);
-            }
-            .mc-module-card.active {
-                border-color: #38bdf8;
-                background: linear-gradient(
-                    135deg,
-                    rgba(14,165,233,0.30),
-                    rgba(15,23,42,0.95)
-                );
-                box-shadow:
-                    0 0 0 1px rgba(56,189,248,0.35),
-                    0 8px 22px rgba(14,165,233,0.12);
-            }
-            .mc-module-icon {
-                font-size: 18px;
-                line-height: 1;
-                flex: 0 0 auto;
-            }
-            .mc-module-text {
-                font-size: 13px;
-                font-weight: 650;
-                line-height: 1.2;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                min-width: 0;
-                color: #ffffff !important;
-            }
-            .mc-module-empty {
-                color: rgba(226,232,240,0.75);
-                font-size: 0.9rem;
-                padding: 8px 0;
-            }
-
-            /* =============================
-               BOTÓN FLOTANTE PACIENTES
+               BOTÓN FLOTANTE PACIENTES (Glassmorphism)
                ============================= */
             #btn-flotante-pacientes {
                 position: fixed;
                 bottom: 40px;
                 left: 0;
                 z-index: 999999;
-                background: rgba(14, 165, 233, 0.95) !important;
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                background: rgba(14, 165, 233, 0.55) !important;
+                backdrop-filter: blur(14px) saturate(140%);
+                -webkit-backdrop-filter: blur(14px) saturate(140%);
                 color: #ffffff !important;
                 padding: 12px 18px 12px 12px;
                 border-radius: 0 24px 24px 0;
                 font-weight: 700 !important;
                 font-size: 15px !important;
-                box-shadow: 2px 4px 12px rgba(0,0,0,0.5);
+                box-shadow: 2px 6px 18px rgba(0,0,0,0.35),
+                            inset 0 1px 0 rgba(255,255,255,0.25);
                 cursor: pointer;
-                border: 1px solid rgba(255,255,255,0.4);
+                border: 1px solid rgba(255,255,255,0.35);
                 border-left: none;
                 display: none;
+                transition: all 0.25s ease;
+            }
+            #btn-flotante-pacientes:hover {
+                background: rgba(14, 165, 233, 0.75) !important;
+                padding-left: 16px;
+                box-shadow: 3px 8px 22px rgba(0,0,0,0.45),
+                            inset 0 1px 0 rgba(255,255,255,0.35);
             }
 
             /* =============================
                MÓVIL
                ============================= */
             @media (max-width: 768px) {
-                .mc-module-nav-grid {
-                    grid-template-columns: repeat(3, minmax(0, 1fr));
-                    gap: 8px;
-                }
-                .mc-module-card {
-                    height: 68px;
-                    padding: 7px 5px;
-                    flex-direction: column;
-                    justify-content: center;
-                    text-align: center;
-                    gap: 5px;
-                    border-radius: 15px;
-                }
-                .mc-module-icon {
-                    font-size: 18px;
-                }
-                .mc-module-text {
-                    font-size: 10.5px;
-                    max-width: 100%;
-                }
                 #btn-flotante-pacientes {
                     display: block;
-                }
-            }
-            @media (min-width: 1200px) {
-                .mc-module-nav-grid {
-                    grid-template-columns: repeat(auto-fill, minmax(158px, 158px));
                 }
             }
         </style>

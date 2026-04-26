@@ -15,3 +15,7 @@ fastReruns = true
 
 [browser]
 gatherUsageStats = false
+
+[client]
+showErrorDetails = false
+toolbarMode = "viewer"
