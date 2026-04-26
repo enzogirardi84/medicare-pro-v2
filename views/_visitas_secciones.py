@@ -35,118 +35,93 @@ except ImportError:
     pass  # Intencional: geolocación es opcional para fichadas
 
 
+def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon, direccion):
+    """Registra una fichada (LLEGADA/SALIDA) en Supabase y session_state."""
+    try:
+        from core.db_sql import insert_checkin
+        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+        from core.database import supabase
+        empresa_id = _obtener_uuid_empresa(mi_empresa)
+        if empresa_id:
+            pac_uuid = None
+            partes = paciente_sel.split(" - ")
+            if len(partes) > 1:
+                pac_uuid = _obtener_uuid_paciente(partes[1].strip(), empresa_id)
+            usr_id = None
+            if supabase:
+                res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
+                if getattr(res_usr, "data", None):
+                    usr_id = res_usr.data[0]["id"]
+            datos_sql = {
+                "empresa_id": empresa_id,
+                "usuario_id": usr_id,
+                "paciente_id": pac_uuid,
+                "fecha_hora": ahora().isoformat(),
+                "tipo_registro": tipo,
+                "latitud": float(lat),
+                "longitud": float(lon),
+                "direccion_estimada": direccion,
+                "observaciones": "Manual" if lat == 0.0 and lon == 0.0 else ""
+            }
+            insert_checkin(datos_sql)
+    except Exception as e:
+        from core.app_logging import log_event
+        log_event("visitas_sql", f"error_dual_write_checkin_{tipo.lower()}:{type(e).__name__}")
+
+    if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
+        st.session_state["checkin_db"] = []
+    st.session_state["checkin_db"].append({
+        "paciente": paciente_sel,
+        "profesional": nombre_usuario,
+        "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+        "tipo": f"{tipo} en: {direccion} (Lat: {lat:.5f})",
+        "empresa": mi_empresa,
+        "gps": f"{lat:.5f},{lon:.5f}"
+    })
+    from core.database import _trim_db_list
+    _trim_db_list("checkin_db", 1000)
+    guardar_datos(spinner=True)
+    queue_toast(f"{tipo} registrada.")
+    st.rerun()
+
+
 def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
     """Sección: Fichada Legal de Visita (GPS Real) + Control de Horas."""
     st.subheader("Fichada Legal de Visita (GPS Real)")
+    lat, lon, direccion = None, None, "Ubicacion Omitida"
+
     if GEO_DISPONIBLE:
         st.info("Para fichar llegada o salida, activa la ubicacion solo cuando la necesites.")
         activar_gps = st.checkbox("Activar GPS y obtener mi ubicacion")
         if activar_gps:
-            loc = streamlit_geolocation()
-            lat = loc.get("latitude") if loc and loc.get("latitude") is not None else None
-            lon = loc.get("longitude") if loc and loc.get("longitude") is not None else None
+            try:
+                loc = streamlit_geolocation()
+            except Exception:
+                loc = None
+                st.warning("No se pudo inicializar el componente GPS.")
+            if loc:
+                lat = loc.get("latitude")
+                lon = loc.get("longitude")
             if lat is not None and lon is not None:
                 lat_str = f"{float(lat):.5f}"
                 lon_str = f"{float(lon):.5f}"
-                direccion_real = obtener_direccion_real(lat_str, lon_str)
-                st.success(f"Estas fisicamente en: {direccion_real}")
-                col_in, col_out = st.columns(2)
-                if col_in.button("Fichar LLEGADA", use_container_width=True, type="primary"):
-                    try:
-                        from core.db_sql import insert_checkin
-                        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
-                        empresa_id = _obtener_uuid_empresa(mi_empresa)
-                        if empresa_id:
-                            pac_uuid = None
-                            partes = paciente_sel.split(" - ")
-                            if len(partes) > 1:
-                                pac_uuid = _obtener_uuid_paciente(partes[1].strip(), empresa_id)
-                            from core.database import supabase
-                            usr_id = None
-                            if supabase:
-                                res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
-                                if res_usr.data:
-                                    usr_id = res_usr.data[0]["id"]
-                            datos_sql = {
-                                "empresa_id": empresa_id,
-                                "usuario_id": usr_id,
-                                "paciente_id": pac_uuid,
-                                "fecha_hora": ahora().isoformat(),
-                                "tipo_registro": "LLEGADA",
-                                "latitud": float(lat),
-                                "longitud": float(lon),
-                                "direccion_estimada": direccion_real,
-                                "observaciones": ""
-                            }
-                            insert_checkin(datos_sql)
-                    except Exception as e:
-                        from core.app_logging import log_event
-                        log_event("visitas_sql", f"error_dual_write_checkin_in:{type(e).__name__}")
-                    if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
-                        st.session_state["checkin_db"] = []
-                    st.session_state["checkin_db"].append({
-                        "paciente": paciente_sel,
-                        "profesional": nombre_usuario,
-                        "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                        "tipo": f"LLEGADA en: {direccion_real} (Lat: {lat_str})",
-                        "empresa": mi_empresa,
-                        "gps": f"{lat_str},{lon_str}"
-                    })
-                    from core.database import _trim_db_list
-                    _trim_db_list("checkin_db", 1000)
-                    guardar_datos(spinner=True)
-                    queue_toast("Llegada registrada.")
-                    st.rerun()
-                if col_out.button("Fichar SALIDA", use_container_width=True):
-                    try:
-                        from core.db_sql import insert_checkin
-                        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
-                        empresa_id = _obtener_uuid_empresa(mi_empresa)
-                        if empresa_id:
-                            pac_uuid = None
-                            partes = paciente_sel.split(" - ")
-                            if len(partes) > 1:
-                                pac_uuid = _obtener_uuid_paciente(partes[1].strip(), empresa_id)
-                            from core.database import supabase
-                            usr_id = None
-                            if supabase:
-                                res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
-                                if res_usr.data:
-                                    usr_id = res_usr.data[0]["id"]
-                            datos_sql = {
-                                "empresa_id": empresa_id,
-                                "usuario_id": usr_id,
-                                "paciente_id": pac_uuid,
-                                "fecha_hora": ahora().isoformat(),
-                                "tipo_registro": "SALIDA",
-                                "latitud": float(lat),
-                                "longitud": float(lon),
-                                "direccion_estimada": direccion_real,
-                                "observaciones": ""
-                            }
-                            insert_checkin(datos_sql)
-                    except Exception as e:
-                        from core.app_logging import log_event
-                        log_event("visitas_sql", f"error_dual_write_checkin_out:{type(e).__name__}")
-                    if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
-                        st.session_state["checkin_db"] = []
-                    st.session_state["checkin_db"].append({
-                        "paciente": paciente_sel,
-                        "profesional": nombre_usuario,
-                        "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                        "tipo": f"SALIDA de: {direccion_real} (Lat: {lat_str})",
-                        "empresa": mi_empresa,
-                        "gps": f"{lat_str},{lon_str}"
-                    })
-                    from core.database import _trim_db_list
-                    _trim_db_list("checkin_db", 1000)
-                    guardar_datos(spinner=True)
-                    queue_toast("Salida registrada.")
-                    st.rerun()
+                direccion = obtener_direccion_real(lat_str, lon_str)
+                st.success(f"Estas fisicamente en: {direccion}")
             else:
-                st.warning("Buscando senal GPS. Asegurate de permitir ubicacion.")
+                st.warning("Buscando senal GPS. Asegurate de permitir ubicacion, o usa el boton manual.")
     else:
-        st.error("Libreria de geolocalizacion no disponible.")
+        st.warning("Libreria de geolocalizacion no disponible. Podes fichar manualmente.")
+
+    # Valores finales: GPS si disponible, sino manual (0.0, 0.0)
+    lat_val = float(lat) if lat is not None else 0.0
+    lon_val = float(lon) if lon is not None else 0.0
+    direccion_final = direccion if lat is not None else "Ubicacion Omitida"
+
+    col_in, col_out = st.columns(2)
+    if col_in.button("Fichar LLEGADA", use_container_width=True, type="primary"):
+        _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "LLEGADA", lat_val, lon_val, direccion_final)
+    if col_out.button("Fichar SALIDA", use_container_width=True):
+        _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "SALIDA", lat_val, lon_val, direccion_final)
 
     st.divider()
     st.markdown("#### Control de Horas de Guardia (Hoy)")

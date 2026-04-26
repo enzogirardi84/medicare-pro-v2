@@ -106,13 +106,14 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
                     empresa_id, busqueda, incluir_altas, c, l, o
                 ).execute(),
             )
-            data = response.data if response and response.data else []
+            data = getattr(response, "data", None) or []
             st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
             return data
         except Exception as e:
             last_error = e
     if last_error is not None:
-        log_event("db_sql", f"error_get_pacientes:{type(last_error).__name__}")
+        log_event("db_sql", f"error_get_pacientes:{type(last_error).__name__}:{last_error}")
+        print(f"Error detallado Supabase get_pacientes: {str(last_error)}")
         st.error("Error al cargar la lista de pacientes desde el servidor. Mostrando datos de caché o lista vacía.")
     return []
 
@@ -143,13 +144,14 @@ def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
                 return q.limit(limit).execute()
 
             response = _supabase_execute_with_retry("get_pacientes_globales", _query)
-            data = response.data if response and response.data else []
+            data = getattr(response, "data", None) or []
             st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
             return data
         except Exception as e:
             last_error = e
     if last_error is not None:
-        log_event("db_sql", f"error_get_pacientes_globales:{type(last_error).__name__}")
+        log_event("db_sql", f"error_get_pacientes_globales:{type(last_error).__name__}:{last_error}")
+        print(f"Error detallado Supabase get_pacientes_globales: {str(last_error)}")
         st.error("Error al cargar pacientes globales desde el servidor. Mostrando datos de caché o lista vacía.")
     return []
 
@@ -169,11 +171,12 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
             "get_paciente_id",
             lambda: supabase.table("pacientes").select("*").eq("id", paciente_id).limit(1).execute(),
         )
-        data = response.data[0] if response and response.data else None
+        data = (getattr(response, "data", None) or [None])[0]
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_paciente_id:{type(e).__name__}")
+        log_event("db_sql", f"error_get_paciente_id:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_paciente_by_id: {str(e)}")
         st.error("Error al cargar datos del paciente desde el servidor. Reintentá en unos segundos.")
         return None
 
@@ -194,11 +197,12 @@ def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
             "get_empresa_nombre",
             lambda: supabase.table("empresas").select(EMPRESAS_MIN_COLUMNS).eq("nombre", nombre_empresa).limit(1).execute(),
         )
-        data = response.data[0] if response and response.data else empresa_fallback
+        data = (getattr(response, "data", None) or [empresa_fallback])[0]
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_empresa_nombre:{type(e).__name__}")
+        log_event("db_sql", f"error_get_empresa_nombre:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_empresa_by_nombre: {str(e)}")
         st.warning("Error al cargar datos de la empresa desde el servidor. Se usarán datos locales.")
         return empresa_fallback
 
@@ -218,11 +222,12 @@ def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str,
             "get_paciente_dni_empresa",
             lambda: supabase.table("pacientes").select("*").eq("empresa_id", empresa_id).eq("dni", dni).limit(1).execute(),
         )
-        data = response.data[0] if response and response.data else None
+        data = (getattr(response, "data", None) or [None])[0]
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_paciente_dni_empresa:{type(e).__name__}")
+        log_event("db_sql", f"error_get_paciente_dni_empresa:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_paciente_by_dni_empresa: {str(e)}")
         st.error("Error al buscar paciente por DNI en el servidor. Reintentá en unos segundos.")
         return None
 

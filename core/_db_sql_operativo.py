@@ -64,17 +64,18 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_auditoria:{type(e).__name__}")
+        log_event("db_sql", f"error_get_auditoria:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_auditoria: {str(e)}")
         st.error("Error al cargar auditoría desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
 
 def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
-    """Obtiene los turnos de una empresa. Cache manual a prueba de fallos."""
+    """Obtiene los turnos de una empresa. Cache manual a prueba de fallos. TTL corto (30s) por alta dinamicidad."""
     cache_key = f"_sql_op_turn_{empresa_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached["ts"] < 30:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -84,11 +85,12 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
             "get_turnos",
             lambda: supabase.table("turnos").select("*, pacientes(nombre_completo, dni), usuarios(nombre)").eq("empresa_id", empresa_id).gte("fecha_hora_programada", fecha_inicio).lte("fecha_hora_programada", fecha_fin).order("fecha_hora_programada", desc=False).execute(),
         )
-        data = response.data if response and response.data else []
+        data = getattr(response, "data", None) or []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_turnos:{type(e).__name__}")
+        log_event("db_sql", f"error_get_turnos:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_turnos: {str(e)}")
         st.error("Error al cargar turnos desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -144,7 +146,8 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_administraciones:{type(e).__name__}")
+        log_event("db_sql", f"error_get_administraciones:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_administraciones: {str(e)}")
         st.error("Error al cargar administraciones desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -184,7 +187,8 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}")
+        log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_emergencias_paciente: {str(e)}")
         st.error("Error al cargar emergencias del paciente desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -208,7 +212,8 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_emergencias:{type(e).__name__}")
+        log_event("db_sql", f"error_get_emergencias:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_emergencias: {str(e)}")
         st.error("Error al cargar emergencias desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -267,7 +272,8 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_inventario:{type(e).__name__}")
+        log_event("db_sql", f"error_get_inventario:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_inventario: {str(e)}")
         st.error("Error al cargar inventario desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -306,7 +312,8 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_facturacion:{type(e).__name__}")
+        log_event("db_sql", f"error_get_facturacion:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_facturacion: {str(e)}")
         st.error("Error al cargar facturación desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -345,7 +352,8 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_balance:{type(e).__name__}")
+        log_event("db_sql", f"error_get_balance:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_balance: {str(e)}")
         st.error("Error al cargar balance desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
@@ -366,11 +374,11 @@ def insert_balance(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str, Any]]:
-    """Obtiene checkins de empresa. Cache manual a prueba de fallos."""
+    """Obtiene checkins de empresa. Cache manual a prueba de fallos. TTL corto (30s) por alta dinamicidad."""
     cache_key = f"_sql_op_chk_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached["ts"] < 30:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -380,11 +388,12 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
             "get_checkins",
             lambda: supabase.table("checkin_asistencia").select("*, pacientes(nombre_completo), usuarios(nombre)").eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute(),
         )
-        data = response.data if response and response.data else []
+        data = getattr(response, "data", None) or []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_checkins:{type(e).__name__}")
+        log_event("db_sql", f"error_get_checkins:{type(e).__name__}:{e}")
+        print(f"Error detallado Supabase get_checkins: {str(e)}")
         st.error("Error al cargar checkins desde el servidor. Mostrando datos de caché o lista vacía.")
         return []
 
