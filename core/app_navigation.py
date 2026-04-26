@@ -109,7 +109,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     es_movil = cliente_es_movil_probable()
     columnas_por_fila = 3 if es_movil else 6
 
-    # CSS mínimo e inofensivo: solo estética de botón, nunca layout de bloques
+    # CSS: fuerza horizontalidad en móviles para filas de 3 columnas
     if not st.session_state.get("_mc_nav_btn_css_inyectado"):
         st.markdown(
             """
@@ -118,6 +118,35 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 border-radius: 12px;
                 min-height: 55px;
                 white-space: pre-wrap !important;
+            }
+            @media (max-width: 768px) {
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(3):last-child) {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    gap: 4px !important;
+                }
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(3):last-child) > div[data-testid="column"] {
+                    width: 33.33% !important;
+                    min-width: 33.33% !important;
+                    max-width: 33.33% !important;
+                    flex: 1 1 33.33% !important;
+                    padding: 0 !important;
+                }
+                div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(3):last-child) div[data-testid="stButton"] > button {
+                    width: 100% !important;
+                    min-height: 50px !important;
+                    height: 100% !important;
+                    padding: 2px !important;
+                    font-size: 0.65rem !important;
+                    white-space: pre-wrap !important;
+                    line-height: 1.1 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    border-radius: 12px !important;
+                }
             }
             </style>
             """,

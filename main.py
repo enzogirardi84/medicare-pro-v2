@@ -249,16 +249,15 @@ components.html(
         if (btnPacientes && !btnPacientes.dataset.mcBound) {
             btnPacientes.dataset.mcBound = "1";
             btnPacientes.addEventListener('click', function(e) {
-                e.preventDefault();   // Evita recarga/submit fantasma en móviles
-                e.stopPropagation();  // Evita que el evento burbujee y dispare otros listeners
-                const sidebarBtn =
-                    doc.querySelector('button[kind="header"]') ||
-                    doc.querySelector('[data-testid="collapsedControl"]') ||
-                    doc.querySelector('header button');
+                e.preventDefault();           // Detiene recarga de página
+                e.stopPropagation();          // Detiene event bubbling hacia Streamlit
+                e.stopImmediatePropagation(); // Aísla completamente el clic
+
+                const sidebarBtn = doc.querySelector('[data-testid="collapsedControl"]');
                 if (sidebarBtn) {
                     sidebarBtn.click();
                 } else {
-                    console.log("No se encontro el menu lateral nativo de Streamlit");
+                    console.log("No se encontró el botón del menú lateral");
                 }
             });
         }
