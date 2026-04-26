@@ -810,24 +810,22 @@ def render_module_nav_grid(menu, vista_actual, menu_set=None):
         url = "?modulo=" + quote_plus(str(modulo))
 
         cards.append(
-            f"""
-            <a class="mc-module-card{active}"
-               href="{url}"
-               target="_self"
-               title="{escape(str(label))}">
-                <span class="mc-module-icon">{escape(str(icono))}</span>
-                <span class="mc-module-text">{escape(str(texto))}</span>
-            </a>
-            """
+            f'<a class="mc-module-card{active}"'
+            f' href="{url}"'
+            f' target="_self"'
+            f' title="{escape(str(label))}">'
+            f'<span class="mc-module-icon">{escape(str(icono))}</span>'
+            f'<span class="mc-module-text">{escape(str(texto))}</span>'
+            f'</a>'
         )
 
-    html_nav = f"""
-    <div class="mc-module-nav-wrap">
-        <div class="mc-module-nav-grid">
-            {''.join(cards)}
-        </div>
-    </div>
-    """
+    html_nav = (
+        '<div class="mc-module-nav-wrap">'
+        '<div class="mc-module-nav-grid">'
+        f'{"".join(cards)}'
+        '</div>'
+        '</div>'
+    )
 
     st.markdown(html_nav, unsafe_allow_html=True)
 
