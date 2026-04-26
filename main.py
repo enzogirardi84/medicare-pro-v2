@@ -122,21 +122,21 @@ st.markdown("""
 
         /* 2. Capsulas ultra-compactas */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
+            height: 45px !important;
+            min-height: 45px !important;
             padding: 2px !important;
-            height: 52px !important;
-            font-size: 0.6rem !important;
             border-radius: 12px !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
-            white-space: normal !important;
-            line-height: 1 !important;
+            gap: 2px !important;
         }
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
             margin: 0 !important;
-            margin-top: 2px !important;
+            padding: 0 !important;
             font-size: 0.6rem !important;
+            line-height: 1 !important;
         }
 
         /* 3. Bloques pequenos (login, forms) vuelven a 100% ancho */
@@ -389,23 +389,27 @@ logo_sidebar_b64 = st.session_state[_logo_ck]
 if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
-# ─── Botón flotante 'Pacientes' para togglear sidebar en móvil (FAB) ───
+# ─── Botón flotante 'Pacientes' para togglear sidebar en móvil (Glass Tab) ───
 st.markdown("""
 <style>
+    /* Diseño de Pestaña de Cristal Pegada al Borde */
     .btn-flotante-pacientes {
         position: fixed;
-        bottom: 20px;
-        left: 20px;
+        bottom: 40px;
+        left: 0;
         z-index: 999999;
-        background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+        background: rgba(14, 165, 233, 0.3) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         color: white !important;
-        padding: 12px 20px;
-        border-radius: 50px;
+        padding: 10px 15px 10px 10px;
+        border-radius: 0 20px 20px 0;
         font-weight: 600;
-        font-size: 14px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        font-size: 13px;
+        box-shadow: 2px 4px 12px rgba(0,0,0,0.2);
         cursor: pointer;
         border: 1px solid rgba(255,255,255,0.2);
+        border-left: none;
         display: none;
     }
     @media (max-width: 768px) {
@@ -413,10 +417,16 @@ st.markdown("""
     }
 </style>
 <div class="btn-flotante-pacientes" onclick="
-    var sidebarBtn = document.querySelector('[data-testid=\\'collapsedControl\\']');
-    if(sidebarBtn) { sidebarBtn.click(); }
+    var sidebarBtn = window.parent.document.querySelector('[data-testid=\\'collapsedControl\\']') ||
+                     window.parent.document.querySelector('button[kind=\\'header\\']') ||
+                     window.document.querySelector('[data-testid=\\'collapsedControl\\']');
+    if(sidebarBtn) {
+        sidebarBtn.click();
+    } else {
+        console.log('Menu lateral no encontrado');
+    }
 ">
-    ≡ Pacientes
+    ☰ Pacientes
 </div>
 """, unsafe_allow_html=True)
 
