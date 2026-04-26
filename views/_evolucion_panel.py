@@ -204,28 +204,17 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         """
         <div class="mc-hero">
             <h2 class="mc-hero-title">Evolución clínica</h2>
-            <p class="mc-hero-text">Acá documentan <strong>todos los profesionales</strong> (médicos, enfermería, operativos): notas de evolución, cambios del paciente,
-            curaciones en texto y <strong>fotos de heridas, lesiones o hallazgos</strong>. Firma del paciente o familiar opcional; en celulares viejos conviene foto de firma antes que el lienzo.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Multidisciplina</span>
-                <span class="mc-chip">Plantillas clínicas</span>
-                <span class="mc-chip">Fotos clínicas</span>
-                <span class="mc-chip">Auditoría legal</span>
-            </div>
+            <p class="mc-hero-text">Nota de evolución, fotos clínicas y firma opcional. Cada profesional utiliza la plantilla de su área.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
     bloque_mc_grid_tarjetas(
         [
-            ("Notas", "Evolución con plantillas: clínica general, Enfermería, Heridas, respiratorio, etc."),
-            ("Imágenes", "Cámara o archivo desde el teléfono (heridas, dispositivos, evolución visual)."),
-            ("Firma", "Opcional: foto de firma o lienzo si el equipo lo permite."),
+            ("Notas", "Plantilla según área profesional."),
+            ("Imágenes", "Foto clínica opcional."),
+            ("Firma", "Opcional: foto o lienzo."),
         ]
-    )
-    st.caption(
-        "Podés registrar primero la firma (opcional). En el formulario: plantilla, nota y **fotografía clínica** (subir archivo o usar cámara). "
-        "Enfermería suele usar plantillas **Enfermería** o **Heridas**."
     )
 
     if CANVAS_DISPONIBLE:
@@ -325,20 +314,6 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         if plantilla != "Libre":
             st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
 
-        st.caption("Acceso rápido:")
-        _btns = st.columns(5)
-        _acceso_rapido = [
-            ("SOAP", "SOAP"),
-            ("Enfermería", "Enfermeria"),
-            ("Heridas", "Heridas"),
-            ("EPOC", "EPOC / Asma"),
-            ("Post-proc.", "Post-procedimiento"),
-        ]
-        for idx, (label, key_pl) in enumerate(_acceso_rapido):
-            if _btns[idx].button(label, key=f"qpl_{key_pl}", use_container_width=True):
-                st.session_state["evol_nota_draft"] = plantillas_evolucion[key_pl]
-                st.session_state["evol_plantilla_prev"] = key_pl
-                st.rerun()
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
