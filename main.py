@@ -105,6 +105,31 @@ st.markdown("""
         font-size: 0.85rem !important;
         min-height: 2.5rem !important;
     }
+
+    /* 7. Media Query exclusivo para telefonos moviles (grid 2x2, compactacion) */
+    @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
+        }
+        div[data-testid="column"] {
+            min-width: 48% !important;
+            flex: 1 1 48% !important;
+            width: 48% !important;
+        }
+        div[data-testid="stButton"] > button {
+            padding: 0.3rem 0.5rem !important;
+            font-size: 0.75rem !important;
+            min-height: 2.2rem !important;
+            border-radius: 12px !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            padding: 0.5rem !important;
+        }
+        h1, h2, h3 {
+            font-size: 1.2rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
