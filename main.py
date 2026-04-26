@@ -42,45 +42,50 @@ APP_BUILD_TAG = "Build 2026-04-24 fix: overlays + syntax + navigation"
 
 st.set_page_config(page_title=PAGE_TITLE_PUBLIC, layout="wide", initial_sidebar_state="expanded")
 
-# CSS estético premium: bordes redondeados, iluminación sutil. NO modifica display/width/margin/padding.
+# CSS Premium Soft-UI: bordes redondeados tipo iOS, iluminacion sutil. Solo estetica visual.
 st.markdown("""
 <style>
-    /* 1. Botones Redondeados (Estilo Capsula/Moderno) */
-    .stButton > button {
-        border-radius: 24px !important;
-        border: 1px solid rgba(14, 165, 233, 0.5) !important;
-        transition: all 0.2s ease-in-out !important;
-        background-color: transparent !important;
-        font-weight: 500 !important;
+    /* 1. Botones Principales (Efecto Capsula Premium) */
+    div[data-testid="stButton"] > button {
+        border-radius: 20px !important;
+        border: 1px solid rgba(14, 165, 233, 0.3) !important;
+        background: rgba(15, 23, 42, 0.5) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease !important;
+        padding: 0.5rem 1rem !important;
     }
 
-    /* Efecto Hover en Botones (Levantamiento e Iluminacion) */
-    .stButton > button:hover {
+    /* Hover iluminado para botones */
+    div[data-testid="stButton"] > button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25) !important;
-        background-color: rgba(14, 165, 233, 0.1) !important;
         border-color: #0ea5e9 !important;
-        color: #fff !important;
+        box-shadow: 0 6px 15px rgba(14, 165, 233, 0.25) !important;
+        color: white !important;
     }
 
-    /* 2. Tarjetas y Contenedores (Bordes Curvos y Fondo Premium) */
-    [data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 16px !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        background-color: #121b2b !important;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+    /* 2. Tarjetas y Contenedores (Bordes muy suaves tipo iOS) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 24px !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+        background-color: #111827 !important;
+        overflow: hidden !important;
     }
 
-    /* 3. Inputs de Texto y Selectores Redondeados */
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div {
-        border-radius: 12px !important;
+    /* 3. Inputs, Selectores y Buscadores (Redondeados) */
+    div[data-testid="stTextInput"] input,
+    div[data-baseweb="select"] > div {
+        border-radius: 14px !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.03) !important;
     }
 
-    /* 4. Estilizar las alertas y mensajes de info */
-    [data-testid="stAlert"] {
-        border-radius: 12px !important;
-        border: none !important;
+    /* 4. Metricas (Redondeo de las cajas de numeros) */
+    div[data-testid="stMetric"] {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+        border-radius: 16px !important;
+        padding: 10px !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
     }
 </style>
 """, unsafe_allow_html=True)
