@@ -368,6 +368,96 @@ logo_sidebar_b64 = st.session_state[_logo_ck]
 if st.session_state.get("_modo_offline"):
     st.info("Modo local activo. Los cambios se guardan en este equipo hasta configurar Supabase correctamente.")
 
+# ─── Botón flotante 'Pacientes' para togglear sidebar en móvil (FAB) ───
+st.components.v1.html("""
+<style>
+    .floating-patients-btn {
+        display: none;
+    }
+    @media (max-width: 768px) {
+        .floating-patients-btn {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10000;
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #fff;
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .floating-patients-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+        }
+        .floating-patients-btn:active {
+            transform: translateY(0);
+        }
+        .floating-patients-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+    }
+</style>
+<button class="floating-patients-btn" id="mc-fab-patients" title="Pacientes">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    Pacientes
+</button>
+<script>
+    (function() {
+        var btn = document.getElementById('mc-fab-patients');
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+            var doc = window.parent.document;
+            var togglers = [
+                'button[aria-label*="sidebar" i]',
+                'button[aria-label*="Expand" i]',
+                'button[aria-label*="Collapse" i]',
+                '[data-testid="stSidebarCollapsedControl"]',
+                '[data-testid="stBaseButton-headerNoPadding"]',
+                'header button[kind="header"]',
+                '.stApp > header button'
+            ];
+            var target = null;
+            for (var i = 0; i < togglers.length; i++) {
+                target = doc.querySelector(togglers[i]);
+                if (target) break;
+            }
+            if (target && target.click) {
+                target.click();
+            } else {
+                var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+                if (sidebar) {
+                    var style = sidebar.style;
+                    if (style.transform && style.transform.indexOf('translateX') !== -1 && style.transform.indexOf('-100%') !== -1) {
+                        style.transform = 'translateX(0)';
+                    } else {
+                        style.transform = 'translateX(-100%)';
+                    }
+                }
+            }
+        });
+    })();
+</script>
+""", height=0)
+
 with st.sidebar:
     # ─── Solo dos botones de acción principales iOS ───
     col1, col2 = st.columns(2)
