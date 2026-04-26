@@ -1365,39 +1365,42 @@ label,
 }
 
 /* ═══════════════════════════════════════════
-   iOS 26 GLASSMORPHISM — Navegación de Módulos
+   Navegación de Módulos — Pills compactos y responsivos
    ═══════════════════════════════════════════ */
 
-/* Container: glass background + blur */
+/* Container: flex wrap, gaps reducidos, sin espacios muertos */
 [data-testid="stRadio"] [role="radiogroup"] {
-    gap: 0.85rem !important;
+    display: flex !important;
     flex-wrap: wrap !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
+    gap: 0.35rem 0.45rem !important;
     background: rgba(255, 255, 255, 0.04) !important;
     backdrop-filter: blur(16px) saturate(180%) !important;
     -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: 28px !important;
-    padding: 1.2rem 1rem !important;
+    border-radius: 16px !important;
+    padding: 0.55rem 0.5rem !important;
     box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 4px 16px rgba(0, 0, 0, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Pills: iOS 26 style */
+/* Pills: compactos, alto uniforme, flujo natural */
 [data-testid="stRadio"] label {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 1 auto !important;
     background: rgba(255, 255, 255, 0.06) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 28px !important;
-    padding: 0.9rem 1.4rem !important;
-    min-height: 3.2rem !important;
-    min-width: 140px !important;
+    border-radius: 24px !important;
+    padding: 0.4rem 0.8rem !important;
+    min-height: 2.2rem !important;
+    min-width: unset !important;
     box-shadow:
         0 1px 2px rgba(0, 0, 0, 0.06),
         inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
-    justify-content: center !important;
-    align-items: center !important;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: pointer !important;
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
@@ -1419,14 +1422,14 @@ label,
     clip: rect(0, 0, 0, 0) !important;
 }
 
-/* Hover: lift + glass glow */
+/* Hover: lift sutil */
 [data-testid="stRadio"] label:hover {
     background: rgba(255, 255, 255, 0.10) !important;
     border-color: rgba(255, 255, 255, 0.18) !important;
     box-shadow:
-        0 8px 24px rgba(0, 0, 0, 0.15),
+        0 6px 18px rgba(0, 0, 0, 0.15),
         inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-    transform: translateY(-3px) scale(1.03) !important;
+    transform: translateY(-2px) scale(1.02) !important;
 }
 
 /* Activo: iOS pastel teal glow */
@@ -1434,20 +1437,91 @@ label,
     background: rgba(45, 212, 191, 0.18) !important;
     border-color: rgba(45, 212, 191, 0.45) !important;
     box-shadow:
-        0 0 0 3px rgba(45, 212, 191, 0.15),
-        0 8px 24px rgba(45, 212, 191, 0.18),
+        0 0 0 2px rgba(45, 212, 191, 0.15),
+        0 6px 18px rgba(45, 212, 191, 0.18),
         inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
-    transform: translateY(-2px) scale(1.02) !important;
+    transform: translateY(-1px) scale(1.01) !important;
 }
 
-/* Texto: clean, semibold, centered */
+/* Texto: compacto, semibold, centered */
 [data-testid="stRadio"] label p {
-    font-size: 0.98rem !important;
+    font-size: 0.85rem !important;
     font-weight: 600 !important;
     color: #e2e8f0 !important;
     margin: 0 !important;
     text-align: center !important;
     letter-spacing: 0.01em !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}
+
+/* ── PC/Monitores grandes: diseño ultra-compacto, 6-7 por fila ── */
+@media (min-width: 1024px) {
+    [data-testid="stRadio"] [role="radiogroup"] {
+        gap: 0.3rem 0.4rem !important;
+        padding: 0.45rem 0.5rem !important;
+    }
+    [data-testid="stRadio"] label {
+        padding: 0.32rem 0.65rem !important;
+        min-height: 2rem !important;
+        border-radius: 20px !important;
+    }
+    [data-testid="stRadio"] label p {
+        font-size: 0.8rem !important;
+    }
+}
+
+/* ── Tablets: ajuste intermedio, ~4 por fila ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+    [data-testid="stRadio"] [role="radiogroup"] {
+        gap: 0.32rem 0.42rem !important;
+        padding: 0.5rem 0.55rem !important;
+    }
+    [data-testid="stRadio"] label {
+        padding: 0.36rem 0.7rem !important;
+        min-height: 2.1rem !important;
+        border-radius: 22px !important;
+    }
+    [data-testid="stRadio"] label p {
+        font-size: 0.82rem !important;
+    }
+}
+
+/* ── Teléfonos: touch-friendly pero compacto, 2-3 por fila ── */
+@media (max-width: 767px) {
+    [data-testid="stRadio"] [role="radiogroup"] {
+        gap: 0.28rem 0.35rem !important;
+        padding: 0.4rem 0.4rem !important;
+        border-radius: 12px !important;
+    }
+    [data-testid="stRadio"] label {
+        padding: 0.35rem 0.6rem !important;
+        min-height: 38px !important;
+        border-radius: 18px !important;
+        flex: 1 1 auto !important;
+        min-width: unset !important;
+    }
+    [data-testid="stRadio"] label p {
+        font-size: 0.78rem !important;
+        white-space: nowrap !important;
+    }
+    /* Reducir padding/margin del shell en mobile */
+    .mc-module-shell {
+        padding: 0.6rem 0.5rem 0.4rem !important;
+        margin-bottom: 0.5rem !important;
+        border-radius: 14px !important;
+    }
+    .mc-module-shell-head {
+        gap: 0.12rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+    .mc-module-shell-title {
+        font-size: 0.95rem !important;
+    }
+    .mc-module-shell-sub {
+        font-size: 0.75rem !important;
+        margin-top: 0.15rem !important;
+    }
 }
 
 [data-testid="stCheckbox"] label {
@@ -1702,17 +1776,17 @@ hr {
         linear-gradient(180deg, rgba(14, 23, 42, 0.78) 0%, rgba(10, 18, 34, 0.92) 100%);
     border: none;
     border-radius: var(--radius-hero);
-    padding: 1.25rem 1.25rem 1.05rem;
-    margin: 0 0 1.2rem 0;
+    padding: 0.75rem 0.85rem 0.55rem;
+    margin: 0 0 0.6rem 0;
     box-shadow: var(--shadow-soft), 0 0 0 1px rgba(96, 165, 250, 0.1), var(--shadow-inset);
 }
 
 .mc-module-shell-head {
     display: flex;
     flex-direction: column;
-    gap: 0.26rem;
-    margin-bottom: 0.95rem;
-    padding: 0 0.22rem;
+    gap: 0.15rem;
+    margin-bottom: 0.4rem;
+    padding: 0 0.1rem;
 }
 
 .mc-module-shell-kicker {
