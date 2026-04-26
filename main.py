@@ -107,10 +107,39 @@ st.markdown("""
         padding: 5px !important;
     }
     @media (max-width: 768px) {
+        /* 1. Ultra-Compact Grid 3x3 para modulos */
         div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) {
+            display: grid !important;
             grid-template-columns: repeat(3, 1fr) !important;
+            gap: 4px !important;
+            padding: 2px !important;
         }
-        /* Bloques pequenos (login, forms) vuelven a 100% ancho */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) > div[data-testid="column"] {
+            width: 100% !important;
+            min-width: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* 2. Capsulas ultra-compactas */
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
+            padding: 2px !important;
+            height: 52px !important;
+            font-size: 0.6rem !important;
+            border-radius: 12px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            white-space: normal !important;
+            line-height: 1 !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button p {
+            margin: 0 !important;
+            margin-top: 2px !important;
+            font-size: 0.6rem !important;
+        }
+
+        /* 3. Bloques pequenos (login, forms) vuelven a 100% ancho */
         div[data-testid="stHorizontalBlock"]:not(:has(> div:nth-child(5))) {
             display: flex !important;
             flex-direction: column !important;
@@ -122,7 +151,7 @@ st.markdown("""
         }
     }
 
-    /* 7. Estética cápsula compacta — solo para modulos (bloques con >5 columnas) */
+    /* 7. Estética cápsula compacta — solo para modulos (bloques con >5 columnas) en escritorio */
     div[data-testid="stHorizontalBlock"]:has(> div:nth-child(5)) div[data-testid="stButton"] > button {
         border-radius: 18px !important;
         height: 65px !important;
