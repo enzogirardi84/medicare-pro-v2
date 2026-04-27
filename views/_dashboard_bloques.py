@@ -1,6 +1,7 @@
 """Bloques de UI del dashboard. Extraído de views/dashboard.py."""
 from datetime import datetime, timedelta
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -11,6 +12,34 @@ from core.utils import (
 )
 from core.view_helpers import bloque_estado_vacio, lista_plegable
 from views._dashboard_utils import _evaluar_ultimo_vital, _sumar_importe
+
+
+# Mapeo de colores semánticos para estados de agenda
+_COLOR_ESTADO_AGENDA = {
+    "Vencida": "#ef4444",
+    "Pendiente": "#f59e0b",
+    "Confirmada": "#10b981",
+    "Completada": "#3b82f6",
+    "Cancelada": "#9ca3af",
+}
+
+
+def _chart_barras_altair(df: pd.DataFrame, x: str, y: str, color_map: dict | None = None, titulo_eje_x: str = "", titulo_eje_y: str = "") -> alt.Chart:
+    """Crea un gráfico de barras horizontal con Altair para evitar rotación de etiquetas."""
+    base = alt.Chart(df).encode(
+        x=alt.X(f"{y}:Q", title=titulo_eje_y),
+        y=alt.Y(f"{x}:O", sort="-x", title=titulo_eje_x),
+        tooltip=[alt.Tooltip(f"{x}:N", title=titulo_eje_x or x), alt.Tooltip(f"{y}:Q", title=titulo_eje_y or y)],
+    )
+    if color_map:
+        base = base.encode(
+            color=alt.Color(
+                f"{x}:N",
+                scale=alt.Scale(domain=list(color_map.keys()), range=list(color_map.values())),
+                legend=None,
+            )
+        )
+    return base.mark_bar(cornerRadiusEnd=4).configure_axis(labelFontSize=12, titleFontSize=13).configure_view(strokeWidth=0)
 
 
 def render_notificaciones_turno(pacientes, indicaciones, ahora_local, hoy, proximas_48h_limite, pac_ids):
@@ -163,16 +192,25 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
         with st.expander("📊 Gráficos", expanded=False):
             st.caption("Agenda por estado")
             if not agenda_estado.empty:
-                st.bar_chart(agenda_estado.set_index("Estado")["Cantidad"], use_container_width=True)
+                st.altair_chart(
+                    _chart_barras_altair(agenda_estado, "Estado", "Cantidad", _COLOR_ESTADO_AGENDA, "Estado", "Cantidad"),
+                    use_container_width=True,
+                )
             st.caption("Visitas del dia por profesional")
             if not visitas_prof.empty:
-                st.bar_chart(visitas_prof.set_index("Profesional")["Visitas"], use_container_width=True)
+                st.altair_chart(
+                    _chart_barras_altair(visitas_prof, "Profesional", "Visitas", titulo_eje_x="Profesional", titulo_eje_y="Visitas"),
+                    use_container_width=True,
+                )
     else:
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             st.caption("Agenda por estado")
             if not agenda_estado.empty:
-                st.bar_chart(agenda_estado.set_index("Estado")["Cantidad"], use_container_width=True)
+                st.altair_chart(
+                    _chart_barras_altair(agenda_estado, "Estado", "Cantidad", _COLOR_ESTADO_AGENDA, "Estado", "Cantidad"),
+                    use_container_width=True,
+                )
             else:
                 bloque_estado_vacio(
                     "Gráfico sin datos",
@@ -182,7 +220,10 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
         with col_g2:
             st.caption("Visitas del dia por profesional")
             if not visitas_prof.empty:
-                st.bar_chart(visitas_prof.set_index("Profesional")["Visitas"], use_container_width=True)
+                st.altair_chart(
+                    _chart_barras_altair(visitas_prof, "Profesional", "Visitas", titulo_eje_x="Profesional", titulo_eje_y="Visitas"),
+                    use_container_width=True,
+                )
             else:
                 bloque_estado_vacio(
                     "Sin visitas hoy",
@@ -192,7 +233,10 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
 
     if not urg_chart.empty:
         st.caption("Urgencias por triage (ultimos 30 dias)")
-        st.bar_chart(urg_chart.set_index("Triage")["Eventos"], use_container_width=True)
+        st.altair_chart(
+            _chart_barras_altair(urg_chart, "Triage", "Eventos", titulo_eje_x="Grado de triage", titulo_eje_y="Eventos"),
+            use_container_width=True,
+        )
 
     evoluciones_hoy = [
         x for x in st.session_state.get("evoluciones_db", [])
