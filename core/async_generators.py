@@ -386,7 +386,6 @@ def render_pending_tasks_dashboard():
     # Botón para limpiar
     if st.button("🧹 Limpiar completadas", key="clear_completed_tasks"):
         manager.clear_completed()
-        st.rerun()
 
 
 def render_async_pdf_button(
