@@ -318,8 +318,7 @@ def lazy_data_loader(
                     state["has_more"] = False
                 
                 state["loading"] = False
-                st.rerun()
-        
+
         with cols[1]:
             st.caption(f"Mostrando {len(state['items'])} registros")
     

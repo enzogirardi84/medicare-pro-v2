@@ -663,7 +663,6 @@ class ConsentManager:
                     )
                     
                     st.success("✅ Documento firmado exitosamente")
-                    st.rerun()
         else:
             st.success("✅ Documento completamente firmado")
             

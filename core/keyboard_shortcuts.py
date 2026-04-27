@@ -473,13 +473,11 @@ def render_command_palette(
                 action()
             if on_close:
                 on_close()
-            st.rerun()
     
     # Botón cerrar
     if st.button("Cerrar (Escape)", key=f"{key}_close"):
         if on_close:
             on_close()
-        st.rerun()
 
 
 # ============================================================
@@ -563,7 +561,6 @@ def demo_keyboard_shortcuts():
     with cols[2]:
         if st.button("⌨️ Simular Ctrl+K"):
             st.session_state._command_palette_open = True
-            st.rerun()
     
     # Mostrar paleta de comandos
     if st.session_state.get("_command_palette_open"):

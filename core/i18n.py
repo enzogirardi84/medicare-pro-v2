@@ -544,7 +544,6 @@ def render_language_selector():
     if selected_code != current:
         if set_locale(selected_code):
             st.success(f"✅ Idioma cambiado a {selected_label}")
-            st.rerun()
 
 
 # Función para inicializar i18n en la app

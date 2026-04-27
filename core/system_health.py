@@ -480,7 +480,7 @@ class SystemHealthMonitor:
         
         # Botón de refresh
         if st.button("🔄 Refresh Health Check"):
-            st.rerun()
+            pass
         
         # Exportar reporte
         if st.button("📥 Export Health Report"):

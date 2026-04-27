@@ -113,10 +113,9 @@ class PatientPortal:
             
             if st.button("Ingresar", use_container_width=True, type="primary"):
                 session = self.authenticate_patient(dni, password)
-                
+
                 if session:
                     st.session_state["portal_session"] = session
-                    st.rerun()
                 else:
                     st.error("❌ DNI o contraseña incorrectos")
             
@@ -145,7 +144,6 @@ class PatientPortal:
         with col3:
             if st.button("🚪 Cerrar Sesión"):
                 del st.session_state["portal_session"]
-                st.rerun()
         
         st.divider()
         
@@ -216,7 +214,6 @@ class PatientPortal:
                             if st.button("✅ Confirmar asistencia", key=f"conf_{turno.id}"):
                                 scheduler.update_status(turno.id, AppointmentStatus.CONFIRMED)
                                 st.success("✅ Turno confirmado")
-                                st.rerun()
                 
                 st.divider()
         

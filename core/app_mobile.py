@@ -124,7 +124,6 @@ def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_d
 
         if paciente_sel_mobile and paciente_sel_mobile != st.session_state.get("paciente_actual"):
             st.session_state["paciente_actual"] = paciente_sel_mobile
-            st.rerun()
 
         if paciente_sel_mobile:
             det = mapa_detalles_fn(st.session_state).get(paciente_sel_mobile, {})

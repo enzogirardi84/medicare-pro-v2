@@ -558,7 +558,6 @@ class QualityManagementSystem:
                         if new_status != incident.status.value:
                             if st.button("Actualizar", key=f"upd_{incident.id}"):
                                 self.update_incident_status(incident.id, IncidentStatus(new_status))
-                                st.rerun()
     
     def _render_report_incident_form(self):
         """Formulario para reportar incidente."""

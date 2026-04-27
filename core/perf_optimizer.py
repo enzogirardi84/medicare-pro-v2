@@ -263,15 +263,13 @@ class Paginator:
         with cols[0]:
             if st.button("◀ Anterior", disabled=self.current_page == 0, key=f"{self.key}_prev"):
                 self.prev_page()
-                st.rerun()
-        
+
         with cols[1]:
             st.caption(f"Página {self.current_page + 1} de {self.total_pages} ({self.total_items} items)")
-        
+
         with cols[2]:
             if st.button("Siguiente ▶", disabled=self.current_page >= self.total_pages - 1, key=f"{self.key}_next"):
                 self.next_page()
-                st.rerun()
     
     def get_slice(self, items: List[Any]) -> List[Any]:
         """Obtener slice de items para la página actual."""
@@ -323,6 +321,5 @@ def lazy_load_large_dataset(
             else:
                 state["has_more"] = False
             state["loading"] = False
-            st.rerun()
-    
+
     return state["items"]

@@ -440,7 +440,6 @@ def render_pending_data_alert(
             if st.button("❌ Descartar", key=f"{key}_discard", use_container_width=True):
                 if st.checkbox("Confirmar descarte de datos", key=f"{key}_confirm"):
                     operations.clear()
-                    st.rerun()
 
 
 # ============================================================

@@ -636,7 +636,6 @@ class IoTMedicalDeviceManager:
                         if st.button("Desemparejar", key=f"unpair_{device.device_id}"):
                             self.unpair_device(device.device_id)
                             st.success("Dispositivo desemparejado")
-                            st.rerun()
             
             # Formulario para emparejar nuevo
             with st.expander("➕ Emparejar Nuevo Dispositivo"):
@@ -658,7 +657,6 @@ class IoTMedicalDeviceManager:
                         connection_type=ConnectionType.BLUETOOTH_LE
                     )
                     st.success(f"Dispositivo emparejado: {device.device_id}")
-                    st.rerun()
         
         with tab2:
             st.subheader("Tomar Lectura")

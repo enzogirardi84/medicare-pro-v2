@@ -440,7 +440,6 @@ def render_notification_badge() -> None:
                 st.write(notif.message)
                 if st.button("✓ Reconocer", key=f"ack_{notif.id}"):
                     manager.acknowledge_critical(user_id, notif.id)
-                    st.rerun()
     
     except Exception as e:
         log_event("notification_ui", f"render_error:{type(e).__name__}")

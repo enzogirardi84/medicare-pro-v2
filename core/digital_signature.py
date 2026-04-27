@@ -530,7 +530,6 @@ def render_signature_ui() -> None:
         if st.button("Generar claves ahora"):
             manager.generate_keypair(user_id)
             st.success("Claves generadas exitosamente")
-            st.rerun()
     
     # Documentos firmados
     with st.expander("📜 Documentos firmados"):
