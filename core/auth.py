@@ -121,7 +121,7 @@ def render_login():
             _, col, _ = st.columns([1, 1.5, 1])
         with col:
             with st.container(border=True):
-                st.markdown("<div style='text-align:center'>### 🔐 Acceso a MediCare</div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:center'><h3 style='margin:0;color:#1e293b;'>🔐 Acceso a MediCare</h3></div>", unsafe_allow_html=True)
                 st.caption("V9.12 · Acceso institucional")
             intro_login = (
                 "Ingresá con el usuario y la contraseña asignados por tu clínica."

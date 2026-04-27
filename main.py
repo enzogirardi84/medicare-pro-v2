@@ -371,6 +371,33 @@ from core.alert_toasts import render_queued_toasts
 render_queued_toasts()
 
 # ============================================================
+# AUTO-SCROLL AL CONTENIDO SI CAMBIÓ EL MÓDULO
+# ============================================================
+_modulo_previo_scroll = st.session_state.get("_mc_modulo_previo_scroll")
+if _modulo_previo_scroll != vista_actual:
+    st.session_state["_mc_modulo_previo_scroll"] = vista_actual
+    # Scroll suave hacia el área de contenido (saltando la navegación superior)
+    st.markdown(
+        """<script>
+            setTimeout(function() {
+                try {
+                    const main = window.parent.document.querySelector('.main');
+                    if (!main) return;
+                    const vb = main.querySelectorAll('[data-testid="stVerticalBlock"]');
+                    // Buscar primer bloque que esté más allá de ~280px (zona navegación)
+                    for (let i = 0; i < vb.length; i++) {
+                        if (vb[i].offsetTop > 280) {
+                            vb[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            break;
+                        }
+                    }
+                } catch(e) {}
+            }, 350);
+        </script>""",
+        unsafe_allow_html=True,
+    )
+
+# ============================================================
 # RENDER DE VISTA ACTUAL
 # ============================================================
 t0_view = time.monotonic()

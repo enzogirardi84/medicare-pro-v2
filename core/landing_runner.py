@@ -155,21 +155,12 @@ def render_publicidad_y_detener() -> None:
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
-    # Boton sticky en HTML puro — no desaparece en re-renders de Streamlit
-    st.markdown(
-        """<div style="position:sticky;top:0;z-index:99999;background:rgba(3,5,10,0.93);
-        padding:10px 0;text-align:center;border-bottom:1px solid rgba(45,212,191,0.18);
-        backdrop-filter:blur(12px)">
-        <a href="?login=1" target="_self" style="display:inline-flex;align-items:center;justify-content:center;
-        min-height:52px;padding:0 36px;border-radius:9999px;
-        background:linear-gradient(135deg,rgba(18,184,166,0.98) 0%,rgba(37,99,235,0.98) 58%,rgba(56,189,248,0.96) 100%);
-        color:white;font-weight:900;font-size:0.95rem;letter-spacing:0.16em;
-        text-decoration:none;text-transform:uppercase;
-        box-shadow:0 12px 32px rgba(14,165,233,0.22);border:1px solid rgba(186,230,253,0.22)">
-        \U0001F680&nbsp;&nbsp;INGRESAR AL SISTEMA
-        </a></div>""",
-        unsafe_allow_html=True,
-    )
+    # Botón sticky nativo de Streamlit (sin <a href> que recarga la página y destruye session_state).
+    # El wrapper sticky se aplica por CSS global inyectado en app_theme.py.
+    def _on_enter_app():
+        st.session_state.entered_app = True
+
+    st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", on_click=_on_enter_app, use_container_width=True, type="primary")
 
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
@@ -177,8 +168,5 @@ def render_publicidad_y_detener() -> None:
         st.html(_landing_html)
     else:
         st.markdown(_landing_html, unsafe_allow_html=True)
-    def _on_enter_app():
-        st.session_state.entered_app = True
 
-    st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", on_click=_on_enter_app)
     st.stop()
