@@ -11,4 +11,4 @@ prometheus-fastapi-instrumentator>=7.0.0
 prometheus-client>=0.20.0
 email-validator>=2.2.0
 alembic>=1.13.0
-python-multipart>=0.0.9
+python-multipart>=0.0.27
