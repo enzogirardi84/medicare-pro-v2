@@ -545,9 +545,8 @@ class TelemedicineManager:
                     diagnosis=diagnostico,
                     prescription=prescription if prescription else None
                 )
-                
+
                 st.success("✅ Consulta finalizada y guardada")
-                st.rerun()
     
     def _render_schedule_virtual_consultation(self):
         """Formulario para agendar consulta virtual."""

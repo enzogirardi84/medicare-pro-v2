@@ -74,7 +74,6 @@ def _navegar_a_modulo_inventario() -> None:
     if cur and str(cur) != _MOD_INVENTARIO:
         st.session_state["modulo_anterior"] = cur
     st.session_state["modulo_actual"] = _MOD_INVENTARIO
-    st.rerun()
 
 
 def _parse_dia(val: Any) -> date | None:
@@ -273,14 +272,14 @@ def render_alerta_inventario_banda_superior(
             )
         if c_go is not None:
             with c_go:
-                if st.button(
+                st.button(
                     "Inventario",
                     key="mc_inv_go_inventario_mini",
                     help="Ir al módulo Inventario",
                     type="primary",
                     use_container_width=True,
-                ):
-                    _navegar_a_modulo_inventario()
+                    on_click=_navegar_a_modulo_inventario,
+                )
         def _on_expand_inv():
             st.session_state.pop(_dismiss_key, None)
             st.session_state.pop(_SESSION_INV_DISMISS, None)
@@ -319,14 +318,14 @@ def render_alerta_inventario_banda_superior(
     if puede_ir_inventario:
         b1, b2 = st.columns(2)
         with b1:
-            if st.button(
+            st.button(
                 "Inventario",
                 key="mc_inv_go_inventario",
                 help="Ir al módulo Inventario (atajo «Anterior» disponible)",
                 type="primary",
                 use_container_width=True,
-            ):
-                _navegar_a_modulo_inventario()
+                on_click=_navegar_a_modulo_inventario,
+            )
         with b2:
             st.button(
                 "Ocultar",
