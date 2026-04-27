@@ -72,6 +72,26 @@ MSG_PIN_RESET_FALLIDO = (
 )
 
 
+
+def _intentar_login_emergencia(u_limpio: str, p_plain: str, loader_ph) -> bool:
+    """Intenta login de emergencia para superadmin cuando la BD no tiene la clave.
+    Retorna True si el login de emergencia fue exitoso (el caller debe hacer rerun).
+    """
+    emergency_pwd = obtener_emergency_password()
+    if u_limpio not in logins_clave_default_superadmin() or not emergency_pwd:
+        return False
+    if p_plain != emergency_pwd:
+        return False
+    limpiar_fallos_login(u_limpio)
+    user_data = DEFAULT_ADMIN_USER.copy()
+    user_data["usuario_login"] = "admin"
+    aplicar_hash_tras_login_ok(user_data, p_plain, rounds=bcrypt_rounds_config())
+    st.session_state["usuarios_db"]["admin"] = user_data
+    if loader_ph is not None:
+        loader_ph.empty()
+    _completar_login_exitoso(user_data, "admin", "Login emergencia superadmin", "login_ok_admin_emergencia")
+    return True  # _completar_login_exitoso hace st.rerun(), esto no se alcanza normalmente
+
 def _auth_strip_pwreset_query_param() -> None:
     qp = getattr(st, "query_params", None)
     if qp is None:
