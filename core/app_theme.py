@@ -800,9 +800,11 @@ def aplicar_css_base() -> None:
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
             }
-            [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
-            [data-testid="stSidebar"] button[kind="headerNoPadding"] {
-                display: none !important;
+            @media (min-width: 768px) {
+                [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
+                [data-testid="stSidebar"] button[kind="headerNoPadding"] {
+                    display: none !important;
+                }
             }
 
             /* =========================================================

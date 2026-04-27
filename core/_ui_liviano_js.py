@@ -10,7 +10,7 @@ LIVIANO_JS_TEMPLATE = """\
 <script>
 (function() {{
   try {{
-    var root = window.parent && window.parent.document ? window.parent.document.documentElement : document.documentElement;
+    var root = document.documentElement;
     if (!root) return;
     var MODO = {modo_js};
     var SERVER_HINT = {server_js};
@@ -127,7 +127,7 @@ MOBILE_SIDEBAR_AUTOCLOSE_JS = """
 
     function getMobileSidebarBridge() {
         try {
-            return window.parent && window.parent !== window ? window.parent : window;
+            return window;
         } catch (e) {
             return window;
         }
@@ -153,9 +153,8 @@ MOBILE_SIDEBAR_AUTOCLOSE_JS = """
 
     function syncFloatingToggle() {
         try {
-            var parentWin = window.parent && window.parent !== window ? window.parent : window;
-            if (parentWin && typeof parentWin.__mcSidebarToggleSync === "function") {
-                parentWin.__mcSidebarToggleSync();
+            if (typeof window.__mcSidebarToggleSync === "function") {
+                window.__mcSidebarToggleSync();
             }
         } catch (e) {}
     }
@@ -247,8 +246,8 @@ SIDEBAR_TOGGLE_JS = """
 <script>
 (function() {
   try {
-    var parentWin = window.parent && window.parent.document ? window.parent : window;
-    var parentDoc = parentWin.document || document;
+    var parentWin = window;
+    var parentDoc = document;
     if (!parentDoc || !parentDoc.body) return;
 
     // Invalidar cache: remover elementos viejos del DOM para forzar recreación

@@ -203,7 +203,4 @@ def render_mobile_sidebar_toggle() -> None:
     Usa st.html (sin iframe) cuando este disponible; fallback a components.v1.html.
     st.markdown NO ejecuta <script>, por eso se evita.
     """
-    if hasattr(st, "html"):
-        st.html(SIDEBAR_TOGGLE_JS)
-    else:
-        st.html(SIDEBAR_TOGGLE_JS)
+    st.html(SIDEBAR_TOGGLE_JS)

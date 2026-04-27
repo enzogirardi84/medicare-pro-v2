@@ -145,10 +145,10 @@ for _guard_key, _guard_default in (
 # ============================================================
 # TEMA PROFESIONAL POSLOGIN
 # ============================================================
-if not st.session_state.get("_mc_professional_theme_applied"):
+if not st.session_state.get("_mc_professional_theme_applied_v2"):
     try:
         apply_professional_theme()
-        st.session_state["_mc_professional_theme_applied"] = True
+        st.session_state["_mc_professional_theme_applied_v2"] = True
     except Exception as exc:
         log_event("ui_theme", f"Error aplicando tema: {exc}")
 
@@ -285,7 +285,54 @@ if not vista_actual:
     )
     st.stop()
 
-# Selector alternativo en móvil
+# Selector alternativo en móvil + mostrar botones nativos de sidebar (el custom JS no funciona en iframe sandboxed de Streamlit Cloud)
+# CSS de rescate para mostrar controles nativos de sidebar en móvil.
+# Usamos st.html (sin iframe) para que el CSS alcance los elementos shell de Streamlit.
+# st.markdown puede aislar el <style> y no afectar el header/sidebar nativos.
+if cliente_es_movil_probable():
+    st.html(
+        """
+        <style>
+        @media (max-width: 767px) {
+            /* Forzar visibilidad del header de Streamlit en móvil (ahi vive el botón hamburguesa) */
+            [data-testid="stHeader"],
+            header[data-testid="stHeader"] {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                height: auto !important;
+                min-height: 44px !important;
+            }
+            /* Forzar visibilidad de TODOS los botones nativos de sidebar */
+            [data-testid="stSidebarCollapsedControl"],
+            [data-testid="collapsedControl"],
+            [data-testid="stExpandSidebarButton"],
+            [data-testid="stSidebarCollapseButton"],
+            button[kind="headerNoPadding"],
+            button[kind="header"],
+            [aria-label="Open sidebar"],
+            [aria-label="Close sidebar"] {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+                width: auto !important;
+                height: auto !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+            }
+            /* Si Streamlit pone el botón colapsado en un div oculto, mostrarlo */
+            [data-testid="stSidebarCollapsedControl"] {
+                position: fixed !important;
+                top: 8px !important;
+                left: 8px !important;
+                z-index: 1000000 !important;
+            }
+        }
+        </style>
+        """
+    )
+
 paciente_mobile = render_mobile_patient_selector(
     mi_empresa, rol, obtener_pacientes_visibles, mapa_detalles_pacientes
 )

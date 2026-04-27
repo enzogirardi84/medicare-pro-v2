@@ -518,7 +518,10 @@ CUSTOM_CSS = """
     /* Hide default elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* Ocultar header solo en desktop; en móvil el header contiene el botón nativo de sidebar */
+    @media (min-width: 768px) {
+        header {visibility: hidden;}
+    }
     
     /* Custom scrollbar */
     ::-webkit-scrollbar {
