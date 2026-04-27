@@ -42,3 +42,6 @@ DB_CACHE_TTL_SEGUNDOS = 300
 # Con True, el sistema borraba evoluciones/vitales de sesion y luego guardaba listas vacias en Supabase.
 # Dejar en False para usar el guardado clasico via JSON blob en Supabase + guardado_universal local.
 ENABLE_NEXTGEN_API_DUAL_WRITE = False
+
+# True: activa el Vigía de Errores (captura centralizada con panel de diagnóstico).
+ERROR_TRACKER_ENABLED = True

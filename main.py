@@ -11,6 +11,7 @@ from core.app_bootstrap import insert_repo_root_on_path
 insert_repo_root_on_path()
 
 from core.app_logging import configurar_logging_basico, log_event
+from core.error_tracker import setup_global_hooks, report_exception
 from core.app_navigation import (
     procesar_query_params_navegacion,
     render_current_view,
@@ -54,6 +55,12 @@ st.set_page_config(
 )
 
 configurar_logging_basico()
+
+# Vigía de Errores: captura global de excepciones (sys.excepthook + threading)
+try:
+    setup_global_hooks()
+except Exception as exc:
+    log_event("error_tracker", f"setup_hooks_falla:{type(exc).__name__}:{exc}")
 
 # ============================================================
 # CSS GLOBAL
@@ -151,6 +158,10 @@ if not st.session_state.get("_mc_professional_theme_applied_v2"):
         st.session_state["_mc_professional_theme_applied_v2"] = True
     except Exception as exc:
         log_event("ui_theme", f"Error aplicando tema: {exc}")
+        try:
+            report_exception(module="main.theme", exc_info=exc, context="apply_professional_theme()", severity="warning")
+        except Exception:
+            pass
 
 # ============================================================
 # GUARDADOS PENDIENTES
@@ -159,6 +170,10 @@ try:
     procesar_guardado_pendiente_seguro()
 except Exception as exc:
     log_event("main_rerun", f"procesar_guardado_pendiente_falla:{type(exc).__name__}:{exc}")
+    try:
+        report_exception(module="main.guardado_pendiente", exc_info=exc, context="procesar_guardado_pendiente_seguro()", severity="error")
+    except Exception:
+        pass
 
 # ============================================================
 # NORMALIZAR USUARIO (solo si cambió)
@@ -196,6 +211,10 @@ if should_cleanup_cache():
             log_event("main_cache", f"limpieza_automatica:{n}_entradas")
     except Exception as exc:
         log_event("main_cache", f"limpieza_automatica_falla:{type(exc).__name__}:{exc}")
+        try:
+            report_exception(module="main.cache_cleanup", exc_info=exc, context="limpiar_cache_app()", severity="warning")
+        except Exception:
+            pass
 
 # ============================================================
 # CONTEXTO USUARIO
@@ -223,8 +242,12 @@ if _logo_ck not in st.session_state:
             if logo_sidebar_path.exists()
             else ""
         )
-    except OSError:
+    except OSError as exc:
         st.session_state[_logo_ck] = ""
+        try:
+            report_exception(module="main.logo", exc_info=exc, context="logo_sidebar_b64 read", severity="warning")
+        except Exception:
+            pass
 
 logo_sidebar_b64 = st.session_state[_logo_ck]
 
@@ -469,6 +492,15 @@ except Exception as exc:
     st.error(f"Error crítico al cargar el módulo **{vista_actual}**: {exc}")
     st.exception(exc)
     st.caption(f"Detalle técnico: {type(exc).__name__}: {exc}")
+    try:
+        report_exception(
+            module=f"main.render_current_view.{vista_actual}",
+            exc_info=exc,
+            context=f"render_current_view({vista_actual}, paciente={paciente_sel})",
+            severity="critical",
+        )
+    except Exception:
+        pass
 finally:
     record_perf(
         f"ui.modulo.{vista_actual}",

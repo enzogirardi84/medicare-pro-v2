@@ -24,11 +24,12 @@ def render_diagnosticos(user=None):
     if user:
         empresa_actual = user.get("empresa", "")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🗄️ Estado Supabase", 
-        "🏢 Empresa / Pacientes", 
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🗄️ Estado Supabase",
+        "🏢 Empresa / Pacientes",
         "💾 Datos Locales",
-        "🔧 Diagnóstico Técnico"
+        "🔧 Diagnóstico Técnico",
+        "🐞 Vigía de Errores",
     ])
 
     # === TAB 1: ESTADO SUPABASE ===
@@ -436,3 +437,110 @@ def render_diagnosticos(user=None):
                     st.success("🎉 Sistema completamente saludable. No se detectaron problemas.")
                 else:
                     st.error(f"⚠️ Se detectaron {total_problemas} problemas que requieren atención")
+
+    # === TAB 5: VIGÍA DE ERRORES ===
+    with tab5:
+        st.markdown("### 🐞 Vigía de Errores")
+        st.caption("Errores capturados por el sistema (automático + reportes manuales). Solo Super Administradores.")
+
+        try:
+            from core.error_tracker import (
+                get_summary_stats,
+                get_recent_errors,
+                mark_resolved,
+                clear_all,
+                export_json,
+            )
+        except Exception as exc:
+            st.error(f"No se pudo cargar el módulo de Vigía: {exc}")
+            st.stop()
+
+        stats = get_summary_stats()
+        if not stats.get("enabled"):
+            st.info("El Vigía de Errores está desactivado (ERROR_TRACKER_ENABLED=False).")
+            st.stop()
+
+        # Métricas
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Total errores", stats.get("total", 0))
+        c2.metric("Críticos", stats.get("critical", 0))
+        c3.metric("Sin resolver", stats.get("unresolved", 0))
+        c4.metric("Hoy", stats.get("today", 0))
+
+        st.divider()
+
+        # Filtros
+        col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
+        with col_f1:
+            filtro_sev = st.selectbox("Severidad", ["Todas", "critical", "error", "warning"], key="vigia_sev")
+        with col_f2:
+            mods = ["Todos"] + [m[0] for m in stats.get("top_modules", [])]
+            filtro_mod = st.selectbox("Módulo", mods, key="vigia_mod")
+        with col_f3:
+            solo_sin_resolver = st.checkbox("Sólo sin resolver", value=True, key="vigia_unresolved")
+        with col_f4:
+            limite = st.number_input("Cantidad", min_value=5, max_value=500, value=50, key="vigia_limit")
+
+        sev_arg = None if filtro_sev == "Todas" else filtro_sev
+        mod_arg = None if filtro_mod == "Todos" else filtro_mod
+
+        errores = get_recent_errors(
+            limit=int(limite),
+            severity=sev_arg,
+            module=mod_arg,
+            unresolved_only=solo_sin_resolver,
+        )
+
+        if not errores:
+            st.success("No hay errores que coincidan con los filtros actuales.")
+        else:
+            st.write(f"Mostrando {len(errores)} errores:")
+            for rec in errores:
+                eid = rec.get("id", "?")
+                ts = rec.get("timestamp", "?")[:19].replace("T", " ")
+                mod = rec.get("module", "?")
+                sev = rec.get("severity", "?")
+                tipo = rec.get("type", "?")
+                msg = rec.get("message", "?")[:180]
+                cnt = rec.get("count", 1)
+                resuelto = rec.get("resolved", False)
+
+                badge_color = "red" if sev == "critical" else ("orange" if sev == "error" else "gray")
+                resuelto_icon = "✅" if resuelto else "❌"
+
+                with st.container(border=True):
+                    c_a, c_b = st.columns([4, 1])
+                    with c_a:
+                        st.markdown(
+                            f"**`{sev.upper()}`** | `{mod}` | `{tipo}` | {resuelto_icon} | {ts}"
+                            + (f" | (×{cnt})" if cnt > 1 else "")
+                        )
+                        st.caption(f"{msg}")
+                    with c_b:
+                        if not resuelto:
+                            if st.button("Marcar resuelto", key=f"vigia_resolve_{eid}"):
+                                mark_resolved(eid)
+                                st.toast("Marcado como resuelto")
+                                st.rerun()
+
+                    with st.expander("Stack trace", expanded=False):
+                        st.code(rec.get("stack_trace", "Sin traza"), language="text")
+                        st.caption(f"Contexto: {rec.get('context', '—')} | Usuario: {rec.get('user', '—')} | ID: {eid}")
+
+        st.divider()
+        # Acciones globales
+        col_a1, col_a2 = st.columns([1, 1])
+        with col_a1:
+            if st.button("📥 Exportar JSON", key="vigia_export"):
+                st.download_button(
+                    label="Descargar",
+                    data=export_json(),
+                    file_name=f"vigia_errores_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    key="vigia_download",
+                )
+        with col_a2:
+            if st.button("🗑️ Limpiar todo", type="secondary", key="vigia_clear"):
+                clear_all()
+                st.toast("Historial de errores limpiado")
+                st.rerun()
