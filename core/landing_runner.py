@@ -187,7 +187,10 @@ def render_publicidad_y_detener() -> None:
 
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
-    st.markdown(_landing_html, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(_landing_html)
+    else:
+        st.markdown(_landing_html, unsafe_allow_html=True)
 
     # Botón respaldo nativo al final del landing
     st.markdown("<br>", unsafe_allow_html=True)
