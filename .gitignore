@@ -160,3 +160,7 @@ test_output/
 output/
 generated/
 *.pdf.tmp
+
+# Node/npm package files (no usados en este proyecto)
+package.json
+package-lock.json
