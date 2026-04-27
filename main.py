@@ -159,10 +159,10 @@ for _guard_key, _guard_default in (
 # ============================================================
 # TEMA PROFESIONAL POSLOGIN
 # ============================================================
-if not st.session_state.get("_mc_professional_theme_applied_v3"):
+if not st.session_state.get("_mc_professional_theme_applied_v4"):
     try:
         apply_professional_theme()
-        st.session_state["_mc_professional_theme_applied_v3"] = True
+        st.session_state["_mc_professional_theme_applied_v4"] = True
     except Exception as exc:
         log_event("ui_theme", f"Error aplicando tema: {exc}")
         try:
