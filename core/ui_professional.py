@@ -22,7 +22,7 @@ from core._ui_professional_css import CUSTOM_CSS, PROFESSIONAL_THEME
 
 def apply_professional_theme():
     """Aplica el tema profesional a la aplicación."""
-    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    st.html(CUSTOM_CSS)
 
 
 # ============================================================
