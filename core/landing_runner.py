@@ -158,17 +158,41 @@ def render_publicidad_y_detener() -> None:
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
-    # Botón sticky nativo de Streamlit (sin <a href> que recarga la página y destruye session_state).
-    # El wrapper sticky se aplica por CSS global inyectado en app_theme.py.
+    # CSS inline para forzar visibilidad del boton nativo (vence cualquier app_theme.py)
+    st.markdown(
+        """
+        <style>
+        [data-testid="stVerticalBlock"] > div > [data-testid="stVerticalBlockBorderWrapper"]:first-of-type,
+        [data-testid="stVerticalBlock"] > div:first-of-type {
+            position: sticky !important; top: 0 !important; z-index: 99999 !important;
+            background: rgba(3,5,10,0.93) !important; padding: 6px 0 !important;
+            border-bottom: 1px solid rgba(45,212,191,0.15) !important;
+        }
+        button[kind="primary"][data-testid="baseButton-primary"] {
+            background: linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%) !important;
+            color: #fff !important; border-radius: 9999px !important;
+            min-height: 60px !important; min-width: 320px !important;
+            font-weight: 900 !important; letter-spacing: 0.18em !important;
+            border: 1px solid rgba(186,230,253,0.24) !important;
+            box-shadow: 0 18px 42px rgba(14,165,233,0.22), 0 0 0 1px rgba(255,255,255,0.06) inset !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True, type="primary"):
         st.session_state.entered_app = True
         st.rerun()
 
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
-    if hasattr(st, "html"):
-        st.html(_landing_html)
-    else:
-        st.markdown(_landing_html, unsafe_allow_html=True)
+    st.markdown(_landing_html, unsafe_allow_html=True)
+
+    # Botón respaldo nativo al final del landing
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("\U0001F680 INGRESAR AL SISTEMA — Acceso", key="btn_ingresar_bottom", use_container_width=True, type="primary"):
+        st.session_state.entered_app = True
+        st.rerun()
 
     st.stop()
