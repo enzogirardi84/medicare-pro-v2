@@ -155,6 +155,7 @@ def render_publicidad_y_detener() -> None:
     Muestra la landing y detiene el script. No importar módulos pesados antes de llamar esto.
     """
     from core.landing_publicidad import obtener_html_landing_publicidad
+    from core._ui_liviano_js import SIDEBAR_TOGGLE_JS
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
@@ -208,5 +209,11 @@ def render_publicidad_y_detener() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    # Botón móvil para abrir/cerrar sidebar (necesario en landing también)
+    if hasattr(st, "html"):
+        st.html(SIDEBAR_TOGGLE_JS)
+    else:
+        st.markdown(SIDEBAR_TOGGLE_JS, unsafe_allow_html=True)
 
     st.stop()
