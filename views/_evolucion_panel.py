@@ -65,65 +65,6 @@ def _generar_pdf_historia_clinica(paciente_sel):
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
     st.markdown("##### Evolución clínica")
 
-    if CANVAS_DISPONIBLE:
-        st.markdown("##### Firma Digital del Paciente / Familiar")
-        firma_cfg = obtener_config_firma("evolucion")
-        metodo_firma = st.radio(
-            "Metodo de firma",
-            ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
-            horizontal=False,
-            key="metodo_firma_evolucion",
-        )
-        firma_subida = None
-        canvas_result = None
-        if metodo_firma.startswith("Subir"):
-            firma_subida = st.file_uploader(
-                "Subir imagen de la firma",
-                type=["png", "jpg", "jpeg"],
-                key="firma_upload_evolucion",
-            )
-        else:
-            st.caption("Usa el lienzo solo si el telefono responde fluido.")
-            canvas_result = st_canvas(
-                fill_color="rgba(255, 255, 255, 1)",
-                stroke_width=firma_cfg["stroke_width"],
-                stroke_color="#000000",
-                background_color="#ffffff",
-                height=firma_cfg["height"],
-                width=firma_cfg["width"],
-                drawing_mode="freedraw",
-                display_toolbar=firma_cfg["display_toolbar"],
-                key="canvas_firma_evolucion",
-            )
-
-        if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
-            b64_firma = firma_a_base64(
-                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
-                uploaded_file=firma_subida,
-            )
-            if b64_firma:
-                if "firmas_tactiles_db" not in st.session_state or not isinstance(st.session_state["firmas_tactiles_db"], list):
-                    st.session_state["firmas_tactiles_db"] = []
-                st.session_state["firmas_tactiles_db"].append({
-                    "paciente": paciente_sel,
-                    "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-                    "firma_img": b64_firma,
-                })
-                from core.database import _trim_db_list
-                _trim_db_list("firmas_tactiles_db", 200)
-                guardar_datos(spinner=True)
-                queue_toast("Firma guardada correctamente.")
-                st.rerun()
-            else:
-                st.error("No se detecto una firma valida. Puedes subir una foto o usar el lienzo.")
-    else:
-        st.warning("Libreria de firma no disponible. Puedes subir una imagen de la firma.")
-        st.file_uploader(
-            "Subir imagen de la firma",
-            type=["png", "jpg", "jpeg"],
-            key="firma_upload_evolucion_sin_canvas",
-        )
-
     st.divider()
 
     plantillas_evolucion = {
@@ -449,3 +390,64 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
                     except Exception:
                         st.warning("No se pudo mostrar una foto registrada.")
+
+    st.divider()
+    st.markdown("##### Firma Digital del Paciente / Familiar")
+    st.caption("Solicitar firma al finalizar la consulta, después de completar la evolución clínica.")
+    if CANVAS_DISPONIBLE:
+        firma_cfg = obtener_config_firma("evolucion")
+        metodo_firma = st.radio(
+            "Método de firma",
+            ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
+            horizontal=False,
+            key="metodo_firma_evolucion",
+        )
+        firma_subida = None
+        canvas_result = None
+        if metodo_firma.startswith("Subir"):
+            firma_subida = st.file_uploader(
+                "Subir imagen de la firma",
+                type=["png", "jpg", "jpeg"],
+                key="firma_upload_evolucion",
+            )
+        else:
+            st.caption("Usá el lienzo solo si el teléfono responde fluido.")
+            canvas_result = st_canvas(
+                fill_color="rgba(255, 255, 255, 1)",
+                stroke_width=firma_cfg["stroke_width"],
+                stroke_color="#000000",
+                background_color="#ffffff",
+                height=firma_cfg["height"],
+                width=firma_cfg["width"],
+                drawing_mode="freedraw",
+                display_toolbar=firma_cfg["display_toolbar"],
+                key="canvas_firma_evolucion",
+            )
+
+        if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
+            b64_firma = firma_a_base64(
+                canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
+                uploaded_file=firma_subida,
+            )
+            if b64_firma:
+                if "firmas_tactiles_db" not in st.session_state or not isinstance(st.session_state["firmas_tactiles_db"], list):
+                    st.session_state["firmas_tactiles_db"] = []
+                st.session_state["firmas_tactiles_db"].append({
+                    "paciente": paciente_sel,
+                    "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                    "firma_img": b64_firma,
+                })
+                from core.database import _trim_db_list
+                _trim_db_list("firmas_tactiles_db", 200)
+                guardar_datos(spinner=True)
+                queue_toast("Firma guardada correctamente.")
+                st.rerun()
+            else:
+                st.error("No se detectó una firma válida. Podés subir una foto o usar el lienzo.")
+    else:
+        st.warning("Librería de firma no disponible. Podés subir una imagen de la firma.")
+        st.file_uploader(
+            "Subir imagen de la firma",
+            type=["png", "jpg", "jpeg"],
+            key="firma_upload_evolucion_sin_canvas",
+        )
