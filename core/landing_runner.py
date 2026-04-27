@@ -158,32 +158,38 @@ def render_publicidad_y_detener() -> None:
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
-    # CSS inline para forzar visibilidad del boton nativo (vence cualquier app_theme.py)
+    # Botón principal: enlace HTML estilizado como botón (más confiable que st.button+st.rerun en Cloud)
     st.markdown(
         """
         <style>
-        [data-testid="stVerticalBlock"] > div > [data-testid="stVerticalBlockBorderWrapper"]:first-of-type,
-        [data-testid="stVerticalBlock"] > div:first-of-type {
+        .mc-lp-sticky-btn-wrap {
             position: sticky !important; top: 0 !important; z-index: 99999 !important;
             background: rgba(3,5,10,0.93) !important; padding: 6px 0 !important;
             border-bottom: 1px solid rgba(45,212,191,0.15) !important;
+            text-align: center;
         }
-        button[kind="primary"][data-testid="baseButton-primary"] {
-            background: linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%) !important;
-            color: #fff !important; border-radius: 9999px !important;
-            min-height: 60px !important; min-width: 320px !important;
-            font-weight: 900 !important; letter-spacing: 0.18em !important;
-            border: 1px solid rgba(186,230,253,0.24) !important;
-            box-shadow: 0 18px 42px rgba(14,165,233,0.22), 0 0 0 1px rgba(255,255,255,0.06) inset !important;
+        .mc-lp-sticky-btn-wrap a {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 60px; min-width: 320px; padding: 0 34px;
+            border-radius: 9999px; border: 1px solid rgba(186,230,253,0.24);
+            background: linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%);
+            color: #fff !important; font-size: 1rem; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.18em; text-decoration: none !important;
+            box-shadow: 0 18px 42px rgba(14,165,233,0.22), 0 0 0 1px rgba(255,255,255,0.06) inset;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+        }
+        .mc-lp-sticky-btn-wrap a:hover {
+            transform: translateY(-3px) scale(1.01);
+            filter: brightness(1.04);
+            box-shadow: 0 24px 54px rgba(56,189,248,0.28), 0 0 0 1px rgba(255,255,255,0.09) inset;
         }
         </style>
+        <div class="mc-lp-sticky-btn-wrap">
+            <a href="?login=1" target="_self">🚀 INGRESAR AL SISTEMA</a>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-
-    if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True, type="primary"):
-        st.session_state.entered_app = True
-        st.rerun()
 
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
@@ -192,10 +198,15 @@ def render_publicidad_y_detener() -> None:
     else:
         st.markdown(_landing_html, unsafe_allow_html=True)
 
-    # Botón respaldo nativo al final del landing
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("\U0001F680 INGRESAR AL SISTEMA — Acceso", key="btn_ingresar_bottom", use_container_width=True, type="primary"):
-        st.session_state.entered_app = True
-        st.rerun()
+    # Botón respaldo nativo al final del landing (mismo enlace, por si el sticky falla)
+    st.markdown(
+        """
+        <br>
+        <div style="text-align:center;padding:18px 0 28px;">
+            <a href="?login=1" target="_self" style="display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 32px;font-size:1rem;text-transform:uppercase;letter-spacing:0.12em;text-decoration:none !important;border-radius:9999px;border:1px solid rgba(186,230,253,0.24);background:linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%);color:#fff !important;box-shadow:0 18px 42px rgba(14,165,233,0.22);">🚀 Ingresar al sistema</a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.stop()
