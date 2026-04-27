@@ -425,17 +425,17 @@ class SearchManager:
                             continue
                         if date_to and result_date > date_to:
                             continue
-                        
+
                         filtered.append(result)
-                    except:
+                    except ValueError:
                         filtered.append(result)
                 else:
                     filtered.append(result)
-            
+
             results = filtered[:limit]
-        
+
         return results[:limit]
-    
+
     def advanced_search(
         self,
         query: str,
@@ -495,17 +495,17 @@ class SearchManager:
                             continue
                         if date_to and result_date > date_to:
                             continue
-                        
+
                         filtered.append(result)
-                    except:
+                    except ValueError:
                         filtered.append(result)
                 else:
                     filtered.append(result)
-            
+
             results = filtered
-        
+
         return results[:limit]
-    
+
     def render_search_ui(self):
         """Renderiza interfaz de búsqueda en Streamlit."""
         st.title("🔍 Búsqueda Avanzada")

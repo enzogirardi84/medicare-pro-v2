@@ -42,7 +42,7 @@ class MemoryLogHandler(logging.Handler):
             if JSON_LOGGING_AVAILABLE:
                 try:
                     entry["correlation_id"] = get_correlation_id()
-                except:
+                except Exception:
                     entry["correlation_id"] = "none"
             _log_buffer.append(entry)
         except Exception as _exc:

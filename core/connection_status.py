@@ -128,7 +128,7 @@ class ConnectionMonitor:
             for listener in self._listeners:
                 try:
                     listener(self._status)
-                except:
+                except Exception:
                     pass
     
     def add_listener(self, callback: Callable[[ConnectionStatus], None]):

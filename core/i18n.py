@@ -467,7 +467,7 @@ class I18nManager:
         
         try:
             return date_obj.strftime(fmt)
-        except:
+        except (ValueError, TypeError, AttributeError):
             return str(date_obj)
     
     def format_number(self, number: float, decimals: int = 2) -> str:

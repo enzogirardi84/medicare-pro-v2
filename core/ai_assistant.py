@@ -383,7 +383,7 @@ class ClinicalRiskPredictor:
                     elif systolic > 160:
                         score += 15
                         factors.append("Hipertensión moderada-severa")
-                except:
+                except (ValueError, TypeError):
                     pass
         
         if vital_signs.get("frecuencia_cardiaca"):
@@ -506,7 +506,7 @@ class VitalSignAnomalyDetector:
                             value = float(pa.split("/")[0])
                         else:
                             value = float(pa.split("/")[1])
-                    except:
+                    except ValueError:
                         continue
             
             if value is None:

@@ -305,14 +305,14 @@ class DrugInteractionMonitor:
                 data = st.session_state["interaction_alerts"]
                 if isinstance(data, dict):
                     self._alerts = data
-            except:
+            except Exception:
                 pass
         
         if "dismissed_interactions" in st.session_state:
             try:
                 dismissed = st.session_state["dismissed_interactions"]
                 self._dismissed_combinations = set(tuple(x) for x in dismissed)
-            except:
+            except Exception:
                 pass
     
     def _save_data(self):

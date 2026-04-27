@@ -410,7 +410,7 @@ class SystemHealthMonitor:
         try:
             from core.release_notes import RELEASES
             return RELEASES[0]["version"] if RELEASES else "unknown"
-        except:
+        except (ImportError, IndexError, KeyError):
             return "unknown"
     
     def render_health_dashboard(self):
