@@ -199,7 +199,7 @@ def render_publicidad_y_detener() -> None:
     else:
         st.markdown(_landing_html, unsafe_allow_html=True)
 
-    # Botón respaldo nativo al final del landing (mismo enlace, por si el sticky falla)
+    # Botón respaldo nativo al final del landing
     st.markdown(
         """
         <br>
@@ -210,12 +210,53 @@ def render_publicidad_y_detener() -> None:
         unsafe_allow_html=True,
     )
 
-    # Botón móvil para abrir/cerrar sidebar (st.components.v1.html ejecuta JS real,
-    # st.html() de Streamlit sandboxea <script> en Cloud)
-    try:
-        import streamlit.components.v1 as components
-        components.html(SIDEBAR_TOGGLE_JS, height=0, scrolling=False)
-    except Exception:
-        st.markdown(SIDEBAR_TOGGLE_JS, unsafe_allow_html=True)
+    # CSS para forzar visibilidad del botón nativo de Streamlit (hamburguesa >> / << sidebar)
+    # en mobile, ya que otros módulos ocultan el nativo con display:none
+    st.markdown(
+        """
+        <style>
+        /* En la landing mostramos el boton nativo de Streamlit para abrir/cerrar sidebar */
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="collapsedControl"],
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="stSidebarCollapseButton"],
+        button[kind="headerNoPadding"],
+        [aria-label="Open sidebar"],
+        [aria-label="Close sidebar"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        /* En mobile: la sidebar empieza colapsada; que el boton nativo sea visible */
+        @media (max-width: 768px) {
+            [data-testid="stSidebarCollapsedControl"] button,
+            [data-testid="stExpandSidebarButton"] button {
+                display: inline-flex !important;
+                visibility: visible !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Sidebar nativo para mobile: renderizar algo para que el sidebar DOM exista
+    # y Streamlit muestre la hamburguesa nativa en mobile
+    with st.sidebar:
+        st.markdown(
+            """
+            <div style="text-align:center;padding:12px 0 8px;">
+                <h3 style="color:#14b8a6;margin:0;font-size:1.1rem;">🏥 MediCare PRO</h3>
+                <p style="color:#94a3b8;font-size:0.78rem;margin:4px 0 0;">Acceso institucional</p>
+            </div>
+            <hr style="border-color:rgba(148,163,184,0.15);margin:8px 0;">
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<a href='?login=1' target='_self' style='display:block;text-align:center;padding:10px 0;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#2563eb);color:#fff!important;text-decoration:none!important;font-weight:700;font-size:0.92rem;'>🚀 Ingresar al sistema</a>",
+            unsafe_allow_html=True,
+        )
 
     st.stop()
