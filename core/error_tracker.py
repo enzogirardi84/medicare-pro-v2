@@ -24,7 +24,11 @@ from typing import Any, Callable, Dict, List, Optional
 import streamlit as st
 
 from core.app_logging import log_event
-from core.feature_flags import ERROR_TRACKER_ENABLED
+
+try:
+    from core.feature_flags import ERROR_TRACKER_ENABLED
+except Exception:
+    ERROR_TRACKER_ENABLED = True
 
 # ---------------------------------------------------------------------------
 # Configuración

@@ -11,7 +11,14 @@ from core.app_bootstrap import insert_repo_root_on_path
 insert_repo_root_on_path()
 
 from core.app_logging import configurar_logging_basico, log_event
-from core.error_tracker import setup_global_hooks, report_exception
+
+try:
+    from core.error_tracker import setup_global_hooks, report_exception
+except Exception as _exc_import_et:
+    log_event("error_tracker", f"import_falla:{type(_exc_import_et).__name__}:{_exc_import_et}")
+    setup_global_hooks = lambda: None
+    def report_exception(**kwargs):
+        pass
 from core.app_navigation import (
     procesar_query_params_navegacion,
     render_current_view,
