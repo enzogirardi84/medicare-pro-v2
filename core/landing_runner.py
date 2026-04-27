@@ -210,10 +210,12 @@ def render_publicidad_y_detener() -> None:
         unsafe_allow_html=True,
     )
 
-    # Botón móvil para abrir/cerrar sidebar (necesario en landing también)
-    if hasattr(st, "html"):
-        st.html(SIDEBAR_TOGGLE_JS)
-    else:
+    # Botón móvil para abrir/cerrar sidebar (st.components.v1.html ejecuta JS real,
+    # st.html() de Streamlit sandboxea <script> en Cloud)
+    try:
+        import streamlit.components.v1 as components
+        components.html(SIDEBAR_TOGGLE_JS, height=0, scrolling=False)
+    except Exception:
         st.markdown(SIDEBAR_TOGGLE_JS, unsafe_allow_html=True)
 
     st.stop()
