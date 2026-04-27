@@ -281,17 +281,19 @@ def render_alerta_inventario_banda_superior(
                     use_container_width=True,
                 ):
                     _navegar_a_modulo_inventario()
+        def _on_expand_inv():
+            st.session_state.pop(_dismiss_key, None)
+            st.session_state.pop(_SESSION_INV_DISMISS, None)
+
         with c2:
-            if st.button(
+            st.button(
                 "Mostrar",
                 key="mc_inv_expand_from_mini",
                 help="Ver resumen, botones y lista de ítems",
                 type="secondary",
                 use_container_width=True,
-            ):
-                st.session_state.pop(_dismiss_key, None)
-                st.session_state.pop(_SESSION_INV_DISMISS, None)
-                st.rerun()
+                on_click=_on_expand_inv,
+            )
         return
 
     chips_html = _chips_inventario_html(na, nb)
@@ -311,6 +313,9 @@ def render_alerta_inventario_banda_superior(
     # Ancla para CSS: centrar y limitar ancho de la fila de botones en escritorio/tablet
     st.markdown('<div class="mc-inv-after-card" aria-hidden="true"></div>', unsafe_allow_html=True)
 
+    def _on_dismiss_inv():
+        st.session_state[_dismiss_key] = f_inv
+
     if puede_ir_inventario:
         b1, b2 = st.columns(2)
         with b1:
@@ -323,25 +328,23 @@ def render_alerta_inventario_banda_superior(
             ):
                 _navegar_a_modulo_inventario()
         with b2:
-            if st.button(
+            st.button(
                 "Ocultar",
                 key="mc_inv_dismiss",
                 help="Minimiza la alerta (se reabre si cambia el stock)",
                 type="secondary",
                 use_container_width=True,
-            ):
-                st.session_state[_dismiss_key] = f_inv
-                st.rerun()
+                on_click=_on_dismiss_inv,
+            )
     else:
-        if st.button(
+        st.button(
             "Ocultar",
             key="mc_inv_dismiss",
             help="Minimiza la alerta (se reabre si cambia el stock)",
             type="secondary",
             use_container_width=True,
-        ):
-            st.session_state[_dismiss_key] = f_inv
-            st.rerun()
+            on_click=_on_dismiss_inv,
+        )
 
     _h_det = min(280, max(160, 22 * (total + 3)))
     with lista_plegable("Lista de ítems", count=total, expanded=False, height=_h_det):

@@ -45,31 +45,6 @@ def _auth_pop_flash(key: str) -> None:
 def _auth_loader_markup(subtitle: str) -> str:
     texto = escape(str(subtitle or "Autenticando..."))
     return f"""
-<style>
-.mc-auth-overlay{{position:fixed;inset:0;background:rgba(3,6,15,0.82);
-backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;
-flex-direction:column;justify-content:center;align-items:center;z-index:9999999;
-gap:16px;padding:1rem;text-align:center;
-animation:mc-auth-fadeout 0.4s ease 4s forwards;}}
-.mc-auth-spinner{{display:block;flex:0 0 auto;width:46px;height:46px;
-border:3px solid rgba(255,255,255,0.08);border-left-color:#14b8a6;
-border-top-color:#60a5fa;border-radius:50%;animation:mc-auth-spin 0.9s linear infinite;
--webkit-animation:mc-auth-spin 0.9s linear infinite;transform-origin:center center;
-will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;}}
-.mc-auth-title{{color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-font-size:18px;font-weight:700;letter-spacing:0.2px;margin:0;}}
-.mc-auth-sub{{color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-font-size:13px;font-weight:500;letter-spacing:0.25px;margin:0;}}
-@keyframes mc-auth-spin{{to{{transform:rotate(360deg);}}}}
-@-webkit-keyframes mc-auth-spin{{to{{transform:rotate(360deg);}}}}
-@keyframes mc-auth-fadeout{{from{{opacity:1}}to{{opacity:0;pointer-events:none;visibility:hidden;}}}}
-@media (max-width: 767px){{
-  .mc-auth-overlay{{gap:14px;padding:0.9rem;background:rgba(3,6,15,0.9);}}
-  .mc-auth-spinner{{width:42px;height:42px;}}
-  .mc-auth-title{{font-size:16px;}}
-  .mc-auth-sub{{font-size:12px;}}
-}}
-</style>
 <div class="mc-auth-overlay" role="status" aria-live="polite">
   <div class="mc-auth-spinner mc-spinner" aria-hidden="true"></div>
   <p class="mc-auth-title">MediCare Enterprise PRO</p>
@@ -259,16 +234,18 @@ def _render_bloque_verificacion_email_2fa() -> bool:
             else:
                 st.error(err)
 
+    def _on_resend():
+        ok_r, err_r = reenviar_codigo_login()
+        st.session_state["_mc_2fa_resend_toast"] = (
+            ("ok", "Nuevo código enviado.") if ok_r else ("err", err_r)
+        )
+
+    def _on_cancel():
+        limpiar_desafio_email_2fa()
+
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Reenviar código", use_container_width=True):
-            ok_r, err_r = reenviar_codigo_login()
-            st.session_state["_mc_2fa_resend_toast"] = (
-                ("ok", "Nuevo código enviado.") if ok_r else ("err", err_r)
-            )
-            st.rerun()
+        st.button("Reenviar código", use_container_width=True, on_click=_on_resend)
     with c2:
-        if st.button("Cancelar", use_container_width=True):
-            limpiar_desafio_email_2fa()
-            st.rerun()
+        st.button("Cancelar", use_container_width=True, on_click=_on_cancel)
     return True
