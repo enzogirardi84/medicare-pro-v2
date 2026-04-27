@@ -783,6 +783,7 @@ def aplicar_css_base() -> None:
             }
 
             /* =========================================================
+    @supports selector(:has(*)) {
                11. NAVIGATION BUTTONS (desktop grid)
                ========================================================= */
             div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"],
@@ -798,12 +799,16 @@ def aplicar_css_base() -> None:
                 color: #ffffff !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
+    } /* end @supports :has() */
                 text-overflow: ellipsis !important;
             }
-            [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
-            [data-testid="stSidebar"] button[kind="headerNoPadding"] {
-                display: none !important;
-            }
+    /* Solo ocultar boton colapsar sidebar en desktop; en mobile debe ser visible */
+    @media (min-width: 769px) {
+        [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
+        [data-testid="stSidebar"] button[kind="headerNoPadding"] {
+            display: none !important;
+        }
+    }
 
             /* =========================================================
                12. COMMAND PALETTE OVERLAY
