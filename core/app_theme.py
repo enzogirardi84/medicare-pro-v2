@@ -781,6 +781,102 @@ def aplicar_css_base() -> None:
                     font-size: 12px;
                 }
             }
+
+            /* =========================================================
+               11. NAVIGATION BUTTONS (desktop grid)
+               ========================================================= */
+            div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"],
+            div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="primary"] {
+                background-color: #1e293b !important;
+                border: 1px solid rgba(255,255,255,0.15) !important;
+                border-radius: 14px !important;
+                transition: all 0.2s ease !important;
+                height: 52px !important;
+            }
+            div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"] p,
+            div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="primary"] p {
+                color: #ffffff !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
+            [data-testid="stSidebar"] button[kind="headerNoPadding"] {
+                display: none !important;
+            }
+
+            /* =========================================================
+               12. COMMAND PALETTE OVERLAY
+               ========================================================= */
+            .cmd-palette-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(2, 6, 23, 0.8);
+                backdrop-filter: blur(4px);
+                z-index: 999999;
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                padding-top: 15vh;
+            }
+            .cmd-palette-container {
+                background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 12px;
+                width: 100%;
+                max-width: 600px;
+                max-height: 60vh;
+                overflow: hidden;
+                box-shadow: 0 25px 50px rgba(2, 6, 23, 0.5);
+            }
+            .cmd-palette-input {
+                width: 100%;
+                padding: 1rem 1.25rem;
+                background: transparent;
+                border: none;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+                color: #f1f5f9;
+                font-size: 1.1rem;
+                outline: none;
+            }
+            .cmd-palette-input::placeholder { color: #64748b; }
+            .cmd-palette-list {
+                max-height: calc(60vh - 80px);
+                overflow-y: auto;
+            }
+            .cmd-palette-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.75rem 1.25rem;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                border-left: 3px solid transparent;
+            }
+            .cmd-palette-item:hover, .cmd-palette-item.selected {
+                background: rgba(59, 130, 246, 0.1);
+                border-left-color: #3b82f6;
+            }
+            .cmd-palette-item-title { color: #f1f5f9; font-size: 0.95rem; }
+            .cmd-palette-item-desc { color: #64748b; font-size: 0.8rem; margin-top: 0.125rem; }
+            .cmd-palette-shortcut { display: flex; align-items: center; gap: 0.375rem; }
+            .cmd-palette-kbd {
+                background: rgba(15, 23, 42, 0.8);
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 4px;
+                padding: 0.25rem 0.5rem;
+                font-family: monospace;
+                font-size: 0.75rem;
+                color: #94a3b8;
+            }
+
+            /* =========================================================
+               13. PATIENT ALERT PULSE (red critical)
+               ========================================================= */
+            @keyframes mc-pulse-red {
+                0%, 100% { box-shadow: 0 0 0 1px rgba(248,113,113,0.35), 0 8px 24px rgba(0,0,0,0.35); }
+                50%   { box-shadow: 0 0 0 3px rgba(248,113,113,0.55), 0 10px 28px rgba(220,38,38,0.25); }
+            }
         </style>
         """,
         unsafe_allow_html=True,

@@ -121,12 +121,6 @@ def render_sidebar_bloque_app_paciente(mi_empresa: str, rol: Optional[str]) -> N
             <div style="font-size:1.15rem; font-weight:900; color:#fff; margin-top:6px;">{n} alerta(s) ROJA(s) pendiente(s)</div>
             <div style="font-size:0.82rem; color:#fecaca; margin-top:6px;">Abri el modulo <b>Alertas app paciente</b> y asigná respuesta.</div>
         </div>
-        <style>
-        @keyframes mc-pulse-red {{
-            0%, 100% {{ box-shadow: 0 0 0 1px rgba(248,113,113,0.35), 0 8px 24px rgba(0,0,0,0.35); }}
-            50% {{ box-shadow: 0 0 0 3px rgba(248,113,113,0.55), 0 10px 28px rgba(220,38,38,0.25); }}
-        }}
-        </style>
         """,
         unsafe_allow_html=True,
     )

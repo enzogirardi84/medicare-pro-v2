@@ -130,38 +130,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 )
         return
 
-    # ── ESCRITORIO: chunking nativo en filas de 6 + CSS simple de estética ──
-    # Inyectar SIEMPRE para que el estilo se aplique desde la primera carga
-    st.markdown(
-        """
-        <style>
-        /* Estética Premium simple para botones de navegación
-           (solo filas anchas de módulos: >=4 columnas) */
-        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"],
-        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="primary"] {
-            background-color: #1e293b !important;
-            border: 1px solid rgba(255,255,255,0.15) !important;
-            border-radius: 14px !important;
-            transition: all 0.2s ease !important;
-            height: 52px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"] p,
-        div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="primary"] p {
-            color: #ffffff !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-        }
-        /* Ocultar flechas nativas de cerrar sidebar en móvil */
-        [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
-        [data-testid="stSidebar"] button[kind="headerNoPadding"] {
-            display: none !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
+    # ── ESCRITORIO: chunking nativo en filas de 6 ──
     # Renderizar en filas de 6 columnas nativas de Streamlit
     chunk_size = 6
     for i in range(0, len(modulos), chunk_size):
