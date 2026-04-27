@@ -242,14 +242,14 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
     if paciente_sel:
         alertas = obtener_alertas_fn(st.session_state, paciente_sel)
         if alertas:
-            st.write("**Alertas clinicas**")
-            for alerta in alertas:
-                nivel = str(alerta.get("nivel", "media")).lower()
-                msg = f"**{escape(alerta['titulo'])}**  \n{escape(alerta['detalle'])}"
-                if nivel == "critica":
-                    st.error(msg)
-                elif nivel == "alta":
-                    st.warning(msg)
-                else:
-                    st.info(msg)
+            with st.expander(f"🚨 Alertas clínicas ({len(alertas)})", expanded=True):
+                for alerta in alertas:
+                    nivel = str(alerta.get("nivel", "media")).lower()
+                    msg = f"**{escape(alerta['titulo'])}**  \n{escape(alerta['detalle'])}"
+                    if nivel == "critica":
+                        st.error(msg)
+                    elif nivel == "alta":
+                        st.warning(msg)
+                    else:
+                        st.info(msg)
     return paciente_sel
