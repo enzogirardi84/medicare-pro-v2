@@ -1,27 +1,162 @@
+# ============================================================
+# .gitignore — MediCare Pro v2
+# Generado: 2026-04-26
+# ============================================================
+
+# ============================================================
+# PYTHON
+# ============================================================
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
 
+# Distribución / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+pip-wheel-metadata/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ============================================================
+# STREAMLIT — DATOS Y SECRETOS
+# ============================================================
 .streamlit/local_data.json
 .streamlit/data_store/
 .streamlit/secrets.toml
 .streamlit/secrets_fixed.toml
 .streamlit/secrets.toml.py
 .streamlit/*.bak.local
+.streamlit/cache/
 
+# ============================================================
+# VARIABLES DE ENTORNO Y SECRETOS
+# ============================================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.pem
+*.key
+*.cert
+
+# ============================================================
+# CACHES DE HERRAMIENTAS
+# ============================================================
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
 
-.venv/
-venv/
-env/
+# ============================================================
+# IDEs Y EDITORES
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.spyderproject
+.spyproject
+.ropeproject
 
-*.log
+# ============================================================
+# JUPYTER / NOTEBOOKS
+# ============================================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ============================================================
+# NODE / NPM
+# ============================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+
+# ============================================================
+# WINDOWS
+# ============================================================
 Thumbs.db
+ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
+*.lnk
 
+# ============================================================
+# MAC
+# ============================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ============================================================
+# LINUX
+# ============================================================
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ============================================================
+# LOGS
+# ============================================================
+*.log
+logs/
+log/
+
+# ============================================================
+# BACKUPS Y ARCHIVOS TEMPORALES
+# ============================================================
+backups/
+*.bak
+*.backup
+*.tmp
+*.temp
+~$*
+
+# ============================================================
+# CI / DEPLOY
+# ============================================================
 nextgen_platform/ci_artifacts/
 
-node_modules/
+# ============================================================
+# BASES DE DATOS LOCALES (NUNCA SUBIR DATOS DE PACIENTES)
+# ============================================================
+*.db
+*.sqlite
+*.sqlite3
+local_data/
+patient_data/
 
-backups/
+# ============================================================
+# ARCHIVOS DE PRUEBA / DESCARGAS GENERADAS
+# ============================================================
+test_output/
+output/
+generated/
+*.pdf.tmp
