@@ -20,7 +20,7 @@ from core.nav_helpers import (
 )
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 
-_VIEW_FN_CACHE: dict = {}
+_VIEW_FN_CACHE: dict = {}  # Cache de funciones render por nombre de módulo (se limpia en re-deploy por reload del módulo)
 
 
 def _split_icon_label(label: str):
@@ -195,7 +195,8 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             default_sel = vista_actual
 
     render_modulos_grid(pill_options, default_sel, view_nav_labels)
-    return default_sel
+    # Leer modulo_actual del session_state post-render para capturar cambios del on_click callback
+    return st.session_state.get("modulo_actual", default_sel)
 
 
 def _get_render_fn(tab_name, view_config):
@@ -214,7 +215,12 @@ def _get_render_fn(tab_name, view_config):
             st.error(f"Error al cargar el modulo '{tab_name}': {type(exc).__name__}")
             log_event("view_dispatch", f"import_fallo:{tab_name}:{type(exc).__name__}:{exc}")
             raise
-    return _VIEW_FN_CACHE[tab_name]
+    fn = _VIEW_FN_CACHE[tab_name]
+    # Verificar que la referencia en cache siga siendo válida (protección ante re-deploys en caliente)
+    if not callable(fn):
+        _VIEW_FN_CACHE.pop(tab_name, None)
+        return _get_render_fn(tab_name, view_config)
+    return fn
 
 
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_config, menu_set=None):

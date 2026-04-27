@@ -783,6 +783,7 @@ def aplicar_css_base() -> None:
             }
 
             /* =========================================================
+    @supports selector(:has(*)) {
                11. NAVIGATION BUTTONS (desktop grid)
                ========================================================= */
             div[data-testid="stHorizontalBlock"]:has(> div[data-testid="column"]:nth-child(4)) button[kind="secondary"],
@@ -800,7 +801,9 @@ def aplicar_css_base() -> None:
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
             }
-            @media (min-width: 768px) {
+    } /* end @supports :has() */
+            /* Solo ocultar boton colapsar sidebar en desktop; en mobile debe ser visible */
+            @media (min-width: 769px) {
                 [data-testid="stSidebar"] [aria-label="Collapse sidebar"],
                 [data-testid="stSidebar"] button[kind="headerNoPadding"] {
                     display: none !important;

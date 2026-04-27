@@ -122,7 +122,11 @@ def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_d
             key="paciente_actual_select_mobile",
         )
 
-        if paciente_sel_mobile and paciente_sel_mobile != st.session_state.get("paciente_actual"):
+        _cambio_paciente = (
+            paciente_sel_mobile is not None
+            and paciente_sel_mobile != st.session_state.get("paciente_actual")
+        )
+        if _cambio_paciente:
             st.session_state["paciente_actual"] = paciente_sel_mobile
 
         if paciente_sel_mobile:
@@ -133,5 +137,6 @@ def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_d
                 f"OS: {det.get('obra_social', 'S/D')}"
             )
 
-        return paciente_sel_mobile
+        # Solo propagar al caller si el paciente cambió en esta interaccion
+        return paciente_sel_mobile if _cambio_paciente else None
     return None

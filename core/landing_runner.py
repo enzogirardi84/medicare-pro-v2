@@ -15,8 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 LANDING_CHROME_CSS = """
             #MainMenu {visibility: hidden !important;}
-            header[data-testid="stHeader"],
-            [data-testid="stHeader"] {display: none !important;}
+        /* Header: preservar DOM para boton hamburguesa en mobile */
+        header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important; overflow: hidden !important; padding: 0 !important; background: transparent !important; }
             [data-testid="stToolbar"],
             [data-testid="stDecoration"] {display: none !important;}
             div[data-testid="stToolbarActions"] {display: none !important;}

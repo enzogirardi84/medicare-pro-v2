@@ -12,6 +12,7 @@ from core.database import (
 from core.auth_security import (
     puede_intentar_login,
     registrar_fallo_login,
+    limpiar_fallos_login,
     texto_ayuda_proteccion,
 )
 from core.password_crypto import (
@@ -20,6 +21,7 @@ from core.password_crypto import (
     mensaje_password_no_cumple_politica,
     password_usuario_coincide,
     texto_ayuda_politica_password_breve,
+    aplicar_hash_tras_login_ok,
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
@@ -69,6 +71,26 @@ MSG_PIN_RESET_FALLIDO = (
     "como en Mi equipo."
 )
 
+
+
+def _intentar_login_emergencia(u_limpio: str, p_plain: str, loader_ph) -> bool:
+    """Intenta login de emergencia para superadmin cuando la BD no tiene la clave.
+    Retorna True si el login de emergencia fue exitoso (el caller debe hacer rerun).
+    """
+    emergency_pwd = obtener_emergency_password()
+    if u_limpio not in logins_clave_default_superadmin() or not emergency_pwd:
+        return False
+    if p_plain != emergency_pwd:
+        return False
+    limpiar_fallos_login(u_limpio)
+    user_data = DEFAULT_ADMIN_USER.copy()
+    user_data["usuario_login"] = "admin"
+    aplicar_hash_tras_login_ok(user_data, p_plain, rounds=bcrypt_rounds_config())
+    st.session_state["usuarios_db"]["admin"] = user_data
+    if loader_ph is not None:
+        loader_ph.empty()
+    _completar_login_exitoso(user_data, "admin", "Login emergencia superadmin", "login_ok_admin_emergencia")
+    return True  # _completar_login_exitoso hace st.rerun(), esto no se alcanza normalmente
 
 def _auth_strip_pwreset_query_param() -> None:
     qp = getattr(st, "query_params", None)
@@ -297,7 +319,7 @@ def render_login():
                         "Listo. Ya podés **iniciar sesión** con tu usuario y la contraseña nueva (elegí **Iniciar sesión** arriba)."
                     )
                     st.stop()
-                if submit and modo_auth == "login":
+                elif submit and modo_auth == "login":
                     if not u.strip() or not p.strip():
                         st.warning("Ingresá usuario y contraseña.")
                         st.stop()
