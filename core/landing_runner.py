@@ -43,8 +43,8 @@ LANDING_CHROME_CSS = """
                     radial-gradient(circle at 92% 8%, rgba(96, 165, 250, 0.1), transparent 40%),
                     linear-gradient(168deg, #03050a 0%, #060d18 100%) !important;
             }
-            /* Sticky top-ingresar button */
-            .block-container > div:has(> .stButton):first-of-type {
+            /* Sticky top-ingresar button — sin :has() para compatibilidad universal */
+            .block-container > div:first-of-type {
                 position: sticky !important;
                 top: 0 !important;
                 z-index: 99999 !important;
@@ -53,8 +53,11 @@ LANDING_CHROME_CSS = """
                 backdrop-filter: blur(10px);
                 border-bottom: 1px solid rgba(45, 212, 191, 0.15);
             }
-            div.stButton { display: flex; justify-content: center; margin-top: 18px; padding-bottom: 42px; }
-            div.stButton > button {
+            .block-container > div:first-of-type div[data-testid="stButton"] {
+                display: flex; justify-content: center; margin-top: 18px; padding-bottom: 42px;
+            }
+            /* Selector muy especifico para vencer a app_theme.py */
+            .block-container > div:first-of-type div[data-testid="stButton"] > button[kind="primary"] {
                 min-height: 60px !important;
                 min-width: 320px !important;
                 padding: 0 34px !important;
@@ -73,7 +76,7 @@ LANDING_CHROME_CSS = """
                 transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease !important;
                 backdrop-filter: blur(12px);
             }
-            div.stButton > button:hover {
+            .block-container > div:first-of-type div[data-testid="stButton"] > button[kind="primary"]:hover {
                 transform: translateY(-3px) scale(1.01) !important;
                 filter: brightness(1.04) !important;
                 box-shadow:
