@@ -177,7 +177,8 @@ def render_publicidad_y_detener() -> None:
         st.html(_landing_html)
     else:
         st.markdown(_landing_html, unsafe_allow_html=True)
-    if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main"):
+    def _on_enter_app():
         st.session_state.entered_app = True
-        st.rerun()
+
+    st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", on_click=_on_enter_app)
     st.stop()
