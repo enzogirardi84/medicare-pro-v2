@@ -1464,6 +1464,8 @@ _PART_7 = """
                   <p>Acceso al sistema</p>
                   <h3>Ingresá a la demo operativa</h3>
                   <span>Explorá módulos, permisos y documentos en un entorno de prueba.</span>
+                  <br><br>
+                  <a class="mc-lp-btn-primary" href="?login=1" style="min-height:52px;padding:0 32px;font-size:1rem;text-transform:uppercase;letter-spacing:0.12em;">🚀 Ingresar al sistema</a>
                 </div>
                 </main>
               </div>

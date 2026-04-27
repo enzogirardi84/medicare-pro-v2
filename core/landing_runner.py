@@ -157,10 +157,9 @@ def render_publicidad_y_detener() -> None:
 
     # Botón sticky nativo de Streamlit (sin <a href> que recarga la página y destruye session_state).
     # El wrapper sticky se aplica por CSS global inyectado en app_theme.py.
-    def _on_enter_app():
+    if st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", use_container_width=True, type="primary"):
         st.session_state.entered_app = True
-
-    st.button("\U0001F680 INGRESAR AL SISTEMA", key="btn_ingresar_main", on_click=_on_enter_app, use_container_width=True, type="primary")
+        st.rerun()
 
     logo_html = obtener_logo_landing()
     _landing_html = obtener_html_landing_publicidad(logo_html)
