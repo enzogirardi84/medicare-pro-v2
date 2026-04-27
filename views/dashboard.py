@@ -191,17 +191,21 @@ def render_dashboard(mi_empresa, rol):
             fila_4[0].metric("Cambios med.", len(meds_suspendidas))
             fila_4[1].metric("Balance", f"{balance_actual:.0f}")
     else:
-        fila_1 = st.columns(4)
+        fila_1 = st.columns(2)
         fila_1[0].metric("Pacientes activos", activos)
         fila_1[1].metric("Pacientes de alta", altas)
-        fila_1[2].metric("Visitas hoy", len(visitas_hoy))
-        fila_1[3].metric("Pendientes hoy", len(pendientes_hoy))
 
-        fila_2 = st.columns(4)
-        fila_2[0].metric("Proximas 48h", len(proximas_48))
-        fila_2[1].metric("Urgencias 30 dias", len(urgencias_30))
-        fila_2[2].metric("Cambios de medicacion", len(meds_suspendidas))
-        fila_2[3].metric("Balance registrado", f"{balance_actual:.0f}")
+        fila_2 = st.columns(2)
+        fila_2[0].metric("Visitas hoy", len(visitas_hoy))
+        fila_2[1].metric("Pendientes hoy", len(pendientes_hoy))
+
+        fila_3 = st.columns(2)
+        fila_3[0].metric("Proximas 48h", len(proximas_48))
+        fila_3[1].metric("Urgencias 30 dias", len(urgencias_30))
+
+        fila_4 = st.columns(2)
+        fila_4[0].metric("Cambios de medicacion", len(meds_suspendidas))
+        fila_4[1].metric("Balance registrado", f"{balance_actual:.0f}")
 
     if fact_mes:
         st.caption(f"Facturacion cargada en el sistema: ${fact_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))

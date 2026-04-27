@@ -877,6 +877,22 @@ def aplicar_css_base() -> None:
                 0%, 100% { box-shadow: 0 0 0 1px rgba(248,113,113,0.35), 0 8px 24px rgba(0,0,0,0.35); }
                 50%   { box-shadow: 0 0 0 3px rgba(248,113,113,0.55), 0 10px 28px rgba(220,38,38,0.25); }
             }
+
+            /* =========================================================
+               14. METRIC LABELS — evitar truncamiento de texto
+               ========================================================= */
+            [data-testid="stMetricLabel"] {
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: initial !important;
+                word-wrap: break-word !important;
+                font-size: 0.85rem !important;
+                line-height: 1.2 !important;
+                min-height: auto !important;
+            }
+            [data-testid="stMetricLabel"] > div {
+                overflow: visible !important;
+            }
         </style>
         """,
         unsafe_allow_html=True,

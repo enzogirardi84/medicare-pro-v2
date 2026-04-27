@@ -147,7 +147,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             ultima_ev = max(evs_all, key=lambda x: x.get("fecha", ""))
             _c1, _c2, _c3 = st.columns(3)
             _c1.metric("Última evolución", ultima_ev.get("fecha", "S/D"))
-            _c2.metric("Profesional", (ultima_ev.get("firma") or "S/D")[:28])
+            _c2.metric("Profesional", (ultima_ev.get("firma") or "S/D"))
             _c3.metric("Total evoluciones", len(evs_all))
 
         plantilla = st.selectbox(
