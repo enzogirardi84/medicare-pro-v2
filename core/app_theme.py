@@ -8,12 +8,12 @@ import streamlit as st
 
 
 def aplicar_css_base() -> None:
-    """CSS general: fondo oscuro, inputs, métricas, navegación y loader premium."""
+    """CSS general: fondo oscuro, loader premium, login y navegación."""
     st.markdown(
         """
         <style>
             /* =========================================================
-               FONDO RAÍZ Y HEADER
+               1. FONDO RAÍZ Y HEADER
                ========================================================= */
             .stApp {
                 background-color: #0f172a !important;
@@ -24,9 +24,8 @@ def aplicar_css_base() -> None:
             }
 
             /* =========================================================
-               MEJORA PREMIUM DEL LOADER (STATUS WIDGET Y SPINNER)
+               2. LOADER PREMIUM (STATUS WIDGET Y SPINNER)
                ========================================================= */
-            /* 1. La píldora superior derecha de "Running..." */
             div[data-testid="stStatusWidget"] {
                 z-index: 999999 !important;
                 visibility: visible !important;
@@ -40,41 +39,67 @@ def aplicar_css_base() -> None:
                 box-shadow: 0 4px 20px rgba(14, 165, 233, 0.15) !important;
                 top: 15px !important;
                 right: 15px !important;
-                transition: all 0.3s ease !important;
             }
-
-            /* 2. Forzar que el texto del loader sea blanco y elegante */
             div[data-testid="stStatusWidget"] label,
             div[data-testid="stStatusWidget"] div {
                 color: #ffffff !important;
                 font-weight: 500 !important;
-                font-size: 0.9rem !important;
             }
-
-            /* 3. Colorear la rueda circular de carga (Spinner) */
             .stSpinner > div > div {
                 border-color: rgba(14, 165, 233, 0.2) !important;
                 border-top-color: #0ea5e9 !important;
             }
-
             div[data-testid="stToastContainer"] {
                 z-index: 999999 !important;
             }
 
-            /* =============================
-               BASE VISUAL GENERAL
-               ============================= */
+            /* =========================================================
+               3. DISEÑO PREMIUM DE LOGIN (Puerta de Ingreso)
+               ========================================================= */
+            /* Tarjeta del Formulario */
+            div[data-testid="stForm"] {
+                background: linear-gradient(145deg, #111827, #1f2937) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                border-radius: 24px !important;
+                padding: 30px 20px !important;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+            }
+            /* Botón de Submit (Ingresar) */
+            div[data-testid="stForm"] div[data-testid="stButton"] > button {
+                background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+                border: none !important;
+                border-radius: 50px !important;
+                height: 50px !important;
+                font-weight: 700 !important;
+                letter-spacing: 0.5px !important;
+                box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
+            }
+            div[data-testid="stForm"] div[data-testid="stButton"] > button:hover {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5) !important;
+                filter: brightness(1.1);
+            }
+
+            /* =========================================================
+               4. BASE VISUAL GENERAL (Inputs, Métricas, Botones)
+               ========================================================= */
             html, body, [data-testid="stAppViewContainer"] {
                 background: #0f172a;
             }
 
-            /* Inputs y selectores */
+            /* Inputs y selectores generales */
             div[data-testid="stTextInput"] input,
             div[data-baseweb="select"] > div {
                 border-radius: 14px !important;
                 border: 1px solid rgba(255, 255, 255, 0.10) !important;
-                background-color: rgba(255, 255, 255, 0.035) !important;
+                background-color: rgba(0, 0, 0, 0.2) !important;
                 color: #ffffff !important;
+                transition: all 0.3s ease !important;
+            }
+            div[data-testid="stTextInput"] input:focus {
+                border-color: #0ea5e9 !important;
+                box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2) !important;
+                background-color: rgba(0, 0, 0, 0.4) !important;
             }
 
             /* Métricas sidebar */
@@ -94,7 +119,7 @@ def aplicar_css_base() -> None:
                 padding: 0 !important;
             }
 
-            /* Botones genéricos (no navegación) */
+            /* Botones genéricos secundarios */
             div[data-testid="stButton"] > button {
                 border-radius: 18px !important;
                 border: 1px solid rgba(14, 165, 233, 0.28) !important;
@@ -108,11 +133,9 @@ def aplicar_css_base() -> None:
                 transform: translateY(-1px) !important;
                 border-color: #0ea5e9 !important;
                 box-shadow: 0 6px 15px rgba(14, 165, 233, 0.20) !important;
-                color: white !important;
             }
             div[data-testid="stButton"] > button p,
-            div[data-testid="stButton"] > button div,
-            div[data-testid="stButton"] > button span {
+            div[data-testid="stButton"] > button div {
                 color: #ffffff !important;
                 font-weight: 600 !important;
             }
@@ -125,7 +148,6 @@ def aplicar_css_base() -> None:
                 background-color: rgba(17, 24, 39, 0.90) !important;
                 overflow: hidden !important;
             }
-
         </style>
         """,
         unsafe_allow_html=True,
