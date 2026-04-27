@@ -208,6 +208,9 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
 
     if not p_f and buscar:
         st.caption("No hay pacientes que coincidan con la busqueda.")
+        return None
+    elif not p_f:
+        return None
     elif p_f:
         st.caption(f"{len(p_f)} paciente(s) visibles")
 
