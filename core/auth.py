@@ -12,6 +12,7 @@ from core.database import (
 from core.auth_security import (
     puede_intentar_login,
     registrar_fallo_login,
+    limpiar_fallos_login,
     texto_ayuda_proteccion,
 )
 from core.password_crypto import (
@@ -20,6 +21,7 @@ from core.password_crypto import (
     mensaje_password_no_cumple_politica,
     password_usuario_coincide,
     texto_ayuda_politica_password_breve,
+    aplicar_hash_tras_login_ok,
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
@@ -297,7 +299,7 @@ def render_login():
                         "Listo. Ya podés **iniciar sesión** con tu usuario y la contraseña nueva (elegí **Iniciar sesión** arriba)."
                     )
                     st.stop()
-                if submit and modo_auth == "login":
+                elif submit and modo_auth == "login":
                     if not u.strip() or not p.strip():
                         st.warning("Ingresá usuario y contraseña.")
                         st.stop()
