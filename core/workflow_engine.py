@@ -650,16 +650,17 @@ class WorkflowEngine:
                         (user_role == task.assignee_role or user_role in ["admin", "superadmin"])
                     )
                     
+                    def _on_complete_task(workflow_id: str, task_id: str, notes_key: str, user_name: str):
+                        notes = st.session_state.get(notes_key, "")
+                        try:
+                            self.complete_task(workflow_id, task_id, user_name, notes)
+                        except Exception as e:
+                            log_event("workflow_engine", f"Error al completar tarea {task_id}: {e}")
+                            st.error("No se pudo completar la tarea.")
+
                     if can_complete:
                         notes = st.text_input("Notas", key=f"notes_{task.id}")
-                        if st.button("✅ Completar", key=f"complete_{task.id}"):
-                            self.complete_task(
-                                workflow_id,
-                                task.id,
-                                user.get("nombre", "Sistema"),
-                                notes
-                            )
-                            st.rerun()
+                        st.button("✅ Completar", key=f"complete_{task.id}", on_click=_on_complete_task, args=(workflow_id, task.id, f"notes_{task.id}", user.get("nombre", "Sistema")))
                     
                     if task.completed_at:
                         st.caption(f"Completado: {task.completed_at.strftime('%H:%M')}")
@@ -708,22 +709,33 @@ class WorkflowEngine:
             format_func=lambda x: x[0]
         )
         
+        def _on_start_workflow(template_id: str, patient_id: Optional[str], patient_name: Optional[str], priority: str, created_by: str):
+            try:
+                workflow = self.create_workflow(
+                    template_id=template_id,
+                    patient_id=patient_id,
+                    patient_name=patient_name,
+                    priority=priority,
+                    created_by=created_by
+                )
+                if workflow:
+                    self.start_workflow(workflow.id)
+                    st.success(f"✅ Workflow '{workflow.name}' iniciado")
+            except Exception as e:
+                log_event("workflow_engine", f"Error al iniciar workflow: {e}")
+                st.error("No se pudo iniciar el workflow.")
+
         if st.button("🚀 Iniciar Workflow", use_container_width=True, type="primary"):
             user = st.session_state.get("u_actual", {})
-            
-            workflow = self.create_workflow(
+            _patient_id = paciente.get("id", paciente_dni) if paciente else None
+            _patient_name = f"{paciente['nombre']} {paciente['apellido']}" if paciente else None
+            _on_start_workflow(
                 template_id=template_id,
-                patient_id=paciente.get("id", paciente_dni) if paciente else None,
-                patient_name=f"{paciente['nombre']} {paciente['apellido']}" if paciente else None,
+                patient_id=_patient_id,
+                patient_name=_patient_name,
                 priority=priority[1],
                 created_by=user.get("nombre", "Sistema")
             )
-            
-            if workflow:
-                # Iniciar automáticamente
-                self.start_workflow(workflow.id)
-                st.success(f"✅ Workflow '{workflow.name}' iniciado")
-                st.rerun()
     
     def _render_workflow_stats(self):
         """Estadísticas de workflows."""

@@ -229,7 +229,7 @@ class ClinicalReminderManager:
         elif recurrence == "yearly":
             try:
                 return current_date.replace(year=current_date.year + 1)
-            except:
+            except ValueError:
                 # Febrero 29
                 return current_date + timedelta(days=365)
         
@@ -593,15 +593,17 @@ class ClinicalReminderManager:
                                 else:
                                     st.caption(f"📅 Vence en {days_left} días")
                         
+                        def _on_complete_reminder(rid: str):
+                            self.complete_reminder(rid)
+
+                        def _on_delete_reminder(rid: str):
+                            self.delete_reminder(rid)
+
                         with col2:
-                            if st.button("✅ Completar", key=f"complete_{reminder.id}"):
-                                self.complete_reminder(reminder.id)
-                                st.rerun()
-                        
+                            st.button("✅ Completar", key=f"complete_{reminder.id}", on_click=_on_complete_reminder, args=(reminder.id,))
+
                         with col3:
-                            if st.button("🗑️", key=f"delete_{reminder.id}"):
-                                self.delete_reminder(reminder.id)
-                                st.rerun()
+                            st.button("🗑️", key=f"delete_{reminder.id}", on_click=_on_delete_reminder, args=(reminder.id,))
                     
                     st.divider()
     
@@ -636,77 +638,78 @@ class ClinicalReminderManager:
         if selected_paciente:
             dni = paciente_options[selected_paciente]
             paciente = pacientes_db[dni]
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                reminder_type = st.selectbox(
-                    "Tipo",
-                    options=[
-                        ("Seguimiento", ReminderType.FOLLOW_UP),
-                        ("Medicación", ReminderType.MEDICATION),
-                        ("Estudio Pendiente", ReminderType.STUDY_PENDING),
-                        ("Cumpleaños", ReminderType.BIRTHDAY),
-                        ("Vacuna", ReminderType.VACCINE),
-                        ("Personalizado", ReminderType.CUSTOM)
-                    ],
-                    format_func=lambda x: x[0]
-                )
-            
-            with col2:
-                priority = st.selectbox(
-                    "Prioridad",
-                    options=[
-                        ("🔴 Crítica", ReminderPriority.CRITICAL),
-                        ("🟠 Alta", ReminderPriority.HIGH),
-                        ("🟡 Media", ReminderPriority.MEDIUM),
-                        ("🟢 Baja", ReminderPriority.LOW)
-                    ],
-                    index=2,
-                    format_func=lambda x: x[0]
-                )
-            
-            title = st.text_input("Título", key="reminder_title")
-            description = st.text_area("Descripción", key="reminder_desc")
-            
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                due_date = st.date_input("Fecha límite", value=None, key="reminder_due")
-                due_time = st.time_input("Hora", value=None, key="reminder_time")
-            
-            with col4:
-                recurrence = st.selectbox(
-                    "Recurrencia",
-                    options=[None, "daily", "weekly", "monthly", "yearly"],
-                    format_func=lambda x: {
-                        None: "Sin recurrencia",
-                        "daily": "Diaria",
-                        "weekly": "Semanal",
-                        "monthly": "Mensual",
-                        "yearly": "Anual"
-                    }.get(x, x)
-                )
-            
-            if st.button("➕ Crear Recordatorio", use_container_width=True):
-                # Combinar fecha y hora
-                due_datetime = None
-                if due_date:
-                    due_datetime = datetime.combine(due_date, due_time or datetime.min.time())
-                
-                self.create_reminder(
-                    reminder_type=reminder_type[1],
-                    patient_id=paciente.get("id", dni),
-                    patient_name=f"{paciente['nombre']} {paciente['apellido']}",
-                    title=title or reminder_type[0],
-                    description=description,
-                    due_date=due_datetime,
-                    priority=priority[1],
-                    recurrence=recurrence
-                )
-                
-                st.success("✅ Recordatorio creado")
-                st.rerun()
+
+            with st.form("create_reminder_form"):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    reminder_type = st.selectbox(
+                        "Tipo",
+                        options=[
+                            ("Seguimiento", ReminderType.FOLLOW_UP),
+                            ("Medicación", ReminderType.MEDICATION),
+                            ("Estudio Pendiente", ReminderType.STUDY_PENDING),
+                            ("Cumpleaños", ReminderType.BIRTHDAY),
+                            ("Vacuna", ReminderType.VACCINE),
+                            ("Personalizado", ReminderType.CUSTOM)
+                        ],
+                        format_func=lambda x: x[0]
+                    )
+
+                with col2:
+                    priority = st.selectbox(
+                        "Prioridad",
+                        options=[
+                            ("🔴 Crítica", ReminderPriority.CRITICAL),
+                            ("🟠 Alta", ReminderPriority.HIGH),
+                            ("🟡 Media", ReminderPriority.MEDIUM),
+                            ("🟢 Baja", ReminderPriority.LOW)
+                        ],
+                        index=2,
+                        format_func=lambda x: x[0]
+                    )
+
+                title = st.text_input("Título", key="reminder_title")
+                description = st.text_area("Descripción", key="reminder_desc")
+
+                col3, col4 = st.columns(2)
+
+                with col3:
+                    due_date = st.date_input("Fecha límite", value=None, key="reminder_due")
+                    due_time = st.time_input("Hora", value=None, key="reminder_time")
+
+                with col4:
+                    recurrence = st.selectbox(
+                        "Recurrencia",
+                        options=[None, "daily", "weekly", "monthly", "yearly"],
+                        format_func=lambda x: {
+                            None: "Sin recurrencia",
+                            "daily": "Diaria",
+                            "weekly": "Semanal",
+                            "monthly": "Mensual",
+                            "yearly": "Anual"
+                        }.get(x, x)
+                    )
+
+                submitted = st.form_submit_button("➕ Crear Recordatorio", use_container_width=True)
+                if submitted:
+                    # Combinar fecha y hora
+                    due_datetime = None
+                    if due_date:
+                        due_datetime = datetime.combine(due_date, due_time or datetime.min.time())
+
+                    self.create_reminder(
+                        reminder_type=reminder_type[1],
+                        patient_id=paciente.get("id", dni),
+                        patient_name=f"{paciente['nombre']} {paciente['apellido']}",
+                        title=title or reminder_type[0],
+                        description=description,
+                        due_date=due_datetime,
+                        priority=priority[1],
+                        recurrence=recurrence
+                    )
+
+                    st.success("✅ Recordatorio creado")
 
 
 # Singleton

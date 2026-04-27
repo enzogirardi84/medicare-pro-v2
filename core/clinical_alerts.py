@@ -699,20 +699,28 @@ class ClinicalAlertEngine:
                     with st.expander("📊 Datos relevantes"):
                         st.json(alert.relevant_data)
                 
+                def _on_acknowledge_alert(alert_id: str):
+                    user = st.session_state.get("u_actual", {}).get("username", "unknown")
+                    try:
+                        self.acknowledge_alert(alert_id, user)
+                    except Exception as e:
+                        log_event("clinical_alerts", f"Error al reconocer alerta {alert_id}: {e}")
+                        st.error("No se pudo reconocer la alerta.")
+
+                def _on_resolve_alert(alert_id: str):
+                    user = st.session_state.get("u_actual", {}).get("username", "unknown")
+                    try:
+                        self.resolve_alert(alert_id, user, "Resuelto desde dashboard")
+                    except Exception as e:
+                        log_event("clinical_alerts", f"Error al resolver alerta {alert_id}: {e}")
+                        st.error("No se pudo resolver la alerta.")
+
                 if not alert.acknowledged:
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("✓ Reconocer", key=f"ack_{alert.id}"):
-                            user = st.session_state.get("u_actual", {}).get("username", "unknown")
-                            if self.acknowledge_alert(alert.id, user):
-                                st.success("Alerta reconocida")
-                                st.rerun()
+                        st.button("✓ Reconocer", key=f"ack_{alert.id}", on_click=_on_acknowledge_alert, args=(alert.id,))
                     with col2:
-                        if st.button("✓ Resolver", key=f"res_{alert.id}"):
-                            user = st.session_state.get("u_actual", {}).get("username", "unknown")
-                            if self.resolve_alert(alert.id, user, "Resuelto desde dashboard"):
-                                st.success("Alerta resuelta")
-                                st.rerun()
+                        st.button("✓ Resolver", key=f"res_{alert.id}", on_click=_on_resolve_alert, args=(alert.id,))
                 else:
                     st.caption(f"✓ Reconocida por {alert.acknowledged_by} a las {alert.acknowledged_at[:16]}")
 

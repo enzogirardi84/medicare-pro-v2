@@ -458,10 +458,15 @@ class DocumentManager:
                                 mime=doc.mime_type
                             )
                 
+                def _on_delete_document(doc_id: str):
+                    try:
+                        self.delete_document(doc_id)
+                    except Exception as e:
+                        log_event("document_manager", f"Error al eliminar documento {doc_id}: {e}")
+                        st.error("No se pudo eliminar el documento.")
+
                 with col2:
-                    if st.button("🗑️", key=f"del_{doc.id}"):
-                        self.delete_document(doc.id)
-                        st.rerun()
+                    st.button("🗑️", key=f"del_{doc.id}", on_click=_on_delete_document, args=(doc.id,))
     
     def render_upload_form(self, patient_id: str, patient_name: str):
         """Renderiza formulario de subida."""
@@ -501,22 +506,23 @@ class DocumentManager:
             
             if st.button("📤 Subir Documento", use_container_width=True, type="primary"):
                 user = st.session_state.get("u_actual", {})
-                
-                doc = self.upload_document(
-                    file_data=uploaded_file.getvalue(),
-                    patient_id=patient_id,
-                    patient_name=patient_name,
-                    document_type=doc_type[1],
-                    original_filename=uploaded_file.name,
-                    description=description,
-                    tags=[t.strip() for t in tags.split(",") if t.strip()],
-                    uploaded_by=user.get("nombre", "Sistema"),
-                    uploaded_by_id=user.get("usuario_login", "system")
-                )
-                
-                if doc:
-                    st.success("✅ Documento subido exitosamente")
-                    st.rerun()
+                try:
+                    doc = self.upload_document(
+                        file_data=uploaded_file.getvalue(),
+                        patient_id=patient_id,
+                        patient_name=patient_name,
+                        document_type=doc_type[1],
+                        original_filename=uploaded_file.name,
+                        description=description,
+                        tags=[t.strip() for t in tags.split(",") if t.strip()],
+                        uploaded_by=user.get("nombre", "Sistema"),
+                        uploaded_by_id=user.get("usuario_login", "system")
+                    )
+                    if doc:
+                        st.success("✅ Documento subido exitosamente")
+                except Exception as e:
+                    log_event("document_manager", f"Error al subir documento: {e}")
+                    st.error("No se pudo subir el documento.")
 
 
 # Singleton
