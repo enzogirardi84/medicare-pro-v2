@@ -410,6 +410,298 @@ def aplicar_css_base() -> None:
                 text-align: center;
                 color: #64748b;
             }
+
+            /* =========================================================
+               8. DATA TABLES
+               ========================================================= */
+            .mc-data-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+                margin-top: 1rem;
+            }
+            .mc-data-table th {
+                background: rgba(30, 41, 59, 0.8);
+                color: #f1f5f9;
+                font-weight: 600;
+                padding: 0.75rem;
+                text-align: left;
+                border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+                cursor: pointer;
+                user-select: none;
+                white-space: nowrap;
+            }
+            .mc-data-table th:hover {
+                background: rgba(30, 41, 59, 1);
+            }
+            .mc-data-table th.sortable::after {
+                content: " ⇅";
+                opacity: 0.5;
+                font-size: 0.75rem;
+            }
+            .mc-data-table th.sort-asc::after {
+                content: " ▲";
+                opacity: 1;
+                color: #3b82f6;
+            }
+            .mc-data-table th.sort-desc::after {
+                content: " ▼";
+                opacity: 1;
+                color: #3b82f6;
+            }
+            .mc-data-table td {
+                padding: 0.75rem;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+                color: #cbd5e1;
+            }
+            .mc-data-table tr:hover td {
+                background: rgba(30, 41, 59, 0.4);
+            }
+            .mc-data-table tr.selected td {
+                background: rgba(59, 130, 246, 0.15);
+            }
+            .mc-table-filter {
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            .mc-pagination {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 0.5rem;
+                margin-top: 1rem;
+                padding: 0.75rem;
+            }
+            .mc-page-btn {
+                min-width: 36px;
+                height: 36px;
+                border-radius: 6px;
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                background: rgba(15, 23, 42, 0.6);
+                color: #94a3b8;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .mc-page-btn:hover {
+                background: rgba(30, 41, 59, 0.8);
+                color: #f1f5f9;
+            }
+            .mc-page-btn.active {
+                background: #3b82f6;
+                color: white;
+                border-color: #3b82f6;
+            }
+            .mc-page-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .mc-table-checkbox {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+            }
+
+            /* =========================================================
+               9. FLOATING ACTION BUTTON (FAB)
+               ========================================================= */
+            .mc-fab-container {
+                position: fixed;
+                z-index: 999998;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            .mc-fab-main {
+                width: 56px;
+                height: 56px;
+                border-radius: 50%;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+            .mc-fab-main:hover {
+                transform: scale(1.1);
+                box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+            }
+            .mc-fab-main:active {
+                transform: scale(0.95);
+            }
+            .mc-fab-main.open {
+                transform: rotate(45deg);
+            }
+            .mc-fab-main::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+                border-radius: 50%;
+            }
+            .mc-fab-actions {
+                display: flex;
+                flex-direction: column-reverse;
+                gap: 0.75rem;
+                margin-bottom: 0.5rem;
+                animation: fab-actions-in 0.3s ease-out;
+            }
+            @keyframes fab-actions-in {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .mc-fab-action {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .mc-fab-action:hover {
+                transform: translateX(-5px);
+            }
+            .mc-fab-action-btn {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                border: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+                transition: all 0.2s ease;
+                position: relative;
+            }
+            .mc-fab-action-btn:hover {
+                transform: scale(1.1);
+            }
+            .mc-fab-action-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            .mc-fab-action-label {
+                background: rgba(15, 23, 42, 0.9);
+                color: #f1f5f9;
+                padding: 0.5rem 0.75rem;
+                border-radius: 6px;
+                font-size: 0.875rem;
+                white-space: nowrap;
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+            .mc-fab-badge {
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                background: #ef4444;
+                color: white;
+                font-size: 0.65rem;
+                font-weight: 600;
+                min-width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 2px solid #0f172a;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }
+            .mc-fab-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(2, 6, 23, 0.5);
+                z-index: 999997;
+                backdrop-filter: blur(2px);
+            }
+            .mc-fab-ripple {
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.4);
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+            }
+            @keyframes ripple {
+                to { transform: scale(4); opacity: 0; }
+            }
+            @media (max-width: 768px) {
+                .mc-fab-container {
+                    bottom: 1rem !important;
+                    right: 1rem !important;
+                    left: auto !important;
+                    transform: none !important;
+                }
+                .mc-fab-main {
+                    width: 48px;
+                    height: 48px;
+                    font-size: 1.25rem;
+                }
+                .mc-fab-action-btn {
+                    width: 40px;
+                    height: 40px;
+                    font-size: 1rem;
+                }
+                .mc-fab-action-label {
+                    display: none;
+                }
+            }
+            .mc-quick-actions-bar {
+                display: flex;
+                gap: 0.5rem;
+                padding: 0.75rem;
+                background: rgba(30, 41, 59, 0.8);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 12px;
+                backdrop-filter: blur(8px);
+                position: sticky;
+                bottom: 1rem;
+                z-index: 99999;
+                margin-top: 2rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            .mc-quick-action-btn {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.625rem 1rem;
+                border-radius: 8px;
+                border: 1px solid transparent;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-size: 0.9rem;
+                font-weight: 500;
+            }
+            .mc-quick-action-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+            @media (max-width: 768px) {
+                .mc-quick-actions-bar {
+                    gap: 0.375rem;
+                    padding: 0.5rem;
+                }
+                .mc-quick-action-btn {
+                    padding: 0.5rem 0.75rem;
+                    font-size: 0.8rem;
+                }
+                .mc-quick-action-btn span {
+                    display: none;
+                }
+            }
         </style>
         """,
         unsafe_allow_html=True,

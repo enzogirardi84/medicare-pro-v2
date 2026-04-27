@@ -66,9 +66,6 @@ class DataTable:
             st.info(empty_message)
             return []
         
-        # Inyectar CSS
-        self._inject_css()
-        
         # Filtros
         filtered_data = self._apply_filters() if enable_filtering else self.data
         
@@ -105,118 +102,27 @@ class DataTable:
         
         return paginated_data
     
-    def _inject_css(self):
-        """Inyectar CSS para la tabla."""
-        st.markdown("""
-        <style>
-        .mc-data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            margin-top: 1rem;
-        }
-        
-        .mc-data-table th {
-            background: rgba(30, 41, 59, 0.8);
-            color: #f1f5f9;
-            font-weight: 600;
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 2px solid rgba(148, 163, 184, 0.2);
-            cursor: pointer;
-            user-select: none;
-            white-space: nowrap;
-        }
-        
-        .mc-data-table th:hover {
-            background: rgba(30, 41, 59, 1);
-        }
-        
-        .mc-data-table th.sortable::after {
-            content: " ⇅";
-            opacity: 0.5;
-            font-size: 0.75rem;
-        }
-        
-        .mc-data-table th.sort-asc::after {
-            content: " ▲";
-            opacity: 1;
-            color: #3b82f6;
-        }
-        
-        .mc-data-table th.sort-desc::after {
-            content: " ▼";
-            opacity: 1;
-            color: #3b82f6;
-        }
-        
-        .mc-data-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-            color: #cbd5e1;
-        }
-        
-        .mc-data-table tr:hover td {
-            background: rgba(30, 41, 59, 0.4);
-        }
-        
-        .mc-data-table tr.selected td {
-            background: rgba(59, 130, 246, 0.15);
-        }
-        
-        .mc-table-filter {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .mc-pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            padding: 0.75rem;
-        }
-        
-        .mc-page-btn {
-            min-width: 36px;
-            height: 36px;
-            border-radius: 6px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: rgba(15, 23, 42, 0.6);
-            color: #94a3b8;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .mc-page-btn:hover {
-            background: rgba(30, 41, 59, 0.8);
-            color: #f1f5f9;
-        }
-        
-        .mc-page-btn.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        
-        .mc-page-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Checkbox personalizado */
-        .mc-table-checkbox {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-    
+    def _on_sort_click(self, col_key: str):
+        """Callback: ordenar por columna."""
+        current_sort = st.session_state.get(self._sort_key)
+        current_order = st.session_state.get(self._sort_order_key, "asc")
+        if current_sort == col_key:
+            new_order = "desc" if current_order == "asc" else "asc"
+            st.session_state[self._sort_order_key] = new_order
+        else:
+            st.session_state[self._sort_key] = col_key
+            st.session_state[self._sort_order_key] = "asc"
+
+    def _on_prev_page(self):
+        """Callback: página anterior."""
+        current_page = st.session_state.get(self._page_key, 0)
+        st.session_state[self._page_key] = max(0, current_page - 1)
+
+    def _on_next_page(self):
+        """Callback: página siguiente."""
+        current_page = st.session_state.get(self._page_key, 0)
+        st.session_state[self._page_key] = current_page + 1
+
     def _render_filters(self):
         """Renderizar controles de filtro."""
         with st.expander("🔍 Filtros", expanded=False):
@@ -304,15 +210,7 @@ class DataTable:
                 label = f"{col.label}{sort_indicator}"
                 
                 if col.sortable:
-                    if st.button(label, key=f"{self.key}_sort_{col.key}", use_container_width=True):
-                        if current_sort == col.key:
-                            # Toggle order
-                            new_order = "desc" if current_order == "asc" else "asc"
-                            st.session_state[self._sort_order_key] = new_order
-                        else:
-                            st.session_state[self._sort_key] = col.key
-                            st.session_state[self._sort_order_key] = "asc"
-                        st.rerun()
+                    st.button(label, key=f"{self.key}_sort_{col.key}", use_container_width=True, on_click=self._on_sort_click, args=(col.key,))
                 else:
                     st.caption(label)
     
@@ -348,21 +246,17 @@ class DataTable:
         cols = st.columns([1, 3, 1])
         
         with cols[0]:
-            if st.button("⬅️ Anterior", disabled=current_page == 0):
-                st.session_state[self._page_key] = current_page - 1
-                st.rerun()
-        
+            st.button("⬅️ Anterior", disabled=current_page == 0, key=f"{self.key}_prev", on_click=self._on_prev_page)
+
         with cols[1]:
             st.markdown(f"""
             <div style="text-align: center; color: #94a3b8; padding: 0.5rem;">
                 Página {current_page + 1} de {total_pages}
             </div>
             """, unsafe_allow_html=True)
-        
+
         with cols[2]:
-            if st.button("Siguiente ➡️", disabled=current_page >= total_pages - 1):
-                st.session_state[self._page_key] = current_page + 1
-                st.rerun()
+            st.button("Siguiente ➡️", disabled=current_page >= total_pages - 1, key=f"{self.key}_next", on_click=self._on_next_page)
     
     def _get_selected(self) -> List[str]:
         """Obtener IDs de filas seleccionadas."""
@@ -405,7 +299,7 @@ def export_to_excel(
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except:
+                except Exception:
                     pass
             adjusted_width = min(max_length + 2, 50)
             worksheet.column_dimensions[column_letter].width = adjusted_width

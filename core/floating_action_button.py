@@ -91,212 +91,38 @@ class FloatingActionButton:
         # Renderizar botón principal
         self._render_main_button(key, position_css, is_open)
     
-    def _inject_css(self):
-        """Inyectar CSS necesario."""
-        css = """
-        <style>
-        .mc-fab-container {
-            position: fixed;
-            z-index: 999998;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .mc-fab-main {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .mc-fab-main:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
-        }
-        
-        .mc-fab-main:active {
-            transform: scale(0.95);
-        }
-        
-        .mc-fab-main.open {
-            transform: rotate(45deg);
-        }
-        
-        .mc-fab-main::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
-            border-radius: 50%;
-        }
-        
-        .mc-fab-actions {
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 0.75rem;
-            margin-bottom: 0.5rem;
-            animation: fab-actions-in 0.3s ease-out;
-        }
-        
-        @keyframes fab-actions-in {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .mc-fab-action {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .mc-fab-action:hover {
-            transform: translateX(-5px);
-        }
-        
-        .mc-fab-action-btn {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            transition: all 0.2s ease;
-            position: relative;
-        }
-        
-        .mc-fab-action-btn:hover {
-            transform: scale(1.1);
-        }
-        
-        .mc-fab-action-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .mc-fab-action-label {
-            background: rgba(15, 23, 42, 0.9);
-            color: #f1f5f9;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            white-space: nowrap;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-        
-        .mc-fab-badge {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            background: #ef4444;
-            color: white;
-            font-size: 0.65rem;
-            font-weight: 600;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #0f172a;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
-        /* Overlay para cerrar al hacer click fuera */
-        .mc-fab-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(2, 6, 23, 0.5);
-            z-index: 999997;
-            backdrop-filter: blur(2px);
-        }
-        
-        /* Mobile adjustments */
-        @media (max-width: 768px) {
-            .mc-fab-container {
-                bottom: 1rem !important;
-                right: 1rem !important;
-                left: auto !important;
-                transform: none !important;
-            }
-            
-            .mc-fab-main {
-                width: 48px;
-                height: 48px;
-                font-size: 1.25rem;
-            }
-            
-            .mc-fab-action-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1rem;
-            }
-            
-            .mc-fab-action-label {
-                display: none;
-            }
-        }
-        
-        /* Animación de ripple */
-        .mc-fab-ripple {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.4);
-            transform: scale(0);
-            animation: ripple 0.6s linear;
-            pointer-events: none;
-        }
-        
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-        </style>
-        """
-        st.markdown(css, unsafe_allow_html=True)
-    
+    def _on_close_overlay(self, key: str):
+        """Callback: cerrar menú FAB."""
+        st.session_state[f"{key}_{self._is_open_key}"] = False
+
+    def _on_toggle(self, key: str):
+        """Callback: toggle FAB."""
+        is_open = st.session_state.get(f"{key}_{self._is_open_key}", False)
+        st.session_state[f"{key}_{self._is_open_key}"] = not is_open
+
+    def _on_action_click(self, key: str, action_id: str):
+        """Callback: ejecutar acción del FAB."""
+        st.session_state[f"{key}_{self._is_open_key}"] = False
+        for action in self.actions:
+            if action.id == action_id and action.on_click and not action.disabled:
+                try:
+                    action.on_click()
+                except Exception as e:
+                    st.error(f"Error en acción: {e}")
+                break
+
     def _render_actions_menu(self, key: str, position_css: str):
         """Renderizar menú de acciones secundarias."""
         # Overlay para cerrar al hacer click fuera
-        if st.button("", key=f"{key}_overlay", help="Cerrar menú"):
-            st.session_state[f"{key}_{self._is_open_key}"] = False
-            st.rerun()
-        
+        st.button("", key=f"{key}_overlay", help="Cerrar menú", on_click=self._on_close_overlay, args=(key,))
+
         # Contenedor de acciones
         actions_html = ['<div class="mc-fab-actions">']
-        
+
         for i, action in enumerate(reversed(self.actions)):
             badge_html = f'<span class="mc-fab-badge">{action.badge}</span>' if action.badge else ""
             disabled_attr = "disabled" if action.disabled else ""
-            
+
             action_html = f"""
             <div class="mc-fab-action">
                 <button class="mc-fab-action-btn" style="background: {action.color};" {disabled_attr}
@@ -308,20 +134,18 @@ class FloatingActionButton:
             </div>
             """
             actions_html.append(action_html)
-            
+
             # Botón invisible de Streamlit para manejar el click
-            if st.button(
+            st.button(
                 f"{action.label}",
                 key=f"{key}_action_{action.id}",
                 disabled=action.disabled,
-            ):
-                if action.on_click and not action.disabled:
-                    action.on_click()
-                st.session_state[f"{key}_{self._is_open_key}"] = False
-                st.rerun()
-        
+                on_click=self._on_action_click,
+                args=(key, action.id),
+            )
+
         actions_html.append('</div>')
-        
+
         st.markdown(
             f"""
             <div class="mc-fab-container" style="{position_css} bottom: 5rem;">
@@ -330,11 +154,11 @@ class FloatingActionButton:
             """,
             unsafe_allow_html=True
         )
-    
+
     def _render_main_button(self, key: str, position_css: str, is_open: bool):
         """Renderizar botón principal del FAB."""
         open_class = "open" if is_open else ""
-        
+
         # HTML del botón
         st.markdown(
             f"""
@@ -347,15 +171,15 @@ class FloatingActionButton:
             """,
             unsafe_allow_html=True
         )
-        
+
         # Botón invisible de Streamlit
-        if st.button(
+        st.button(
             self.main_label,
             key=f"{key}_toggle",
             help=self.main_label,
-        ):
-            st.session_state[f"{key}_{self._is_open_key}"] = not is_open
-            st.rerun()
+            on_click=self._on_toggle,
+            args=(key,),
+        )
 
 
 # ============================================================
@@ -441,60 +265,6 @@ def render_quick_actions_bar(
     Args:
         actions: Lista de dicts con keys: icon, label, on_click, color
     """
-    st.markdown("""
-    <style>
-    .mc-quick-actions-bar {
-        display: flex;
-        gap: 0.5rem;
-        padding: 0.75rem;
-        background: rgba(30, 41, 59, 0.8);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 12px;
-        backdrop-filter: blur(8px);
-        position: sticky;
-        bottom: 1rem;
-        z-index: 99999;
-        margin-top: 2rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .mc-quick-action-btn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.625rem 1rem;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-size: 0.9rem;
-        font-weight: 500;
-    }
-    
-    .mc-quick-action-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-    
-    @media (max-width: 768px) {
-        .mc-quick-actions-bar {
-            gap: 0.375rem;
-            padding: 0.5rem;
-        }
-        
-        .mc-quick-action-btn {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.8rem;
-        }
-        
-        .mc-quick-action-btn span {
-            display: none;
-        }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
     # Renderizar barra
     cols = st.columns(len(actions))
     
