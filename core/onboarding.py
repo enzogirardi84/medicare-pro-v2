@@ -91,7 +91,33 @@ class InteractiveTour:
     def is_completed(self) -> bool:
         """Verificar si el tour fue completado."""
         return st.session_state.get(self._completed_key, False)
-    
+
+    def _on_prev(self):
+        """Callback: paso anterior."""
+        current_idx = st.session_state.get(self._current_step_key, 0)
+        if current_idx > 0:
+            st.session_state[self._current_step_key] = current_idx - 1
+
+    def _on_skip(self):
+        """Callback: saltar tour."""
+        self.stop()
+
+    def _on_next(self):
+        """Callback: paso siguiente."""
+        current_idx = st.session_state.get(self._current_step_key, 0)
+        if current_idx < len(self.steps) - 1:
+            st.session_state[self._current_step_key] = current_idx + 1
+
+    def _on_finish(self):
+        """Callback: finalizar tour."""
+        st.session_state[self._completed_key] = True
+        self.stop()
+
+    def _on_action(self):
+        """Callback: acción del paso y avanzar."""
+        current_idx = st.session_state.get(self._current_step_key, 0)
+        st.session_state[self._current_step_key] = current_idx + 1
+
     def render(self):
         """Renderizar el paso actual del tour."""
         if not self.is_active():
@@ -101,22 +127,8 @@ class InteractiveTour:
         step = self.steps[current_idx]
         total = len(self.steps)
         
-        # CSS del tour
-        self._inject_css()
-        
         # Overlay
-        st.markdown("""
-        <div style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(2, 6, 23, 0.7);
-            z-index: 999998;
-            backdrop-filter: blur(3px);
-        "></div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="mc-tour-overlay"></div>', unsafe_allow_html=True)
         
         # Tooltip del tour
         progress = (current_idx + 1) / total
@@ -139,103 +151,23 @@ class InteractiveTour:
             
             # Botones de navegación
             cols = st.columns([1, 1, 2])
-            
+
             with cols[0]:
                 if current_idx > 0:
-                    if st.button("⬅️ Anterior", key=f"tour_{self.tour_id}_prev"):
-                        st.session_state[self._current_step_key] = current_idx - 1
-                        st.rerun()
+                    st.button("⬅️ Anterior", key=f"tour_{self.tour_id}_prev", on_click=self._on_prev)
                 else:
-                    if st.button("❌ Saltar tour", key=f"tour_{self.tour_id}_skip"):
-                        self.stop()
-                        st.rerun()
-            
+                    st.button("❌ Saltar tour", key=f"tour_{self.tour_id}_skip", on_click=self._on_skip)
+
             with cols[1]:
                 if current_idx < total - 1:
-                    if st.button("Siguiente ➡️", key=f"tour_{self.tour_id}_next", type="primary"):
-                        st.session_state[self._current_step_key] = current_idx + 1
-                        st.rerun()
+                    st.button("Siguiente ➡️", key=f"tour_{self.tour_id}_next", type="primary", on_click=self._on_next)
                 else:
-                    if st.button("✅ Finalizar", key=f"tour_{self.tour_id}_finish", type="primary"):
-                        st.session_state[self._completed_key] = True
-                        self.stop()
-                        st.rerun()
-            
+                    st.button("✅ Finalizar", key=f"tour_{self.tour_id}_finish", type="primary", on_click=self._on_finish)
+
             with cols[2]:
                 if step.action_button:
-                    if st.button(f"⚡ {step.action_button}", key=f"tour_{self.tour_id}_action"):
-                        # Ejecutar acción y avanzar
-                        st.session_state[self._current_step_key] = current_idx + 1
-                        st.rerun()
+                    st.button(f"⚡ {step.action_button}", key=f"tour_{self.tour_id}_action", on_click=self._on_action)
     
-    def _inject_css(self):
-        """Inyectar CSS del tour."""
-        st.markdown("""
-        <style>
-        .mc-tour-tooltip {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 16px;
-            padding: 1.5rem;
-            max-width: 450px;
-            width: 90%;
-            z-index: 999999;
-            box-shadow: 0 25px 50px rgba(2, 6, 23, 0.5);
-            backdrop-filter: blur(20px);
-        }
-        
-        .mc-tour-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-        
-        .mc-tour-badge {
-            background: linear-gradient(135deg, #3b82f6, #22c55e);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .mc-tour-title {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #f8fafc;
-        }
-        
-        .mc-tour-content {
-            color: #94a3b8;
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-            font-size: 0.95rem;
-        }
-        
-        .mc-tour-progress {
-            height: 4px;
-            background: rgba(148, 163, 184, 0.2);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 1.5rem;
-        }
-        
-        .mc-tour-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #22c55e);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-
 class FirstStepsChecklist:
     """
     Checklist de primeros pasos para nuevos usuarios.
@@ -274,7 +206,18 @@ class FirstStepsChecklist:
         """Marcar item como completado."""
         key = f"{self._key}_{item_id}"
         st.session_state[key] = True
-    
+
+    def _on_item_action(self, item_id: str):
+        """Callback: ejecutar acción del checklist."""
+        self.mark_completed(item_id)
+        for item in self.items:
+            if item.id == item_id and item.action:
+                try:
+                    item.action()
+                except Exception as e:
+                    st.error(f"Error al ejecutar acción: {e}")
+                break
+
     def get_progress(self) -> tuple:
         """Obtener progreso (completados, total)."""
         completed = sum(1 for item in self.items if item.completed)
@@ -286,26 +229,13 @@ class FirstStepsChecklist:
         progress_percent = int((completed / total * 100)) if total > 0 else 0
         
         st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-            border: 1px solid rgba(148, 163, 184, 0.15);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h4 style="margin: 0; font-size: 1.1rem; color: #f8fafc;">{title}</h4>
-                <span style="background: rgba(59, 130, 246, 0.2); color: #3b82f6; 
-                           padding: 0.375rem 0.875rem; border-radius: 9999px;
-                           font-size: 0.875rem; font-weight: 600;">
-                    {completed}/{total}
-                </span>
+        <div class="mc-checklist-container">
+            <div class="mc-checklist-header">
+                <h4>{title}</h4>
+                <span class="mc-checklist-counter">{completed}/{total}</span>
             </div>
-            <div style="height: 6px; background: rgba(148, 163, 184, 0.2); border-radius: 3px; overflow: hidden;">
-                <div style="height: 100%; width: {progress_percent}%; 
-                           background: linear-gradient(90deg, #3b82f6, #22c55e); 
-                           border-radius: 3px; transition: width 0.3s ease;">
-                </div>
+            <div class="mc-checklist-progress-track">
+                <div class="mc-checklist-progress-fill" style="width: {progress_percent}%;"></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -328,12 +258,7 @@ class FirstStepsChecklist:
         with cols[0]:
             icon_color = "#22c55e" if is_done else "#64748b"
             st.markdown(f"""
-            <div style="
-                width: 28px; height: 28px; border-radius: 50%;
-                background: {bg}; border: 2px solid {border};
-                display: flex; align-items: center; justify-content: center;
-                font-size: 0.875rem; color: {icon_color};
-            ">
+            <div class="mc-checklist-icon" style="background: {bg}; border: 2px solid {border}; color: {icon_color};">
                 {item.icon if is_done else "○"}
             </div>
             """, unsafe_allow_html=True)
@@ -352,10 +277,7 @@ class FirstStepsChecklist:
         
         with cols[2]:
             if not is_done and item.action:
-                if st.button("Ir", key=f"checklist_action_{item.id}"):
-                    self.mark_completed(item.id)
-                    item.action()
-                    st.rerun()
+                st.button("Ir", key=f"checklist_action_{item.id}", on_click=self._on_item_action, args=(item.id,))
 
 
 # ============================================================
@@ -654,10 +576,11 @@ def render_panel_bienvenida(rol: str, menu: list[str], etiquetas_nav: dict[str, 
             st.markdown(f"- {t}")
         st.caption("Los filtros y fechas suelen conservarse mientras la sesión sigue abierta (hasta Cerrar sesión).")
         c1, c2 = st.columns([1, 2])
+        def _on_close_panel():
+            st.session_state[clave] = True
+            st.session_state["_mc_onboarding_oculto"] = True
+
         with c1:
-            if st.button("Entendido, ocultar", use_container_width=True, key="mc_onboarding_cerrar"):
-                st.session_state[clave] = True
-                st.session_state["_mc_onboarding_oculto"] = True
-                st.rerun()
+            st.button("Entendido, ocultar", use_container_width=True, key="mc_onboarding_cerrar", on_click=_on_close_panel)
         with c2:
             st.caption("Podés volver a ver ayuda contextual en cada módulo (bloques superiores).")

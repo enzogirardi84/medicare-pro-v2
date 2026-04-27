@@ -2,8 +2,8 @@
 Sistema de Búsqueda Global Inteligente para MediCare.
 Búsqueda con autocompletado, filtros rápidos y resultados destacados.
 """
-import re
-from typing import List, Dict, Any, Optional, Callable, Tuple
+from functools import partial
+from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from datetime import datetime
 import html
@@ -213,95 +213,6 @@ def render_smart_search_bar(
     Returns:
         Query ingresado por el usuario
     """
-    # CSS para la barra de búsqueda
-    st.markdown("""
-    <style>
-    .mc-search-container {
-        position: relative;
-        margin-bottom: 1rem;
-    }
-    
-    .mc-search-input-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-    
-    .mc-search-icon {
-        position: absolute;
-        left: 1rem;
-        color: #64748b;
-        font-size: 1.1rem;
-        z-index: 10;
-        pointer-events: none;
-    }
-    
-    .mc-search-input {
-        width: 100%;
-        padding: 0.875rem 1rem 0.875rem 2.75rem;
-        border: 2px solid rgba(148, 163, 184, 0.2);
-        border-radius: 12px;
-        background: rgba(15, 23, 42, 0.6);
-        color: #f1f5f9;
-        font-size: 1rem;
-        transition: all 0.25s ease;
-        backdrop-filter: blur(8px);
-    }
-    
-    .mc-search-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        background: rgba(15, 23, 42, 0.8);
-    }
-    
-    .mc-search-input::placeholder {
-        color: #64748b;
-    }
-    
-    .mc-search-badges {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-        flex-wrap: wrap;
-    }
-    
-    .mc-search-badge {
-        padding: 0.375rem 0.875rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: 1px solid transparent;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-    
-    .mc-search-badge:hover {
-        transform: translateY(-1px);
-    }
-    
-    .mc-search-badge.active {
-        background: rgba(59, 130, 246, 0.2);
-        color: #3b82f6;
-        border-color: rgba(59, 130, 246, 0.4);
-    }
-    
-    .mc-search-badge.inactive {
-        background: rgba(30, 41, 59, 0.5);
-        color: #64748b;
-        border-color: rgba(148, 163, 184, 0.2);
-    }
-    
-    .mc-search-results-count {
-        font-size: 0.875rem;
-        color: #64748b;
-        margin-top: 0.5rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
     # Contenedor visual
     st.markdown('<div class="mc-search-container">', unsafe_allow_html=True)
     
@@ -320,6 +231,9 @@ def render_smart_search_bar(
     return query
 
 
+def _set_estado_filter(key: str, label: str):
+    st.session_state[f"{key}_estado"] = label
+
 def render_search_filters(
     key: str = "search_filters",
     show_estados: bool = True,
@@ -328,16 +242,16 @@ def render_search_filters(
 ) -> Dict[str, Any]:
     """
     Renderizar filtros rápidos como badges clickeables.
-    
+
     Returns:
         Dict con filtros activos
     """
     filters = {}
-    
+
     if show_estados:
-        st.markdown("<div style='margin-bottom:0.5rem;color:#64748b;font-size:0.8rem;'>Estado:</div>", 
+        st.markdown("<div style='margin-bottom:0.5rem;color:#64748b;font-size:0.8rem;'>Estado:</div>",
                      unsafe_allow_html=True)
-        
+
         estado_cols = st.columns(4)
         estados = [
             ("Todos", None, "neutral"),
@@ -345,45 +259,42 @@ def render_search_filters(
             ("Internados", "Internado", "info"),
             ("De Alta", "Alta", "neutral"),
         ]
-        
+
         estado_seleccionado = st.session_state.get(f"{key}_estado", "Todos")
-        
+
         for i, (label, valor, tipo) in enumerate(estados):
             with estado_cols[i]:
                 is_active = estado_seleccionado == label
-                badge_class = "mc-badge-" + (tipo if is_active else "neutral")
-                opacity = "1" if is_active else "0.6"
-                
-                if st.button(
+
+                st.button(
                     label,
                     key=f"{key}_estado_{i}",
                     use_container_width=True,
                     type="secondary" if not is_active else "primary",
-                ):
-                    st.session_state[f"{key}_estado"] = label
-                    filters["estado"] = valor
-                    st.rerun()
-        
+                    on_click=_set_estado_filter,
+                    args=(key, label),
+                )
+
         # Recuperar filtro guardado
         if f"{key}_estado" in st.session_state:
             selected = st.session_state[f"{key}_estado"]
             for label, valor, _ in estados:
                 if label == selected and valor:
                     filters["estado"] = valor
-    
+
     return filters
 
 
 def render_search_result_card(
     result: SearchResult,
-    on_click: Optional[Callable] = None,
+    on_select: Optional[Callable[[SearchResult], None]] = None,
     key_suffix: str = "",
 ) -> bool:
     """
     Renderizar una card de resultado de búsqueda.
-    
+
     Returns:
-        True si fue clickeada
+        True si fue clickeada (solo cuando on_select es None)
     """
     # Badge CSS según tipo
     badge_styles = {
@@ -395,7 +306,7 @@ def render_search_result_card(
         "alergia": "background:rgba(236,72,153,0.15);color:#ec4899;border-color:rgba(236,72,153,0.3);",
         "urgencia": "background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(245,158,11,0.15));color:#f97316;border-color:rgba(245,158,11,0.3);",
     }
-    
+
     badge_style = badge_styles.get(result.badge_type, badge_styles["info"])
     badge_html = f"""
     <span style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.25rem 0.625rem;
@@ -404,7 +315,7 @@ def render_search_result_card(
         {html.escape(result.badge) if result.badge else ''}
     </span>
     """ if result.badge else ""
-    
+
     # Metadata secundaria
     meta_items = []
     if result.metadata.get("obra_social"):
@@ -413,24 +324,29 @@ def render_search_result_card(
         meta_items.append(f"📞 {html.escape(str(result.metadata['telefono']))}")
     if result.metadata.get("edad"):
         meta_items.append(f"🎂 {html.escape(str(result.metadata['edad']))} años")
-    
+
     meta_html = " · ".join(meta_items) if meta_items else ""
-    
-    # Card HTML
+
+    clicked = False
+    if on_select:
+        st.button(
+            f"Seleccionar: {result.title}",
+            key=f"result_{result.id}_{key_suffix}",
+            use_container_width=True,
+            type="secondary",
+            on_click=on_select,
+            args=(result,),
+        )
+    else:
+        clicked = st.button(
+            f"Seleccionar: {result.title}",
+            key=f"result_{result.id}_{key_suffix}",
+            use_container_width=True,
+            type="secondary",
+        )
+
     card_html = f"""
-    <div style="
-        background: linear-gradient(135deg, rgba(30,41,59,0.6) 0%, rgba(15,23,42,0.8) 100%);
-        border: 1px solid rgba(148,163,184,0.1);
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        cursor: pointer;
-        transition: all 0.25s ease;
-        position: relative;
-        overflow: hidden;
-    " onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='rgba(148,163,184,0.2)';this.style.boxShadow='0 8px 30px rgba(2,6,23,0.25)';"
-       onmouseout="this.style.transform='translateY(0)';this.style.borderColor='rgba(148,163,184,0.1)';this.style.boxShadow='none';"
-    >
+    <div class="mc-result-card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem;">
             <div>
                 <h4 style="margin:0;font-size:1rem;font-weight:600;color:#f8fafc;">
@@ -449,24 +365,11 @@ def render_search_result_card(
                 {result.score:.0%} match
             </div>
         </div>
-        <div style="position:absolute;bottom:0;left:0;right:0;height:3px;
-                    background:linear-gradient(90deg,#3b82f6,#22c55e);
-                    opacity:0;transition:opacity 0.3s ease;"
-             onmouseover="this.style.opacity='1';"
-             onmouseout="this.style.opacity='0';">
-        </div>
+        <div class="mc-result-bar"></div>
     </div>
     """
-    
-    clicked = st.button(
-        f"Seleccionar: {result.title}",
-        key=f"result_{result.id}_{key_suffix}",
-        use_container_width=True,
-        type="secondary",
-    )
-    
     st.markdown(card_html, unsafe_allow_html=True)
-    
+
     return clicked
 
 
@@ -493,15 +396,16 @@ def render_search_results(
     
     # Resultados
     for i, result in enumerate(results):
-        clicked = render_search_result_card(result, on_select, f"{key}_{i}")
-        if clicked and on_select:
-            on_select(result)
-            st.rerun()
+        render_search_result_card(result, on_select, f"{key}_{i}")
 
 
 # ============================================================
 # FUNCIÓN PRINCIPAL: BÚSQUEDA INTEGRADA
 # ============================================================
+
+def _select_paciente(result: SearchResult, key: str):
+    st.session_state[f"{key}_selected"] = result.id
+    st.toast(f"✅ Paciente seleccionado: {result.title}")
 
 def smart_search_pacientes(
     pacientes_data: List[Dict[str, Any]],
@@ -509,24 +413,24 @@ def smart_search_pacientes(
 ) -> Optional[SearchResult]:
     """
     Componente completo de búsqueda inteligente de pacientes.
-    
+
     Returns:
         SearchResult seleccionado o None
     """
     st.markdown("## 🔍 Buscador Inteligente de Pacientes")
-    
+
     # Barra de búsqueda
     query = render_smart_search_bar(
         key=key,
         placeholder="Nombre completo, DNI, obra social o teléfono...",
     )
-    
+
     # Filtros rápidos
     filters = render_search_filters(key=key)
-    
+
     # Realizar búsqueda
     selected_paciente = None
-    
+
     if query and len(query) >= 2:
         engine = SmartSearchEngine()
         results = engine.search(
@@ -536,29 +440,26 @@ def smart_search_pacientes(
             filters=filters if filters else None,
             limit=20,
         )
-        
+
         if results:
             st.markdown("---")
-            
+
             # Mostrar resultados
             for i, result in enumerate(results):
-                clicked = render_search_result_card(result, key_suffix=f"{key}_{i}")
-                
-                if clicked:
-                    selected_paciente = result
-                    # Guardar selección en session_state
-                    st.session_state[f"{key}_selected"] = result.id
-                    st.toast(f"✅ Paciente seleccionado: {result.title}")
-                    st.rerun()
-    
+                render_search_result_card(
+                    result,
+                    on_select=partial(_select_paciente, key=key),
+                    key_suffix=f"{key}_{i}",
+                )
+
     elif query and len(query) < 2:
         st.caption("💡 Escribe al menos 2 caracteres para buscar")
-    
+
     else:
         # Mostrar pacientes recientes o destacados
         st.markdown("### ⭐ Pacientes Recientes")
         recientes = pacientes_data[:5]  # Últimos 5
-        
+
         for i, paciente in enumerate(recientes):
             result = SearchResult(
                 id=str(paciente.get("id", "")),
@@ -568,13 +469,13 @@ def smart_search_pacientes(
                 badge_type="success" if paciente.get("estado") == "Activo" else "info",
                 metadata={"obra_social": paciente.get("obra_social", "")},
             )
-            
-            clicked = render_search_result_card(result, key_suffix=f"recent_{i}")
-            if clicked:
-                selected_paciente = result
-                st.session_state[f"{key}_selected"] = result.id
-                st.rerun()
-    
+
+            render_search_result_card(
+                result,
+                on_select=partial(_select_paciente, key=key),
+                key_suffix=f"recent_{i}",
+            )
+
     return selected_paciente
 
 
@@ -588,29 +489,10 @@ def render_sidebar_smart_search(
 ) -> Optional[str]:
     """
     Versión compacta del buscador para el sidebar.
-    
+
     Returns:
         ID del paciente seleccionado
     """
-    st.markdown("""
-    <style>
-    .mc-sidebar-search {
-        margin-bottom: 1rem;
-    }
-    .mc-sidebar-search input {
-        background: rgba(15, 23, 42, 0.6) !important;
-        border: 1px solid rgba(148, 163, 184, 0.2) !important;
-        border-radius: 8px !important;
-        color: #f1f5f9 !important;
-        padding: 0.625rem 0.875rem !important;
-    }
-    .mc-sidebar-search input:focus {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
     st.markdown('<div class="mc-sidebar-search">', unsafe_allow_html=True)
     
     query = st.text_input(

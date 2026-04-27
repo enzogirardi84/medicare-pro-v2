@@ -13,10 +13,10 @@ Características:
 from __future__ import annotations
 
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from enum import Enum, auto
+from enum import Enum
 import uuid
 
 from core.app_logging import log_event
@@ -262,6 +262,16 @@ class TelemedicineManager:
         
         return True
     
+    def _on_send_message(self, consultation_id: str, input_key: str):
+        """Callback: enviar mensaje de chat."""
+        message = st.session_state.get(input_key, "")
+        if message:
+            try:
+                self.add_chat_message(consultation_id, "doctor", message)
+            except Exception as e:
+                log_event("telemedicine", f"Error al enviar mensaje: {e}")
+                st.error("No se pudo enviar el mensaje.")
+
     def _create_evolution_from_consultation(self, consultation: VirtualConsultation):
         """Crea registro de evolución desde consulta virtual."""
         evolucion = {
@@ -362,24 +372,31 @@ class TelemedicineManager:
         with tabs[-1]:
             self._render_consultation_history()
     
+    def _on_start_consultation(self, consultation_id: str):
+        """Callback: iniciar consulta desde lista."""
+        try:
+            self.doctor_join_consultation(consultation_id)
+        except Exception as e:
+            log_event("telemedicine", f"Error al iniciar consulta {consultation_id}: {e}")
+            st.error("No se pudo iniciar la consulta.")
+
     def _render_doctor_consultations(self, doctor_id: str):
         """Renderiza consultas del médico."""
         st.header("📅 Mis Consultas Virtuales de Hoy")
-        
-        from datetime import date
+
         consultations = self.get_doctor_consultations(doctor_id, datetime.now())
-        
+
         if not consultations:
             st.info("📭 No tiene consultas virtuales programadas para hoy")
         else:
             for consultation in consultations:
                 with st.container():
                     col1, col2, col3 = st.columns([2, 3, 2])
-                    
+
                     with col1:
                         st.markdown(f"**{consultation.scheduled_time.strftime('%H:%M')}**")
                         st.caption(f"{consultation.duration_minutes} min")
-                    
+
                     with col2:
                         status_icons = {
                             TelemedicineStatus.SCHEDULED: "🔵",
@@ -388,71 +405,66 @@ class TelemedicineManager:
                             TelemedicineStatus.COMPLETED: "✅"
                         }
                         icon = status_icons.get(consultation.status, "⚪")
-                        
+
                         st.markdown(f"**{icon} {consultation.patient_name}**")
                         st.caption(f"Estado: {consultation.status.value}")
-                        
+
                         if consultation.patient_joined_at:
                             st.caption(f"🟢 En sala de espera desde {consultation.patient_joined_at.strftime('%H:%M')}")
-                    
+
                     with col3:
                         if consultation.status == TelemedicineStatus.WAITING_ROOM:
-                            if st.button("▶️ Iniciar Consulta", key=f"start_{consultation.id}", use_container_width=True):
-                                self.doctor_join_consultation(consultation.id)
-                                st.rerun()
-                        
+                            st.button("▶️ Iniciar Consulta", key=f"start_{consultation.id}", use_container_width=True, on_click=self._on_start_consultation, args=(consultation.id,))
+
                         elif consultation.status == TelemedicineStatus.IN_PROGRESS:
                             if st.button("🚪 Ingresar a Sala", key=f"join_{consultation.id}", use_container_width=True, type="primary"):
                                 self._render_virtual_room(consultation)
-                        
+
                         elif consultation.status == TelemedicineStatus.SCHEDULED:
                             st.caption("Esperando paciente...")
-                
+
                 st.divider()
     
+    def _on_attend(self, consultation_id: str):
+        """Callback: atender paciente en sala de espera."""
+        try:
+            self.doctor_join_consultation(consultation_id)
+        except Exception as e:
+            log_event("telemedicine", f"Error al atender consulta {consultation_id}: {e}")
+            st.error("No se pudo atender al paciente.")
+
     def _render_waiting_room(self, doctor_id: str):
         """Renderiza sala de espera digital."""
         st.header("⏳ Sala de Espera Digital")
-        
+
         waiting = self.get_waiting_room(doctor_id)
-        
+
         if not waiting:
             st.info("📭 No hay pacientes en sala de espera")
-            
+
             # Simulación de sala vacía
-            st.markdown("""
-            <div style="
-                background: rgba(30, 41, 59, 0.5);
-                border: 2px dashed rgba(148, 163, 184, 0.3);
-                border-radius: 16px;
-                padding: 60px 20px;
-                text-align: center;
-                margin-top: 20px;
-            ">
-                <h3 style="color: #64748b; margin: 0;">🪑 Sala de Espera Vacía</h3>
-                <p style="color: #94a3b8;">Los pacientes aparecerán aquí cuando se conecten a sus consultas virtuales</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                '<div class="mc-waiting-empty"><h3>🪑 Sala de Espera Vacía</h3><p>Los pacientes aparecerán aquí cuando se conecten a sus consultas virtuales</p></div>',
+                unsafe_allow_html=True,
+            )
         else:
             st.success(f"🟢 {len(waiting)} paciente(s) esperando")
-            
+
             for consultation in waiting:
                 with st.container():
                     col1, col2 = st.columns([3, 1])
-                    
+
                     with col1:
                         st.markdown(f"**👤 {consultation.patient_name}**")
                         st.caption(f"Consulta: {consultation.scheduled_time.strftime('%H:%M')}")
                         st.caption(f"Esperando desde: {consultation.patient_joined_at.strftime('%H:%M:%S')}")
-                        
+
                         wait_time = datetime.now() - consultation.patient_joined_at
                         st.caption(f"⏱️ Tiempo de espera: {int(wait_time.total_seconds() / 60)} minutos")
-                    
+
                     with col2:
-                        if st.button("▶️ Atender", key=f"attend_{consultation.id}", use_container_width=True, type="primary"):
-                            self.doctor_join_consultation(consultation.id)
-                            st.rerun()
-                
+                        st.button("▶️ Atender", key=f"attend_{consultation.id}", use_container_width=True, type="primary", on_click=self._on_attend, args=(consultation.id,))
+
                 st.divider()
     
     def _render_virtual_room(self, consultation: VirtualConsultation):
@@ -464,26 +476,13 @@ class TelemedicineManager:
         
         with col_video:
             st.subheader("📹 Video")
-            
+
             # Placeholder de video
-            st.markdown("""
-            <div style="
-                background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-                border-radius: 12px;
-                height: 400px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2px solid #334155;
-            ">
-                <div style="text-align: center; color: #64748b;">
-                    <h2>👤</h2>
-                    <p>Video del Paciente</p>
-                    <p style="font-size: 12px;">Integración WebRTC/Daily.co</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            st.markdown(
+                '<div class="mc-video-placeholder"><div class="mc-video-placeholder-inner"><h2>👤</h2><p>Video del Paciente</p><p style="font-size: 12px;">Integración WebRTC/Daily.co</p></div></div>',
+                unsafe_allow_html=True,
+            )
+
             # Controles
             col1, col2, col3, col4 = st.columns(4)
             with col1:
@@ -495,23 +494,20 @@ class TelemedicineManager:
             with col4:
                 if st.button("🔴 Finalizar", use_container_width=True, type="primary"):
                     self._render_end_consultation_form(consultation)
-        
+
         with col_chat:
             st.subheader("💬 Chat")
-            
+
             # Historial de chat
             chat_container = st.container()
             with chat_container:
                 for msg in consultation.chat_history:
                     sender = "🧑‍⚕️" if msg["sender"] == "doctor" else "👤"
                     st.markdown(f"**{sender} {msg['sender']}**: {msg['message']}")
-            
+
             # Input de mensaje
-            message = st.text_input("Mensaje", key=f"chat_{consultation.id}")
-            if st.button("Enviar", key=f"send_{consultation.id}"):
-                if message:
-                    self.add_chat_message(consultation.id, "doctor", message)
-                    st.rerun()
+            st.text_input("Mensaje", key=f"chat_{consultation.id}")
+            st.button("Enviar", key=f"send_{consultation.id}", on_click=self._on_send_message, args=(consultation.id, f"chat_{consultation.id}"))
     
     def _render_end_consultation_form(self, consultation: VirtualConsultation):
         """Formulario para finalizar consulta."""
@@ -631,9 +627,7 @@ class TelemedicineManager:
                     
                     with col2:
                         if consultation.status == TelemedicineStatus.SCHEDULED:
-                            if st.button("🚪 Ingresar a Sala", key=f"patient_join_{consultation.id}", use_container_width=True, type="primary"):
-                                self.patient_join_waiting_room(consultation.id)
-                                st.rerun()
+                            st.button("🚪 Ingresar a Sala", key=f"patient_join_{consultation.id}", use_container_width=True, type="primary", on_click=self._on_patient_join, args=(consultation.id,))
                         elif consultation.status == TelemedicineStatus.WAITING_ROOM:
                             st.info("✅ En sala de espera")
                         elif consultation.status == TelemedicineStatus.IN_PROGRESS:
@@ -641,6 +635,14 @@ class TelemedicineManager:
                 
                 st.divider()
     
+    def _on_patient_join(self, consultation_id: str):
+        """Callback: paciente ingresa a sala de espera."""
+        try:
+            self.patient_join_waiting_room(consultation_id)
+        except Exception as e:
+            log_event("telemedicine", f"Error al unirse a sala {consultation_id}: {e}")
+            st.error("No se pudo ingresar a la sala de espera.")
+
     def _render_consultation_history(self):
         """Renderiza historial de consultas."""
         st.header("📊 Historial de Consultas Virtuales")
