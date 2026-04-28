@@ -127,7 +127,7 @@ def generar_pdf_auditoria_legal(df, nombre_empresa=""):
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 10, f"Generado por MediCare Pro  |  {len(df)} registros", align="C")
 
-    return pdf.output(dest="S").encode("latin-1")
+    return bytes(pdf.output(dest="S"))
 
 
 def render_auditoria_legal(mi_empresa, user):
