@@ -30,7 +30,7 @@ def _texto_busqueda_log(reg):
 
 
 def generar_pdf_auditoria_logs(df, nombre_empresa=""):
-    """Genera un PDF profesional con el log de auditoria del sistema."""
+    """Genera un PDF profesional con el log de auditoria del sistema. v2-force-rebuild"""
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
