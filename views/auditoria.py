@@ -29,6 +29,78 @@ def _texto_busqueda_log(reg):
     ).lower()
 
 
+def generar_pdf_auditoria_logs(df, nombre_empresa=""):
+    """Genera un PDF profesional con el log de auditoria del sistema."""
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    HEADER_BG = (30, 41, 59)
+    HEADER_TEXT = (255, 255, 255)
+    ROW_ALT = (241, 245, 249)
+    ROW_BASE = (255, 255, 255)
+    TEXT_DARK = (15, 23, 42)
+
+    pdf.set_fill_color(*HEADER_BG)
+    pdf.rect(10, 10, 277, 20, style="F")
+    pdf.set_text_color(*HEADER_TEXT)
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_xy(15, 16)
+    pdf.cell(0, 8, "Auditoría del Sistema", ln=True)
+
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_xy(15, 23)
+    empresa_str = str(nombre_empresa)[:60] if nombre_empresa else ""
+    pdf.cell(0, 6, f"Empresa: {empresa_str}  |  Fecha: {ahora().strftime('%d/%m/%Y %H:%M')}", ln=True)
+
+    pdf.set_y(38)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_text_color(*TEXT_DARK)
+
+    columnas = ["Fecha", "Usuario", "Acción", "Módulo", "Paciente", "Empresa", "Detalle"]
+    anchos = [35, 30, 35, 30, 35, 30, 82]
+
+    pdf.set_fill_color(*HEADER_BG)
+    pdf.set_text_color(*HEADER_TEXT)
+    for col, w in zip(columnas, anchos):
+        pdf.cell(w, 8, col, border=1, align="C", fill=True)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 8)
+    for idx, row in df.iterrows():
+        fill = ROW_ALT if idx % 2 == 0 else ROW_BASE
+        pdf.set_fill_color(*fill)
+        pdf.set_text_color(*TEXT_DARK)
+
+        def safe(val, max_len):
+            v = str(val) if val is not None else ""
+            return (v[: max_len - 3] + "...") if len(v) > max_len else v
+
+        fecha = safe(row.get("F", row.get("fecha", "")), 20)
+        usuario = safe(row.get("U", row.get("usuario", "")), 18)
+        accion = safe(row.get("A", row.get("accion", "")), 22)
+        modulo = safe(row.get("modulo", ""), 18)
+        paciente = safe(row.get("paciente", ""), 20)
+        empresa = safe(row.get("E", row.get("empresa", "")), 18)
+        detalle = safe(row.get("detalle", ""), 55)
+
+        pdf.cell(anchos[0], 7, fecha, border=1, align="C", fill=True)
+        pdf.cell(anchos[1], 7, usuario, border=1, align="L", fill=True)
+        pdf.cell(anchos[2], 7, accion, border=1, align="L", fill=True)
+        pdf.cell(anchos[3], 7, modulo, border=1, align="L", fill=True)
+        pdf.cell(anchos[4], 7, paciente, border=1, align="L", fill=True)
+        pdf.cell(anchos[5], 7, empresa, border=1, align="L", fill=True)
+        pdf.cell(anchos[6], 7, detalle, border=1, align="L", fill=True)
+        pdf.ln()
+
+    pdf.set_y(-20)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(100, 116, 139)
+    pdf.cell(0, 10, f"Generado por MediCare Pro  |  {len(df)} registros", align="C")
+
+    return bytes(pdf.output(dest="S"))
+
+
 def render_auditoria(mi_empresa, user):
     emp_e = escape(str(mi_empresa or ""))
     st.markdown(
@@ -158,15 +230,13 @@ def render_auditoria(mi_empresa, user):
                 height=440,
             )
 
-        csv_key = f"audit_logs_csv_{mi_empresa}_{user.get('nombre','')}_{usuario_filtro}_{str(buscar_log or '').strip().lower()}"
-        if st.button("Preparar auditoría CSV", use_container_width=True):
-            df_descarga = df_filtrado.drop(columns=["fecha_dt"], errors="ignore").copy()
-            rename_dict = {"U": "Usuario", "A": "Accion", "F": "Fecha", "H": "Hora", "E": "Empresa"}
-            df_descarga = df_descarga.rename(columns=rename_dict)
-            st.session_state[csv_key] = dataframe_csv_bytes(df_descarga)
-        if st.session_state.get(csv_key):
-            nombre_csv = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.csv"
-            st.download_button("Descargar auditoria CSV", data=st.session_state[csv_key], file_name=nombre_csv, mime="text/csv", use_container_width=True)
+        pdf_key = f"audit_logs_pdf_{mi_empresa}_{user.get('nombre','')}_{usuario_filtro}_{str(buscar_log or '').strip().lower()}"
+        if st.button("Preparar auditoría PDF", use_container_width=True):
+            pdf_bytes = generar_pdf_auditoria_logs(df_filtrado, mi_empresa)
+            st.session_state[pdf_key] = pdf_bytes
+        if st.session_state.get(pdf_key):
+            nombre_pdf = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.pdf"
+            st.download_button("Descargar auditoría PDF", data=st.session_state[pdf_key], file_name=nombre_pdf, mime="application/pdf", use_container_width=True)
         return
 
     st.subheader("Auditoria de Asistencia por Profesional")
