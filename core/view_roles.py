@@ -85,6 +85,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Auditoria": list(_ROL_AUDITORIA),
     "Auditoria Legal": list(_ROL_AUDITORIA),
     "Diagnosticos": [],
+    "APS / Dispensario": list(_ROL_TODOS) + [AUD],
 }
 
 
