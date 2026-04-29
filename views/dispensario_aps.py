@@ -85,6 +85,8 @@ def _buscar_pacientes_por_texto(texto):
     pacientes = st.session_state.get("pacientes_db", [])
     resultados = []
     for p in pacientes:
+        if not isinstance(p, dict):
+            continue
         nombre = str(p.get("nombre", "")).lower()
         dni = str(p.get("dni", "")).lower()
         if texto in nombre or texto in dni:
@@ -848,6 +850,8 @@ def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
     pacientes_db = st.session_state.get("pacientes_db", [])
     paciente_data = None
     for p in pacientes_db:
+        if not isinstance(p, dict):
+            continue
         if p.get("nombre") == paciente_id or str(p.get("dni")) in paciente_id:
             paciente_data = p
             break
@@ -997,6 +1001,8 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
         pacientes_db = st.session_state.get("pacientes_db", [])
         paciente_data = None
         for p in pacientes_db:
+            if not isinstance(p, dict):
+                continue
             if p.get("nombre") == paciente_id or str(p.get("dni")) in paciente_id:
                 paciente_data = p
                 break
