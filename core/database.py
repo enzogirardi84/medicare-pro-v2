@@ -170,6 +170,9 @@ def _estructura_vacia_por_clave() -> dict[str, dict | list]:
         "epidemiologia_aps_db": [],
         "visitas_domiciliarias_aps_db": [],
         "ficha_aps_db": [],
+        "grupo_familiar_aps_db": [],
+        "turnos_aps_db": [],
+        "controles_aps_db": [],
     }
 
 
@@ -285,6 +288,9 @@ def _db_keys():
         "epidemiologia_aps_db",
         "visitas_domiciliarias_aps_db",
         "ficha_aps_db",
+        "grupo_familiar_aps_db",
+        "turnos_aps_db",
+        "controles_aps_db",
     ]
 
 

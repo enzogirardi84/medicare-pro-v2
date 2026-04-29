@@ -1,18 +1,19 @@
 """Módulo APS / Dispensario para MediCare Enterprise PRO.
 
 Ventana general de Atención Primaria de la Salud:
-- Panel diario con métricas
-- Ficha APS del paciente
-- Historial APS unificado
-- Nueva atención
-- Farmacia e insumos
+- Panel diario con métricas y sala de espera
+- Gestión de pacientes y núcleo familiar
+- Turnos flexibles y demanda espontánea
+- Atención APS
+- Control Niño Sano y Embarazo
+- Farmacia, leche e insumos
 - Trabajo Social
 - Epidemiología
 - Visitas domiciliarias
 - Reportes
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import streamlit as st
 
@@ -41,6 +42,85 @@ def _header_paciente(paciente_sel, user):
         col2.metric("DNI", dni)
         col3.metric("Empresa / Barrio", empresa)
         col4.metric("Estado", estado)
+
+
+def _guardar_con_feedback(clave_db, payload, max_items=500):
+    """Wrapper con try/except y feedback visual para escenarios de baja conectividad."""
+    try:
+        guardar_json_db(clave_db, payload, spinner=True, max_items=max_items)
+        st.toast("Guardado correctamente", icon="✅")
+        return True
+    except Exception as e:
+        st.error(f"Error al guardar: {e}")
+        st.toast("Falló la conexión. Se guardará localmente.", icon="⚠️")
+        return False
+
+
+def _buscar_pacientes_por_texto(texto):
+    """Búsqueda en tiempo real por nombre o DNI sobre pacientes_db global."""
+    texto = str(texto or "").strip().lower()
+    if not texto:
+        return []
+    pacientes = st.session_state.get("pacientes_db", [])
+    resultados = []
+    for p in pacientes:
+        nombre = str(p.get("nombre", "")).lower()
+        dni = str(p.get("dni", "")).lower()
+        if texto in nombre or texto in dni:
+            resultados.append(p)
+    return resultados
+
+
+def _calcular_edad(fecha_nacimiento_str):
+    """Calcula edad en años desde string ISO o fecha."""
+    try:
+        if isinstance(fecha_nacimiento_str, str) and fecha_nacimiento_str:
+            fn = datetime.fromisoformat(fecha_nacimiento_str.replace("Z", "+00:00")).date()
+        elif isinstance(fecha_nacimiento_str, date):
+            fn = fecha_nacimiento_str
+        else:
+            return None
+        hoy = date.today()
+        return hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+    except Exception:
+        return None
+
+
+def _ya_entrego_mes(paciente_id, tipo_entrega, entregas_db):
+    """Devuelve True si ya hubo una entrega de este tipo en el mes corriente."""
+    hoy = date.today()
+    inicio_mes = hoy.replace(day=1)
+    for e in entregas_db:
+        if e.get("paciente_id") != paciente_id:
+            continue
+        if e.get("tipo_entrega") != tipo_entrega:
+            continue
+        try:
+            fecha = datetime.fromisoformat(str(e.get("fecha_entrega", ""))[:10]).date()
+            if inicio_mes <= fecha <= hoy:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _calcular_edad_gestacional(fum_str):
+    """Calcula edad gestacional en semanas desde FUM."""
+    try:
+        fum = datetime.fromisoformat(str(fum_str)).date()
+        hoy = date.today()
+        dias = (hoy - fum).days
+        semanas = dias // 7
+        return max(0, semanas)
+    except Exception:
+        return None
+
+
+def _paciente_info_para_selector(p):
+    """Formatea un paciente para mostrar en selectores."""
+    nombre = p.get("nombre", "S/N")
+    dni = p.get("dni", "S/D")
+    return f"{nombre} — DNI {dni}"
 
 
 def _metricas_aps_del_dia():
@@ -86,11 +166,61 @@ def _tab_panel_diario(paciente_sel, user):
     entregas = st.session_state.get("entregas_aps_db", [])
     epi = st.session_state.get("epidemiologia_aps_db", [])
     visitas = st.session_state.get("visitas_domiciliarias_aps_db", [])
+    turnos = st.session_state.get("turnos_aps_db", [])
 
     hoy_iso = date.today().isoformat()
 
-    col1, col2 = st.columns(2)
+    # Sala de espera
+    en_espera = [t for t in turnos if t.get("estado") == "en_espera"]
+    pacientes_hoy = set()
+    medicacion_hoy = 0
+    alertas_epi = 0
 
+    for a in atenciones:
+        if str(a.get("fecha_atencion", ""))[:10] == hoy_iso:
+            pacientes_hoy.add(a.get("paciente_id"))
+
+    for e in entregas:
+        if str(e.get("fecha_entrega", ""))[:10] == hoy_iso:
+            medicacion_hoy += 1
+
+    for ep in epi:
+        if ep.get("estado") in ("Pendiente", "En seguimiento"):
+            alertas_epi += 1
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Pacientes hoy", len(pacientes_hoy))
+    col2.metric("Medicación hoy", medicacion_hoy)
+    col3.metric("Alertas epi.", alertas_epi)
+    col4.metric("En sala de espera", len(en_espera), delta="pendientes")
+
+    st.divider()
+
+    # Sala de espera visual
+    with st.container(border=True):
+        st.markdown("### 🪑 Sala de espera")
+        if en_espera:
+            en_espera.sort(key=lambda x: x.get("hora_llegada", ""))
+            for t in en_espera:
+                prio = t.get("prioridad", "Normal")
+                color = "🔴" if prio == "Urgente" else "🟡" if prio == "Preferencial" else "🟢"
+                with st.container(border=True):
+                    col_a, col_b, col_c = st.columns([3, 2, 1])
+                    with col_a:
+                        st.write(f"{color} **{t.get('paciente_id', '-')}**")
+                        st.caption(f"Motivo: {t.get('motivo', '-')}")
+                    with col_b:
+                        st.caption(f"Llegada: {str(t.get('hora_llegada', ''))[:16]}")
+                        st.caption(f"Tipo: {t.get('tipo_turno', '-')}")
+                    with col_c:
+                        if st.button("Atender", key=f"btn_atender_{t.get('id_turno', t.get('hora_llegada', 'x'))}"):
+                            t["estado"] = "atendido"
+                            _guardar_con_feedback("turnos_aps_db", t, max_items=2000)
+                            st.rerun()
+        else:
+            st.caption("Sala de espera vacía.")
+
+    col1, col2 = st.columns(2)
     with col1:
         with st.container(border=True):
             st.markdown("### Últimas atenciones")
@@ -121,112 +251,207 @@ def _tab_panel_diario(paciente_sel, user):
             else:
                 st.caption("Sin alertas activas.")
 
+
+def _tab_pacientes_familia(paciente_sel, user, centro_salud_id):
+    st.subheader("Pacientes y Núcleo Familiar")
+    st.caption("Gestión territorial y familiar del dispensario.")
+
+    tab_buscar, tab_grupo = st.tabs(["Alta / Búsqueda", "Gestión de Núcleo Familiar"])
+
+    with tab_buscar:
+        busqueda = st.text_input("Buscar por DNI o Nombre", placeholder="Ej: 30123456 o Juan Pérez", key="aps_buscar_pac")
+        if busqueda:
+            resultados = _buscar_pacientes_por_texto(busqueda)
+            if resultados:
+                st.write(f"**{len(resultados)}** resultado(s)")
+                for p in resultados[:10]:
+                    with st.container(border=True):
+                        col_a, col_b = st.columns([3, 1])
+                        with col_a:
+                            st.markdown(f"**{p.get('nombre', '-')}**")
+                            st.caption(f"DNI: {p.get('dni', '-')} · Barrio: {p.get('barrio', p.get('empresa', '-'))}")
+                        with col_b:
+                            if st.button("Seleccionar", key=f"sel_pac_{p.get('dni', 'x')}"):
+                                st.session_state["paciente_actual"] = p.get("nombre", p.get("dni", "-"))
+                                st.toast(f"Paciente {p.get('nombre', '-')} seleccionado", icon="👤")
+                                st.rerun()
+            else:
+                st.warning("No se encontraron pacientes. Verificá los datos o dá de alta en Admisión.")
+        else:
+            st.caption("Ingresá al menos 3 caracteres para buscar.")
+
+    with tab_grupo:
+        st.markdown("### Vinculación familiar / territorial")
+        paciente_id = _get_paciente_id_visual(paciente_sel)
+        if not paciente_id:
+            st.info("Seleccioná un paciente para gestionar su grupo familiar.")
+            return
+
+        grupos = st.session_state.get("grupo_familiar_aps_db", [])
+        grupo_existente = None
+        for g in grupos:
+            miembros = g.get("miembros", [])
+            if paciente_id in miembros:
+                grupo_existente = g
+                break
+
+        if grupo_existente:
+            st.success(f"Paciente vinculado a familia ID: {grupo_existente.get('id_familia', '-')}")
+            st.caption(f"Domicilio: {grupo_existente.get('domicilio', '-')} · Barrio: {grupo_existente.get('barrio', '-')}")
+            st.write("Miembros:")
+            for m in grupo_existente.get("miembros", []):
+                st.write(f"• {m}")
+        else:
+            st.info("Este paciente no está vinculado a ningún núcleo familiar.")
+
+        with st.form("form_grupo_familiar"):
+            domicilio = st.text_input("Domicilio familiar")
+            barrio = st.text_input("Barrio / Zona territorial")
+            manzana = st.text_input("Manzana")
+            lote = st.text_input("Lote")
+            id_familia = st.text_input("ID Familia (opcional, se genera automático si vacío)", value=grupo_existente.get("id_familia", "") if grupo_existente else "")
+            st.caption("Los miembros se vinculan automáticamente por domicilio compartido.")
+            guardar = st.form_submit_button("Guardar / Vincular núcleo", use_container_width=True)
+
+        if guardar:
+            fid = id_familia.strip() or f"fam-{centro_salud_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            payload = {
+                "id_familia": fid,
+                "centro_salud_id": centro_salud_id,
+                "domicilio": domicilio,
+                "barrio": barrio,
+                "manzana": manzana,
+                "lote": lote,
+                "miembros": list(set((grupo_existente.get("miembros", []) if grupo_existente else []) + [paciente_id])),
+                "ultima_actualizacion": datetime.now().isoformat(),
+            }
+            if grupo_existente:
+                idx = grupos.index(grupo_existente)
+                st.session_state["grupo_familiar_aps_db"][idx] = payload
+            else:
+                if "grupo_familiar_aps_db" not in st.session_state or not isinstance(st.session_state["grupo_familiar_aps_db"], list):
+                    st.session_state["grupo_familiar_aps_db"] = []
+                st.session_state["grupo_familiar_aps_db"].append(payload)
+            _guardar_con_feedback("grupo_familiar_aps_db", payload, max_items=500)
+            st.success("Núcleo familiar guardado correctamente.")
+
+
+def _tab_turnos(paciente_sel, user, centro_salud_id):
+    st.subheader("Turnos y Demanda Espontánea")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### 🚪 Registrar llegada espontánea")
+        with st.form("form_llegada_espontanea"):
+            dni_esp = st.text_input("DNI del paciente", placeholder="30123456")
+            nombre_esp = st.text_input("Nombre (opcional)", placeholder="Juan Pérez")
+            motivo_esp = st.selectbox(
+                "Motivo de consulta",
+                ["Control Niño Sano", "Enfermedad aguda", "Receta / Medicación", "Curación", "Vacunación",
+                 "Control embarazo", "Control crónico (HTA/Diabetes)", "Otro"],
+                key="aps_motivo_esp",
+            )
+            prioridad_esp = st.selectbox("Prioridad / Triage", ["Normal", "Preferencial", "Urgente"])
+            guardar_esp = st.form_submit_button("Ingresar a sala de espera", use_container_width=True)
+
+        if guardar_esp:
+            payload = {
+                "id_turno": f"esp-{datetime.now().strftime('%Y%m%d%H%M%S')}-{dni_esp}",
+                "paciente_id": nombre_esp or f"DNI {dni_esp}",
+                "dni": dni_esp,
+                "centro_salud_id": centro_salud_id,
+                "tipo_turno": "espontaneo",
+                "motivo": motivo_esp,
+                "prioridad": prioridad_esp,
+                "estado": "en_espera",
+                "hora_llegada": datetime.now().isoformat(),
+                "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Operador APS"),
+            }
+            _guardar_con_feedback("turnos_aps_db", payload, max_items=2000)
+            st.success("Paciente ingresado a sala de espera.")
+
+    with col2:
+        st.markdown("### 📅 Turno programado")
+        with st.form("form_turno_programado"):
+            paciente_prog = st.text_input("Paciente (Nombre o DNI)")
+            fecha_prog = st.date_input("Fecha", value=date.today())
+            hora_prog = st.time_input("Hora")
+            motivo_prog = st.selectbox(
+                "Motivo",
+                ["Control general", "Vacunación", "Control Niño Sano", "Control embarazo",
+                 "Receta", "Curación", "Otro"],
+                key="aps_motivo_prog",
+            )
+            guardar_prog = st.form_submit_button("Agendar turno", use_container_width=True)
+
+        if guardar_prog:
+            payload = {
+                "id_turno": f"prog-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                "paciente_id": paciente_prog,
+                "centro_salud_id": centro_salud_id,
+                "tipo_turno": "programado",
+                "motivo": motivo_prog,
+                "fecha_turno": datetime.combine(fecha_prog, hora_prog).isoformat(),
+                "estado": "programado",
+                "hora_llegada": None,
+                "prioridad": "Normal",
+                "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Operador APS"),
+            }
+            _guardar_con_feedback("turnos_aps_db", payload, max_items=2000)
+            st.success("Turno programado correctamente.")
+
     st.divider()
+    st.markdown("### Fila de espera y turnos de hoy")
+    hoy_iso = date.today().isoformat()
+    turnos = st.session_state.get("turnos_aps_db", [])
 
-    with st.container(border=True):
-        st.markdown("### Visitas domiciliarias")
-        pendientes = [
-            v for v in visitas
-            if v.get("estado", "Pendiente") == "Pendiente"
-        ]
-        if pendientes:
-            st.dataframe(
-                [
-                    {
-                        "Paciente": v.get("paciente_id", "-"),
-                        "Motivo": v.get("motivo_visita", "-"),
-                        "Prioridad": v.get("prioridad", "Media"),
-                        "Barrio": v.get("barrio", "-"),
-                    }
-                    for v in pendientes
-                ],
-                use_container_width=True,
-                hide_index=True,
-            )
-        else:
-            st.caption("Sin visitas domiciliarias pendientes.")
+    turnos_hoy = [
+        t for t in turnos
+        if (t.get("hora_llegada") and str(t.get("hora_llegada"))[:10] == hoy_iso)
+        or (t.get("fecha_turno") and str(t.get("fecha_turno"))[:10] == hoy_iso)
+    ]
 
+    if turnos_hoy:
+        turnos_hoy.sort(key=lambda x: x.get("hora_llegada") or x.get("fecha_turno") or "")
+        for t in turnos_hoy:
+            estado = t.get("estado", "-")
+            if estado == "en_espera":
+                icono = "🟡"
+                tipo_label = "En espera"
+            elif estado == "atendido":
+                icono = "✅"
+                tipo_label = "Atendido"
+            elif estado == "programado":
+                icono = "📅"
+                tipo_label = "Programado"
+            else:
+                icono = "⚪"
+                tipo_label = estado
 
-def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
-    st.subheader("Ficha APS del Paciente")
-    st.caption("Datos generales propios del centro de salud.")
-
-    fichas = st.session_state.get("ficha_aps_db", [])
-    paciente_id = _get_paciente_id_visual(paciente_sel)
-    ficha_existente = None
-    for f in fichas:
-        if f.get("paciente_id") == paciente_id and f.get("centro_salud_id") == centro_salud_id:
-            ficha_existente = f
-            break
-
-    with st.form("form_ficha_aps"):
-        col1, col2 = st.columns(2)
-        with col1:
-            medico_referente = st.text_input(
-                "Médico referente",
-                value=ficha_existente.get("medico_referente", "") if ficha_existente else "",
-            )
-            enfermero_referente = st.text_input(
-                "Enfermero/a referente",
-                value=ficha_existente.get("enfermero_referente", "") if ficha_existente else "",
-            )
-            promotor_referente = st.text_input(
-                "Promotor/a de salud",
-                value=ficha_existente.get("promotor_referente", "") if ficha_existente else "",
-            )
-
-        with col2:
-            riesgo_general = st.selectbox(
-                "Riesgo general APS",
-                ["Bajo", "Moderado", "Alto", "Crítico"],
-                index=(["Bajo", "Moderado", "Alto", "Crítico"].index(ficha_existente.get("riesgo_general", "Bajo")) if ficha_existente else 0),
-            )
-            programa_asignado = st.multiselect(
-                "Programas asignados",
-                [
-                    "HTA", "Diabetes", "Salud sexual", "Materno infantil",
-                    "Leche", "Adulto mayor", "Tuberculosis", "Dengue",
-                    "Salud mental", "Trabajo social",
-                ],
-                default=ficha_existente.get("programa_asignado", []) if ficha_existente else [],
-            )
-            estado_ficha = st.selectbox(
-                "Estado de ficha APS",
-                ["Activa", "En seguimiento", "Derivada", "Inactiva"],
-                index=(["Activa", "En seguimiento", "Derivada", "Inactiva"].index(ficha_existente.get("estado_ficha", "Activa")) if ficha_existente else 0),
-            )
-
-        observaciones_generales = st.text_area(
-            "Observaciones generales APS",
-            value=ficha_existente.get("observaciones_generales", "") if ficha_existente else "",
-            placeholder="Resumen general del paciente dentro del dispensario...",
-        )
-
-        guardar = st.form_submit_button("Guardar ficha APS", use_container_width=True)
-
-    if guardar:
-        payload = {
-            "paciente_id": paciente_id,
-            "centro_salud_id": centro_salud_id,
-            "medico_referente": medico_referente,
-            "enfermero_referente": enfermero_referente,
-            "promotor_referente": promotor_referente,
-            "riesgo_general": riesgo_general,
-            "programa_asignado": programa_asignado,
-            "estado_ficha": estado_ficha,
-            "observaciones_generales": observaciones_generales,
-            "ultima_actualizacion": datetime.now().isoformat(),
-        }
-        # Actualizar si existe, sino insertar
-        if ficha_existente:
-            idx = fichas.index(ficha_existente)
-            st.session_state["ficha_aps_db"][idx] = payload
-        else:
-            if "ficha_aps_db" not in st.session_state or not isinstance(st.session_state["ficha_aps_db"], list):
-                st.session_state["ficha_aps_db"] = []
-            st.session_state["ficha_aps_db"].append(payload)
-        guardar_json_db("ficha_aps_db", payload, spinner=True, max_items=500)
-        st.success("Ficha APS guardada correctamente.")
+            with st.container(border=True):
+                col_a, col_b, col_c = st.columns([3, 2, 1])
+                with col_a:
+                    st.write(f"{icono} **{t.get('paciente_id', '-')}**")
+                    st.caption(f"Motivo: {t.get('motivo', '-')} · Prioridad: {t.get('prioridad', 'Normal')}")
+                with col_b:
+                    if t.get("hora_llegada"):
+                        st.caption(f"Llegada: {str(t['hora_llegada'])[:16]}")
+                    elif t.get("fecha_turno"):
+                        st.caption(f"Turno: {str(t['fecha_turno'])[:16]}")
+                    st.caption(f"Tipo: {tipo_label}")
+                with col_c:
+                    if estado == "en_espera" and st.button("Atender", key=f"turno_atender_{t.get('id_turno', 'x')}"):
+                        t["estado"] = "atendido"
+                        _guardar_con_feedback("turnos_aps_db", t, max_items=2000)
+                        st.rerun()
+                    if estado == "programado" and st.button("Llegó", key=f"turno_llego_{t.get('id_turno', 'x')}"):
+                        t["estado"] = "en_espera"
+                        t["hora_llegada"] = datetime.now().isoformat()
+                        _guardar_con_feedback("turnos_aps_db", t, max_items=2000)
+                        st.rerun()
+    else:
+        st.caption("Sin turnos ni llegadas registradas hoy.")
 
 
 def _tab_historial_aps(paciente_sel, user, centro_salud_id):
@@ -242,6 +467,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             [
                 "Todos", "Atención APS", "Farmacia", "Trabajo Social",
                 "Epidemiología", "Visita domiciliaria", "Ficha APS",
+                "Turnos", "Control Niño/Embarazo",
             ],
         )
     with col2:
@@ -313,6 +539,32 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
                 "registrado_por": "-",
             })
 
+    for t in st.session_state.get("turnos_aps_db", []):
+        if t.get("paciente_id") == paciente_id:
+            registros.append({
+                "fecha": str(t.get("hora_llegada") or t.get("fecha_turno") or "")[:16],
+                "tipo": "Turnos",
+                "titulo": f"{t.get('tipo_turno', '-').capitalize()} — {t.get('motivo', '-')}",
+                "detalle": f"Prioridad: {t.get('prioridad', '-')} · Estado: {t.get('estado', '-')}",
+                "registrado_por": t.get("registrado_por", "-"),
+            })
+
+    for c in st.session_state.get("controles_aps_db", []):
+        if c.get("paciente_id") == paciente_id:
+            tipo_label = "Niño Sano" if c.get("tipo_control") == "nino_sano" else "Embarazo"
+            detalle = (
+                f"Peso: {c.get('peso', '-')} · Talla: {c.get('talla', '-')} · Vacunas: {c.get('vacunas_al_dia', '-')}"
+                if c.get("tipo_control") == "nino_sano"
+                else f"EG: {c.get('semanas_gestacion', '-')} sem · PA: {c.get('presion_arterial', '-')}"
+            )
+            registros.append({
+                "fecha": str(c.get("fecha_control", ""))[:16],
+                "tipo": "Control Niño/Embarazo",
+                "titulo": tipo_label,
+                "detalle": detalle,
+                "registrado_por": c.get("registrado_por", "-"),
+            })
+
     # Filtros
     if filtro_tipo != "Todos":
         registros = [r for r in registros if r["tipo"] == filtro_tipo]
@@ -340,7 +592,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
 
 
 def _tab_nueva_atencion(paciente_sel, user, centro_salud_id):
-    st.subheader("Nueva Atención APS")
+    st.subheader("Atención APS")
 
     paciente_id = _get_paciente_id_visual(paciente_sel)
 
@@ -394,76 +646,190 @@ def _tab_nueva_atencion(paciente_sel, user, centro_salud_id):
             "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
             "created_at": datetime.now().isoformat(),
         }
-        guardar_json_db("atenciones_aps_db", payload, spinner=True, max_items=1000)
-        st.success("Atención APS guardada correctamente.")
+        _guardar_con_feedback("atenciones_aps_db", payload, max_items=1000)
+
+
+def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
+    st.subheader("Control Niño Sano y Embarazo")
+
+    paciente_id = _get_paciente_id_visual(paciente_sel)
+    pacientes_db = st.session_state.get("pacientes_db", [])
+    paciente_data = None
+    for p in pacientes_db:
+        if p.get("nombre") == paciente_id or str(p.get("dni")) in paciente_id:
+            paciente_data = p
+            break
+
+    edad = _calcular_edad(paciente_data.get("fecha_nacimiento")) if paciente_data else None
+
+    tab_nino, tab_embarazo = st.tabs(["👶 Niño Sano", "🤰 Embarazo"])
+
+    with tab_nino:
+        if edad is not None and edad >= 18:
+            st.info("El paciente seleccionado tiene 18+ años. Usá esta pestaña solo para menores.")
+
+        with st.form("form_nino_sano"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                peso = st.number_input("Peso (kg)", min_value=0.0, max_value=150.0, step=0.1)
+                talla = st.number_input("Talla (cm)", min_value=0.0, max_value=200.0, step=0.1)
+            with col2:
+                perimetro_cefalico = st.number_input("Perímetro cefálico (cm)", min_value=0.0, max_value=80.0, step=0.1)
+                imc = round(peso / ((talla / 100) ** 2), 2) if talla > 0 else 0.0
+                st.metric("IMC calculado", f"{imc:.1f}")
+            with col3:
+                vacunas_al_dia = st.selectbox("Vacunas al día", ["Sí", "No", "Parcial"])
+                proximo_control = st.date_input("Próximo control", value=date.today() + timedelta(days=30))
+
+            observaciones = st.text_area("Observaciones del control")
+            guardar = st.form_submit_button("Guardar control niño sano", use_container_width=True)
+
+        if guardar:
+            payload = {
+                "paciente_id": paciente_id,
+                "centro_salud_id": centro_salud_id,
+                "tipo_control": "nino_sano",
+                "fecha_control": datetime.now().isoformat(),
+                "peso": peso,
+                "talla": talla,
+                "perimetro_cefalico": perimetro_cefalico,
+                "imc": imc,
+                "vacunas_al_dia": vacunas_al_dia,
+                "proximo_control": proximo_control.isoformat(),
+                "observaciones": observaciones,
+                "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Operador APS"),
+                "created_at": datetime.now().isoformat(),
+            }
+            _guardar_con_feedback("controles_aps_db", payload, max_items=500)
+
+    with tab_embarazo:
+        with st.form("form_embarazo"):
+            fum = st.date_input("Fecha última menstruación (FUM)", value=None)
+            semanas_gestacion = None
+            if fum:
+                semanas_gestacion = _calcular_edad_gestacional(fum.isoformat())
+                st.metric("Edad gestacional", f"{semanas_gestacion} semanas" if semanas_gestacion is not None else "N/D")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                peso_pre = st.number_input("Peso pregestacional (kg)", min_value=0.0, max_value=200.0, step=0.1)
+                ta = st.text_input("Presión arterial", placeholder="120/80")
+            with col2:
+                altura_uterina = st.number_input("Altura uterina (cm)", min_value=0, max_value=50)
+                fcf = st.number_input("FCF (lat/min)", min_value=0, max_value=200)
+
+            movimientos_fetales = st.selectbox("Movimientos fetales", ["Presentes", "Disminuidos", "No evaluado"])
+            observaciones_emb = st.text_area("Observaciones obstétricas")
+            guardar_emb = st.form_submit_button("Guardar control embarazo", use_container_width=True)
+
+        if guardar_emb:
+            payload = {
+                "paciente_id": paciente_id,
+                "centro_salud_id": centro_salud_id,
+                "tipo_control": "embarazo",
+                "fecha_control": datetime.now().isoformat(),
+                "fum": fum.isoformat() if fum else None,
+                "semanas_gestacion": semanas_gestacion,
+                "peso_pregestacional": peso_pre,
+                "presion_arterial": ta,
+                "altura_uterina": altura_uterina,
+                "fcf": fcf,
+                "movimientos_fetales": movimientos_fetales,
+                "observaciones": observaciones_emb,
+                "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Operador APS"),
+                "created_at": datetime.now().isoformat(),
+            }
+            _guardar_con_feedback("controles_aps_db", payload, max_items=500)
 
 
 def _tab_farmacia(paciente_sel, user, centro_salud_id):
-    st.subheader("Farmacia e Insumos")
-    st.caption("Entrega de medicación crónica, leche, anticonceptivos e insumos.")
+    st.subheader("Farmacia y Entrega de Leche")
+    st.caption("Medicación crónica, leche (Plan Materno Infantil) e insumos.")
 
     paciente_id = _get_paciente_id_visual(paciente_sel)
+    entregas_db = st.session_state.get("entregas_aps_db", [])
 
-    col1, col2 = st.columns(2)
+    tab_med, tab_leche = st.tabs(["💊 Medicación Crónica", "🥛 Leche"])
 
-    with col1:
-        st.markdown("### Medicación crónica")
-        medicamento = st.selectbox(
-            "Medicamento",
-            [
-                "Enalapril 10 mg", "Losartán 50 mg", "Amlodipina 5 mg",
-                "Metformina 850 mg", "Glibenclamida 5 mg", "Insulina NPH",
-                "Salbutamol", "Levotiroxina", "Atorvastatina", "Otro",
-            ],
-            key="aps_med_select",
-        )
-        cantidad = st.number_input("Cantidad", min_value=1, value=1, key="aps_med_cant")
-        unidad = st.selectbox("Unidad", ["Comprimidos", "Cajas", "Frascos", "Ampollas", "Aerosoles"], key="aps_med_unidad")
+    with tab_med:
+        col1, col2 = st.columns(2)
+        with col1:
+            medicamento = st.selectbox(
+                "Medicamento",
+                [
+                    "Enalapril 10 mg", "Losartán 50 mg", "Amlodipina 5 mg",
+                    "Metformina 850 mg", "Glibenclamida 5 mg", "Insulina NPH",
+                    "Salbutamol", "Levotiroxina", "Atorvastatina", "Otro",
+                ],
+                key="aps_med_select",
+            )
+            cantidad = st.number_input("Cantidad", min_value=1, value=30, key="aps_med_cant")
+        with col2:
+            unidad = st.selectbox("Unidad", ["Comprimidos", "Cajas", "Frascos", "Ampollas", "Aerosoles"], key="aps_med_unidad")
+            mes_corriente = _ya_entrego_mes(paciente_id, "farmacia_aps", entregas_db)
+            if mes_corriente:
+                st.warning("⚠️ Este paciente ya retiró medicación este mes.")
+            else:
+                st.success("✅ Cuota mensual disponible")
 
-    with col2:
-        st.markdown("### Programas APS")
-        entrega_leche = st.checkbox("Entrega de leche", key="aps_leche")
-        cantidad_leche = st.number_input("Cantidad leche", min_value=0, value=0, key="aps_leche_cant")
-        entrega_anticonceptivos = st.checkbox("Entrega de anticonceptivos", key="aps_anti")
-        tipo_anticonceptivo = st.selectbox(
-            "Tipo anticonceptivo",
-            [
-                "No corresponde", "Preservativos", "Anticonceptivos orales",
-                "Inyectable mensual", "Inyectable trimestral", "DIU - derivación", "Implante - derivación",
-            ],
-            key="aps_anti_tipo",
-        )
-        insumos = st.multiselect(
-            "Insumos entregados",
-            [
-                "Gasas", "Apósitos", "Guantes", "Jeringas",
-                "Alcohol", "Tiras reactivas", "Lancetas", "Material de curación",
-            ],
-            key="aps_insumos",
-        )
+        observacion_med = st.text_area("Observación de farmacia", key="aps_med_obs")
 
-    observacion_farmacia = st.text_area("Observación de farmacia", key="aps_farm_obs")
+        if st.button("Registrar entrega medicación", use_container_width=True, key="aps_btn_med"):
+            payload = {
+                "paciente_id": paciente_id,
+                "centro_salud_id": centro_salud_id,
+                "fecha_entrega": datetime.now().isoformat(),
+                "tipo_entrega": "farmacia_aps",
+                "medicamento": medicamento,
+                "cantidad": cantidad,
+                "unidad": unidad,
+                "observaciones": observacion_med,
+                "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
+                "created_at": datetime.now().isoformat(),
+            }
+            _guardar_con_feedback("entregas_aps_db", payload, max_items=1000)
 
-    if st.button("Registrar entrega APS", use_container_width=True, key="aps_btn_farmacia"):
-        payload = {
-            "paciente_id": paciente_id,
-            "centro_salud_id": centro_salud_id,
-            "fecha_entrega": datetime.now().isoformat(),
-            "tipo_entrega": "farmacia_aps",
-            "medicamento": medicamento,
-            "cantidad": cantidad,
-            "unidad": unidad,
-            "entrega_leche": entrega_leche,
-            "cantidad_leche": cantidad_leche,
-            "entrega_anticonceptivos": entrega_anticonceptivos,
-            "tipo_anticonceptivo": tipo_anticonceptivo,
-            "insumos_entregados": insumos,
-            "observaciones": observacion_farmacia,
-            "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
-            "created_at": datetime.now().isoformat(),
-        }
-        guardar_json_db("entregas_aps_db", payload, spinner=True, max_items=1000)
-        st.success("Entrega APS registrada correctamente.")
+    with tab_leche:
+        pacientes_db = st.session_state.get("pacientes_db", [])
+        paciente_data = None
+        for p in pacientes_db:
+            if p.get("nombre") == paciente_id or str(p.get("dni")) in paciente_id:
+                paciente_data = p
+                break
+
+        dni_tutor = st.text_input("DNI del tutor/a", value=paciente_data.get("dni", "") if paciente_data else "", key="aps_leche_dni")
+        edad_nino = _calcular_edad(paciente_data.get("fecha_nacimiento")) if paciente_data else None
+
+        if edad_nino is not None:
+            if edad_nino <= 2:
+                st.success(f"✅ Edad válida para leche: {edad_nino} año(s)")
+            else:
+                st.error(f"❌ Edad fuera de rango: {edad_nino} año(s). El plan cubre hasta 2 años.")
+
+        ya_leche_mes = _ya_entrego_mes(paciente_id, "leche_aps", entregas_db)
+        if ya_leche_mes:
+            st.warning("⚠️ Este beneficiario ya retiró leche este mes.")
+
+        if st.button("Registrar entrega leche (2 kg)", use_container_width=True, key="aps_btn_leche"):
+            if edad_nino is not None and edad_nino > 2:
+                st.error("No se puede registrar: edad fuera del rango del plan.")
+            elif ya_leche_mes:
+                st.error("No se puede registrar: ya retiró la cuota mensual.")
+            else:
+                payload = {
+                    "paciente_id": paciente_id,
+                    "centro_salud_id": centro_salud_id,
+                    "fecha_entrega": datetime.now().isoformat(),
+                    "tipo_entrega": "leche_aps",
+                    "medicamento": "Leche entera 2kg",
+                    "cantidad": 2,
+                    "unidad": "kg",
+                    "dni_tutor": dni_tutor,
+                    "observaciones": "Entrega leche Plan Materno Infantil",
+                    "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
+                    "created_at": datetime.now().isoformat(),
+                }
+                _guardar_con_feedback("entregas_aps_db", payload, max_items=1000)
 
 
 def _tab_trabajo_social(paciente_sel, user, centro_salud_id):
@@ -521,8 +887,7 @@ def _tab_trabajo_social(paciente_sel, user, centro_salud_id):
             "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Trabajo Social APS"),
             "created_at": datetime.now().isoformat(),
         }
-        guardar_json_db("trabajo_social_aps_db", payload, spinner=True, max_items=500)
-        st.success("Registro social APS guardado correctamente.")
+        _guardar_con_feedback("trabajo_social_aps_db", payload, max_items=500)
 
 
 def _tab_epidemiologia(paciente_sel, user, centro_salud_id):
@@ -567,8 +932,7 @@ def _tab_epidemiologia(paciente_sel, user, centro_salud_id):
             "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
             "created_at": datetime.now().isoformat(),
         }
-        guardar_json_db("epidemiologia_aps_db", payload, spinner=True, max_items=500)
-        st.success("Registro epidemiológico guardado correctamente.")
+        _guardar_con_feedback("epidemiologia_aps_db", payload, max_items=500)
 
 
 def _tab_visitas(paciente_sel, user, centro_salud_id):
@@ -609,8 +973,7 @@ def _tab_visitas(paciente_sel, user, centro_salud_id):
             "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Promotor APS"),
             "created_at": datetime.now().isoformat(),
         }
-        guardar_json_db("visitas_domiciliarias_aps_db", payload, spinner=True, max_items=500)
-        st.success("Visita domiciliaria guardada correctamente.")
+        _guardar_con_feedback("visitas_domiciliarias_aps_db", payload, max_items=500)
 
 
 def _tab_reportes(paciente_sel, user, centro_salud_id):
@@ -627,6 +990,8 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
             [
                 "Atenciones APS", "Entregas de medicación", "Entregas de leche",
                 "Casos epidemiológicos", "Pacientes con riesgo social", "Visitas domiciliarias",
+                "Turnos y demanda espontánea", "Controles Niño Sano / Embarazo",
+                "Grupos familiares",
             ],
             key="aps_rep_tipo",
         )
@@ -661,6 +1026,18 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
                 v for v in st.session_state.get("visitas_domiciliarias_aps_db", [])
                 if fd <= str(v.get("fecha_visita", ""))[:10] <= fh
             ]
+        elif tipo_reporte == "Turnos y demanda espontánea":
+            registros = [
+                t for t in st.session_state.get("turnos_aps_db", [])
+                if fd <= str(t.get("hora_llegada") or t.get("fecha_turno") or "")[:10] <= fh
+            ]
+        elif tipo_reporte == "Controles Niño Sano / Embarazo":
+            registros = [
+                c for c in st.session_state.get("controles_aps_db", [])
+                if fd <= str(c.get("fecha_control", ""))[:10] <= fh
+            ]
+        elif tipo_reporte == "Grupos familiares":
+            registros = st.session_state.get("grupo_familiar_aps_db", [])
 
         st.write(f"**{len(registros)}** registros encontrados.")
         if registros:
@@ -686,10 +1063,12 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
 
     tabs = st.tabs([
         "📊 Panel Diario",
-        "👤 Ficha APS",
+        "� Pacientes y Familia",
+        "📅 Turnos y Sala de Espera",
         "📚 Historial APS",
-        "🩺 Nueva Atención",
-        "💊 Farmacia",
+        "🩺 Atención APS",
+        "� Niño Sano / Embarazo",
+        "�� Farmacia y Leche",
         "📋 Trabajo Social",
         "🚨 Epidemiología",
         "🏠 Visitas",
@@ -700,46 +1079,52 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
         _tab_panel_diario(paciente_sel, user)
 
     with tabs[1]:
-        if paciente_sel:
-            _tab_ficha_aps(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_pacientes_familia(paciente_sel, user, centro_salud_id)
 
     with tabs[2]:
+        _tab_turnos(paciente_sel, user, centro_salud_id)
+
+    with tabs[3]:
         if paciente_sel:
             _tab_historial_aps(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[3]:
+    with tabs[4]:
         if paciente_sel:
             _tab_nueva_atencion(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[4]:
-        if paciente_sel:
-            _tab_farmacia(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
-
     with tabs[5]:
         if paciente_sel:
-            _tab_trabajo_social(paciente_sel, user, centro_salud_id)
+            _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
     with tabs[6]:
         if paciente_sel:
-            _tab_epidemiologia(paciente_sel, user, centro_salud_id)
+            _tab_farmacia(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
     with tabs[7]:
         if paciente_sel:
-            _tab_visitas(paciente_sel, user, centro_salud_id)
+            _tab_trabajo_social(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
     with tabs[8]:
+        if paciente_sel:
+            _tab_epidemiologia(paciente_sel, user, centro_salud_id)
+        else:
+            aviso_sin_paciente()
+
+    with tabs[9]:
+        if paciente_sel:
+            _tab_visitas(paciente_sel, user, centro_salud_id)
+        else:
+            aviso_sin_paciente()
+
+    with tabs[10]:
         _tab_reportes(paciente_sel, user, centro_salud_id)
