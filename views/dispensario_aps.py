@@ -648,6 +648,33 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
         st.caption("Sin turnos ni llegadas registradas hoy.")
 
 
+def _generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_id):
+    """Genera un PDF portrait con el historial APS del paciente seleccionado."""
+    if not FPDF_DISPONIBLE:
+        return None
+    pdf = FPDF(orientation="P")
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, safe_text(f"Historial APS — {paciente_id}"), ln=True, align="C")
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 8, safe_text(f"Periodo: {fd} a {fh}  |  Centro: {centro_salud_id}"), ln=True, align="C")
+    pdf.ln(4)
+
+    if not registros:
+        pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 10, safe_text("No hay registros para el periodo seleccionado."), ln=True)
+        return pdf_output_bytes(pdf)
+
+    for i, item in enumerate(registros[:300], 1):
+        pdf.set_font("Arial", "B", 9)
+        pdf.cell(0, 6, safe_text(f"#{i} [{item['tipo']}] {item['titulo']}"), ln=True)
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(0, 5, safe_text(f"Fecha: {item['fecha']}  |  Registrado por: {item['registrado_por']}"), ln=True)
+        pdf.multi_cell(0, 5, safe_text(f"Detalle: {item['detalle']}"))
+        pdf.ln(2)
+    return pdf_output_bytes(pdf)
+
+
 def _tab_historial_aps(paciente_sel, user, centro_salud_id):
     st.subheader("Historial APS del Dispensario")
     st.caption("Todos los movimientos del paciente dentro del centro de salud.")
@@ -772,6 +799,22 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
     if not registros:
         st.warning("No hay registros para el filtro seleccionado.")
         return
+
+    if FPDF_DISPONIBLE:
+        pdf_bytes = _generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_id)
+        if pdf_bytes:
+            st.download_button(
+                "📄 Descargar historial PDF",
+                data=pdf_bytes,
+                file_name=f"Historial_APS_{sanitize_filename_component(paciente_id, 'paciente')}_{date.today().isoformat()}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="aps_historial_pdf_btn",
+            )
+    else:
+        st.caption("La librería FPDF no está disponible. No se puede generar PDF.")
+
+    st.divider()
 
     for item in registros:
         with st.container(border=True):
