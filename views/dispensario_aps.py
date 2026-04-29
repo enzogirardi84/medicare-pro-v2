@@ -19,7 +19,15 @@ import streamlit as st
 
 from core.database import guardar_json_db
 from core.view_helpers import aviso_sin_paciente
-from core.utils import puede_accion
+from core.utils import puede_accion, cargar_json_asset
+from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
+
+FPDF_DISPONIBLE = False
+try:
+    from fpdf import FPDF
+    FPDF_DISPONIBLE = True
+except ImportError:
+    pass
 
 
 def _get_paciente_id_visual(paciente_sel):
@@ -936,17 +944,26 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
     tab_med, tab_leche = st.tabs(["💊 Medicación Crónica", "🥛 Leche"])
 
     with tab_med:
+        try:
+            vademecum_base = cargar_json_asset("vademecum.json")
+        except Exception:
+            vademecum_base = [
+                "Enalapril 10 mg", "Losartán 50 mg", "Amlodipina 5 mg",
+                "Metformina 850 mg", "Glibenclamida 5 mg", "Insulina NPH",
+                "Salbutamol", "Levotiroxina", "Atorvastatina",
+            ]
+
         col1, col2 = st.columns(2)
         with col1:
-            medicamento = st.selectbox(
+            med_vademecum = st.selectbox(
                 "Medicamento",
-                [
-                    "Enalapril 10 mg", "Losartán 50 mg", "Amlodipina 5 mg",
-                    "Metformina 850 mg", "Glibenclamida 5 mg", "Insulina NPH",
-                    "Salbutamol", "Levotiroxina", "Atorvastatina", "Otro",
-                ],
+                ["-- Seleccionar del vademecum --"] + vademecum_base,
                 key="aps_med_select",
             )
+            med_manual = ""
+            if med_vademecum == "-- Seleccionar del vademecum --":
+                med_manual = st.text_input("O escribir manualmente", key="aps_med_manual")
+            medicamento = med_manual if med_vademecum == "-- Seleccionar del vademecum --" else med_vademecum
             cantidad = st.number_input("Cantidad", min_value=1, value=30, key="aps_med_cant")
         with col2:
             unidad = st.selectbox("Unidad", ["Comprimidos", "Cajas", "Frascos", "Ampollas", "Aerosoles"], key="aps_med_unidad")
@@ -959,19 +976,22 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
         observacion_med = st.text_area("Observación de farmacia", key="aps_med_obs")
 
         if st.button("Registrar entrega medicación", use_container_width=True, key="aps_btn_med"):
-            payload = {
-                "paciente_id": paciente_id,
-                "centro_salud_id": centro_salud_id,
-                "fecha_entrega": datetime.now().isoformat(),
-                "tipo_entrega": "farmacia_aps",
-                "medicamento": medicamento,
-                "cantidad": cantidad,
-                "unidad": unidad,
-                "observaciones": observacion_med,
-                "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
-                "created_at": datetime.now().isoformat(),
-            }
-            _guardar_con_feedback("entregas_aps_db", payload, max_items=1000)
+            if not medicamento:
+                st.error("Seleccioná un medicamento del vademecum o escribí uno manualmente.")
+            else:
+                payload = {
+                    "paciente_id": paciente_id,
+                    "centro_salud_id": centro_salud_id,
+                    "fecha_entrega": datetime.now().isoformat(),
+                    "tipo_entrega": "farmacia_aps",
+                    "medicamento": medicamento,
+                    "cantidad": cantidad,
+                    "unidad": unidad,
+                    "observaciones": observacion_med,
+                    "registrado_por": st.session_state.get("u_actual", {}).get("nombre", "Usuario APS"),
+                    "created_at": datetime.now().isoformat(),
+                }
+                _guardar_con_feedback("entregas_aps_db", payload, max_items=1000)
 
     with tab_leche:
         pacientes_db = st.session_state.get("pacientes_db", [])
@@ -1160,6 +1180,28 @@ def _tab_visitas(paciente_sel, user, centro_salud_id):
         _guardar_con_feedback("visitas_domiciliarias_aps_db", payload, max_items=500)
 
 
+def _generar_pdf_reporte_aps(titulo, registros, periodo, centro_salud_id):
+    """Genera un PDF landscape genérico con los registros del reporte APS."""
+    if not FPDF_DISPONIBLE:
+        return None
+    pdf = FPDF(orientation="L")
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, safe_text(titulo), ln=True, align="C")
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 8, safe_text(f"Periodo: {periodo}  |  Centro: {centro_salud_id}"), ln=True, align="C")
+    pdf.ln(4)
+    for i, r in enumerate(registros[:250], 1):
+        pdf.set_font("Arial", "B", 9)
+        pdf.cell(0, 6, safe_text(f"Registro #{i}"), ln=True)
+        pdf.set_font("Arial", "", 8)
+        for k, v in sorted(r.items()):
+            line = f"  {k}: {v}"
+            pdf.multi_cell(0, 5, safe_text(line))
+        pdf.ln(1)
+    return pdf_output_bytes(pdf)
+
+
 def _tab_reportes(paciente_sel, user, centro_salud_id):
     st.subheader("Reportes APS")
     st.caption("Indicadores útiles para coordinación, municipio o centro de salud.")
@@ -1223,11 +1265,36 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
         elif tipo_reporte == "Grupos familiares":
             registros = st.session_state.get("grupo_familiar_aps_db", [])
 
-        st.write(f"**{len(registros)}** registros encontrados.")
-        if registros:
-            st.dataframe(registros, use_container_width=True, hide_index=True)
+        st.session_state["aps_reporte_actual"] = registros
+        st.session_state["aps_reporte_tipo"] = tipo_reporte
+        st.session_state["aps_reporte_periodo"] = f"{fd} a {fh}"
+
+    reporte_registros = st.session_state.get("aps_reporte_actual", [])
+    reporte_tipo = st.session_state.get("aps_reporte_tipo", "")
+    reporte_periodo = st.session_state.get("aps_reporte_periodo", "")
+    if reporte_registros:
+        st.write(f"**{len(reporte_registros)}** registros encontrados.")
+        st.dataframe(reporte_registros, use_container_width=True, hide_index=True)
+        if FPDF_DISPONIBLE:
+            pdf_bytes = _generar_pdf_reporte_aps(
+                f"Reporte APS — {reporte_tipo}",
+                reporte_registros,
+                reporte_periodo,
+                centro_salud_id,
+            )
+            if pdf_bytes:
+                st.download_button(
+                    "📄 Descargar PDF",
+                    data=pdf_bytes,
+                    file_name=f"Reporte_APS_{sanitize_filename_component(reporte_tipo, 'reporte')}_{date.today().isoformat()}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="aps_rep_pdf_btn",
+                )
         else:
-            st.info("No hay registros en el período seleccionado.")
+            st.caption("La librería FPDF no está disponible. No se puede generar PDF.")
+    else:
+        st.info("Generá un reporte para visualizar los registros.")
 
 
 def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
