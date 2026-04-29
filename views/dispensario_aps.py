@@ -35,6 +35,27 @@ def _get_paciente_id_visual(paciente_sel):
     return str(paciente_sel or "").strip()
 
 
+def _input_paciente_volatil(paciente_sel, key_prefix="aps_vol"):
+    """Si hay paciente_sel, lo retorna. Si no, muestra inputs para paciente volátil."""
+    if paciente_sel:
+        st.success(f"Paciente seleccionado: **{paciente_sel}**")
+        return _get_paciente_id_visual(paciente_sel), None
+
+    st.info("No hay paciente seleccionado. Completá los datos del paciente voluntario:")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        apellido = st.text_input("Apellido", key=f"{key_prefix}_apellido")
+    with col2:
+        nombre = st.text_input("Nombre", key=f"{key_prefix}_nombre")
+    with col3:
+        dni = st.text_input("DNI", key=f"{key_prefix}_dni")
+
+    parts = [p for p in [apellido, nombre] if p and p.strip()]
+    paciente_id = f"{' '.join(parts)} - {dni}".strip() if (parts or (dni and dni.strip())) else ""
+    paciente_data = {"apellido": apellido, "nombre": nombre, "dni": dni}
+    return paciente_id, paciente_data
+
+
 def _header_paciente(paciente_sel, user):
     """Muestra la cabecera del paciente seleccionado."""
     from core.utils import mapa_detalles_pacientes
@@ -758,7 +779,22 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
     st.subheader("Historial APS del Dispensario")
     st.caption("Todos los movimientos del paciente dentro del centro de salud.")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    if paciente_sel:
+        paciente_id = _get_paciente_id_visual(paciente_sel)
+    else:
+        st.info("Buscá un paciente por Apellido, Nombre o DNI (también funciona para pacientes voluntarios):")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            bus_apellido = st.text_input("Apellido", key="aps_hist_bus_apellido")
+        with c2:
+            bus_nombre = st.text_input("Nombre", key="aps_hist_bus_nombre")
+        with c3:
+            bus_dni = st.text_input("DNI", key="aps_hist_bus_dni")
+        parts = [p for p in [bus_apellido, bus_nombre] if p and p.strip()]
+        paciente_id = f"{' '.join(parts)} - {bus_dni}".strip() if (parts or (bus_dni and bus_dni.strip())) else ""
+        if not paciente_id:
+            st.warning("Completá al menos un campo para buscar el historial.")
+            return
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -780,7 +816,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
     registros = []
 
     for a in st.session_state.get("atenciones_aps_db", []):
-        if a.get("paciente_id") == paciente_id:
+        if paciente_id in str(a.get("paciente_id", "")):
             registros.append({
                 "fecha": str(a.get("fecha_atencion", ""))[:16],
                 "tipo": "Atención APS",
@@ -790,7 +826,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for e in st.session_state.get("entregas_aps_db", []):
-        if e.get("paciente_id") == paciente_id:
+        if paciente_id in str(e.get("paciente_id", "")):
             registros.append({
                 "fecha": str(e.get("fecha_entrega", ""))[:16],
                 "tipo": "Farmacia",
@@ -800,7 +836,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for s in st.session_state.get("trabajo_social_aps_db", []):
-        if s.get("paciente_id") == paciente_id:
+        if paciente_id in str(s.get("paciente_id", "")):
             registros.append({
                 "fecha": str(s.get("fecha_registro", ""))[:16],
                 "tipo": "Trabajo Social",
@@ -810,7 +846,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for ep in st.session_state.get("epidemiologia_aps_db", []):
-        if ep.get("paciente_id") == paciente_id:
+        if paciente_id in str(ep.get("paciente_id", "")):
             registros.append({
                 "fecha": str(ep.get("fecha_registro", ""))[:16],
                 "tipo": "Epidemiología",
@@ -820,7 +856,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for v in st.session_state.get("visitas_domiciliarias_aps_db", []):
-        if v.get("paciente_id") == paciente_id:
+        if paciente_id in str(v.get("paciente_id", "")):
             registros.append({
                 "fecha": str(v.get("fecha_visita", ""))[:16],
                 "tipo": "Visita domiciliaria",
@@ -830,7 +866,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for f in st.session_state.get("ficha_aps_db", []):
-        if f.get("paciente_id") == paciente_id:
+        if paciente_id in str(f.get("paciente_id", "")):
             registros.append({
                 "fecha": str(f.get("ultima_actualizacion", ""))[:16],
                 "tipo": "Ficha APS",
@@ -840,7 +876,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for t in st.session_state.get("turnos_aps_db", []):
-        if t.get("paciente_id") == paciente_id:
+        if paciente_id in str(t.get("paciente_id", "")):
             registros.append({
                 "fecha": str(t.get("hora_llegada") or t.get("fecha_turno") or "")[:16],
                 "tipo": "Turnos",
@@ -850,7 +886,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for c in st.session_state.get("controles_aps_db", []):
-        if c.get("paciente_id") == paciente_id:
+        if paciente_id in str(c.get("paciente_id", "")):
             tipo_label = "Niño Sano" if c.get("tipo_control") == "nino_sano" else "Embarazo"
             detalle = (
                 f"Peso: {c.get('peso', '-')} · Talla: {c.get('talla', '-')} · Vacunas: {c.get('vacunas_al_dia', '-')}"
@@ -910,7 +946,10 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
 def _tab_nueva_atencion(paciente_sel, user, centro_salud_id):
     st.subheader("Atención APS")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    paciente_id, paciente_volatil = _input_paciente_volatil(paciente_sel, key_prefix="aps_atencion")
+    if not paciente_id:
+        st.warning("Completá Apellido, Nombre y DNI del paciente para continuar.")
+        return
 
     with st.form("form_nueva_atencion_aps"):
         motivo = st.selectbox(
@@ -945,6 +984,7 @@ def _tab_nueva_atencion(paciente_sel, user, centro_salud_id):
     if guardar:
         payload = {
             "paciente_id": paciente_id,
+            "paciente_volatil": paciente_volatil,
             "centro_salud_id": centro_salud_id,
             "fecha_atencion": datetime.now().isoformat(),
             "motivo_consulta": motivo,
@@ -968,7 +1008,11 @@ def _tab_nueva_atencion(paciente_sel, user, centro_salud_id):
 def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
     st.subheader("Control Niño Sano y Embarazo")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    paciente_id, paciente_volatil = _input_paciente_volatil(paciente_sel, key_prefix="aps_control")
+    if not paciente_id:
+        st.warning("Completá Apellido, Nombre y DNI del paciente para continuar.")
+        return
+
     pacientes_db = st.session_state.get("pacientes_db", [])
     paciente_data = None
     for p in pacientes_db:
@@ -1005,6 +1049,7 @@ def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
         if guardar:
             payload = {
                 "paciente_id": paciente_id,
+                "paciente_volatil": paciente_volatil,
                 "centro_salud_id": centro_salud_id,
                 "tipo_control": "nino_sano",
                 "fecha_control": datetime.now().isoformat(),
@@ -1043,6 +1088,7 @@ def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
         if guardar_emb:
             payload = {
                 "paciente_id": paciente_id,
+                "paciente_volatil": paciente_volatil,
                 "centro_salud_id": centro_salud_id,
                 "tipo_control": "embarazo",
                 "fecha_control": datetime.now().isoformat(),
@@ -1064,7 +1110,11 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
     st.subheader("Farmacia y Entrega de Leche")
     st.caption("Medicación crónica, leche (Plan Materno Infantil) e insumos.")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    paciente_id, paciente_volatil = _input_paciente_volatil(paciente_sel, key_prefix="aps_farmacia")
+    if not paciente_id:
+        st.warning("Completá Apellido, Nombre y DNI del paciente para continuar.")
+        return
+
     entregas_db = st.session_state.get("entregas_aps_db", [])
 
     tab_med, tab_leche = st.tabs(["💊 Medicación Crónica", "🥛 Leche"])
@@ -1107,6 +1157,7 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
             else:
                 payload = {
                     "paciente_id": paciente_id,
+                    "paciente_volatil": paciente_volatil,
                     "centro_salud_id": centro_salud_id,
                     "fecha_entrega": datetime.now().isoformat(),
                     "tipo_entrega": "farmacia_aps",
@@ -1150,6 +1201,7 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
             else:
                 payload = {
                     "paciente_id": paciente_id,
+                    "paciente_volatil": paciente_volatil,
                     "centro_salud_id": centro_salud_id,
                     "fecha_entrega": datetime.now().isoformat(),
                     "tipo_entrega": "leche_aps",
@@ -1167,7 +1219,10 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
 def _tab_trabajo_social(paciente_sel, user, centro_salud_id):
     st.subheader("Trabajo Social APS")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    paciente_id, paciente_volatil = _input_paciente_volatil(paciente_sel, key_prefix="aps_tsocial")
+    if not paciente_id:
+        st.warning("Completá Apellido, Nombre y DNI del paciente para continuar.")
+        return
 
     with st.form("form_trabajo_social_aps"):
         col1, col2 = st.columns(2)
@@ -1206,6 +1261,7 @@ def _tab_trabajo_social(paciente_sel, user, centro_salud_id):
     if guardar:
         payload = {
             "paciente_id": paciente_id,
+            "paciente_volatil": paciente_volatil,
             "centro_salud_id": centro_salud_id,
             "fecha_registro": datetime.now().isoformat(),
             "tipo_vivienda": tipo_vivienda,
@@ -1225,7 +1281,10 @@ def _tab_trabajo_social(paciente_sel, user, centro_salud_id):
 def _tab_epidemiologia(paciente_sel, user, centro_salud_id):
     st.subheader("Epidemiología APS")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    paciente_id, paciente_volatil = _input_paciente_volatil(paciente_sel, key_prefix="aps_epi")
+    if not paciente_id:
+        st.warning("Completá Apellido, Nombre y DNI del paciente para continuar.")
+        return
 
     with st.form("form_epidemiologia_aps"):
         enfermedades = st.multiselect(
@@ -1253,6 +1312,7 @@ def _tab_epidemiologia(paciente_sel, user, centro_salud_id):
     if guardar:
         payload = {
             "paciente_id": paciente_id,
+            "paciente_volatil": paciente_volatil,
             "centro_salud_id": centro_salud_id,
             "fecha_registro": datetime.now().isoformat(),
             "enfermedades_seguimiento": enfermedades,
@@ -1270,7 +1330,10 @@ def _tab_epidemiologia(paciente_sel, user, centro_salud_id):
 def _tab_visitas(paciente_sel, user, centro_salud_id):
     st.subheader("Visitas Domiciliarias APS")
 
-    paciente_id = _get_paciente_id_visual(paciente_sel)
+    paciente_id, paciente_volatil = _input_paciente_volatil(paciente_sel, key_prefix="aps_visitas")
+    if not paciente_id:
+        st.warning("Completá Apellido, Nombre y DNI del paciente para continuar.")
+        return
 
     with st.form("form_visita_domiciliaria_aps"):
         motivo = st.selectbox(
@@ -1293,6 +1356,7 @@ def _tab_visitas(paciente_sel, user, centro_salud_id):
     if guardar:
         payload = {
             "paciente_id": paciente_id,
+            "paciente_volatil": paciente_volatil,
             "centro_salud_id": centro_salud_id,
             "fecha_visita": datetime.now().isoformat(),
             "motivo_visita": motivo,
@@ -1471,46 +1535,25 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
         _tab_turnos(paciente_sel, user, centro_salud_id)
 
     with tabs[4]:
-        if paciente_sel:
-            _tab_historial_aps(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_historial_aps(paciente_sel, user, centro_salud_id)
 
     with tabs[5]:
-        if paciente_sel:
-            _tab_nueva_atencion(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_nueva_atencion(paciente_sel, user, centro_salud_id)
 
     with tabs[6]:
-        if paciente_sel:
-            _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id)
 
     with tabs[7]:
-        if paciente_sel:
-            _tab_farmacia(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_farmacia(paciente_sel, user, centro_salud_id)
 
     with tabs[8]:
-        if paciente_sel:
-            _tab_trabajo_social(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_trabajo_social(paciente_sel, user, centro_salud_id)
 
     with tabs[9]:
-        if paciente_sel:
-            _tab_epidemiologia(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_epidemiologia(paciente_sel, user, centro_salud_id)
 
     with tabs[10]:
-        if paciente_sel:
-            _tab_visitas(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
+        _tab_visitas(paciente_sel, user, centro_salud_id)
 
     with tabs[11]:
         _tab_reportes(paciente_sel, user, centro_salud_id)
