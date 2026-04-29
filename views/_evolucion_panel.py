@@ -317,7 +317,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     real_idx = (total_evs - 1) - idx
                     if 0 <= real_idx < len(evs_paciente):
                         ev_borrada = evs_paciente.pop(real_idx)
-                        st.session_state["db"]["evoluciones_db"] = evs_paciente
+                        st.session_state["evoluciones_db"] = evs_paciente
                         guardar_datos()
                         st.toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
                         try:
