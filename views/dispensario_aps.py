@@ -56,6 +56,19 @@ def _guardar_con_feedback(clave_db, payload, max_items=500):
         return False
 
 
+def _guardar_directo():
+    """Fuerza guardado de session_state actual SIN agregar payload nuevo. Útil para actualizaciones in-place."""
+    from core.database import guardar_datos
+    try:
+        guardar_datos(spinner=True)
+        st.toast("Guardado correctamente", icon="✅")
+        return True
+    except Exception as e:
+        st.error(f"Error al guardar: {e}")
+        st.toast("Falló la conexión. Se guardará localmente.", icon="⚠️")
+        return False
+
+
 def _buscar_pacientes_por_texto(texto):
     """Búsqueda en tiempo real por nombre o DNI sobre pacientes_db global."""
     texto = str(texto or "").strip().lower()
@@ -215,7 +228,7 @@ def _tab_panel_diario(paciente_sel, user):
                     with col_c:
                         if st.button("Atender", key=f"btn_atender_{t.get('id_turno', t.get('hora_llegada', 'x'))}"):
                             t["estado"] = "atendido"
-                            _guardar_con_feedback("turnos_aps_db", t, max_items=2000)
+                            _guardar_directo()
                             st.rerun()
         else:
             st.caption("Sala de espera vacía.")
@@ -336,6 +349,177 @@ def _tab_pacientes_familia(paciente_sel, user, centro_salud_id):
             st.success("Núcleo familiar guardado correctamente.")
 
 
+def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
+    st.subheader("Ficha APS del Paciente")
+    st.caption("Datos generales propios del centro de salud y equipo de salud.")
+
+    paciente_id = _get_paciente_id_visual(paciente_sel)
+    if not paciente_id:
+        st.info("Seleccioná un paciente para cargar su ficha APS.")
+        return
+
+    fichas = st.session_state.get("ficha_aps_db", [])
+    ficha_existente = None
+    for f in fichas:
+        if f.get("paciente_id") == paciente_id and f.get("centro_salud_id") == centro_salud_id:
+            ficha_existente = f
+            break
+
+    fe = ficha_existente or {}
+
+    # Inicializar session_state keys si no existen (para evitar conflictos value+key)
+    _defaults = {
+        "aps_med_nombre": fe.get("medico_nombre", ""),
+        "aps_med_apellido": fe.get("medico_apellido", ""),
+        "aps_med_matricula": fe.get("medico_matricula", ""),
+        "aps_enf_nombre": fe.get("enfermero_nombre", ""),
+        "aps_enf_apellido": fe.get("enfermero_apellido", ""),
+        "aps_enf_matricula": fe.get("enfermero_matricula", ""),
+        "aps_prom_nombre": fe.get("promotor_nombre", ""),
+        "aps_prom_apellido": fe.get("promotor_apellido", ""),
+        "aps_riesgo": fe.get("riesgo_general", "Bajo"),
+        "aps_estado_ficha": fe.get("estado_ficha", "Activa"),
+        "aps_obs_ficha": fe.get("observaciones_generales", ""),
+    }
+    for k, v in _defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+    # Profesionales adicionales (dinámicos)
+    prof_key = f"prof_adic_{paciente_id}"
+    if prof_key not in st.session_state:
+        st.session_state[prof_key] = fe.get("profesionales_adicionales", [])
+
+    st.markdown("### 🩺 Médico/a referente")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        med_nombre = st.text_input("Nombre", key="aps_med_nombre")
+    with col2:
+        med_apellido = st.text_input("Apellido", key="aps_med_apellido")
+    with col3:
+        med_matricula = st.text_input("Matrícula", key="aps_med_matricula")
+
+    st.markdown("### 🏥 Enfermero/a referente")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        enf_nombre = st.text_input("Nombre", key="aps_enf_nombre")
+    with col2:
+        enf_apellido = st.text_input("Apellido", key="aps_enf_apellido")
+    with col3:
+        enf_matricula = st.text_input("Matrícula", key="aps_enf_matricula")
+
+    st.markdown("### 🌿 Promotor/a de salud")
+    col1, col2 = st.columns(2)
+    with col1:
+        prom_nombre = st.text_input("Nombre", key="aps_prom_nombre")
+    with col2:
+        prom_apellido = st.text_input("Apellido", key="aps_prom_apellido")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        riesgo_general = st.selectbox(
+            "Riesgo general APS",
+            ["Bajo", "Moderado", "Alto", "Crítico"],
+            index=(["Bajo", "Moderado", "Alto", "Crítico"].index(st.session_state.get("aps_riesgo", "Bajo"))),
+            key="aps_riesgo",
+        )
+    with col2:
+        estado_ficha = st.selectbox(
+            "Estado de ficha APS",
+            ["Activa", "En seguimiento", "Derivada", "Inactiva"],
+            index=(["Activa", "En seguimiento", "Derivada", "Inactiva"].index(st.session_state.get("aps_estado_ficha", "Activa"))),
+            key="aps_estado_ficha",
+        )
+
+    programa_asignado = st.multiselect(
+        "Programas asignados",
+        [
+            "HTA", "Diabetes", "Salud sexual", "Materno infantil",
+            "Leche", "Adulto mayor", "Tuberculosis", "Dengue",
+            "Salud mental", "Trabajo social",
+        ],
+        default=fe.get("programa_asignado", []),
+        key="aps_programas",
+    )
+
+    observaciones_generales = st.text_area(
+        "Observaciones generales APS",
+        key="aps_obs_ficha",
+    )
+
+    st.divider()
+    st.markdown("### ➕ Profesionales adicionales del equipo de salud")
+
+    col_a, col_b, col_c, col_d = st.columns([2, 2, 2, 1])
+    with col_a:
+        prof_espec = st.selectbox(
+            "Especialidad",
+            ["Kinesiólogo/a", "Nutricionista", "Psicólogo/a", "Odontólogo/a", "Fonoaudiólogo/a", "Otro"],
+            key="aps_prof_espec",
+        )
+    with col_b:
+        prof_nombre = st.text_input("Nombre", key="aps_prof_nombre")
+    with col_c:
+        prof_apellido = st.text_input("Apellido", key="aps_prof_apellido")
+    with col_d:
+        prof_mat = st.text_input("Matrícula", key="aps_prof_matricula")
+
+    if st.button("Agregar profesional", use_container_width=True, key="aps_btn_add_prof"):
+        if prof_nombre.strip() and prof_apellido.strip():
+            st.session_state[prof_key].append({
+                "especialidad": prof_espec,
+                "nombre": prof_nombre.strip(),
+                "apellido": prof_apellido.strip(),
+                "matricula": prof_mat.strip(),
+            })
+            st.rerun()
+        else:
+            st.warning("Completá nombre y apellido del profesional.")
+
+    profesionales_actuales = st.session_state.get(prof_key, [])
+    if profesionales_actuales:
+        st.write("**Profesionales agregados:**")
+        for i, prof in enumerate(profesionales_actuales):
+            col_rem, col_txt = st.columns([1, 5])
+            with col_txt:
+                st.write(f"• **{prof['especialidad']}**: {prof['nombre']} {prof['apellido']} (Mat: {prof['matricula'] or 'S/D'})")
+            with col_rem:
+                if st.button("Quitar", key=f"aps_rem_prof_{i}_{paciente_id}"):
+                    st.session_state[prof_key].pop(i)
+                    st.rerun()
+    else:
+        st.caption("Sin profesionales adicionales asignados.")
+
+    st.divider()
+    if st.button("💾 Guardar ficha APS completa", use_container_width=True, key="aps_btn_guardar_ficha"):
+        payload = {
+            "paciente_id": paciente_id,
+            "centro_salud_id": centro_salud_id,
+            "medico_nombre": med_nombre,
+            "medico_apellido": med_apellido,
+            "medico_matricula": med_matricula,
+            "enfermero_nombre": enf_nombre,
+            "enfermero_apellido": enf_apellido,
+            "enfermero_matricula": enf_matricula,
+            "promotor_nombre": prom_nombre,
+            "promotor_apellido": prom_apellido,
+            "riesgo_general": riesgo_general,
+            "programa_asignado": programa_asignado,
+            "estado_ficha": estado_ficha,
+            "observaciones_generales": observaciones_generales,
+            "profesionales_adicionales": profesionales_actuales,
+            "ultima_actualizacion": datetime.now().isoformat(),
+        }
+        if ficha_existente:
+            idx = fichas.index(ficha_existente)
+            st.session_state["ficha_aps_db"][idx] = payload
+        else:
+            if "ficha_aps_db" not in st.session_state or not isinstance(st.session_state["ficha_aps_db"], list):
+                st.session_state["ficha_aps_db"] = []
+            st.session_state["ficha_aps_db"].append(payload)
+        _guardar_con_feedback("ficha_aps_db", payload, max_items=500)
+
+
 def _tab_turnos(paciente_sel, user, centro_salud_id):
     st.subheader("Turnos y Demanda Espontánea")
 
@@ -443,12 +627,12 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
                 with col_c:
                     if estado == "en_espera" and st.button("Atender", key=f"turno_atender_{t.get('id_turno', 'x')}"):
                         t["estado"] = "atendido"
-                        _guardar_con_feedback("turnos_aps_db", t, max_items=2000)
+                        _guardar_directo()
                         st.rerun()
                     if estado == "programado" and st.button("Llegó", key=f"turno_llego_{t.get('id_turno', 'x')}"):
                         t["estado"] = "en_espera"
                         t["hora_llegada"] = datetime.now().isoformat()
-                        _guardar_con_feedback("turnos_aps_db", t, max_items=2000)
+                        _guardar_directo()
                         st.rerun()
     else:
         st.caption("Sin turnos ni llegadas registradas hoy.")
@@ -1063,12 +1247,13 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
 
     tabs = st.tabs([
         "📊 Panel Diario",
-        "� Pacientes y Familia",
-        "📅 Turnos y Sala de Espera",
+        "👥 Pacientes y Familia",
+        "� Ficha APS",
+        "�📅 Turnos y Sala de Espera",
         "📚 Historial APS",
         "🩺 Atención APS",
-        "� Niño Sano / Embarazo",
-        "�� Farmacia y Leche",
+        "👶 Niño Sano / Embarazo",
+        "💊 Farmacia y Leche",
         "📋 Trabajo Social",
         "🚨 Epidemiología",
         "🏠 Visitas",
@@ -1082,49 +1267,55 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
         _tab_pacientes_familia(paciente_sel, user, centro_salud_id)
 
     with tabs[2]:
-        _tab_turnos(paciente_sel, user, centro_salud_id)
+        if paciente_sel:
+            _tab_ficha_aps(paciente_sel, user, centro_salud_id)
+        else:
+            aviso_sin_paciente()
 
     with tabs[3]:
+        _tab_turnos(paciente_sel, user, centro_salud_id)
+
+    with tabs[4]:
         if paciente_sel:
             _tab_historial_aps(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[4]:
+    with tabs[5]:
         if paciente_sel:
             _tab_nueva_atencion(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[5]:
+    with tabs[6]:
         if paciente_sel:
             _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[6]:
+    with tabs[7]:
         if paciente_sel:
             _tab_farmacia(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[7]:
+    with tabs[8]:
         if paciente_sel:
             _tab_trabajo_social(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[8]:
+    with tabs[9]:
         if paciente_sel:
             _tab_epidemiologia(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[9]:
+    with tabs[10]:
         if paciente_sel:
             _tab_visitas(paciente_sel, user, centro_salud_id)
         else:
             aviso_sin_paciente()
 
-    with tabs[10]:
+    with tabs[11]:
         _tab_reportes(paciente_sel, user, centro_salud_id)
