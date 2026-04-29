@@ -36,8 +36,8 @@ def render_pediatria(paciente_sel, user):
     st.markdown(
         """
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Control antropometrico y curvas</h2>
-            <p class="mc-hero-text">Peso, talla, IMC y percentiles con graficos de tendencia. Admite controles pediátricos y de adultos.</p>
+            <h2 class="mc-hero-title">Percentilo</h2>
+            <p class="mc-hero-text">Peso, talla, IMC y percentiles con graficos de tendencia.</p>
             <div class="mc-chip-row">
                 <span class="mc-chip">Curvas</span>
                 <span class="mc-chip">Percentiles</span>
