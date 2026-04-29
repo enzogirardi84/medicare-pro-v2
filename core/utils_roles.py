@@ -52,21 +52,24 @@ MODULO_ALIAS = {
     "Asistencia": "Asistencia en Vivo",
     "RRHH": "RRHH y Fichajes",
     "Legal": "Auditoria Legal",
+    "APS": "APS / Dispensario",
 }
 
 PERMISOS_MODULOS = {
     "operativo_clinico": [
         "Visitas", "Admision", "Clinica", "Pediatria", "Evolucion", "Estudios",
         "Materiales", "Recetas", "Balance", "Emergencias", "Escalas", "Historial",
-        "PDF", "Telemedicina", "Cierre",
+        "PDF", "Telemedicina", "Cierre", "APS / Dispensario",
     ],
     "operativo_gestion": [
         "Dashboard", "Admision", "Materiales", "Balance", "Inventario", "Caja",
         "Red", "Historial", "PDF", "Equipo", "Asistencia", "RRHH", "Legal",
+        "APS / Dispensario",
     ],
     "auditoria": [
         "Dashboard", "Admision", "Materiales", "Balance", "Inventario", "Caja",
         "Red", "Historial", "PDF", "Equipo", "Asistencia", "RRHH", "Legal",
+        "APS / Dispensario",
     ],
 }
 
