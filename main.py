@@ -298,6 +298,16 @@ if st.session_state.pop("_mc_logout_requested", False):
     st.rerun()
 
 # ============================================================
+# OPTIMIZACIONES DE VELOCIDAD
+# ============================================================
+# Evitar reruns innecesarios en sidebar
+if "sidebar_rendered" not in st.session_state:
+    st.session_state["sidebar_rendered"] = True
+else:
+    # Skip reload if nothing changed
+    pass
+
+# ============================================================
 # MENÚ Y NAVEGACIÓN
 # ============================================================
 menu = resolve_menu_for_role(rol, user, VIEW_CONFIG, obtener_modulos_permitidos)

@@ -127,7 +127,27 @@ def aplicar_css_base() -> None:
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.14) !important;
                 transition: all 0.18s ease !important;
                 padding: 0.5rem 1rem !important;
-                color: #ffffff !important;
+            }
+            /* Botón primario (type="primary") - más visible */
+            div[data-testid="stButton"] > button[kind="primary"] {
+                background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+                border: none !important;
+                font-weight: 600 !important;
+                box-shadow: 0 4px 15px rgba(14, 165, 233, 0.35) !important;
+            }
+            div[data-testid="stButton"] > button[kind="primary"]:hover {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 8px 25px rgba(14, 165, 233, 0.5) !important;
+            }
+            /* Botón secundario */
+            div[data-testid="stButton"] > button[kind="secondary"] {
+                background: rgba(30, 41, 59, 0.8) !important;
+                border: 1px solid rgba(100, 120, 140, 0.3) !important;
+            }
+            /* disabled buttons */
+            div[data-testid="stButton"] > button:disabled {
+                opacity: 0.5 !important;
+                cursor: not-allowed !important;
             }
             div[data-testid="stButton"] > button:hover {
                 transform: translateY(-1px) !important;

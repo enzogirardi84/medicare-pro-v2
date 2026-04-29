@@ -35,3 +35,25 @@ def validar_telefono(telefono: str) -> bool:
 def validar_email(email: str) -> bool:
     """Alias público de email_formato_aceptable para tests."""
     return email_formato_aceptable(email)
+
+
+def sanitizar_html(texto: str) -> str:
+    """Escapa caracteres HTML para prevenir XSS."""
+    if not texto:
+        return ""
+    replacements = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#x27;",
+        "/": "&#x2F;",
+    }
+    for char, entity in replacements.items():
+        texto = texto.replace(char, entity)
+    return texto
+
+
+def validar_longitud_maxima(texto: str, max_len: int = 10000) -> bool:
+    """Verifica que el texto no exceda la longitud máxima."""
+    return len(str(texto or "")) <= max_len
