@@ -122,14 +122,14 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
     for v in vitales:
         sys_ta, dia_ta = _extraer_ta(v.get("presion_arterial") or v.get("ta") or v.get("TA") or v.get("tension"))
         if sys_ta and sys_ta > 150:
-            alertas.append({"titulo":"Riesgo Cardiovascular — TA elevada","detalle":f"Ultima TA: {sys_ta}/{dia_ta or '-'} mmHg. Supera umbral de 150/90.","nivel":"danger","categoria":"vitales"})
+            alertas.append({"titulo":"Riesgo Cardiovascular - TA elevada","detalle":f"Ultima TA: {sys_ta}/{dia_ta or '-'} mmHg. Supera umbral de 150/90.","nivel":"danger","categoria":"vitales"})
             break
     # Glucemia extrema
     for v in vitales:
         glu = _to_float(v.get("glucemia") or v.get("glucosa") or v.get("HGT"))
         if glu is not None and (glu < 70 or glu > 250):
             tipo = "hipoglucemia" if glu < 70 else "hiperglucemia"
-            alertas.append({"titulo":f"Riesgo Metabolico — {tipo}","detalle":f"Glucemia: {glu} mg/dL. Requiere revision.","nivel":"danger","categoria":"vitales"})
+            alertas.append({"titulo":f"Riesgo Metabolico - {tipo}","detalle":f"Glucemia: {glu} mg/dL. Requiere revision.","nivel":"danger","categoria":"vitales"})
             break
     # Fiebre
     for v in vitales:
@@ -174,7 +174,7 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
                         ta_alta = True
                         break
                 if ta_alta:
-                    alertas.append({"titulo":"Riesgo Farmacologico — HTA no controlada","detalle":"Paciente con medicacion antihipertensiva activa y TA > 150/90. Evaluar ajuste.","nivel":"danger","categoria":"farmacologia"})
+                    alertas.append({"titulo":"Riesgo Farmacologico - HTA no controlada","detalle":"Paciente con medicacion antihipertensiva activa y TA > 150/90. Evaluar ajuste.","nivel":"danger","categoria":"farmacologia"})
                 break
     # Indicaciones sin administracion
     for ind in indicaciones:
@@ -189,7 +189,7 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
         if _contiene_keyword(c.get("cuidado_tipo",c.get("tipo_cuidado","")),("curacion","curacion")):
             tiene_insumo = any(_contiene_keyword(co.get("insumo",co.get("material","")),("gasa","antisep","aposito","venda")) for co in datos.get("consumos",[]))
             if not tiene_insumo:
-                alertas.append({"titulo":"Auditoria de Insumos — Curacion sin consumo","detalle":"Se registro una curacion pero no hay gasto de gasa/antiseptico en consumos.","nivel":"warning","categoria":"insumos"})
+                alertas.append({"titulo":"Auditoria de Insumos - Curacion sin consumo","detalle":"Se registro una curacion pero no hay gasto de gasa/antiseptico en consumos.","nivel":"warning","categoria":"insumos"})
                 break
     # Peso
     pesos = []
@@ -233,7 +233,7 @@ def analizar_consistencia_datos(datos: dict) -> List[dict]:
     # Estudios sin resultado
     for es in estudios:
         if str(es.get("estado","")).lower() in ("solicitado","pendiente"):
-            alertas.append({"titulo":"Estudio pendiente de resultado","detalle":f"{es.get('tipo','Estudio')}: {es.get('nombre',es.get('detalle','-'))} — Estado: {es.get('estado','Pendiente')}","nivel":"info","categoria":"consistencia"})
+            alertas.append({"titulo":"Estudio pendiente de resultado","detalle":f"{es.get('tipo','Estudio')}: {es.get('nombre',es.get('detalle','-'))} - Estado: {es.get('estado','Pendiente')}","nivel":"info","categoria":"consistencia"})
     # Balance desactualizado
     if balance:
         ultimo = None
@@ -248,7 +248,7 @@ def analizar_consistencia_datos(datos: dict) -> List[dict]:
         insumo = str(co.get("insumo",co.get("material",""))).lower()
         cantidad = co.get("cantidad", 0)
         if "canula" in insumo and int(cantidad or 0) > 4:
-            alertas.append({"titulo":"Auditoria de Insumos — Consumo elevado","detalle":f"Consumo de {insumo}: {cantidad} unidades. Revisar justificacion clinica.","nivel":"warning","categoria":"insumos"})
+            alertas.append({"titulo":"Auditoria de Insumos - Consumo elevado","detalle":f"Consumo de {insumo}: {cantidad} unidades. Revisar justificacion clinica.","nivel":"warning","categoria":"insumos"})
     return alertas
 
 def compilar_dashboard_ejecutivo(datos: dict) -> dict:
@@ -407,7 +407,7 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
     else:
         filas_medicacion = '<tr><td colspan="6">Sin indicaciones activas registradas.</td></tr>'
 
-    # Alertas / Pendientes — lenguaje clinico profesional
+    # Alertas / Pendientes - lenguaje clinico profesional
     alertas = dashboard.get("alertas", [])
     criticas = [a for a in alertas if a.get("nivel") == "danger"]
     warnings = [a for a in alertas if a.get("nivel") == "warning"]
@@ -415,13 +415,13 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
 
     bloque_alertas = ""
     if criticas:
-        bloque_alertas += '<div class="alerta critica"><strong>Alertas Criticas — Requiere Intervencion Inmediata</strong></div>\n'
+        bloque_alertas += '<div class="alerta critica"><strong>Alertas Criticas - Requiere Intervencion Inmediata</strong></div>\n'
         for a in criticas:
             titulo = _esc_html(a.get("titulo", ""))
             detalle = _esc_html(a.get("detalle", ""))
             bloque_alertas += f'<div class="observacion critica"><strong>{titulo}:</strong> {detalle}</div>\n'
     if warnings:
-        bloque_alertas += '<div class="alerta advertencia"><strong>Advertencias Clinicas — Monitoreo Necesario</strong></div>\n'
+        bloque_alertas += '<div class="alerta advertencia"><strong>Advertencias Clinicas - Monitoreo Necesario</strong></div>\n'
         for a in warnings:
             titulo = _esc_html(a.get("titulo", ""))
             detalle = _esc_html(a.get("detalle", ""))
@@ -439,7 +439,7 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Reporte de Auditoria y Pase de Sala — {nombre}</title>
+<title>Reporte de Auditoria y Pase de Sala - {nombre}</title>
 <style>
     @page {{ size: A4; margin: 15mm; }}
     @media print {{
@@ -576,7 +576,7 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
     {bloque_alertas}
 
     <div class="footer">
-        Documento generado por MediCare Enterprise PRO — No sustituye la historia clinica original.
+        Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.
     </div>
 </body>
 </html>"""
@@ -731,7 +731,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         pdf.set_fill_color(253, 237, 236)
         pdf.set_text_color(192, 57, 43)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 7, "ALERTAS CRITICAS — Requiere Intervencion Inmediata", ln=True, fill=True)
+        pdf.cell(0, 7, "ALERTAS CRITICAS - Requiere Intervencion Inmediata", ln=True, fill=True)
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "", 10)
         for a in criticas:
@@ -744,7 +744,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         pdf.set_fill_color(254, 245, 231)
         pdf.set_text_color(211, 84, 0)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 7, "ADVERTENCIAS CLINICAS — Monitoreo Necesario", ln=True, fill=True)
+        pdf.cell(0, 7, "ADVERTENCIAS CLINICAS - Monitoreo Necesario", ln=True, fill=True)
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "", 10)
         for a in warnings:

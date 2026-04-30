@@ -56,8 +56,8 @@ class TestEvaluarRiesgoClinico:
         }
         alertas = evaluar_riesgo_clinico(datos)
         titulos = [a["titulo"] for a in alertas]
-        assert "Riesgo Cardiovascular — TA elevada" in titulos
-        assert "Riesgo Metabolico — hiperglucemia" in titulos
+        assert "Riesgo Cardiovascular - TA elevada" in titulos
+        assert "Riesgo Metabolico - hiperglucemia" in titulos
         assert "Fiebre significativa" in titulos
         assert "Taquicardia" in titulos
         assert "Hipoxemia" in titulos
