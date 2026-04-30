@@ -3,7 +3,15 @@
 Diseño minimalista, estilo médico moderno, con badges, alertas y timeline.
 """
 
+import re
+from html import escape
+
 import streamlit as st
+
+
+def _hex_color(valor, default="#3B82F6"):
+    texto = str(valor or "").strip()
+    return texto if re.fullmatch(r"#[0-9A-Fa-f]{6}", texto) else default
 
 
 def inyectar_css():
@@ -39,12 +47,17 @@ def inyectar_css():
 
 
 def card_clinica(titulo, contenido, badge_text=None, badge_type="ok"):
-    badge_html = f'<span class="badge-{badge_type}">{badge_text}</span>' if badge_text else ""
+    badge_type = str(badge_type or "ok")
+    if badge_type not in {"ok", "warning", "danger", "info"}:
+        badge_type = "ok"
+    badge_html = (
+        f'<span class="badge-{badge_type}">{escape(str(badge_text))}</span>' if badge_text else ""
+    )
     st.markdown(
         f"""
     <div class="clinical-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div class="card-title" style="margin: 0;">{titulo}</div>
+            <div class="card-title" style="margin: 0;">{escape(str(titulo))}</div>
             {badge_html}
         </div>
         <div class="card-text">{contenido}</div>
@@ -55,11 +68,14 @@ def card_clinica(titulo, contenido, badge_text=None, badge_type="ok"):
 
 
 def alerta_caja(titulo, detalle, nivel="info"):
+    nivel = str(nivel or "info")
+    if nivel not in {"ok", "warning", "danger", "info"}:
+        nivel = "info"
     clase = f"alert-{nivel}"
     st.markdown(
         f"""
     <div class="alert-box {clase}">
-        <strong>{titulo}</strong><br>{detalle}
+        <strong>{escape(str(titulo))}</strong><br>{escape(str(detalle))}
     </div>
     """,
         unsafe_allow_html=True,
@@ -67,12 +83,13 @@ def alerta_caja(titulo, detalle, nivel="info"):
 
 
 def timeline_event(fecha, titulo, detalle, color_dot="#3B82F6"):
+    color_dot = _hex_color(color_dot)
     st.markdown(
         f"""
     <div class="timeline-item">
         <div class="timeline-dot" style="background: {color_dot};"></div>
-        <div class="timeline-date">{fecha} - <b>{titulo}</b></div>
-        <div class="timeline-content">{detalle}</div>
+        <div class="timeline-date">{escape(str(fecha))} - <b>{escape(str(titulo))}</b></div>
+        <div class="timeline-content">{escape(str(detalle))}</div>
     </div>
     """,
         unsafe_allow_html=True,

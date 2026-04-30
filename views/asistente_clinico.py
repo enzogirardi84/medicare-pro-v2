@@ -6,6 +6,7 @@ un resumen ejecutivo con alertas, metricas y tendencias.
 
 from __future__ import annotations
 
+from html import escape
 from typing import Optional
 
 import streamlit as st
@@ -31,10 +32,11 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
         st.info("Selecciona un paciente en el menu lateral.")
         return
 
-    nombre_usuario = user.get("nombre", "Profesional")
+    nombre_usuario = escape(str(user.get("nombre", "Profesional")))
+    paciente_visible = escape(str(paciente_sel))
     st.markdown("<div class='main-title'>Asistente Clínico 360°</div>", unsafe_allow_html=True)
     st.markdown(
-        f"<div class='subtitle'>Paciente: <b>{paciente_sel}</b> | Usuario: <b>{nombre_usuario}</b></div>",
+        f"<div class='subtitle'>Paciente: <b>{paciente_visible}</b> | Usuario: <b>{nombre_usuario}</b></div>",
         unsafe_allow_html=True,
     )
 
@@ -186,9 +188,14 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
         for ind in indicaciones[-20:]:
             estado = ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))
             badge = "ok" if "activa" in str(estado).lower() else "warning"
+            med = str(ind.get("med", "Medicacion"))
+            fecha = str(ind.get("fecha", "-"))
+            via = escape(str(ind.get("via", "-")))
+            frecuencia = escape(str(ind.get("frecuencia", "-")))
+            estado_visible = escape(str(estado))
             card_clinica(
-                f"{ind.get('med', 'Medicacion')} — {ind.get('fecha', '-')}",
-                f"Via: {ind.get('via', '-')} | Frecuencia: {ind.get('frecuencia', '-')} | Estado: <b>{estado}</b>",
+                f"{med} — {fecha}",
+                f"Via: {via} | Frecuencia: {frecuencia} | Estado: <b>{estado_visible}</b>",
                 badge_text=estado,
                 badge_type=badge,
             )
