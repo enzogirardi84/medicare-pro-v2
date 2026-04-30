@@ -1,3 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medicare-pro-v2"
+version = "0.1.0"
+description = "MediCare Enterprise PRO Streamlit application"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+py-modules = []
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
