@@ -22,7 +22,7 @@ from components.clinical_cards import (
 from core.clinical_assistant_service import (
     compilar_dashboard_ejecutivo,
     generar_html_informe_profesional,
-    generar_texto_pase_guardia,
+    generar_pdf_informe_profesional,
     recopilar_datos_paciente,
 )
 
@@ -283,22 +283,22 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     # Vista previa embebida del informe profesional
     st.components.v1.html(html_informe, height=600, scrolling=True)
 
-    # Botones de descarga: HTML (listo para imprimir a PDF) y texto plano legacy
+    # Botones de descarga: PDF profesional (principal) y HTML (alternativa)
+    pdf_bytes = generar_pdf_informe_profesional(paciente_sel, datos, dashboard)
     col_d1, col_d2 = st.columns(2)
     with col_d1:
+        st.download_button(
+            label="Descargar informe PDF",
+            data=pdf_bytes,
+            file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    with col_d2:
         st.download_button(
             label="Descargar informe HTML",
             data=html_informe.encode("utf-8"),
             file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.html",
             mime="text/html",
-            use_container_width=True,
-        )
-    with col_d2:
-        texto_legacy = generar_texto_pase_guardia(paciente_sel, datos, dashboard)
-        st.download_button(
-            label="Descargar texto plano (legacy)",
-            data=texto_legacy.encode("utf-8"),
-            file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.txt",
-            mime="text/plain",
             use_container_width=True,
         )

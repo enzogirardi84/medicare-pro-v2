@@ -583,6 +583,201 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
     return html
 
 
+def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: dict) -> bytes:
+    """Genera un PDF profesional del informe de pase de sala/auditoria usando FPDF.
+
+    Devuelve los bytes listos para descargar.
+    """
+    from io import BytesIO
+    from fpdf import FPDF
+    from core.export_utils import safe_text
+
+    paciente_data = datos.get("paciente_data") or {}
+    nombre = safe_text(paciente_data.get("nombre", paciente_id))
+    dni = safe_text(paciente_data.get("dni", "-"))
+    obra_social = safe_text(paciente_data.get("obra_social", "S/D"))
+    fnac = safe_text(paciente_data.get("fnac", "S/D"))
+    diag_principal = safe_text(paciente_data.get("diagnostico", paciente_data.get("patologias", "Sin diagnostico principal registrado")))
+    fecha_generacion = safe_text(_ahora().strftime("%d/%m/%Y %H:%M"))
+
+    semaforo = dashboard.get("semaforo", "desconocido")
+    estado_general = "ATENCION REQUERIDA" if semaforo in ("rojo", "amarillo") else "ESTABLE"
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # --- Encabezado corporativo ---
+    pdf.set_fill_color(44, 62, 80)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "REPORTE DE AUDITORIA Y PASE DE SALA", ln=True, align="C", fill=True)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 6, f"Generado: {fecha_generacion}  |  MediCare Enterprise PRO", ln=True, align="C", fill=True)
+    pdf.ln(4)
+
+    # --- Datos del paciente (tabla simple) ---
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "DATOS DEL PACIENTE", ln=True)
+    pdf.set_font("Arial", "", 10)
+
+    col_w = pdf.w / 2 - 15
+    pdf.set_fill_color(236, 240, 241)
+    pdf.cell(35, 7, "Paciente:", fill=True)
+    pdf.cell(col_w - 35, 7, nombre)
+    pdf.cell(35, 7, "DNI:", fill=True)
+    pdf.cell(col_w - 35, 7, dni, ln=True)
+
+    pdf.cell(35, 7, "Obra Social:", fill=True)
+    pdf.cell(col_w - 35, 7, obra_social)
+    pdf.cell(35, 7, "F. Nacimiento:", fill=True)
+    pdf.cell(col_w - 35, 7, fnac, ln=True)
+
+    pdf.cell(35, 7, "Diagnostico:", fill=True)
+    pdf.cell(0, 7, diag_principal, ln=True)
+
+    pdf.set_font("Arial", "B", 10)
+    pdf.set_text_color(231, 76, 60) if semaforo == "rojo" else (pdf.set_text_color(243, 156, 18) if semaforo == "amarillo" else pdf.set_text_color(39, 174, 96))
+    pdf.cell(0, 8, f"Estado General: {estado_general}", ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(3)
+
+    # --- 1. Signos Vitales ---
+    pdf.set_fill_color(236, 240, 241)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "1. SIGNOS VITALES MAS RECIENTES", ln=True, fill=True)
+    pdf.set_font("Arial", "B", 10)
+    headers = ["Tension Arterial", "Frec. Cardiaca", "Temperatura", "Sat. O2", "Glucemia"]
+    w_cols = [45, 35, 35, 35, 35]
+    for h, w in zip(headers, w_cols):
+        pdf.cell(w, 8, h, border=1, align="C")
+    pdf.ln()
+    pdf.set_font("Arial", "", 10)
+    values = [
+        safe_text(dashboard.get("ultima_ta", "-")) + " mmHg",
+        safe_text(dashboard.get("ultima_fc", "-")) + " lpm",
+        safe_text(dashboard.get("ultima_temp", "-")) + " C",
+        safe_text(dashboard.get("ultima_spo2", "-")) + " %",
+        safe_text(dashboard.get("ultima_glu", "-")) + " mg/dL",
+    ]
+    for v, w in zip(values, w_cols):
+        pdf.cell(w, 8, v, border=1, align="C")
+    pdf.ln(10)
+
+    # --- 2. Ultima Evolucion Clinica ---
+    evoluciones = datos.get("evoluciones", [])
+    pdf.set_fill_color(236, 240, 241)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "2. ULTIMA EVOLUCION CLINICA", ln=True, fill=True)
+    if evoluciones:
+        ultima_evo = max(evoluciones, key=lambda x: _parse_fecha(x.get("fecha", "")) or datetime.min)
+        evo_fecha = safe_text(ultima_evo.get("fecha", "S/D"))
+        evo_prof = safe_text(ultima_evo.get("firma", ultima_evo.get("profesional", "S/D")))
+        evo_texto = safe_text(ultima_evo.get("nota", ultima_evo.get("evolucion", ultima_evo.get("texto", "Sin detalle de texto"))))
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 6, f"Fecha: {evo_fecha}  |  Profesional: {evo_prof}", ln=True)
+        pdf.set_font("Arial", "", 10)
+        pdf.multi_cell(0, 6, evo_texto)
+    else:
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(0, 6, "Sin evoluciones registradas.", ln=True)
+    pdf.ln(5)
+
+    # --- 3. Tratamiento y Cuidados Activos ---
+    indicaciones = datos.get("indicaciones", [])
+    indicaciones_activas = [
+        ind for ind in indicaciones
+        if "activa" in str(ind.get("estado_receta", ind.get("estado_clinico", ""))).lower()
+    ]
+    pdf.set_fill_color(236, 240, 241)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "3. TRATAMIENTO Y CUIDADOS ACTIVOS", ln=True, fill=True)
+    if indicaciones_activas:
+        pdf.set_font("Arial", "B", 9)
+        med_headers = ["Medicacion / Indicacion", "Dosis", "Via", "Frecuencia", "Estado", "Fecha"]
+        med_w = [60, 25, 25, 30, 25, 25]
+        for h, w in zip(med_headers, med_w):
+            pdf.cell(w, 7, h, border=1, align="C")
+        pdf.ln()
+        pdf.set_font("Arial", "", 9)
+        for ind in indicaciones_activas:
+            med = safe_text(ind.get("med", "Medicacion"))
+            dosis = safe_text(ind.get("dosis", "S/D"))
+            via = safe_text(ind.get("via", "S/D"))
+            frec = safe_text(ind.get("frecuencia", "S/D"))
+            estado_ind = safe_text(ind.get("estado_receta", ind.get("estado_clinico", "Activa")))
+            fecha_ind = safe_text(ind.get("fecha", "S/D"))
+            row = [med, dosis, via, frec, estado_ind, fecha_ind]
+            for v, w in zip(row, med_w):
+                pdf.cell(w, 7, v, border=1)
+            pdf.ln()
+    else:
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(0, 6, "Sin indicaciones activas registradas.", ln=True)
+    pdf.ln(5)
+
+    # --- 4. Pendientes y Observaciones de Auditoria ---
+    alertas = dashboard.get("alertas", [])
+    criticas = [a for a in alertas if a.get("nivel") == "danger"]
+    warnings = [a for a in alertas if a.get("nivel") == "warning"]
+    infos = [a for a in alertas if a.get("nivel") == "info"]
+
+    pdf.set_fill_color(236, 240, 241)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "4. PENDIENTES Y OBSERVACIONES DE AUDITORIA", ln=True, fill=True)
+
+    if criticas:
+        pdf.set_fill_color(253, 237, 236)
+        pdf.set_text_color(192, 57, 43)
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 7, "ALERTAS CRITICAS — Requiere Intervencion Inmediata", ln=True, fill=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "", 10)
+        for a in criticas:
+            titulo = safe_text(a.get("titulo", ""))
+            detalle = safe_text(a.get("detalle", ""))
+            pdf.multi_cell(0, 6, f"  • {titulo}: {detalle}")
+        pdf.ln(2)
+
+    if warnings:
+        pdf.set_fill_color(254, 245, 231)
+        pdf.set_text_color(211, 84, 0)
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 7, "ADVERTENCIAS CLINICAS — Monitoreo Necesario", ln=True, fill=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "", 10)
+        for a in warnings:
+            titulo = safe_text(a.get("titulo", ""))
+            detalle = safe_text(a.get("detalle", ""))
+            pdf.multi_cell(0, 6, f"  • {titulo}: {detalle}")
+        pdf.ln(2)
+
+    if infos:
+        pdf.set_fill_color(235, 245, 251)
+        pdf.set_text_color(41, 128, 185)
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(0, 7, "OBSERVACIONES DE AUDITORIA", ln=True, fill=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "", 10)
+        for a in infos:
+            titulo = safe_text(a.get("titulo", ""))
+            detalle = safe_text(a.get("detalle", ""))
+            pdf.multi_cell(0, 6, f"  • {titulo}: {detalle}")
+        pdf.ln(2)
+
+    if not alertas:
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(0, 6, "No se registran alertas ni pendientes de auditoria.", ln=True)
+
+    pdf.ln(5)
+    pdf.set_font("Arial", "I", 8)
+    pdf.set_text_color(127, 140, 141)
+    pdf.cell(0, 5, "Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.", ln=True, align="C")
+
+    return bytes(pdf.output(dest="S"))
+
+
 def generar_texto_pase_guardia(paciente_id: str, datos: dict, dashboard: dict) -> str:
     paciente_data = datos.get("paciente_data") or {}
     nombre = paciente_data.get("nombre", paciente_id)

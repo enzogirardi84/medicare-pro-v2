@@ -256,3 +256,50 @@ class TestGenerarTextoPaseGuardia:
         assert "Sin alertas ni pendientes detectados." not in texto
         # Verificar que no hay truncamiento con "..."
         assert "..." not in texto or "Saturacion mejorada al 96%" in texto
+
+    def test_genera_pdf_profesional(self):
+        from core.clinical_assistant_service import generar_pdf_informe_profesional
+
+        datos = {
+            "paciente_data": {
+                "nombre": "Facundo Acosta",
+                "dni": "41440234",
+                "obra_social": "Nobis",
+                "fnac": "01/01/1980",
+                "diagnostico": "Neumonia bilateral",
+            },
+            "evoluciones": [
+                {
+                    "fecha": "30/04/2026 01:06",
+                    "firma": "Dr. Garcia",
+                    "nota": "Paciente estable. Saturacion mejorada al 96%.",
+                }
+            ],
+            "indicaciones": [
+                {
+                    "med": "Fisiologico 0.9% 500 ml",
+                    "dosis": "500 ml",
+                    "via": "Endovenosa",
+                    "frecuencia": "Continuo",
+                    "estado_receta": "Activa",
+                    "fecha": "30/04/2026 01:00",
+                },
+            ],
+        }
+        dashboard = {
+            "semaforo": "amarillo",
+            "ultima_ta": "130/80",
+            "ultima_fc": "75",
+            "ultima_temp": "36.5",
+            "ultima_glu": "110",
+            "ultima_spo2": "96",
+            "alertas": [],
+        }
+
+        pdf_bytes = generar_pdf_informe_profesional("Facundo Acosta (Nobis) - 41440234", datos, dashboard)
+        assert isinstance(pdf_bytes, bytes)
+        assert pdf_bytes.startswith(b"%PDF")
+        # Con fuentes core fpdf2 no almacena texto literal en el stream;
+        # verificamos que el PDF es valido y tiene contenido.
+        assert len(pdf_bytes) > 1000
+        assert b"%%EOF" in pdf_bytes
