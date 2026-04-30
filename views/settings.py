@@ -555,7 +555,7 @@ def get_version() -> str:
     try:
         from core.release_notes import RELEASES
         return RELEASES[0]["version"] if RELEASES else "unknown"
-    except:
+    except Exception:
         return "unknown"
 
 

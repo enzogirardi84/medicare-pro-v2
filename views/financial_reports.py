@@ -185,7 +185,7 @@ def render_financial_dashboard():
         try:
             fig = px.pie(df_estado, values="Cantidad", names="Estado", hole=0.4)
             st.plotly_chart(fig, use_container_width=True)
-        except:
+        except Exception:
             st.bar_chart(df_estado.set_index("Estado"))
     
     # Exportar
@@ -478,11 +478,11 @@ def parse_date(fecha_str: str) -> date:
     try:
         # Intentar formato DD/MM/YYYY
         return datetime.strptime(fecha_str[:10], "%d/%m/%Y").date()
-    except:
+    except Exception:
         try:
             # Intentar formato ISO
             return datetime.fromisoformat(fecha_str).date()
-        except:
+        except Exception:
             return date.min
 
 

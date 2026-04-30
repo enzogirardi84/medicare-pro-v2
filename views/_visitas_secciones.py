@@ -166,19 +166,19 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
     if not fichadas_hoy and chk_sql is None:
         st.info("Sincronización con servidor en pausa (Modo Local). Los registros se guardarán en la sesión actual.")
     if fichadas_hoy:
-        fichadas_hoy = sorted(fichadas_hoy, key=lambda x: pd.to_datetime(x["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce"))
+        fichadas_hoy = sorted(fichadas_hoy, key=lambda x: pd.to_datetime(x.get("fecha_hora", ""), format="%d/%m/%Y %H:%M:%S", errors="coerce"))
         llegada_time = None
         ahora_naive = ahora().replace(tzinfo=None)
         for f in fichadas_hoy:
-            dt = pd.to_datetime(f["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+            dt = pd.to_datetime(f.get("fecha_hora", ""), format="%d/%m/%Y %H:%M:%S", errors="coerce")
             if pd.isna(dt):
-                dt = pd.to_datetime(f["fecha_hora"], format="%d/%m/%Y %H:%M", errors="coerce")
+                dt = pd.to_datetime(f.get("fecha_hora", ""), format="%d/%m/%Y %H:%M", errors="coerce")
             if pd.isna(dt):
                 continue
             dt = dt.to_pydatetime()
-            if "LLEGADA" in f["tipo"].upper():
+            if "LLEGADA" in str(f.get("tipo", "")).upper():
                 llegada_time = dt
-            elif "SALIDA" in f["tipo"].upper() and llegada_time:
+            elif "SALIDA" in str(f.get("tipo", "")).upper() and llegada_time:
                 duracion = dt - llegada_time
                 horas, rem = divmod(duracion.seconds, 3600)
                 minutos, _ = divmod(rem, 60)
