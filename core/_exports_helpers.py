@@ -190,7 +190,7 @@ def sql_sections_empty():
         "Procedimientos y Evoluciones": [],
         "Estudios Complementarios": [],
         "Signos Vitales": [],
-        "Control Pediatrico": [],
+        "Control Percentilo": [],
         "Plan Terapeutico": [],
         "Consentimientos": [],
     }
@@ -306,7 +306,7 @@ def collect_sql_sections(session_state, paciente_sel, ctx):
             talla = row.get("talla_cm") or 0
             peso = row.get("peso_kg") or 0
             imc = round(peso / ((talla / 100) ** 2), 2) if talla else 0
-            sections["Control Pediatrico"].append({
+            sections["Control Percentilo"].append({
                 "id_sql": row.get("id"), "paciente": paciente_sel, "empresa": empresa,
                 "fecha": format_sql_datetime(row.get("fecha_registro")),
                 "peso": peso, "talla": talla,
@@ -384,7 +384,7 @@ def collect_patient_sections(session_state, paciente_sel):
         "Materiales Utilizados": local_section_records(session_state, "consumos_db", paciente_sel, ctx),
         "Registro de Heridas": local_section_records(session_state, "fotos_heridas_db", paciente_sel, ctx),
         "Signos Vitales": local_section_records(session_state, "vitales_db", paciente_sel, ctx),
-        "Control Pediatrico": local_section_records(session_state, "pediatria_db", paciente_sel, ctx),
+        "Control Percentilo": local_section_records(session_state, "pediatria_db", paciente_sel, ctx),
         "Balance Hidrico": local_section_records(session_state, "balance_db", paciente_sel, ctx),
         "Plan Terapeutico": local_section_records(session_state, "indicaciones_db", paciente_sel, ctx),
         "Consentimientos": local_section_records(session_state, "consentimientos_db", paciente_sel, ctx),
@@ -397,7 +397,7 @@ def collect_patient_sections(session_state, paciente_sel):
             "Auditoria de Presencia", "Visitas y Agenda", "Emergencias y Ambulancia",
             "Enfermeria y Plan de Cuidados", "Escalas Clinicas", "Auditoria Legal",
             "Procedimientos y Evoluciones", "Estudios Complementarios", "Materiales Utilizados",
-            "Registro de Heridas", "Signos Vitales", "Control Pediatrico",
+            "Registro de Heridas", "Signos Vitales", "Control Percentilo",
             "Balance Hidrico", "Plan Terapeutico", "Consentimientos", "Cobros y Facturacion",
         )
     }

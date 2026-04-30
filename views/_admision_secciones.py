@@ -37,7 +37,7 @@ DB_LABELS = {
     "indicaciones_db": "Recetas e indicaciones",
     "evoluciones_db": "Evoluciones",
     "balance_db": "Balance",
-    "pediatria_db": "Pediatria",
+    "pediatria_db": "Percentilo",
     "fotos_heridas_db": "Fotos de heridas",
     "consumos_db": "Materiales",
     "estudios_db": "Estudios",

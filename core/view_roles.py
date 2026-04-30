@@ -61,7 +61,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Clinicas (panel global)": [],
     "Admision": list(_ROL_TODOS),
     "Clinica": list(_ROL_CLINICA),
-    "Pediatria": list(_ROL_CLINICA),
+    "Percentilo": list(_ROL_CLINICA),
     "Evolucion": list(_ROL_CLINICA),
     "Estudios": list(_ROL_CLINICA),
     "Materiales": list(_ROL_TODOS),

@@ -32,7 +32,7 @@ SECCIONES_TABLA = {
     "Procedimientos y Evoluciones",
     "Materiales Utilizados",
     "Signos Vitales",
-    "Control Pediatrico",
+    "Control Percentilo",
     "Balance Hidrico",
 }
 

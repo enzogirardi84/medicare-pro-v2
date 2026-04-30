@@ -174,14 +174,14 @@ def render_pediatria(paciente_sel, user):
     st.divider()
     with st.form("pedia", clear_on_submit=True):
         st.markdown("##### Nuevo Control")
-        tipo_ctrl = st.radio("Tipo de control", ["Pediátrico (menor)", "Adulto"], horizontal=True, key="tipo_ctrl_ped")
+        tipo_ctrl = st.radio("Tipo de control", ["Percentilo (menor)", "Adulto"], horizontal=True, key="tipo_ctrl_ped")
         col_time1, col_time2 = st.columns(2)
         fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key="fecha_ped")
         hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_ped")
         col_a, col_b = st.columns(2)
         pes = col_a.number_input("Peso Actual (kg)", min_value=0.0, format="%.2f")
         tal = col_b.number_input("Talla Actual (cm)", min_value=0.0, format="%.2f")
-        pc = col_a.number_input("Perimetro Cefalico (cm, solo pediátrico)", min_value=0.0, format="%.2f")
+        pc = col_a.number_input("Perimetro Cefalico (cm, solo percentilo)", min_value=0.0, format="%.2f")
         desc = col_b.text_input("Descripcion / Nota (opcional)")
         if st.form_submit_button("Guardar Control", use_container_width=True, type="primary"):
             hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
@@ -273,7 +273,7 @@ def render_pediatria(paciente_sel, user):
                 st.rerun()
 
         busqueda_ped = st.text_input(
-            "🔍 Buscar en historial pediátrico",
+            "🔍 Buscar en historial percentilo",
             placeholder="Percentil, nota, profesional o fecha...",
             key="ped_busqueda",
         ).strip().lower()
@@ -291,11 +291,11 @@ def render_pediatria(paciente_sel, user):
         max_controles = min(200, len(ped_filtrado))
         if max_controles <= 10:
             limite = max_controles
-            st.caption(f"Mostrando {limite} control(es) pediatricos.")
+            st.caption(f"Mostrando {limite} control(es) percentilo.")
         else:
-            limite = st.slider("Controles pediatricos a mostrar", min_value=10, max_value=max_controles, value=min(50, len(ped_filtrado)), step=10)
+            limite = st.slider("Controles percentilo a mostrar", min_value=10, max_value=max_controles, value=min(50, len(ped_filtrado)), step=10)
         df_ped = pd.DataFrame(ped_filtrado[-limite:]).drop(columns=["paciente"], errors='ignore')
         df_ped["fecha_dt"] = df_ped["fecha"].apply(_parse_fecha_hora)
         df_ped = df_ped.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
-        with lista_plegable("Controles pediátricos (tabla)", count=len(df_ped), expanded=False, height=400):
+        with lista_plegable("Controles percentilo (tabla)", count=len(df_ped), expanded=False, height=400):
             mostrar_dataframe_con_scroll(df_ped, height=340)

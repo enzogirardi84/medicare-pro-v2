@@ -120,7 +120,7 @@ ROLE_MATRIX = [
     {"Categoria": "Clinica", "Modulo": "Recetas / Medicacion", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
     {"Categoria": "Clinica", "Modulo": "Estudios / Ordenes", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
     {"Categoria": "Clinica", "Modulo": "Escalas Clinicas", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
-    {"Categoria": "Clinica", "Modulo": "Pediatria (Curvas)", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
+    {"Categoria": "Clinica", "Modulo": "Percentilo", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
     {"Categoria": "Clinica", "Modulo": "Balance Hidrico", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
     {"Categoria": "Clinica", "Modulo": "Emergencias", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
     {"Categoria": "Clinica", "Modulo": "Alertas app paciente", "SuperAdmin": "Si", "Coordinador": "Si", "Operativo": "Si", "Administrador": "No"},
