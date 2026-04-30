@@ -180,3 +180,79 @@ class TestCompilarDashboard:
         assert dash["ultima_temp"] == "36.8"
         assert dash["ultima_glu"] == "95"
         assert dash["ultima_spo2"] == "99"
+
+
+class TestGenerarTextoPaseGuardia:
+    def test_estructura_completa_sin_truncamiento(self):
+        from core.clinical_assistant_service import generar_texto_pase_guardia
+
+        datos = {
+            "paciente_data": {
+                "nombre": "Facundo Acosta",
+                "dni": "41440234",
+                "obra_social": "Nobis",
+                "fnac": "01/01/1980",
+                "diagnostico": "Neumonia bilateral",
+            },
+            "evoluciones": [
+                {
+                    "fecha": "30/04/2026 01:06",
+                    "firma": "Dr. Garcia",
+                    "nota": "Paciente estable. Saturacion mejorada al 96%. Continuar antibioticoterapia.",
+                }
+            ],
+            "indicaciones": [
+                {
+                    "med": "Fisiologico 0.9% 500 ml",
+                    "dosis": "500 ml",
+                    "via": "Endovenosa",
+                    "frecuencia": "Continuo",
+                    "estado_receta": "Activa",
+                    "fecha": "30/04/2026 01:00",
+                },
+                {
+                    "med": "Ketorolac 30Mg Ampolla",
+                    "dosis": "30 mg",
+                    "via": "Endovenosa",
+                    "frecuencia": "Cada 8 horas",
+                    "estado_receta": "Activa",
+                    "fecha": "30/04/2026 01:00",
+                },
+            ],
+        }
+        dashboard = {
+            "semaforo": "amarillo",
+            "ultima_ta": "130/80",
+            "ultima_fc": "75",
+            "ultima_temp": "36.5",
+            "ultima_glu": "110",
+            "ultima_spo2": "96",
+            "alertas": [
+                {"nivel": "warning", "titulo": "Administracion Pendiente", "detalle": "Ketorolac sin registro de administracion."},
+                {"nivel": "info", "titulo": "Evolucion sin diagnostico formal", "detalle": "Hay evoluciones clinicas pero no hay diagnosticos cargados."},
+            ],
+        }
+
+        texto = generar_texto_pase_guardia("Facundo Acosta (Nobis) - 41440234", datos, dashboard)
+
+        assert "=== INFORME DE PASE DE GUARDIA / AUDITORIA ===" in texto
+        assert "Paciente: Facundo Acosta" in texto
+        assert "DNI: 41440234" in texto
+        assert "Obra Social: Nobis" in texto
+        assert "Neumonia bilateral" in texto
+        assert "AMARILLO (REQUIERE ATENCION)" in texto
+        assert "--- 1. ESTADO ACTUAL (Ultimos Signos Vitales) ---" in texto
+        assert "TA: 130/80 mmHg" in texto
+        assert "--- 2. ULTIMA EVOLUCION CLINICA ---" in texto
+        assert "[30/04/2026 01:06] - Dr. Garcia:" in texto
+        assert "Saturacion mejorada al 96%" in texto
+        assert "--- 3. TRATAMIENTO Y CUIDADOS ACTIVOS ---" in texto
+        assert "Fisiologico 0.9% 500 ml" in texto
+        assert "Ketorolac 30Mg Ampolla" in texto
+        assert "Cada 8 horas" in texto
+        assert "--- 4. ALERTAS Y PENDIENTES (ATENCION) ---" in texto
+        assert "[ADVERTENCIAS]" in texto
+        assert "[OBSERVACIONES / AUDITORIA]" in texto
+        assert "Sin alertas ni pendientes detectados." not in texto
+        # Verificar que no hay truncamiento con "..."
+        assert "..." not in texto or "Saturacion mejorada al 96%" in texto

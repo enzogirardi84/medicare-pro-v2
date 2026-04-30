@@ -332,31 +332,86 @@ def generar_texto_pase_guardia(paciente_id: str, datos: dict, dashboard: dict) -
     paciente_data = datos.get("paciente_data") or {}
     nombre = paciente_data.get("nombre", paciente_id)
     dni = paciente_data.get("dni", "-")
+    obra_social = paciente_data.get("obra_social", "S/D")
+    edad = paciente_data.get("fnac", "S/D")
+    diag_principal = paciente_data.get("diagnostico", paciente_data.get("patologias", "Sin diagnostico principal registrado"))
+
     lines = [
-        f"=== INFORME DE PASE DE GUARDIA / AUDITORIA ===",
-        f"Paciente: {nombre} | DNI: {dni}",
+        "=== INFORME DE PASE DE GUARDIA / AUDITORIA ===",
         f"Generado: {_ahora().strftime('%d/%m/%Y %H:%M')}",
-        f"Semaforo de estado: {dashboard.get('semaforo', 'desconocido').upper()}",
+        f"Paciente: {nombre}",
+        f"DNI: {dni}  |  Obra Social: {obra_social}  |  F.Nac: {edad}",
+        f"Diagnostico principal: {diag_principal}",
+        f"Estado del Sistema: {dashboard.get('semaforo', 'desconocido').upper()} {'(REQUIERE ATENCION)' if dashboard.get('semaforo') in ('rojo', 'amarillo') else '(ESTABLE)'}",
         "",
-        f"Alertas criticas: {dashboard['alertas_criticas']}",
-        f"Alertas warning: {dashboard['alertas_warning']}",
-        f"Alertas info: {dashboard['alertas_info']}",
+        "--- 1. ESTADO ACTUAL (Ultimos Signos Vitales) ---",
+        f"TA: {dashboard['ultima_ta']} mmHg  |  FC: {dashboard['ultima_fc']} lpm  |  Temp: {dashboard['ultima_temp']} C",
+        f"SatO2: {dashboard['ultima_spo2']} %  |  Glucemia: {dashboard['ultima_glu']} mg/dL",
         "",
-        "--- Signos vitales mas recientes ---",
-        f"TA: {dashboard['ultima_ta']} | FC: {dashboard['ultima_fc']} | Temp: {dashboard['ultima_temp']}C",
-        f"Glucemia: {dashboard['ultima_glu']} | SatO2: {dashboard['ultima_spo2']}",
-        "",
-        "--- Resumen de actividad ---",
-        f"Evoluciones (24h): {dashboard['evoluciones_24h']} | Total: {dashboard['total_evoluciones']}",
-        f"Cuidados (24h): {dashboard['cuidados_24h']} | Total: {dashboard['total_cuidados']}",
-        f"Indicaciones activas: {dashboard['indicaciones_activas']}",
-        f"Administraciones pendientes: {dashboard['administraciones_pendientes']}",
-        f"Estudios pendientes: {dashboard['estudios_pendientes']}",
-        "",
-        "--- Alertas activas ---",
     ]
-    for a in dashboard.get("alertas", []):
-        lines.append(f"[{a['nivel'].upper()}] {a['titulo']}: {a['detalle']}")
+
+    # 2. ULTIMA EVOLUCION CLINICA
+    evoluciones = datos.get("evoluciones", [])
+    if evoluciones:
+        ultima_evo = max(evoluciones, key=lambda x: _parse_fecha(x.get("fecha", "")) or datetime.min)
+        evo_fecha = ultima_evo.get("fecha", "S/D")
+        evo_prof = ultima_evo.get("firma", ultima_evo.get("profesional", "S/D"))
+        evo_texto = ultima_evo.get("nota", ultima_evo.get("evolucion", ultima_evo.get("texto", "Sin detalle de texto")))
+        lines.append("--- 2. ULTIMA EVOLUCION CLINICA ---")
+        lines.append(f"[{evo_fecha}] - {evo_prof}:")
+        lines.append(f'"{evo_texto}"')
+        lines.append("")
+    else:
+        lines.append("--- 2. ULTIMA EVOLUCION CLINICA ---")
+        lines.append("Sin evoluciones registradas.")
+        lines.append("")
+
+    # 3. TRATAMIENTO Y CUIDADOS ACTIVOS
+    indicaciones = datos.get("indicaciones", [])
+    indicaciones_activas = [
+        ind for ind in indicaciones
+        if "activa" in str(ind.get("estado_receta", ind.get("estado_clinico", ""))).lower()
+    ]
+    if indicaciones_activas:
+        lines.append("--- 3. TRATAMIENTO Y CUIDADOS ACTIVOS ---")
+        for ind in indicaciones_activas:
+            med = str(ind.get("med", "Medicacion"))
+            dosis = str(ind.get("dosis", "S/D"))
+            via = str(ind.get("via", "S/D"))
+            frecuencia = str(ind.get("frecuencia", "S/D"))
+            estado_ind = ind.get("estado_receta", ind.get("estado_clinico", "Activa"))
+            fecha_ind = str(ind.get("fecha", "S/D"))
+            lines.append(f"- {med} | Dosis: {dosis} | Via: {via} | Frecuencia: {frecuencia} | Estado: {estado_ind} | Fecha: {fecha_ind}")
+        lines.append("")
+    else:
+        lines.append("--- 3. TRATAMIENTO Y CUIDADOS ACTIVOS ---")
+        lines.append("Sin indicaciones activas registradas.")
+        lines.append("")
+
+    # 4. ALERTAS Y PENDIENTES
+    lines.append("--- 4. ALERTAS Y PENDIENTES (ATENCION) ---")
+
+    alertas = dashboard.get("alertas", [])
+    criticas = [a for a in alertas if a.get("nivel") == "danger"]
+    warnings = [a for a in alertas if a.get("nivel") == "warning"]
+    infos = [a for a in alertas if a.get("nivel") == "info"]
+
+    if criticas:
+        lines.append("[CRITICAS]")
+        for a in criticas:
+            lines.append(f"[!] {a['titulo']}: {a['detalle']}")
+    if warnings:
+        lines.append("[ADVERTENCIAS]")
+        for a in warnings:
+            lines.append(f"[!!] {a['titulo']}: {a['detalle']}")
+    if infos:
+        lines.append("[OBSERVACIONES / AUDITORIA]")
+        for a in infos:
+            lines.append(f"[i] {a['titulo']}: {a['detalle']}")
+
+    if not alertas:
+        lines.append("Sin alertas ni pendientes detectados.")
+
     lines.append("")
-    lines.append("=== FIN DEL INFORME ===")
+    lines.append("=" * 46)
     return "\n".join(lines)
