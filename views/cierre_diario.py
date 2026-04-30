@@ -186,7 +186,7 @@ def render_cierre_diario(mi_empresa, user):
             pdf.set_font("Arial", 'B', 15)
             pdf.cell(0, 12, safe_text(f"REPORTE DE CIERRE DIARIO - {mi_empresa}"), ln=True, align='C')
             pdf.set_font("Arial", 'I', 10)
-            pdf.cell(0, 8, safe_text(f"Fecha auditada: {fecha_str_pdf} | Generado por: {user['nombre']} a las {ahora().strftime('%H:%M')}"), ln=True, align='C')
+            pdf.cell(0, 8, safe_text(f"Fecha auditada: {fecha_str_pdf} | Generado por: {user.get('nombre', 'Sistema')} a las {ahora().strftime('%H:%M')}"), ln=True, align='C')
             pdf.ln(8)
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text("1. INSUMOS CONSUMIDOS EN EL DIA"), ln=True)

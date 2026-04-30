@@ -86,7 +86,7 @@ def render_asistencia(mi_empresa, user):
                                 "paciente": data["paciente"],
                                 "profesional": profesional,
                                 "fecha_hora": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                                "tipo": f"SALIDA (Forzada por Admin: {user['nombre']})",
+                                "tipo": f"SALIDA (Forzada por Admin: {user.get('nombre', 'Admin')})",
                                 "empresa": mi_empresa,
                             }
                         )
