@@ -135,6 +135,8 @@ def _ya_entrego_mes(paciente_id, tipo_entrega, entregas_db):
     hoy = date.today()
     inicio_mes = hoy.replace(day=1)
     for e in entregas_db:
+        if not isinstance(e, dict):
+            continue
         if e.get("paciente_id") != paciente_id:
             continue
         if e.get("tipo_entrega") != tipo_entrega:
@@ -182,14 +184,20 @@ def _metricas_aps_del_dia():
     visitas_pend = 0
 
     for a in atenciones:
+        if not isinstance(a, dict):
+            continue
         if str(a.get("fecha_atencion", ""))[:10] == hoy_iso:
             pacientes_hoy.add(a.get("paciente_id"))
 
     for e in entregas:
+        if not isinstance(e, dict):
+            continue
         if str(e.get("fecha_entrega", ""))[:10] == hoy_iso:
             medicacion_hoy += 1
 
     for ep in epi:
+        if not isinstance(ep, dict):
+            continue
         if ep.get("estado") in ("Pendiente", "En seguimiento"):
             alertas_epi += 1
         if ep.get("requiere_visita") and ep.get("estado") == "Pendiente":
@@ -215,20 +223,26 @@ def _tab_panel_diario(paciente_sel, user):
     hoy_iso = date.today().isoformat()
 
     # Sala de espera
-    en_espera = [t for t in turnos if t.get("estado") == "en_espera"]
+    en_espera = [t for t in turnos if isinstance(t, dict) and t.get("estado") == "en_espera"]
     pacientes_hoy = set()
     medicacion_hoy = 0
     alertas_epi = 0
 
     for a in atenciones:
+        if not isinstance(a, dict):
+            continue
         if str(a.get("fecha_atencion", ""))[:10] == hoy_iso:
             pacientes_hoy.add(a.get("paciente_id"))
 
     for e in entregas:
+        if not isinstance(e, dict):
+            continue
         if str(e.get("fecha_entrega", ""))[:10] == hoy_iso:
             medicacion_hoy += 1
 
     for ep in epi:
+        if not isinstance(ep, dict):
+            continue
         if ep.get("estado") in ("Pendiente", "En seguimiento"):
             alertas_epi += 1
 
@@ -244,7 +258,7 @@ def _tab_panel_diario(paciente_sel, user):
     with st.container(border=True):
         st.markdown("### 🪑 Sala de espera")
         if en_espera:
-            en_espera.sort(key=lambda x: x.get("hora_llegada", ""))
+            en_espera.sort(key=lambda x: x.get("hora_llegada", "") if isinstance(x, dict) else "")
             for t in en_espera:
                 prio = t.get("prioridad", "Normal")
                 color = "🔴" if prio == "Urgente" else "🟡" if prio == "Preferencial" else "🟢"
@@ -270,7 +284,7 @@ def _tab_panel_diario(paciente_sel, user):
             st.markdown("### Últimas atenciones")
             recientes = [
                 a for a in atenciones
-                if str(a.get("fecha_atencion", ""))[:10] == hoy_iso
+                if isinstance(a, dict) and str(a.get("fecha_atencion", ""))[:10] == hoy_iso
             ][-10:]
             if recientes:
                 for a in recientes:
@@ -283,7 +297,7 @@ def _tab_panel_diario(paciente_sel, user):
             st.markdown("### Alertas pendientes")
             alertas = [
                 ep for ep in epi
-                if ep.get("estado") in ("Pendiente", "En seguimiento")
+                if isinstance(ep, dict) and ep.get("estado") in ("Pendiente", "En seguimiento")
             ]
             if alertas:
                 for al in alertas[:5]:
@@ -334,6 +348,8 @@ def _tab_pacientes_familia(paciente_sel, user, centro_salud_id):
         grupos = st.session_state.get("grupo_familiar_aps_db", [])
         grupo_existente = None
         for g in grupos:
+            if not isinstance(g, dict):
+                continue
             miembros = g.get("miembros", [])
             if paciente_id in miembros:
                 grupo_existente = g
@@ -392,6 +408,8 @@ def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
     fichas = st.session_state.get("ficha_aps_db", [])
     ficha_existente = None
     for f in fichas:
+        if not isinstance(f, dict):
+            continue
         if f.get("paciente_id") == paciente_id and f.get("centro_salud_id") == centro_salud_id:
             ficha_existente = f
             break
@@ -623,12 +641,14 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
 
     turnos_hoy = [
         t for t in turnos
-        if (t.get("hora_llegada") and str(t.get("hora_llegada"))[:10] == hoy_iso)
-        or (t.get("fecha_turno") and str(t.get("fecha_turno"))[:10] == hoy_iso)
+        if isinstance(t, dict) and (
+            (t.get("hora_llegada") and str(t.get("hora_llegada"))[:10] == hoy_iso)
+            or (t.get("fecha_turno") and str(t.get("fecha_turno"))[:10] == hoy_iso)
+        )
     ]
 
     if turnos_hoy:
-        turnos_hoy.sort(key=lambda x: x.get("hora_llegada") or x.get("fecha_turno") or "")
+        turnos_hoy.sort(key=lambda x: (x.get("hora_llegada") or x.get("fecha_turno") or "") if isinstance(x, dict) else "")
         for t in turnos_hoy:
             estado = t.get("estado", "-")
             if estado == "en_espera":
@@ -816,6 +836,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
     registros = []
 
     for a in st.session_state.get("atenciones_aps_db", []):
+        if not isinstance(a, dict):
+            continue
         if paciente_id in str(a.get("paciente_id", "")):
             registros.append({
                 "fecha": str(a.get("fecha_atencion", ""))[:16],
@@ -826,6 +848,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for e in st.session_state.get("entregas_aps_db", []):
+        if not isinstance(e, dict):
+            continue
         if paciente_id in str(e.get("paciente_id", "")):
             registros.append({
                 "fecha": str(e.get("fecha_entrega", ""))[:16],
@@ -836,6 +860,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for s in st.session_state.get("trabajo_social_aps_db", []):
+        if not isinstance(s, dict):
+            continue
         if paciente_id in str(s.get("paciente_id", "")):
             registros.append({
                 "fecha": str(s.get("fecha_registro", ""))[:16],
@@ -846,6 +872,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for ep in st.session_state.get("epidemiologia_aps_db", []):
+        if not isinstance(ep, dict):
+            continue
         if paciente_id in str(ep.get("paciente_id", "")):
             registros.append({
                 "fecha": str(ep.get("fecha_registro", ""))[:16],
@@ -856,6 +884,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for v in st.session_state.get("visitas_domiciliarias_aps_db", []):
+        if not isinstance(v, dict):
+            continue
         if paciente_id in str(v.get("paciente_id", "")):
             registros.append({
                 "fecha": str(v.get("fecha_visita", ""))[:16],
@@ -866,6 +896,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for f in st.session_state.get("ficha_aps_db", []):
+        if not isinstance(f, dict):
+            continue
         if paciente_id in str(f.get("paciente_id", "")):
             registros.append({
                 "fecha": str(f.get("ultima_actualizacion", ""))[:16],
@@ -876,6 +908,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for t in st.session_state.get("turnos_aps_db", []):
+        if not isinstance(t, dict):
+            continue
         if paciente_id in str(t.get("paciente_id", "")):
             registros.append({
                 "fecha": str(t.get("hora_llegada") or t.get("fecha_turno") or "")[:16],
@@ -886,6 +920,8 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
             })
 
     for c in st.session_state.get("controles_aps_db", []):
+        if not isinstance(c, dict):
+            continue
         if paciente_id in str(c.get("paciente_id", "")):
             tipo_label = "Niño Sano" if c.get("tipo_control") == "nino_sano" else "Embarazo"
             detalle = (
@@ -1422,37 +1458,37 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
         if tipo_reporte == "Atenciones APS":
             registros = [
                 a for a in st.session_state.get("atenciones_aps_db", [])
-                if fd <= str(a.get("fecha_atencion", ""))[:10] <= fh
+                if isinstance(a, dict) and fd <= str(a.get("fecha_atencion", ""))[:10] <= fh
             ]
         elif tipo_reporte in ("Entregas de medicación", "Entregas de leche"):
             registros = [
                 e for e in st.session_state.get("entregas_aps_db", [])
-                if fd <= str(e.get("fecha_entrega", ""))[:10] <= fh
+                if isinstance(e, dict) and fd <= str(e.get("fecha_entrega", ""))[:10] <= fh
             ]
         elif tipo_reporte == "Casos epidemiológicos":
             registros = [
                 ep for ep in st.session_state.get("epidemiologia_aps_db", [])
-                if fd <= str(ep.get("fecha_registro", ""))[:10] <= fh
+                if isinstance(ep, dict) and fd <= str(ep.get("fecha_registro", ""))[:10] <= fh
             ]
         elif tipo_reporte == "Pacientes con riesgo social":
             registros = [
                 s for s in st.session_state.get("trabajo_social_aps_db", [])
-                if fd <= str(s.get("fecha_registro", ""))[:10] <= fh
+                if isinstance(s, dict) and fd <= str(s.get("fecha_registro", ""))[:10] <= fh
             ]
         elif tipo_reporte == "Visitas domiciliarias":
             registros = [
                 v for v in st.session_state.get("visitas_domiciliarias_aps_db", [])
-                if fd <= str(v.get("fecha_visita", ""))[:10] <= fh
+                if isinstance(v, dict) and fd <= str(v.get("fecha_visita", ""))[:10] <= fh
             ]
         elif tipo_reporte == "Turnos y demanda espontánea":
             registros = [
                 t for t in st.session_state.get("turnos_aps_db", [])
-                if fd <= str(t.get("hora_llegada") or t.get("fecha_turno") or "")[:10] <= fh
+                if isinstance(t, dict) and fd <= str(t.get("hora_llegada") or t.get("fecha_turno") or "")[:10] <= fh
             ]
         elif tipo_reporte == "Controles Niño Sano / Embarazo":
             registros = [
                 c for c in st.session_state.get("controles_aps_db", [])
-                if fd <= str(c.get("fecha_control", ""))[:10] <= fh
+                if isinstance(c, dict) and fd <= str(c.get("fecha_control", ""))[:10] <= fh
             ]
         elif tipo_reporte == "Grupos familiares":
             registros = st.session_state.get("grupo_familiar_aps_db", [])
