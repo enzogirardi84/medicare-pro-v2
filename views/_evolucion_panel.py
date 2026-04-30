@@ -330,8 +330,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                                     "responsable": user.get("nombre", ""),
                                 },
                             )
-                        except Exception:
-                            pass
+                        except Exception as _aud_exc:
+                            from core.app_logging import log_event
+                            log_event("evolucion_panel", f"auditoria_falla:{type(_aud_exc).__name__}:{_aud_exc}")
                         st.rerun()
 
         # Botón tradicional: Borrar última evolución
