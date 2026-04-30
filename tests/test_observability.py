@@ -48,7 +48,7 @@ class TestStructuredLogFormatter:
         
         try:
             raise ValueError("Test error")
-        except:
+        except Exception:
             record = logging.LogRecord(
                 name="test_logger",
                 level=logging.ERROR,
