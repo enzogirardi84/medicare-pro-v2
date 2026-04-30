@@ -39,6 +39,8 @@ def render_inventario(mi_empresa):
                         "stock": i.get("stock_actual", 0),
                         "id_sql": i.get("id")
                     })
+                # Sincronizar session_state para que fallback JSON sea consistente
+                st.session_state["inventario_db"] = list(inv_mio)
     except Exception as e:
         log_event("error_leer_inventario_sql", str(e))
 
@@ -263,10 +265,13 @@ def render_inventario(mi_empresa):
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     if empresa_uuid:
                         from core.database import supabase
-                        res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", del_item).execute()
-                        if res.data:
-                            supabase.table("inventario").delete().eq("id", res.data[0]["id"]).execute()
-                        log_event("inventario_sql_delete", f"Item: {del_item}")
+                        if supabase is not None:
+                            res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", del_item).execute()
+                            if res.data:
+                                supabase.table("inventario").delete().eq("id", res.data[0]["id"]).execute()
+                            log_event("inventario_sql_delete", f"Item: {del_item}")
+                        else:
+                            log_event("inventario_sql_delete", "Supabase offline; se elimina solo en JSON local")
                 except Exception as e:
                     log_event("error_inventario_sql_delete", str(e))
 
