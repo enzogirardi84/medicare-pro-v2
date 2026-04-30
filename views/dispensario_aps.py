@@ -1543,8 +1543,8 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
     tabs = st.tabs([
         "📊 Panel Diario",
         "👥 Pacientes y Familia",
-        "� Ficha APS",
-        "�📅 Turnos y Sala de Espera",
+        "📝 Ficha APS",
+        "📅 Turnos y Sala de Espera",
         "📚 Historial APS",
         "🩺 Atención APS",
         "👶 Niño Sano / Embarazo",
