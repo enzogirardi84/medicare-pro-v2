@@ -25,6 +25,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Escalas Clinicas",
         "Historial",
         "Percentilo",
+        "Asistente Clinico",
         "Telemedicina",
     ],
     "Gestión": [
