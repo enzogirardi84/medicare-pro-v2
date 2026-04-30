@@ -40,9 +40,21 @@ def _coincide_paciente(item: dict, paciente_id: str) -> bool:
     pid_norm = str(paciente_id).strip().lower()
     if not pid_norm or pid_norm == "none":
         return False
+    # Extraer componentes significativos (nombre, dni, etc.) para match parcial
+    pid_partes = [p.strip() for p in pid_norm.replace("(", " ").replace(")", " ").split(" - ") if len(p.strip()) >= 2]
+    if not pid_partes:
+        pid_partes = [pid_norm]
     for campo in (item.get("paciente"), item.get("paciente_id"), item.get("nombre"), item.get("dni")):
-        if campo is not None and pid_norm in str(campo).strip().lower():
+        if campo is None:
+            continue
+        campo_norm = str(campo).strip().lower()
+        # Match exacto o substring en cualquier direccion
+        if pid_norm in campo_norm or campo_norm in pid_norm:
             return True
+        # Match por parte significativa (nombre o DNI)
+        for parte in pid_partes:
+            if parte in campo_norm:
+                return True
     return False
 
 def _extraer_ta(valor: Any) -> Tuple[Optional[int], Optional[int]]:
@@ -97,26 +109,26 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
     emergencias = datos.get("emergencias", [])
     # TA elevada
     for v in vitales:
-        sys_ta, dia_ta = _extraer_ta(v.get("presion_arterial") or v.get("ta") or v.get("tension"))
+        sys_ta, dia_ta = _extraer_ta(v.get("presion_arterial") or v.get("ta") or v.get("TA") or v.get("tension"))
         if sys_ta and sys_ta > 150:
             alertas.append({"titulo":"Riesgo Cardiovascular — TA elevada","detalle":f"Ultima TA: {sys_ta}/{dia_ta or '-'} mmHg. Supera umbral de 150/90.","nivel":"danger","categoria":"vitales"})
             break
     # Glucemia extrema
     for v in vitales:
-        glu = _to_float(v.get("glucemia") or v.get("glucosa"))
+        glu = _to_float(v.get("glucemia") or v.get("glucosa") or v.get("HGT"))
         if glu is not None and (glu < 70 or glu > 250):
             tipo = "hipoglucemia" if glu < 70 else "hiperglucemia"
             alertas.append({"titulo":f"Riesgo Metabolico — {tipo}","detalle":f"Glucemia: {glu} mg/dL. Requiere revision.","nivel":"danger","categoria":"vitales"})
             break
     # Fiebre
     for v in vitales:
-        temp = _to_float(v.get("temperatura") or v.get("temp"))
+        temp = _to_float(v.get("temperatura") or v.get("temp") or v.get("Temp"))
         if temp is not None and temp >= 38.5:
             alertas.append({"titulo":"Fiebre significativa","detalle":f"Temperatura: {temp}C. Evaluar origen infeccioso.","nivel":"warning","categoria":"vitales"})
             break
     # FC extrema
     for v in vitales:
-        fc = _to_float(v.get("frecuencia_cardiaca") or v.get("fc") or v.get("pulso"))
+        fc = _to_float(v.get("frecuencia_cardiaca") or v.get("fc") or v.get("FC") or v.get("pulso"))
         if fc is not None:
             if fc < 50:
                 alertas.append({"titulo":"Bradicardia","detalle":f"FC: {fc} lat/min. < 50 requiere evaluacion.","nivel":"warning","categoria":"vitales"})
@@ -126,7 +138,7 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
                 break
     # Hipoxemia
     for v in vitales:
-        sat = _to_float(v.get("saturacion_o2") or v.get("saturacion") or v.get("spo2"))
+        sat = _to_float(v.get("saturacion_o2") or v.get("saturacion") or v.get("spo2") or v.get("Sat"))
         if sat is not None and sat < 90:
             alertas.append({"titulo":"Hipoxemia","detalle":f"SatO2: {sat}%. < 90% requiere oxigenoterapia.","nivel":"danger","categoria":"vitales"})
             break
@@ -251,17 +263,17 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
     ultima_glu = "-"
     ultima_spo2 = "-"
     if ultimo_vital:
-        s, d = _extraer_ta(ultimo_vital.get("presion_arterial") or ultimo_vital.get("ta"))
+        s, d = _extraer_ta(ultimo_vital.get("presion_arterial") or ultimo_vital.get("ta") or ultimo_vital.get("TA"))
         if s:
             ultima_ta = f"{s}/{d or '-'}"
-        ultima_fc = str(ultimo_vital.get("frecuencia_cardiaca") or ultimo_vital.get("fc") or "-")
-        t = _to_float(ultimo_vital.get("temperatura") or ultimo_vital.get("temp"))
+        ultima_fc = str(ultimo_vital.get("frecuencia_cardiaca") or ultimo_vital.get("fc") or ultimo_vital.get("FC") or "-")
+        t = _to_float(ultimo_vital.get("temperatura") or ultimo_vital.get("temp") or ultimo_vital.get("Temp"))
         if t is not None:
             ultima_temp = f"{t:.1f}"
-        g = _to_float(ultimo_vital.get("glucemia") or ultimo_vital.get("glucosa"))
+        g = _to_float(ultimo_vital.get("glucemia") or ultimo_vital.get("glucosa") or ultimo_vital.get("HGT"))
         if g is not None:
             ultima_glu = f"{g:.0f}"
-        s2 = _to_float(ultimo_vital.get("saturacion_o2") or ultimo_vital.get("saturacion") or ultimo_vital.get("spo2"))
+        s2 = _to_float(ultimo_vital.get("saturacion_o2") or ultimo_vital.get("saturacion") or ultimo_vital.get("spo2") or ultimo_vital.get("Sat"))
         if s2 is not None:
             ultima_spo2 = f"{s2:.0f}"
     # Alertas
@@ -283,8 +295,8 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
     glu_tendencia = []
     for v in sorted(vitales, key=lambda x: _parse_fecha(x.get("fecha") or x.get("timestamp")) or datetime.min):
         f = _parse_fecha(v.get("fecha") or v.get("timestamp"))
-        s, d = _extraer_ta(v.get("presion_arterial") or v.get("ta"))
-        g = _to_float(v.get("glucemia") or v.get("glucosa"))
+        s, d = _extraer_ta(v.get("presion_arterial") or v.get("ta") or v.get("TA"))
+        g = _to_float(v.get("glucemia") or v.get("glucosa") or v.get("HGT"))
         if f and s:
             ta_tendencia.append({"fecha": f.strftime("%Y-%m-%d %H:%M"), "sistolica": s, "diastolica": d or 0})
         if f and g is not None:
