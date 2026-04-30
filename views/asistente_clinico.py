@@ -280,8 +280,11 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
 
     html_informe = generar_html_informe_profesional(paciente_sel, datos, dashboard)
 
-    # Vista previa embebida del informe profesional
-    st.components.v1.html(html_informe, height=600, scrolling=True)
+    # Vista previa del informe profesional sin scroll interno.
+    if hasattr(st, "html"):
+        st.html(html_informe)
+    else:
+        st.components.v1.html(html_informe, height=1200, scrolling=False)
 
     # Botones de descarga: PDF profesional (principal) y HTML (alternativa)
     pdf_bytes = generar_pdf_informe_profesional(paciente_sel, datos, dashboard)

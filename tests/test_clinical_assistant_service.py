@@ -303,3 +303,43 @@ class TestGenerarTextoPaseGuardia:
         # verificamos que el PDF es valido y tiene contenido.
         assert len(pdf_bytes) > 1000
         assert b"%%EOF" in pdf_bytes
+
+    def test_genera_html_responsive_sin_tabla_ancha_de_medicacion(self):
+        from core.clinical_assistant_service import generar_html_informe_profesional
+
+        datos = {
+            "paciente_data": {
+                "nombre": "Facundo Acosta",
+                "dni": "41440234",
+                "obra_social": "Nobis",
+                "diagnostico": "Diagnostico largo con observaciones clinicas extendidas",
+            },
+            "evoluciones": [],
+            "indicaciones": [
+                {
+                    "med": "Fisiologico 0.9% 500 ml | Via: Via Endovenosa | Velocidad: 21.0 ml/h | Durante 7 dias",
+                    "dosis": "S/D",
+                    "via": "S/D",
+                    "frecuencia": "Infusion continua",
+                    "estado_receta": "Activa",
+                    "fecha": "23/04/2026 11:34:25",
+                }
+            ],
+        }
+        dashboard = {
+            "semaforo": "amarillo",
+            "ultima_ta": "130/80",
+            "ultima_fc": "75",
+            "ultima_temp": "36.5",
+            "ultima_glu": "110",
+            "ultima_spo2": "96",
+            "alertas": [],
+        }
+
+        html = generar_html_informe_profesional("Facundo Acosta (Nobis) - 41440234", datos, dashboard)
+
+        assert "report-shell" in html
+        assert "vitals-grid" in html
+        assert "med-card" in html
+        assert "Medicacion / Indicacion" not in html
+        assert "<table" not in html

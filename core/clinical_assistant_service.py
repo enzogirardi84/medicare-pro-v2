@@ -335,10 +335,7 @@ def _esc_html(valor: Any) -> str:
 
 
 def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: dict) -> str:
-    """Genera un informe clinico profesional en HTML con CSS embebido.
-
-    Cero truncamientos, cero etiquetas de log ([WARNING], [INFO]).
-    """
+    """Genera un informe clinico profesional en HTML con CSS embebido."""
     paciente_data = datos.get("paciente_data") or {}
     nombre = _esc_html(paciente_data.get("nombre", paciente_id))
     dni = _esc_html(paciente_data.get("dni", "-"))
@@ -360,23 +357,26 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
 
     # Ultima evolucion
     evoluciones = datos.get("evoluciones", [])
-    bloque_evolucion = ""
     if evoluciones:
         ultima_evo = max(evoluciones, key=lambda x: _parse_fecha(x.get("fecha", "")) or datetime.min)
         evo_fecha = _esc_html(ultima_evo.get("fecha", "S/D"))
         evo_prof = _esc_html(ultima_evo.get("firma", ultima_evo.get("profesional", "S/D")))
         evo_texto = _esc_html(ultima_evo.get("nota", ultima_evo.get("evolucion", ultima_evo.get("texto", "Sin detalle de texto"))))
         bloque_evolucion = f"""
-        <div class="section-title">2. Ultima Evolucion Clinica</div>
-        <div class="evo-box">
-            <p><strong>Fecha:</strong> {evo_fecha} &nbsp;|&nbsp; <strong>Profesional:</strong> {evo_prof}</p>
-            <blockquote>{evo_texto}</blockquote>
-        </div>
+        <section class="section">
+            <div class="section-title">2. Ultima Evolucion Clinica</div>
+            <div class="evo-box">
+                <p><strong>Fecha:</strong> {evo_fecha} <span class="sep">|</span> <strong>Profesional:</strong> {evo_prof}</p>
+                <blockquote>{evo_texto}</blockquote>
+            </div>
+        </section>
         """
     else:
         bloque_evolucion = """
-        <div class="section-title">2. Ultima Evolucion Clinica</div>
-        <p>Sin evoluciones registradas.</p>
+        <section class="section">
+            <div class="section-title">2. Ultima Evolucion Clinica</div>
+            <p class="empty-state">Sin evoluciones registradas.</p>
+        </section>
         """
 
     # Medicacion activa
@@ -385,7 +385,7 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
         ind for ind in indicaciones
         if "activa" in str(ind.get("estado_receta", ind.get("estado_clinico", ""))).lower()
     ]
-    filas_medicacion = ""
+    bloque_medicacion = ""
     if indicaciones_activas:
         for ind in indicaciones_activas:
             med = _esc_html(ind.get("med", "Medicacion"))
@@ -394,18 +394,20 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
             frec = _esc_html(ind.get("frecuencia", "S/D"))
             estado_ind = _esc_html(ind.get("estado_receta", ind.get("estado_clinico", "Activa")))
             fecha_ind = _esc_html(ind.get("fecha", "S/D"))
-            filas_medicacion += f"""
-            <tr>
-                <td>{med}</td>
-                <td>{dosis}</td>
-                <td>{via}</td>
-                <td>{frec}</td>
-                <td>{estado_ind}</td>
-                <td>{fecha_ind}</td>
-            </tr>
+            bloque_medicacion += f"""
+            <article class="med-card">
+                <div class="med-card__title">{med}</div>
+                <dl class="med-card__meta">
+                    <div><dt>Dosis</dt><dd>{dosis}</dd></div>
+                    <div><dt>Via</dt><dd>{via}</dd></div>
+                    <div><dt>Frecuencia</dt><dd>{frec}</dd></div>
+                    <div><dt>Estado</dt><dd>{estado_ind}</dd></div>
+                    <div><dt>Fecha</dt><dd>{fecha_ind}</dd></div>
+                </dl>
+            </article>
             """
     else:
-        filas_medicacion = '<tr><td colspan="6">Sin indicaciones activas registradas.</td></tr>'
+        bloque_medicacion = '<p class="empty-state">Sin indicaciones activas registradas.</p>'
 
     # Alertas / Pendientes - lenguaje clinico profesional
     alertas = dashboard.get("alertas", [])
@@ -441,53 +443,83 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
 <meta charset="UTF-8">
 <title>Reporte de Auditoria y Pase de Sala - {nombre}</title>
 <style>
-    @page {{ size: A4; margin: 15mm; }}
+    @page {{ size: A4; margin: 14mm; }}
     @media print {{
-        body {{ margin: 0; padding: 15mm; }}
+        body {{ margin: 0; padding: 0; background: #fff; }}
         .no-print {{ display: none; }}
+        .report-shell {{ box-shadow: none; margin: 0; max-width: none; padding: 0; }}
+        .section, .med-card {{ break-inside: avoid; page-break-inside: avoid; }}
     }}
     body {{
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        color: #333; line-height: 1.6; margin: 0; padding: 20px;
-        background: #fff;
+        color: #172033; line-height: 1.5; margin: 0; padding: 0;
+        background: #F3F6FA;
+    }}
+    .report-shell {{
+        max-width: 1040px; margin: 0 auto; padding: 28px 28px 24px;
+        background: #fff; box-sizing: border-box;
     }}
     .header {{
-        border-bottom: 3px solid #2C3E50; padding-bottom: 12px; margin-bottom: 25px;
+        border-bottom: 3px solid #1F4E79; padding-bottom: 14px; margin-bottom: 22px;
     }}
     .header h1 {{
-        margin: 0; color: #2C3E50; font-size: 22px; text-transform: uppercase; letter-spacing: 1px;
+        margin: 0; color: #12324D; font-size: 24px; letter-spacing: 0;
     }}
-    .header p {{ margin: 4px 0; color: #7F8C8D; font-size: 13px; }}
+    .header p {{ margin: 4px 0; color: #617084; font-size: 13px; }}
     .estado-badge {{
-        display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff;
-        font-size: 12px; font-weight: bold; background-color: {color_semaforo};
+        display: inline-block; padding: 5px 11px; border-radius: 999px; color: #fff;
+        font-size: 12px; font-weight: 700; background-color: {color_semaforo};
     }}
-    table {{
-        width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px;
-        font-size: 13px;
+    .patient-grid, .vitals-grid {{
+        display: grid; gap: 10px; margin: 12px 0 22px;
     }}
-    th, td {{
-        border: 1px solid #BDC3C7; padding: 10px; text-align: left; vertical-align: top;
+    .patient-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+    .vitals-grid {{ grid-template-columns: repeat(5, minmax(0, 1fr)); }}
+    .field, .vital {{
+        border: 1px solid #D8E0E8; border-radius: 8px; padding: 10px 12px;
+        background: #FBFCFE; min-width: 0;
     }}
-    th {{
-        background-color: #F4F6F7; color: #2C3E50; font-weight: 600;
+    .field__label, .vital__label, .med-card dt {{
+        display: block; color: #66758A; font-size: 11px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .03em; margin-bottom: 3px;
+    }}
+    .field__value, .vital__value, .med-card dd {{
+        margin: 0; color: #10243A; font-size: 14px; overflow-wrap: anywhere;
+    }}
+    .vital__value {{ font-size: 18px; font-weight: 700; }}
+    .section {{ margin-top: 22px; }}
+    .sep {{ color: #95A3B3; padding: 0 6px; }}
+    .empty-state {{
+        border: 1px dashed #C7D2DE; border-radius: 8px; padding: 14px;
+        color: #617084; background: #FBFCFE;
     }}
     .section-title {{
-        background-color: #ECF0F1; color: #2C3E50; padding: 8px 12px;
-        font-size: 15px; font-weight: 600; margin-top: 28px;
-        border-left: 5px solid #3498DB;
+        background-color: #EEF4F8; color: #12324D; padding: 10px 12px;
+        font-size: 16px; font-weight: 700; margin: 0 0 12px;
+        border-left: 5px solid #2D9CDB; border-radius: 4px;
     }}
     .evo-box {{
-        background: #F8F9FA; border: 1px solid #E5E7EB; padding: 14px; border-radius: 4px;
-        margin-top: 8px;
+        background: #FBFCFE; border: 1px solid #D8E0E8; padding: 14px; border-radius: 8px;
     }}
     .evo-box blockquote {{
-        margin: 8px 0 0 0; padding-left: 14px; border-left: 3px solid #3498DB;
-        color: #444; font-style: italic;
+        margin: 8px 0 0; padding-left: 14px; border-left: 3px solid #2D9CDB;
+        color: #27384A; overflow-wrap: anywhere;
+    }}
+    .treatment-list {{ display: grid; gap: 10px; }}
+    .med-card {{
+        border: 1px solid #D8E0E8; border-radius: 8px; padding: 12px;
+        background: #fff;
+    }}
+    .med-card__title {{
+        color: #10243A; font-weight: 700; margin-bottom: 9px; overflow-wrap: anywhere;
+    }}
+    .med-card__meta {{
+        display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px; margin: 0;
     }}
     .observacion {{
-        margin-bottom: 10px; padding: 10px 12px; border-radius: 4px;
-        font-size: 13px;
+        margin-bottom: 10px; padding: 10px 12px; border-radius: 7px;
+        font-size: 13px; overflow-wrap: anywhere;
     }}
     .observacion.critica {{
         background: #FDEDEC; border-left: 4px solid #E74C3C;
@@ -509,75 +541,60 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
         margin-top: 30px; padding-top: 10px; border-top: 1px solid #BDC3C7;
         font-size: 11px; color: #95A5A6; text-align: center;
     }}
+    @media (max-width: 720px) {{
+        .report-shell {{ padding: 18px 14px; }}
+        .header h1 {{ font-size: 21px; }}
+        .patient-grid, .vitals-grid, .med-card__meta {{ grid-template-columns: 1fr; }}
+        .vital__value {{ font-size: 16px; }}
+    }}
 </style>
 </head>
 <body>
+<main class="report-shell">
     <div class="header">
         <h1>Reporte de Auditoria y Pase de Sala</h1>
         <p><strong>Generado:</strong> {fecha_generacion}</p>
         <p><strong>Institucion:</strong> MediCare Enterprise PRO</p>
     </div>
 
-    <table>
-        <tr>
-            <th>Paciente</th>
-            <td>{nombre}</td>
-            <th>DNI</th>
-            <td>{dni}</td>
-        </tr>
-        <tr>
-            <th>Obra Social</th>
-            <td>{obra_social}</td>
-            <th>Estado General</th>
-            <td><span class="estado-badge">{estado_general}</span></td>
-        </tr>
-        <tr>
-            <th>Fecha de Nacimiento</th>
-            <td>{fnac}</td>
-            <th>Diagnostico Principal</th>
-            <td>{diag_principal}</td>
-        </tr>
-    </table>
+    <section class="patient-grid" aria-label="Datos del paciente">
+        <div class="field"><span class="field__label">Paciente</span><div class="field__value">{nombre}</div></div>
+        <div class="field"><span class="field__label">DNI</span><div class="field__value">{dni}</div></div>
+        <div class="field"><span class="field__label">Obra Social</span><div class="field__value">{obra_social}</div></div>
+        <div class="field"><span class="field__label">Estado General</span><div class="field__value"><span class="estado-badge">{estado_general}</span></div></div>
+        <div class="field"><span class="field__label">Fecha de Nacimiento</span><div class="field__value">{fnac}</div></div>
+        <div class="field"><span class="field__label">Diagnostico Principal</span><div class="field__value">{diag_principal}</div></div>
+    </section>
 
-    <div class="section-title">1. Signos Vitales Mas Recientes</div>
-    <table>
-        <tr>
-            <th>Tension Arterial</th>
-            <th>Frec. Cardiaca</th>
-            <th>Temperatura</th>
-            <th>Saturacion O2</th>
-            <th>Glucemia</th>
-        </tr>
-        <tr>
-            <td>{ta} mmHg</td>
-            <td>{fc} lpm</td>
-            <td>{temp} °C</td>
-            <td>{spo2} %</td>
-            <td>{glu} mg/dL</td>
-        </tr>
-    </table>
+    <section class="section">
+        <div class="section-title">1. Signos Vitales Mas Recientes</div>
+        <div class="vitals-grid">
+            <div class="vital"><span class="vital__label">Tension Arterial</span><div class="vital__value">{ta} <small>mmHg</small></div></div>
+            <div class="vital"><span class="vital__label">Frec. Cardiaca</span><div class="vital__value">{fc} <small>lpm</small></div></div>
+            <div class="vital"><span class="vital__label">Temperatura</span><div class="vital__value">{temp} <small>C</small></div></div>
+            <div class="vital"><span class="vital__label">Saturacion O2</span><div class="vital__value">{spo2} <small>%</small></div></div>
+            <div class="vital"><span class="vital__label">Glucemia</span><div class="vital__value">{glu} <small>mg/dL</small></div></div>
+        </div>
+    </section>
 
     {bloque_evolucion}
 
-    <div class="section-title">3. Tratamiento y Cuidados Activos</div>
-    <table>
-        <tr>
-            <th>Medicacion / Indicacion</th>
-            <th>Dosis</th>
-            <th>Via</th>
-            <th>Frecuencia</th>
-            <th>Estado</th>
-            <th>Fecha</th>
-        </tr>
-        {filas_medicacion}
-    </table>
+    <section class="section">
+        <div class="section-title">3. Tratamiento y Cuidados Activos</div>
+        <div class="treatment-list">
+            {bloque_medicacion}
+        </div>
+    </section>
 
-    <div class="section-title">4. Pendientes y Observaciones de Auditoria</div>
-    {bloque_alertas}
+    <section class="section">
+        <div class="section-title">4. Pendientes y Observaciones de Auditoria</div>
+        {bloque_alertas}
+    </section>
 
     <div class="footer">
         Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.
     </div>
+</main>
 </body>
 </html>"""
     return html
@@ -616,30 +633,36 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     pdf.cell(0, 6, f"Generado: {fecha_generacion}  |  MediCare Enterprise PRO", ln=True, align="C", fill=True)
     pdf.ln(4)
 
-    # --- Datos del paciente (tabla simple) ---
+    # --- Datos del paciente ---
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "DATOS DEL PACIENTE", ln=True)
-    pdf.set_font("Arial", "", 10)
 
-    col_w = pdf.w / 2 - 15
-    pdf.set_fill_color(236, 240, 241)
-    pdf.cell(35, 7, "Paciente:", fill=True)
-    pdf.cell(col_w - 35, 7, nombre)
-    pdf.cell(35, 7, "DNI:", fill=True)
-    pdf.cell(col_w - 35, 7, dni, ln=True)
+    def pdf_field(label: str, value: str):
+        pdf.set_x(pdf.l_margin)
+        pdf.set_fill_color(245, 247, 250)
+        pdf.set_text_color(44, 62, 80)
+        pdf.set_font("Arial", "B", 9)
+        pdf.cell(38, 7, label, border=0, fill=True)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(0, 0, 0)
+        pdf.multi_cell(0, 7, value, border=0)
 
-    pdf.cell(35, 7, "Obra Social:", fill=True)
-    pdf.cell(col_w - 35, 7, obra_social)
-    pdf.cell(35, 7, "F. Nacimiento:", fill=True)
-    pdf.cell(col_w - 35, 7, fnac, ln=True)
-
-    pdf.cell(35, 7, "Diagnostico:", fill=True)
-    pdf.cell(0, 7, diag_principal, ln=True)
+    pdf_field("Paciente", nombre)
+    pdf_field("DNI", dni)
+    pdf_field("Obra Social", obra_social)
+    pdf_field("F. Nacimiento", fnac)
+    pdf_field("Diagnostico", diag_principal)
 
     pdf.set_font("Arial", "B", 10)
-    pdf.set_text_color(231, 76, 60) if semaforo == "rojo" else (pdf.set_text_color(243, 156, 18) if semaforo == "amarillo" else pdf.set_text_color(39, 174, 96))
-    pdf.cell(0, 8, f"Estado General: {estado_general}", ln=True)
+    if semaforo == "rojo":
+        pdf.set_text_color(231, 76, 60)
+    elif semaforo == "amarillo":
+        pdf.set_text_color(243, 156, 18)
+    else:
+        pdf.set_text_color(39, 174, 96)
+    pdf.set_x(pdf.l_margin)
+    pdf.multi_cell(0, 8, f"Estado General: {estado_general}")
     pdf.set_text_color(0, 0, 0)
     pdf.ln(3)
 
