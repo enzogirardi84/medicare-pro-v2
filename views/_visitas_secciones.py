@@ -438,7 +438,7 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
                             except Exception as e:
                                 from core.app_logging import log_event
                                 log_event("visitas_sql", f"error_dual_write_update_turno:{type(e).__name__}")
-                        for item in st.session_state["agenda_db"]:
+                        for item in st.session_state.get("agenda_db", []):
                             if (
                                 item.get("paciente") == objetivo.get("paciente")
                                 and item.get("profesional") == objetivo.get("profesional")

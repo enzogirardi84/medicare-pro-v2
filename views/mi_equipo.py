@@ -256,7 +256,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not usuarios_base:
-        for login, datos in st.session_state["usuarios_db"].items():
+        for login, datos in st.session_state.get("usuarios_db", {}).items():
             fila = dict(datos)
             fila["_login"] = login
             usuarios_base.append(fila)
