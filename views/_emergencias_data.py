@@ -69,7 +69,7 @@ EVENTO_CATEGORIAS = {
         "Preeclampsia / eclampsia",
         "Control obstetrico urgente",
     ],
-    "Percentilo": [
+    "Pediatria": [
         "Fiebre alta en nino",
         "Convulsion febril",
         "Dificultad respiratoria pediatrica",
