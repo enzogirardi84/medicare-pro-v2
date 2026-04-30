@@ -341,3 +341,56 @@ class TestHelperFunctions:
         
         assert result.priority in ["low", "medium", "high", "urgent"]
         assert len(result.reasons) > 0
+
+    def test_confidence_capped(self):
+        """Test que confidence no supera 0.95"""
+        from core.ai_assistant import ClinicalRiskPredictor
+
+        predictor = ClinicalRiskPredictor()
+        result = predictor.assess_risk(
+            age=85,
+            vital_signs={"saturacion_o2": 85, "presion_arterial": "200/120"},
+            symptoms=["dolor de pecho", "disnea severa"],
+            comorbidities=["diabetes descompensada", "insuficiencia cardiaca"]
+        )
+
+        assert result.confidence <= 0.95
+        assert result.confidence >= 0.0
+
+    def test_diastolic_detection(self):
+        """Test deteccion de diastolica elevada desde string PA"""
+        from core.ai_assistant import VitalSignAnomalyDetector
+
+        detector = VitalSignAnomalyDetector()
+        vitals = {"presion_arterial": "120/95"}  # diastolica > 90
+
+        anomalies = detector.detect_anomalies(vitals)
+        diastolic_anomalies = [a for a in anomalies if a.parameter == "presion_arterial_diastolic"]
+        assert len(diastolic_anomalies) == 1
+        assert diastolic_anomalies[0].value == 95.0
+
+    def test_division_by_zero_history(self):
+        """Test que cambio brusco con valor previo 0 no causa ZeroDivisionError"""
+        from core.ai_assistant import VitalSignAnomalyDetector
+
+        detector = VitalSignAnomalyDetector()
+        history = [{"temperatura": 0.0}, {"temperatura": 0.0}]
+        current = {"temperatura": 5.0}
+
+        # No debe lanzar excepcion
+        anomalies = detector.detect_anomalies(current, history)
+        # Solo detecta valor fuera de rango, no cambio brusco
+        assert any(a.parameter == "temperatura" for a in anomalies)
+
+    def test_improve_note_fallback_on_error(self):
+        """Test que improve_note retorna draft original si el LLM falla"""
+        from core.ai_assistant import AIEvolutionAssistant
+        from unittest.mock import patch
+
+        with patch("core.ai_assistant.LLM_ENABLED", True):
+            with patch("core.ai_assistant.LLM_PROVIDER", "openai"):
+                assistant = AIEvolutionAssistant()
+                draft = "Paciente con dolor."
+                with patch.object(assistant, "_call_llm", side_effect=RuntimeError("API down")):
+                    result = assistant.improve_note(draft)
+                    assert result == draft

@@ -6,6 +6,7 @@ un resumen ejecutivo con alertas, metricas y tendencias.
 
 from __future__ import annotations
 
+from datetime import datetime
 from html import escape
 from typing import Optional
 
@@ -244,7 +245,8 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
         eventos.append((em.get("fecha", "-"), "Emergencia", em.get("motivo", em.get("tipo", "-"))[:120], "#EF4444"))
 
     # Ordenar por fecha aproximada (descendente)
-    eventos.sort(key=lambda x: str(x[0]), reverse=True)
+    from core.clinical_assistant_service import _parse_fecha
+    eventos.sort(key=lambda x: _parse_fecha(str(x[0])) or datetime.min, reverse=True)
     for fecha, titulo, detalle, color in eventos[:30]:
         timeline_event(fecha, titulo, detalle, color_dot=color)
 

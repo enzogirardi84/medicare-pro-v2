@@ -313,11 +313,13 @@ NOTA MEJORADA:"""
             import requests
             
             local_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
+            local_model = os.getenv("LOCAL_LLM_MODEL", "llama3.1")
+            model = local_model if LLM_MODEL in ("gpt-4", "gpt-3.5-turbo", "claude-3") else LLM_MODEL
             
             response = requests.post(
                 f"{local_url}/api/generate",
                 json={
-                    "model": LLM_MODEL,
+                    "model": model,
                     "prompt": prompt,
                     "stream": False,
                     "options": {
@@ -457,7 +459,7 @@ class ClinicalRiskPredictor:
             level=level,
             factors=factors,
             recommendations=recommendations,
-            confidence=0.7 + (score / 200)  # Más score = más confianza en alerta
+            confidence=min(0.95, 0.7 + (score / 200))  # Más score = más confianza en alerta (cap 0.95)
         )
 
 
@@ -497,16 +499,17 @@ class VitalSignAnomalyDetector:
         for param, (min_val, max_val) in self.NORMAL_RANGES.items():
             value = current_vitals.get(param)
             
-            if value is None and param == "presion_arterial_systolic":
+            if value is None and param in ("presion_arterial_systolic", "presion_arterial_diastolic"):
                 # Extraer de formato "120/80"
                 pa = current_vitals.get("presion_arterial", "")
                 if isinstance(pa, str) and "/" in pa:
                     try:
-                        if "systolic" in param:
-                            value = float(pa.split("/")[0])
+                        parts = pa.split("/")
+                        if param == "presion_arterial_systolic":
+                            value = float(parts[0])
                         else:
-                            value = float(pa.split("/")[1])
-                    except ValueError:
+                            value = float(parts[1])
+                    except (ValueError, IndexError):
                         continue
             
             if value is None:
@@ -537,6 +540,8 @@ class VitalSignAnomalyDetector:
                 
                 # Calcular cambio porcentual
                 if isinstance(current_val, (int, float)) and isinstance(previous_val, (int, float)):
+                    if previous_val == 0:
+                        continue
                     change_pct = abs(current_val - previous_val) / previous_val * 100
                     
                     # Alertar si cambio > 20%
@@ -577,9 +582,9 @@ class VitalSignAnomalyDetector:
         
         # Determinar por distancia al rango normal
         if value < min_val:
-            distance = (min_val - value) / min_val
+            distance = (min_val - value) / min_val if min_val != 0 else abs(value)
         else:
-            distance = (value - max_val) / max_val
+            distance = (value - max_val) / max_val if max_val != 0 else abs(value)
         
         if distance > 0.5:
             return "high"

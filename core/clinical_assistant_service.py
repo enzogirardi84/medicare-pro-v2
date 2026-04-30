@@ -35,9 +35,11 @@ def _horas_desde(fecha: Optional[datetime]) -> Optional[float]:
     return (_ahora() - fecha).total_seconds() / 3600.0
 
 def _coincide_paciente(item: dict, paciente_id: str) -> bool:
-    if not paciente_id:
+    if paciente_id is None:
         return False
     pid_norm = str(paciente_id).strip().lower()
+    if not pid_norm or pid_norm == "none":
+        return False
     for campo in (item.get("paciente"), item.get("paciente_id"), item.get("nombre"), item.get("dni")):
         if campo is not None and pid_norm in str(campo).strip().lower():
             return True
@@ -240,7 +242,7 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
     emergencias = datos.get("emergencias", [])
     # Ultimos vitales
     ultimo_vital = None
-    for v in sorted(vitales, key=lambda x: _parse_fecha(x.get("fecha") or x.get("timestamp")) or datetime.min, reverse=True):
+    for v in sorted(vitales, key=lambda x: (_parse_fecha(x.get("fecha") or x.get("timestamp")) or datetime.min, vitales.index(x) if x in vitales else 0), reverse=True):
         ultimo_vital = v
         break
     ultima_ta = "-"
@@ -311,7 +313,7 @@ def generar_texto_pase_guardia(paciente_id: str, datos: dict, dashboard: dict) -
         f"=== INFORME DE PASE DE GUARDIA / AUDITORIA ===",
         f"Paciente: {nombre} | DNI: {dni}",
         f"Generado: {_ahora().strftime('%d/%m/%Y %H:%M')}",
-        f"Semaforo de estado: {dashboard['semaforo'].upper()}",
+        f"Semaforo de estado: {dashboard.get('semaforo', 'desconocido').upper()}",
         "",
         f"Alertas criticas: {dashboard['alertas_criticas']}",
         f"Alertas warning: {dashboard['alertas_warning']}",
