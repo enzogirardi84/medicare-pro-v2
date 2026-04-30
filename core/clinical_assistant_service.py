@@ -328,6 +328,261 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
         "total_emergencias": len(emergencias),
     }
 
+def _esc_html(valor: Any) -> str:
+    """Escape seguro para contenido HTML."""
+    from html import escape
+    return escape(str(valor) if valor is not None else "-")
+
+
+def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: dict) -> str:
+    """Genera un informe clinico profesional en HTML con CSS embebido.
+
+    Cero truncamientos, cero etiquetas de log ([WARNING], [INFO]).
+    """
+    paciente_data = datos.get("paciente_data") or {}
+    nombre = _esc_html(paciente_data.get("nombre", paciente_id))
+    dni = _esc_html(paciente_data.get("dni", "-"))
+    obra_social = _esc_html(paciente_data.get("obra_social", "S/D"))
+    fnac = _esc_html(paciente_data.get("fnac", "S/D"))
+    diag_principal = _esc_html(paciente_data.get("diagnostico", paciente_data.get("patologias", "Sin diagnostico principal registrado")))
+    fecha_generacion = _esc_html(_ahora().strftime("%d/%m/%Y %H:%M"))
+
+    semaforo = dashboard.get("semaforo", "desconocido")
+    estado_general = "Atencion Requerida" if semaforo in ("rojo", "amarillo") else "Estable"
+    color_semaforo = "#E74C3C" if semaforo == "rojo" else ("#F39C12" if semaforo == "amarillo" else "#27AE60")
+
+    # Signos vitales
+    ta = _esc_html(dashboard.get("ultima_ta", "-"))
+    fc = _esc_html(dashboard.get("ultima_fc", "-"))
+    temp = _esc_html(dashboard.get("ultima_temp", "-"))
+    spo2 = _esc_html(dashboard.get("ultima_spo2", "-"))
+    glu = _esc_html(dashboard.get("ultima_glu", "-"))
+
+    # Ultima evolucion
+    evoluciones = datos.get("evoluciones", [])
+    bloque_evolucion = ""
+    if evoluciones:
+        ultima_evo = max(evoluciones, key=lambda x: _parse_fecha(x.get("fecha", "")) or datetime.min)
+        evo_fecha = _esc_html(ultima_evo.get("fecha", "S/D"))
+        evo_prof = _esc_html(ultima_evo.get("firma", ultima_evo.get("profesional", "S/D")))
+        evo_texto = _esc_html(ultima_evo.get("nota", ultima_evo.get("evolucion", ultima_evo.get("texto", "Sin detalle de texto"))))
+        bloque_evolucion = f"""
+        <div class="section-title">2. Ultima Evolucion Clinica</div>
+        <div class="evo-box">
+            <p><strong>Fecha:</strong> {evo_fecha} &nbsp;|&nbsp; <strong>Profesional:</strong> {evo_prof}</p>
+            <blockquote>{evo_texto}</blockquote>
+        </div>
+        """
+    else:
+        bloque_evolucion = """
+        <div class="section-title">2. Ultima Evolucion Clinica</div>
+        <p>Sin evoluciones registradas.</p>
+        """
+
+    # Medicacion activa
+    indicaciones = datos.get("indicaciones", [])
+    indicaciones_activas = [
+        ind for ind in indicaciones
+        if "activa" in str(ind.get("estado_receta", ind.get("estado_clinico", ""))).lower()
+    ]
+    filas_medicacion = ""
+    if indicaciones_activas:
+        for ind in indicaciones_activas:
+            med = _esc_html(ind.get("med", "Medicacion"))
+            dosis = _esc_html(ind.get("dosis", "S/D"))
+            via = _esc_html(ind.get("via", "S/D"))
+            frec = _esc_html(ind.get("frecuencia", "S/D"))
+            estado_ind = _esc_html(ind.get("estado_receta", ind.get("estado_clinico", "Activa")))
+            fecha_ind = _esc_html(ind.get("fecha", "S/D"))
+            filas_medicacion += f"""
+            <tr>
+                <td>{med}</td>
+                <td>{dosis}</td>
+                <td>{via}</td>
+                <td>{frec}</td>
+                <td>{estado_ind}</td>
+                <td>{fecha_ind}</td>
+            </tr>
+            """
+    else:
+        filas_medicacion = '<tr><td colspan="6">Sin indicaciones activas registradas.</td></tr>'
+
+    # Alertas / Pendientes — lenguaje clinico profesional
+    alertas = dashboard.get("alertas", [])
+    criticas = [a for a in alertas if a.get("nivel") == "danger"]
+    warnings = [a for a in alertas if a.get("nivel") == "warning"]
+    infos = [a for a in alertas if a.get("nivel") == "info"]
+
+    bloque_alertas = ""
+    if criticas:
+        bloque_alertas += '<div class="alerta critica"><strong>Alertas Criticas — Requiere Intervencion Inmediata</strong></div>\n'
+        for a in criticas:
+            titulo = _esc_html(a.get("titulo", ""))
+            detalle = _esc_html(a.get("detalle", ""))
+            bloque_alertas += f'<div class="observacion critica"><strong>{titulo}:</strong> {detalle}</div>\n'
+    if warnings:
+        bloque_alertas += '<div class="alerta advertencia"><strong>Advertencias Clinicas — Monitoreo Necesario</strong></div>\n'
+        for a in warnings:
+            titulo = _esc_html(a.get("titulo", ""))
+            detalle = _esc_html(a.get("detalle", ""))
+            bloque_alertas += f'<div class="observacion advertencia"><strong>{titulo}:</strong> {detalle}</div>\n'
+    if infos:
+        bloque_alertas += '<div class="alerta info"><strong>Observaciones de Auditoria</strong></div>\n'
+        for a in infos:
+            titulo = _esc_html(a.get("titulo", ""))
+            detalle = _esc_html(a.get("detalle", ""))
+            bloque_alertas += f'<div class="observacion info"><strong>{titulo}:</strong> {detalle}</div>\n'
+    if not alertas:
+        bloque_alertas = '<p>No se registran alertas ni pendientes de auditoria.</p>'
+
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de Auditoria y Pase de Sala — {nombre}</title>
+<style>
+    @page {{ size: A4; margin: 15mm; }}
+    @media print {{
+        body {{ margin: 0; padding: 15mm; }}
+        .no-print {{ display: none; }}
+    }}
+    body {{
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color: #333; line-height: 1.6; margin: 0; padding: 20px;
+        background: #fff;
+    }}
+    .header {{
+        border-bottom: 3px solid #2C3E50; padding-bottom: 12px; margin-bottom: 25px;
+    }}
+    .header h1 {{
+        margin: 0; color: #2C3E50; font-size: 22px; text-transform: uppercase; letter-spacing: 1px;
+    }}
+    .header p {{ margin: 4px 0; color: #7F8C8D; font-size: 13px; }}
+    .estado-badge {{
+        display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff;
+        font-size: 12px; font-weight: bold; background-color: {color_semaforo};
+    }}
+    table {{
+        width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px;
+        font-size: 13px;
+    }}
+    th, td {{
+        border: 1px solid #BDC3C7; padding: 10px; text-align: left; vertical-align: top;
+    }}
+    th {{
+        background-color: #F4F6F7; color: #2C3E50; font-weight: 600;
+    }}
+    .section-title {{
+        background-color: #ECF0F1; color: #2C3E50; padding: 8px 12px;
+        font-size: 15px; font-weight: 600; margin-top: 28px;
+        border-left: 5px solid #3498DB;
+    }}
+    .evo-box {{
+        background: #F8F9FA; border: 1px solid #E5E7EB; padding: 14px; border-radius: 4px;
+        margin-top: 8px;
+    }}
+    .evo-box blockquote {{
+        margin: 8px 0 0 0; padding-left: 14px; border-left: 3px solid #3498DB;
+        color: #444; font-style: italic;
+    }}
+    .observacion {{
+        margin-bottom: 10px; padding: 10px 12px; border-radius: 4px;
+        font-size: 13px;
+    }}
+    .observacion.critica {{
+        background: #FDEDEC; border-left: 4px solid #E74C3C;
+    }}
+    .observacion.advertencia {{
+        background: #FEF5E7; border-left: 4px solid #F39C12;
+    }}
+    .observacion.info {{
+        background: #EBF5FB; border-left: 4px solid #3498DB;
+    }}
+    .alerta {{
+        font-size: 13px; font-weight: 600; margin-top: 14px; margin-bottom: 6px;
+        padding: 6px 10px; border-radius: 3px; display: inline-block;
+    }}
+    .alerta.critica {{ background: #E74C3C; color: #fff; }}
+    .alerta.advertencia {{ background: #F39C12; color: #fff; }}
+    .alerta.info {{ background: #3498DB; color: #fff; }}
+    .footer {{
+        margin-top: 30px; padding-top: 10px; border-top: 1px solid #BDC3C7;
+        font-size: 11px; color: #95A5A6; text-align: center;
+    }}
+</style>
+</head>
+<body>
+    <div class="header">
+        <h1>Reporte de Auditoria y Pase de Sala</h1>
+        <p><strong>Generado:</strong> {fecha_generacion}</p>
+        <p><strong>Institucion:</strong> MediCare Enterprise PRO</p>
+    </div>
+
+    <table>
+        <tr>
+            <th>Paciente</th>
+            <td>{nombre}</td>
+            <th>DNI</th>
+            <td>{dni}</td>
+        </tr>
+        <tr>
+            <th>Obra Social</th>
+            <td>{obra_social}</td>
+            <th>Estado General</th>
+            <td><span class="estado-badge">{estado_general}</span></td>
+        </tr>
+        <tr>
+            <th>Fecha de Nacimiento</th>
+            <td>{fnac}</td>
+            <th>Diagnostico Principal</th>
+            <td>{diag_principal}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">1. Signos Vitales Mas Recientes</div>
+    <table>
+        <tr>
+            <th>Tension Arterial</th>
+            <th>Frec. Cardiaca</th>
+            <th>Temperatura</th>
+            <th>Saturacion O2</th>
+            <th>Glucemia</th>
+        </tr>
+        <tr>
+            <td>{ta} mmHg</td>
+            <td>{fc} lpm</td>
+            <td>{temp} °C</td>
+            <td>{spo2} %</td>
+            <td>{glu} mg/dL</td>
+        </tr>
+    </table>
+
+    {bloque_evolucion}
+
+    <div class="section-title">3. Tratamiento y Cuidados Activos</div>
+    <table>
+        <tr>
+            <th>Medicacion / Indicacion</th>
+            <th>Dosis</th>
+            <th>Via</th>
+            <th>Frecuencia</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+        </tr>
+        {filas_medicacion}
+    </table>
+
+    <div class="section-title">4. Pendientes y Observaciones de Auditoria</div>
+    {bloque_alertas}
+
+    <div class="footer">
+        Documento generado por MediCare Enterprise PRO — No sustituye la historia clinica original.
+    </div>
+</body>
+</html>"""
+    return html
+
+
 def generar_texto_pase_guardia(paciente_id: str, datos: dict, dashboard: dict) -> str:
     paciente_data = datos.get("paciente_data") or {}
     nombre = paciente_data.get("nombre", paciente_id)

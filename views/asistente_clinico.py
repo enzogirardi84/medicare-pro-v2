@@ -21,6 +21,7 @@ from components.clinical_cards import (
 )
 from core.clinical_assistant_service import (
     compilar_dashboard_ejecutivo,
+    generar_html_informe_profesional,
     generar_texto_pase_guardia,
     recopilar_datos_paciente,
 )
@@ -199,9 +200,31 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
         )
 
     if indicaciones:
-        st.markdown("### Indicaciones registradas")
-        for ind in indicaciones[-20:]:
-            renderizar_tarjeta_indicacion(ind)
+        # Separar activas y suspendidas/historicas
+        indicaciones_activas = []
+        indicaciones_suspendidas = []
+        for ind in indicaciones:
+            estado = str(ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))).lower()
+            if "activa" in estado or "vigente" in estado:
+                indicaciones_activas.append(ind)
+            else:
+                indicaciones_suspendidas.append(ind)
+
+        # 1. Renderizar PRIMERO las Activas
+        if indicaciones_activas:
+            st.markdown("### Indicaciones Activas")
+            for ind in indicaciones_activas:
+                renderizar_tarjeta_indicacion(ind)
+        else:
+            st.info("No hay indicaciones farmacologicas activas en este momento.")
+
+        st.markdown("---")
+
+        # 2. Renderizar DESPUES las Suspendidas / Historicas
+        if indicaciones_suspendidas:
+            st.markdown("### Historial: Indicaciones Suspendidas")
+            for ind in indicaciones_suspendidas[-15:]:
+                renderizar_tarjeta_indicacion(ind)
     else:
         st.info("No hay indicaciones registradas para este paciente.")
 
@@ -254,5 +277,28 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
 
     st.divider()
     st.markdown("### Pase de Guardia / Auditoria")
-    texto_informe = generar_texto_pase_guardia(paciente_sel, datos, dashboard)
-    st.text_area("Informe de auditoria (copiar y pegar)", texto_informe, height=300)
+
+    html_informe = generar_html_informe_profesional(paciente_sel, datos, dashboard)
+
+    # Vista previa embebida del informe profesional
+    st.components.v1.html(html_informe, height=600, scrolling=True)
+
+    # Botones de descarga: HTML (listo para imprimir a PDF) y texto plano legacy
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        st.download_button(
+            label="Descargar informe HTML",
+            data=html_informe.encode("utf-8"),
+            file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.html",
+            mime="text/html",
+            use_container_width=True,
+        )
+    with col_d2:
+        texto_legacy = generar_texto_pase_guardia(paciente_sel, datos, dashboard)
+        st.download_button(
+            label="Descargar texto plano (legacy)",
+            data=texto_legacy.encode("utf-8"),
+            file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
