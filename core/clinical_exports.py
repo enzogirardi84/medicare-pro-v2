@@ -499,7 +499,7 @@ def build_emergency_pdf_bytes(session_state, paciente_sel, mi_empresa, record, p
                 pdf.cell(28, 5, safe_text(str(lbl) + ":"), border=0)
                 pdf.set_font("Arial", "", 8)
                 pdf.set_text_color(20, 20, 20)
-                pdf.cell(col_w - 28, 5, safe_text(val[:40]), border=0)
+                pdf.cell(col_w - 28, 5, safe_text(val), border=0)
             pdf.ln(5)
         pdf.set_text_color(0, 0, 0)
 

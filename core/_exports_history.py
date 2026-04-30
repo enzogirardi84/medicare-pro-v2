@@ -102,7 +102,7 @@ def _history_escape_paragraph(value: Any) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
 
 
-def _history_trim_value(value: Any, max_len: int = 900) -> str:
+def _history_trim_value(value: Any, max_len: int = 50000) -> str:
     text = _safe_text(value).strip()
     if len(text) > max_len:
         return text[: max_len - 3] + "..."
@@ -155,42 +155,38 @@ def _history_record_summary(section_name: str, record: Optional[Dict[str, Any]])
         return "Sin detalle."
     if section_name == "Signos Vitales":
         return (
-            f"TA {_history_trim_value(record.get('TA', '-'), 60)} | "
-            f"FC {_history_trim_value(record.get('FC', '-'), 60)} | "
-            f"Sat {_history_trim_value(record.get('Sat', '-'), 60)} | "
-            f"Temp {_history_trim_value(record.get('Temp', '-'), 60)}"
+            f"TA {_history_trim_value(record.get('TA', '-'))} | "
+            f"FC {_history_trim_value(record.get('FC', '-'))} | "
+            f"Sat {_history_trim_value(record.get('Sat', '-'))} | "
+            f"Temp {_history_trim_value(record.get('Temp', '-'))}"
         )
     if section_name == "Balance Hidrico":
         return (
-            f"Ingresos {_history_trim_value(record.get('ingresos', '-'), 60)} | "
-            f"Egresos {_history_trim_value(record.get('egresos', '-'), 60)} | "
-            f"Balance {_history_trim_value(record.get('balance', '-'), 60)}"
+            f"Ingresos {_history_trim_value(record.get('ingresos', '-'))} | "
+            f"Egresos {_history_trim_value(record.get('egresos', '-'))} | "
+            f"Balance {_history_trim_value(record.get('balance', '-'))}"
         )
     if section_name == "Plan Terapeutico":
         return _history_trim_value(
             f"{record.get('med', 'Indicacion sin detalle')} | "
             f"{record.get('estado_receta', record.get('estado_clinico', 'Activa'))}",
-            160,
         )
     if section_name == "Materiales Utilizados":
         return _history_trim_value(
             f"{record.get('insumo', record.get('material', 'Material'))} x {record.get('cantidad', '-')}",
-            160,
         )
     if section_name == "Estudios Complementarios":
         return _history_trim_value(
             f"{record.get('tipo', 'Estudio')} | {record.get('detalle', 'Sin detalle')}",
-            180,
         )
     if section_name == "Consentimientos":
         return _history_trim_value(
             f"{record.get('firmante', 'Firmante')} | {record.get('vinculo', 'Sin vinculo')} | DNI {record.get('dni_firmante', 'S/D')}",
-            180,
         )
 
     for key in ("detalle", "nota", "observaciones", "texto", "descripcion", "motivo", "intervencion"):
         if record.get(key):
-            return _history_trim_value(record.get(key), 220)
+            return _history_trim_value(record.get(key))
 
     pieces = [
         record.get("tipo"),
@@ -233,7 +229,7 @@ def _history_rows_from_record(record: Dict[str, Any]) -> List[Tuple[str, str]]:
     if record.get("firma_b64") or record.get("firma_img"):
         rows.append(("Firma", "Firma digital registrada en el sistema."))
 
-    return rows[:24]
+    return rows
 
 
 def _history_record_heading(record: Dict[str, Any], fallback_index: int) -> str:
