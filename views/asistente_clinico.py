@@ -164,6 +164,20 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
         st.caption("No hay datos de glucemia para graficar.")
 
 
+def renderizar_tarjeta_indicacion(ind: dict):
+    estado = ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))
+    badge_type = "ok" if "activa" in str(estado).lower() else "warning"
+
+    med = str(ind.get("med", "Medicacion"))
+    fecha = str(ind.get("fecha", "-"))
+    via = escape(str(ind.get("via", "-")))
+    frecuencia = escape(str(ind.get("frecuencia", "-")))
+
+    contenido_html = f"<b>Fecha:</b> {fecha}<br><b>Via:</b> {via}<br><b>Frecuencia:</b> {frecuencia}"
+
+    card_clinica(titulo=med, contenido=contenido_html, badge_text=estado, badge_type=badge_type)
+
+
 def _tab_farmacologia(dashboard: dict, datos: dict):
     indicaciones = datos.get("indicaciones", [])
     administracion = datos.get("administracion_med", [])
@@ -187,19 +201,7 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
     if indicaciones:
         st.markdown("### Indicaciones registradas")
         for ind in indicaciones[-20:]:
-            estado = ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))
-            badge = "ok" if "activa" in str(estado).lower() else "warning"
-            med = str(ind.get("med", "Medicacion"))
-            fecha = str(ind.get("fecha", "-"))
-            via = escape(str(ind.get("via", "-")))
-            frecuencia = escape(str(ind.get("frecuencia", "-")))
-            estado_visible = escape(str(estado))
-            card_clinica(
-                f"{med} — {fecha}",
-                f"Via: {via} | Frecuencia: {frecuencia} | Estado: <b>{estado_visible}</b>",
-                badge_text=estado,
-                badge_type=badge,
-            )
+            renderizar_tarjeta_indicacion(ind)
     else:
         st.info("No hay indicaciones registradas para este paciente.")
 

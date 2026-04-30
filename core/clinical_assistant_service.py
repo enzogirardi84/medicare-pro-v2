@@ -7,6 +7,22 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
 
+# CONSTANTES DE CONFIGURACION
+FORMATOS_FECHA = (
+    "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M",
+    "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M",
+    "%Y-%m-%d", "%d/%m/%Y"
+)
+
+MAPEO_BASE_DATOS = {
+    "evoluciones_db": "evoluciones", "vitales_db": "vitales",
+    "indicaciones_db": "indicaciones", "cuidados_enfermeria_db": "cuidados",
+    "consumos_db": "consumos", "balance_db": "balance",
+    "estudios_db": "estudios", "administracion_med_db": "administracion_med",
+    "diagnosticos_db": "diagnosticos", "escalas_clinicas_db": "escalas",
+    "emergencias_db": "emergencias", "checkin_db": "checkin"
+}
+
 def _safe_list(key: str) -> list:
     raw = st.session_state.get(key, [])
     if not isinstance(raw, list):
@@ -19,7 +35,7 @@ def _parse_fecha(valor: Any) -> Optional[datetime]:
     s = str(valor).strip()
     if not s:
         return None
-    for fmt in ("%Y-%m-%dT%H:%M:%S","%Y-%m-%d %H:%M:%S","%Y-%m-%dT%H:%M","%Y-%m-%d %H:%M","%d/%m/%Y %H:%M:%S","%d/%m/%Y %H:%M","%Y-%m-%d","%d/%m/%Y"):
+    for fmt in FORMATOS_FECHA:
         try:
             return datetime.strptime(s, fmt)
         except ValueError:
@@ -83,12 +99,7 @@ def recopilar_datos_paciente(paciente_id: str) -> dict:
     out = {"evoluciones": [], "vitales": [], "indicaciones": [], "cuidados": [],
            "consumos": [], "balance": [], "estudios": [], "administracion_med": [],
            "diagnosticos": [], "escalas": [], "emergencias": [], "checkin": [], "paciente_data": None}
-    for key, target in (("evoluciones_db","evoluciones"),("vitales_db","vitales"),
-                        ("indicaciones_db","indicaciones"),("cuidados_enfermeria_db","cuidados"),
-                        ("consumos_db","consumos"),("balance_db","balance"),
-                        ("estudios_db","estudios"),("administracion_med_db","administracion_med"),
-                        ("diagnosticos_db","diagnosticos"),("escalas_clinicas_db","escalas"),
-                        ("emergencias_db","emergencias"),("checkin_db","checkin")):
+    for key, target in MAPEO_BASE_DATOS.items():
         for item in _safe_list(key):
             if _coincide_paciente(item, paciente_id):
                 out[target].append(item)
