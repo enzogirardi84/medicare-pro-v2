@@ -98,8 +98,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     """Renderiza la navegación de módulos.
 
     - Escritorio: filas de 6 botones nativas (st.columns) + CSS simple para estética.
-    - Móvil: cortina st.expander con botones verticales al 100%.
-    - Botones usan on_click callback (sin st.rerun() manual) para evitar crasheos en móviles.
+    - Móvil: popover con botones verticales al 100% para cierre automatico.
     """
     if not modulos:
         return
@@ -110,8 +109,35 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     es_movil = cliente_es_movil_probable()
 
     if es_movil:
-        # ── CORTINA MÓVIL: expander colapsable con lista vertical de botones ──
-        with st.expander("☰ Navegar a otro módulo", expanded=False):
+        if hasattr(st, "popover"):
+            with st.popover("Menu de modulos", use_container_width=True):
+                for modulo in modulos:
+                    nombre_raw = str(modulo)
+                    if not nombre_raw:
+                        continue
+                    label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+                    icono, texto = _split_icon_label(label)
+                    btn_label = f"{icono} {texto}".strip()
+                    tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+                    if st.button(
+                        btn_label,
+                        key=f"nav_pop_{nombre_raw}",
+                        use_container_width=True,
+                        type=tipo,
+                    ):
+                        st.session_state["modulo_actual"] = nombre_raw
+                        st.rerun()
+            return
+
+        if "menu_nav_abierto" not in st.session_state:
+            st.session_state["menu_nav_abierto"] = False
+
+        def cambiar_modulo_mobile(modulo_seleccionado):
+            st.session_state["modulo_actual"] = modulo_seleccionado
+            st.session_state["menu_nav_abierto"] = False
+
+        # ── Fallback para Streamlit sin st.popover ──
+        with st.expander("Menu de modulos", expanded=st.session_state["menu_nav_abierto"]):
             for modulo in modulos:
                 nombre_raw = str(modulo)
                 if not nombre_raw:
@@ -125,7 +151,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                     key=f"nav_exp_{nombre_raw}",
                     use_container_width=True,
                     type=tipo,
-                    on_click=cambiar_modulo_callback,
+                    on_click=cambiar_modulo_mobile,
                     args=(nombre_raw,),
                 )
         return

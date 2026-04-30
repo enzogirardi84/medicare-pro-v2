@@ -261,13 +261,13 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     st.markdown("### Timeline de eventos clínicos")
     eventos = []
     for ev in datos.get("evoluciones", []):
-        eventos.append((ev.get("fecha", "-"), "Evolucion", ev.get("texto", ev.get("evolucion", "-"))[:120], "#3B82F6"))
+        eventos.append((ev.get("fecha", "-"), "Evolucion", ev.get("texto", ev.get("evolucion", "-")), "#3B82F6"))
     for cu in datos.get("cuidados", []):
-        eventos.append((cu.get("fecha", "-"), "Cuidado", cu.get("detalle", cu.get("cuidado_tipo", "-"))[:120], "#8B5CF6"))
+        eventos.append((cu.get("fecha", "-"), "Cuidado", cu.get("detalle", cu.get("cuidado_tipo", "-")), "#8B5CF6"))
     for es in datos.get("estudios", []):
-        eventos.append((es.get("fecha", es.get("fecha_solicitud", "-")), "Estudio", f"{es.get('tipo', 'Estudio')}: {es.get('nombre', es.get('detalle', '-'))}"[:120], "#F59E0B"))
+        eventos.append((es.get("fecha", es.get("fecha_solicitud", "-")), "Estudio", f"{es.get('tipo', 'Estudio')}: {es.get('nombre', es.get('detalle', '-'))}", "#F59E0B"))
     for em in datos.get("emergencias", []):
-        eventos.append((em.get("fecha", "-"), "Emergencia", em.get("motivo", em.get("tipo", "-"))[:120], "#EF4444"))
+        eventos.append((em.get("fecha", "-"), "Emergencia", em.get("motivo", em.get("tipo", "-")), "#EF4444"))
 
     # Ordenar por fecha aproximada (descendente)
     from core.clinical_assistant_service import _parse_fecha

@@ -183,7 +183,7 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
         med_texto = ind.get("med","")
         ya_admin = any(str(med_texto).lower() in str(adm.get("med","")).lower() for adm in administracion)
         if not ya_admin:
-            alertas.append({"titulo":"Administracion Pendiente","detalle":f"Indicacion activa: {str(med_texto)[:60]}... sin registro de administracion.","nivel":"warning","categoria":"farmacologia"})
+            alertas.append({"titulo":"Administracion Pendiente","detalle":f"Indicacion activa: {str(med_texto)} sin registro de administracion.","nivel":"warning","categoria":"farmacologia"})
     # Curacion sin insumos
     for c in cuidados:
         if _contiene_keyword(c.get("cuidado_tipo",c.get("tipo_cuidado","")),("curacion","curacion")):
@@ -694,12 +694,6 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "3. TRATAMIENTO Y CUIDADOS ACTIVOS", ln=True, fill=True)
     if indicaciones_activas:
-        pdf.set_font("Arial", "B", 9)
-        med_headers = ["Medicacion / Indicacion", "Dosis", "Via", "Frecuencia", "Estado", "Fecha"]
-        med_w = [60, 25, 25, 30, 25, 25]
-        for h, w in zip(med_headers, med_w):
-            pdf.cell(w, 7, h, border=1, align="C")
-        pdf.ln()
         pdf.set_font("Arial", "", 9)
         for ind in indicaciones_activas:
             med = safe_text(ind.get("med", "Medicacion"))
@@ -708,14 +702,23 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
             frec = safe_text(ind.get("frecuencia", "S/D"))
             estado_ind = safe_text(ind.get("estado_receta", ind.get("estado_clinico", "Activa")))
             fecha_ind = safe_text(ind.get("fecha", "S/D"))
-            row = [med, dosis, via, frec, estado_ind, fecha_ind]
-            for v, w in zip(row, med_w):
-                pdf.cell(w, 7, v, border=1)
-            pdf.ln()
+
+            # Bloque de medicacion: nombre en negrita con ajuste automatico
+            pdf.set_font("Arial", "B", 9)
+            pdf.set_x(pdf.l_margin)
+            pdf.multi_cell(0, 5, f"- {med}")
+
+            # Linea de detalles
+            pdf.set_font("Arial", "", 8)
+            pdf.set_x(pdf.l_margin + 3)
+            detalle = f"Dosis: {dosis}  |  Via: {via}  |  Frec: {frec}  |  Estado: {estado_ind}  |  Fecha: {fecha_ind}"
+            pdf.multi_cell(0, 4, detalle)
+            pdf.ln(2)
     else:
         pdf.set_font("Arial", "", 10)
+        pdf.set_x(pdf.l_margin)
         pdf.cell(0, 6, "Sin indicaciones activas registradas.", ln=True)
-    pdf.ln(5)
+    pdf.ln(3)
 
     # --- 4. Pendientes y Observaciones de Auditoria ---
     alertas = dashboard.get("alertas", [])
