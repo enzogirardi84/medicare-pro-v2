@@ -57,7 +57,7 @@ MODULO_ALIAS = {
 
 PERMISOS_MODULOS = {
     "operativo_clinico": [
-        "Visitas", "Admision", "Clinica", "Percentilo", "Evolucion", "Estudios",
+        "Visitas", "Admision", "Clinica", "Percentilo", "Asistente Clinico", "Evolucion", "Estudios",
         "Materiales", "Recetas", "Balance", "Emergencias", "Escalas", "Historial",
         "PDF", "Telemedicina", "Cierre", "APS / Dispensario",
     ],
