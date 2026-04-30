@@ -737,6 +737,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         for a in criticas:
             titulo = safe_text(a.get("titulo", ""))
             detalle = safe_text(a.get("detalle", ""))
+            pdf.set_x(pdf.l_margin)
             pdf.multi_cell(0, 6, f"  - {titulo}: {detalle}")
         pdf.ln(2)
 
@@ -750,6 +751,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         for a in warnings:
             titulo = safe_text(a.get("titulo", ""))
             detalle = safe_text(a.get("detalle", ""))
+            pdf.set_x(pdf.l_margin)
             pdf.multi_cell(0, 6, f"  - {titulo}: {detalle}")
         pdf.ln(2)
 
@@ -763,16 +765,19 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         for a in infos:
             titulo = safe_text(a.get("titulo", ""))
             detalle = safe_text(a.get("detalle", ""))
+            pdf.set_x(pdf.l_margin)
             pdf.multi_cell(0, 6, f"  - {titulo}: {detalle}")
         pdf.ln(2)
 
     if not alertas:
         pdf.set_font("Arial", "", 10)
+        pdf.set_x(pdf.l_margin)
         pdf.cell(0, 6, "No se registran alertas ni pendientes de auditoria.", ln=True)
 
     pdf.ln(5)
     pdf.set_font("Arial", "I", 8)
     pdf.set_text_color(127, 140, 141)
+    pdf.set_x(pdf.l_margin)
     pdf.cell(0, 5, "Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.", ln=True, align="C")
 
     return bytes(pdf.output(dest="S"))
