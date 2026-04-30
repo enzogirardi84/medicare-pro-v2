@@ -737,7 +737,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         for a in criticas:
             titulo = safe_text(a.get("titulo", ""))
             detalle = safe_text(a.get("detalle", ""))
-            pdf.multi_cell(0, 6, f"  • {titulo}: {detalle}")
+            pdf.multi_cell(0, 6, f"  - {titulo}: {detalle}")
         pdf.ln(2)
 
     if warnings:
@@ -750,7 +750,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         for a in warnings:
             titulo = safe_text(a.get("titulo", ""))
             detalle = safe_text(a.get("detalle", ""))
-            pdf.multi_cell(0, 6, f"  • {titulo}: {detalle}")
+            pdf.multi_cell(0, 6, f"  - {titulo}: {detalle}")
         pdf.ln(2)
 
     if infos:
@@ -763,7 +763,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         for a in infos:
             titulo = safe_text(a.get("titulo", ""))
             detalle = safe_text(a.get("detalle", ""))
-            pdf.multi_cell(0, 6, f"  • {titulo}: {detalle}")
+            pdf.multi_cell(0, 6, f"  - {titulo}: {detalle}")
         pdf.ln(2)
 
     if not alertas:
