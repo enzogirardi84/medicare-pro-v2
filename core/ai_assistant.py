@@ -201,40 +201,37 @@ NOTA MEJORADA:"""
         Returns:
             Lista de diagnósticos sugeridos con probabilidad estimada
         """
-        if not self.enabled:
-            return []
-        
-        # Implementación local sin LLM (más seguro y rápido)
-        # En producción, esto podría usar un modelo médico especializado
-        
         suggestions = []
         symptoms_lower = [s.lower() for s in symptoms]
-        
+
+        def _match_any(keywords: list[str]) -> bool:
+            return any(kw in s for s in symptoms_lower for kw in keywords)
+
         # Reglas simples de matching (solo como ejemplo)
-        if any(word in symptoms_lower for word in ["dolor de pecho", "opresión", "taquicardia"]):
+        if _match_any(["dolor de pecho", "opresión", "taquicardia"]):
             suggestions.append({
                 "condition": "Síndrome Coronario Agudo",
                 "probability": "media",
                 "urgency": "alta",
                 "disclaimer": "REQUIERE ECG URGENTE"
             })
-        
-        if any(word in symptoms_lower for word in ["cefalea", "mareos", "hipertensión"]):
+
+        if _match_any(["cefalea", "mareos", "hipertensión"]):
             suggestions.append({
                 "condition": "Crisis Hipertensiva",
                 "probability": "media-alta",
                 "urgency": "media",
                 "disclaimer": "Verificar PA"
             })
-        
-        if any(word in symptoms_lower for word in ["fiebre", "tos", "disnea"]):
+
+        if _match_any(["fiebre", "tos", "disnea"]):
             suggestions.append({
                 "condition": "Neumonía / Infección Respiratoria",
                 "probability": "media",
                 "urgency": "media",
                 "disclaimer": "Considerar Rx de tórax"
             })
-        
+
         return suggestions
     
     def _format_vitals(self, vitals: Optional[Dict]) -> str:

@@ -61,6 +61,32 @@ class TestAIEvolutionAssistant:
             
             assert result == draft  # Retorna sin cambios
 
+    def test_differential_diagnosis_works_when_llm_disabled(self):
+        """Test que suggest_differential_diagnosis funciona sin LLM"""
+        from core.ai_assistant import AIEvolutionAssistant
+
+        with patch("core.ai_assistant.LLM_ENABLED", False):
+            assistant = AIEvolutionAssistant()
+            result = assistant.suggest_differential_diagnosis(
+                symptoms=["dolor de pecho intenso"],
+                vital_signs={},
+            )
+
+            assert len(result) > 0
+            assert any("Coronario" in r["condition"] for r in result)
+
+    def test_differential_diagnosis_substring_match(self):
+        """Test que matching usa substring, no exact match"""
+        from core.ai_assistant import AIEvolutionAssistant
+
+        assistant = AIEvolutionAssistant()
+        result = assistant.suggest_differential_diagnosis(
+            symptoms=["fiebre alta y tos productiva"],
+            vital_signs={},
+        )
+
+        assert any("Neumonía" in r["condition"] for r in result)
+
 
 class TestClinicalRiskPredictor:
     """Tests para ClinicalRiskPredictor"""
