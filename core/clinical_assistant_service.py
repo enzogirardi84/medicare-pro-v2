@@ -457,7 +457,10 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
     }}
     .report-shell {{
         max-width: 1040px; margin: 0 auto; padding: 28px 28px 24px;
-        background: #fff; box-sizing: border-box;
+        background: #fff; box-sizing: border-box; color: #172033;
+    }}
+    .report-shell * {{
+        color: inherit;
     }}
     .header {{
         border-bottom: 3px solid #1F4E79; padding-bottom: 14px; margin-bottom: 22px;
@@ -519,16 +522,28 @@ def generar_html_informe_profesional(paciente_id: str, datos: dict, dashboard: d
     }}
     .observacion {{
         margin-bottom: 10px; padding: 10px 12px; border-radius: 7px;
-        font-size: 13px; overflow-wrap: anywhere;
+        font-size: 13px; overflow-wrap: anywhere; color: #172033;
+    }}
+    .observacion strong {{
+        color: #10243A;
     }}
     .observacion.critica {{
-        background: #FDEDEC; border-left: 4px solid #E74C3C;
+        background: #FDEDEC; border-left: 4px solid #E74C3C; color: #4A1F1A;
+    }}
+    .observacion.critica strong {{
+        color: #8A1F15;
     }}
     .observacion.advertencia {{
-        background: #FEF5E7; border-left: 4px solid #F39C12;
+        background: #FEF5E7; border-left: 4px solid #F39C12; color: #4D3410;
+    }}
+    .observacion.advertencia strong {{
+        color: #7A4A00;
     }}
     .observacion.info {{
-        background: #EBF5FB; border-left: 4px solid #3498DB;
+        background: #EBF5FB; border-left: 4px solid #3498DB; color: #173A56;
+    }}
+    .observacion.info strong {{
+        color: #1F5E8A;
     }}
     .alerta {{
         font-size: 13px; font-weight: 600; margin-top: 14px; margin-bottom: 6px;
