@@ -622,6 +622,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     """
     from io import BytesIO
     from fpdf import FPDF
+    from fpdf.enums import XPos, YPos
     from core.export_utils import safe_text
 
     paciente_data = datos.get("paciente_data") or {}
@@ -660,7 +661,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         pdf.rect(pdf.l_margin, y, page_w, 8, style="F")
         pdf.rect(pdf.l_margin, y, 2.2, 8, style="F")
         pdf.set_xy(pdf.l_margin + 4, y)
-        pdf.cell(page_w - 4, 8, title, ln=True)
+        pdf.cell(page_w - 4, 8, title, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(3)
         reset_text()
 
@@ -678,7 +679,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         pdf.set_xy(x + 2.5, y + 2)
         pdf.set_text_color(102, 117, 138)
         pdf.set_font("Helvetica", "B", 7)
-        pdf.cell(w - 5, 4, label.upper(), ln=True)
+        pdf.cell(w - 5, 4, label.upper(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_x(x + 2.5)
         reset_text()
         pdf.set_font("Helvetica", "", 9)
@@ -694,7 +695,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
             lines.append(("title", safe_text(title)))
         pdf.set_font("Helvetica", "", 9)
         body = safe_text(text)
-        body_lines = pdf.multi_cell(page_w - 8, 4.8, body, split_only=True)
+        body_lines = pdf.multi_cell(page_w - 8, 4.8, body, dry_run=True, output="LINES")
         height = 7 + (4.8 * max(1, len(body_lines))) + (4 if title else 0)
         ensure_space(height + 2)
         start_y = pdf.get_y()
@@ -721,7 +722,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         pdf.set_fill_color(*fill)
         pdf.set_text_color(*title_color)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(page_w, 8, title, ln=True, fill=True)
+        pdf.cell(page_w, 8, title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=True)
         reset_text()
         pdf.ln(1.5)
         for item in items:
@@ -735,10 +736,10 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     pdf.set_xy(pdf.l_margin + 5, pdf.get_y() + 4)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 15)
-    pdf.cell(page_w - 10, 7, "Reporte de Auditoria y Pase de Sala", ln=True)
+    pdf.cell(page_w - 10, 7, "Reporte de Auditoria y Pase de Sala", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_x(pdf.l_margin + 5)
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(page_w - 10, 5, f"Generado: {fecha_generacion} | MediCare Enterprise PRO", ln=True)
+    pdf.cell(page_w - 10, 5, f"Generado: {fecha_generacion} | MediCare Enterprise PRO", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(8)
     reset_text()
 
@@ -759,7 +760,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     pdf.set_fill_color(*badge_fill)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(60, 7, f"Estado: {estado_general}", ln=True, align="C", fill=True)
+    pdf.cell(60, 7, f"Estado: {estado_general}", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C", fill=True)
     reset_text()
     pdf.ln(4)
 
@@ -783,11 +784,11 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         pdf.set_xy(x + 2, y + 2)
         pdf.set_text_color(102, 117, 138)
         pdf.set_font("Helvetica", "B", 7)
-        pdf.cell(card_w - 4, 4, label.upper(), ln=True)
+        pdf.cell(card_w - 4, 4, label.upper(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_xy(x + 2, y + 7)
         reset_text()
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(card_w - 4, 5, value, ln=True)
+        pdf.cell(card_w - 4, 5, value, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_x(x + 2)
         pdf.set_font("Helvetica", "", 7)
         pdf.set_text_color(102, 117, 138)
@@ -804,7 +805,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
         evo_prof = safe_text(ultima_evo.get("firma", ultima_evo.get("profesional", "S/D")))
         evo_texto = safe_text(ultima_evo.get("nota", ultima_evo.get("evolucion", ultima_evo.get("texto", "Sin detalle de texto"))))
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(0, 5, f"Fecha: {evo_fecha} | Profesional: {evo_prof}", ln=True)
+        pdf.cell(0, 5, f"Fecha: {evo_fecha} | Profesional: {evo_prof}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(1)
         text_box(evo_texto, (248, 250, 252), (216, 224, 232))
     else:
@@ -867,9 +868,9 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     pdf.ln(3)
     pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(127, 140, 141)
-    pdf.cell(page_w, 5, "Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.", ln=True, align="C")
+    pdf.cell(page_w, 5, "Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
-    return bytes(pdf.output(dest="S"))
+    return bytes(pdf.output())
 
 
 def generar_texto_pase_guardia(paciente_id: str, datos: dict, dashboard: dict) -> str:
