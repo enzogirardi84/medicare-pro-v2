@@ -8,4 +8,5 @@ def pytest_collection_modifyitems(config, items):
         return
     skip_integration = pytest.mark.skip(reason="Set NEXTGEN_BASE_URL to run integration contract tests.")
     for item in items:
-        item.add_marker(skip_integration)
+        if "integration" in item.path.parts:
+            item.add_marker(skip_integration)
