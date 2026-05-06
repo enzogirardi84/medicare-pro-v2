@@ -1,39 +1,70 @@
 name: nextgen-smoke-pr
 
 on:
+  workflow_dispatch:
+
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "nextgen_platform/**"
       - ".github/workflows/**"
       - ".github/actions/**"
 
 concurrency:
-  group: nextgen-smoke-pr-${{ github.event.pull_request.number || github.ref }}
+  group: nextgen-smoke-pr-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  actions: read
 
 jobs:
   smoke-nextgen:
+    name: Smoke NextGen
     runs-on: ubuntu-latest
     timeout-minutes: 35
+
     defaults:
       run:
+        shell: bash
         working-directory: nextgen_platform
 
+    env:
+      PROJECT_DIR: nextgen_platform
+      COMPOSE_FILE: infra/docker/docker-compose.yml
+      NEXTGEN_BASE_URL: http://localhost:8000
+      HEALTHCHECK_URL: http://localhost:8000/health
+      PYTHONUNBUFFERED: "1"
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: "nextgen_platform/requirements-dev.txt"
+          cache-dependency-path: nextgen_platform/requirements-dev.txt
+
+      - name: Show Python and pip version
+        run: |
+          python --version
+          python -m pip --version
 
       - name: Install dev dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Prepare CI artifacts directory
+        run: |
+          mkdir -p ci_artifacts
+
+      - name: Validate docker compose config
+        run: |
+          docker compose -f "$COMPOSE_FILE" config >/dev/null
 
       - name: Build/start stack and wait health
         uses: ./.github/actions/nextgen-stack-up
@@ -43,14 +74,18 @@ jobs:
           healthcheck_url: http://localhost:8000/health
           max_attempts: "60"
           sleep_seconds: "5"
-          initial_delay_seconds: "10"
 
       - name: Run smoke integration contracts
-        env:
-          NEXTGEN_BASE_URL: http://localhost:8000
         run: |
-          mkdir -p ci_artifacts
-          python -m pytest tests/integration/test_auth_contract.py tests/integration/test_outbox_contract.py tests/integration/test_system_resilience_contract.py tests/integration/test_api_guardrails_contract.py -q --junitxml=ci_artifacts/smoke-junit.xml
+          python -m pytest \
+            tests/integration/test_auth_contract.py \
+            tests/integration/test_outbox_contract.py \
+            tests/integration/test_system_resilience_contract.py \
+            tests/integration/test_api_guardrails_contract.py \
+            -q \
+            -ra \
+            --durations=10 \
+            --junitxml=ci_artifacts/smoke-junit.xml
 
       - name: Capture and upload docker logs on failure
         if: failure()
@@ -62,7 +97,8 @@ jobs:
           artifact_name: nextgen-smoke-pr-failure-logs
 
       - name: Publish test summary
-        if: always()
+        if: ${{ always() && hashFiles('nextgen_platform/ci_artifacts/smoke-junit.xml') != '' }}
+        continue-on-error: true
         uses: ./.github/actions/publish-junit-summary
         with:
           report_path: nextgen_platform/ci_artifacts/smoke-junit.xml
@@ -74,6 +110,8 @@ jobs:
         with:
           name: nextgen-smoke-pr-junit
           path: nextgen_platform/ci_artifacts/smoke-junit.xml
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Shutdown stack
         if: always()
