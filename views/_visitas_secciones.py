@@ -92,9 +92,9 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
     st.rerun()
 
 
-def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
+def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario, show_divider=True):
     """Sección: Fichada Legal de Visita (GPS Real) + Control de Horas."""
-    st.subheader("Fichada Legal de Visita (GPS Real)")
+    st.subheader("Fichada de visita")
     lat, lon, direccion = None, None, "Ubicacion Omitida"
 
     if GEO_DISPONIBLE:
@@ -130,8 +130,9 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
     if col_out.button("Fichar SALIDA", use_container_width=True):
         _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "SALIDA", lat_val, lon_val, direccion_final)
 
-    st.divider()
-    st.markdown("#### Control de Horas de Guardia (Hoy)")
+    if show_divider:
+        st.divider()
+    st.markdown("#### Control de horas de hoy")
     hoy_str = ahora().strftime("%d/%m/%Y")
     fichadas_hoy = []
     chk_sql = None
@@ -197,9 +198,21 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
         )
 
 
-def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente, nombre_usuario, nombre_corto_pac, dire_paciente, tel_paciente):
+def _render_agendar_visita(
+    paciente_sel,
+    mi_empresa,
+    user,
+    rol,
+    agenda_paciente,
+    nombre_usuario,
+    nombre_corto_pac,
+    dire_paciente,
+    tel_paciente,
+    show_divider=True,
+):
     """Sección: Agendar Próxima Visita."""
-    st.divider()
+    if show_divider:
+        st.divider()
     st.subheader("Agendar Proxima Visita")
     profesionales = sorted({
         str(v.get("nombre", "")).strip()
