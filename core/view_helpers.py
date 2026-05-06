@@ -92,9 +92,12 @@ def bloque_mc_grid_tarjetas(items: list[tuple[str, str]]) -> None:
 
 _VISTAS_COMPACTAS_MOVIL = {
     "Visitas y Agenda",
+    "Dashboard",
+    "Clinicas (panel global)",
     "Admision",
     "Clinica",
-    "Pediatria",
+    "Percentilo",
+    "Asistente Clinico",
     "Evolucion",
     "Estudios",
     "Materiales",

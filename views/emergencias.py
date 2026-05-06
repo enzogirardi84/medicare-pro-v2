@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 from core.app_logging import log_event
 from core.db_sql import get_emergencias_by_paciente
@@ -74,15 +75,17 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     m1.metric("Eventos", len(eventos))
     m2.metric("Criticos activos", len(activos))
     m3.metric("Traslados", len(traslados))
-    m4.metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
+    m4.metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "-")
 
-    tab_reg, tab_panel, tab_hist = st.tabs(["⚡ Registrar evento", "📋 Panel operativo", "📄 Historial y PDF"])
-
-    with tab_reg:
+    area = st.selectbox(
+        "Area de emergencia",
+        ["Registrar evento", "Panel operativo", "Historial y PDF"],
+        key=f"emergencias_area_{paciente_sel}",
+        help="Renderiza solo el area elegida para mantener la pantalla liviana.",
+    )
+    if area == "Registrar evento":
         _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil)
-
-    with tab_panel:
+    elif area == "Panel operativo":
         _render_tab_panel(paciente_sel, detalles, eventos, es_movil)
-
-    with tab_hist:
+    else:
         _render_tab_historial(paciente_sel, mi_empresa, eventos, es_movil)
