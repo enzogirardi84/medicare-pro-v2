@@ -1,4 +1,4 @@
 -r apps/api/requirements.txt
 -r apps/worker/requirements.txt
-pytest>=8.0.0
+pytest>=9.0.3
 requests>=2.32.0
