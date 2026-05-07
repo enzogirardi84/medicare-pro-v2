@@ -193,7 +193,7 @@ def render_auditoria(mi_empresa, user):
             filtro_fechas = []
             for r in registros_filtrados:
                 fecha_raw = str(r.get(col_fecha, "") or "").strip()
-                dt = pd.to_datetime(fecha_raw, format="%d/%m/%Y" if col_fecha == "F" else None, errors="coerce")
+                dt = pd.to_datetime(fecha_raw, dayfirst=True, errors="coerce")
                 if pd.notna(dt) and fecha_inicio <= dt.date() <= fecha_fin:
                     filtro_fechas.append(r)
             registros_filtrados = filtro_fechas

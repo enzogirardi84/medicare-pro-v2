@@ -148,7 +148,10 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario, show_divider=T
                     if pd.notnull(dt) and dt.strftime("%d/%m/%Y") == hoy_str:
                         paciente_nombre = c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A"
                         prof_nombre = c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido"
-                        if paciente_sel.startswith(paciente_nombre) and prof_nombre == nombre_usuario:
+                        paciente_sql = str(paciente_nombre or "").strip().lower()
+                        paciente_actual = str(paciente_sel or "").strip().lower()
+                        mismo_paciente = paciente_sql and (paciente_actual == paciente_sql or paciente_sql in paciente_actual)
+                        if mismo_paciente and prof_nombre == nombre_usuario:
                             fichadas_hoy.append({
                                 "paciente": paciente_sel,
                                 "profesional": nombre_usuario,
@@ -181,13 +184,15 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario, show_divider=T
                 llegada_time = dt
             elif "SALIDA" in str(f.get("tipo", "")).upper() and llegada_time:
                 duracion = dt - llegada_time
-                horas, rem = divmod(duracion.seconds, 3600)
+                total_segundos = int(duracion.total_seconds())
+                horas, rem = divmod(total_segundos, 3600)
                 minutos, _ = divmod(rem, 60)
                 st.success(f"Turno completado: {llegada_time.strftime('%H:%M')} -> {dt.strftime('%H:%M')} ({horas}h {minutos}m)")
                 llegada_time = None
         if llegada_time:
             duracion_actual = ahora_naive - llegada_time
-            horas, rem = divmod(duracion_actual.seconds, 3600)
+            total_segundos = int(duracion_actual.total_seconds())
+            horas, rem = divmod(total_segundos, 3600)
             minutos, _ = divmod(rem, 60)
             st.warning(f"Guardia en curso desde las {llegada_time.strftime('%H:%M')} -> {horas}h {minutos}m")
     else:

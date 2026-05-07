@@ -71,7 +71,8 @@ def render_asistencia(mi_empresa, user):
                     col_info, col_btn = st.columns([3, 1])
                     dt_llegada = data["llegada"]
                     duracion = ahora().replace(tzinfo=None) - dt_llegada
-                    horas, rem = divmod(duracion.seconds, 3600)
+                    total_segundos = int(duracion.total_seconds())
+                    horas, rem = divmod(total_segundos, 3600)
                     minutos, _ = divmod(rem, 60)
 
                     col_info.markdown(f"**{profesional}** esta en el domicilio de **{data['paciente']}**")
