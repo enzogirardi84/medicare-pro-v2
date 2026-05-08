@@ -25,5 +25,7 @@ def reverse_geocode_short_label(lat, lon) -> str:
             if len(partes) > 3:
                 return ", ".join(partes[:3])
             return display_name
-    except Exception:
+    except Exception as e:
+        from core.app_logging import log_event
+        log_event("nominatim", f"reverse_geocode_falla:{type(e).__name__}:{e}")
         return "Direccion exacta no disponible (solo coordenadas)"
