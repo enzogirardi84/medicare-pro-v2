@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 import redis
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -86,32 +87,27 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 def refresh(payload: RefreshRequest):
     try:
         claims = jwt.decode(payload.refresh_token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError as exc:
+    except PyJWTError as exc:
         raise HTTPException(status_code=401, detail="Invalid refresh token") from exc
 
     if claims.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid token type")
-    jti = claims.get("jti")
-    if _is_token_revoked(jti, operation="refresh_check"):
-        token_revocation_events_total.labels(operation="refresh_check", result="revoked").inc()
-        raise HTTPException(status_code=401, detail="Refresh token revoked")
+    if claims.get("jti") is None:
+        raise HTTPException(status_code=401, detail="Missing token id")
+    try:
+        if redis_client.get(f"revoked_token:{claims['jti']}") == "1":
+            raise HTTPException(status_code=401, detail="Token revoked")
+    except redis.RedisError:
+        pass
 
-    _store_revoked_token(
-        jti,
-        settings.refresh_token_expire_days * 24 * 3600,
-        operation="refresh_rotate_revoke_old",
+    new_access = create_access_token(
+        sub=claims["sub"], tenant_id=claims["tenant_id"], role=claims.get("role", "staff")
     )
-    access_token = create_access_token(
-        subject=str(claims["sub"]), tenant_id=str(claims["tenant_id"]), role=str(claims["role"])
-    )
-    refresh_token = create_refresh_token(
-        subject=str(claims["sub"]), tenant_id=str(claims["tenant_id"]), role=str(claims["role"])
-    )
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return {"access_token": new_access, "token_type": "bearer"}
 
 
-@router.post("/logout")
-def logout(payload: LogoutRequest, claims: dict = Depends(get_current_claims)):
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(payload: RefreshRequest, claims: dict = Depends(get_current_claims)):
     access_jti = claims.get("jti")
     _store_revoked_token(
         access_jti,
@@ -120,7 +116,7 @@ def logout(payload: LogoutRequest, claims: dict = Depends(get_current_claims)):
     )
     try:
         refresh_claims = jwt.decode(payload.refresh_token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError as exc:
+    except PyJWTError as exc:
         raise HTTPException(status_code=401, detail="Invalid refresh token") from exc
     if refresh_claims.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid token type")

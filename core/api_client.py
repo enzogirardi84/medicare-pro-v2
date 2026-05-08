@@ -11,12 +11,16 @@ from core.app_logging import log_event
 def get_api_base_url() -> str:
     """
     Obtiene la URL base de la nueva API (FastAPI) desde secrets.
-    Si no está configurada, asume localhost para desarrollo local.
+    Si no está configurada, loguea warning y devuelve None para que el caller decida.
     """
     try:
-        return st.secrets.get("NEXTGEN_API_URL", "http://localhost:8000/v1")
+        url = st.secrets.get("NEXTGEN_API_URL", "")
+        if url:
+            return url
     except Exception:
-        return "http://localhost:8000/v1"
+        pass
+    log_event("api_client", "NEXTGEN_API_URL no configurado en secrets.")
+    return ""
 
 
 def get_api_headers(token: Optional[str] = None) -> Dict[str, str]:
@@ -44,6 +48,9 @@ def request_with_retry(method: str, endpoint: str, max_retries: int = 3, **kwarg
     según la guía oficial de integración.
     """
     base_url = get_api_base_url()
+    if not base_url:
+        log_event("api_client", f"Saltando peticion {method} {endpoint}: NEXTGEN_API_URL no configurado.")
+        raise requests.exceptions.ConnectionError("NEXTGEN_API_URL no configurado en secrets.")
     url = f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
     
     # Inyectar headers por defecto si no vienen en kwargs

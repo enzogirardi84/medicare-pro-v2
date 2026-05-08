@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime, timezone
 import time
 
@@ -12,6 +13,7 @@ from app.infrastructure.metrics import self_heal_actions_total, self_heal_depend
 
 _SELF_HEAL_MARKER_KEY = "self_heal:auto_fail_open_active"
 _SELF_HEAL_LAST_CHANGE_TS_KEY = "self_heal:last_change_ts"
+_state_lock = threading.Lock()
 _state = {
     "enabled": bool(settings.self_heal_enabled),
     "active_fail_open": False,
@@ -123,6 +125,11 @@ def _probe_dependencies() -> tuple[bool, bool]:
 
 
 def run_self_heal_cycle() -> dict:
+    with _state_lock:
+        return _run_self_heal_cycle_locked()
+
+
+def _run_self_heal_cycle_locked() -> dict:
     if not settings.self_heal_enabled:
         _state["enabled"] = False
         _state["last_action"] = "disabled"
@@ -198,6 +205,11 @@ def run_self_heal_cycle() -> dict:
 
 
 def get_self_heal_status() -> dict:
+    with _state_lock:
+        return _get_self_heal_status_locked()
+
+
+def _get_self_heal_status_locked() -> dict:
     status = dict(_state)
     last_change = _last_change_ts()
     cooldown_seconds = max(settings.self_heal_cooldown_seconds, 0)

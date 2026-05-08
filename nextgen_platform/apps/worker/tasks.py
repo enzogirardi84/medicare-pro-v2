@@ -10,8 +10,13 @@ from celery import Celery
 import psycopg
 import redis
 
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-database_url = os.getenv("DATABASE_URL", "postgresql+psycopg://postgres:postgres@db:5432/medicare_nextgen")
+redis_url = os.getenv("REDIS_URL") or os.getenv("CELERY_BROKER_URL") or ""
+database_url = os.getenv("DATABASE_URL") or ""
+
+if not redis_url:
+    raise RuntimeError("REDIS_URL or CELERY_BROKER_URL must be set for NextGen worker.")
+if not database_url:
+    raise RuntimeError("DATABASE_URL must be set for NextGen worker.")
 celery_app = Celery("nextgen_worker", broker=redis_url, backend=redis_url)
 redis_client = redis.from_url(redis_url, decode_responses=True)
 celery_app.conf.task_routes = {

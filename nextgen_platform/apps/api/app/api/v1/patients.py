@@ -84,7 +84,10 @@ def create_patient(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Patient document already exists in this tenant") from exc
+        detail = "Patient document already exists in this tenant"
+        if hasattr(exc, 'orig') and exc.orig:
+            detail = str(exc.orig).split('\n')[0][:255]
+        raise HTTPException(status_code=409, detail=detail) from exc
     db.refresh(patient)
     invalidate_resource_list_cache("patients", str(tenant_id))
     if idempotency_key:
