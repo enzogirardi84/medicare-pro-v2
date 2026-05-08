@@ -105,6 +105,8 @@ def test_parse_patient_csv_rejects_duplicate_documents_in_file():
 
     assert missing_required_columns is False
     assert len(valid_rows) == 1
+    assert valid_rows[0]["line_number"] == 2
+    assert valid_rows[0]["full_name"] == "Paciente Uno"
     assert errors == [{"line_number": 3, "code": "duplicate_document", "message": "duplicate document in csv"}]
 
 

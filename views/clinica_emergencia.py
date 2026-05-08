@@ -7,15 +7,6 @@ Guarda datos inmediatamente en local_data.json
 import streamlit as st
 from datetime import datetime
 
-try:
-    from core._database_supabase import supabase as _supabase
-    from core.db_sql import insert_signo_vital
-except ImportError:
-    _supabase = None
-    insert_signo_vital = None
-    # log_event("emergencia", "Supabase no disponible")  # This line is commented out because log_event is not defined
-    st.warning("Supabase no disponible. Guardado local.")
-
 from core.guardado_universal import (
     guardar_signos_vitales,
     obtener_signos_vitales
