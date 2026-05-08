@@ -6,8 +6,10 @@ export const options = {
   duration: "30s",
 };
 
+const BASE = __ENV.BASE_URL || "http://localhost:8000";
+
 export default function () {
-  const res = http.get("http://localhost:8000/health");
+  const res = http.get(`${BASE}/health`);
   check(res, {
     "health status 200": (r) => r.status === 200,
   });

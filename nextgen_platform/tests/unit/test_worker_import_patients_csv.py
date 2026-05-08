@@ -1,7 +1,11 @@
 import importlib
+import os
 import sys
 from pathlib import Path
 
+# Setear env vars requeridas por el nuevo guardrail del worker (fix #7)
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/medicare_nextgen")
 
 WORKER_DIR = Path(__file__).resolve().parents[2] / "apps" / "worker"
 sys.path.insert(0, str(WORKER_DIR))
