@@ -36,7 +36,9 @@ def _marker_set(ttl_seconds: int) -> None:
 def _marker_is_set() -> bool:
     try:
         return redis_client.get(_SELF_HEAL_MARKER_KEY) == "1"
-    except Exception:
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_marker_is_set:{type(_exc).__name__}")
         return False
 
 
@@ -54,7 +56,9 @@ def _last_change_ts() -> float:
         if raw is None:
             return 0.0
         return float(raw)
-    except Exception:
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_last_change_ts:{type(_exc).__name__}")
         return 0.0
 
 

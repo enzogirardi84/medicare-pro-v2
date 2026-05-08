@@ -288,7 +288,8 @@ def _logo_cell() -> Any:
             continue
         try:
             return RLImage(str(path), width=52, height=52)
-        except Exception:
+        except Exception as _exc:
+            log_event("exports_history", f"logo_cell_falla:{type(_exc).__name__}")
             continue
     return ""
 
