@@ -15,6 +15,13 @@ ASSETS_DIR = PROJECT_ROOT / "assets"
 # ── Supabase ───────────────────────────────────────────────
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+ALLOW_LOCAL_FALLBACK = os.getenv("BILLING_ALLOW_LOCAL_FALLBACK", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "si",
+    "sí",
+}
 
 # ── App ────────────────────────────────────────────────────
 APP_NAME = "Medicare Billing Pro"

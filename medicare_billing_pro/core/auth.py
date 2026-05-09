@@ -138,16 +138,68 @@ def render_login() -> bool:
 
     st.markdown("""
     <style>
+    .stApp {
+        background:
+            radial-gradient(ellipse 80% 50% at 100% 0%, rgba(20, 184, 166, 0.11), transparent 55%),
+            radial-gradient(ellipse 70% 45% at 0% 10%, rgba(59, 130, 246, 0.08), transparent 50%),
+            linear-gradient(180deg, #0b1020 0%, #070b14 100%) !important;
+    }
     .billing-login-box {
         max-width: 420px;
         margin: 6vh auto;
         padding: 2.5rem 2rem;
-        background: #fff;
+        background:
+            radial-gradient(ellipse 80% 70% at 100% 0%, rgba(20, 184, 166, 0.12), transparent 58%),
+            linear-gradient(145deg, rgba(18, 32, 54, 0.98) 0%, rgba(11, 18, 32, 0.99) 100%);
+        border: 1px solid rgba(148, 163, 184, 0.14);
         border-radius: 16px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+        box-shadow: 0 24px 56px rgba(2, 6, 18, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
-    .billing-login-box h2 { color: #1e293b; margin-bottom: 0.25rem; }
-    .billing-login-box p { color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .billing-login-box h2 { color: #f8fafc; margin-bottom: 0.25rem; }
+    .billing-login-box p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .billing-login-box label,
+    .billing-login-box [data-testid="stCaptionContainer"] {
+        color: #cbd5e1 !important;
+    }
+    .billing-login-box [data-baseweb="input"] > div {
+        background: rgba(15, 23, 42, 0.82) !important;
+        border: 1px solid #334155 !important;
+        border-radius: 10px !important;
+        color: #f8fafc !important;
+    }
+    .billing-login-box [data-baseweb="input"] > div:focus-within {
+        border-color: #14b8a6 !important;
+        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16) !important;
+    }
+    .billing-login-box input {
+        color: #f8fafc !important;
+    }
+    .billing-login-box .stButton > button[kind="primary"],
+    .billing-login-box .stButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #14b8a6 0%, #2563eb 100%) !important;
+        border: 1px solid rgba(94, 234, 212, 0.35) !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        box-shadow: 0 8px 22px rgba(14, 165, 233, 0.24) !important;
+    }
+    .billing-login-box .stButton > button[kind="primary"] p,
+    .billing-login-box .stButton > button[data-testid="stBaseButton-primary"] p {
+        color: #ffffff !important;
+    }
+    .stFormSubmitButton > button,
+    .stFormSubmitButton > button[kind="primary"],
+    .stFormSubmitButton > button[data-testid="stBaseButton-primary"] {
+        background: linear-gradient(135deg, #14b8a6 0%, #2563eb 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(94, 234, 212, 0.35) !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 8px 22px rgba(14, 165, 233, 0.24) !important;
+    }
+    .stFormSubmitButton > button p {
+        color: #ffffff !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 

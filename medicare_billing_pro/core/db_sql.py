@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from core.config import SUPABASE_URL, SUPABASE_KEY
+from core.config import ALLOW_LOCAL_FALLBACK, SUPABASE_KEY, SUPABASE_URL
 from core.app_logging import log_event
 
 LOCAL_DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "billing_data.json"
@@ -23,7 +23,7 @@ try:
     if SUPABASE_URL and SUPABASE_KEY:
         supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except ImportError:
-    log_event("db", "supabase no disponible, usando almacenamiento local")
+    log_event("db", "supabase no disponible")
 except Exception as e:
     log_event("db", f"error_init_supabase:{type(e).__name__}:{e}")
 
@@ -89,11 +89,32 @@ def _local_delete(collection: str, row_id: str) -> bool:
     return _save_local_data(data) and len(data[collection]) < before
 
 
+def _fallback_get(collection: str, empresa_id: str) -> List[Dict[str, Any]]:
+    if ALLOW_LOCAL_FALLBACK:
+        return _local_get(collection, empresa_id)
+    log_event("db", f"supabase_required_get_blocked:{collection}")
+    return []
+
+
+def _fallback_upsert(collection: str, row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if ALLOW_LOCAL_FALLBACK:
+        return _local_upsert(collection, row)
+    log_event("db", f"supabase_required_upsert_blocked:{collection}")
+    return None
+
+
+def _fallback_delete(collection: str, row_id: str) -> bool:
+    if ALLOW_LOCAL_FALLBACK:
+        return _local_delete(collection, row_id)
+    log_event("db", f"supabase_required_delete_blocked:{collection}:{row_id}")
+    return False
+
+
 # ── Clientes ───────────────────────────────────────────────
 
 def get_clientes(empresa_id: str) -> List[Dict[str, Any]]:
     if not supabase:
-        return _local_get("clientes", empresa_id)
+        return _fallback_get("clientes", empresa_id)
     try:
         resp = _supabase_execute_with_retry(
             "get_clientes",
@@ -102,12 +123,12 @@ def get_clientes(empresa_id: str) -> List[Dict[str, Any]]:
         return resp.data or []
     except Exception as e:
         log_event("db", f"get_clientes_error:{e}")
-        return _local_get("clientes", empresa_id)
+        return _fallback_get("clientes", empresa_id)
 
 
 def upsert_cliente(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not supabase:
-        return _local_upsert("clientes", data)
+        return _fallback_upsert("clientes", data)
     try:
         resp = _supabase_execute_with_retry(
             "upsert_cliente",
@@ -116,12 +137,12 @@ def upsert_cliente(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return resp.data[0] if resp.data else None
     except Exception as e:
         log_event("db", f"upsert_cliente_error:{e}")
-        return _local_upsert("clientes", data)
+        return _fallback_upsert("clientes", data)
 
 
 def delete_cliente(cliente_id: str) -> bool:
     if not supabase:
-        return _local_delete("clientes", cliente_id)
+        return _fallback_delete("clientes", cliente_id)
     try:
         _supabase_execute_with_retry(
             "delete_cliente",
@@ -130,14 +151,14 @@ def delete_cliente(cliente_id: str) -> bool:
         return True
     except Exception as e:
         log_event("db", f"delete_cliente_error:{e}")
-        return _local_delete("clientes", cliente_id)
+        return _fallback_delete("clientes", cliente_id)
 
 
 # ── Presupuestos ───────────────────────────────────────────
 
 def get_presupuestos(empresa_id: str) -> List[Dict[str, Any]]:
     if not supabase:
-        return _local_get("presupuestos", empresa_id)
+        return _fallback_get("presupuestos", empresa_id)
     try:
         resp = _supabase_execute_with_retry(
             "get_presupuestos",
@@ -146,12 +167,12 @@ def get_presupuestos(empresa_id: str) -> List[Dict[str, Any]]:
         return resp.data or []
     except Exception as e:
         log_event("db", f"get_presupuestos_error:{e}")
-        return _local_get("presupuestos", empresa_id)
+        return _fallback_get("presupuestos", empresa_id)
 
 
 def upsert_presupuesto(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not supabase:
-        return _local_upsert("presupuestos", data)
+        return _fallback_upsert("presupuestos", data)
     try:
         resp = _supabase_execute_with_retry(
             "upsert_presupuesto",
@@ -160,12 +181,12 @@ def upsert_presupuesto(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return resp.data[0] if resp.data else None
     except Exception as e:
         log_event("db", f"upsert_presupuesto_error:{e}")
-        return _local_upsert("presupuestos", data)
+        return _fallback_upsert("presupuestos", data)
 
 
 def delete_presupuesto(presupuesto_id: str) -> bool:
     if not supabase:
-        return _local_delete("presupuestos", presupuesto_id)
+        return _fallback_delete("presupuestos", presupuesto_id)
     try:
         _supabase_execute_with_retry(
             "delete_presupuesto",
@@ -174,14 +195,14 @@ def delete_presupuesto(presupuesto_id: str) -> bool:
         return True
     except Exception as e:
         log_event("db", f"delete_presupuesto_error:{e}")
-        return _local_delete("presupuestos", presupuesto_id)
+        return _fallback_delete("presupuestos", presupuesto_id)
 
 
 # ── Pre-facturas ───────────────────────────────────────────
 
 def get_prefacturas(empresa_id: str) -> List[Dict[str, Any]]:
     if not supabase:
-        return _local_get("prefacturas", empresa_id)
+        return _fallback_get("prefacturas", empresa_id)
     try:
         resp = _supabase_execute_with_retry(
             "get_prefacturas",
@@ -190,12 +211,12 @@ def get_prefacturas(empresa_id: str) -> List[Dict[str, Any]]:
         return resp.data or []
     except Exception as e:
         log_event("db", f"get_prefacturas_error:{e}")
-        return _local_get("prefacturas", empresa_id)
+        return _fallback_get("prefacturas", empresa_id)
 
 
 def upsert_prefactura(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not supabase:
-        return _local_upsert("prefacturas", data)
+        return _fallback_upsert("prefacturas", data)
     try:
         resp = _supabase_execute_with_retry(
             "upsert_prefactura",
@@ -204,12 +225,12 @@ def upsert_prefactura(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return resp.data[0] if resp.data else None
     except Exception as e:
         log_event("db", f"upsert_prefactura_error:{e}")
-        return _local_upsert("prefacturas", data)
+        return _fallback_upsert("prefacturas", data)
 
 
 def delete_prefactura(prefactura_id: str) -> bool:
     if not supabase:
-        return _local_delete("prefacturas", prefactura_id)
+        return _fallback_delete("prefacturas", prefactura_id)
     try:
         _supabase_execute_with_retry(
             "delete_prefactura",
@@ -218,14 +239,14 @@ def delete_prefactura(prefactura_id: str) -> bool:
         return True
     except Exception as e:
         log_event("db", f"delete_prefactura_error:{e}")
-        return _local_delete("prefacturas", prefactura_id)
+        return _fallback_delete("prefacturas", prefactura_id)
 
 
 # ── Cobros ─────────────────────────────────────────────────
 
 def get_cobros(empresa_id: str) -> List[Dict[str, Any]]:
     if not supabase:
-        return _local_get("cobros", empresa_id)
+        return _fallback_get("cobros", empresa_id)
     try:
         resp = _supabase_execute_with_retry(
             "get_cobros",
@@ -234,12 +255,12 @@ def get_cobros(empresa_id: str) -> List[Dict[str, Any]]:
         return resp.data or []
     except Exception as e:
         log_event("db", f"get_cobros_error:{e}")
-        return _local_get("cobros", empresa_id)
+        return _fallback_get("cobros", empresa_id)
 
 
 def upsert_cobro(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not supabase:
-        return _local_upsert("cobros", data)
+        return _fallback_upsert("cobros", data)
     try:
         resp = _supabase_execute_with_retry(
             "upsert_cobro",
@@ -248,12 +269,12 @@ def upsert_cobro(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return resp.data[0] if resp.data else None
     except Exception as e:
         log_event("db", f"upsert_cobro_error:{e}")
-        return _local_upsert("cobros", data)
+        return _fallback_upsert("cobros", data)
 
 
 def delete_cobro(cobro_id: str) -> bool:
     if not supabase:
-        return _local_delete("cobros", cobro_id)
+        return _fallback_delete("cobros", cobro_id)
     try:
         _supabase_execute_with_retry(
             "delete_cobro",
@@ -262,7 +283,7 @@ def delete_cobro(cobro_id: str) -> bool:
         return True
     except Exception as e:
         log_event("db", f"delete_cobro_error:{e}")
-        return _local_delete("cobros", cobro_id)
+        return _fallback_delete("cobros", cobro_id)
 
 
 # ── Empresas ───────────────────────────────────────────────
