@@ -1074,6 +1074,71 @@ _PART_4 = """
                 font-weight: 800;
               }
 
+              .mc-lp-product-access {
+                margin: 20px auto 24px;
+                max-width: 900px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 18px;
+                align-items: center;
+                padding: 24px;
+                border-radius: 22px;
+                border: 1px solid rgba(45, 212, 191, 0.26);
+                background:
+                  var(--lp-sheen),
+                  radial-gradient(ellipse 70% 90% at 100% 0%, rgba(45, 212, 191, 0.12), transparent 58%),
+                  linear-gradient(145deg, rgba(17, 28, 47, 0.96), rgba(6, 11, 20, 0.94));
+                box-shadow: var(--lp-shadow), var(--lp-inset);
+              }
+
+              .mc-lp-product-access p {
+                margin: 0 0 7px;
+                color: var(--lp-accent);
+                font-size: 0.72rem;
+                font-weight: 800;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+              }
+
+              .mc-lp-product-access h3 {
+                margin: 0 0 8px;
+                color: #ffffff;
+                font-family: 'Fraunces', Georgia, serif;
+                font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+                letter-spacing: -0.03em;
+              }
+
+              .mc-lp-product-access span {
+                display: block;
+                max-width: 48rem;
+                color: #a8b8cc;
+                font-size: 0.94rem;
+                line-height: 1.65;
+              }
+
+              .mc-lp-product-link {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 52px;
+                padding: 0 24px;
+                border-radius: 14px;
+                background: linear-gradient(135deg, #14b8a6, #2563eb);
+                color: #ffffff !important;
+                font-size: 0.84rem;
+                font-weight: 900;
+                letter-spacing: 0.1em;
+                text-decoration: none !important;
+                text-transform: uppercase;
+                white-space: nowrap;
+                box-shadow: 0 12px 30px rgba(37, 99, 235, 0.26);
+              }
+
+              .mc-lp-product-link:hover {
+                transform: translateY(-2px);
+                filter: brightness(1.06);
+              }
+
               @media (prefers-reduced-motion: reduce) {
                 .mc-lp-cell,
                 .mc-lp-mini-card,
@@ -1093,6 +1158,10 @@ _PART_4 = """
                 .mc-lp-hero,
                 .mc-lp-two-up,
                 .mc-lp-contact-grid {
+                  grid-template-columns: 1fr;
+                }
+
+                .mc-lp-product-access {
                   grid-template-columns: 1fr;
                 }
 
@@ -1156,6 +1225,10 @@ _PART_4 = """
                   justify-content: center;
                 }
 
+                .mc-lp-product-link {
+                  width: 100%;
+                }
+
                 .mc-lp-flow-card {
                   grid-template-columns: 44px 1fr;
                 }
@@ -1208,6 +1281,7 @@ _PART_5 = """
 
                     <div class="mc-lp-cta-group">
                       <a class="mc-lp-btn-primary" href="#mc-lp-contact" aria-label="Solicitar demo en vivo de MediCare PRO">Solicitar demo en vivo</a>
+                      <a class="mc-lp-btn-primary" href="__BILLING_APP_URL__" target="_blank" rel="noopener" aria-label="Abrir Medicare Billing Pro">🧾 Billing Pro</a>
                       <a class="mc-lp-btn-outline" href="#mc-lp-modulos" aria-label="Ver módulos del sistema">Ver módulos</a>
                     </div>
 
@@ -1459,6 +1533,18 @@ _PART_7 = """
                   <strong>MediCare Enterprise PRO</strong> · Software para operación clínica y domiciliaria con enfoque en
                   trazabilidad, roles y documentación profesional. Acceso al sistema solo para personal autorizado.
                 </p>
+
+                <section class="mc-lp-product-access" aria-label="Acceso a Medicare Billing Pro">
+                  <div>
+                    <p>Módulo administrativo conectado</p>
+                    <h3>Medicare Billing Pro</h3>
+                    <span>
+                      Facturación médica, clientes fiscales, presupuestos, pre-facturas, cobros y reportes contables
+                      con guardado en Supabase y acceso con las mismas credenciales institucionales.
+                    </span>
+                  </div>
+                  <a class="mc-lp-product-link" href="__BILLING_APP_URL__" target="_blank" rel="noopener" aria-label="Abrir Medicare Billing Pro">🧾 Abrir Billing Pro</a>
+                </section>
 
                 <div class="mc-lp-cta-wrap">
                   <p>Acceso al sistema</p>
