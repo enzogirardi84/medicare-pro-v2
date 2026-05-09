@@ -98,8 +98,8 @@ def insert_turno(datos_turno: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         _invalidate_cache_prefix(f"_sql_op_turn_{datos_turno.get('empresa_id', '')}")
         try:
             get_turnos_by_empresa.clear()
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("db_sql", f"cache_clear_turnos_falla:{type(_exc).__name__}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_turno:{type(e).__name__}")
@@ -390,8 +390,8 @@ def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         _invalidate_cache_prefix(f"_sql_op_chk_{datos.get('empresa_id', '')}")
         try:
             get_checkins_by_empresa.clear()
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("db_sql", f"cache_clear_checkins_falla:{type(_exc).__name__}")
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_checkin:{type(e).__name__}")
