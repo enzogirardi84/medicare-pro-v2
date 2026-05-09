@@ -189,7 +189,7 @@ jobs:
           chmod +x nextgen_platform/scripts/post_release_aggregate_latency.sh
           if [ "${{ github.event_name }}" = "schedule" ]; then
             export FAIL_ON_LATENCY_BREACH="${SCHEDULE_FAIL_ON_BREACH:-true}"
-            export POST_RELEASE_GUARDRAIL_SKIP_HINT='secret `NEXTGEN_POST_RELEASE_FAIL_ON_LATENCY_BREACH` disables aggregate failure'
+            export POST_RELEASE_GUARDRAIL_SKIP_HINT="secret \`NEXTGEN_POST_RELEASE_FAIL_ON_LATENCY_BREACH\` disables aggregate failure"
           else
             export FAIL_ON_LATENCY_BREACH="${{ inputs.fail_on_latency_breach }}"
             export POST_RELEASE_GUARDRAIL_SKIP_HINT='`fail_on_latency_breach=false`'

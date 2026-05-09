@@ -10,8 +10,13 @@ from celery import Celery
 import psycopg
 import redis
 
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
-database_url = os.getenv("DATABASE_URL", "postgresql+psycopg://postgres:postgres@db:5432/medicare_nextgen")
+redis_url = os.getenv("REDIS_URL") or os.getenv("CELERY_BROKER_URL") or ""
+database_url = os.getenv("DATABASE_URL") or ""
+
+if not redis_url:
+    raise RuntimeError("REDIS_URL or CELERY_BROKER_URL must be set for NextGen worker.")
+if not database_url:
+    raise RuntimeError("DATABASE_URL must be set for NextGen worker.")
 celery_app = Celery("nextgen_worker", broker=redis_url, backend=redis_url)
 redis_client = redis.from_url(redis_url, decode_responses=True)
 celery_app.conf.task_routes = {
@@ -27,14 +32,14 @@ def _psycopg_dsn(url: str) -> str:
     return str(url).replace("postgresql+psycopg://", "postgresql://", 1)
 
 
-def _parse_patient_csv(csv_content: str) -> tuple[list[dict[str, str]], list[dict[str, object]], bool]:
+def _parse_patient_csv(csv_content: str) -> tuple[list[dict[str, object]], list[dict[str, object]], bool]:
     stream = io.StringIO(csv_content or "")
     reader = csv.DictReader(stream)
     required = {"full_name", "document_number"}
     if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
         return [], [{"line_number": 1, "code": "missing_required_columns", "message": "missing required columns"}], True
 
-    valid_rows: list[dict[str, str]] = []
+    valid_rows: list[dict[str, object]] = []
     errors: list[dict[str, object]] = []
     seen_documents: set[str] = set()
     for line_number, row in enumerate(reader, start=2):
@@ -47,7 +52,7 @@ def _parse_patient_csv(csv_content: str) -> tuple[list[dict[str, str]], list[dic
             errors.append({"line_number": line_number, "code": "duplicate_document", "message": "duplicate document in csv"})
             continue
         seen_documents.add(document_number)
-        valid_rows.append({"full_name": full_name, "document_number": document_number})
+        valid_rows.append({"full_name": full_name, "document_number": document_number, "line_number": line_number})
     return valid_rows, errors, False
 
 
@@ -136,7 +141,7 @@ def import_patients_csv(tenant_id: str, actor_user_id: str, import_job_id: str, 
                     if not inserted:
                         errors.append(
                             {
-                                "line_number": 0,
+                                "line_number": row.get("line_number", 0),
                                 "code": "duplicate_document",
                                 "message": "duplicate document in database",
                             }

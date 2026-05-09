@@ -204,13 +204,15 @@ def render_cierre_diario(mi_empresa, user):
             return pdf_output_bytes(pdf)
 
         if st.checkbox("Preparar y guardar cierre en PDF", value=False):
-            pdf_bytes = generar_pdf_cierre()
-            st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
+            fecha_pdf = fecha_reporte
+            fecha_str_pdf = fecha_pdf.strftime("%d/%m/%Y")
+            pdf_bytes = generar_pdf_cierre(fecha_pdf)
+            st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str_pdf.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
             if st.button("Guardar cierre en historial", use_container_width=True, type="primary"):
                 b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                 st.session_state.setdefault("reportes_diarios_db", [])
                 st.session_state["reportes_diarios_db"].append({
-                    "fecha_reporte": fecha_str,
+                    "fecha_reporte": fecha_str_pdf,
                     "fecha_generacion": ahora().strftime("%d/%m/%Y %H:%M"),
                     "generado_por": user.get("nombre", "Sistema"),
                     "empresa": mi_empresa,
@@ -219,7 +221,7 @@ def render_cierre_diario(mi_empresa, user):
                 from core.database import _trim_db_list
                 _trim_db_list("reportes_diarios_db", 100)
                 guardar_datos(spinner=True)
-                queue_toast(f"Cierre del dia {fecha_str} guardado exitosamente.")
+                queue_toast(f"Cierre del dia {fecha_str_pdf} guardado exitosamente.")
                 st.rerun()
 
     if vista == "Archivo de Cierres":

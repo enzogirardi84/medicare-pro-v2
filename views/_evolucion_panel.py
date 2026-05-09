@@ -62,7 +62,13 @@ def _generar_pdf_historia_clinica(paciente_sel):
         return None
 
 
-def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
+def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar, mi_empresa=None):
+    mi_empresa = str(
+        mi_empresa
+        or (user.get("empresa") if isinstance(user, dict) else "")
+        or st.session_state.get("u_actual", {}).get("empresa", "")
+        or "Clinica General"
+    ).strip()
     st.markdown("##### Evolución clínica")
 
     st.divider()
@@ -313,11 +319,18 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
                 # Botón borrar esta evolución específica
                 btn_key = f"borrar_ev_especifica_{ev_num}_{idx}_{paciente_sel}"
-                if st.button("Borrar esta evolución", key=btn_key, type="secondary"):
+                if st.button("Borrar esta evolución", key=btn_key, type="secondary", disabled=not puede_borrar):
                     real_idx = (total_evs - 1) - idx
                     if 0 <= real_idx < len(evs_paciente):
-                        ev_borrada = evs_paciente.pop(real_idx)
-                        st.session_state["evoluciones_db"] = evs_paciente
+                        ev_borrada = evs_paciente[real_idx]
+                        eliminada = False
+                        nuevas_evs = []
+                        for ev_actual in st.session_state.get("evoluciones_db", []):
+                            if not eliminada and ev_actual == ev_borrada:
+                                eliminada = True
+                                continue
+                            nuevas_evs.append(ev_actual)
+                        st.session_state["evoluciones_db"] = nuevas_evs
                         guardar_datos()
                         st.toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
                         try:
@@ -338,7 +351,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         # Botón tradicional: Borrar última evolución
         col_chk, col_btn = st.columns([1.2, 2.8])
         confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
-        if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
+        if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=(not confirmar_borrado or not puede_borrar)):
             if not evs_paciente:
                 st.error("No hay evoluciones para borrar.")
             else:

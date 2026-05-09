@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime, timezone
 import time
 
@@ -12,6 +13,7 @@ from app.infrastructure.metrics import self_heal_actions_total, self_heal_depend
 
 _SELF_HEAL_MARKER_KEY = "self_heal:auto_fail_open_active"
 _SELF_HEAL_LAST_CHANGE_TS_KEY = "self_heal:last_change_ts"
+_state_lock = threading.Lock()
 _state = {
     "enabled": bool(settings.self_heal_enabled),
     "active_fail_open": False,
@@ -34,7 +36,9 @@ def _marker_set(ttl_seconds: int) -> None:
 def _marker_is_set() -> bool:
     try:
         return redis_client.get(_SELF_HEAL_MARKER_KEY) == "1"
-    except Exception:
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_marker_is_set:{type(_exc).__name__}")
         return False
 
 
@@ -52,7 +56,9 @@ def _last_change_ts() -> float:
         if raw is None:
             return 0.0
         return float(raw)
-    except Exception:
+    except Exception as _exc:
+        import logging
+        logging.getLogger("self_heal").debug(f"fallo_last_change_ts:{type(_exc).__name__}")
         return 0.0
 
 
@@ -123,6 +129,11 @@ def _probe_dependencies() -> tuple[bool, bool]:
 
 
 def run_self_heal_cycle() -> dict:
+    with _state_lock:
+        return _run_self_heal_cycle_locked()
+
+
+def _run_self_heal_cycle_locked() -> dict:
     if not settings.self_heal_enabled:
         _state["enabled"] = False
         _state["last_action"] = "disabled"
@@ -198,6 +209,11 @@ def run_self_heal_cycle() -> dict:
 
 
 def get_self_heal_status() -> dict:
+    with _state_lock:
+        return _get_self_heal_status_locked()
+
+
+def _get_self_heal_status_locked() -> dict:
     status = dict(_state)
     last_change = _last_change_ts()
     cooldown_seconds = max(settings.self_heal_cooldown_seconds, 0)

@@ -37,7 +37,8 @@ def format_sql_datetime(valor, *, default=""):
         return default
     try:
         dt = pd.to_datetime(valor, errors="coerce")
-    except Exception:
+    except Exception as _exc:
+        log_event("exports_helpers", f"format_sql_datetime_falla:{type(_exc).__name__}")
         dt = None
     if dt is None or pd.isna(dt):
         return str(valor).replace("T", " ").strip()
@@ -72,7 +73,8 @@ def patient_context(session_state, paciente_sel):
             from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
             empresa_id = _obtener_uuid_empresa(empresa)
             paciente_uuid = _obtener_uuid_paciente(dni, empresa_id) if empresa_id else None
-        except Exception:
+        except Exception as _exc:
+            log_event("exports_helpers", f"uuid_resolution_falla:{type(_exc).__name__}")
             empresa_id = None
             paciente_uuid = None
     result = {
@@ -339,7 +341,8 @@ def collect_sql_sections(session_state, paciente_sel, ctx):
                 "profesional": map_sql_user_name(row),
                 "observaciones": resolucion,
             })
-    except Exception:
+    except Exception as _exc:
+        log_event("exports_helpers", f"build_sql_sections_falla:{type(_exc).__name__}")
         sections = sections or sql_sections_empty()
 
     session_state[cache_key] = {

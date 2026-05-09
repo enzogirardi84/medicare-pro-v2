@@ -12,6 +12,7 @@ Características:
 
 import streamlit as st
 import pandas as pd
+import io
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from collections import defaultdict
@@ -24,7 +25,8 @@ def render_financial_reports():
     """Renderiza panel de reportes financieros."""
     # Verificar permisos
     user = st.session_state.get("u_actual", {})
-    if user.get("rol") not in ["admin", "superadmin", "recepcionista"]:
+    rol = str(user.get("rol", "")).strip().lower()
+    if rol not in ["superadmin", "coordinador", "administrativo", "recepcionista"]:
         st.error("🔒 Acceso denegado. Solo administradores y recepción.")
         return
     
@@ -222,7 +224,11 @@ def render_productivity_dashboard():
     fecha_desde = date.today() - timedelta(days=dias)
     
     # Filtrar por fecha
-    evo_filtradas = [e for e in evoluciones if parse_date(e.get("fecha")) >= fecha_desde]
+    evo_filtradas = []
+    for e in evoluciones:
+        fecha_evo = parse_date(e.get("fecha"))
+        if fecha_evo is not None and fecha_evo >= fecha_desde:
+            evo_filtradas.append(e)
     
     # Estadísticas por médico
     medico_stats = defaultdict(lambda: {
@@ -237,7 +243,11 @@ def render_productivity_dashboard():
         medico_stats[medico]["pacientes_unicos"].add(evo.get("paciente_id", "unknown"))
     
     # Agregar datos de facturación
-    fact_filtradas = [f for f in facturacion if parse_date(f.get("fecha")) >= fecha_desde]
+    fact_filtradas = []
+    for f in facturacion:
+        fecha_fact = parse_date(f.get("fecha"))
+        if fecha_fact is not None and fecha_fact >= fecha_desde:
+            fact_filtradas.append(f)
     for fact in fact_filtradas:
         medico = fact.get("medico", "Desconocido")
         medico_stats[medico]["ingresos"] += fact.get("monto", 0) or 0
@@ -295,7 +305,7 @@ def render_patients_analytics():
     paciente_evoluciones = defaultdict(int)
     for evo in evoluciones:
         fecha = parse_date(evo.get("fecha"))
-        if fecha >= mes_pasado:
+        if fecha is not None and fecha >= mes_pasado:
             paciente_evoluciones[evo.get("paciente_id", "")] += 1
     
     # Si tienen 1 evolución y fueron creados recientemente = nuevo
@@ -304,7 +314,7 @@ def render_patients_analytics():
             paciente = pacientes.get(p_id)
             if paciente:
                 fecha_alta = parse_date(paciente.get("fecha_alta", ""))
-                if fecha_alta >= mes_pasado:
+                if fecha_alta is not None and fecha_alta >= mes_pasado:
                     pacientes_nuevos += 1
                 else:
                     pacientes_recurrentes += 1
@@ -470,10 +480,10 @@ def calculate_period_start(periodo: str) -> date:
         return hoy - timedelta(days=30)
 
 
-def parse_date(fecha_str: str) -> date:
+def parse_date(fecha_str: str) -> Optional[date]:
     """Parsea fecha de string."""
     if not fecha_str:
-        return date.min
+        return None
     
     try:
         # Intentar formato DD/MM/YYYY
@@ -483,7 +493,7 @@ def parse_date(fecha_str: str) -> date:
             # Intentar formato ISO
             return datetime.fromisoformat(fecha_str).date()
         except Exception:
-            return date.min
+            return None
 
 
 def filter_by_date_range(data: list, desde: date, hasta: date) -> list:
@@ -491,17 +501,14 @@ def filter_by_date_range(data: list, desde: date, hasta: date) -> list:
     result = []
     for item in data:
         fecha = parse_date(item.get("fecha", ""))
-        if desde <= fecha <= hasta:
+        if fecha is not None and desde <= fecha <= hasta:
             result.append(item)
     return result
 
 
 def export_to_excel(df: pd.DataFrame, sheet_name: str) -> bytes:
     """Exporta DataFrame a Excel."""
-    output = pd.ExcelWriter(f"{sheet_name}.xlsx", engine='openpyxl')
-    df.to_excel(output, sheet_name=sheet_name, index=False)
-    
-    import io
     buffer = io.BytesIO()
-    output.book.save(buffer)
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
     return buffer.getvalue()

@@ -124,20 +124,23 @@ def render_inventario(mi_empresa):
                     if empresa_uuid:
                         # Buscar si ya existe en SQL
                         from core.database import supabase
-                        res = supabase.table("inventario").select("id, stock_actual").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
-                        if res.data:
-                            # Actualizar stock
-                            nuevo_stock_sql = res.data[0]["stock_actual"] + cantidad
-                            supabase.table("inventario").update({"stock_actual": nuevo_stock_sql}).eq("id", res.data[0]["id"]).execute()
+                        if supabase is not None:
+                            res = supabase.table("inventario").select("id, stock_actual").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
+                            if res.data:
+                                # Actualizar stock
+                                nuevo_stock_sql = res.data[0]["stock_actual"] + cantidad
+                                supabase.table("inventario").update({"stock_actual": nuevo_stock_sql}).eq("id", res.data[0]["id"]).execute()
+                            else:
+                                # Insertar nuevo
+                                datos_sql = {
+                                    "empresa_id": empresa_uuid,
+                                    "nombre": item_final,
+                                    "stock_actual": cantidad
+                                }
+                                insert_inventario(datos_sql)
+                            log_event("inventario_sql_insert_update", f"Item: {item_final}")
                         else:
-                            # Insertar nuevo
-                            datos_sql = {
-                                "empresa_id": empresa_uuid,
-                                "nombre": item_final,
-                                "stock_actual": cantidad
-                            }
-                            insert_inventario(datos_sql)
-                        log_event("inventario_sql_insert_update", f"Item: {item_final}")
+                            log_event("inventario_sql_insert_update", "Supabase offline; se guarda solo en JSON local")
                 except Exception as e:
                     log_event("error_inventario_sql", str(e))
 
@@ -239,10 +242,13 @@ def render_inventario(mi_empresa):
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     if empresa_uuid:
                         from core.database import supabase
-                        res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", item_a_editar).execute()
-                        if res.data:
-                            supabase.table("inventario").update({"stock_actual": nuevo_stock}).eq("id", res.data[0]["id"]).execute()
-                        log_event("inventario_sql_update", f"Item: {item_a_editar}")
+                        if supabase is not None:
+                            res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", item_a_editar).execute()
+                            if res.data:
+                                supabase.table("inventario").update({"stock_actual": nuevo_stock}).eq("id", res.data[0]["id"]).execute()
+                            log_event("inventario_sql_update", f"Item: {item_a_editar}")
+                        else:
+                            log_event("inventario_sql_update", "Supabase offline; se actualiza solo JSON local")
                 except Exception as e:
                     log_event("error_inventario_sql_update", str(e))
 

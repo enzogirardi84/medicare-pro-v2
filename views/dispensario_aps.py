@@ -210,6 +210,70 @@ def _metricas_aps_del_dia():
     col4.metric("Visitas domic. pendientes", visitas_pend)
 
 
+_APS_SECCIONES = {
+    "Panel Diario": {
+        "descripcion": "Sala de espera, actividad del dia y alertas activas.",
+        "requiere_paciente": False,
+        "render": "_tab_panel_diario",
+    },
+    "Pacientes y Familia": {
+        "descripcion": "Busqueda, alta territorial y nucleo familiar.",
+        "requiere_paciente": False,
+        "render": "_tab_pacientes_familia",
+    },
+    "Ficha APS": {
+        "descripcion": "Equipo referente, riesgo general y programas asignados.",
+        "requiere_paciente": True,
+        "render": "_tab_ficha_aps",
+    },
+    "Turnos y Sala de Espera": {
+        "descripcion": "Demanda espontanea, agenda y estado de espera.",
+        "requiere_paciente": False,
+        "render": "_tab_turnos",
+    },
+    "Historial APS": {
+        "descripcion": "Movimientos del paciente dentro del centro de salud.",
+        "requiere_paciente": False,
+        "render": "_tab_historial_aps",
+    },
+    "Atencion APS": {
+        "descripcion": "Consulta, signos, diagnostico e indicaciones.",
+        "requiere_paciente": False,
+        "render": "_tab_nueva_atencion",
+    },
+    "Nino Sano / Embarazo": {
+        "descripcion": "Controles pediatricos y obstetricos.",
+        "requiere_paciente": False,
+        "render": "_tab_control_nino_embarazo",
+    },
+    "Farmacia y Leche": {
+        "descripcion": "Entregas, cuota mensual y plan materno infantil.",
+        "requiere_paciente": False,
+        "render": "_tab_farmacia",
+    },
+    "Trabajo Social": {
+        "descripcion": "Condiciones de vivienda, cobertura y riesgo social.",
+        "requiere_paciente": False,
+        "render": "_tab_trabajo_social",
+    },
+    "Epidemiologia": {
+        "descripcion": "Eventos de seguimiento, notificacion y visitas requeridas.",
+        "requiere_paciente": False,
+        "render": "_tab_epidemiologia",
+    },
+    "Visitas Domiciliarias": {
+        "descripcion": "Registro de visitas territoriales y proxima accion.",
+        "requiere_paciente": False,
+        "render": "_tab_visitas",
+    },
+    "Reportes": {
+        "descripcion": "Indicadores exportables por periodo.",
+        "requiere_paciente": False,
+        "render": "_tab_reportes",
+    },
+}
+
+
 def _tab_panel_diario(paciente_sel, user):
     st.subheader("Panel Diario APS")
     st.caption("Vista rápida para administración, enfermería y coordinación.")
@@ -1540,56 +1604,22 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
     if not paciente_sel:
         st.info("Seleccioná un paciente desde el sidebar para registrar atenciones, farmacia, trabajo social, epidemiología y visitas.")
 
-    tabs = st.tabs([
-        "📊 Panel Diario",
-        "👥 Pacientes y Familia",
-        "📝 Ficha APS",
-        "📅 Turnos y Sala de Espera",
-        "📚 Historial APS",
-        "🩺 Atención APS",
-        "👶 Niño Sano / Embarazo",
-        "💊 Farmacia y Leche",
-        "📋 Trabajo Social",
-        "🚨 Epidemiología",
-        "🏠 Visitas",
-        "📈 Reportes",
-    ])
+    opciones = list(_APS_SECCIONES)
+    area = st.selectbox(
+        "Area de trabajo APS",
+        opciones,
+        key="aps_area_activa",
+        help="Renderiza solo el area elegida para mantener la pantalla liviana.",
+    )
+    meta = _APS_SECCIONES[area]
+    st.caption(meta["descripcion"])
 
-    with tabs[0]:
-        _tab_panel_diario(paciente_sel, user)
+    if meta["requiere_paciente"] and not paciente_sel:
+        aviso_sin_paciente()
+        return
 
-    with tabs[1]:
-        _tab_pacientes_familia(paciente_sel, user, centro_salud_id)
-
-    with tabs[2]:
-        if paciente_sel:
-            _tab_ficha_aps(paciente_sel, user, centro_salud_id)
-        else:
-            aviso_sin_paciente()
-
-    with tabs[3]:
-        _tab_turnos(paciente_sel, user, centro_salud_id)
-
-    with tabs[4]:
-        _tab_historial_aps(paciente_sel, user, centro_salud_id)
-
-    with tabs[5]:
-        _tab_nueva_atencion(paciente_sel, user, centro_salud_id)
-
-    with tabs[6]:
-        _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id)
-
-    with tabs[7]:
-        _tab_farmacia(paciente_sel, user, centro_salud_id)
-
-    with tabs[8]:
-        _tab_trabajo_social(paciente_sel, user, centro_salud_id)
-
-    with tabs[9]:
-        _tab_epidemiologia(paciente_sel, user, centro_salud_id)
-
-    with tabs[10]:
-        _tab_visitas(paciente_sel, user, centro_salud_id)
-
-    with tabs[11]:
-        _tab_reportes(paciente_sel, user, centro_salud_id)
+    render_fn = globals()[meta["render"]]
+    if meta["render"] == "_tab_panel_diario":
+        render_fn(paciente_sel, user)
+    else:
+        render_fn(paciente_sel, user, centro_salud_id)

@@ -37,6 +37,7 @@ from core.app_session import (
 )
 from core.app_theme import aplicar_css_base
 from core.app_mobile import cliente_es_movil_probable, render_mobile_patient_selector
+from core.alert_toasts import render_queued_toasts
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401
@@ -449,11 +450,6 @@ if mostrar_atajo or paciente_sel:
                 f"DNI {escape(str(det_actual.get('dni', 'S/D')))}  ·  "
                 f"{escape(str(det_actual.get('estado', 'Activo')))}"
             )
-
-# ============================================================
-# TOASTS
-# ============================================================
-from core.alert_toasts import render_queued_toasts
 
 render_queued_toasts()
 

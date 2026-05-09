@@ -81,6 +81,7 @@ def render_estudios(paciente_sel, user, rol=None):
             if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
                 img_b64 = ""
                 ext = ""
+                raw_bytes = None
                 if archivo_subido is not None:
                     raw_bytes = archivo_subido.getvalue()
                     ext = archivo_subido.name.split('.')[-1].lower()
@@ -121,7 +122,7 @@ def render_estudios(paciente_sel, user, rol=None):
                             pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                             if pac_uuid:
                                 archivo_url = ""
-                                if archivo_subido is not None or foto_estudio is not None:
+                                if raw_bytes is not None:
                                     # Subir a Storage
                                     file_path = f"{pac_uuid}/{uuid4()}.{ext}"
                                     content_type = "application/pdf" if ext == "pdf" else f"image/{ext}"

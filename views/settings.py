@@ -22,7 +22,8 @@ def render_settings_page():
     """Renderiza página completa de configuración."""
     # Verificar permisos
     user = st.session_state.get("u_actual", {})
-    is_admin = user.get("rol") in ["admin", "superadmin"]
+    rol = str(user.get("rol", "")).strip().lower()
+    is_admin = rol in ["superadmin", "coordinador"]
     
     st.title("⚙️ Configuración")
     st.caption(f"Usuario: {user.get('nombre', 'N/A')}")
@@ -97,7 +98,8 @@ def render_appearance_settings():
     
     # Personalización de colores (solo admin)
     user = st.session_state.get("u_actual", {})
-    if user.get("rol") in ["admin", "superadmin"]:
+    rol = str(user.get("rol", "")).strip().lower()
+    if rol in ["superadmin", "coordinador"]:
         st.subheader("Personalización de Colores (Admin)")
         
         col1, col2 = st.columns(2)

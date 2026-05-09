@@ -254,12 +254,15 @@ def render_mi_equipo(mi_empresa, rol, user=None):
         from core.app_logging import log_event
         log_event("error_leer_usuarios_sql", str(e))
 
-    # 2. Fallback a JSON si SQL falla o esta vacio
-    if not usuarios_base:
-        for login, datos in st.session_state.get("usuarios_db", {}).items():
+    # 2. Completar con JSON local si SQL falla, esta vacio o viene parcial.
+    logins_sql = {str(fila.get("_login", "")).strip().lower() for fila in usuarios_base}
+    for login, datos in st.session_state.get("usuarios_db", {}).items():
+        login_norm = str(login).strip().lower()
+        if login_norm not in logins_sql:
             fila = dict(datos)
             fila["_login"] = login
             usuarios_base.append(fila)
+            logins_sql.add(login_norm)
 
     usuarios_filtrados = {
         fila["_login"]: {k: v for k, v in fila.items() if k != "_login"}

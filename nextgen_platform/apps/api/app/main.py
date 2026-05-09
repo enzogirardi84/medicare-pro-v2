@@ -378,7 +378,9 @@ def readiness():
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db_ok = True
-    except Exception:
+    except Exception as _exc:
+        import logging
+        logging.getLogger("api.main").debug(f"fallo_db_health:{type(_exc).__name__}")
         db_ok = False
     finally:
         try:
@@ -389,7 +391,9 @@ def readiness():
             logging.getLogger("api.main").debug(f"fallo_db_close_health:{type(_exc).__name__}")
     try:
         redis_ok = bool(redis_client.ping())
-    except Exception:
+    except Exception as _exc:
+        import logging
+        logging.getLogger("api.main").debug(f"fallo_redis_health:{type(_exc).__name__}")
         redis_ok = False
     status = "ready" if db_ok and redis_ok else "not_ready"
     code = 200 if status == "ready" else 503

@@ -58,8 +58,8 @@ class ClinicalPDFv2(FPDF):
             logo_path = ASSETS_DIR / "logo_medicare_pro.jpeg"
             if logo_path.exists():
                 self.image(str(logo_path), x=10, y=5, w=15)
-        except Exception:
-            pass
+        except Exception as _exc:
+            log_event("pdf_v2", f"logo_header_falla:{type(_exc).__name__}")
         
         # Texto header
         self.set_xy(30, 8)
@@ -160,8 +160,8 @@ def header_portada_v2(pdf: ClinicalPDFv2, empresa: str, titulo: str, paciente_da
         logo_path = ASSETS_DIR / "logo_medicare_pro.jpeg"
         if logo_path.exists():
             pdf.image(str(logo_path), x=20, y=15, w=35)
-    except Exception:
-        pass
+    except Exception as _exc:
+        log_event("pdf_v2", f"logo_portada_falla:{type(_exc).__name__}")
     
     # Título principal
     pdf.set_xy(20, 55)

@@ -7,18 +7,8 @@ on:
         description: "Base URL to verify (e.g. https://api.example.com)"
         required: true
         type: string
-      expected_version:
-        description: "Expected x-api-version header (optional)"
-        required: false
-        default: ""
-        type: string
-      expected_deploy_id:
-        description: "Expected x-deploy-id header (optional)"
-        required: false
-        default: ""
-        type: string
-      expected_git_sha:
-        description: "Expected x-git-sha header (optional)"
+      expected_headers_json:
+        description: 'JSON with expected response headers, e.g. {"x-api-version":"0.2.0","x-deploy-id":"abc","x-git-sha":"def"}. Empty = skip header checks.'
         required: false
         default: ""
         type: string
@@ -47,18 +37,8 @@ on:
         required: false
         default: ""
         type: string
-      max_total_time_health_seconds:
-        description: "Optional threshold for /health (seconds)"
-        required: false
-        default: ""
-        type: string
-      max_total_time_live_seconds:
-        description: "Optional threshold for /live (seconds)"
-        required: false
-        default: ""
-        type: string
-      max_total_time_ready_seconds:
-        description: "Optional threshold for /ready (seconds)"
+      latency_thresholds_json:
+        description: 'JSON with per-endpoint thresholds, e.g. {"/health":"1.5","/live":"1.0","/ready":"2.0"}. Empty = no per-endpoint check.'
         required: false
         default: ""
         type: string
@@ -84,19 +64,25 @@ jobs:
         env:
           POST_RELEASE_MODE: watch
           BASE_URL: ${{ inputs.base_url }}
-          EXPECTED_VERSION: ${{ inputs.expected_version }}
-          EXPECTED_DEPLOY_ID: ${{ inputs.expected_deploy_id }}
-          EXPECTED_GIT_SHA: ${{ inputs.expected_git_sha }}
+          EXPECTED_HEADERS_JSON: ${{ inputs.expected_headers_json }}
           POST_RELEASE_RETRY_ATTEMPTS: ${{ inputs.retry_attempts }}
           POST_RELEASE_RETRY_SLEEP_SECONDS: ${{ inputs.retry_sleep_seconds }}
           POST_RELEASE_MAX_TOTAL_TIME_SECONDS: ${{ inputs.max_total_time_seconds }}
-          POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS: ${{ inputs.max_total_time_health_seconds }}
-          POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS: ${{ inputs.max_total_time_live_seconds }}
-          POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS: ${{ inputs.max_total_time_ready_seconds }}
+          POST_RELEASE_LATENCY_THRESHOLDS_JSON: ${{ inputs.latency_thresholds_json }}
         run: |
           set -euo pipefail
           mkdir -p nextgen_platform/ci_artifacts
           export POST_RELEASE_REPORT_PATH="nextgen_platform/ci_artifacts/post-release-report.csv"
+          if [ -n "${EXPECTED_HEADERS_JSON:-}" ]; then
+            export EXPECTED_VERSION="$(echo "$EXPECTED_HEADERS_JSON" | python -c "import json,sys;d=json.load(sys.stdin);print(d.get('x-api-version',''))")"
+            export EXPECTED_DEPLOY_ID="$(echo "$EXPECTED_HEADERS_JSON" | python -c "import json,sys;d=json.load(sys.stdin);print(d.get('x-deploy-id',''))")"
+            export EXPECTED_GIT_SHA="$(echo "$EXPECTED_HEADERS_JSON" | python -c "import json,sys;d=json.load(sys.stdin);print(d.get('x-git-sha',''))")"
+          fi
+          if [ -n "${POST_RELEASE_LATENCY_THRESHOLDS_JSON:-}" ]; then
+            export POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS="$(echo "$POST_RELEASE_LATENCY_THRESHOLDS_JSON" | python -c "import json,sys;d=json.load(sys.stdin);print(d.get('/health',''))")"
+            export POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS="$(echo "$POST_RELEASE_LATENCY_THRESHOLDS_JSON" | python -c "import json,sys;d=json.load(sys.stdin);print(d.get('/live',''))")"
+            export POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS="$(echo "$POST_RELEASE_LATENCY_THRESHOLDS_JSON" | python -c "import json,sys;d=json.load(sys.stdin);print(d.get('/ready',''))")"
+          fi
           case "${{ inputs.duration_minutes }}" in
             ''|*[!0-9]*) echo "[FAIL] duration_minutes must be numeric"; exit 1 ;;
           esac
@@ -123,9 +109,7 @@ jobs:
             echo "- Retry attempts: \`${{ inputs.retry_attempts }}\`"
             echo "- Retry sleep: \`${{ inputs.retry_sleep_seconds }}s\`"
             echo "- Max total time (optional): \`${{ inputs.max_total_time_seconds }}\`"
-            echo "- Max /health (optional): \`${{ inputs.max_total_time_health_seconds }}\`"
-            echo "- Max /live (optional): \`${{ inputs.max_total_time_live_seconds }}\`"
-            echo "- Max /ready (optional): \`${{ inputs.max_total_time_ready_seconds }}\`"
+            echo "- Per-endpoint thresholds: \`${{ inputs.latency_thresholds_json }}\`"
             echo "- Fail on aggregate latency breach: \`${{ inputs.fail_on_latency_breach }}\`"
             echo "- Result: ✅ watch completed"
             echo ""

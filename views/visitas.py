@@ -44,15 +44,43 @@ try:
 except ImportError:
     GEO_DISPONIBLE = False
 
+
+def _inyectar_estilos_visitas():
+    st.markdown(
+        """
+        <style>
+        [data-testid="stForm"] {
+            border-radius: 14px;
+            border-color: rgba(148, 163, 184, 0.26);
+            background: rgba(15, 23, 42, 0.28);
+            box-shadow: 0 18px 42px rgba(2, 6, 23, 0.16);
+        }
+        [data-testid="stMetric"] {
+            border: 1px solid rgba(148, 163, 184, 0.20);
+            border-radius: 12px;
+            padding: 0.72rem 0.85rem;
+            background: rgba(15, 23, 42, 0.18);
+        }
+        [data-testid="stMetric"] label {
+            color: rgba(226, 232, 240, 0.82) !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: rgba(148, 163, 184, 0.24);
+            background: rgba(15, 23, 42, 0.20);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_visitas(paciente_sel, mi_empresa, user, rol):
     if not paciente_sel:
         aviso_sin_paciente()
         return
 
+    _inyectar_estilos_visitas()
     nombre_usuario = user.get("nombre", "Profesional sin nombre")
-
-    st.markdown("## Visitas y agenda del paciente")
-    st.caption("Fichada con GPS, control de horas de guardia y agendamiento con aviso por WhatsApp.")
 
     _det_map = mapa_detalles_pacientes(st.session_state)
     estado_pac = _det_map.get(paciente_sel, {}).get("estado", "Activo")
@@ -64,6 +92,11 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     dire_paciente = det.get("direccion", "No registrada")
     tel_paciente = det.get("telefono", "")
     nombre_corto_pac = paciente_sel.split(" (")[0]
+
+    st.markdown("## Visitas y agenda")
+    st.caption(
+        f"{nombre_corto_pac} | Fichada, control de horas, agenda y aviso por WhatsApp en una sola pantalla."
+    )
 
     rec_wpp = st.session_state.pop("_wpp_recordatorio_visita", None)
     if rec_wpp and rec_wpp.get("paciente") == paciente_sel:
@@ -119,8 +152,25 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             "Revisá la agenda y actualizá el estado."
         )
 
-    _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario)
-    _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente, nombre_usuario, nombre_corto_pac, dire_paciente, tel_paciente)
+    st.markdown("### Operacion del dia")
+    col_fichada, col_agenda = st.columns([0.94, 1.06], gap="large")
+    with col_fichada:
+        with st.container(border=True):
+            _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario, show_divider=False)
+    with col_agenda:
+        with st.container(border=True):
+            _render_agendar_visita(
+                paciente_sel,
+                mi_empresa,
+                user,
+                rol,
+                agenda_paciente,
+                nombre_usuario,
+                nombre_corto_pac,
+                dire_paciente,
+                tel_paciente,
+                show_divider=False,
+            )
     _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente, nombre_corto_pac, dire_paciente, tel_paciente)
 
     st.divider()

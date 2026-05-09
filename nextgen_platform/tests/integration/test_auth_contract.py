@@ -56,7 +56,7 @@ def test_register_login_refresh_logout_flow():
         json={"refresh_token": rotated["refresh_token"]},
         timeout=TIMEOUT,
     )
-    assert logout.status_code == 200, logout.text
+    assert logout.status_code == 204, logout.text
 
     after_logout = requests.get(
         f"{base}/v1/patients",
