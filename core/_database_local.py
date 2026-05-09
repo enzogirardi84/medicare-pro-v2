@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from core.db_serialize import dumps_db_sorted, loads_db_payload, loads_json_any
+from core.app_logging import log_event
 
 LOCAL_DB_PATH = Path(__file__).resolve().parent.parent / ".streamlit" / "local_data.json"
 LOCAL_DB_DIR = Path(__file__).resolve().parent.parent / ".streamlit" / "data_store"
@@ -54,7 +55,8 @@ def _guardar_local(data, payload_bytes: bytes | None = None):
             encoding="utf-8",
         )
         return True
-    except Exception:
+    except Exception as _exc:
+        log_event("local_db", f"guardar_local_falla:{type(_exc).__name__}")
         return False
 
 
@@ -76,7 +78,8 @@ def _cargar_local():
                     data[key] = loads_json_any(shard_path.read_bytes())
             if data:
                 return data
-    except Exception:
+    except Exception as _exc:
+        log_event("local_db", f"cargar_local_falla:{type(_exc).__name__}")
         return None
     return None
 
@@ -92,7 +95,8 @@ def _cargar_local_tenant(tenant_key: str):
             if not raw.strip():
                 return None
             return loads_db_payload(raw)
-    except Exception:
+    except Exception as _exc:
+        log_event("local_db", f"cargar_local_tenant_falla:{type(_exc).__name__}")
         return None
     return None
 
@@ -112,5 +116,6 @@ def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | No
                 encoding="utf-8",
             )
         return True
-    except Exception:
+    except Exception as _exc:
+        log_event("local_db", f"guardar_local_tenant_falla:{type(_exc).__name__}")
         return False
