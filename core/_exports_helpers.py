@@ -341,7 +341,8 @@ def collect_sql_sections(session_state, paciente_sel, ctx):
                 "profesional": map_sql_user_name(row),
                 "observaciones": resolucion,
             })
-    except Exception:
+    except Exception as _exc:
+        log_event("exports_helpers", f"build_sql_sections_falla:{type(_exc).__name__}")
         sections = sections or sql_sections_empty()
 
     session_state[cache_key] = {
