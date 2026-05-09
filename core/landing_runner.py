@@ -7,6 +7,7 @@ Se importa antes del resto de main.py para que visitantes anónimos no paguen el
 from __future__ import annotations
 
 import base64
+import html
 from pathlib import Path
 
 import streamlit as st
@@ -154,8 +155,10 @@ def render_publicidad_y_detener() -> None:
     """
     Muestra la landing y detiene el script. No importar módulos pesados antes de llamar esto.
     """
-    from core.landing_publicidad import obtener_html_landing_publicidad
+    from core.landing_publicidad import billing_app_url, obtener_html_landing_publicidad
     from core._ui_liviano_js import SIDEBAR_TOGGLE_JS
+
+    billing_url = html.escape(billing_app_url() or "http://localhost:8502", quote=True)
 
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
@@ -169,9 +172,15 @@ def render_publicidad_y_detener() -> None:
             border-bottom: 1px solid rgba(45,212,191,0.15) !important;
             text-align: center;
         }
+        .mc-lp-sticky-btns {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+        }
         .mc-lp-sticky-btn-wrap a {
             display: inline-flex; align-items: center; justify-content: center;
-            min-height: 60px; min-width: 320px; padding: 0 34px;
+            min-height: 60px; min-width: 260px; padding: 0 30px;
             border-radius: 9999px; border: 1px solid rgba(186,230,253,0.24);
             background: linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%);
             color: #fff !important; font-size: 1rem; font-weight: 900;
@@ -184,11 +193,26 @@ def render_publicidad_y_detener() -> None:
             filter: brightness(1.04);
             box-shadow: 0 24px 54px rgba(56,189,248,0.28), 0 0 0 1px rgba(255,255,255,0.09) inset;
         }
+        .mc-lp-sticky-btn-wrap a.mc-lp-sticky-billing {
+            background: linear-gradient(135deg, rgba(20,184,166,0.95) 0%, rgba(14,116,144,0.98) 100%);
+            min-width: 230px;
+        }
+        @media (max-width: 720px) {
+            .mc-lp-sticky-btn-wrap a {
+                min-height: 48px;
+                min-width: min(100%, 300px);
+                font-size: 0.78rem;
+                letter-spacing: 0.1em;
+            }
+        }
         </style>
         <div class="mc-lp-sticky-btn-wrap">
-            <a href="?login=1" target="_self">🚀 INGRESAR AL SISTEMA</a>
+            <div class="mc-lp-sticky-btns">
+                <a href="?login=1" target="_self">🚀 INGRESAR AL SISTEMA</a>
+                <a class="mc-lp-sticky-billing" href="__BILLING_URL__" target="_blank" rel="noopener">🧾 BILLING PRO</a>
+            </div>
         </div>
-        """,
+        """.replace("__BILLING_URL__", billing_url),
         unsafe_allow_html=True,
     )
 
@@ -255,7 +279,10 @@ def render_publicidad_y_detener() -> None:
             unsafe_allow_html=True,
         )
         st.markdown(
-            "<a href='?login=1' target='_self' style='display:block;text-align:center;padding:10px 0;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#2563eb);color:#fff!important;text-decoration:none!important;font-weight:700;font-size:0.92rem;'>🚀 Ingresar al sistema</a>",
+            (
+                "<a href='?login=1' target='_self' style='display:block;text-align:center;padding:10px 0;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#2563eb);color:#fff!important;text-decoration:none!important;font-weight:700;font-size:0.92rem;'>🚀 Ingresar al sistema</a>"
+                f"<a href='{billing_url}' target='_blank' rel='noopener' style='display:block;text-align:center;margin-top:10px;padding:10px 0;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#0e7490);color:#fff!important;text-decoration:none!important;font-weight:700;font-size:0.92rem;'>🧾 Billing Pro</a>"
+            ),
             unsafe_allow_html=True,
         )
 
