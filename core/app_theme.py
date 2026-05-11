@@ -918,6 +918,38 @@ def aplicar_css_base() -> None:
             [data-testid="stMetricLabel"] > div {
                 overflow: visible !important;
             }
+
+            /* =========================================================
+               15. OPTIMIZACIÓN DE CARGA - Progressive loading
+               ========================================================= */
+            .stApp {
+                opacity: 1;
+                transition: opacity 0.2s ease-in-out;
+            }
+            /* Skeleton loading para tablas */
+            .stDataFrame {
+                animation: mc-fade-in 0.3s ease-in;
+            }
+            @keyframes mc-fade-in {
+                from { opacity: 0.7; }
+                to { opacity: 1; }
+            }
+            /* Botones más responsivos */
+            .stButton > button {
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .stButton > button:active {
+                transform: scale(0.97);
+            }
+            /* Sidebar más fluida */
+            [data-testid="stSidebar"] {
+                transition: width 0.2s ease;
+            }
+            /* Spinner más visible */
+            .stSpinner {
+                min-height: 60px;
+            }
         </style>
         """,
         unsafe_allow_html=True,

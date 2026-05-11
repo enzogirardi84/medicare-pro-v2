@@ -53,13 +53,21 @@ from core.sidebar_components import (
 from core.ui_professional import apply_professional_theme
 from core.view_registry import build_view_maps
 
-APP_BUILD_TAG = "Build 2026-04-26 refactor: core/app_*.py + nav grid + sin duplicados"
+APP_BUILD_TAG = "Build 2026-05-09 - Optimizado: velocidad, cache, UI"
 
 st.set_page_config(
     page_title=PAGE_TITLE_PUBLIC,
     layout="wide",
     initial_sidebar_state="expanded",
+    page_icon="🩺",
 )
+
+# ============================================================
+# OPTIMIZACIÓN DE RENDIMIENTO - Reducir re-renders
+# ============================================================
+# Solo aplicar theme una vez
+if "theme_applied_v5" not in st.session_state:
+    st.session_state["theme_applied_v5"] = False
 
 configurar_logging_basico()
 

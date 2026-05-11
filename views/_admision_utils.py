@@ -65,6 +65,14 @@ def _dni_duplicado(dni, excluir_paciente=None):
 
 
 def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False, empresa_filtro=""):
+    import hashlib
+    cache_key = f"_pacientes_cache_{mi_empresa}_{rol}_{busqueda}_{incluir_altas}_{empresa_filtro}"
+    cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()[:12]
+    
+    cached_data = st.session_state.get(f"_cache_{cache_key_hash}")
+    if cached_data is not None:
+        return cached_data
+    
     pacientes = []
     for paciente_id, _, dni, obra_social, estado, empresa in obtener_pacientes_visibles(
         st.session_state, mi_empresa, rol, incluir_altas=incluir_altas, busqueda=busqueda,
@@ -82,6 +90,8 @@ def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False,
             "telefono": detalles.get("telefono", ""),
             "direccion": detalles.get("direccion", ""),
         })
+    
+    st.session_state[f"_cache_{cache_key_hash}"] = pacientes
     return pacientes
 
 

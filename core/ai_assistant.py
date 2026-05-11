@@ -266,7 +266,6 @@ NOTA MEJORADA:"""
         """Llama API de OpenAI (v1.0+)."""
         try:
             from openai import OpenAI
-            # Instanciar el cliente es obligatorio en v1.0+
             client = OpenAI(api_key=LLM_API_KEY, timeout=30.0)
             
             response = client.chat.completions.create(
@@ -282,6 +281,10 @@ NOTA MEJORADA:"""
             return response.choices[0].message.content.strip()
             
         except Exception as e:
+            error_msg = str(e)
+            if "image" in error_msg.lower() or "vision" in error_msg.lower():
+                log_event("ai_error", "Modelo no soporta imágenes. Usando modo texto.")
+                return "El modelo actual no soporta análisis de imágenes. Por favor, describe el contenido textual."
             log_event("ai_error", f"OpenAI API error: {e}")
             raise
     
@@ -301,6 +304,10 @@ NOTA MEJORADA:"""
             return response.completion.strip()
             
         except Exception as e:
+            error_msg = str(e)
+            if "image" in error_msg.lower() or "vision" in error_msg.lower() or "png" in error_msg.lower():
+                log_event("ai_error", "Modelo Anthropic no soporta imágenes.")
+                return "El modelo actual no soporta análisis de imágenes. Por favor, usa texto."
             log_event("ai_error", f"Anthropic API error: {e}")
             raise
     

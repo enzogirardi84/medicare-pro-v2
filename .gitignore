@@ -152,6 +152,7 @@ nextgen_platform/ci_artifacts/
 *.sqlite3
 local_data/
 patient_data/
+medicare_billing_pro/data/
 
 # ============================================================
 # ARCHIVOS DE PRUEBA / DESCARGAS GENERADAS

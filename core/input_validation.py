@@ -57,3 +57,33 @@ def sanitizar_html(texto: str) -> str:
 def validar_longitud_maxima(texto: str, max_len: int = 10000) -> bool:
     """Verifica que el texto no exceda la longitud máxima."""
     return len(str(texto or "")) <= max_len
+
+
+def sanitizar_sql(texto: str) -> str:
+    """Previene inyección SQL básicos."""
+    if not texto:
+        return ""
+    dangerous = ["'", '"', ";", "--", "/*", "*/", "xp_", "sp_", "EXEC", "DROP", "CREATE"]
+    result = str(texto)
+    for word in dangerous:
+        result = result.replace(word, "")
+    return result.strip()
+
+
+def validar_dni_seguro(dni: str) -> bool:
+    """Valida DNI de forma segura."""
+    s = (dni or "").strip()
+    if not s.isdigit():
+        return False
+    if len(s) < 7000000 or len(s) > 99999999:
+        return False
+    return True
+
+
+def validar_monto(monto: float, maximo: float = 500000.0) -> bool:
+    """Valida que el monto esté en rango seguro."""
+    try:
+        m = float(monto)
+        return 0 <= m <= maximo
+    except (ValueError, TypeError):
+        return False

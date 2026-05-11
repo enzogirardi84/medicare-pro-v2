@@ -92,17 +92,29 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     if not fact_empresa:
         fact_empresa = [f for f in st.session_state.get("facturacion_db", []) if f.get("empresa") == mi_empresa]
 
-    fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
-
-    total_cobrado = sum((f.get("monto") or 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
-    total_pendiente = sum((f.get("monto") or 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
+    # Cache simple para evitar recálculos innecesarios en reruns
+    cache_key_caja = f"_caja_cache_{paciente_sel}_{len(fact_empresa)}"
+    if cache_key_caja not in st.session_state:
+        fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
+        total_cobrado = sum((f.get("monto") or 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
+        total_pendiente = sum((f.get("monto") or 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
+        st.session_state[cache_key_caja] = {
+            "fact_paciente": fact_paciente,
+            "total_cobrado": total_cobrado,
+            "total_pendiente": total_pendiente
+        }
+    
+    cached = st.session_state[cache_key_caja]
+    fact_paciente = cached["fact_paciente"]
+    total_cobrado = cached["total_cobrado"]
+    total_pendiente = cached["total_pendiente"]
 
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("Total Cobrado", f"${total_cobrado:,.2f}")
     col_m2.metric("Pendiente de Cobro", f"${total_pendiente:,.2f}")
     col_m3.metric("Practicas Registradas", len(fact_paciente))
 
-    tabs_caja = st.tabs(["Registrar cobro", "Historial del paciente", "Auditoría general"])
+    tabs_caja = st.tabs(["💰 Registrar cobro", "📋 Historial del paciente", "📊 Auditoría general"])
 
     with tabs_caja[0]:
       with st.form("caja_form", clear_on_submit=True):
@@ -116,7 +128,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         ]
         practica_sel = c1.selectbox("Tipo de Servicio / Nomenclador", practicas_comunes)
         practica_manual = c1.text_input("Detalle adicional")
-        mon = c2.number_input("Monto a Facturar ($)", min_value=0.0, step=500.0, value=0.0)
+        # Validación: monto máximo 500000 (500k) para seguridad
+        mon = c2.number_input("Monto a Facturar ($)", min_value=0.0, step=500.0, value=0.0, max_value=500000.0)
 
         c3, c4 = st.columns(2)
         opciones_pago = [
@@ -126,9 +139,18 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         metodo = c3.selectbox("Metodo de Pago", opciones_pago)
         estado = c4.radio("Estado del Cobro", ["Cobrado", "Pendiente / A Facturar"], horizontal=False)
 
-        if st.form_submit_button("Registrar Cobro / Practica", use_container_width=True, type="primary"):
+        if st.form_submit_button("💰 Registrar Cobro / Practica", use_container_width=True, type="primary"):
+            # Validación extra de seguridad
             desc_final = practica_manual.strip() if practica_sel == "-- Otro (Especificar manualmente) --" else f"{practica_sel} {('- ' + practica_manual.strip()) if practica_manual.strip() else ''}"
-            if desc_final.strip() and mon > 0:
+            
+            # Validaciones de seguridad
+            if not desc_final.strip():
+                st.error("⚠️ Descripción vacía. Complete el campo.")
+            elif mon <= 0:
+                st.error("⚠️ El monto debe ser mayor a $0.")
+            elif mon > 500000:
+                st.error("⚠️ Monto máximo permitido: $500,000")
+            else:
                 fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
                 
                 # 1. Guardar en SQL (Dual-Write)
@@ -171,10 +193,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 from core.database import _trim_db_list
                 _trim_db_list("facturacion_db", 500)
                 guardar_datos(spinner=True)
-                queue_toast(f"${mon:,.2f} registrado correctamente.")
+                queue_toast(f"✅ ${mon:,.2f} registrado - {desc_final.strip()[:30]}...")
                 st.rerun()
-            else:
-                st.error("Debe ingresar una descripcion valida y un monto mayor a $0.")
 
     with tabs_caja[1]:
         st.caption(f"Mostrando movimientos de **{paciente_sel}**")

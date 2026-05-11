@@ -13,6 +13,40 @@ services:
         value: "true"
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: "false"
-      # URL pública HTTPS sin barra final (canonical, Open Graph). Definir el valor en el panel de Render.
+      # URL publica HTTPS sin barra final (canonical, Open Graph). Definir el valor en el panel de Render.
       - key: SITE_URL
+        sync: false
+      # URL publica HTTPS del servicio Medicare Billing Pro.
+      - key: BILLING_APP_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+  - type: web
+    name: medicare-billing-pro
+    runtime: python
+    plan: free
+    buildCommand: pip install -r medicare_billing_pro/requirements.txt
+    startCommand: cd medicare_billing_pro && streamlit run main.py --server.port $PORT --server.address 0.0.0.0
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: STREAMLIT_SERVER_HEADLESS
+        value: "true"
+      - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+        value: "false"
+      - key: BILLING_ALLOW_LOCAL_FALLBACK
+        value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: BILLING_SECRET
         sync: false
