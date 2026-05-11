@@ -19,26 +19,6 @@ st.set_page_config(
 
 configurar_logging_basico()
 
-# CSS simplificado para compatibilidad con Streamlit Cloud
-st.markdown(
-    """
-    <style>
-    .stApp { background: #0a0f1a !important; }
-    .main .block-container { max-width: 1320px; padding: 1.1rem 1.6rem 2.4rem !important; }
-    h1, h2, h3 { color: #f8fafc !important; }
-    p, label, .stMarkdown, .stCaption { color: #cbd5e1; }
-    [data-testid="stSidebar"] { background: #0b1220 !important; border-right: 1px solid rgba(148,163,184,0.16) !important; }
-    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] label { color: #e2e8f0 !important; }
-    .stButton > button { border-radius: 8px !important; font-weight: 700 !important; }
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #14b8a6 0%, #2563eb 100%) !important;
-        border: 1px solid rgba(94, 234, 212, 0.35) !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
 if not require_auth():
     st.stop()
 
@@ -62,18 +42,13 @@ with st.sidebar:
     st.caption("2026 Medicare Pro Suite")
     st.caption("[Documentacion](https://github.com/enzogirardi84/medicare-pro-v2)")
 
-st.markdown(
-    f"""
-    <div class="billing-header">
-        <div>
-            <h1>Medicare Billing Pro</h1>
-            <p>Facturacion medica profesional | {empresa_nombre}</p>
-        </div>
-        <div class="billing-status-pill">{'Supabase activo' if supabase else 'Supabase requerido'}</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+st.title("Medicare Billing Pro")
+st.caption(f"Facturacion medica profesional | {empresa_nombre}")
+status = "Supabase activo" if supabase else "Supabase requerido"
+if supabase:
+    st.success(status)
+else:
+    st.warning(status)
 
 MODULOS = {
     "Resumen": "dashboard",
