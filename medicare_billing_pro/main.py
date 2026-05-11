@@ -19,162 +19,20 @@ st.set_page_config(
 
 configurar_logging_basico()
 
+# CSS simplificado para compatibilidad con Streamlit Cloud
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-    header[data-testid="stHeader"] { background: transparent; }
-    .stApp { background: #0a0f1a !important; color: #e2e8f0; }
-    .main .block-container {
-        max-width: 1320px;
-        padding: 1.1rem 1.6rem 2.4rem !important;
-    }
-    h1, h2, h3 { color: #f8fafc !important; letter-spacing: 0 !important; }
-    p, label, .stMarkdown, .stCaption, [data-testid="stMarkdownContainer"] { color: #cbd5e1; }
-    [data-testid="stSidebar"] {
-        background: #0b1220 !important;
-        border-right: 1px solid rgba(148, 163, 184, 0.16) !important;
-    }
-    [data-testid="stSidebar"] .stMarkdown,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] .stCaption { color: #e2e8f0 !important; }
-    .billing-header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 1rem;
-        align-items: end;
-        margin: 0 0 1rem 0;
-        padding: 1rem 1.1rem;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #111c2e 0%, #0d1524 100%);
-        border: 1px solid rgba(148, 163, 184, 0.16);
-        box-shadow: 0 14px 34px rgba(2, 6, 23, 0.22);
-    }
-    .billing-header h1 { font-size: 1.45rem; margin: 0; }
-    .billing-header p { color: #94a3b8 !important; margin: 0.25rem 0 0; }
-    .billing-status-pill {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 34px;
-        padding: 0 0.85rem;
-        border-radius: 999px;
-        color: #ccfbf1;
-        background: rgba(20, 184, 166, 0.12);
-        border: 1px solid rgba(45, 212, 191, 0.22);
-        font-size: 0.82rem;
-        font-weight: 750;
-        white-space: nowrap;
-    }
-    .billing-summary {
-        display: grid;
-        gap: 0.7rem;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        margin: 0 0 0.9rem;
-    }
-    .billing-kpi {
-        padding: 0.85rem 0.95rem;
-        border-radius: 8px;
-        background: #101827;
-        border: 1px solid rgba(148, 163, 184, 0.14);
-    }
-    .billing-kpi span {
-        display: block;
-        color: #94a3b8;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        margin-bottom: 0.35rem;
-    }
-    .billing-kpi strong {
-        color: #f8fafc;
-        display: block;
-        font-size: 1.15rem;
-    }
-    [data-baseweb="input"] > div,
-    [data-baseweb="select"] > div,
-    [data-baseweb="textarea"] > div,
-    textarea,
-    input {
-        background: rgba(15, 23, 42, 0.86) !important;
-        border-color: #334155 !important;
-        color: #f8fafc !important;
-        border-radius: 8px !important;
-    }
-    [data-baseweb="input"] > div:focus-within,
-    [data-baseweb="select"] > div:focus-within,
-    [data-baseweb="textarea"] > div:focus-within {
-        border-color: #14b8a6 !important;
-        box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.16) !important;
-    }
-    .stButton > button {
-        border-radius: 8px !important;
-        min-height: 2.65rem !important;
-        font-weight: 700 !important;
-        white-space: normal !important;
-    }
-    .stButton > button[kind="primary"],
-    .stButton > button[data-testid="stBaseButton-primary"] {
+    .stApp { background: #0a0f1a !important; }
+    .main .block-container { max-width: 1320px; padding: 1.1rem 1.6rem 2.4rem !important; }
+    h1, h2, h3 { color: #f8fafc !important; }
+    p, label, .stMarkdown, .stCaption { color: #cbd5e1; }
+    [data-testid="stSidebar"] { background: #0b1220 !important; border-right: 1px solid rgba(148,163,184,0.16) !important; }
+    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] label { color: #e2e8f0 !important; }
+    .stButton > button { border-radius: 8px !important; font-weight: 700 !important; }
+    .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #14b8a6 0%, #2563eb 100%) !important;
         border: 1px solid rgba(94, 234, 212, 0.35) !important;
-        color: #ffffff !important;
-    }
-    .stButton > button[kind="secondary"],
-    .stButton > button[data-testid="stBaseButton-secondary"] {
-        background: #1e293b !important;
-        color: #e2e8f0 !important;
-        border: 1px solid #334155 !important;
-    }
-    .stButton > button p { color: inherit !important; }
-    [data-testid="stTabs"] [role="tablist"] {
-        background: #101827 !important;
-        border-radius: 8px !important;
-        border: 1px solid rgba(148, 163, 184, 0.14) !important;
-        padding: 0.35rem;
-    }
-    [data-testid="stTabs"] [role="tab"] {
-        border-radius: 7px;
-        color: #cbd5e1;
-        font-weight: 700;
-        padding: 0.55rem 0.85rem;
-    }
-    [data-testid="stTabs"] [aria-selected="true"] {
-        background: #0f172a;
-        color: #ffffff;
-        box-shadow: inset 0 -2px 0 #14b8a6;
-    }
-    [data-testid="stForm"],
-    [data-testid="stVerticalBlockBorderWrapper"],
-    [data-testid="stMetric"] {
-        background: #101827 !important;
-        border: 1px solid rgba(148, 163, 184, 0.14) !important;
-        border-radius: 8px !important;
-        box-shadow: none !important;
-    }
-    [data-testid="stAlert"] { border-radius: 8px; }
-    [data-testid="stVerticalBlockBorderWrapper"] div[style*="overflow"]::-webkit-scrollbar,
-    div[style*="overflow"]::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    [data-testid="stVerticalBlockBorderWrapper"] div[style*="overflow"]::-webkit-scrollbar-track,
-    div[style*="overflow"]::-webkit-scrollbar-track {
-        background: rgba(15, 23, 42, 0.55);
-        border-radius: 999px;
-    }
-    [data-testid="stVerticalBlockBorderWrapper"] div[style*="overflow"]::-webkit-scrollbar-thumb,
-    div[style*="overflow"]::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #14b8a6 0%, #2563eb 100%);
-        border-radius: 999px;
-    }
-    @media (max-width: 900px) {
-        .billing-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 760px) {
-        .main .block-container { padding: 0.8rem 0.75rem 2rem !important; }
-        .billing-header { grid-template-columns: 1fr; }
-        .billing-summary { grid-template-columns: 1fr; }
     }
     </style>
     """,
@@ -242,19 +100,19 @@ facturas_arca_resumen = get_facturas_arca(empresa_id)
 cobros_total = sum(float(c.get("monto", 0) or 0) for c in cobros_resumen)
 pendiente_total = total_saldo_prefacturas(prefacturas_resumen, cobros_resumen)
 
-st.markdown(
-    f"""
-    <div class="billing-summary">
-        <div class="billing-kpi"><span>Clientes</span><strong>{len(clientes_resumen)}</strong></div>
-        <div class="billing-kpi"><span>Presupuestos</span><strong>{len(presupuestos_resumen)}</strong></div>
-        <div class="billing-kpi"><span>Pre-facturas</span><strong>{len(prefacturas_resumen)}</strong></div>
-        <div class="billing-kpi"><span>Facturas ARCA</span><strong>{len(facturas_arca_resumen)}</strong></div>
-        <div class="billing-kpi"><span>Cobrado</span><strong>{fmt_moneda(cobros_total)}</strong></div>
-        <div class="billing-kpi"><span>Pendiente</span><strong>{fmt_moneda(pendiente_total)}</strong></div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# KPIs nativos de Streamlit (más compatibles con Cloud)
+kpi_cols = st.columns(6)
+kpis = [
+    ("Clientes", len(clientes_resumen)),
+    ("Presupuestos", len(presupuestos_resumen)),
+    ("Pre-facturas", len(prefacturas_resumen)),
+    ("Facturas ARCA", len(facturas_arca_resumen)),
+    ("Cobrado", fmt_moneda(cobros_total)),
+    ("Pendiente", fmt_moneda(pendiente_total)),
+]
+for col, (label, value) in zip(kpi_cols, kpis):
+    with col:
+        st.metric(label=label, value=value)
 
 cols = st.columns(len(MODULOS))
 for i, label in enumerate(MODULOS):
@@ -346,21 +204,22 @@ global_query = st.text_input(
 if global_query.strip():
     query = global_query.strip().lower()
     matches = _global_results(query)
-    with st.container(height=260 if matches else 120, border=True):
-        if not matches:
-            st.caption("No se encontraron coincidencias.")
-        else:
-            for idx, item in enumerate(matches):
-                c1, c2 = st.columns([4, 1])
-                with c1:
-                    st.markdown(f"**{item['titulo']}**")
-                    st.caption(f"{item['modulo']} | {item['detalle']}")
-                with c2:
-                    if st.button("Abrir", key=f"global_open_{idx}_{item['modulo']}", use_container_width=True):
-                        st.session_state["billing_modulo_activo"] = item["modulo"]
-                        if item.get("cliente_label"):
-                            st.session_state["cc_cliente_label"] = item["cliente_label"]
-                        st.rerun()
+    st.divider()
+    if not matches:
+        st.caption("No se encontraron coincidencias.")
+    else:
+        for idx, item in enumerate(matches):
+            c1, c2 = st.columns([4, 1])
+            with c1:
+                st.markdown(f"**{item['titulo']}**")
+                st.caption(f"{item['modulo']} | {item['detalle']}")
+            with c2:
+                if st.button("Abrir", key=f"global_open_{idx}_{item['modulo']}", use_container_width=True):
+                    st.session_state["billing_modulo_activo"] = item["modulo"]
+                    if item.get("cliente_label"):
+                        st.session_state["cc_cliente_label"] = item["cliente_label"]
+                    st.rerun()
+    st.divider()
 
 try:
     if modulo_key == "dashboard":
