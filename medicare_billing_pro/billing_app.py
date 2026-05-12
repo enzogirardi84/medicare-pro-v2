@@ -8,6 +8,7 @@ from core.auth import render_logout_button, require_auth
 from core.config import ALLOW_LOCAL_FALLBACK, APP_NAME, APP_VERSION, DEBUG, PAGE_TITLE
 from core.db_sql import LOCAL_DATA_PATH, get_clientes, get_cobros, get_facturas_arca, get_prefacturas, get_presupuestos, supabase
 from core.billing_logic import total_saldo_prefacturas
+from core.ui_theme import aplicar_tema_billing
 from core.utils import fmt_moneda
 
 st.set_page_config(
@@ -18,6 +19,7 @@ st.set_page_config(
 )
 
 configurar_logging_basico()
+aplicar_tema_billing()
 
 if not require_auth():
     st.stop()
@@ -89,17 +91,19 @@ for col, (label, value) in zip(kpi_cols, kpis):
     with col:
         st.metric(label=label, value=value)
 
-cols = st.columns(len(MODULOS))
-for i, label in enumerate(MODULOS):
-    with cols[i]:
-        if st.button(
-            label,
-            key=f"nav_{label}",
-            use_container_width=True,
-            type="primary" if modulo_activo == label else "secondary",
-        ):
-            st.session_state["billing_modulo_activo"] = label
-            st.rerun()
+nav_labels = list(MODULOS)
+for start in range(0, len(nav_labels), 3):
+    cols = st.columns(3)
+    for col, label in zip(cols, nav_labels[start : start + 3]):
+        with col:
+            if st.button(
+                label,
+                key=f"nav_{label}",
+                use_container_width=True,
+                type="primary" if modulo_activo == label else "secondary",
+            ):
+                st.session_state["billing_modulo_activo"] = label
+                st.rerun()
 
 st.divider()
 

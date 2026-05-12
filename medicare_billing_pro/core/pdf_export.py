@@ -108,11 +108,51 @@ def _table_header(pdf: "BillingPDF", headers: Sequence[str], widths: Sequence[fl
 
 
 def _table_row(pdf: "BillingPDF", values: Sequence[Any], widths: Sequence[float], aligns: Sequence[str], fill: bool = False) -> None:
+    line_h = 4.6
+    padding = 1.6
+    texts = [safe_text(str(value or "-")) for value in values]
+    wrapped = [_wrap_pdf_text(pdf, text, max(width - (padding * 2), 8)) for text, width in zip(texts, widths)]
+    row_h = max(6.5, max(len(lines) for lines in wrapped) * line_h + (padding * 2))
+    if pdf.get_y() + row_h > pdf.h - pdf.b_margin:
+        pdf.add_page()
     pdf.set_fill_color(*SOFT)
     pdf.set_font("Arial", "", 8)
-    for value, width, align in zip(values, widths, aligns):
-        pdf.cell(width, 6, safe_text(str(value or "-"))[:42], border=1, align=align, fill=fill)
-    pdf.ln()
+    y = pdf.get_y()
+    x = pdf.get_x()
+    for lines, width, align in zip(wrapped, widths, aligns):
+        pdf.set_xy(x, y)
+        if fill:
+            pdf.rect(x, y, width, row_h, "F")
+        pdf.rect(x, y, width, row_h)
+        pdf.set_xy(x + padding, y + padding)
+        pdf.multi_cell(width - (padding * 2), line_h, "\n".join(lines), border=0, align=align)
+        x += width
+    pdf.set_xy(pdf.l_margin, y + row_h)
+
+
+def _wrap_pdf_text(pdf: "BillingPDF", text: str, max_width: float, max_lines: int = 4) -> List[str]:
+    """Corta texto para filas PDF sin partir palabras ni desbordar columnas."""
+    words = safe_text(text).split()
+    if not words:
+        return ["-"]
+    lines: List[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if pdf.get_string_width(candidate) <= max_width or not current:
+            current = candidate
+            continue
+        lines.append(current)
+        current = word
+        if len(lines) >= max_lines:
+            break
+    if len(lines) < max_lines and current:
+        lines.append(current)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+    if len(lines) == max_lines and words and " ".join(words) != " ".join(lines):
+        lines[-1] = lines[-1].rstrip(".") + "..."
+    return lines or ["-"]
 
 
 def _total_box(pdf: "BillingPDF", label: str, value: float) -> None:

@@ -201,7 +201,7 @@ def render_facturas_arca() -> None:
             with st.container(height=610, border=False):
                 for f in facturas_filtradas:
                     with st.container(border=True):
-                        c1, c2, c3 = st.columns([3, 1.4, 2])
+                        c1, c2, c3 = st.columns([3.1, 1.25, 2.55])
                         with c1:
                             st.markdown(f"**Factura {f.get('tipo_comprobante', 'C')} {f.get('numero', '-')}** | {f.get('cliente_nombre', '-')}")
                             st.caption(f"{fmt_fecha(f.get('fecha', ''))} | Neto {fmt_moneda(f.get('neto', 0))} | IVA {fmt_moneda(f.get('iva', 0))} | Total {fmt_moneda(f.get('total', 0))}")
@@ -214,16 +214,17 @@ def render_facturas_arca() -> None:
                                     registrar_auditoria(empresa_id, usuario, "cambiar_estado", "factura_arca", f.get("id", ""), {"estado": estado})
                                     st.rerun()
                         with c3:
-                            b1, b2, b3 = st.columns(3)
+                            b1, b2, b3 = st.columns([1.25, 1, 1.2])
                             with b1:
                                 if FPDF_DISPONIBLE:
-                                    st.download_button("PDF", exportar_factura_arca_pdf(f, empresa_nombre, f.get("items", []), config), f"factura_arca_{sanitize_filename(f.get('numero', ''))}.pdf", mime="application/pdf", key=f"pdf_arca_{f.get('id')}", use_container_width=True)
+                                    st.download_button("Descargar PDF", exportar_factura_arca_pdf(f, empresa_nombre, f.get("items", []), config), f"factura_arca_{sanitize_filename(f.get('numero', ''))}.pdf", mime="application/pdf", key=f"pdf_arca_{f.get('id')}", use_container_width=True)
                             with b2:
                                 result = emitir_factura_homologacion(f, config)
                                 if st.button("Emitir", key=f"emit_arca_{f.get('id')}", use_container_width=True, disabled=not status.listo):
                                     st.warning(result.get("mensaje", "Pendiente de homologacion."))
                             with b3:
-                                if st.button("Borrar", key=f"del_arca_{f.get('id')}", use_container_width=True):
+                                confirm = st.checkbox("Confirmar", key=f"confirm_del_arca_{f.get('id')}")
+                                if st.button("Eliminar", key=f"del_arca_{f.get('id')}", use_container_width=True, disabled=not confirm):
                                     if delete_factura_arca(f.get("id")):
                                         registrar_auditoria(empresa_id, usuario, "borrar", "factura_arca", f.get("id", ""))
                                         st.rerun()

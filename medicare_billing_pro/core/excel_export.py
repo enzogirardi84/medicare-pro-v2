@@ -270,6 +270,7 @@ def exportar_presupuestos_excel(presupuestos: List[Dict], empresa: str) -> bytes
         _total_row(ws, last + 2, 3, 4, "Total presupuestado", total)
     _add_table(ws, "tbl_presupuestos", header_row, last, len(headers))
     _auto_width(ws)
+    _write_concept_detail_sheet(wb, "Detalle conceptos", "Detalle de presupuestos", empresa, presupuestos, "Presupuesto")
     return _finish(wb)
 
 
@@ -303,7 +304,43 @@ def exportar_prefacturas_excel(prefacturas: List[Dict], empresa: str) -> bytes:
         _total_row(ws, last + 3, 6, 7, "Saldo pendiente", sum(float(p.get("saldo", p.get("total", 0)) or 0) for p in prefacturas))
     _add_table(ws, "tbl_prefacturas", header_row, last, len(headers))
     _auto_width(ws)
+    _write_concept_detail_sheet(wb, "Detalle conceptos", "Detalle de pre-facturas", empresa, prefacturas, "Pre-factura")
     return _finish(wb)
+
+
+def _write_concept_detail_sheet(
+    wb: "Workbook",
+    sheet_name: str,
+    title: str,
+    empresa: str,
+    documents: List[Dict],
+    document_label: str,
+) -> None:
+    ws = wb.create_sheet(_safe_sheet_name(sheet_name))
+    header = _write_title(ws, title, empresa, f"{len(documents)} documentos")
+    headers = [document_label, "Fecha", "Cliente", "Estado", "Concepto", "Cantidad", "Precio unitario", "Subtotal"]
+    rows = []
+    for doc in documents:
+        for item in doc.get("items", []) or []:
+            cantidad = float(item.get("cantidad", 1) or 1)
+            precio = float(item.get("precio_unitario", 0) or 0)
+            rows.append(
+                [
+                    doc.get("numero", ""),
+                    fmt_fecha(doc.get("fecha", "")),
+                    doc.get("cliente_nombre", ""),
+                    doc.get("estado_calculado", doc.get("estado", "")),
+                    item.get("concepto", ""),
+                    cantidad,
+                    precio,
+                    cantidad * precio,
+                ]
+            )
+    last = _append_rows(ws, headers, rows, header)
+    if last >= header + 1:
+        _format_money_cols(ws, [7, 8], header + 1, last)
+    _add_table(ws, f"tbl_{document_label.lower().replace('-', '').replace(' ', '_')}_items", header, last, len(headers))
+    _auto_width(ws)
 
 
 def _summary_sheet(ws, empresa: str, mes: str, presupuestos: List[Dict], prefacturas: List[Dict], cobros: List[Dict]) -> None:
