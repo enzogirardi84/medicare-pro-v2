@@ -950,6 +950,89 @@ def aplicar_css_base() -> None:
             .stSpinner {
                 min-height: 60px;
             }
+
+            /* =========================================================
+               16. PULIDO GENERAL MEDICARE PRO 2
+               ========================================================= */
+            .block-container {
+                max-width: 1480px !important;
+                padding-top: 0.9rem !important;
+                padding-bottom: 1.25rem !important;
+            }
+
+            h1, h2, h3, h4,
+            p, span, label, div {
+                letter-spacing: 0 !important;
+            }
+
+            div[data-testid="stButton"] > button,
+            div[data-testid="stDownloadButton"] > button,
+            div[data-testid="stFormSubmitButton"] > button {
+                min-height: 42px !important;
+                height: auto !important;
+                border-radius: 10px !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere !important;
+                line-height: 1.18 !important;
+                padding: 0.55rem 0.85rem !important;
+            }
+
+            div[data-testid="stButton"] > button p,
+            div[data-testid="stDownloadButton"] > button p,
+            div[data-testid="stFormSubmitButton"] > button p {
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: clip !important;
+                line-height: 1.18 !important;
+                margin: 0 !important;
+            }
+
+            [data-testid="stTabs"] [role="tablist"] {
+                overflow-x: auto !important;
+                gap: 0.25rem !important;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.16) !important;
+            }
+
+            [data-testid="stTabs"] [role="tab"] {
+                min-width: max-content !important;
+                white-space: nowrap !important;
+            }
+
+            [data-testid="stMetric"] {
+                min-height: 78px !important;
+            }
+
+            [data-testid="stMetricValue"] {
+                font-size: clamp(1.15rem, 1.8vw, 1.85rem) !important;
+                line-height: 1.08 !important;
+            }
+
+            div[data-testid="stDataFrame"],
+            div[data-testid="stTable"] {
+                max-height: 62vh !important;
+                overflow: auto !important;
+                border-radius: 10px !important;
+            }
+
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                border-radius: 12px !important;
+            }
+
+            [data-testid="stSidebar"] .stButton > button {
+                min-height: 40px !important;
+                padding: 0.5rem 0.7rem !important;
+            }
+
+            @media (max-width: 900px) {
+                .block-container {
+                    padding-left: 0.85rem !important;
+                    padding-right: 0.85rem !important;
+                }
+
+                [data-testid="column"] {
+                    min-width: min(100%, 240px) !important;
+                }
+            }
         </style>
         """,
         unsafe_allow_html=True,

@@ -156,9 +156,8 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 )
         return
 
-    # ── ESCRITORIO: chunking nativo en filas de 6 ──
-    # Renderizar en filas de 6 columnas nativas de Streamlit
-    chunk_size = 6
+    # Escritorio: filas de 4 columnas para evitar textos cortados.
+    chunk_size = 4
     for i in range(0, len(modulos), chunk_size):
         fila_modulos = modulos[i:i + chunk_size]
         cols = st.columns(chunk_size)
