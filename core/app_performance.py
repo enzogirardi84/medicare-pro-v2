@@ -3,6 +3,8 @@
 Evita que main.py cargue lógica de procesar_guardado_pendiente directamente.
 """
 
+import time
+
 import streamlit as st
 
 from core.app_logging import log_event
@@ -22,7 +24,7 @@ def procesar_guardado_pendiente_seguro() -> bool:
         return False
 
     ultimo = float(st.session_state.get("_guardar_datos_ultimo_intento_ts", 0.0) or 0.0)
-    if ultimo > 0 and (__import__("time").monotonic() - ultimo) < min_intervalo:
+    if ultimo > 0 and (time.monotonic() - ultimo) < min_intervalo:
         return False
 
     st.session_state["_guardar_datos_pendiente"] = False

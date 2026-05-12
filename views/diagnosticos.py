@@ -3,10 +3,12 @@ PANEL DE DIAGNOSTICO DEL SISTEMA
 Vista exclusiva para superadmin: verifica Supabase, tablas SQL, datos locales, errores,
 estado del sistema, logs, memoria y configuración.
 """
-import streamlit as st
+import importlib.util
 import time
 from datetime import datetime
 from pathlib import Path
+
+import streamlit as st
 
 
 def render_diagnosticos(user=None):
@@ -371,9 +373,7 @@ def render_diagnosticos(user=None):
                     ("psutil", "psutil"),
                 ]
                 for pip_name, import_name in deps:
-                    try:
-                        __import__(import_name)
-                    except ImportError:
+                    if importlib.util.find_spec(import_name) is None:
                         dependencias_faltantes.append(pip_name)
                 
                 time.sleep(0.5)

@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Callable, Set
 from collections import defaultdict
 import json
 
+import pandas as pd
 import streamlit as st
 
 from core.app_logging import log_event
@@ -772,7 +773,7 @@ class WorkflowEngine:
         if by_template:
             st.subheader("Por Tipo")
             data = [{"Workflow": k, "Cantidad": v} for k, v in sorted(by_template.items(), key=lambda x: x[1], reverse=True)]
-            df = __import__('pandas', fromlist=['DataFrame']).DataFrame(data)
+            df = pd.DataFrame(data)
             st.bar_chart(df.set_index("Workflow"))
 
 

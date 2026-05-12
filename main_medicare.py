@@ -1,7 +1,6 @@
 import base64
 import time
 from html import escape
-from importlib import import_module
 from pathlib import Path
 
 import streamlit as st
@@ -26,6 +25,12 @@ from core.app_navigation import (
     resolve_current_view,
     resolve_menu_for_role,
 )
+from core import utils as core_utils
+from core.alertas_app_paciente_ui import render_banner_alertas_criticas_si_aplica
+from core.anticolapso import limite_pacientes_sidebar
+from core.auth import check_inactividad, render_login, verificar_clinica_sesion_activa
+from core.notificaciones_superiores import render_franja_avisos_operativos
+from core.release_notes import MC_APP_CHANGELOG
 from core.app_performance import (
     procesar_guardado_pendiente_seguro,
     render_metricas_admin_sidebar,
@@ -99,14 +104,6 @@ if not st.session_state.get("entered_app"):
 # ============================================================
 # IMPORTS DINÁMICOS / FALLBACKS
 # ============================================================
-_core_auth = import_module("core.auth")
-check_inactividad = _core_auth.check_inactividad
-render_login = _core_auth.render_login
-verificar_clinica_sesion_activa = getattr(
-    _core_auth, "verificar_clinica_sesion_activa", lambda: None
-)
-
-core_utils = import_module("core.utils")
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(core_utils, "es_control_total", lambda rol, usuario_actual=None: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"})
 inicializar_db_state = core_utils.inicializar_db_state
@@ -124,18 +121,6 @@ descripcion_acceso_rol = getattr(
         else "Acceso asistencial limitado al registro clinico del paciente"
     ),
 )
-
-_ac = import_module("core.anticolapso")
-limite_pacientes_sidebar = _ac.limite_pacientes_sidebar
-
-_aa = import_module("core.alertas_app_paciente_ui")
-render_banner_alertas_criticas_si_aplica = _aa.render_banner_alertas_criticas_si_aplica
-
-_ns = import_module("core.notificaciones_superiores")
-render_franja_avisos_operativos = _ns.render_franja_avisos_operativos
-
-_rn = import_module("core.release_notes")
-MC_APP_CHANGELOG = _rn.MC_APP_CHANGELOG
 
 # ============================================================
 # SESIÓN / BOOTSTRAP DB
