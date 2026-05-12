@@ -32,6 +32,21 @@ class TestEnvironmentBase:
         assert "SECRET_KEY" not in data
         assert "SUPABASE_KEY" not in data
         assert "ENVIRONMENT" in data
+
+    def test_environment_detects_insecure_placeholders(self):
+        from config.environment import Environment
+
+        env = Environment(
+            ENVIRONMENT="production",
+            SECRET_KEY="default-secret-key-change-in-production",
+            PASSWORD_SALT="default-salt",
+            SUPABASE_KEY="your-supabase-anon-key",
+        )
+
+        insecure = env.insecure_settings()
+        assert "SECRET_KEY" in insecure
+        assert "PASSWORD_SALT" in insecure
+        assert "SUPABASE_KEY" in insecure
     
     def test_is_production(self):
         """Test detección de producción"""
@@ -89,6 +104,7 @@ class TestProductionConfig:
         # Mockear variables de entorno requeridas y recargar para capturar defaults
         with patch.dict(os.environ, {
             "SECRET_KEY": "test-secret",
+            "PASSWORD_SALT": "test-salt",
             "DATABASE_URL": "postgresql://test",
             "SUPABASE_URL": "https://test.supabase.co",
             "SUPABASE_KEY": "test-key",
@@ -105,6 +121,7 @@ class TestProductionConfig:
         
         with patch.dict(os.environ, {
             "SECRET_KEY": "test-secret",
+            "PASSWORD_SALT": "test-salt",
             "DATABASE_URL": "postgresql://test",
             "SUPABASE_URL": "https://test.supabase.co",
             "SUPABASE_KEY": "test-key",
@@ -125,6 +142,23 @@ class TestProductionConfig:
                 _prod_mod.ProductionConfig()
             
             assert "SECRET_KEY" in str(exc_info.value)
+
+    def test_production_validation_rejects_placeholder_secrets(self):
+        import importlib
+        import config.production as _prod_mod
+
+        with patch.dict(os.environ, {
+            "SECRET_KEY": "default-secret-key-change-in-production",
+            "PASSWORD_SALT": "default-salt",
+            "DATABASE_URL": "postgresql://test",
+            "SUPABASE_URL": "https://test.supabase.co",
+            "SUPABASE_KEY": "your-supabase-anon-key",
+        }):
+            importlib.reload(_prod_mod)
+            with pytest.raises(ValueError) as exc_info:
+                _prod_mod.ProductionConfig()
+
+            assert "Configuracion insegura" in str(exc_info.value)
 
 
 class TestTestingConfig:
@@ -170,7 +204,7 @@ class TestConfigModule:
     
     def test_config_import_production(self):
         """Test import con MEDICARE_ENV=production"""
-        with patch.dict(os.environ, {"MEDICARE_ENV": "production", "SECRET_KEY": "test"}):
+        with patch.dict(os.environ, {"MEDICARE_ENV": "production", "SECRET_KEY": "test", "PASSWORD_SALT": "test-salt"}):
             # Nota: esto requeriría reimportar el módulo
             pass  # Simplificado por dependencias de import
 

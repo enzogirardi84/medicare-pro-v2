@@ -148,10 +148,8 @@ def texto_ayuda_politica_password_breve() -> str:
 
 
 def establecer_password_nuevo(user_dict: dict, plain: str, rounds: int = 12) -> None:
-    """Recuperación de contraseña u alta: solo hash si bcrypt está disponible."""
-    if hashing_disponible():
-        user_dict["pass_hash"] = hash_password(plain, rounds=rounds)
-        user_dict["pass"] = ""
-    else:
-        user_dict["pass"] = plain
-        user_dict.pop("pass_hash", None)
+    """Recuperacion de contrasena u alta: nunca persiste texto plano."""
+    if not hashing_disponible():
+        raise RuntimeError("bcrypt no instalado: no se puede guardar una contrasena de forma segura")
+    user_dict["pass_hash"] = hash_password(plain, rounds=rounds)
+    user_dict["pass"] = ""

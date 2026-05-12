@@ -7,6 +7,18 @@ from typing import Dict, List, Optional
 import os
 
 
+_INSECURE_SENTINELS = {
+    "",
+    "default-secret-key-change-in-production",
+    "default-salt",
+    "change-this-to-a-secure-random-key-in-production",
+    "another-random-salt-value",
+    "your-supabase-anon-key",
+    "your-supabase-service-key",
+    "your-api-key",
+}
+
+
 @dataclass
 class Environment:
     """Configuración base que aplica a todos los ambientes."""
@@ -17,8 +29,8 @@ class Environment:
     TESTING: bool = False
     
     # Seguridad
-    SECRET_KEY: str = field(default_factory=lambda: os.getenv("SECRET_KEY", "default-secret-key-change-in-production"))
-    PASSWORD_SALT: str = field(default_factory=lambda: os.getenv("PASSWORD_SALT", "default-salt"))
+    SECRET_KEY: str = field(default_factory=lambda: os.getenv("SECRET_KEY", ""))
+    PASSWORD_SALT: str = field(default_factory=lambda: os.getenv("PASSWORD_SALT", ""))
     
     # Base de datos
     DATABASE_URL: str = field(default_factory=lambda: os.getenv("DATABASE_URL", ""))
@@ -76,6 +88,30 @@ class Environment:
     HEALTH_CHECK_ENABLED: bool = True
     METRICS_ENABLED: bool = False
     SENTRY_DSN: str = field(default_factory=lambda: os.getenv("SENTRY_DSN", ""))
+
+    def insecure_settings(self) -> List[str]:
+        """Retorna settings sensibles vacios o con placeholders conocidos."""
+        values = {
+            "SECRET_KEY": self.SECRET_KEY,
+            "PASSWORD_SALT": self.PASSWORD_SALT,
+            "SUPABASE_KEY": self.SUPABASE_KEY,
+        }
+        return [
+            key
+            for key, value in values.items()
+            if str(value or "").strip() in _INSECURE_SENTINELS
+        ]
+
+    def validate_security(self) -> None:
+        """Falla temprano en produccion ante secrets faltantes o placeholders."""
+        if not self.is_production():
+            return
+        insecure = self.insecure_settings()
+        if insecure:
+            raise ValueError(
+                "Configuracion insegura en produccion. Revisar variables: "
+                + ", ".join(sorted(insecure))
+            )
     
     @classmethod
     def from_dict(cls, data: Dict) -> "Environment":

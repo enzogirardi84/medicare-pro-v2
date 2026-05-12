@@ -13,8 +13,8 @@
 2. Pegá esto (reemplazá con tus credenciales reales):
 
 ```toml
-SUPABASE_URL = "https://cvgybjwmkyjtxmbaaimt.supabase.co"
-SUPABASE_KEY = "sb_publishable_hfeivzW1BcBKvkZiDI_8vw_N3YnGZR2"
+SUPABASE_URL = "https://TU-PROYECTO.supabase.co"
+SUPABASE_KEY = "TU_SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_ROLE_KEY = "TU_SERVICE_ROLE_KEY_AQUI"
 ```
 

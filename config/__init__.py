@@ -37,13 +37,14 @@ settings = Config()
 def validate_required_settings():
     """Valida que todas las configuraciones requeridas estén presentes."""
     required = [
-        "SECRET_KEY",
         "DATABASE_URL",
     ]
     
     if settings.ENVIRONMENT == "production":
         # En producción, requerir configuraciones adicionales
         required.extend([
+            "SECRET_KEY",
+            "PASSWORD_SALT",
             "SUPABASE_URL",
             "SUPABASE_KEY",
         ])

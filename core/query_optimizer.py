@@ -10,8 +10,8 @@ Optimizador de consultas para grandes datasets.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
-import pickle
 import zlib
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, field
@@ -212,22 +212,22 @@ class DataCompressor:
     @staticmethod
     def compress(data: Any) -> bytes:
         """Comprime datos con zlib."""
-        pickled = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
-        return zlib.compress(pickled)
+        payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str).encode("utf-8")
+        return zlib.compress(payload)
 
     @staticmethod
     def decompress(compressed: bytes) -> Any:
-        """Descomprime datos."""
+        """Descomprime datos JSON sin ejecutar payloads arbitrarios."""
         decompressed = zlib.decompress(compressed)
-        return pickle.loads(decompressed)
+        return json.loads(decompressed.decode("utf-8"))
 
     @staticmethod
     def should_compress(data: Any, threshold_bytes: int = 1024) -> bool:
         """Determina si los datos deberían comprimirse."""
         try:
-            size = len(pickle.dumps(data))
+            size = len(json.dumps(data, ensure_ascii=False, default=str).encode("utf-8"))
             return size > threshold_bytes
-        except Exception:
+        except (TypeError, ValueError):
             return False
 
 
@@ -368,11 +368,11 @@ def compress_large_data(data: Any, threshold_kb: int = 10) -> Tuple[Any, bool]:
     """
     compressor = DataCompressor()
     try:
-        pickled = pickle.dumps(data)
-        if len(pickled) > threshold_kb * 1024:
+        encoded = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
+        if len(encoded) > threshold_kb * 1024:
             compressed = compressor.compress(data)
             return compressed, True
-    except Exception as _exc:
+    except (TypeError, ValueError) as _exc:
         import logging
         logging.getLogger("query_optimizer").debug(f"fallo_compress:{type(_exc).__name__}")
     return data, False

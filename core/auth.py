@@ -58,7 +58,20 @@ from core._auth_helpers import (
     _render_bloque_verificacion_email_2fa,
 )
 
-SESSION_TIMEOUT_MINUTES = 90
+def _session_timeout_minutes() -> int:
+    """Timeout de sesion configurable y acotado para reducir riesgo de sesiones largas."""
+    try:
+        raw = st.secrets.get("SESSION_TIMEOUT_MINUTES", 30)
+    except Exception:
+        raw = 30
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = 30
+    return max(5, min(60, value))
+
+
+SESSION_TIMEOUT_MINUTES = _session_timeout_minutes()
 
 MSG_LOGIN_CREDENCIALES_FALLIDAS = (
     "No pudimos validar el acceso. Revisá **usuario** y **contraseña** "

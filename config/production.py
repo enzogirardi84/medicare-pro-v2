@@ -78,6 +78,7 @@ class ProductionConfig(Environment):
         """Valida que todas las configuraciones requeridas estén presentes."""
         required_vars = [
             "SECRET_KEY",
+            "PASSWORD_SALT",
             "DATABASE_URL",
             "SUPABASE_URL",
             "SUPABASE_KEY",
@@ -98,3 +99,4 @@ class ProductionConfig(Environment):
     def __post_init__(self):
         """Validar configuración al instanciar."""
         self.validate()
+        self.validate_security()

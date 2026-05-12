@@ -392,6 +392,27 @@ class TestQueryOptimizer:
         result_none = BinarySearchHelper.find_exact(items, 6, key=lambda x: x["id"])
         assert result_none is None
 
+    def test_data_compressor_roundtrip_json_safe(self):
+        from core.query_optimizer import DataCompressor
+
+        payload = {"pacientes": [{"dni": "37108100", "nombre": "Juan"}], "total": 1}
+        compressed = DataCompressor.compress(payload)
+
+        assert isinstance(compressed, bytes)
+        assert DataCompressor.decompress(compressed) == payload
+
+    def test_data_compressor_rejects_pickle_payload(self):
+        import pickle
+        import zlib
+
+        import pytest
+        from core.query_optimizer import DataCompressor
+
+        unsafe_payload = zlib.compress(pickle.dumps({"legacy": True}))
+
+        with pytest.raises(Exception):
+            DataCompressor.decompress(unsafe_payload)
+
 
 class TestUIOptimizer:
     """Tests para ui_optimizer.py"""
