@@ -28,3 +28,27 @@ def test_establecer_password_nuevo_no_guarda_texto_plano():
 
     assert usuario["pass"] == ""
     assert usuario["pass_hash"].startswith(("$2a$", "$2b$", "$2y$"))
+
+
+def test_password_legacy_texto_plano_bloqueado_por_defecto_en_produccion(monkeypatch):
+    from core.password_crypto import password_usuario_coincide
+
+    monkeypatch.setenv("MEDICARE_ENV", "production")
+    monkeypatch.delenv("ALLOW_LEGACY_PLAINTEXT_PASSWORD_LOGIN", raising=False)
+
+    ok, migrar = password_usuario_coincide({"pass": "ClaveVieja123"}, "ClaveVieja123")
+
+    assert ok is False
+    assert migrar is False
+
+
+def test_password_legacy_texto_plano_solo_en_ventana_de_migracion(monkeypatch):
+    from core.password_crypto import password_usuario_coincide
+
+    monkeypatch.setenv("MEDICARE_ENV", "production")
+    monkeypatch.setenv("ALLOW_LEGACY_PLAINTEXT_PASSWORD_LOGIN", "true")
+
+    ok, migrar = password_usuario_coincide({"pass": "ClaveVieja123"}, "ClaveVieja123")
+
+    assert ok is True
+    assert isinstance(migrar, bool)

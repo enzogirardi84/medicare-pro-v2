@@ -285,7 +285,7 @@ def render_diagnosticos(user=None):
             st.markdown("#### 🔐 Variables de Entorno")
             
             # Verificar secrets/configuración
-            required_vars = ["SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+            required_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
             secrets_ok = True
             
             for var in required_vars:

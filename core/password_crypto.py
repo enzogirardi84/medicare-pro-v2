@@ -7,6 +7,7 @@ Hash y verificación de contraseñas (bcrypt).
 
 from __future__ import annotations
 
+import os
 import re
 import secrets
 from typing import Optional, Tuple
@@ -21,6 +22,34 @@ BCRYPT_PREFIXES = ("$2a$", "$2b$", "$2y$")
 
 def hashing_disponible() -> bool:
     return bcrypt is not None
+
+
+def _setting_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    try:
+        import streamlit as st
+
+        candidate = st.secrets.get(name, None)
+        if isinstance(candidate, (bool, int, str)):
+            raw = candidate
+    except Exception:
+        pass
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).strip().lower() in {"1", "true", "yes", "si", "on"}
+
+
+def legacy_password_login_enabled() -> bool:
+    """Permite login con `pass` en claro solo durante migracion controlada.
+
+    En produccion queda deshabilitado por defecto. Para una ventana de migracion
+    acotada se puede activar `ALLOW_LEGACY_PLAINTEXT_PASSWORD_LOGIN=true`.
+    """
+    env = os.getenv("MEDICARE_ENV", "development").strip().lower()
+    default = env not in {"production", "prod"}
+    return _setting_bool("ALLOW_LEGACY_PLAINTEXT_PASSWORD_LOGIN", default)
 
 
 def bcrypt_rounds_config() -> int:
@@ -83,6 +112,8 @@ def password_usuario_coincide(user_dict: dict, plain: str) -> Tuple[bool, bool]:
     ph = user_dict.get("pass_hash")
     if ph is not None and str(ph).strip():
         return verificar_password(plain, str(ph).strip()), False
+    if not legacy_password_login_enabled():
+        return False, False
     legacy = user_dict.get("pass", "")
     if verificar_password(plain, str(legacy)):
         return True, bool(hashing_disponible())

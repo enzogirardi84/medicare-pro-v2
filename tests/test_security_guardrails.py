@@ -5,6 +5,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCAN_DIRS = ["main_medicare.py", "core", "views"]
 ALLOWED_IMPORT_MODULE = {Path("core/app_navigation.py")}
+SERVICE_ROLE_ALLOWED = {
+    Path("core/diagnosticos.py"),
+}
 
 
 def _python_files():
@@ -59,5 +62,18 @@ def test_dynamic_imports_are_limited_to_view_dispatcher():
             )
             if is_import_module and rel not in ALLOWED_IMPORT_MODULE:
                 findings.append(f"{_rel(path)}:{node.lineno}:import_module")
+
+    assert findings == []
+
+
+def test_service_role_key_is_not_used_in_views_or_public_app_entrypoints():
+    findings = []
+    for path in _python_files():
+        rel = path.relative_to(REPO_ROOT)
+        if rel in SERVICE_ROLE_ALLOWED:
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "SUPABASE_SERVICE_ROLE_KEY" in text or "sb_secret_" in text:
+            findings.append(_rel(path))
 
     assert findings == []

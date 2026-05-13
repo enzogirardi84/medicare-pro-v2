@@ -10,6 +10,7 @@ Revisa todas las vistas para verificar que:
 
 import ast
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Set
 
@@ -159,7 +160,7 @@ def generate_audit_report(results: List[Dict]) -> str:
     <div class="header {header_class}">
         <h1>Auditoria de Guardado - Medicare Pro</h1>
         <p>{status_text}</p>
-        <p style="font-size: 0.875rem; opacity: 0.9;">Generado: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p style="font-size: 0.875rem; opacity: 0.9;">Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     </div>
     
     <div class="stats">

@@ -2,12 +2,12 @@ name: Medicare Pro CI/CD
 
 on:
   push:
-    branches: [main, develop, "feature/**", "codex/**"]
+    branches: [main, master, develop, "feature/**", "codex/**"]
     paths-ignore:
       - "**.md"
       - "docs/**"
   pull_request:
-    branches: [main, develop]
+    branches: [main, master, develop]
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -151,6 +151,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run project security checklist
+        run: |
+          pip install pytest
+          python scripts/security_checklist.py
+          pytest tests/test_security_guardrails.py -q
 
       - name: Run Bandit (security linter)
         run: |

@@ -67,8 +67,8 @@ PERMISOS_MODULOS = {
         "APS / Dispensario",
     ],
     "auditoria": [
-        "Dashboard", "Admision", "Materiales", "Balance", "Inventario", "Caja",
-        "Red", "Historial", "PDF", "Equipo", "Asistencia", "RRHH", "Legal",
+        "Dashboard", "Admision", "Materiales", "Balance", "Inventario",
+        "Red", "Historial", "PDF", "Asistencia", "Legal",
         "APS / Dispensario",
     ],
 }

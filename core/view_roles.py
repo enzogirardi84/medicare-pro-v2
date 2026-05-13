@@ -69,7 +69,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Recetas": list(_ROL_CLINICA),
     "Balance": list(_ROL_CLINICA),
     "Inventario": list(_ROL_SOLO_OPER),
-    "Caja": list(_ROL_TODOS),
+    "Caja": list(_ROL_COORD_OPER),
     "Emergencias y Ambulancia": list(_ROL_CLINICA),
     "Alertas app paciente": list(_ROL_CLINICA),
     "Red de Profesionales": list(_ROL_TODOS),

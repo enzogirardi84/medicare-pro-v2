@@ -17,6 +17,7 @@ EJECUTAR:
 import ast
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 
@@ -168,7 +169,7 @@ def generate_refactoring_report(files_data: List[dict]) -> str:
 <body>
     <div class="header">
         <h1>Refactoring Report - Medicare Pro</h1>
-        <p>Generated on: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     </div>
     
     <div class="stats">
