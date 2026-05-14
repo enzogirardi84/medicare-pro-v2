@@ -51,6 +51,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Factura Electronica": ("views.factura_electronica", "render_factura_electronica"),
     "Turnos Online": ("views.turnos_online", "render_turnos_online"),
     "Chatbot IA": ("views.chatbot_ia", "render_chatbot_ia"),
+    "Calc. Dosis Pediatricas": ("views.calculadora_dosis", "render_calculadora_dosis"),
 }
 
 VIEW_NAV_LABELS_BASE: Dict[str, str] = {
@@ -91,6 +92,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Factura Electronica": "Factura Electronica",
     "Turnos Online": "Turnos Online",
     "Chatbot IA": "Chatbot IA",
+    "Calc. Dosis Pediatricas": "Calc. Dosis",
 }
 
 
