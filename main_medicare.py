@@ -279,20 +279,20 @@ with st.sidebar:
     )
     st.divider()
 
-    paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
-        mi_empresa,
-        rol,
-        obtener_pacientes_fn=obtener_pacientes_visibles,
-        obtener_alertas_fn=obtener_alertas_clinicas,
-        mapa_detalles_fn=mapa_detalles_pacientes,
-        es_control_total_fn=es_control_total,
-        valor_por_modo_liviano_fn=valor_por_modo_liviano,
-        limite_pacientes_fn=limite_pacientes_sidebar,
-    )
-
-# En móvil, el sidebar no debe tener su propio selector (conflicto con el móvil)
-if cliente_es_movil_probable():
-    paciente_sel = None
+    # En móvil, el sidebar NO tiene selector de pacientes (usa el central)
+    if not cliente_es_movil_probable():
+        paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
+            mi_empresa,
+            rol,
+            obtener_pacientes_fn=obtener_pacientes_visibles,
+            obtener_alertas_fn=obtener_alertas_clinicas,
+            mapa_detalles_fn=mapa_detalles_pacientes,
+            es_control_total_fn=es_control_total,
+            valor_por_modo_liviano_fn=valor_por_modo_liviano,
+            limite_pacientes_fn=limite_pacientes_sidebar,
+        )
+    else:
+        paciente_sel = None
 
 # Rerun limpio tras logout (fuera del contexto del botón para evitar desconexión websocket)
 if st.session_state.pop("_mc_logout_requested", False):
