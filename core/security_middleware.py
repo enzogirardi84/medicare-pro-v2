@@ -44,6 +44,39 @@ class SecurityError(Exception):
     pass
 
 
+# CSP (Content Security Policy) - protege contra XSS
+CSP_HEADER = {
+    "default-src": "'self'",
+    "script-src": "'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co",
+    "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src": "'self' data: blob: https:",
+    "font-src": "'self' https://fonts.gstatic.com",
+    "connect-src": "'self' https://*.supabase.co wss://*.supabase.co https://*.streamlit.app",
+    "frame-src": "'self' https://*.streamlit.app",
+    "object-src": "'none'",
+    "base-uri": "'self'",
+}
+
+
+def generar_csp_header() -> str:
+    """Genera el header CSP como string."""
+    return "; ".join(f"{k} {v}" for k, v in CSP_HEADER.items())
+
+
+def detectar_api_key_en_texto(texto: str) -> bool:
+    """Detecta posibles API keys expuestas en texto plano."""
+    patrones = [
+        r"sb_secret_[A-Za-z0-9_-]+",      # Supabase service key
+        r"sk-[A-Za-z0-9]+",               # OpenAI
+        r"ghp_[A-Za-z0-9]+",              # GitHub token
+        r"xox[bpr]-[A-Za-z0-9-]+",        # Slack
+    ]
+    for patron in patrones:
+        if re.search(patron, texto):
+            return True
+    return False
+
+
 class InputSanitizer:
     """Sanitizador de inputs con prevención XSS y SQL injection."""
     

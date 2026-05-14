@@ -63,14 +63,29 @@ Todos los datos sensibles se encriptan automáticamente con AES-256-GCM.
 """
 
 # Inicializar FastAPI
+# FIX 2026-05-14: CSP y seguridad mejorada
+from core.security_middleware import generar_csp_header
+
 app = FastAPI(
-    title=API_TITLE,
-    description=API_DESCRIPTION,
-    version=API_VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    title="Medicare Pro API",
+    version="2.0.0",
+    docs_url=None if ENV == "production" else "/docs",
+    redoc_url=None,
 )
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    """Agrega headers de seguridad a todas las respuestas."""
+    from core.security_middleware import generar_csp_header
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = generar_csp_header()
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
+    return response
 
 # CORS middleware - headers restringidos por seguridad
 app.add_middleware(
