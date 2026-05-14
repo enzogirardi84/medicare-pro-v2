@@ -9,4 +9,7 @@ if str(repo_root) not in sys.path:
 from core.app_bootstrap import insert_repo_root_on_path
 insert_repo_root_on_path()
 
-import main_medicare  # noqa: F401, E402
+import streamlit as st
+
+# Ejecutar main_medicare.py fresco en cada rerun (necesario para Streamlit)
+exec(compile(open("main_medicare.py", encoding="utf-8").read(), "main_medicare.py", "exec"))
