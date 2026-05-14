@@ -59,8 +59,8 @@ class SecureSettings(BaseSettings):
     db_cache_ttl_seconds: int = 300
     
     # Seguridad adicional
-    allowed_hosts: List[str] = ["*"]
-    cors_origins: List[str] = ["*"]
+    allowed_hosts: List[str] = ["medicare-pro.com", "app.medicare-pro.com"]
+    cors_origins: List[str] = ["https://medicare-pro.com", "https://app.medicare-pro.com"]
     max_login_attempts: int = 5
     login_lockout_minutes: int = 15
     session_timeout_minutes: int = 30

@@ -1,6 +1,20 @@
 """Medicare Billing Pro - entry point."""
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# FIX: En Streamlit Cloud el repo-root core/ puede conflictear con
+# medicare_billing_pro/core/. Forzamos la resolucion correcta.
+_billing_root = Path(__file__).resolve().parent
+if str(_billing_root) not in sys.path:
+    sys.path.insert(0, str(_billing_root))
+
+# Limpiar cache del root 'core' para evitar que Python reutilice el modulo equivocado
+for _mod_name in list(sys.modules.keys()):
+    if _mod_name == "core" or _mod_name.startswith("core."):
+        del sys.modules[_mod_name]
+
 import streamlit as st
 
 from core.app_logging import configurar_logging_basico, log_event
