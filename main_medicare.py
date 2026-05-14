@@ -594,10 +594,17 @@ if _modulo_previo_scroll != vista_actual:
     )
 
 # ============================================================
-# RENDER DE VISTA ACTUAL
+# RENDER DE VISTA ACTUAL - con indicador visible
 # ============================================================
 t0_view = time.monotonic()
 ok_view = True
+
+# Indicador debug: modulo cargando
+st.markdown(f"""
+<div style="background:#059669;color:#fff;padding:6px 12px;border-radius:8px;font-size:0.8rem;text-align:center;margin-bottom:8px;">
+Modulo cargado: <strong>{vista_actual}</strong> | Paciente: {paciente_sel or 'No seleccionado'}
+</div>
+""", unsafe_allow_html=True)
 
 try:
     render_current_view(
