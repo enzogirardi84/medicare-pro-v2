@@ -1,5 +1,7 @@
 import base64
+import json
 import time
+from datetime import datetime
 from html import escape
 from pathlib import Path
 
@@ -456,6 +458,22 @@ if mostrar_atajo or paciente_sel:
                 f"DNI {escape(str(det_actual.get('dni', 'S/D')))}  ·  "
                 f"{escape(str(det_actual.get('estado', 'Activo')))}"
             )
+
+# Backup automatico: verificar si pasaron 24h desde el ultimo
+try:
+    _ultimo_backup = st.session_state.get("_ultimo_backup_ts", 0)
+    if time.time() - _ultimo_backup > 86400:  # 24h
+        st.session_state["_ultimo_backup_ts"] = time.time()
+        from core.database import _db_keys, dumps_db_sorted
+        import json
+        claves = _db_keys()
+        data = {k: st.session_state[k] for k in claves if k in st.session_state}
+        backup_path = Path(f"backups/auto_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json")
+        backup_path.parent.mkdir(parents=True, exist_ok=True)
+        backup_path.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        log_event("backup", f"auto_backup_ok:{backup_path.name}")
+except Exception as exc:
+    log_event("backup", f"auto_backup_fallo:{type(exc).__name__}:{exc}")
 
 # ============================================================
 # NOTIFICACIONES DE ESCRITORIO (browser push)
