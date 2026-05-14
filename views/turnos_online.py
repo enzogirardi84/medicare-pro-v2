@@ -19,7 +19,7 @@ HORARIOS_DISPONIBLES = [
     '17:00', '17:30', '18:00',
 ]
 
-PROFESIONALES_POR_DEFECTO = ['Dr. Garcia', 'Dra. Lopez', 'Dr. Martinez', 'Dra. Rodriguez']
+PROFESIONALES_POR_DEFECTO = ['Dr. Garcia', 'Dra. Lopez', 'Dr. Martinez', 'Dra. Rodriguez', '-- Otro (especificar) --']
 
 
 def render_turnos_online(mi_empresa, rol):
@@ -69,7 +69,8 @@ def render_turnos_online(mi_empresa, rol):
         st.markdown('#### Configurar slots disponibles')
         with st.form('agenda_form', clear_on_submit=True):
             col_a1, col_a2 = st.columns(2)
-            profesional = col_a1.selectbox('Profesional', PROFESIONALES_POR_DEFECTO)
+            prof_sel = col_a1.selectbox('Profesional', PROFESIONALES_POR_DEFECTO)
+            profesional = col_a1.text_input('Nombre del profesional', placeholder='Ej: Dr. Perez') if prof_sel == '-- Otro (especificar) --' else prof_sel
             fecha = col_a2.date_input('Fecha', value=ahora().date() + timedelta(days=1))
             horarios = st.multiselect('Horarios disponibles', HORARIOS_DISPONIBLES, default=HORARIOS_DISPONIBLES[:4])
 
