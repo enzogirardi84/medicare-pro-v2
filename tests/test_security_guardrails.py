@@ -7,6 +7,7 @@ SCAN_DIRS = ["main_medicare.py", "core", "views"]
 ALLOWED_IMPORT_MODULE = {Path("core/app_navigation.py")}
 SERVICE_ROLE_ALLOWED = {
     Path("core/diagnosticos.py"),
+    Path("core/security_middleware.py"),
 }
 
 
