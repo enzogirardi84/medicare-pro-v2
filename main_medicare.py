@@ -322,6 +322,12 @@ if not vista_actual:
     )
     st.stop()
 
+# ============================================================
+# BIENVENIDA / ESTADO INICIAL (visible siempre)
+# ============================================================
+nombre_usuario = user.get("nombre", "Usuario")
+st.caption(f"Bienvenido, **{nombre_usuario}** — {mi_empresa} · Rol: {rol}")
+
 # Selector alternativo en móvil + mostrar botones nativos de sidebar (el custom JS no funciona en iframe sandboxed de Streamlit Cloud)
 # CSS de rescate para mostrar controles nativos de sidebar en móvil.
 # Usamos st.html (sin iframe) para que el CSS alcance los elementos shell de Streamlit.
