@@ -50,11 +50,12 @@ CSP_HEADER = {
     "script-src": "'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co",
     "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src": "'self' data: blob: https:",
-    "font-src": "'self' https://fonts.gstatic.com",
-    "connect-src": "'self' https://*.supabase.co wss://*.supabase.co https://*.streamlit.app",
+    "font-src": "'self' https://fonts.gstatic.com data:",
+    "connect-src": "'self' https://*.supabase.co wss://*.supabase.co https://*.streamlit.app wss://*.streamlit.app",
     "frame-src": "'self' https://*.streamlit.app",
     "object-src": "'none'",
     "base-uri": "'self'",
+    "form-action": "'self'",
 }
 
 
