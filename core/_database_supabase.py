@@ -64,7 +64,7 @@ def init_supabase():
                     trust_env=False,
                     follow_redirects=True,
                     http2=True,
-                    timeout=3.0,
+                    timeout=httpx.Timeout(5.0, connect=3.0),
                 )
             )
             log_event("db", "supabase_proxy_bypass:loopback_port_9")
@@ -82,7 +82,26 @@ def init_supabase():
         return None
 
 
-supabase = init_supabase()
+# LAZY initialization - no bloquea el import
+supabase = None
+# Inicializar Supabase en un thread con timeout
+import threading as _threading
+import time as _time
+
+_supabase_result = [None]
+_supabase_done = [False]
+
+def _init_worker():
+    _supabase_result[0] = init_supabase()
+    _supabase_done[0] = True
+
+_t = _threading.Thread(target=_init_worker, daemon=True)
+_t.start()
+_t.join(timeout=8.0)  # Esperar maximo 8 segundos
+if _supabase_done[0]:
+    supabase = _supabase_result[0]
+else:
+    log_event("db", "supabase_init_timeout - usando modo local")
 
 
 def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay: float = 0.35):
