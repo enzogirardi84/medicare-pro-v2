@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -71,14 +71,14 @@ jobs:
           cat nextgen_platform/ci_artifacts/release-draft.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release draft artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nextgen-release-draft
           path: nextgen_platform/ci_artifacts/release-draft.md
 
       - name: Create or update GitHub Release draft
         if: ${{ inputs.create_github_release }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.version }}
           name: NextGen ${{ inputs.version }}
