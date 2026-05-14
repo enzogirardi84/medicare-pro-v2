@@ -290,6 +290,10 @@ with st.sidebar:
         limite_pacientes_fn=limite_pacientes_sidebar,
     )
 
+# En móvil, el sidebar no debe tener su propio selector (conflicto con el móvil)
+if cliente_es_movil_probable():
+    paciente_sel = None
+
 # Rerun limpio tras logout (fuera del contexto del botón para evitar desconexión websocket)
 if st.session_state.pop("_mc_logout_requested", False):
     st.rerun()

@@ -117,11 +117,14 @@ def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_d
         opciones = [item[0] for item in p_f]
         display_map = {item[0]: item[1] for item in p_f}
 
+        valor_actual = st.session_state.get("paciente_actual")
+        idx_actual = opciones.index(valor_actual) if valor_actual in opciones else 0
+
         paciente_sel_mobile = st.selectbox(
             "Seleccionar paciente",
             opciones,
+            index=idx_actual,
             format_func=lambda x: display_map.get(x, x),
-            key="paciente_actual_select_mobile",
         )
 
         _cambio_paciente = (
@@ -130,6 +133,7 @@ def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_d
         )
         if _cambio_paciente:
             set_paciente_actual(st.session_state, paciente_sel_mobile)
+            # El selectbox ya trigger un rerun automaticamente
 
         if paciente_sel_mobile:
             det = mapa_detalles_fn(st.session_state).get(paciente_sel_mobile, {})
