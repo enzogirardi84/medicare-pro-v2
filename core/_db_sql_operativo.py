@@ -58,7 +58,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
     try:
         response = _supabase_execute_with_retry(
             "get_auditoria",
-            lambda: supabase.table("auditoria_legal").select("*, usuarios(nombre), pacientes(nombre_completo)").eq("empresa_id", empresa_id).order("fecha_evento", desc=True).limit(limit).execute(),
+            lambda: supabase.table("auditoria_legal").select("*").eq("empresa_id", empresa_id).order("fecha_evento", desc=True).limit(limit).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -77,7 +77,7 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
     try:
         response = _supabase_execute_with_retry(
             "get_turnos",
-            lambda: supabase.table("turnos").select("*, pacientes(nombre_completo, dni), usuarios(nombre)").eq("empresa_id", empresa_id).gte("fecha_hora_programada", fecha_inicio).lte("fecha_hora_programada", fecha_fin).order("fecha_hora_programada", desc=False).execute(),
+            lambda: supabase.table("turnos").select("*").eq("empresa_id", empresa_id).gte("fecha_hora_programada", fecha_inicio).lte("fecha_hora_programada", fecha_fin).order("fecha_hora_programada", desc=False).execute(),
         )
         return getattr(response, "data", None) or []
     except Exception as e:
@@ -135,7 +135,7 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
     try:
         response = _supabase_execute_with_retry(
             "get_administraciones",
-            lambda: supabase.table("administracion_med").select("*, indicaciones(medicamento, via_administracion, frecuencia), usuarios(nombre)").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).execute(),
+            lambda: supabase.table("administracion_med").select("*").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -175,7 +175,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
     try:
         response = _supabase_execute_with_retry(
             "get_emergencias_paciente",
-            lambda: supabase.table("emergencias").select("*, pacientes(nombre_completo), usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_llamado", desc=True).limit(limit).execute(),
+            lambda: supabase.table("emergencias").select("*").eq("paciente_id", paciente_id).order("fecha_llamado", desc=True).limit(limit).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -199,7 +199,7 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
     try:
         response = _supabase_execute_with_retry(
             "get_emergencias",
-            lambda: supabase.table("emergencias").select("*, pacientes(nombre_completo), usuarios(nombre)").eq("empresa_id", empresa_id).order("fecha_llamado", desc=True).limit(limit).execute(),
+            lambda: supabase.table("emergencias").select("*").eq("empresa_id", empresa_id).order("fecha_llamado", desc=True).limit(limit).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -297,7 +297,7 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_facturacion",
-            lambda: supabase.table("facturacion").select("*, pacientes(nombre_completo)").eq("empresa_id", empresa_id).order("fecha_emision", desc=True).execute(),
+            lambda: supabase.table("facturacion").select("*").eq("empresa_id", empresa_id).order("fecha_emision", desc=True).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -370,7 +370,7 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
     try:
         response = _supabase_execute_with_retry(
             "get_checkins",
-            lambda: supabase.table("checkin_asistencia").select("*, pacientes(nombre_completo), usuarios(nombre)").eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute(),
+            lambda: supabase.table("checkin_asistencia").select("*").eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute(),
         )
         return getattr(response, "data", None) or []
     except Exception as e:

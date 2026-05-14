@@ -49,7 +49,7 @@ def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[
     try:
         response = _supabase_execute_with_retry(
             "get_evoluciones",
-            lambda: supabase.table("evoluciones").select("*, usuarios(nombre, matricula)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).limit(limit).execute(),
+            lambda: supabase.table("evoluciones").select("*").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).limit(limit).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -198,7 +198,7 @@ def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]
     try:
         response = _supabase_execute_with_retry(
             "get_vitales",
-            lambda: supabase.table("signos_vitales").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).limit(limit).execute(),
+            lambda: supabase.table("signos_vitales").select("*").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).limit(limit).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -236,7 +236,7 @@ def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str)
     try:
         response = _supabase_execute_with_retry(
             "get_cuidados",
-            lambda: supabase.table("cuidados_enfermeria").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).order("fecha_registro", desc=False).execute(),
+            lambda: supabase.table("cuidados_enfermeria").select("*").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).order("fecha_registro", desc=False).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -274,7 +274,7 @@ def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_consentimientos",
-            lambda: supabase.table("consentimientos").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_firma", desc=True).execute(),
+            lambda: supabase.table("consentimientos").select("*").eq("paciente_id", paciente_id).order("fecha_firma", desc=True).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -312,7 +312,7 @@ def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_pediatria",
-            lambda: supabase.table("pediatria").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
+            lambda: supabase.table("pediatria").select("*").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -350,7 +350,7 @@ def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_escalas",
-            lambda: supabase.table("escalas_clinicas").select("*, usuarios(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
+            lambda: supabase.table("escalas_clinicas").select("*").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
