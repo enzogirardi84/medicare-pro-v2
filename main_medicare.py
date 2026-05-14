@@ -416,6 +416,21 @@ if not st.session_state.get("_acceso_registrado"):
     st.session_state["_acceso_registrado"] = True
 
 # ============================================================
+# BIENVENIDA / ESTADO SIN PACIENTE
+# ============================================================
+nombre_usuario = user.get("nombre", "Usuario")
+if not paciente_sel:
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(37,99,235,0.05));border:1px solid rgba(14,165,233,0.2);border-radius:20px;padding:28px 24px;margin:10px 0 20px;text-align:center;">
+        <h3 style="margin:0 0 8px;color:#e2e8f0;">Bienvenido, {nombre_usuario}</h3>
+        <p style="margin:0 0 4px;color:#94a3b8;">Selecciona un paciente del panel lateral izquierdo para comenzar.</p>
+        <p style="margin:0;color:#64748b;font-size:0.85rem;">Clinica: {mi_empresa} · Rol: {rol}</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.caption(f"Paciente: **{paciente_sel}** — {mi_empresa}")
+
+# ============================================================
 # CONTEXTO CLÍNICO / NOTIFICACIONES
 # ============================================================
 _render_sidebar_contexto_clinico(paciente_sel, vista_actual)
