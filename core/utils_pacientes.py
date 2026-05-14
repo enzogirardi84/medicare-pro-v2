@@ -19,7 +19,38 @@ _PACIENTES_SQL_STATUS_KEY = "_mc_pacientes_sql_status"
 
 def mapa_detalles_pacientes(session_state: dict) -> dict:
     m = session_state.get("detalles_pacientes_db")
-    return m if isinstance(m, dict) else {}
+    if not isinstance(m, dict):
+        m = {}
+        session_state["detalles_pacientes_db"] = m
+    # Si esta vacio, intentar cargar desde SQL
+    if not m:
+        try:
+            from core._db_sql_pacientes import get_pacientes_by_empresa
+            from core.nextgen_sync import _obtener_uuid_empresa
+            from core.utils_roles import _texto_normalizado
+            empresa = session_state.get("u_actual", {}).get("empresa", "")
+            if empresa:
+                eid = _obtener_uuid_empresa(empresa)
+                if eid:
+                    pacs = get_pacientes_by_empresa(eid)
+                    for p in pacs:
+                        nombre = p.get("nombre_completo", p.get("nombre", ""))
+                        dni = p.get("dni", "")
+                        pid = f"{nombre} - {dni}" if nombre and dni else p.get("id", "")
+                        m[pid] = {
+                            "dni": dni,
+                            "telefono": p.get("telefono", ""),
+                            "obra_social": p.get("obra_social", ""),
+                            "direccion": p.get("direccion", ""),
+                            "estado": p.get("estado", "Activo"),
+                            "empresa": empresa,
+                            "alergias": p.get("alergias", ""),
+                            "patologias": p.get("patologias", ""),
+                            "fecha_nacimiento": p.get("fecha_nacimiento", ""),
+                        }
+        except Exception:
+            pass
+    return m
 
 
 def asegurar_detalles_pacientes_en_sesion(session_state: dict) -> dict:
