@@ -952,83 +952,141 @@ def aplicar_css_base() -> None:
             }
 
             /* =========================================================
-               16. PULIDO GENERAL MEDICARE PRO 2
+               16. TEMA PROFESIONAL V2 - Glassmorphism + Diseño moderno
                ========================================================= */
+            /* Fondo con sutiles gradientes */
+            .stApp {
+                background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #16213e 100%) !important;
+            }
+            
+            /* Tarjetas con efecto glassmorphism */
+            div[data-testid="stForm"], 
+            div[data-testid="stMetric"],
+            div[data-testid="stDataFrame"],
+            div[data-testid="stTable"],
+            div.stAlert {
+                background: rgba(255, 255, 255, 0.03) !important;
+                backdrop-filter: blur(10px) !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                border: 1px solid rgba(255, 255, 255, 0.06) !important;
+                border-radius: 16px !important;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+            }
+            
+            /* Metric hover effect */
+            div[data-testid="stMetric"]:hover {
+                transform: translateY(-2px) !important;
+                border-color: rgba(14, 165, 233, 0.2) !important;
+                box-shadow: 0 12px 40px rgba(14, 165, 233, 0.1) !important;
+            }
+            
+            /* Sidebar mejorado */
+            [data-testid="stSidebar"] {
+                background: linear-gradient(180deg, rgba(15, 12, 41, 0.95) 0%, rgba(26, 26, 62, 0.98) 100%) !important;
+                border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+            }
+            
+            /* Cards del modulo grid */
+            div[data-testid="column"] > div[data-testid="stButton"] > button {
+                border-radius: 14px !important;
+                border: 1px solid rgba(255, 255, 255, 0.06) !important;
+                background: rgba(255, 255, 255, 0.03) !important;
+                transition: all 0.25s ease !important;
+                min-height: 48px !important;
+            }
+            div[data-testid="column"] > div[data-testid="stButton"] > button:hover {
+                transform: translateY(-3px) !important;
+                border-color: rgba(14, 165, 233, 0.3) !important;
+                box-shadow: 0 8px 25px rgba(14, 165, 233, 0.15) !important;
+                background: rgba(14, 165, 233, 0.08) !important;
+            }
+            
+            /* Tabs elegantes */
+            [data-testid="stTabs"] [role="tab"] {
+                border-radius: 10px 10px 0 0 !important;
+                padding: 8px 20px !important;
+                transition: all 0.2s ease !important;
+            }
+            [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+                background: rgba(14, 165, 233, 0.1) !important;
+                border-bottom: 2px solid #0ea5e9 !important;
+            }
+            
+            /* Headers con gradiente */
+            h1, h2, h3, h4 {
+                background: linear-gradient(135deg, #fff 0%, #94a3b8 100%) !important;
+                -webkit-background-clip: text !important;
+                -webkit-text-fill-color: transparent !important;
+                background-clip: text !important;
+                font-weight: 700 !important;
+            }
+            
+            /* Metric values con color accent */
+            [data-testid="stMetricValue"] {
+                background: linear-gradient(135deg, #0ea5e9, #38bdf8) !important;
+                -webkit-background-clip: text !important;
+                -webkit-text-fill-color: transparent !important;
+                font-weight: 800 !important;
+                font-size: clamp(1.3rem, 2vw, 2rem) !important;
+            }
+            
+            /* DataFrames con bordes redondeados */
+            .stDataFrame {
+                border-radius: 12px !important;
+                overflow: hidden !important;
+            }
+            
+            /* Scrollbar elegante */
+            ::-webkit-scrollbar {
+                width: 6px !important;
+                height: 6px !important;
+            }
+            ::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.02) !important;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: rgba(14, 165, 233, 0.3) !important;
+                border-radius: 10px !important;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: rgba(14, 165, 233, 0.5) !important;
+            }
+            
+            /* Botones primarios con glow */
+            button[kind="primary"] {
+                box-shadow: 0 0 20px rgba(14, 165, 233, 0.15) !important;
+            }
+            button[kind="primary"]:hover {
+                box-shadow: 0 0 30px rgba(14, 165, 233, 0.3) !important;
+            }
+            
+            /* Expanders con estilo */
+            .streamlit-expanderHeader {
+                border-radius: 12px !important;
+                background: rgba(255, 255, 255, 0.02) !important;
+            }
+            
+            /* Loading spinner premium */
+            .stSpinner > div > div {
+                border-width: 3px !important;
+                border-color: rgba(14, 165, 233, 0.1) !important;
+                border-top-color: #0ea5e9 !important;
+            }
+
+            /* Block container spacing */
             .block-container {
                 max-width: 1480px !important;
                 padding-top: 0.9rem !important;
                 padding-bottom: 1.25rem !important;
             }
-
-            h1, h2, h3, h4,
-            p, span, label, div {
-                letter-spacing: 0 !important;
+            div[data-testid="stHorizontalBlock"] {
+                gap: 0.65rem !important;
             }
-
-            div[data-testid="stButton"] > button,
-            div[data-testid="stDownloadButton"] > button,
-            div[data-testid="stFormSubmitButton"] > button {
-                min-height: 42px !important;
-                height: auto !important;
-                border-radius: 10px !important;
-                white-space: normal !important;
-                overflow-wrap: anywhere !important;
-                line-height: 1.18 !important;
-                padding: 0.55rem 0.85rem !important;
-            }
-
-            div[data-testid="stButton"] > button p,
-            div[data-testid="stDownloadButton"] > button p,
-            div[data-testid="stFormSubmitButton"] > button p {
-                white-space: normal !important;
-                overflow: visible !important;
-                text-overflow: clip !important;
-                line-height: 1.18 !important;
-                margin: 0 !important;
-            }
-
-            [data-testid="stTabs"] [role="tablist"] {
-                overflow-x: auto !important;
-                gap: 0.25rem !important;
-                border-bottom: 1px solid rgba(148, 163, 184, 0.16) !important;
-            }
-
-            [data-testid="stTabs"] [role="tab"] {
-                min-width: max-content !important;
-                white-space: nowrap !important;
-            }
-
-            [data-testid="stMetric"] {
-                min-height: 78px !important;
-            }
-
-            [data-testid="stMetricValue"] {
-                font-size: clamp(1.15rem, 1.8vw, 1.85rem) !important;
-                line-height: 1.08 !important;
-            }
-
-            div[data-testid="stDataFrame"],
-            div[data-testid="stTable"] {
-                max-height: 62vh !important;
-                overflow: auto !important;
-                border-radius: 10px !important;
-            }
-
-            div[data-testid="stVerticalBlockBorderWrapper"] {
-                border-radius: 12px !important;
-            }
-
-            [data-testid="stSidebar"] .stButton > button {
-                min-height: 40px !important;
-                padding: 0.5rem 0.7rem !important;
-            }
-
-            @media (max-width: 900px) {
+            @media (max-width: 768px) {
                 .block-container {
                     padding-left: 0.85rem !important;
                     padding-right: 0.85rem !important;
                 }
-
                 [data-testid="column"] {
                     min-width: min(100%, 240px) !important;
                 }
