@@ -29,8 +29,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
 
     st.info(
         'Esta es una vista de solo lectura para compartir con el paciente. '
-        'No se pueden realizar modificaciones desde este modulo.',
-        icon='',
+        'No se pueden realizar modificaciones desde este modulo.'
     )
 
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
