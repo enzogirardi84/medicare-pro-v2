@@ -716,6 +716,13 @@ def _guardar_datos_ejecutar():
 def _guardar_datos_ejecutar_core():
     _trim_logs_db_for_save()
 
+    # Skip Supabase sync on first load after login (evita guardar_lento de 14s)
+    if not st.session_state.get("_db_initial_load_done"):
+        st.session_state["_db_initial_load_done"] = True
+        st.session_state["_guardar_datos_pendiente"] = False
+        _registrar_estado_guardado("inicial", "Carga inicial completada.", guardado_nube=False, guardado_local=True)
+        return
+
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
     
