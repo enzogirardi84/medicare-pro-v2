@@ -36,7 +36,7 @@ def scan_file(path: Path) -> list[str]:
         return []
     try:
         text = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, PermissionError, OSError):
         return []
 
     findings: list[str] = []
