@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-05-14T02:39:16.568396",
+  "resultados": {
+    "errores_sintaxis": 0,
+    "errores_imports": 169,
+    "archivos_faltantes": 0,
+    "secrets_expuestos": 19,
+    "archivos_limpiados": 0,
+    "dependencias_faltantes": 7,
+    "sugerencias_optimizacion": 0
+  },
+  "total_problemas": 195
+}
