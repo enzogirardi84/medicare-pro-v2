@@ -625,7 +625,7 @@ class QualityManagementSystem:
                 placeholder="Nombres separados por comas"
             )
             
-            submitted = st.form_submit_button("📋 Reportar Incidente", use_container_width=True, type="primary")
+            submitted = st.form_submit_button("📋 Reportar Incidente", width='stretch', type="primary")
             
             if submitted:
                 if not description:

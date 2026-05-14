@@ -691,7 +691,7 @@ class ClinicalReminderManager:
                         }.get(x, x)
                     )
 
-                submitted = st.form_submit_button("➕ Crear Recordatorio", use_container_width=True)
+                submitted = st.form_submit_button("➕ Crear Recordatorio", width='stretch')
                 if submitted:
                     # Combinar fecha y hora
                     due_datetime = None

@@ -432,12 +432,12 @@ def render_pending_data_alert(
         # Botón de reintento
         cols = st.columns([1, 1, 2])
         with cols[0]:
-            if st.button("🔄 Reintentar todo", key=f"{key}_retry", use_container_width=True):
+            if st.button("🔄 Reintentar todo", key=f"{key}_retry", width='stretch'):
                 if on_retry:
                     on_retry()
         
         with cols[1]:
-            if st.button("❌ Descartar", key=f"{key}_discard", use_container_width=True):
+            if st.button("❌ Descartar", key=f"{key}_discard", width='stretch'):
                 if st.checkbox("Confirmar descarte de datos", key=f"{key}_confirm"):
                     operations.clear()
 

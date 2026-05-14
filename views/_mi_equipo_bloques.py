@@ -159,7 +159,7 @@ def _mi_equipo_bloque_principal(
                 type="password",
                 key=_widget_key_equipo(u, "ch_pw2"),
             )
-            if st.button("Guardar", key=_widget_key_equipo(u, "ch_btn"), use_container_width=True):
+            if st.button("Guardar", key=_widget_key_equipo(u, "ch_btn"), width='stretch'):
                 pin_l = str(ch_pin).strip()
                 pw_l = str(ch_pw).strip()
                 pw2_l = str(ch_pw2).strip()
@@ -253,7 +253,7 @@ def _mi_equipo_bloque_suspender(
 ) -> None:
     if mostrar_ui_suspender:
         if d.get("estado", "Activo") == "Activo":
-            if st.button("Suspender", key=f"susp_{u}", use_container_width=True):
+            if st.button("Suspender", key=f"susp_{u}", width='stretch'):
                 if not puede_suspender_reactivar_usuario_mi_equipo(rol):
                     st.error("Tu rol no puede suspender usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                 else:
@@ -274,7 +274,7 @@ def _mi_equipo_bloque_suspender(
                             guardar_datos(spinner=True)
                             st.rerun()
         else:
-            if st.button("Reactivar", key=f"reac_{u}", use_container_width=True):
+            if st.button("Reactivar", key=f"reac_{u}", width='stretch'):
                 if not puede_suspender_reactivar_usuario_mi_equipo(rol):
                     st.error("Tu rol no puede reactivar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                 else:
@@ -316,7 +316,7 @@ def _mi_equipo_bloque_eliminar(
     if mostrar_ui_eliminar:
         seguro = st.checkbox("Confirmar baja", key=f"chk_del_{u}")
         st.caption("La eliminación es permanente y quita el usuario del sistema.")
-        if st.button("Eliminar", key=f"del_{u}", use_container_width=True, disabled=not seguro):
+        if st.button("Eliminar", key=f"del_{u}", width='stretch', disabled=not seguro):
             if not puede_eliminar_cuenta_equipo(rol):
                 st.error("Tu rol no puede eliminar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
             else:

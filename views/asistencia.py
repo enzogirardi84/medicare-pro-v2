@@ -79,7 +79,7 @@ def render_asistencia(mi_empresa, user):
                         f"Ingreso a las {dt_llegada.strftime('%H:%M')} | Tiempo transcurrido: {horas}h {minutos}m"
                     )
 
-                    if col_btn.button("Forzar salida", key=f"force_out_{profesional}", use_container_width=True):
+                    if col_btn.button("Forzar salida", key=f"force_out_{profesional}", width='stretch'):
                         st.session_state.setdefault("checkin_db", [])
                         st.session_state["checkin_db"].append(
                             {

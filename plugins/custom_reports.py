@@ -138,7 +138,7 @@ class CustomReportsPlugin(MedicarePlugin):
             })
         
         df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
         
         # Gráfico
         if self.show_charts and len(data) > 0:
@@ -194,7 +194,7 @@ class CustomReportsPlugin(MedicarePlugin):
         os_data = [{"Obra Social": k, "Pacientes": v} for k, v in sorted(os_counts.items(), key=lambda x: x[1], reverse=True)]
         df_os = pd.DataFrame(os_data)
         
-        st.dataframe(df_os, use_container_width=True)
+        st.dataframe(df_os, width='stretch')
         
         if self.show_charts:
             st.bar_chart(df_os.set_index("Obra Social"))
@@ -226,7 +226,7 @@ class CustomReportsPlugin(MedicarePlugin):
         df = pd.DataFrame(data)
         
         st.subheader("Evoluciones por Mes")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
         
         if self.show_charts and len(data) > 1:
             st.line_chart(df.set_index("Mes"))
@@ -258,7 +258,7 @@ class CustomReportsPlugin(MedicarePlugin):
         data = [{"Medicamento": k, "Prescripciones": v} for k, v in conteo.most_common(20)]
         df = pd.DataFrame(data)
         
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
         
         if self.show_charts and len(data) > 0:
             st.bar_chart(df.head(10).set_index("Medicamento"))

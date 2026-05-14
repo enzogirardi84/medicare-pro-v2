@@ -255,17 +255,17 @@ def render_clinica(paciente_sel, user=None):
                 _ch1, _ch2 = st.columns(2)
                 if _tr["FC"].notna().sum() >= 2:
                     _ch1.caption("F.C. (lpm)")
-                    _ch1.line_chart(_tr[["FC"]].rename(columns={"FC": "F.C."}), use_container_width=True, height=140)
+                    _ch1.line_chart(_tr[["FC"]].rename(columns={"FC": "F.C."}), width='stretch', height=140)
                 if _tr["Sat"].notna().sum() >= 2:
                     _ch2.caption("SatO2 (%)")
-                    _ch2.line_chart(_tr[["Sat"]].rename(columns={"Sat": "SatO2"}), use_container_width=True, height=140)
+                    _ch2.line_chart(_tr[["Sat"]].rename(columns={"Sat": "SatO2"}), width='stretch', height=140)
                 _ch3, _ch4 = st.columns(2)
                 if _tr["TA_sis"].notna().sum() >= 2:
                     _ch3.caption("TA sistólica (mmHg)")
-                    _ch3.line_chart(_tr[["TA_sis"]].rename(columns={"TA_sis": "TA sis."}), use_container_width=True, height=140)
+                    _ch3.line_chart(_tr[["TA_sis"]].rename(columns={"TA_sis": "TA sis."}), width='stretch', height=140)
                 if _tr["Temp"].notna().sum() >= 2:
                     _ch4.caption("Temperatura (°C)")
-                    _ch4.line_chart(_tr[["Temp"]].rename(columns={"Temp": "Temp °C"}), use_container_width=True, height=140)
+                    _ch4.line_chart(_tr[["Temp"]].rename(columns={"Temp": "Temp °C"}), width='stretch', height=140)
     else:
         bloque_estado_vacio(
             "Sin signos vitales",
@@ -306,7 +306,7 @@ def render_clinica(paciente_sel, user=None):
 
         label_btn = "⚠️ Guardar (hay alertas)" if (hay_critico or hay_alerta) else "Guardar signos vitales"
         btn_type = "secondary" if hay_critico else "primary"
-        if st.form_submit_button(label_btn, use_container_width=True, type=btn_type):
+        if st.form_submit_button(label_btn, width='stretch', type=btn_type):
             ta_limpia = str(ta or "").strip()
             if ta_limpia and not (
                 "/" in ta_limpia
@@ -352,7 +352,7 @@ def render_clinica(paciente_sel, user=None):
         col_tit, col_chk, col_btn = st.columns([3, 1.2, 1])
         col_tit.markdown("#### Historial de signos vitales")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_borrar_vital")
-        if col_btn.button("Borrar ultimo control", use_container_width=True, disabled=not confirmar_borrado):
+        if col_btn.button("Borrar ultimo control", width='stretch', disabled=not confirmar_borrado):
             try:
                 st.session_state["vitales_db"].remove(vits[-1])
             except ValueError:

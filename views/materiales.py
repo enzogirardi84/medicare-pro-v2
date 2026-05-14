@@ -74,7 +74,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
             cant_usada = c2.number_input("Cantidad", min_value=1, value=1, step=1)
             stock_disponible = next((i.get("stock", 0) for i in inv_mi_empresa if i.get("item") == insumo_sel), 0)
             st.caption(f"Stock disponible: {stock_disponible} unidad(es)")
-            if st.form_submit_button("Registrar consumo", use_container_width=True, type="primary"):
+            if st.form_submit_button("Registrar consumo", width='stretch', type="primary"):
                 stock_actualizado = False
                 for i in st.session_state["inventario_db"]:
                     if i["item"] == insumo_sel and i.get("empresa") == mi_empresa:
@@ -151,7 +151,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
 
         col_chk, col_btn = st.columns([1.2, 2.8])
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
-        if col_btn.button("Borrar ultimo consumo", use_container_width=True, disabled=not confirmar_borrado):
+        if col_btn.button("Borrar ultimo consumo", width='stretch', disabled=not confirmar_borrado):
             if not cons_paciente:
                 st.error("No hay consumos para borrar.")
             else:

@@ -371,7 +371,7 @@ def _tab_pacientes_familia(paciente_sel, user, centro_salud_id):
             lote = st.text_input("Lote")
             id_familia = st.text_input("ID Familia (opcional, se genera automático si vacío)", value=grupo_existente.get("id_familia", "") if grupo_existente else "")
             st.caption("Los miembros se vinculan automáticamente por domicilio compartido.")
-            guardar = st.form_submit_button("Guardar / Vincular núcleo", use_container_width=True)
+            guardar = st.form_submit_button("Guardar / Vincular núcleo", width='stretch')
 
         if guardar:
             fid = id_familia.strip() or f"fam-{centro_salud_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -513,7 +513,7 @@ def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
     with col_d:
         prof_mat = st.text_input("Matrícula", key="aps_prof_matricula")
 
-    if st.button("Agregar profesional", use_container_width=True, key="aps_btn_add_prof"):
+    if st.button("Agregar profesional", width='stretch', key="aps_btn_add_prof"):
         if prof_nombre.strip() and prof_apellido.strip():
             st.session_state[prof_key].append({
                 "especialidad": prof_espec,
@@ -540,7 +540,7 @@ def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
         st.caption("Sin profesionales adicionales asignados.")
 
     st.divider()
-    if st.button("💾 Guardar ficha APS completa", use_container_width=True, key="aps_btn_guardar_ficha"):
+    if st.button("💾 Guardar ficha APS completa", width='stretch', key="aps_btn_guardar_ficha"):
         payload = {
             "paciente_id": paciente_id,
             "centro_salud_id": centro_salud_id,
@@ -586,7 +586,7 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
                 key="aps_motivo_esp",
             )
             prioridad_esp = st.selectbox("Prioridad / Triage", ["Normal", "Preferencial", "Urgente"])
-            guardar_esp = st.form_submit_button("Ingresar a sala de espera", use_container_width=True)
+            guardar_esp = st.form_submit_button("Ingresar a sala de espera", width='stretch')
 
         if guardar_esp:
             payload = {
@@ -616,7 +616,7 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
                  "Receta", "Curación", "Otro"],
                 key="aps_motivo_prog",
             )
-            guardar_prog = st.form_submit_button("Agendar turno", use_container_width=True)
+            guardar_prog = st.form_submit_button("Agendar turno", width='stretch')
 
         if guardar_prog:
             payload = {
@@ -959,7 +959,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
                 data=pdf_bytes,
                 file_name=f"Historial_APS_{sanitize_filename_component(paciente_id, 'paciente')}_{date.today().isoformat()}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
                 key="aps_historial_pdf_btn",
             )
     else:
@@ -1015,7 +1015,7 @@ def _tab_nueva_atencion(paciente_sel, user, centro_salud_id):
         requiere_derivacion = st.checkbox("Requiere derivación")
         destino_derivacion = st.text_input("Destino de derivación", placeholder="Hospital, guardia, especialista...")
 
-        guardar = st.form_submit_button("Guardar atención", use_container_width=True)
+        guardar = st.form_submit_button("Guardar atención", width='stretch')
 
     if guardar:
         payload = {
@@ -1080,7 +1080,7 @@ def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
                 proximo_control = st.date_input("Próximo control", value=date.today() + timedelta(days=30))
 
             observaciones = st.text_area("Observaciones del control")
-            guardar = st.form_submit_button("Guardar control niño sano", use_container_width=True)
+            guardar = st.form_submit_button("Guardar control niño sano", width='stretch')
 
         if guardar:
             payload = {
@@ -1119,7 +1119,7 @@ def _tab_control_nino_embarazo(paciente_sel, user, centro_salud_id):
 
             movimientos_fetales = st.selectbox("Movimientos fetales", ["Presentes", "Disminuidos", "No evaluado"])
             observaciones_emb = st.text_area("Observaciones obstétricas")
-            guardar_emb = st.form_submit_button("Guardar control embarazo", use_container_width=True)
+            guardar_emb = st.form_submit_button("Guardar control embarazo", width='stretch')
 
         if guardar_emb:
             payload = {
@@ -1187,7 +1187,7 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
 
         observacion_med = st.text_area("Observación de farmacia", key="aps_med_obs")
 
-        if st.button("Registrar entrega medicación", use_container_width=True, key="aps_btn_med"):
+        if st.button("Registrar entrega medicación", width='stretch', key="aps_btn_med"):
             if not medicamento:
                 st.error("Seleccioná un medicamento del vademecum o escribí uno manualmente.")
             else:
@@ -1229,7 +1229,7 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
         if ya_leche_mes:
             st.warning("⚠️ Este beneficiario ya retiró leche este mes.")
 
-        if st.button("Registrar entrega leche (2 kg)", use_container_width=True, key="aps_btn_leche"):
+        if st.button("Registrar entrega leche (2 kg)", width='stretch', key="aps_btn_leche"):
             if edad_nino is not None and edad_nino > 2:
                 st.error("No se puede registrar: edad fuera del rango del plan.")
             elif ya_leche_mes:
@@ -1292,7 +1292,7 @@ def _tab_trabajo_social(paciente_sel, user, centro_salud_id):
         grupo_familiar = st.number_input("Cantidad de convivientes", min_value=0, max_value=30)
         observaciones = st.text_area("Observaciones sociales")
 
-        guardar = st.form_submit_button("Guardar registro social", use_container_width=True)
+        guardar = st.form_submit_button("Guardar registro social", width='stretch')
 
     if guardar:
         payload = {
@@ -1343,7 +1343,7 @@ def _tab_epidemiologia(paciente_sel, user, centro_salud_id):
 
         observaciones = st.text_area("Observaciones para promotor de salud")
 
-        guardar = st.form_submit_button("Guardar epidemiología", use_container_width=True)
+        guardar = st.form_submit_button("Guardar epidemiología", width='stretch')
 
     if guardar:
         payload = {
@@ -1387,7 +1387,7 @@ def _tab_visitas(paciente_sel, user, centro_salud_id):
         requiere_nueva = st.checkbox("Requiere nueva visita")
         prioridad = st.selectbox("Prioridad", ["Baja", "Media", "Alta", "Urgente"])
 
-        guardar = st.form_submit_button("Guardar visita", use_container_width=True)
+        guardar = st.form_submit_button("Guardar visita", width='stretch')
 
     if guardar:
         payload = {
@@ -1450,7 +1450,7 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
             key="aps_rep_tipo",
         )
 
-    if st.button("Generar reporte", use_container_width=True, key="aps_rep_btn"):
+    if st.button("Generar reporte", width='stretch', key="aps_rep_btn"):
         fd = fecha_desde.isoformat()
         fh = fecha_hasta.isoformat()
 
@@ -1502,7 +1502,7 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
     reporte_periodo = st.session_state.get("aps_reporte_periodo", "")
     if reporte_registros:
         st.write(f"**{len(reporte_registros)}** registros encontrados.")
-        st.dataframe(reporte_registros, use_container_width=True, hide_index=True)
+        st.dataframe(reporte_registros, width='stretch', hide_index=True)
         if FPDF_DISPONIBLE:
             pdf_bytes = _generar_pdf_reporte_aps(
                 f"Reporte APS — {reporte_tipo}",
@@ -1516,7 +1516,7 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
                     data=pdf_bytes,
                     file_name=f"Reporte_APS_{sanitize_filename_component(reporte_tipo, 'reporte')}_{date.today().isoformat()}.pdf",
                     mime="application/pdf",
-                    use_container_width=True,
+                    width='stretch',
                     key="aps_rep_pdf_btn",
                 )
         else:

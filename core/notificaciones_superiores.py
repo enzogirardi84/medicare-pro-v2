@@ -275,7 +275,7 @@ def render_alerta_inventario_banda_superior(
                     key="mc_inv_go_inventario_mini",
                     help="Ir al módulo Inventario",
                     type="primary",
-                    use_container_width=True,
+                    width='stretch',
                     on_click=_navegar_a_modulo_inventario,
                 )
         def _on_expand_inv():
@@ -288,7 +288,7 @@ def render_alerta_inventario_banda_superior(
                 key="mc_inv_expand_from_mini",
                 help="Ver resumen, botones y lista de ítems",
                 type="secondary",
-                use_container_width=True,
+                width='stretch',
                 on_click=_on_expand_inv,
             )
         return
@@ -321,7 +321,7 @@ def render_alerta_inventario_banda_superior(
                 key="mc_inv_go_inventario",
                 help="Ir al módulo Inventario (atajo «Anterior» disponible)",
                 type="primary",
-                use_container_width=True,
+                width='stretch',
                 on_click=_navegar_a_modulo_inventario,
             )
         with b2:
@@ -330,7 +330,7 @@ def render_alerta_inventario_banda_superior(
                 key="mc_inv_dismiss",
                 help="Minimiza la alerta (se reabre si cambia el stock)",
                 type="secondary",
-                use_container_width=True,
+                width='stretch',
                 on_click=_on_dismiss_inv,
             )
     else:
@@ -339,7 +339,7 @@ def render_alerta_inventario_banda_superior(
             key="mc_inv_dismiss",
             help="Minimiza la alerta (se reabre si cambia el stock)",
             type="secondary",
-            use_container_width=True,
+            width='stretch',
             on_click=_on_dismiss_inv,
         )
 

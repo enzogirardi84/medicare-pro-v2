@@ -203,7 +203,7 @@ def render_auditoria_legal(mi_empresa, user):
 
     filtro_key = f"{paciente_sel}|{str(filtro or '').strip().lower()}|{total_filtrado}"
     cache_key = "auditoria_legal_pdf"
-    if st.button("Preparar PDF auditoría legal", use_container_width=True):
+    if st.button("Preparar PDF auditoría legal", width='stretch'):
         pdf_bytes = generar_pdf_auditoria_legal(pd.DataFrame(registros), mi_empresa)
         st.session_state[cache_key] = pdf_bytes
 
@@ -213,6 +213,6 @@ def render_auditoria_legal(mi_empresa, user):
             data=st.session_state[cache_key],
             file_name=f"auditoria_legal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            width='stretch',
         )
     st.markdown("</div>", unsafe_allow_html=True)

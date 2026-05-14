@@ -99,7 +99,7 @@ def _form_cobro(existing: Dict[str, Any] | None = None) -> Dict[str, Any] | None
             )
         notas = st.text_area("Notas", value=existing.get("notas", "") if existing else "", height=70)
 
-        submitted = st.form_submit_button("Guardar cobro", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("Guardar cobro", width='stretch', type="primary")
         if submitted:
             if not cliente_sel:
                 st.error("Selecciona un cliente.")
@@ -191,7 +191,7 @@ def render_cobros() -> None:
                     data=exportar_cobros_excel(filtrados, empresa_nombre),
                     file_name=f"cobros_{sanitize_filename(empresa_nombre)}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width='stretch',
                 )
 
             agrupados = agrupar_por_mes(filtrados)
@@ -205,7 +205,7 @@ def render_cobros() -> None:
                                 data=exportar_reporte_cobros_pdf(items, empresa_nombre, f"{mes}-01", f"{mes}-31"),
                                 file_name=f"cobros_{sanitize_filename(mes)}.pdf",
                                 mime="application/pdf",
-                                use_container_width=True,
+                                width='stretch',
                                 key=f"pdf_cob_mes_{mes}",
                             )
                         for cobro in items:
@@ -251,10 +251,10 @@ def render_cobros() -> None:
                                             file_name=f"recibo_{sanitize_filename(str(cid))}.pdf",
                                             mime="application/pdf",
                                             key=f"pdf_recibo_{cid}",
-                                            use_container_width=True,
+                                            width='stretch',
                                         )
                                     confirm = st.checkbox("Borrar", key=f"confirm_del_cob_{cid}")
-                                    if st.button("Eliminar", key=f"del_cob_{cid}", use_container_width=True, disabled=not confirm):
+                                    if st.button("Eliminar", key=f"del_cob_{cid}", width='stretch', disabled=not confirm):
                                         prefactura_id = cobro.get("prefactura_id", "")
                                         if delete_cobro(cid):
                                             if prefactura_id and not _sync_prefactura(prefactura_id):

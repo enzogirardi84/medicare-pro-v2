@@ -99,7 +99,7 @@ for start in range(0, len(nav_labels), 3):
             if st.button(
                 label,
                 key=f"nav_{label}",
-                use_container_width=True,
+                width='stretch',
                 type="primary" if modulo_activo == label else "secondary",
             ):
                 st.session_state["billing_modulo_activo"] = label
@@ -193,7 +193,7 @@ if global_query.strip():
                 st.markdown(f"**{item['titulo']}**")
                 st.caption(f"{item['modulo']} | {item['detalle']}")
             with c2:
-                if st.button("Abrir", key=f"global_open_{idx}_{item['modulo']}", use_container_width=True):
+                if st.button("Abrir", key=f"global_open_{idx}_{item['modulo']}", width='stretch'):
                     st.session_state["billing_modulo_activo"] = item["modulo"]
                     if item.get("cliente_label"):
                         st.session_state["cc_cliente_label"] = item["cliente_label"]

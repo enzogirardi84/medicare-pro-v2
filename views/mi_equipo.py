@@ -165,7 +165,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                     placeholder="profesional@clinica.com",
                 )
 
-                if st.form_submit_button("Habilitar Acceso", use_container_width=True, type="primary"):
+                if st.form_submit_button("Habilitar Acceso", width='stretch', type="primary"):
                     err_alta = _validar_alta_usuario_equipo(u_id, u_pw, u_dni, u_pin, u_email)
                     if err_alta:
                         st.error(err_alta)

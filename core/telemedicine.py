@@ -414,10 +414,10 @@ class TelemedicineManager:
 
                     with col3:
                         if consultation.status == TelemedicineStatus.WAITING_ROOM:
-                            st.button("▶️ Iniciar Consulta", key=f"start_{consultation.id}", use_container_width=True, on_click=self._on_start_consultation, args=(consultation.id,))
+                            st.button("▶️ Iniciar Consulta", key=f"start_{consultation.id}", width='stretch', on_click=self._on_start_consultation, args=(consultation.id,))
 
                         elif consultation.status == TelemedicineStatus.IN_PROGRESS:
-                            if st.button("🚪 Ingresar a Sala", key=f"join_{consultation.id}", use_container_width=True, type="primary"):
+                            if st.button("🚪 Ingresar a Sala", key=f"join_{consultation.id}", width='stretch', type="primary"):
                                 self._render_virtual_room(consultation)
 
                         elif consultation.status == TelemedicineStatus.SCHEDULED:
@@ -463,7 +463,7 @@ class TelemedicineManager:
                         st.caption(f"⏱️ Tiempo de espera: {int(wait_time.total_seconds() / 60)} minutos")
 
                     with col2:
-                        st.button("▶️ Atender", key=f"attend_{consultation.id}", use_container_width=True, type="primary", on_click=self._on_attend, args=(consultation.id,))
+                        st.button("▶️ Atender", key=f"attend_{consultation.id}", width='stretch', type="primary", on_click=self._on_attend, args=(consultation.id,))
 
                 st.divider()
     
@@ -486,13 +486,13 @@ class TelemedicineManager:
             # Controles
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.button("🎤 Mic", use_container_width=True)
+                st.button("🎤 Mic", width='stretch')
             with col2:
-                st.button("📹 Video", use_container_width=True)
+                st.button("📹 Video", width='stretch')
             with col3:
-                st.button("💻 Compartir", use_container_width=True)
+                st.button("💻 Compartir", width='stretch')
             with col4:
-                if st.button("🔴 Finalizar", use_container_width=True, type="primary"):
+                if st.button("🔴 Finalizar", width='stretch', type="primary"):
                     self._render_end_consultation_form(consultation)
 
         with col_chat:
@@ -528,7 +528,7 @@ class TelemedicineManager:
             with col3:
                 frecuencia = st.text_input("Frecuencia")
             
-            submit = st.form_submit_button("✅ Finalizar y Guardar", use_container_width=True, type="primary")
+            submit = st.form_submit_button("✅ Finalizar y Guardar", width='stretch', type="primary")
             
             if submit:
                 prescription = []
@@ -585,7 +585,7 @@ class TelemedicineManager:
         
         duracion = st.slider("Duración (minutos)", 15, 60, 30, step=15)
         
-        if st.button("📅 Agendar Consulta Virtual", use_container_width=True, type="primary"):
+        if st.button("📅 Agendar Consulta Virtual", width='stretch', type="primary"):
             scheduled_time = datetime.combine(fecha, hora)
             
             consultation = self.schedule_virtual_consultation(
@@ -626,11 +626,11 @@ class TelemedicineManager:
                     
                     with col2:
                         if consultation.status == TelemedicineStatus.SCHEDULED:
-                            st.button("🚪 Ingresar a Sala", key=f"patient_join_{consultation.id}", use_container_width=True, type="primary", on_click=self._on_patient_join, args=(consultation.id,))
+                            st.button("🚪 Ingresar a Sala", key=f"patient_join_{consultation.id}", width='stretch', type="primary", on_click=self._on_patient_join, args=(consultation.id,))
                         elif consultation.status == TelemedicineStatus.WAITING_ROOM:
                             st.info("✅ En sala de espera")
                         elif consultation.status == TelemedicineStatus.IN_PROGRESS:
-                            st.button("📹 Reconectar", key=f"reconnect_{consultation.id}", use_container_width=True)
+                            st.button("📹 Reconectar", key=f"reconnect_{consultation.id}", width='stretch')
                 
                 st.divider()
     

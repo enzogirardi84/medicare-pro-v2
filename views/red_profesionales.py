@@ -225,7 +225,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                 height=120,
             )
 
-            if st.button("Guardar perfil profesional", use_container_width=True, type="primary"):
+            if st.button("Guardar perfil profesional", width='stretch', type="primary"):
                 nuevo = {
                     "nombre": nombre.strip() or user.get("nombre", ""),
                     "usuario_login": usuario_login,
@@ -343,7 +343,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                                     st.link_button(
                                         "Contactar por WhatsApp",
                                         f"https://wa.me/{telefono.lstrip('+')}",
-                                        use_container_width=True,
+                                        width='stretch',
                                     )
 
     with tab_solicitudes:
@@ -361,7 +361,7 @@ def render_red_profesionales(mi_empresa, user, rol):
             zona = col7.text_input("Zona / direccion", key="sol_zona")
             detalle = st.text_area("Detalle de la necesidad", key="sol_detalle", height=120)
 
-            if st.button("Guardar solicitud", use_container_width=True, type="primary"):
+            if st.button("Guardar solicitud", width='stretch', type="primary"):
                 if not nombre_paciente.strip() or not telefono.strip():
                     st.error("Debe completar al menos nombre y telefono.")
                 else:

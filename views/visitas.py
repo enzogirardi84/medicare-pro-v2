@@ -73,7 +73,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             st.link_button(
                 "WhatsApp: avisar al paciente sobre esta visita",
                 f"https://wa.me/{rec_wpp['tel']}?text={urllib.parse.quote(rec_wpp['texto'])}",
-                use_container_width=True,
+                width='stretch',
                 type="primary",
             )
         elif not str(tel_paciente or "").strip():

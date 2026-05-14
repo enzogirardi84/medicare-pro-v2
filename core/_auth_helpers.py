@@ -222,7 +222,7 @@ def _render_bloque_verificacion_email_2fa() -> bool:
     st.caption(f"Código enviado a **{p.get('destino_mascarado', 'tu correo')}**.")
     with st.form("form_email_2fa"):
         cod = st.text_input("Código de 6 dígitos", max_chars=6, placeholder="000000")
-        if st.form_submit_button("Confirmar acceso", use_container_width=True):
+        if st.form_submit_button("Confirmar acceso", width='stretch'):
             ok, err = verificar_codigo_ingresado(cod)
             if ok:
                 uk = p.get("usuario_key")
@@ -245,7 +245,7 @@ def _render_bloque_verificacion_email_2fa() -> bool:
 
     c1, c2 = st.columns(2)
     with c1:
-        st.button("Reenviar código", use_container_width=True, on_click=_on_resend)
+        st.button("Reenviar código", width='stretch', on_click=_on_resend)
     with c2:
-        st.button("Cancelar", use_container_width=True, on_click=_on_cancel)
+        st.button("Cancelar", width='stretch', on_click=_on_cancel)
     return True

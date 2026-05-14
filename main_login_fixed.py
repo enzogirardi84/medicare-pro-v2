@@ -279,7 +279,7 @@ def render_login_view():
                 if st.button(
                     "Ingresar",
                     type="primary",
-                    use_container_width=True,
+                    width='stretch',
                     disabled=login_disabled,
                     on_click=verificar_credenciales
                 ):
@@ -365,7 +365,7 @@ def render_dashboard():
             """, unsafe_allow_html=True)
         
         with col3:
-            if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
+            if st.button("🚪 Cerrar Sesión", type="secondary", width='stretch'):
                 # Limpiar todos los estados de auth
                 st.session_state.usuario_autenticado = False
                 st.session_state.authenticating = False

@@ -139,7 +139,7 @@ def render_reportes() -> None:
                     "Saldo": fmt_moneda(item.get("saldo", 0)),
                 }
             )
-        st.dataframe(cartera_rows, use_container_width=True, hide_index=True, height=260)
+        st.dataframe(cartera_rows, width='stretch', hide_index=True, height=260)
     else:
         bloque_estado_vacio("Cartera al dia", "No hay pre-facturas pendientes en el mes seleccionado.")
 
@@ -153,7 +153,7 @@ def render_reportes() -> None:
                 data=exportar_reporte_contable_excel(empresa_nombre, mes_sel, pres_mes, fac_mes, cob_mes),
                 file_name=f"reporte_contable_{base_name}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width='stretch',
             )
     with ec2:
         if FPDF_DISPONIBLE:
@@ -162,7 +162,7 @@ def render_reportes() -> None:
                 data=exportar_reporte_contable_pdf(empresa_nombre, mes_sel, pres_mes, fac_mes, cob_mes),
                 file_name=f"reporte_contable_{base_name}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
             )
     with ec3:
         if XLSX_DISPONIBLE and cob_mes:
@@ -171,7 +171,7 @@ def render_reportes() -> None:
                 data=exportar_cobros_excel(cob_mes, empresa_nombre),
                 file_name=f"cobros_{base_name}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width='stretch',
             )
     with ec4:
         if FPDF_DISPONIBLE and cob_mes:
@@ -180,7 +180,7 @@ def render_reportes() -> None:
                 data=exportar_reporte_cobros_pdf(cob_mes, empresa_nombre, f"{mes_sel}-01", f"{mes_sel}-31"),
                 file_name=f"cobros_{base_name}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
             )
     with ec5:
         if XLSX_DISPONIBLE and arca_mes:
@@ -189,7 +189,7 @@ def render_reportes() -> None:
                 data=exportar_facturas_arca_excel(arca_mes, empresa_nombre),
                 file_name=f"facturas_arca_{base_name}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width='stretch',
             )
 
     st.divider()

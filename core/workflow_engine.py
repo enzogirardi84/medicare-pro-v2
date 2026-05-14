@@ -726,7 +726,7 @@ class WorkflowEngine:
                 log_event("workflow_engine", f"Error al iniciar workflow: {e}")
                 st.error("No se pudo iniciar el workflow.")
 
-        if st.button("🚀 Iniciar Workflow", use_container_width=True, type="primary"):
+        if st.button("🚀 Iniciar Workflow", width='stretch', type="primary"):
             user = st.session_state.get("u_actual", {})
             _patient_id = paciente.get("id", paciente_dni) if paciente else None
             _patient_name = f"{paciente['nombre']} {paciente['apellido']}" if paciente else None

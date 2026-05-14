@@ -599,7 +599,7 @@ def require_auth() -> bool:
 
 def render_logout_button():
     """Renderiza botón de cerrar sesión. Usado por billing_app."""
-    if st.button("🚪 Cerrar sesión", use_container_width=True, key="billing_logout"):
+    if st.button("🚪 Cerrar sesión", width='stretch', key="billing_logout"):
         for key in ["u_actual", "billing_user", "billing_empresa_nombre", "billing_empresa_id"]:
             st.session_state.pop(key, None)
         st.session_state["logeado"] = False

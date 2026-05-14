@@ -279,7 +279,7 @@ def render_quick_actions_bar(
             if st.button(
                 f"{icon} {label}",
                 key=f"{key}_action_{i}",
-                use_container_width=True,
+                width='stretch',
                 disabled=disabled,
                 type="secondary",
             ):

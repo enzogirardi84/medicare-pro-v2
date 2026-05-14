@@ -231,12 +231,12 @@ def render_auditoria(mi_empresa, user):
             )
 
         pdf_key = f"audit_logs_pdf_{mi_empresa}_{user.get('nombre','')}_{usuario_filtro}_{str(buscar_log or '').strip().lower()}"
-        if st.button("Preparar auditoría PDF", use_container_width=True):
+        if st.button("Preparar auditoría PDF", width='stretch'):
             pdf_bytes = generar_pdf_auditoria_logs(df_filtrado, mi_empresa)
             st.session_state[pdf_key] = pdf_bytes
         if st.session_state.get(pdf_key):
             nombre_pdf = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.pdf"
-            st.download_button("Descargar auditoría PDF", data=st.session_state[pdf_key], file_name=nombre_pdf, mime="application/pdf", use_container_width=True)
+            st.download_button("Descargar auditoría PDF", data=st.session_state[pdf_key], file_name=nombre_pdf, mime="application/pdf", width='stretch')
         return
 
     st.subheader("Auditoria de Asistencia por Profesional")
@@ -310,4 +310,4 @@ def render_auditoria(mi_empresa, user):
 
             pdf_bytes = pdf_output_bytes(pdf)
             nombre_pdf = f"Asistencia_{sanitize_filename_component(prof_sel, 'profesional')}_{fecha_rrhh_desde.strftime('%d%m%Y')}.pdf"
-            st.download_button("Descargar reporte asistencia PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", use_container_width=True)
+            st.download_button("Descargar reporte asistencia PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", width='stretch')

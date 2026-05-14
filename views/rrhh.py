@@ -183,7 +183,7 @@ def render_rrhh(mi_empresa, rol, user):
             mostrar_dataframe_con_scroll(df_hist, height=460)
 
         csv_data = dataframe_csv_bytes(df_mostrar.drop(columns=["fecha_dt"], errors='ignore'))
-        st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", use_container_width=True)
+        st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", width='stretch')
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF RRHH", value=False):
             pdf = FPDF(orientation='L')
@@ -197,7 +197,7 @@ def render_rrhh(mi_empresa, rol, user):
             for _, fila in df_mostrar.sort_values(by="fecha_dt", ascending=False).head(200).iterrows():
                 pdf.cell(0, 7, safe_text(f"{fila['Fecha']} {fila['Hora']} | {fila['Profesional']} | {fila['Accion']} | {fila['Paciente']} | {fila['Tiempo Trabajado']}"), ln=True)
             pdf_bytes = pdf_output_bytes(pdf)
-            st.download_button("Descargar PDF RRHH", data=pdf_bytes, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}.pdf", mime="application/pdf", use_container_width=True)
+            st.download_button("Descargar PDF RRHH", data=pdf_bytes, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}.pdf", mime="application/pdf", width='stretch')
         return
 
     if seccion == "Resumen":
@@ -252,7 +252,7 @@ def render_rrhh(mi_empresa, rol, user):
         col_del1, col_del2 = st.columns([3, 1])
         registro_sel = col_del1.selectbox("Seleccionar fichaje a eliminar", options=opciones_borrar, format_func=lambda x: x[0])
         confirmar_borrado = col_del1.checkbox("Confirmar eliminacion del fichaje", key="rrhh_conf_del_fichaje")
-        if col_del2.button("Eliminar Fichaje", type="secondary", use_container_width=True, disabled=not confirmar_borrado):
+        if col_del2.button("Eliminar Fichaje", type="secondary", width='stretch', disabled=not confirmar_borrado):
             del st.session_state["checkin_db"][registro_sel[1]]
             guardar_datos(spinner=True)
             st.rerun()

@@ -151,21 +151,21 @@ def render_pediatria(paciente_sel, user):
                 st.caption("Peso en el tiempo")
                 st.line_chart(
                     df_preview.set_index("fecha")["peso"],
-                    use_container_width=True,
+                    width='stretch',
                     color="#38bdf8",
                 )
             with col_graph2:
                 st.caption("Talla en el tiempo")
                 st.line_chart(
                     df_preview.set_index("fecha")["talla"],
-                    use_container_width=True,
+                    width='stretch',
                     color="#818cf8",
                 )
             if df_preview["pc"].astype(float).gt(0).sum() >= 2:
                 st.caption("Perímetro cefálico (cm)")
                 st.line_chart(
                     df_preview.set_index("fecha")["pc"],
-                    use_container_width=True,
+                    width='stretch',
                     color="#f59e0b",
                     height=140,
                 )
@@ -183,7 +183,7 @@ def render_pediatria(paciente_sel, user):
         tal = col_b.number_input("Talla Actual (cm)", min_value=0.0, format="%.2f")
         pc = col_a.number_input("Perimetro Cefalico (cm, solo percentilo)", min_value=0.0, format="%.2f")
         desc = col_b.text_input("Descripcion / Nota (opcional)")
-        if st.form_submit_button("Guardar Control", use_container_width=True, type="primary"):
+        if st.form_submit_button("Guardar Control", width='stretch', type="primary"):
             hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")
             fecha_str_toma = f"{fecha_toma.strftime('%d/%m/%Y')} {hora_limpia}"
             dt_toma = _parse_fecha_hora(fecha_str_toma)
@@ -250,18 +250,18 @@ def render_pediatria(paciente_sel, user):
             col_g1, col_g2, col_g3 = st.columns(3)
             with col_g1:
                 st.caption("Peso (kg)")
-                st.line_chart(df_g.set_index("fecha")["peso"], use_container_width=True, color="#38bdf8")
+                st.line_chart(df_g.set_index("fecha")["peso"], width='stretch', color="#38bdf8")
             with col_g2:
                 st.caption("Talla (cm)")
-                st.line_chart(df_g.set_index("fecha")["talla"], use_container_width=True, color="#818cf8")
+                st.line_chart(df_g.set_index("fecha")["talla"], width='stretch', color="#818cf8")
             with col_g3:
                 st.caption("IMC")
-                st.area_chart(df_g.set_index("fecha")["imc"], use_container_width=True, color="#22c55e")
+                st.area_chart(df_g.set_index("fecha")["imc"], width='stretch', color="#22c55e")
         st.divider()
         col_tit, col_chk, col_btn = st.columns([3, 1.2, 1])
         col_tit.markdown("#### Historial")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
-        if col_btn.button("Borrar ultimo", use_container_width=True, disabled=not confirmar_borrado):
+        if col_btn.button("Borrar ultimo", width='stretch', disabled=not confirmar_borrado):
             if not ped:
                 st.error("No hay registros para borrar.")
             else:

@@ -230,7 +230,7 @@ def render_flags_analytics():
     }
     
     df_adoption = pd.DataFrame(adoption_data)
-    st.dataframe(df_adoption, use_container_width=True, hide_index=True)
+    st.dataframe(df_adoption, width='stretch', hide_index=True)
 
 
 def render_flags_history():

@@ -427,7 +427,7 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
     
     notas = st.text_area("Notas internas (opcional)")
     
-    if st.button("📅 Agendar Turno", use_container_width=True, type="primary"):
+    if st.button("📅 Agendar Turno", width='stretch', type="primary"):
         if not hora:
             st.error("❌ Seleccione un horario disponible")
             return

@@ -215,7 +215,7 @@ def _render_plan_cuidados_enfermeria_legacy(
             incidente = st.checkbox("Hubo incidente o evento adverso", key="enf_incidente")
             detalle_incidente = st.text_area("Detalle del incidente", height=80, key="enf_det_inc") if incidente else ""
 
-            if st.button("Guardar registro de enfermería", use_container_width=True, type="primary", key="enf_guardar"):
+            if st.button("Guardar registro de enfermería", width='stretch', type="primary", key="enf_guardar"):
                 if not intervencion.strip():
                     st.error("Debés registrar la intervención realizada.")
                 else:

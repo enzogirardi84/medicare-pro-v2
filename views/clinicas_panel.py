@@ -171,7 +171,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
     df_pub = df.drop(columns=["_key"], errors="ignore")
     st.dataframe(
         df_pub,
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         height=min(420, 60 + len(df) * 38),
     )
@@ -205,7 +205,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
         if not usuarios:
             st.caption("Sin usuarios operativos listados (solo SuperAdmin u otras excepciones).")
         else:
-            st.dataframe(pd.DataFrame(usuarios), use_container_width=True, hide_index=True, height=min(320, 60 + len(usuarios) * 36))
+            st.dataframe(pd.DataFrame(usuarios), width='stretch', hide_index=True, height=min(320, 60 + len(usuarios) * 36))
 
     st.markdown("##### Suspender o reactivar (baja / alta logica)")
     motivo = st.text_input(
@@ -220,7 +220,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
         if st.button(
             "Suspender clinica (bloquea accesos)",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             key=f"clin_susp_{key_norm}",
             disabled=str(row["Estado"]).strip().lower() == "suspendida",
         ):
@@ -238,7 +238,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
         if st.button(
             "Reactivar clinica",
             type="secondary",
-            use_container_width=True,
+            width='stretch',
             key=f"clin_react_{key_norm}",
             disabled=str(row["Estado"]).strip().lower() != "suspendida",
         ):
@@ -260,7 +260,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
             st.caption("Todavia no hay eventos registrados en auditoria para este panel.")
         else:
             df_hist = pd.DataFrame(hist)
-            st.dataframe(df_hist, use_container_width=True, hide_index=True, height=min(380, 60 + len(hist) * 36))
+            st.dataframe(df_hist, width='stretch', hide_index=True, height=min(380, 60 + len(hist) * 36))
             hbuf = io.BytesIO()
             df_hist.to_csv(hbuf, index=False, encoding="utf-8-sig")
             st.download_button(

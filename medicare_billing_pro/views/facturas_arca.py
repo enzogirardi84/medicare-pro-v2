@@ -84,7 +84,7 @@ def _form_factura(existing: Dict[str, Any] | None = None) -> Dict[str, Any] | No
         st.info(f"Neto {fmt_moneda(neto)} | IVA {fmt_moneda(iva)} | Total {fmt_moneda(total)}")
         notas = st.text_area("Notas", value=(existing or {}).get("notas", ""), height=70)
 
-        if st.form_submit_button("Guardar factura", type="primary", use_container_width=True):
+        if st.form_submit_button("Guardar factura", type="primary", width='stretch'):
             if not cliente_sel or not items:
                 st.error("Selecciona cliente y agrega al menos un concepto.")
                 return None
@@ -197,7 +197,7 @@ def render_facturas_arca() -> None:
             k1.metric("Facturas filtradas", len(facturas_filtradas))
             k2.metric("Total filtrado", fmt_moneda(sum(money(f.get("total")) for f in facturas_filtradas)))
             if XLSX_DISPONIBLE:
-                st.download_button("Exportar Excel", exportar_facturas_arca_excel(facturas_filtradas, empresa_nombre), f"facturas_arca_{sanitize_filename(empresa_nombre)}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                st.download_button("Exportar Excel", exportar_facturas_arca_excel(facturas_filtradas, empresa_nombre), f"facturas_arca_{sanitize_filename(empresa_nombre)}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width='stretch')
             with st.container(height=610, border=False):
                 for f in facturas_filtradas:
                     with st.container(border=True):
@@ -217,14 +217,14 @@ def render_facturas_arca() -> None:
                             b1, b2, b3 = st.columns([1.25, 1, 1.2])
                             with b1:
                                 if FPDF_DISPONIBLE:
-                                    st.download_button("Descargar PDF", exportar_factura_arca_pdf(f, empresa_nombre, f.get("items", []), config), f"factura_arca_{sanitize_filename(f.get('numero', ''))}.pdf", mime="application/pdf", key=f"pdf_arca_{f.get('id')}", use_container_width=True)
+                                    st.download_button("Descargar PDF", exportar_factura_arca_pdf(f, empresa_nombre, f.get("items", []), config), f"factura_arca_{sanitize_filename(f.get('numero', ''))}.pdf", mime="application/pdf", key=f"pdf_arca_{f.get('id')}", width='stretch')
                             with b2:
                                 result = emitir_factura_homologacion(f, config)
-                                if st.button("Emitir", key=f"emit_arca_{f.get('id')}", use_container_width=True, disabled=not status.listo):
+                                if st.button("Emitir", key=f"emit_arca_{f.get('id')}", width='stretch', disabled=not status.listo):
                                     st.warning(result.get("mensaje", "Pendiente de homologacion."))
                             with b3:
                                 confirm = st.checkbox("Confirmar", key=f"confirm_del_arca_{f.get('id')}")
-                                if st.button("Eliminar", key=f"del_arca_{f.get('id')}", use_container_width=True, disabled=not confirm):
+                                if st.button("Eliminar", key=f"del_arca_{f.get('id')}", width='stretch', disabled=not confirm):
                                     if delete_factura_arca(f.get("id")):
                                         registrar_auditoria(empresa_id, usuario, "borrar", "factura_arca", f.get("id", ""))
                                         st.rerun()
@@ -251,7 +251,7 @@ def render_facturas_arca() -> None:
                 for p in prefs:
                     with st.container(border=True):
                         st.markdown(f"**{p.get('numero', '-')}** | {p.get('cliente_nombre', '-')} | {fmt_moneda(p.get('total', 0))}")
-                        if st.button("Convertir a factura ARCA", key=f"conv_arca_{p.get('id')}", use_container_width=True):
+                        if st.button("Convertir a factura ARCA", key=f"conv_arca_{p.get('id')}", width='stretch'):
                             data = _desde_prefactura(p, tipo, int(pv), iva_incluido)
                             if upsert_factura_arca(data):
                                 registrar_auditoria(empresa_id, usuario, "convertir_prefactura", "factura_arca", data.get("id", ""), {"prefactura": p.get("id")})

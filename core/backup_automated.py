@@ -29,7 +29,7 @@ import uuid
 import streamlit as st
 
 from core.app_logging import log_event
-from core.config_secure import get_settings, get_settings
+from core.config_secure import get_settings
 from core.security_middleware import InputSanitizer
 
 

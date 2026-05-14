@@ -194,13 +194,13 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
             if not agenda_estado.empty:
                 st.altair_chart(
                     _chart_barras_altair(agenda_estado, "Estado", "Cantidad", _COLOR_ESTADO_AGENDA, "Estado", "Cantidad"),
-                    use_container_width=True,
+                    width='stretch',
                 )
             st.caption("Visitas del dia por profesional")
             if not visitas_prof.empty:
                 st.altair_chart(
                     _chart_barras_altair(visitas_prof, "Profesional", "Visitas", titulo_eje_x="Profesional", titulo_eje_y="Visitas"),
-                    use_container_width=True,
+                    width='stretch',
                 )
     else:
         col_g1, col_g2 = st.columns(2)
@@ -209,7 +209,7 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
             if not agenda_estado.empty:
                 st.altair_chart(
                     _chart_barras_altair(agenda_estado, "Estado", "Cantidad", _COLOR_ESTADO_AGENDA, "Estado", "Cantidad"),
-                    use_container_width=True,
+                    width='stretch',
                 )
             else:
                 bloque_estado_vacio(
@@ -222,7 +222,7 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
             if not visitas_prof.empty:
                 st.altair_chart(
                     _chart_barras_altair(visitas_prof, "Profesional", "Visitas", titulo_eje_x="Profesional", titulo_eje_y="Visitas"),
-                    use_container_width=True,
+                    width='stretch',
                 )
             else:
                 bloque_estado_vacio(
@@ -235,7 +235,7 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
         st.caption("Urgencias por triage (ultimos 30 dias)")
         st.altair_chart(
             _chart_barras_altair(urg_chart, "Triage", "Eventos", titulo_eje_x="Grado de triage", titulo_eje_y="Eventos"),
-            use_container_width=True,
+            width='stretch',
         )
 
     evoluciones_hoy = [

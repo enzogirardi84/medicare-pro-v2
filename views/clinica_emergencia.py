@@ -69,7 +69,7 @@ def render(paciente_sel=None, user=None):
         
         submitted = st.form_submit_button(
             "💾 GUARDAR SIGNOS VITALES (LOCAL)",
-            use_container_width=True,
+            width='stretch',
             type="primary"
         )
         
@@ -132,7 +132,7 @@ def render(paciente_sel=None, user=None):
         # Tabla con formato profesional
         st.dataframe(
             df,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             height=min(400, len(df) * 45 + 50),
             column_config={
@@ -154,7 +154,7 @@ def render(paciente_sel=None, user=None):
             data=csv,
             file_name=f"signos_vitales_{paciente_id}.csv",
             mime="text/csv",
-            use_container_width=False
+            width='content'
         )
     else:
         st.info("📋 No hay signos vitales guardados para este paciente. Usa el formulario de arriba para agregar el primero.")

@@ -295,7 +295,7 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
             data=pdf_bytes,
             file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            width='stretch',
         )
     with col_d2:
         st.download_button(
@@ -303,5 +303,5 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
             data=html_informe.encode("utf-8"),
             file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.html",
             mime="text/html",
-            use_container_width=True,
+            width='stretch',
         )

@@ -139,7 +139,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         metodo = c3.selectbox("Metodo de Pago", opciones_pago)
         estado = c4.radio("Estado del Cobro", ["Cobrado", "Pendiente / A Facturar"], horizontal=False)
 
-        if st.form_submit_button("💰 Registrar Cobro / Practica", use_container_width=True, type="primary"):
+        if st.form_submit_button("💰 Registrar Cobro / Practica", width='stretch', type="primary"):
             # Validación extra de seguridad
             desc_final = practica_manual.strip() if practica_sel == "-- Otro (Especificar manualmente) --" else f"{practica_sel} {('- ' + practica_manual.strip()) if practica_manual.strip() else ''}"
             
@@ -261,7 +261,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                                     file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf",
                                     mime="application/pdf",
                                     key=f"pdf_btn_{i}",
-                                    use_container_width=True,
+                                    width='stretch',
                                 )
         else:
             st.warning(
@@ -292,7 +292,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 )
                 mostrar_dataframe_con_scroll(df_mostrar.tail(limite_aud).iloc[::-1], height=420)
                 csv_data = dataframe_csv_bytes(df_mostrar)
-                st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
+                st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", width='stretch')
             else:
                 bloque_estado_vacio(
                     "Caja sin movimientos",

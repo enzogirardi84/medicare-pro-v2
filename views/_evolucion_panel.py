@@ -124,7 +124,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 usar_camara = st.checkbox("Usar cámara ahora", key="evol_usar_cam")
                 foto_cam = st.camera_input("Capturar imagen", key="cam_evol") if usar_camara else None
 
-            if st.form_submit_button("Firmar y Guardar Evolucion", use_container_width=True, type="primary"):
+            if st.form_submit_button("Firmar y Guardar Evolucion", width='stretch', type="primary"):
                 if nota.strip():
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
                     if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
@@ -338,7 +338,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         # Botón tradicional: Borrar última evolución
         col_chk, col_btn = st.columns([1.2, 2.8])
         confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
-        if col_btn.button("Borrar ultima evolucion", use_container_width=True, disabled=not confirmar_borrado):
+        if col_btn.button("Borrar ultima evolucion", width='stretch', disabled=not confirmar_borrado):
             if not evs_paciente:
                 st.error("No hay evoluciones para borrar.")
             else:
@@ -388,7 +388,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     if foto.get("descripcion"):
                         st.caption(foto.get("descripcion"))
                     try:
-                        st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
+                        st.image(base64.b64decode(foto.get("base64_foto", "")), width='stretch')
                     except Exception:
                         st.warning("No se pudo mostrar una foto registrada.")
 
@@ -425,7 +425,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 key="canvas_firma_evolucion",
             )
 
-        if st.button("Guardar Firma Digital", use_container_width=True, type="primary"):
+        if st.button("Guardar Firma Digital", width='stretch', type="primary"):
             b64_firma = firma_a_base64(
                 canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
                 uploaded_file=firma_subida,

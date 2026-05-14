@@ -126,7 +126,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
 
     if es_movil:
         if hasattr(st, "popover"):
-            with st.popover("Menu de modulos", use_container_width=True):
+            with st.popover("Menu de modulos", width='stretch'):
                 for modulo in modulos:
                     nombre_raw = str(modulo)
                     if not nombre_raw:
@@ -138,7 +138,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                     if st.button(
                         btn_label,
                         key=f"nav_pop_{nombre_raw}",
-                        use_container_width=True,
+                        width='stretch',
                         type=tipo,
                     ):
                         set_modulo_actual(nombre_raw, rerun=True)
@@ -164,7 +164,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 st.button(
                     btn_label,
                     key=f"nav_exp_{nombre_raw}",
-                    use_container_width=True,
+                    width='stretch',
                     type=tipo,
                     on_click=cambiar_modulo_mobile,
                     args=(nombre_raw,),
@@ -188,7 +188,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 st.button(
                     btn_label,
                     key=f"nav_btn_{nombre_raw}",
-                    use_container_width=True,
+                    width='stretch',
                     type=tipo,
                     on_click=set_modulo_actual,
                     args=(nombre_raw,),

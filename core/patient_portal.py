@@ -111,7 +111,7 @@ class PatientPortal:
             dni = st.text_input("DNI", placeholder="Ingrese su DNI sin puntos")
             password = st.text_input("Contraseña", type="password")
             
-            if st.button("Ingresar", use_container_width=True, type="primary"):
+            if st.button("Ingresar", width='stretch', type="primary"):
                 session = self.authenticate_patient(dni, password)
 
                 if session:

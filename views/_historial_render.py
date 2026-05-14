@@ -82,10 +82,10 @@ def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None
                                 file_name=f"Estudio_{idx + 1}.pdf",
                                 mime="application/pdf",
                                 key=f"hist_est_pdf_{paciente_sel}_{idx}",
-                                use_container_width=True,
+                                width='stretch',
                             )
                         else:
-                            st.image(archivo, use_container_width=True)
+                            st.image(archivo, width='stretch')
                     except Exception:
                         st.error("No se pudo leer el adjunto.")
 
@@ -100,7 +100,7 @@ def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
                 st.write(fh.get("descripcion", "Sin descripción"))
                 if mostrar_fotos and (foto_b64 := fh.get("base64_foto")):
                     try:
-                        st.image(base64.b64decode(foto_b64), use_container_width=True)
+                        st.image(base64.b64decode(foto_b64), width='stretch')
                     except Exception:
                         st.error("No se pudo leer la foto.")
 
@@ -141,7 +141,7 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any], idx: int, pacien
                 file_name=registro.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                 mime=registro.get("adjunto_papel_tipo", "application/octet-stream"),
                 key=f"hist_adj_rec_{paciente_sel}_{idx}",
-                use_container_width=True,
+                width='stretch',
             )
         except Exception:
             st.caption("El adjunto cargado no pudo prepararse para descarga.")
@@ -192,13 +192,13 @@ def _render_lazy_download(
             file_name=file_name,
             mime=mime,
             key=f"download_{key_base}",
-            use_container_width=True,
+            width='stretch',
         )
-        if container.button("Actualizar archivo", key=f"refresh_{key_base}", use_container_width=True):
+        if container.button("Actualizar archivo", key=f"refresh_{key_base}", width='stretch'):
             st.session_state.pop(cache_key, None)
             st.rerun()
         return
-    if container.button(prepare_label, key=f"prepare_{key_base}", use_container_width=True):
+    if container.button(prepare_label, key=f"prepare_{key_base}", width='stretch'):
         with st.spinner("Preparando archivo..."):
             payload = build_fn()
         if payload:

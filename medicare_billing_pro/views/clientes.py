@@ -50,7 +50,7 @@ def _form_cliente(existing: Dict[str, Any] | None = None, clientes: list[Dict[st
             )
         notas = st.text_area("Notas", value=existing.get("notas", "") if existing else "", height=74)
 
-        submitted = st.form_submit_button("Guardar cliente", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("Guardar cliente", width='stretch', type="primary")
         if submitted:
             nombre = nombre.strip()
             dni = normalize_document(dni)
@@ -131,7 +131,7 @@ def render_clientes() -> None:
                     data=excel_data,
                     file_name=f"clientes_{sanitize_filename(empresa_nombre)}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width='stretch',
                 )
 
             with st.container(height=610, border=False):
@@ -171,11 +171,11 @@ def render_clientes() -> None:
                                     reverse=True,
                                 )[:6]
                                 if ultimos:
-                                    st.dataframe(ultimos, use_container_width=True, hide_index=True, height=210)
+                                    st.dataframe(ultimos, width='stretch', hide_index=True, height=210)
                                 else:
                                     st.caption("Sin movimientos todavia.")
                         with c2:
-                            if st.button("Cuenta", key=f"cc_cli_{cliente_id}", use_container_width=True):
+                            if st.button("Cuenta", key=f"cc_cli_{cliente_id}", width='stretch'):
                                 st.session_state["cc_cliente_label"] = (
                                     f"{cliente.get('nombre', 'Sin nombre')} | {cliente.get('dni', '')}"
                                     if cliente.get("dni")
@@ -184,12 +184,12 @@ def render_clientes() -> None:
                                 st.session_state["billing_modulo_activo"] = "Cuenta corriente"
                                 st.rerun()
                         with c3:
-                            if st.button("Editar", key=f"edit_cli_{cliente_id}", use_container_width=True):
+                            if st.button("Editar", key=f"edit_cli_{cliente_id}", width='stretch'):
                                 st.session_state["cli_editing"] = cliente_id
                                 st.rerun()
                         with c4:
                             confirmar = st.checkbox("Confirmar", key=f"confirm_del_cli_{cliente_id}")
-                            if st.button("Borrar", key=f"del_cli_{cliente_id}", use_container_width=True, disabled=not confirmar):
+                            if st.button("Borrar", key=f"del_cli_{cliente_id}", width='stretch', disabled=not confirmar):
                                 if delete_cliente(cliente_id):
                                     st.toast("Cliente eliminado.")
                                     st.rerun()

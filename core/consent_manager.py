@@ -650,7 +650,7 @@ class ConsentManager:
             
             # Simulación de firma
             if st.checkbox("Confirmo que he leído y acepto el contenido del documento"):
-                if st.button("✍️ Firmar Documento", use_container_width=True):
+                if st.button("✍️ Firmar Documento", width='stretch'):
                     # En producción: capturar firma digital real
                     signature_placeholder = "signature_svg_data_placeholder"
                     

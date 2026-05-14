@@ -49,7 +49,7 @@ def render_configuracion() -> None:
             modo = st.selectbox("Modo ARCA", ["homologacion", "produccion"], index=0 if config.get("arca_modo", "homologacion") == "homologacion" else 1)
             cert_ok = st.checkbox("Certificado y clave privada configurados fuera de la app", value=bool(config.get("arca_certificado_configurado", False)))
 
-            if st.form_submit_button("Guardar configuracion fiscal", type="primary", use_container_width=True):
+            if st.form_submit_button("Guardar configuracion fiscal", type="primary", width='stretch'):
                 data = {
                     "empresa_id": empresa_id,
                     "razon_social": razon_social.strip(),
@@ -90,7 +90,7 @@ def render_configuracion() -> None:
                         prefijo = st.text_input("Prefijo", value=actual.get("prefijo", tipo), key=f"pref_{tipo}")
                     with c3:
                         ultimo = st.number_input("Ultimo numero", min_value=0, value=int(actual.get("ultimo_numero", 0) or 0), key=f"ult_{tipo}")
-                    if st.form_submit_button(f"Guardar {tipo}", use_container_width=True):
+                    if st.form_submit_button(f"Guardar {tipo}", width='stretch'):
                         if upsert_numerador({
                             "id": actual.get("id") or generar_id(),
                             "empresa_id": empresa_id,
@@ -129,7 +129,7 @@ def render_configuracion() -> None:
                     }
                     for r in rows
                 ],
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 height=520,
             )

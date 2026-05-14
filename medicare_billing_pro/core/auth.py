@@ -262,7 +262,7 @@ def render_login() -> bool:
         with st.form("billing_login_form", border=False, clear_on_submit=False):
             usuario = st.text_input("Usuario", key="billing_login_user", placeholder="admin")
             password = st.text_input("Contrasena", type="password", key="billing_login_pw", placeholder="********")
-            submitted = st.form_submit_button("Ingresar", use_container_width=True, type="primary")
+            submitted = st.form_submit_button("Ingresar", width='stretch', type="primary")
 
         if submitted:
             usuario_limpio = str(usuario or st.session_state.get("billing_login_user", "")).strip()
@@ -285,7 +285,7 @@ def render_login() -> bool:
 
 
 def render_logout_button() -> None:
-    if st.sidebar.button("Cerrar sesion", use_container_width=True):
+    if st.sidebar.button("Cerrar sesion", width='stretch'):
         for key in list(st.session_state.keys()):
             if key.startswith("billing_"):
                 del st.session_state[key]

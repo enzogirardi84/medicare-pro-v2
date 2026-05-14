@@ -9,10 +9,5 @@ root_str = str(repo_root)
 if root_str not in sys.path:
     sys.path.insert(0, root_str)
 
-# Importar y ejecutar el programa principal
-from main_medicare import *
-
-# Ejecutar la lógica principal
-if __name__ == "__main__":
-    # Streamlit ejecutará esto automáticamente
-    pass
+# Importar el programa principal (ejecuta st.set_page_config y render)
+import main_medicare  # noqa: F401

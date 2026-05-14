@@ -153,16 +153,16 @@ def render_dashboard() -> None:
     st.markdown("### Accesos rapidos")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        if st.button("Nuevo cliente", use_container_width=True):
+        if st.button("Nuevo cliente", width='stretch'):
             _set_module("Clientes fiscales")
     with c2:
-        if st.button("Nuevo presupuesto", use_container_width=True):
+        if st.button("Nuevo presupuesto", width='stretch'):
             _set_module("Presupuestos")
     with c3:
-        if st.button("Nueva pre-factura", use_container_width=True):
+        if st.button("Nueva pre-factura", width='stretch'):
             _set_module("Pre-facturas")
     with c4:
-        if st.button("Registrar cobro", use_container_width=True):
+        if st.button("Registrar cobro", width='stretch'):
             _set_module("Cobros")
 
     st.divider()
@@ -192,7 +192,7 @@ def render_dashboard() -> None:
                             "Saldo": fmt_moneda(item.get("saldo", 0)),
                         }
                     )
-                st.dataframe(rows, use_container_width=True, hide_index=True, height=185)
+                st.dataframe(rows, width='stretch', hide_index=True, height=185)
 
         st.markdown("### Meses con cobros")
         with st.container(height=220, border=True):
@@ -208,7 +208,7 @@ def render_dashboard() -> None:
                     {"Mes": _month_label(key), "Cobrado": fmt_moneda(value)}
                     for key, value in sorted(meses.items(), reverse=True)
                 ]
-                st.dataframe(month_rows, use_container_width=True, hide_index=True, height=155)
+                st.dataframe(month_rows, width='stretch', hide_index=True, height=155)
                 chart_rows = [
                     {"Mes": _month_label(key), "Cobrado": value}
                     for key, value in sorted(meses.items())[-6:]

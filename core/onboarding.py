@@ -581,6 +581,6 @@ def render_panel_bienvenida(rol: str, menu: list[str], etiquetas_nav: dict[str, 
             st.session_state["_mc_onboarding_oculto"] = True
 
         with c1:
-            st.button("Entendido, ocultar", use_container_width=True, key="mc_onboarding_cerrar", on_click=_on_close_panel)
+            st.button("Entendido, ocultar", width='stretch', key="mc_onboarding_cerrar", on_click=_on_close_panel)
         with c2:
             st.caption("Podés volver a ver ayuda contextual en cada módulo (bloques superiores).")

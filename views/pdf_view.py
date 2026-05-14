@@ -44,14 +44,14 @@ def _render_lazy_download(container, key_base, prepare_label, download_label, bu
             file_name=file_name,
             mime=mime,
             key=f"download_{key_base}",
-            use_container_width=True,
+            width='stretch',
         )
-        if container.button("Actualizar archivo", key=f"refresh_{key_base}", use_container_width=True):
+        if container.button("Actualizar archivo", key=f"refresh_{key_base}", width='stretch'):
             st.session_state.pop(cache_key, None)
             st.rerun()
         return
 
-    if container.button(prepare_label, key=f"prepare_{key_base}", use_container_width=True):
+    if container.button(prepare_label, key=f"prepare_{key_base}", width='stretch'):
         with st.spinner("Preparando archivo..."):
             try:
                 payload = build_fn()
@@ -186,7 +186,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
             )
 
         if puede_guardar_consentimiento:
-            if st.button("Guardar consentimiento legal", use_container_width=True, type="primary", key=f"save_consent_{paciente_sel}"):
+            if st.button("Guardar consentimiento legal", width='stretch', type="primary", key=f"save_consent_{paciente_sel}"):
                 if not acepta:
                     st.error("Debe confirmar la aceptacion del tratamiento domiciliario.")
                 else:

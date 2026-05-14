@@ -155,9 +155,9 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
     direccion_final = direccion if lat is not None else "Ubicacion Omitida"
 
     col_in, col_out = st.columns(2)
-    if col_in.button("Fichar LLEGADA", use_container_width=True, type="primary"):
+    if col_in.button("Fichar LLEGADA", width='stretch', type="primary"):
         _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "LLEGADA", lat_val, lon_val, direccion_final)
-    if col_out.button("Fichar SALIDA", use_container_width=True):
+    if col_out.button("Fichar SALIDA", width='stretch'):
         _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "SALIDA", lat_val, lon_val, direccion_final)
 
     st.divider()
@@ -270,7 +270,7 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
             )
             idx_prof = profesionales.index(nombre_usuario) if nombre_usuario in profesionales else 0
             prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
-            if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
+            if st.form_submit_button("Agendar Visita", width='stretch', type="primary"):
                 hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
                 fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
                 fecha_hora_programada = datetime.combine(fecha_ag, hora_ag).strftime("%Y-%m-%d %H:%M:%S")
@@ -400,7 +400,7 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
     tel_wa = _normalizar_telefono_whatsapp(tel_paciente)
     if tel_wa and texto_final_wa:
         link_wpp = f"https://wa.me/{tel_wa}?text={urllib.parse.quote(texto_final_wa)}"
-        st.link_button("Abrir WhatsApp con este mensaje", link_wpp, use_container_width=True, type="primary")
+        st.link_button("Abrir WhatsApp con este mensaje", link_wpp, width='stretch', type="primary")
     elif not tel_paciente:
         st.warning("Este paciente no tiene telefono registrado. Cargalo en Admision para poder avisar por WhatsApp.")
     else:
@@ -445,17 +445,17 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
                 st.caption("Estado de la agenda del paciente")
                 estado_chart = df_agenda.groupby("Estado").size().reset_index(name="Visitas")
                 if not estado_chart.empty:
-                    st.bar_chart(estado_chart.set_index("Estado")["Visitas"], use_container_width=True)
+                    st.bar_chart(estado_chart.set_index("Estado")["Visitas"], width='stretch')
             with col_g2:
                 st.caption("Carga por profesional")
                 prof_chart = df_agenda.groupby("Profesional").size().reset_index(name="Visitas").sort_values("Visitas", ascending=False)
                 if not prof_chart.empty:
-                    st.bar_chart(prof_chart.set_index("Profesional")["Visitas"], use_container_width=True)
+                    st.bar_chart(prof_chart.set_index("Profesional")["Visitas"], width='stretch')
             c_a1, c_a2 = st.columns([2, 1])
             opciones_accion = [f"{x['Fecha y Hora']} | {x['Profesional']} | {x['Estado']}" for _, x in df_filtrado.sort_values("_fecha_dt").iterrows()]
             seleccion = c_a1.selectbox("Accion rapida sobre una visita", ["Sin cambios"] + opciones_accion, key=f"agenda_accion_sel_{paciente_sel}")
             accion = c_a2.selectbox("Accion", ["Marcar realizada", "Cancelar"], key=f"agenda_accion_tipo_{paciente_sel}")
-            if st.button("Aplicar cambio de agenda", use_container_width=True, key=f"agenda_apply_{paciente_sel}"):
+            if st.button("Aplicar cambio de agenda", width='stretch', key=f"agenda_apply_{paciente_sel}"):
                 if seleccion != "Sin cambios":
                     def _fmt_sel(dt):
                         try:

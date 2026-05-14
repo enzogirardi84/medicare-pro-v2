@@ -515,19 +515,19 @@ def demo_toasts():
     cols = st.columns(4)
     
     with cols[0]:
-        if st.button("✅ Éxito", use_container_width=True):
+        if st.button("✅ Éxito", width='stretch'):
             toast_success("Operación completada exitosamente", "Guardado")
     
     with cols[1]:
-        if st.button("❌ Error", use_container_width=True):
+        if st.button("❌ Error", width='stretch'):
             toast_error("No se pudo conectar con el servidor", "Error de Conexión")
     
     with cols[2]:
-        if st.button("⚠️ Advertencia", use_container_width=True):
+        if st.button("⚠️ Advertencia", width='stretch'):
             toast_warning("Algunos campos están incompletos", "Atención")
     
     with cols[3]:
-        if st.button("ℹ️ Info", use_container_width=True):
+        if st.button("ℹ️ Info", width='stretch'):
             toast_info("Sincronización completada", "Actualización")
     
     st.markdown("---")
@@ -545,13 +545,13 @@ def demo_toasts():
     cols2 = st.columns(3)
     
     with cols2[0]:
-        if st.button("💾 Guardar", use_container_width=True):
+        if st.button("💾 Guardar", width='stretch'):
             toast_guardado_exitoso("Evolución")
     
     with cols2[1]:
-        if st.button("🗑️ Eliminar", use_container_width=True):
+        if st.button("🗑️ Eliminar", width='stretch'):
             toast_eliminado_exitoso("Registro")
     
     with cols2[2]:
-        if st.button("📄 Generar PDF", use_container_width=True):
+        if st.button("📄 Generar PDF", width='stretch'):
             toast_pdf_generado("historia_clinica_001.pdf")

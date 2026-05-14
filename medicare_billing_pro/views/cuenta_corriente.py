@@ -184,7 +184,7 @@ def render_cuenta_corriente() -> None:
                 data=exportar_estado_cuenta_excel(cliente, empresa_nombre, movimientos, total_debe, total_haber, saldo),
                 file_name=f"estado_cuenta_{sanitize_filename(cliente.get('nombre', 'cliente'))}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width='stretch',
             )
     with e2:
         if FPDF_DISPONIBLE:
@@ -193,7 +193,7 @@ def render_cuenta_corriente() -> None:
                 data=exportar_estado_cuenta_pdf(cliente, empresa_nombre, movimientos, total_debe, total_haber, saldo),
                 file_name=f"estado_cuenta_{sanitize_filename(cliente.get('nombre', 'cliente'))}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
             )
 
     st.divider()
@@ -213,4 +213,4 @@ def render_cuenta_corriente() -> None:
         }
         for m in movimientos
     ]
-    st.dataframe(rows, use_container_width=True, hide_index=True, height=430)
+    st.dataframe(rows, width='stretch', hide_index=True, height=430)

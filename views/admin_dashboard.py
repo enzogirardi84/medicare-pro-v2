@@ -174,7 +174,7 @@ def render_users_tab():
     if filtered_users:
         st.dataframe(
             filtered_users,
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
         
@@ -189,16 +189,16 @@ def render_users_tab():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("➕ Crear Usuario", use_container_width=True):
+        if st.button("➕ Crear Usuario", width='stretch'):
             st.session_state["admin_action"] = "create_user"
             st.rerun()
     
     with col2:
-        if st.button("🔄 Reset Password", use_container_width=True):
+        if st.button("🔄 Reset Password", width='stretch'):
             st.info("Seleccione usuario de la tabla")
     
     with col3:
-        if st.button("🚫 Desactivar", use_container_width=True):
+        if st.button("🚫 Desactivar", width='stretch'):
             st.warning("Seleccione usuario de la tabla")
 
 
@@ -247,7 +247,7 @@ def render_audit_tab():
                 "Descripción": entry.description[:50] + "..." if len(entry.description) > 50 else entry.description
             })
         
-        st.dataframe(audit_data, use_container_width=True, hide_index=True)
+        st.dataframe(audit_data, width='stretch', hide_index=True)
         
         # Verificar integridad
         st.divider()
@@ -265,7 +265,7 @@ def render_audit_tab():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📥 Exportar JSON", use_container_width=True):
+        if st.button("📥 Exportar JSON", width='stretch'):
             desde = (ahora() - timedelta(days=30)).strftime("%Y-%m-%d")
             hasta = ahora().strftime("%Y-%m-%d")
             export = trail.export_for_compliance(desde, hasta, format="json")
@@ -278,7 +278,7 @@ def render_audit_tab():
             )
     
     with col2:
-        if st.button("📄 Exportar CSV", use_container_width=True):
+        if st.button("📄 Exportar CSV", width='stretch'):
             desde = (ahora() - timedelta(days=30)).strftime("%Y-%m-%d")
             hasta = ahora().strftime("%Y-%m-%d")
             export = trail.export_for_compliance(desde, hasta, format="csv")
@@ -371,13 +371,13 @@ def render_cache_tab():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("🗑️ Limpiar Caché Local", use_container_width=True):
+        if st.button("🗑️ Limpiar Caché Local", width='stretch'):
             cache._local_cache.clear()
             st.success("Caché local limpiado")
             log_event("admin", "Cache local limpiado por admin")
     
     with col2:
-        if st.button("🔄 Forzar Reconexión Redis", use_container_width=True):
+        if st.button("🔄 Forzar Reconexión Redis", width='stretch'):
             # Reintentar conexión
             st.info("Reconexión intentada. Verificar estado en unos segundos.")
 
@@ -419,7 +419,7 @@ def render_alerts_tab():
     
     # Botón para limpiar alertas
     st.divider()
-    if st.button("🧹 Limpiar Alertas", use_container_width=True):
+    if st.button("🧹 Limpiar Alertas", width='stretch'):
         st.session_state["_system_alerts"] = []
         st.success("Alertas limpiadas")
         st.rerun()

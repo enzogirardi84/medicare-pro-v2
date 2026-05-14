@@ -153,7 +153,7 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
         if "em_hora" not in st.session_state:
             hora_evento = fecha_actual.time().replace(microsecond=0)
 
-        if st.button("GUARDAR EVENTO CRITICO", use_container_width=True, type="primary", key="em_guardar"):
+        if st.button("GUARDAR EVENTO CRITICO", width='stretch', type="primary", key="em_guardar"):
             if not motivo.strip():
                 st.error("Debes indicar el motivo principal del evento.")
             elif not profesional.strip() or not matricula.strip():
@@ -408,7 +408,7 @@ def _render_tab_historial(paciente_sel, mi_empresa, eventos, es_movil):
                         data=pdf_bytes,
                         file_name=nombre_arch,
                         mime="application/pdf",
-                        use_container_width=True,
+                        width='stretch',
                         key=f"pdf_emerg_{idx}",
                     )
                 else:
@@ -417,6 +417,6 @@ def _render_tab_historial(paciente_sel, mi_empresa, eventos, es_movil):
                         data=pdf_bytes,
                         file_name=nombre_arch,
                         mime="application/pdf",
-                        use_container_width=True,
+                        width='stretch',
                         key=f"pdf_emerg_{idx}",
                     )

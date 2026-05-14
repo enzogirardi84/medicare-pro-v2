@@ -183,7 +183,7 @@ def render_escalas_clinicas(paciente_sel, user):
             unsafe_allow_html=True,
         )
 
-        if st.button(f"Guardar {escala}", use_container_width=True, type="primary"):
+        if st.button(f"Guardar {escala}", width='stretch', type="primary"):
             fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")
             
             # 1. Guardar en SQL (Dual-Write)
@@ -296,7 +296,7 @@ def render_escalas_clinicas(paciente_sel, user):
                 df_e = df_hist[df_hist["escala"] == e_key].set_index("fecha_dt")["puntaje"]
                 if len(df_e) >= 2:
                     st.caption(f"Evolución {e_key} ({len(df_e)} registros)")
-                    st.line_chart(df_e, use_container_width=True, height=140)
+                    st.line_chart(df_e, width='stretch', height=140)
 
     limite = seleccionar_limite_registros(
         "Escalas a mostrar",

@@ -504,7 +504,7 @@ class DocumentManager:
             
             description = st.text_area("Descripción", placeholder="Notas sobre el documento...")
             
-            if st.button("📤 Subir Documento", use_container_width=True, type="primary"):
+            if st.button("📤 Subir Documento", width='stretch', type="primary"):
                 user = st.session_state.get("u_actual", {})
                 try:
                     doc = self.upload_document(

@@ -269,7 +269,7 @@ def render_search_filters(
                 st.button(
                     label,
                     key=f"{key}_estado_{i}",
-                    use_container_width=True,
+                    width='stretch',
                     type="secondary" if not is_active else "primary",
                     on_click=_set_estado_filter,
                     args=(key, label),
@@ -332,7 +332,7 @@ def render_search_result_card(
         st.button(
             f"Seleccionar: {result.title}",
             key=f"result_{result.id}_{key_suffix}",
-            use_container_width=True,
+            width='stretch',
             type="secondary",
             on_click=on_select,
             args=(result,),
@@ -341,7 +341,7 @@ def render_search_result_card(
         clicked = st.button(
             f"Seleccionar: {result.title}",
             key=f"result_{result.id}_{key_suffix}",
-            use_container_width=True,
+            width='stretch',
             type="secondary",
         )
 

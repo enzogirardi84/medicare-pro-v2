@@ -115,7 +115,7 @@ def render_inventario(mi_empresa):
         nuevo_item = c2.text_input("2. Escribir insumo nuevo")
         cantidad = c3.number_input("Cantidad", min_value=1, value=10, step=1)
 
-        if st.form_submit_button("Sumar al stock", use_container_width=True, type="primary"):
+        if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
             item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
             if item_final and item_final != "-- Seleccionar del catalogo --":
                 # 1. Guardar en SQL (Dual-Write)
@@ -215,7 +215,7 @@ def render_inventario(mi_empresa):
             .style.apply(colorear_stock, axis=1)
         )
         with lista_plegable("Tabla de stock actual", count=len(df_filtrado), expanded=False, height=520):
-            st.dataframe(styled, use_container_width=True, hide_index=True, height=496)
+            st.dataframe(styled, width='stretch', hide_index=True, height=496)
     else:
         bloque_estado_vacio(
             "Inventario vacío",
@@ -233,7 +233,7 @@ def render_inventario(mi_empresa):
             stock_actual = next((i.get("stock", 0) for i in inv_mio if i["item"] == item_a_editar), 0)
             nuevo_stock = col2.number_input("Nuevo stock real", min_value=0, value=stock_actual, key="new_stock")
 
-            if col3.button("Actualizar stock", use_container_width=True):
+            if col3.button("Actualizar stock", width='stretch'):
                 # 1. Actualizar en SQL (Dual-Write)
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
@@ -259,7 +259,7 @@ def render_inventario(mi_empresa):
             col_del1, col_del2 = st.columns([3, 1])
             del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
             confirmar = col_del1.checkbox("Confirmar eliminacion definitiva", key="conf_del_item")
-            if col_del2.button("Eliminar insumo", use_container_width=True, type="secondary", disabled=not confirmar):
+            if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
                 # 1. Eliminar en SQL (Dual-Write)
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)

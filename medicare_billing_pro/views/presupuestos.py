@@ -97,7 +97,7 @@ def _form_presupuesto(existing: Dict[str, Any] | None = None) -> Dict[str, Any] 
         st.markdown(f"**Total: {fmt_moneda(total)}**")
         notas = st.text_area("Notas", value=existing.get("notas", "") if existing else "", height=70)
 
-        submitted = st.form_submit_button("Guardar presupuesto", use_container_width=True, type="primary")
+        submitted = st.form_submit_button("Guardar presupuesto", width='stretch', type="primary")
         if submitted:
             if not cliente_sel:
                 st.error("Selecciona un cliente.")
@@ -173,7 +173,7 @@ def render_presupuestos() -> None:
                     data=exportar_presupuestos_excel(filtrados, empresa_nombre),
                     file_name=f"presupuestos_{sanitize_filename(empresa_nombre)}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                    width='stretch',
                 )
 
             with st.container(height=610, border=False):
@@ -210,15 +210,15 @@ def render_presupuestos() -> None:
                                         file_name=f"presupuesto_{sanitize_filename(p.get('numero', ''))}.pdf",
                                         mime="application/pdf",
                                         key=f"pdf_pres_{pid}",
-                                        use_container_width=True,
+                                        width='stretch',
                                     )
                             with b2:
-                                if st.button("Editar", key=f"edit_pres_{pid}", use_container_width=True):
+                                if st.button("Editar", key=f"edit_pres_{pid}", width='stretch'):
                                     st.session_state["pres_editing"] = pid
                                     st.rerun()
                             with b3:
                                 confirm = st.checkbox("Confirmar", key=f"confirm_del_pres_{pid}")
-                                if st.button("Eliminar", key=f"del_pres_{pid}", use_container_width=True, disabled=not confirm):
+                                if st.button("Eliminar", key=f"del_pres_{pid}", width='stretch', disabled=not confirm):
                                     if delete_presupuesto(pid):
                                         st.toast("Presupuesto eliminado.")
                                         st.rerun()
@@ -226,7 +226,7 @@ def render_presupuestos() -> None:
                                         mostrar_error_db("eliminar el presupuesto")
 
                         if p.get("estado") == "Aceptado":
-                            if st.button("Convertir a pre-factura", key=f"conv_pres_{pid}", use_container_width=True):
+                            if st.button("Convertir a pre-factura", key=f"conv_pres_{pid}", width='stretch'):
                                 prefactura_data = {
                                     "id": generar_id(),
                                     "empresa_id": empresa_id,

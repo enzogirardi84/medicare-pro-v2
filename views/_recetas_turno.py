@@ -194,7 +194,7 @@ def render_administracion_turno(
                 hora_col, options=estado_celda_opciones, required=False, width="small",
             )
         editor_mar_df = st.data_editor(
-            matriz_registro_df, hide_index=True, use_container_width=True,
+            matriz_registro_df, hide_index=True, width='stretch',
             disabled=["Medicacion", "Via", "Frecuencia"], column_config=column_config,
             key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
         )
@@ -203,7 +203,7 @@ def render_administracion_turno(
             placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica...",
             key=f"motivo_no_realizada_mar_{paciente_sel}_{fecha_hoy}",
         )
-        if st.button("Guardar estados de cortina", use_container_width=True, key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
+        if st.button("Guardar estados de cortina", width='stretch', key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
             registros_guardados = 0
             requiere_motivo = False
             for row_idx in range(len(editor_mar_df)):
@@ -324,7 +324,7 @@ def render_administracion_turno(
                     placeholder="Vacío = hora actual del servidor",
                 )
                 justificacion = st.text_input("Justificación clínica (obligatoria si no realizada)")
-                if st.form_submit_button("Guardar registro", use_container_width=True):
+                if st.form_submit_button("Guardar registro", width='stretch'):
                     nombre_med = _extraer_nombre_medicacion(receta_actual.get("med", ""))
                     if _registrar_administracion_dosis(
                         paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, hora_sel,
@@ -365,7 +365,7 @@ def render_administracion_turno(
         motivo_cambio = st.text_input("Motivo medico / legal del cambio", key="motivo_cambio_receta")
         if accion_receta == "Editar indicacion":
             nuevo_texto_receta = st.text_input("Modificar detalle", value=receta_objetivo.get("med", ""))
-        if st.button("Aplicar cambios", use_container_width=True):
+        if st.button("Aplicar cambios", width='stretch'):
             cambio_aplicado = False
             if accion_receta == "Editar indicacion" and not nuevo_texto_receta.strip():
                 st.error("Debes escribir el nuevo detalle de la indicacion.")
@@ -498,7 +498,7 @@ def render_historial_prescripciones(paciente_sel, mi_empresa, user, es_movil, re
                             "Descargar orden adjunta", data=base64.b64decode(r["adjunto_papel_b64"]),
                             file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                             mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
-                            key=f"adj_papel_btn_{idx}", use_container_width=True,
+                            key=f"adj_papel_btn_{idx}", width='stretch',
                         )
                     except Exception:
                         info_container.caption("No se pudo preparar el adjunto cargado.")
@@ -521,5 +521,5 @@ def render_historial_prescripciones(paciente_sel, mi_empresa, user, es_movil, re
                     )
                     action_container.download_button(
                         "Descargar PDF legal", data=pdf_bytes, file_name=nombre_arch,
-                        mime="application/pdf", key=f"pdf_rec_btn_{idx}", use_container_width=True,
+                        mime="application/pdf", key=f"pdf_rec_btn_{idx}", width='stretch',
                     )

@@ -134,7 +134,7 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
 
     c_ref, c_lim = st.columns([1, 2])
     with c_ref:
-        if st.button("Actualizar lista", use_container_width=True, key="mc_alertas_refresh"):
+        if st.button("Actualizar lista", width='stretch', key="mc_alertas_refresh"):
             st.rerun()
     with c_lim:
         limite = st.slider("Maximo de filas", 50, 500, 200, 50, key="mc_alertas_limite")

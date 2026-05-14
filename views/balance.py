@@ -56,7 +56,7 @@ def render_balance(paciente_sel, user):
             e_dren = st.number_input("Drenajes / Sondas", min_value=0, step=50, value=0)
             e_perd = st.number_input("Perdidas insensibles / Catarsis", min_value=0, step=50, value=0)
 
-        if st.form_submit_button("Guardar balance y calcular shift", use_container_width=True, type="primary"):
+        if st.form_submit_button("Guardar balance y calcular shift", width='stretch', type="primary"):
             hora_limpia = hora_bal_str.strip() if ":" in hora_bal_str else ahora().strftime("%H:%M")
             fecha_str = f"{fecha_bal.strftime('%d/%m/%Y')} {hora_limpia}"
             ingresos, egresos, balance = totales_balance_hidrico_ml(
@@ -177,7 +177,7 @@ def render_balance(paciente_sel, user):
             col_chart0.caption("Tendencia de balance neto por día (suma de turnos)")
             col_chart0.bar_chart(
                 df_diario[["balance"]],
-                use_container_width=True,
+                width='stretch',
                 color="#6366f1",
             )
         except Exception as _exc:
@@ -189,14 +189,14 @@ def render_balance(paciente_sel, user):
             st.caption("Ingresos vs egresos (últimos 8 turnos)")
             st.bar_chart(
                 df_chart.set_index("etiqueta")[["ingresos", "egresos"]].tail(8),
-                use_container_width=True,
+                width='stretch',
                 color=["#38bdf8", "#f97316"],
             )
         with col_chart2:
             st.caption("Evolucion del shift por turno")
             st.area_chart(
                 df_chart.set_index("etiqueta")["balance"].tail(8),
-                use_container_width=True,
+                width='stretch',
                 color="#22c55e",
             )
 
@@ -241,7 +241,7 @@ def render_balance(paciente_sel, user):
     st.divider()
     col_chk, col_btn = st.columns([1.2, 2.8])
     confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_balance")
-    if col_btn.button("Borrar ultimo balance", use_container_width=True, type="secondary", disabled=not confirmar_borrado):
+    if col_btn.button("Borrar ultimo balance", width='stretch', type="secondary", disabled=not confirmar_borrado):
         try:
             st.session_state["balance_db"].remove(blp[-1])
         except ValueError:

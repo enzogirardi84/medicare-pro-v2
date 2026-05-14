@@ -443,7 +443,7 @@ class DrugInteractionMonitor:
             placeholder="warfarina\nenalapril\nibuprofeno"
         )
         
-        if st.button("🔍 Verificar Interacciones", use_container_width=True):
+        if st.button("🔍 Verificar Interacciones", width='stretch'):
             drugs = [d.strip().lower() for d in drugs_input.split("\n") if d.strip()]
             
             if len(drugs) < 2:
@@ -573,10 +573,10 @@ class DrugInteractionMonitor:
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("✅ He revisado y acepto los riesgos", use_container_width=True):
+                if st.button("✅ He revisado y acepto los riesgos", width='stretch'):
                     return True
             with col2:
-                if st.button("❌ Modificar prescripción", use_container_width=True):
+                if st.button("❌ Modificar prescripción", width='stretch'):
                     return False
             
             return None  # Esperando decisión

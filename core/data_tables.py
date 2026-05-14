@@ -210,7 +210,7 @@ class DataTable:
                 label = f"{col.label}{sort_indicator}"
                 
                 if col.sortable:
-                    st.button(label, key=f"{self.key}_sort_{col.key}", use_container_width=True, on_click=self._on_sort_click, args=(col.key,))
+                    st.button(label, key=f"{self.key}_sort_{col.key}", width='stretch', on_click=self._on_sort_click, args=(col.key,))
                 else:
                     st.caption(label)
     
@@ -347,7 +347,7 @@ def render_export_buttons(
             file_name=f"{filename_prefix}_{timestamp}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key=f"{key}_excel",
-            use_container_width=True,
+            width='stretch',
         )
     
     with cols[1]:
@@ -358,7 +358,7 @@ def render_export_buttons(
             file_name=f"{filename_prefix}_{timestamp}.csv",
             mime="text/csv",
             key=f"{key}_csv",
-            use_container_width=True,
+            width='stretch',
         )
     
     with cols[2]:
@@ -371,7 +371,7 @@ def render_export_buttons(
             file_name=f"{filename_prefix}_{timestamp}.json",
             mime="application/json",
             key=f"{key}_json",
-            use_container_width=True,
+            width='stretch',
         )
 
 

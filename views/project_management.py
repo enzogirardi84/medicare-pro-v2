@@ -312,7 +312,7 @@ def render_project_management(mi_empresa, user=None, rol=None):
             )
         else:
             if jira_cfg.get("board_url"):
-                st.link_button("Abrir tablero en Jira", jira_cfg["board_url"], use_container_width=False)
+                st.link_button("Abrir tablero en Jira", jira_cfg["board_url"], width='content')
             st.code(jira_cfg["jql"], language="text")
             with st.spinner("Consultando Jira..."):
                 filas, err = fetch_jira_issues(jira_cfg)
@@ -325,7 +325,7 @@ def render_project_management(mi_empresa, user=None, rol=None):
                 with st.container(border=True):
                     st.dataframe(
                         df_j,
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True,
                         height=min(420, 80 + len(df_j) * 36),
                         column_config={

@@ -203,7 +203,7 @@ def render_panorama(secciones, paciente_sel):
     altura = min(280, max(140, 32 * len(df_cnt) + 72))
     st.bar_chart(
         df_cnt.set_index("Seccion")["Cantidad"],
-        use_container_width=True,
+        width='stretch',
         height=altura,
     )
 
@@ -244,7 +244,7 @@ def render_tarjetas_secciones(
                 """,
                 unsafe_allow_html=True,
             )
-            if st.button("Abrir modulo", key=f"hist_open_card_{paciente_sel}_{idx}", use_container_width=True):
+            if st.button("Abrir modulo", key=f"hist_open_card_{paciente_sel}_{idx}", width='stretch'):
                 st.session_state[f"hist_seccion_radio_{paciente_sel}"] = seccion
                 st.rerun()
 
@@ -327,7 +327,7 @@ def render_busqueda_global(secciones, paciente_sel):
                     .set_index("Seccion")
                 )
                 st.caption("Coincidencias por modulo")
-                st.bar_chart(df_dist, use_container_width=True, height=min(220, 40 + len(conteo_sec) * 28))
+                st.bar_chart(df_dist, width='stretch', height=min(220, 40 + len(conteo_sec) * 28))
 
             df_hits = pd.DataFrame(hits).rename(
                 columns={"seccion": "Seccion", "fecha": "Fecha", "resumen": "Resumen"}

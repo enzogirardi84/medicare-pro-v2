@@ -38,7 +38,7 @@ def render_diagnosticos(user=None):
     with tab1:
         st.markdown("### Estado de la Conexión y Tablas SQL")
 
-        if st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", use_container_width=True):
+        if st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", width='stretch'):
             with st.spinner("Diagnosticando Supabase..."):
                 from core.diagnosticos import diagnosticar_supabase
                 diag = diagnosticar_supabase()
@@ -126,7 +126,7 @@ def render_diagnosticos(user=None):
                 df_tablas = pd.DataFrame(filas_estado)
                 st.session_state[df_cache_key] = {"hash": diag_hash, "df": df_tablas}
             
-            st.dataframe(df_tablas, use_container_width=True, hide_index=True)
+            st.dataframe(df_tablas, width='stretch', hide_index=True)
 
     # === TAB 2: EMPRESA / PACIENTES ===
     with tab2:
@@ -207,7 +207,7 @@ def render_diagnosticos(user=None):
             conteos.append({"Tipo": t, "Total registros": len(registros), "Pacientes únicos": pacientes_unicos})
 
         df_local = pd.DataFrame(conteos)
-        st.dataframe(df_local, use_container_width=True, hide_index=True)
+        st.dataframe(df_local, width='stretch', hide_index=True)
 
         # Conteos session_state
         st.markdown("#### Registros en Sesión Activa (RAM)")
@@ -218,7 +218,7 @@ def render_diagnosticos(user=None):
             val = st.session_state.get(clave, [])
             ss_data.append({"Clave": clave, "Items": len(val) if isinstance(val, list) else "dict"})
         df_ss = pd.DataFrame(ss_data)
-        st.dataframe(df_ss, use_container_width=True, hide_index=True)
+        st.dataframe(df_ss, width='stretch', hide_index=True)
 
         # Backups
         st.markdown("#### Backups Disponibles")
@@ -354,7 +354,7 @@ def render_diagnosticos(user=None):
         st.markdown("---")
         
         # Botón de diagnóstico completo
-        if st.button("🔄 Ejecutar Diagnóstico Completo del Sistema", type="primary", use_container_width=True):
+        if st.button("🔄 Ejecutar Diagnóstico Completo del Sistema", type="primary", width='stretch'):
             with st.spinner("Analizando todo el sistema..."):
                 progress = st.progress(0)
                 

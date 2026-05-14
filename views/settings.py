@@ -488,7 +488,7 @@ def render_advanced_settings(is_admin: bool):
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("🗑️ Limpiar Caché", use_container_width=True):
+        if st.button("🗑️ Limpiar Caché", width='stretch'):
             from core.distributed_cache import get_cache
             cache = get_cache()
             cache.clear()
@@ -496,7 +496,7 @@ def render_advanced_settings(is_admin: bool):
             log_event("maintenance", "Cache cleared from settings")
     
     with col2:
-        if st.button("🔄 Forzar Guardado", use_container_width=True):
+        if st.button("🔄 Forzar Guardado", width='stretch'):
             from core.database import guardar_datos
             try:
                 guardar_datos()

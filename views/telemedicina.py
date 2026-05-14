@@ -45,7 +45,7 @@ def render_telemedicina(paciente_sel):
 
     with c_vid1:
         st.markdown("### Sala de Video en Vivo")
-        st.link_button("ABRIR VIDEOLLAMADA EN PANTALLA COMPLETA", jitsi_url, use_container_width=True, type="primary")
+        st.link_button("ABRIR VIDEOLLAMADA EN PANTALLA COMPLETA", jitsi_url, width='stretch', type="primary")
         st.caption("Recomendado para celulares y tablets")
         mostrar_iframe = st.checkbox("Cargar vista integrada", value=False, help="Activalo solo en PC o si el equipo responde bien.")
 
@@ -65,7 +65,7 @@ def render_telemedicina(paciente_sel):
         st.markdown("### Enlace para compartir")
         st.code(jitsi_url, language=None)
 
-        if st.button("Copiar enlace de la sala", use_container_width=True):
+        if st.button("Copiar enlace de la sala", width='stretch'):
             st.toast("Enlace copiado al portapapeles")
             st.session_state["clipboard"] = jitsi_url
 

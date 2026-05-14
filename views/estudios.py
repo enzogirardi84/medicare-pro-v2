@@ -107,7 +107,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 if usar_cam:
                     foto_estudio = st.camera_input("Tomar foto en vivo", key="camara_estudio")
 
-            if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
+            if st.form_submit_button("Guardar Estudio Clinico", width='stretch', type="primary"):
                 img_b64 = ""
                 ext = ""
                 if archivo_subido is not None:
@@ -289,7 +289,7 @@ def render_estudios(paciente_sel, user, rol=None):
     if puede_borrar:
         col_del1, col_del1_chk = st.columns([3, 1.2])
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
-        if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
+        if col_del1.button("Borrar ultimo estudio", width='stretch', disabled=not confirmar_ultimo):
             if not estudios_pac:
                 st.error("No hay estudios para borrar.")
             else:
@@ -321,7 +321,7 @@ def render_estudios(paciente_sel, user, rol=None):
         estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
         col_sel_chk, col_sel_btn = st.columns([1.2, 2.8])
         confirmar_estudio = col_sel_chk.checkbox("Confirmar seleccion", key="conf_borrar_estudio")
-        if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True, disabled=not confirmar_estudio):
+        if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", width='stretch', disabled=not confirmar_estudio):
             objetivo = estudio_seleccionado[1]
             st.session_state["estudios_db"] = [
                 e for e in st.session_state.get("estudios_db", [])
@@ -412,17 +412,17 @@ def render_estudios(paciente_sel, user, rol=None):
                     if est.get("archivo_url") and est["archivo_url"].startswith("http"):
                         # Es una URL de Supabase Storage
                         if est.get("extension") == "pdf" or ".pdf" in est["archivo_url"].lower():
-                            st.link_button("Abrir PDF en el navegador", est["archivo_url"], use_container_width=True)
+                            st.link_button("Abrir PDF en el navegador", est["archivo_url"], width='stretch')
                         else:
-                            st.image(est["archivo_url"], caption="Documento Adjunto", use_container_width=True)
+                            st.image(est["archivo_url"], caption="Documento Adjunto", width='stretch')
                     elif est.get("imagen"):
                         # Es el base64 legacy
                         try:
                             img_bytes = base64.b64decode(est["imagen"])
                             if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
                                 nombre_arch = f"Estudio_{est['fecha'][:10].replace('/', '-')}.pdf"
-                                st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", use_container_width=True)
+                                st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", width='stretch')
                             else:
-                                st.image(img_bytes, caption="Documento Adjunto", use_container_width=True)
+                                st.image(img_bytes, caption="Documento Adjunto", width='stretch')
                         except Exception:
                             st.error("Error al leer el archivo")

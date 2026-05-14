@@ -273,7 +273,7 @@ def _logout_callback():
 with st.sidebar:
     st.button(
         "Cerrar sesión",
-        use_container_width=True,
+        width='stretch',
         key="sidebar_logout",
         on_click=_logout_callback,
     )
@@ -414,7 +414,7 @@ if mostrar_atajo or paciente_sel:
             st.button(
                 "← Anterior",
                 help=f"Volver a: {etiqueta_ant}",
-                use_container_width=True,
+                width='stretch',
                 key="mc_atajo_modulo_anterior",
                 on_click=_swap_modulo_callback,
                 args=(vista_actual, modulo_anterior),
@@ -432,7 +432,7 @@ if mostrar_atajo or paciente_sel:
         etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
         st.button(
             f"← Volver a {etiqueta_ant}",
-            use_container_width=False,
+            width='content',
             key="mc_atajo_modulo_anterior_solo",
             on_click=_swap_modulo_callback,
             args=(vista_actual, modulo_anterior),

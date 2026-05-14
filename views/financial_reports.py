@@ -184,7 +184,7 @@ def render_financial_dashboard():
         import plotly.express as px
         try:
             fig = px.pie(df_estado, values="Cantidad", names="Estado", hole=0.4)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         except Exception:
             st.bar_chart(df_estado.set_index("Estado"))
     
@@ -194,7 +194,7 @@ def render_financial_dashboard():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📥 Exportar a Excel", use_container_width=True):
+        if st.button("📥 Exportar a Excel", width='stretch'):
             if facturas_filtradas:
                 df_export = pd.DataFrame(facturas_filtradas)
                 output = export_to_excel(df_export, "reporte_financiero")
@@ -205,7 +205,7 @@ def render_financial_dashboard():
                 )
     
     with col2:
-        if st.button("📄 Exportar a PDF", use_container_width=True):
+        if st.button("📄 Exportar a PDF", width='stretch'):
             st.info("Generación de PDF en desarrollo...")
 
 
@@ -255,7 +255,7 @@ def render_productivity_dashboard():
     
     if data:
         df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width='stretch', hide_index=True)
         
         # Gráficos
         st.subheader("Comparación Visual")
@@ -343,7 +343,7 @@ def render_patients_analytics():
         col1, col2 = st.columns(2)
         
         with col1:
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width='stretch', hide_index=True)
         
         with col2:
             st.bar_chart(df.head(10).set_index("Obra Social"))
@@ -380,7 +380,7 @@ def render_insurance_analytics():
         })
     
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width='stretch', hide_index=True)
     
     st.divider()
     

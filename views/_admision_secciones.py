@@ -208,7 +208,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                     height=90,
                 )
 
-                if st.form_submit_button("Guardar cambios del legajo", use_container_width=True, type="primary"):
+                if st.form_submit_button("Guardar cambios del legajo", width='stretch', type="primary"):
                     campos_legajo, error_legajo = _validar_legajo(
                         nombre_edit,
                         dni_edit,
@@ -296,7 +296,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                 if st.button(
                     "Eliminar paciente y limpiar historial vinculado",
                     key=f"adm_delete_{paciente_sel_admin}",
-                    use_container_width=True,
+                    width='stretch',
                     disabled=not confirmar_borrado,
                     type="primary" if confirmar_borrado else "secondary",
                 ):
@@ -430,7 +430,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
         if _faltantes:
             st.warning(f"⚠️ Campos obligatorios sin completar: {', '.join(_faltantes)}")
 
-        if st.form_submit_button("Habilitar paciente", use_container_width=True, type="primary"):
+        if st.form_submit_button("Habilitar paciente", width='stretch', type="primary"):
             campos_legajo, error_legajo = _validar_legajo(n, d, emp_d, mi_empresa, rol)
             if error_legajo:
                 st.error(error_legajo)
