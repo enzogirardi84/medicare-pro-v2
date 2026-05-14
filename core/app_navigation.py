@@ -23,6 +23,27 @@ from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 _VIEW_FN_CACHE: dict = {}  # Cache de funciones render por nombre de módulo (se limpia en re-deploy por reload del módulo)
 
 
+def set_modulo_actual(modulo_seleccionado, rerun=False):
+    """Actualiza el modulo activo y preserva el anterior para atajos de vuelta."""
+    modulo_nuevo = str(modulo_seleccionado or "").strip()
+    if not modulo_nuevo:
+        return
+
+    modulo_actual = st.session_state.get("modulo_actual")
+    if modulo_actual == modulo_nuevo:
+        return
+
+    if modulo_actual:
+        st.session_state["modulo_anterior"] = modulo_actual
+    st.session_state["modulo_actual"] = modulo_nuevo
+
+    if rerun:
+        st.rerun()
+
+
+_set_modulo_actual = set_modulo_actual
+
+
 def _split_icon_label(label: str):
     """Separa icono y texto. Ejemplo: '📍 Visitas' -> ('📍', 'Visitas')"""
     label = str(label or "").strip()
@@ -53,16 +74,14 @@ def procesar_query_params_navegacion(menu_set):
             except Exception:
                 pass
             return
-        modulo_actual = st.session_state.get("modulo_actual")
-        if modulo_actual == modulo_nuevo:
+        if st.session_state.get("modulo_actual") == modulo_nuevo:
             # Ya está en el módulo pedido; solo limpiar param
             try:
                 del st.query_params["modulo"]
             except Exception:
                 pass
             return
-        st.session_state["modulo_anterior"] = modulo_actual
-        st.session_state["modulo_actual"] = modulo_nuevo
+        set_modulo_actual(modulo_nuevo)
         try:
             del st.query_params["modulo"]
         except Exception:
@@ -103,9 +122,6 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     if not modulos:
         return
 
-    def cambiar_modulo_callback(modulo_seleccionado):
-        st.session_state["modulo_actual"] = modulo_seleccionado
-
     es_movil = cliente_es_movil_probable()
 
     if es_movil:
@@ -125,15 +141,14 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                         use_container_width=True,
                         type=tipo,
                     ):
-                        st.session_state["modulo_actual"] = nombre_raw
-                        st.rerun()
+                        set_modulo_actual(nombre_raw, rerun=True)
             return
 
         if "menu_nav_abierto" not in st.session_state:
             st.session_state["menu_nav_abierto"] = False
 
         def cambiar_modulo_mobile(modulo_seleccionado):
-            st.session_state["modulo_actual"] = modulo_seleccionado
+            set_modulo_actual(modulo_seleccionado)
             st.session_state["menu_nav_abierto"] = False
 
         # ── Fallback para Streamlit sin st.popover ──
@@ -175,7 +190,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                     key=f"nav_btn_{nombre_raw}",
                     use_container_width=True,
                     type=tipo,
-                    on_click=cambiar_modulo_callback,
+                    on_click=set_modulo_actual,
                     args=(nombre_raw,),
                 )
 

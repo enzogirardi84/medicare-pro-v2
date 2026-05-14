@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from core.utils_pacientes import set_paciente_actual
+
 
 # Cache simple UA en session_state para evitar reparseo
 _UA_CACHE_KEY = "_mc_cache_ua_contexto"
@@ -127,7 +129,7 @@ def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_d
             and paciente_sel_mobile != st.session_state.get("paciente_actual")
         )
         if _cambio_paciente:
-            st.session_state["paciente_actual"] = paciente_sel_mobile
+            set_paciente_actual(st.session_state, paciente_sel_mobile)
 
         if paciente_sel_mobile:
             det = mapa_detalles_fn(st.session_state).get(paciente_sel_mobile, {})

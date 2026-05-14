@@ -1,5 +1,6 @@
 """Operaciones SQL clínicas: evoluciones, indicaciones, estudios, vitales,
 cuidados, consentimientos, pediatría, escalas. Extraído de core/db_sql.py."""
+import secrets
 import time
 from typing import Any, Dict, List, Optional
 
@@ -12,12 +13,15 @@ try:
 except ImportError:
     supabase = None
 
-    def _supabase_execute_with_retry(op_name, fn, attempts=3, base_delay=0.35):
-        for _ in range(attempts):
+    def _supabase_execute_with_retry(op_name, fn, attempts=3, base_delay=0.15):
+        for i in range(attempts):
             try:
                 return fn()
             except Exception:
-                time.sleep(base_delay)
+                if i == attempts - 1:
+                    raise
+                delay = base_delay * (2 ** i) + secrets.randbelow(100) / 1000
+                time.sleep(delay)
         return fn()
 
 

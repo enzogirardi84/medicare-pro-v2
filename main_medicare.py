@@ -261,6 +261,10 @@ if st.session_state.get("_modo_offline"):
 # SIDEBAR
 # ============================================================
 def _logout_callback():
+    # Invalidar caches clinicos para prevenir fuga de datos entre sesiones
+    for k in list(st.session_state.keys()):
+        if k.startswith("_sql_clin_"):
+            st.session_state.pop(k, None)
     for _key in ("u_actual", "modulo_actual", "paciente_actual"):
         st.session_state.pop(_key, None)
     st.session_state["_mc_logout_requested"] = True

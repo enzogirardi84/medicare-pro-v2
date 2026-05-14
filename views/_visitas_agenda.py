@@ -13,6 +13,35 @@ from core.utils import (
     parse_agenda_datetime,
 )
 
+_VISITAS_SQL_STATUS_KEY = "_mc_visitas_sql_status"
+
+
+def registrar_estado_visitas_sql(
+    session_state: dict,
+    *,
+    ok: bool,
+    empresa: str,
+    rows: int = 0,
+    error: Exception | None = None,
+) -> dict:
+    """Deja un diagnostico breve de la lectura SQL de agenda/turnos para la UI."""
+    status = {
+        "ok": bool(ok),
+        "empresa": str(empresa or ""),
+        "rows": int(rows or 0),
+        "fallback": None if ok else "local",
+    }
+    if error is not None:
+        status["error_type"] = type(error).__name__
+        status["error"] = str(error)[:180]
+    session_state[_VISITAS_SQL_STATUS_KEY] = status
+    return status
+
+
+def estado_visitas_sql(session_state: dict) -> dict:
+    status = session_state.get(_VISITAS_SQL_STATUS_KEY)
+    return status if isinstance(status, dict) else {}
+
 
 def _agenda_empresa(mi_empresa, rol):
     from core.db_sql import get_turnos_by_empresa
@@ -56,9 +85,13 @@ def _agenda_empresa(mi_empresa, rol):
                     "motivo": t.get("motivo", ""),
                     "notas": t.get("notas", ""),
                 })
+            registrar_estado_visitas_sql(st.session_state, ok=True, empresa=mi_empresa, rows=len(agenda_sql))
+        else:
+            registrar_estado_visitas_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0)
     except Exception as e:
         from core.app_logging import log_event
         log_event("visitas_sql", f"error_lectura_agenda:{type(e).__name__}")
+        registrar_estado_visitas_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0, error=e)
 
     if uso_sql:
         return agenda_sql

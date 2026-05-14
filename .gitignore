@@ -43,6 +43,7 @@ venv.bak/
 # VARIABLES DE ENTORNO Y SECRETOS
 # ============================================================
 .env
+.env.example
 .env.local
 .env.*.local
 .env.development

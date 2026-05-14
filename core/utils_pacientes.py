@@ -14,6 +14,8 @@ from core.utils_roles import (
     _texto_normalizado,
 )
 
+_PACIENTES_SQL_STATUS_KEY = "_mc_pacientes_sql_status"
+
 
 def mapa_detalles_pacientes(session_state: dict) -> dict:
     m = session_state.get("detalles_pacientes_db")
@@ -26,6 +28,122 @@ def asegurar_detalles_pacientes_en_sesion(session_state: dict) -> dict:
         m = {}
         session_state["detalles_pacientes_db"] = m
     return m
+
+
+def registrar_estado_pacientes_sql(
+    session_state: dict,
+    *,
+    ok: bool,
+    empresa: str,
+    rows: int = 0,
+    error: Exception | None = None,
+) -> dict:
+    """Deja un diagnostico breve de la lectura SQL de pacientes para la UI."""
+    status = {
+        "ok": bool(ok),
+        "empresa": str(empresa or ""),
+        "rows": int(rows or 0),
+        "fallback": None if ok else "local",
+    }
+    if error is not None:
+        status["error_type"] = type(error).__name__
+        status["error"] = str(error)[:180]
+    session_state[_PACIENTES_SQL_STATUS_KEY] = status
+    return status
+
+
+def estado_pacientes_sql(session_state: dict) -> dict:
+    status = session_state.get(_PACIENTES_SQL_STATUS_KEY)
+    return status if isinstance(status, dict) else {}
+
+
+_PACIENTE_UI_KEYS_LIMPIAR = frozenset(
+    {
+        "fecha_vits",
+        "hora_vits",
+        "conf_borrar_vital",
+        "fecha_bal",
+        "hora_bal",
+        "conf_del_balance",
+        "uploader_estudio",
+        "mostrar_cam_estudio_form",
+        "activar_cam_estudio_form",
+        "camara_estudio",
+        "conf_del_ultimo_estudio",
+        "selector_borrar_estudio",
+        "conf_borrar_estudio",
+        "tipo_indicacion_receta",
+        "hora_inicio_receta",
+        "solucion_receta",
+        "volumen_receta",
+        "dias_infusion_receta",
+        "velocidad_receta",
+        "hora_inicio_infusion_receta",
+        "detalle_infusion_receta",
+        "metodo_firma_receta",
+        "firma_upload_receta",
+        "firma_receta_activa",
+        "motivo_cambio_receta",
+        "tipo_indicacion_papel_receta",
+        "medico_papel_nombre",
+        "medico_papel_matricula",
+        "dias_papel_receta",
+        "hora_papel_receta",
+        "detalle_papel_receta",
+        "horarios_papel_receta",
+        "solucion_papel_receta",
+        "volumen_papel_receta",
+        "velocidad_papel_receta",
+        "detalle_papel_infusion_receta",
+        "adjunto_papel_receta",
+    }
+)
+
+_PACIENTE_UI_PREFIXES_LIMPIAR = (
+    "matriz_mar_editor_",
+    "motivo_no_realizada_mar_",
+    "recetas_editar_sel_",
+    "cortina_rapida_",
+    "cortina_tabla_editor_",
+    "cf_del_est_",
+    "del_est_",
+    "pdf_est_",
+    "mar_ok_",
+    "mar_no_",
+)
+
+
+def limpiar_estado_ui_paciente(session_state: dict) -> list[str]:
+    """Limpia estado efimero de formularios que no debe cruzar entre pacientes."""
+    removidas: list[str] = []
+    for clave in list(session_state.keys()):
+        clave_txt = str(clave)
+        if clave_txt in _PACIENTE_UI_KEYS_LIMPIAR or clave_txt.startswith(_PACIENTE_UI_PREFIXES_LIMPIAR):
+            session_state.pop(clave, None)
+            removidas.append(clave_txt)
+    return removidas
+
+
+def set_paciente_actual(session_state: dict, paciente_id: str | None) -> bool:
+    """Actualiza el paciente activo y deja trazabilidad del cambio en la UI."""
+    paciente_nuevo = str(paciente_id or "").strip()
+    if not paciente_nuevo:
+        return False
+
+    paciente_actual = session_state.get("paciente_actual")
+    if paciente_actual == paciente_nuevo:
+        return False
+
+    if paciente_actual:
+        session_state["paciente_anterior"] = paciente_actual
+    claves_limpiadas = limpiar_estado_ui_paciente(session_state)
+    session_state["paciente_actual"] = paciente_nuevo
+    session_state["_mc_paciente_cambio"] = {
+        "anterior": paciente_actual,
+        "actual": paciente_nuevo,
+        "ui_limpiada": claves_limpiadas,
+    }
+    return True
 
 
 def _clave_paciente_visible(paciente_id: str, dni: str, empresa: str) -> tuple:
@@ -43,7 +161,7 @@ def obtener_pacientes_visibles(
     incluir_altas: bool = False,
     busqueda: str = "",
 ) -> list[tuple]:
-    busqueda_norm = str(busqueda or "").strip().lower()
+    busqueda_norm = _texto_normalizado(busqueda)
 
     from core.db_sql import get_pacientes_by_empresa
     from core.nextgen_sync import _obtener_uuid_empresa
@@ -61,9 +179,13 @@ def obtener_pacientes_visibles(
                 paciente_id_visual = f"{nombre} - {dni}"
                 etiqueta = compactar_etiqueta_paciente(paciente_id_visual, estado)
                 pacientes_sql.append((paciente_id_visual, etiqueta, dni, obra_social, estado, mi_empresa))
+            registrar_estado_pacientes_sql(session_state, ok=True, empresa=mi_empresa, rows=len(pacientes_sql))
+        else:
+            registrar_estado_pacientes_sql(session_state, ok=False, empresa=mi_empresa, rows=0)
     except Exception as e:
         from core.app_logging import log_event
         log_event("utils", f"Error en lectura SQL de pacientes: {type(e).__name__}: {e}")
+        registrar_estado_pacientes_sql(session_state, ok=False, empresa=mi_empresa, rows=0, error=e)
 
     ts = session_state.get("_ultimo_guardado_ts", 0)
     cache_key = f"_mc_cache_pac_vis_{mi_empresa}_{rol_actual}_{incluir_altas}_{busqueda_norm}"
@@ -90,7 +212,7 @@ def obtener_pacientes_visibles(
         empresa = str(detalles.get("empresa", "") or "")
         etiqueta = compactar_etiqueta_paciente(paciente, estado)
         if hay_busqueda:
-            searchable = f"{paciente} {etiqueta} {dni} {obra_social} {empresa} {estado}".lower()
+            searchable = _texto_normalizado(f"{paciente} {etiqueta} {dni} {obra_social} {empresa} {estado}")
             if busqueda_norm not in searchable:
                 continue
         pacientes_visibles_map[_clave_paciente_visible(paciente, dni, empresa)] = (

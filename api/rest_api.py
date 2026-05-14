@@ -26,6 +26,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from functools import wraps
+import secrets
 
 from fastapi import FastAPI, HTTPException, Depends, Query, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -69,13 +70,13 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# CORS middleware
+# CORS middleware - headers restringidos por seguridad
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://medicare-pro.com", "https://app.medicare-pro.com"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 # Seguridad
@@ -233,38 +234,65 @@ class ErrorResponse(BaseModel):
 
 # ============ AUTENTICACIÓN ============
 
+# Blocklist en memoria para revocación de tokens (JTI)
+_token_blocklist: set[str] = set()
+
+
+def revoke_token(jti: str) -> None:
+    """Revoca un token específico por su JTI."""
+    _token_blocklist.add(jti)
+    # Limpiar blocklist periódicamente de JTIs expirados
+    if len(_token_blocklist) > 10000:
+        _token_blocklist.clear()
+
+
+def is_token_revoked(jti: str) -> bool:
+    """Verifica si un token fue revocado."""
+    return jti in _token_blocklist
+
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Crea JWT token."""
+    """Crea JWT token con JTI único para permitir revocación."""
     settings = get_settings()
     to_encode = data.copy()
-    
+
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=30)
-    
-    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
-    
+
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "jti": secrets.token_hex(16),
+    })
+
     encoded = jwt.encode(
         to_encode,
         settings.secret_key.get_secret_value(),
         algorithm="HS256"
     )
-    
+
     return encoded
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Verifica JWT token."""
+    """Verifica JWT token con soporte de revocación."""
     settings = get_settings()
     token = credentials.credentials
-    
+
     try:
         payload = jwt.decode(
             token,
             settings.secret_key.get_secret_value(),
             algorithms=["HS256"]
         )
+        jti = payload.get("jti")
+        if jti and is_token_revoked(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token revocado"
+            )
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -278,44 +306,132 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
         )
 
 
+async def verify_tenant_access(
+    paciente_id: str,
+    current_user: dict = Depends(verify_token)
+) -> dict:
+    """Verifica que el usuario pertenezca a la misma empresa que el paciente."""
+    from core.database import supabase
+
+    rol = str(current_user.get("rol", "")).strip().lower()
+    if rol in ("superadmin", "admin"):
+        return current_user
+
+    empresa_usuario = str(current_user.get("empresa", "")).strip()
+
+    try:
+        response = (
+            supabase.table("pacientes")
+            .select("empresa_id")
+            .eq("id", paciente_id)
+            .limit(1)
+            .execute()
+        )
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        paciente_empresa_id = response.data[0].get("empresa_id", "")
+        emp_response = (
+            supabase.table("empresas")
+            .select("nombre")
+            .eq("id", paciente_empresa_id)
+            .limit(1)
+            .execute()
+        )
+        if emp_response.data:
+            paciente_empresa = str(emp_response.data[0].get("nombre", "")).strip()
+            if paciente_empresa and paciente_empresa != empresa_usuario:
+                raise HTTPException(
+                    status_code=403,
+                    detail="No tiene acceso a pacientes de otra empresa"
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_event("api", f"tenant_check_error:{type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Error validando acceso")
+
+    return current_user
+
+
 # ============ ENDPOINTS ============
 
 @app.post("/v1/auth/login", response_model=LoginResponse, tags=["Autenticación"])
 async def login(request: LoginRequest):
     """
-    Autenticación de usuario.
+    Autenticación de usuario contra base de datos.
     
     Retorna JWT token para usar en otros endpoints.
     Rate limit: 10 requests/minuto.
     """
-    # Aquí iría la lógica real de autenticación
-    # Por ahora, mock para demostración
-    
-    if request.username == "demo" and request.password == "demo123":
-        user_data = {
-            "username": request.username,
-            "rol": "medico",
-            "empresa": request.empresa or "Demo Clinic"
-        }
-        
-        access_token = create_access_token(
-            user_data,
-            expires_delta=timedelta(minutes=60)
+    from core.database import supabase
+    from core.password_crypto import verificar_password
+
+    if not supabase:
+        log_event("api", "login_error:supabase_not_available")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de autenticación no disponible"
         )
-        
-        log_event("api", f"login_success:{request.username}")
-        
-        return LoginResponse(
-            access_token=access_token,
-            expires_in=3600,
-            user=user_data
+
+    login_normalizado = request.username.strip().lower()
+
+    try:
+        response = (
+            supabase.table("usuarios")
+            .select("login, pass_hash, rol, empresa, estado")
+            .eq("login", login_normalizado)
+            .limit(1)
+            .execute()
         )
-    
-    log_event("api", f"login_failed:{request.username}")
-    
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Credenciales inválidas"
+    except Exception as e:
+        log_event("api", f"login_db_error:{type(e).__name__}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Error consultando base de datos"
+        )
+
+    if not response.data or len(response.data) == 0:
+        log_event("api", f"login_failed:{login_normalizado}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales inválidas"
+        )
+
+    user_row = response.data[0]
+
+    if user_row.get("estado") == "Bloqueado":
+        log_event("api", f"login_blocked:{login_normalizado}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario bloqueado. Contacte al administrador."
+        )
+
+    stored_hash = user_row.get("pass_hash", "")
+    if not stored_hash or not verificar_password(request.password, stored_hash):
+        log_event("api", f"login_failed:{login_normalizado}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales inválidas"
+        )
+
+    user_data = {
+        "username": login_normalizado,
+        "rol": user_row.get("rol", "operativo"),
+        "empresa": user_row.get("empresa", ""),
+    }
+
+    access_token = create_access_token(
+        user_data,
+        expires_delta=timedelta(minutes=60)
+    )
+
+    log_event("api", f"login_success:{login_normalizado}")
+
+    return LoginResponse(
+        access_token=access_token,
+        expires_in=3600,
+        user=user_data
     )
 
 
@@ -451,7 +567,9 @@ async def create_evolution(
     Crea una evolución clínica.
     
     Diagnóstico y tratamiento se encriptan automáticamente.
+    Verifica que el paciente pertenezca a la empresa del usuario.
     """
+    await verify_tenant_access(evolution.paciente_id, current_user)
     # Encriptar datos sensibles
     evolution_dict = evolution.model_dump()
     
@@ -481,7 +599,9 @@ async def create_vitals(
     - FC: 30-250 bpm
     - PA: Diastólica < Sistólica
     - SatO2: 50-100%
+    Verifica que el paciente pertenezca a la empresa del usuario.
     """
+    await verify_tenant_access(vitals.paciente_id, current_user)
     new_vitals = VitalsResponse(
         id=f"vit-{datetime.now(timezone.utc).timestamp()}",
         fecha_hora=datetime.now(timezone.utc).isoformat(),
@@ -524,14 +644,21 @@ async def search(
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handler global de excepciones."""
-    log_event("api_error", f"unhandled:{type(exc).__name__}:{str(exc)}")
-    
+    """Handler global de excepciones - sanitizado para no filtrar datos."""
+    log_event("api_error", f"unhandled:{type(exc).__name__}")
+
+    is_dev = get_settings().medicare_env in ("development", "testing")
+    safe_detail = (
+        f"{type(exc).__name__}"
+        if is_dev
+        else "Error interno del servidor"
+    )
+
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
             error="Error interno del servidor",
-            detail=str(exc) if get_settings().is_development() else None,
+            detail=safe_detail,
             code="INTERNAL_ERROR"
         ).model_dump()
     )

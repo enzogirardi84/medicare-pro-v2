@@ -87,6 +87,37 @@ def test_obtener_pacientes_visibles_fusiona_sql_y_local(monkeypatch):
     assert "Local Uno - 222" in ids
 
 
+def test_obtener_pacientes_visibles_registra_fallback_sql(monkeypatch):
+    fake_state = {
+        "pacientes_db": ["Local Uno - 222"],
+        "detalles_pacientes_db": {
+            "Local Uno - 222": {
+                "dni": "222",
+                "empresa": "Clinica Demo",
+                "estado": "Activo",
+                "obra_social": "PAMI",
+            }
+        },
+        "_ultimo_guardado_ts": 0,
+    }
+
+    monkeypatch.setattr("core.nextgen_sync._obtener_uuid_empresa", lambda empresa: "emp-1")
+
+    def falla_sql(*_args, **_kwargs):
+        raise RuntimeError("conexion temporalmente no disponible")
+
+    monkeypatch.setattr("core.db_sql.get_pacientes_by_empresa", falla_sql)
+
+    visibles = utils.obtener_pacientes_visibles(fake_state, "Clinica Demo", "Admin")
+
+    assert [item[0] for item in visibles] == ["Local Uno - 222"]
+    status = utils.estado_pacientes_sql(fake_state)
+    assert status["ok"] is False
+    assert status["fallback"] == "local"
+    assert status["error_type"] == "RuntimeError"
+    assert "conexion temporalmente" in status["error"]
+
+
 def test_registrar_auditoria_legal_resuelve_uuid_con_dni_y_empresa(monkeypatch):
     capturado = {}
 

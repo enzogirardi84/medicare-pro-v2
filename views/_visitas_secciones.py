@@ -27,6 +27,36 @@ from views._visitas_whatsapp import (
 )
 from views._visitas_agenda import _agenda_empresa, _zona_corta
 
+_CHECKINS_SQL_STATUS_KEY = "_mc_checkins_sql_status"
+
+
+def registrar_estado_checkins_sql(
+    session_state: dict,
+    *,
+    ok: bool,
+    empresa: str,
+    rows: int = 0,
+    error: Exception | None = None,
+) -> dict:
+    """Deja un diagnostico breve de la lectura SQL de fichadas/checkins."""
+    status = {
+        "ok": bool(ok),
+        "empresa": str(empresa or ""),
+        "rows": int(rows or 0),
+        "fallback": None if ok else "local",
+    }
+    if error is not None:
+        status["error_type"] = type(error).__name__
+        status["error"] = str(error)[:180]
+    session_state[_CHECKINS_SQL_STATUS_KEY] = status
+    return status
+
+
+def estado_checkins_sql(session_state: dict) -> dict:
+    status = session_state.get(_CHECKINS_SQL_STATUS_KEY)
+    return status if isinstance(status, dict) else {}
+
+
 GEO_DISPONIBLE = False
 try:
     from streamlit_geolocation import streamlit_geolocation
@@ -141,6 +171,7 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
         empresa_uuid = _obtener_uuid_empresa(mi_empresa)
         if empresa_uuid:
             chk_sql = get_checkins_by_empresa(empresa_uuid, limit=500)
+            registrar_estado_checkins_sql(st.session_state, ok=True, empresa=mi_empresa, rows=len(chk_sql or []))
             if chk_sql:
                 for c in chk_sql:
                     dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
@@ -155,15 +186,21 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
                                 "tipo": c.get("tipo_registro", ""),
                                 "empresa": mi_empresa,
                             })
+        else:
+            registrar_estado_checkins_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0)
     except Exception as e:
         from core.app_logging import log_event
         log_event("visitas_sql", f"error_lectura_checkins:{type(e).__name__}")
+        registrar_estado_checkins_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0, error=e)
     if not fichadas_hoy:
         fichadas_hoy = [
             c for c in st.session_state.get("checkin_db", [])
             if c.get("paciente") == paciente_sel and c.get("profesional") == nombre_usuario and c.get("fecha_hora", "").startswith(hoy_str)
         ]
-    if not fichadas_hoy and chk_sql is None:
+    checkins_status = estado_checkins_sql(st.session_state)
+    if checkins_status and not checkins_status.get("ok"):
+        st.info("Modo local/cache activo para fichadas. Los registros se guardaran en la sesion actual si la conexion no responde.")
+    elif not fichadas_hoy and chk_sql is None:
         st.info("Sincronización con servidor en pausa (Modo Local). Los registros se guardarán en la sesión actual.")
     if fichadas_hoy:
         fichadas_hoy = sorted(fichadas_hoy, key=lambda x: pd.to_datetime(x.get("fecha_hora", ""), format="%d/%m/%Y %H:%M:%S", errors="coerce"))

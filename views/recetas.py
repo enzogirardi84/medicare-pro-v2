@@ -31,6 +31,37 @@ from views._recetas_turno import (
     render_historial_prescripciones as _render_historial_prescripciones,
 )
 
+_RECETAS_SQL_STATUS_KEY = "_mc_recetas_sql_status"
+
+
+def registrar_estado_recetas_sql(
+    session_state: dict,
+    *,
+    ok: bool,
+    paciente: str,
+    indicaciones: int = 0,
+    administraciones: int = 0,
+    error: Exception | None = None,
+) -> dict:
+    """Deja un diagnostico breve de la lectura SQL de recetas/MAR para la UI."""
+    status = {
+        "ok": bool(ok),
+        "paciente": str(paciente or ""),
+        "indicaciones": int(indicaciones or 0),
+        "administraciones": int(administraciones or 0),
+        "fallback": None if ok else "local",
+    }
+    if error is not None:
+        status["error_type"] = type(error).__name__
+        status["error"] = str(error)[:180]
+    session_state[_RECETAS_SQL_STATUS_KEY] = status
+    return status
+
+
+def estado_recetas_sql(session_state: dict) -> dict:
+    status = session_state.get(_RECETAS_SQL_STATUS_KEY)
+    return status if isinstance(status, dict) else {}
+
 
 def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
@@ -93,6 +124,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         adms_sql = _cached["adms"]
                     else:
                         from core.database import supabase
+                        if supabase is None:
+                            raise RuntimeError("Supabase no inicializado")
                         fecha_hoy_iso = ahora().strftime("%Y-%m-%d")
                         res_ind = supabase.table("indicaciones").select("*").eq("paciente_id", pac_uuid).order("fecha_indicacion", desc=True).execute()
                         inds_sql = res_ind.data if res_ind and res_ind.data else []
@@ -100,6 +133,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                         adms_sql = res_adm.data if res_adm and res_adm.data else []
                         st.session_state[_ck] = {"ts": _time.monotonic(), "fecha": fecha_hoy, "inds": inds_sql, "adms": adms_sql}
                     uso_sql_recetas = True
+                    registrar_estado_recetas_sql(
+                        st.session_state,
+                        ok=True,
+                        paciente=paciente_sel,
+                        indicaciones=len(inds_sql),
+                        administraciones=len(adms_sql),
+                    )
                     for ind in inds_sql:
                         extra = ind.get("datos_extra", {}) or {}
                         recs_todas.append({
@@ -137,9 +177,16 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "matricula_profesional": extra.get("matricula_profesional", ""),
                             "usuario_login": extra.get("usuario_login", ""),
                         })
+                else:
+                    registrar_estado_recetas_sql(st.session_state, ok=False, paciente=paciente_sel)
+            else:
+                registrar_estado_recetas_sql(st.session_state, ok=False, paciente=paciente_sel)
+        else:
+            registrar_estado_recetas_sql(st.session_state, ok=False, paciente=paciente_sel)
     except Exception as e:
         from core.app_logging import log_event
         log_event("recetas_sql", f"error_lectura:{type(e).__name__}")
+        registrar_estado_recetas_sql(st.session_state, ok=False, paciente=paciente_sel, error=e)
 
     if not uso_sql_recetas:
         recs_todas = [r for r in st.session_state.get("indicaciones_db", []) if r.get("paciente") == paciente_sel]
@@ -147,6 +194,9 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             a for a in st.session_state.get("administracion_med_db", [])
             if a.get("paciente") == paciente_sel and a.get("fecha") == fecha_hoy
         ]
+        sql_status = estado_recetas_sql(st.session_state)
+        if sql_status and not sql_status.get("ok"):
+            st.caption("Modo local/cache activo para recetas y administracion. La lectura SQL no respondio en esta vista.")
 
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
 

@@ -8,6 +8,35 @@ from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros, parse_fecha_hora
 
+_ESTUDIOS_SQL_STATUS_KEY = "_mc_estudios_sql_status"
+
+
+def registrar_estado_estudios_sql(
+    session_state: dict,
+    *,
+    ok: bool,
+    paciente: str,
+    rows: int = 0,
+    error: Exception | None = None,
+) -> dict:
+    """Deja un diagnostico breve de la lectura SQL de estudios para la UI."""
+    status = {
+        "ok": bool(ok),
+        "paciente": str(paciente or ""),
+        "rows": int(rows or 0),
+        "fallback": None if ok else "local",
+    }
+    if error is not None:
+        status["error_type"] = type(error).__name__
+        status["error"] = str(error)[:180]
+    session_state[_ESTUDIOS_SQL_STATUS_KEY] = status
+    return status
+
+
+def estado_estudios_sql(session_state: dict) -> dict:
+    status = session_state.get(_ESTUDIOS_SQL_STATUS_KEY)
+    return status if isinstance(status, dict) else {}
+
 
 def _mismo_estudio(registro, objetivo):
     if registro.get("id") and objetivo.get("id"):
@@ -171,6 +200,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 if pac_uuid:
                     estudios_sql = get_estudios_by_paciente(pac_uuid)
                     uso_sql = True
+                    registrar_estado_estudios_sql(st.session_state, ok=True, paciente=paciente_sel, rows=len(estudios_sql))
                     
                     for e in estudios_sql:
                         fecha_raw = e.get("fecha_realizacion", "")
@@ -190,12 +220,22 @@ def render_estudios(paciente_sel, user, rol=None):
                             "firma": e.get("medico_solicitante", "Sistema"),
                             "extension": "pdf" if ".pdf" in str(e.get("archivo_url", "")).lower() else "jpg"
                         })
+                else:
+                    registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0)
+            else:
+                registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0)
+        else:
+            registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0)
     except Exception as e:
         from core.app_logging import log_event
         log_event("estudios_sql", f"error_lectura:{type(e).__name__}")
+        registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0, error=e)
         
     if not uso_sql:
         estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e.get("paciente") == paciente_sel]
+        sql_status = estado_estudios_sql(st.session_state)
+        if sql_status and not sql_status.get("ok"):
+            st.caption("Modo local/cache activo para estudios. La lectura SQL no respondio en esta vista.")
     # ----------------------------------------------
 
     if not estudios_pac:

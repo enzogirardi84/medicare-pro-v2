@@ -133,10 +133,14 @@ from core.utils_roles import (  # noqa: E402
 )
 from core.utils_pacientes import (  # noqa: E402
     asegurar_detalles_pacientes_en_sesion,
+    estado_pacientes_sql,
+    limpiar_estado_ui_paciente,
     mapa_detalles_pacientes,
     obtener_alertas_clinicas,
     obtener_pacientes_visibles,
     obtener_profesionales_visibles,
+    registrar_estado_pacientes_sql,
+    set_paciente_actual,
 )
 from core.utils_fechas import (  # noqa: E402
     ahora,

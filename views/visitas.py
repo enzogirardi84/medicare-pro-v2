@@ -29,6 +29,7 @@ from views._visitas_agenda import (
     _agenda_paciente,
     _enriquecer_agenda,
     _resumen_agenda,
+    estado_visitas_sql,
     _zona_corta,
 )
 from views._visitas_secciones import (
@@ -79,6 +80,9 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
             st.info("Para avisar por WhatsApp, carga el telefono del paciente en Admision.")
 
     agenda_paciente = _enriquecer_agenda(_agenda_paciente(mi_empresa, paciente_sel, rol))
+    sql_status = estado_visitas_sql(st.session_state)
+    if sql_status and not sql_status.get("ok"):
+        st.caption("Modo local/cache activo para visitas y agenda. La lectura SQL no respondio en esta vista.")
     resumen = _resumen_agenda(agenda_paciente)
     carga_profesional = sum(
         1

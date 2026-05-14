@@ -17,6 +17,7 @@ from core.alert_toasts import (
     firma_inventario_alerta,
     toast_alerta_si_firma_cambia,
 )
+from core.app_navigation import set_modulo_actual
 from core.utils import cargar_json_asset
 from core.view_helpers import lista_plegable
 
@@ -70,10 +71,7 @@ def _render_tarjeta_alerta_inventario_markdown(accent: str, chips_html: str, foo
 
 def _navegar_a_modulo_inventario() -> None:
     """Misma idea que al elegir un módulo en la navegación: deja atajo «Anterior»."""
-    cur = st.session_state.get("modulo_actual")
-    if cur and str(cur) != _MOD_INVENTARIO:
-        st.session_state["modulo_anterior"] = cur
-    st.session_state["modulo_actual"] = _MOD_INVENTARIO
+    set_modulo_actual(_MOD_INVENTARIO)
 
 
 def _parse_dia(val: Any) -> date | None:

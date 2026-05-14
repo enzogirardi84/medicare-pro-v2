@@ -16,6 +16,10 @@ from core.utils import (
     obtener_pacientes_visibles,
     preparar_imagen_clinica_bytes,
     rol_ve_datos_todas_las_clinicas,
+    estado_pacientes_sql,
+    limpiar_estado_ui_paciente,
+    registrar_estado_pacientes_sql,
+    set_paciente_actual,
     validar_archivo_bytes,
     valor_por_modo_liviano,
 )
@@ -109,6 +113,101 @@ def test_paciente_visible_misma_clinica_con_o_sin_tilde():
     vis = obtener_pacientes_visibles(ss, "Clinica Este", "Medico", busqueda="")
     assert len(vis) == 1
     assert vis[0][0] == "Ana Gomez - 111"
+
+
+def test_busqueda_pacientes_ignora_tildes_en_nombre_y_detalles():
+    paciente = "Jos\u00e9 \u00c1lvarez - 333"
+    ss = {
+        "pacientes_db": [paciente, "Maria Lopez - 444"],
+        "detalles_pacientes_db": {
+            paciente: {
+                "dni": "333",
+                "obra_social": "Uni\u00f3n Personal",
+                "empresa": "Clinica Norte",
+                "estado": "Activo",
+            },
+            "Maria Lopez - 444": {
+                "dni": "444",
+                "obra_social": "OSDE",
+                "empresa": "Clinica Norte",
+                "estado": "Activo",
+            },
+        },
+    }
+
+    por_nombre = obtener_pacientes_visibles(ss, "Clinica Norte", "Medico", busqueda="Jose Alvarez")
+    por_obra_social = obtener_pacientes_visibles(ss, "Clinica Norte", "Medico", busqueda="Union")
+
+    assert [x[0] for x in por_nombre] == [paciente]
+    assert [x[0] for x in por_obra_social] == [paciente]
+
+
+def test_set_paciente_actual_registra_cambio_y_anterior():
+    ss = {
+        "paciente_actual": "Ana Gomez - 111",
+        "hora_vits": "08:30",
+        "vitales_db": [{"paciente": "Ana Gomez - 111"}],
+    }
+
+    cambio = set_paciente_actual(ss, "Luis Perez - 222")
+
+    assert cambio is True
+    assert ss["paciente_actual"] == "Luis Perez - 222"
+    assert ss["paciente_anterior"] == "Ana Gomez - 111"
+    assert ss["_mc_paciente_cambio"]["anterior"] == "Ana Gomez - 111"
+    assert ss["_mc_paciente_cambio"]["actual"] == "Luis Perez - 222"
+    assert ss["_mc_paciente_cambio"]["ui_limpiada"] == ["hora_vits"]
+    assert "hora_vits" not in ss
+    assert ss["vitales_db"] == [{"paciente": "Ana Gomez - 111"}]
+
+
+def test_set_paciente_actual_no_ensucia_estado_si_no_cambia():
+    ss = {
+        "paciente_actual": "Ana Gomez - 111",
+        "paciente_anterior": "Luis Perez - 222",
+    }
+
+    cambio = set_paciente_actual(ss, "Ana Gomez - 111")
+
+    assert cambio is False
+    assert ss["paciente_actual"] == "Ana Gomez - 111"
+    assert ss["paciente_anterior"] == "Luis Perez - 222"
+    assert "_mc_paciente_cambio" not in ss
+
+
+def test_limpiar_estado_ui_paciente_solo_borra_claves_efimeras():
+    ss = {
+        "hora_vits": "09:10",
+        "conf_borrar_estudio": True,
+        "matriz_mar_editor_Ana_2026-05-13": {"rows": []},
+        "pacientes_db": ["Ana Gomez - 111"],
+        "evoluciones_db": [{"paciente": "Ana Gomez - 111"}],
+        "mc_buscar_paciente": "Ana",
+    }
+
+    removidas = limpiar_estado_ui_paciente(ss)
+
+    assert removidas == [
+        "hora_vits",
+        "conf_borrar_estudio",
+        "matriz_mar_editor_Ana_2026-05-13",
+    ]
+    assert ss["pacientes_db"] == ["Ana Gomez - 111"]
+    assert ss["evoluciones_db"] == [{"paciente": "Ana Gomez - 111"}]
+    assert ss["mc_buscar_paciente"] == "Ana"
+
+
+def test_estado_pacientes_sql_expone_diagnostico_breve():
+    ss = {}
+    err = RuntimeError("x" * 300)
+
+    status = registrar_estado_pacientes_sql(ss, ok=False, empresa="Clinica Demo", error=err)
+
+    assert estado_pacientes_sql(ss) == status
+    assert status["ok"] is False
+    assert status["fallback"] == "local"
+    assert status["error_type"] == "RuntimeError"
+    assert len(status["error"]) == 180
 
 
 def test_coordinador_no_ve_pacientes_de_otra_clinica():

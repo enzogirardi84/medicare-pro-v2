@@ -1,4 +1,10 @@
-from core.notificaciones_superiores import clasificar_inventario_alerta, _filtrar_por_fecha
+from unittest.mock import MagicMock
+
+from core.notificaciones_superiores import (
+    _filtrar_por_fecha,
+    _navegar_a_modulo_inventario,
+    clasificar_inventario_alerta,
+)
 from datetime import date, timedelta
 
 
@@ -26,3 +32,18 @@ def test_filtrar_avisos_por_fecha():
     f = _filtrar_por_fecha(avisos)
     assert len(f) == 1
     assert f[0]["texto"] == "ok"
+
+
+def test_navegar_a_modulo_inventario_preserva_modulo_anterior():
+    from core import app_navigation
+    from core import notificaciones_superiores
+
+    app_navigation.st.session_state = {"modulo_actual": "Dashboard"}
+    app_navigation.st.rerun = MagicMock()
+    notificaciones_superiores.st.session_state = app_navigation.st.session_state
+
+    _navegar_a_modulo_inventario()
+
+    assert app_navigation.st.session_state["modulo_actual"] == "Inventario"
+    assert app_navigation.st.session_state["modulo_anterior"] == "Dashboard"
+    app_navigation.st.rerun.assert_not_called()

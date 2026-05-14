@@ -19,8 +19,8 @@ class SecureSettings(BaseSettings):
         case_sensitive=False,
     )
     
-    # Ambiente
-    medicare_env: str = "development"
+    # Ambiente (default seguro: production)
+    medicare_env: str = "production"
     debug: bool = False
     
     # Seguridad - SecretStr oculta los valores en logs/traces

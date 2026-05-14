@@ -9,6 +9,8 @@ from html import escape
 
 import streamlit as st
 
+from core.utils_pacientes import estado_pacientes_sql, set_paciente_actual
+
 
 # ---------------------------------------------------------------------------
 # Tarjetas de marca y paciente
@@ -201,6 +203,10 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
         incluir_altas=ver_altas,
         busqueda=buscar,
     )
+    sql_status = estado_pacientes_sql(st.session_state)
+    if sql_status and not sql_status.get("ok"):
+        st.caption("Modo local/cache activo para pacientes. La conexion SQL no respondio en esta lectura.")
+
     limite_pacientes = valor_por_modo_liviano_fn(limite_pacientes_fn(), 36, st.session_state)
     if not buscar and len(p_f) > limite_pacientes:
         st.caption(f"Mostrando los primeros {limite_pacientes} pacientes. Escribi para filtrar y ahorrar memoria.")
@@ -234,9 +240,8 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
         if p_f
         else None
     )
-    paciente_prev = st.session_state.get("paciente_actual")
     if paciente_sel:
-        st.session_state["paciente_actual"] = paciente_sel
+        set_paciente_actual(st.session_state, paciente_sel)
         # El selectbox de Streamlit ya dispara rerun nativo al cambiar;
         # st.rerun() adicional causa doble recarga innecesaria.
         det_sidebar = mapa_detalles_fn(st.session_state).get(paciente_sel, {})
