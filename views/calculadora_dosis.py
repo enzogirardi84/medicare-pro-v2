@@ -27,10 +27,13 @@ def _completar_con_vademecum() -> dict:
         nombre = nombre.strip()
         if not nombre or nombre in combinado:
             continue
-        # Solo farmacos, no insumos
-        if any(p in nombre.lower() for p in ["abocath", "aguja", "sonda", "guante", "jeringa", "cateter", "baja lengua"]):
+        # Saltar insumos no farmacos
+        if any(p in nombre.lower() for p in ["abocath", "aguja", "sonda", "guante", "jeringa", "cateter", "baja lengua",
+                                                "bajo lengua", "alcohol", "gasas", "algo torn", "cotonete", "esparadrapo"]):
             continue
-        combinado[nombre] = None  # Marcar como sin datos de dosis
+        # Si ya existe con nombre similar, agregar como alias
+        if not any(nombre.lower() in k.lower() or k.lower() in nombre.lower() for k in MEDICAMENTOS):
+            combinado[nombre] = None  # Sin datos de dosis
     return combinado
 
 # ============================================================
@@ -289,17 +292,27 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 pass
 
     with c2:
+        _todos = sorted(_TODOS_MEDICAMENTOS.keys())
+        # Mostrar indicador de disponibilidad
+        _labels = {}
+        for m in _todos:
+            if _TODOS_MEDICAMENTOS[m] is not None:
+                _labels[m] = m + " (con dosis pediatrica)"
+            else:
+                _labels[m] = m + " (solo vademecum)"
+
         medicamento = st.selectbox(
             "Medicamento *",
-            sorted(_TODOS_MEDICAMENTOS.keys()),
-            help="Seleccionar el medicamento a calcular. Cargado desde vademecum + base pediatrica.",
+            _todos,
+            format_func=lambda x: _labels[x],
+            help="Seleccionar el medicamento a calcular. Los que tienen dosis pediatrica aparecen indicados.",
         )
 
         info = _TODOS_MEDICAMENTOS[medicamento]
         if info is None:
-            st.caption("Medicamento del vademecum. No hay datos de dosis pediatrica en la base.")
+            st.caption("Medicamento del vademecum sin dosis pediatrica cargada. Selecciona uno con '(con dosis pediatrica)' para calcular.")
         else:
-            st.caption(f"Via de administracion: {info['via']}")
+            st.caption(f"Via: {info['via']} | Intervalo: {info['intervalo_hs']} | Dosis calculada segun peso")
 
     st.divider()
 
@@ -309,7 +322,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
         else:
             info = _TODOS_MEDICAMENTOS[medicamento]
             if info is None:
-                st.warning(f"'{medicamento}' esta en el vademecum pero no tiene datos de dosis pediatrica cargados. Consulta la literatura medica.")
+                st.warning(f"'{medicamento}' solo esta en el vademecum (sin dosis pediatrica cargada). Selecciona un medicamento que diga '(con dosis pediatrica)' para calcular.")
                 log_event("calculadora_dosis", f"sin_datos:{medicamento}")
             else:
                 resultado = calcular_dosis(medicamento, peso)
