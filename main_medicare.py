@@ -143,6 +143,19 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
+# ============================================================
+# SEGURIDAD: HTTPS, CSRF, Logs de acceso
+# ============================================================
+from core.seguridad_extendida import verificar_https, generar_csrf_token, registrar_acceso
+
+verificar_https()
+generar_csrf_token()  # Inicializar token CSRF para esta sesion
+
+# Registrar acceso solo una vez por sesion
+if not st.session_state.get("_acceso_registrado"):
+    registrar_acceso("login_ok", f"Modulo inicial: {st.session_state.get('modulo_actual', '?')}")
+    st.session_state["_acceso_registrado"] = True
+
 # Inicialización segura de variables críticas (evita KeyError en reruns parciales)
 for _guard_key, _guard_default in (
     ("modulo_actual", None),
@@ -391,6 +404,12 @@ if paciente_mobile:
 
 # Grilla de módulos responsive (chunking nativo st.columns + CSS simple)
 vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
+
+# Log de cambio de modulo
+_modulo_prev = st.session_state.get("_modulo_anterior_log")
+if _modulo_prev and _modulo_prev != vista_actual:
+    registrar_acceso("cambio_modulo", f"{_modulo_prev} -> {vista_actual}")
+st.session_state["_modulo_anterior_log"] = vista_actual
 
 if not vista_actual:
     st.warning("No se pudo resolver un módulo visible para este usuario.")
