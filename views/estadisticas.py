@@ -94,7 +94,7 @@ def render_estadisticas(mi_empresa, rol):
                         altas_ano += 1
                 except TypeError:
                     pass
-    col_m2.metric('Altas del ano', altas_ano)
+    col_m2.metric('Altas del a\u00f1o', altas_ano)
     col_m3.metric('Facturacion total', f"${sum(float(f.get('monto', 0) or 0) for f in facturacion):,.2f}")
     col_m4.metric('Stock critico', sum(1 for item in inventario if int(item.get('stock', 0) or 0) <= int(item.get('stock_minimo', 0) or 0)) if inventario else 0)
 
