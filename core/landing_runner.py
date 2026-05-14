@@ -160,6 +160,53 @@ def render_publicidad_y_detener() -> None:
 
     billing_url = html.escape(billing_app_url() or "http://localhost:8502", quote=True)
 
+    # CSS mejorado para la landing
+    st.markdown(f"""<style>
+    {LANDING_CHROME_CSS}
+    /* Mejoras visuales landing */
+    .mc-lp-hero-title {{
+        font-size: clamp(1.8rem, 4vw, 3.2rem) !important;
+        font-weight: 800 !important;
+        line-height: 1.1 !important;
+        background: linear-gradient(135deg, #f4f7fb 0%, #60a5fa 50%, #2dd4bf 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }}
+    .mc-lp-btn-primary {{
+        background: linear-gradient(135deg, #2563eb, #0ea5e9) !important;
+        border: none !important;
+        border-radius: 50px !important;
+        padding: 14px 36px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+        box-shadow: 0 8px 30px rgba(14, 165, 233, 0.3) !important;
+        transition: all 0.3s ease !important;
+    }}
+    .mc-lp-btn-primary:hover {{
+        transform: translateY(-3px) !important;
+        box-shadow: 0 12px 40px rgba(14, 165, 233, 0.45) !important;
+    }}
+    .mc-lp-card {{
+        background: rgba(255,255,255,0.03) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        border-radius: 20px !important;
+        padding: 24px !important;
+        transition: all 0.3s ease !important;
+    }}
+    .mc-lp-card:hover {{
+        transform: translateY(-5px) !important;
+        border-color: rgba(14,165,233,0.2) !important;
+        box-shadow: 0 12px 40px rgba(14,165,233,0.1) !important;
+    }}
+    @media (max-width: 768px) {{
+        .mc-lp-card {{
+            padding: 16px !important;
+        }}
+    }}
+    </style>""", unsafe_allow_html=True)
+
     st.markdown(f"<style>{LANDING_CHROME_CSS}</style>", unsafe_allow_html=True)
 
     # Botón principal: enlace HTML estilizado como botón (más confiable que st.button+st.rerun en Cloud)
