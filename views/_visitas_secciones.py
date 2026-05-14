@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.view_helpers import bloque_estado_vacio
@@ -156,9 +157,17 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
 
     col_in, col_out = st.columns(2)
     if col_in.button("Fichar LLEGADA", width='stretch', type="primary"):
-        _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "LLEGADA", lat_val, lon_val, direccion_final)
+        try:
+            _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "LLEGADA", lat_val, lon_val, direccion_final)
+        except Exception as e:
+            log_event("visitas", f"error_fichada_llegada:{type(e).__name__}:{e}")
+            st.error(f"Error al registrar llegada: {e}")
     if col_out.button("Fichar SALIDA", width='stretch'):
-        _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "SALIDA", lat_val, lon_val, direccion_final)
+        try:
+            _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "SALIDA", lat_val, lon_val, direccion_final)
+        except Exception as e:
+            log_event("visitas", f"error_fichada_salida:{type(e).__name__}:{e}")
+            st.error(f"Error al registrar salida: {e}")
 
     st.divider()
     st.markdown("#### Control de Horas de Guardia (Hoy)")
