@@ -90,6 +90,27 @@ except Exception as exc:
 aplicar_css_base()
 
 # ============================================================
+# JS ERROR TRACKER - captura errores del navegador
+# ============================================================
+st.markdown("""
+<script>
+window.onerror = function(msg, url, line, col, error) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/_stcore/upload_file', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(JSON.stringify({
+        type: 'js_error',
+        message: msg,
+        url: url,
+        line: line,
+        col: col,
+        stack: error ? error.stack : ''
+    }));
+};
+</script>
+""", unsafe_allow_html=True)
+
+# ============================================================
 # HANDLER GLOBAL: Error conocido de imagen (Anthropic/IA)
 # ============================================================
 try:

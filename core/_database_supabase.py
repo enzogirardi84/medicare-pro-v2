@@ -64,7 +64,7 @@ def init_supabase():
                     trust_env=False,
                     follow_redirects=True,
                     http2=True,
-                    timeout=5.0,
+                    timeout=3.0,
                 )
             )
             log_event("db", "supabase_proxy_bypass:loopback_port_9")
