@@ -826,7 +826,6 @@ def _guardar_datos_ejecutar_core():
 def _trim_logs_db_for_save() -> None:
     try:
         from core.feature_flags import MAX_LOGS_DB_ENTRIES
-
         max_logs = int(MAX_LOGS_DB_ENTRIES or 0)
     except Exception:
         max_logs = 0
@@ -838,3 +837,10 @@ def _trim_logs_db_for_save() -> None:
     exceso = len(logs) - max_logs
     st.session_state["logs_db"] = logs[-max_logs:]
     log_event("db", f"logs_db_trim:{exceso}")
+
+    # Trim ALL db lists to prevent payload bloat (max 500 items c/u)
+    _MAX_LIST_ITEMS = 500
+    for key in list(st.session_state.keys()):
+        if key.endswith("_db") and isinstance(st.session_state[key], list):
+            if len(st.session_state[key]) > _MAX_LIST_ITEMS:
+                st.session_state[key] = st.session_state[key][-_MAX_LIST_ITEMS:]

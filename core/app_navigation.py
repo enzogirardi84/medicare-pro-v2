@@ -113,6 +113,9 @@ def resolve_current_view(menu, menu_set=None):
     return vista_actual
 
 
+from streamlit import fragment as st_fragment
+
+
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     """Renderiza la navegación de módulos.
 

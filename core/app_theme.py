@@ -1073,6 +1073,59 @@ def aplicar_css_base() -> None:
                 border-top-color: #0ea5e9 !important;
             }
 
+            /* =========================================================
+               17. MODULO NAV - Tarjetas premium responsivas
+               ========================================================= */
+            /* Contenedor de botones del modulo nav */
+            div[data-testid="column"] > div[data-testid="stButton"] {
+                width: 100% !important;
+            }
+            div[data-testid="column"] > div[data-testid="stButton"] > button {
+                width: 100% !important;
+                min-height: 52px !important;
+                border-radius: 14px !important;
+                font-size: 0.9rem !important;
+                font-weight: 500 !important;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                border: 1px solid rgba(255, 255, 255, 0.06) !important;
+                background: rgba(255, 255, 255, 0.03) !important;
+                backdrop-filter: blur(4px) !important;
+                letter-spacing: 0.3px !important;
+            }
+            div[data-testid="column"] > div[data-testid="stButton"] > button:hover {
+                transform: translateY(-4px) !important;
+                border-color: rgba(14, 165, 233, 0.35) !important;
+                box-shadow: 0 12px 28px rgba(14, 165, 233, 0.15) !important;
+                background: rgba(14, 165, 233, 0.08) !important;
+            }
+            div[data-testid="column"] > div[data-testid="stButton"] > button:active {
+                transform: translateY(-1px) !important;
+            }
+            /* Boton activo */
+            div[data-testid="column"] > div[data-testid="stButton"] > button[kind="primary"] {
+                background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(37, 99, 235, 0.2)) !important;
+                border-color: rgba(14, 165, 233, 0.4) !important;
+                box-shadow: 0 0 20px rgba(14, 165, 233, 0.1) !important;
+            }
+            div[data-testid="column"] > div[data-testid="stButton"] > button[kind="primary"]:hover {
+                box-shadow: 0 0 30px rgba(14, 165, 233, 0.25) !important;
+            }
+
+            /* =========================================================
+               18. SKELETON LOADING - shimmer effect
+               ========================================================= */
+            @keyframes mc-shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+            }
+            .mc-skeleton {
+                background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%) !important;
+                background-size: 200% 100% !important;
+                animation: mc-shimmer 1.5s ease-in-out infinite !important;
+                border-radius: 8px !important;
+                min-height: 20px !important;
+            }
+
             /* Block container spacing */
             .block-container {
                 max-width: 1480px !important;
