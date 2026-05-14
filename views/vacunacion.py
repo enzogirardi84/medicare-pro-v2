@@ -21,6 +21,7 @@ VACUNAS_CALENDARIO = [
     "Triple bacteriana acelular (dTpa)", "VPH",
     "Hepatitis A", "Meningococo",
     "Antiamarilica", "Fiebre tifoidea",
+    "-- Otra (especificar manualmente) --",
 ]
 
 DOSIS_OPCIONES = [
@@ -71,6 +72,7 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
             st.markdown("##### Datos de la dosis")
             c1, c2 = st.columns(2)
             vacuna = c1.selectbox("Vacuna", VACUNAS_CALENDARIO)
+            vacuna_manual = c1.text_input("Nombre de la vacuna (si seleccionaste 'Otra')", placeholder="Ej: Vacuna experimental X") if vacuna == "-- Otra (especificar manualmente) --" else ""
             dosis = c2.selectbox("Dosis", DOSIS_OPCIONES)
 
             c3, c4 = st.columns(2)
@@ -85,14 +87,17 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
             observaciones = st.text_area("Observaciones", placeholder="Reacciones adversas, contraindicaciones, etc...")
 
             if st.form_submit_button("Guardar dosis", width="stretch", type="primary"):
-                if not lote.strip():
+                nombre_final = vacuna_manual.strip() if vacuna == "-- Otra (especificar manualmente) --" else vacuna
+                if not nombre_final:
+                    st.error("Debe especificar la vacuna.")
+                elif not lote.strip():
                     st.error("El numero de lote es obligatorio.")
                 elif not aplicador.strip():
                     st.error("El nombre del aplicador es obligatorio.")
                 else:
                     registro = {
                         "paciente": paciente_sel,
-                        "vacuna": vacuna,
+                        "vacuna": nombre_final,
                         "dosis": dosis,
                         "fecha_aplicacion": fecha_aplicacion.strftime("%d/%m/%Y"),
                         "edad_aplicacion": edad_paciente.strip(),
