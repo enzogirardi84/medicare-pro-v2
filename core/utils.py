@@ -267,7 +267,7 @@ def obtener_emergency_password() -> str | None:
     return None
 
 # Logins que pueden usar la SUPERADMIN_EMERGENCY_PASSWORD desde secrets si el hash en base no coincide (recuperación).
-EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin", "enzogirardi"})
+EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin"})
 
 
 def logins_clave_default_superadmin() -> frozenset[str]:

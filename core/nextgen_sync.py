@@ -106,9 +106,9 @@ def sync_paciente_to_nextgen(nombre: str, dni: str, empresa: str) -> None:
                 "estado": "Activo"
             }
             upsert_paciente(datos_paciente)
-            log_event("sql_sync", f"Paciente {dni} guardado en PostgreSQL.")
+            log_event("sql_sync", "Paciente guardado en PostgreSQL")
     except Exception as e:
-        log_event("sql_sync", f"Error al guardar paciente {dni} en PostgreSQL: {e}")
+        log_event("sql_sync", f"Error al guardar paciente en PostgreSQL: {type(e).__name__}")
 
     # 2. Guardar en la API NextGen (Código original)
     if not ENABLE_NEXTGEN_API_DUAL_WRITE:
@@ -133,11 +133,11 @@ def sync_paciente_to_nextgen(nombre: str, dni: str, empresa: str) -> None:
             timeout=5.0
         )
         if resp.ok:
-            log_event("nextgen_sync", f"Paciente {dni} sincronizado con éxito a NextGen API.")
+            log_event("nextgen_sync", "Paciente sincronizado con exito a NextGen API")
         else:
-            log_event("nextgen_sync", f"Error al sincronizar paciente {dni}: {resp.status_code} - {resp.text}")
+            log_event("nextgen_sync", f"Error al sincronizar paciente: {resp.status_code}")
     except Exception as e:
-        log_event("nextgen_sync", f"Excepción al sincronizar paciente {dni} a NextGen: {e}")
+        log_event("nextgen_sync", f"Excepcion al sincronizar paciente a NextGen: {type(e).__name__}")
 
 
 def sync_visita_evolucion_to_nextgen(paciente_id: str, nota: str) -> None:
@@ -163,7 +163,7 @@ def sync_visita_evolucion_to_nextgen(paciente_id: str, nota: str) -> None:
                         "plantilla": "Libre"
                     }
                     insert_evolucion(datos_evolucion)
-                    log_event("sql_sync", f"Evolución guardada en PostgreSQL para {dni}.")
+                    log_event("sql_sync", "Evolucion guardada en PostgreSQL")
     except Exception as e:
         log_event("sql_sync", f"Error al guardar evolución en PostgreSQL: {e}")
 
@@ -221,7 +221,7 @@ def sync_receta_to_sql(paciente_id: str, medicamento: str, via: str, frecuencia:
                         "datos_extra": datos_completos or {}
                     }
                     insert_indicacion(datos_indicacion)
-                    log_event("sql_sync", f"Indicación guardada en PostgreSQL para {dni}.")
+                    log_event("sql_sync", "Indicacion guardada en PostgreSQL")
     except Exception as e:
         log_event("sql_sync", f"Error al guardar indicación en PostgreSQL: {e}")
 
@@ -248,6 +248,6 @@ def sync_administracion_to_sql(paciente_id: str, medicamento: str, horario: str,
                         "datos_extra": datos_completos or {}
                     }
                     insert_administracion(datos_admin)
-                    log_event("sql_sync", f"Administración guardada en PostgreSQL para {dni}.")
+                    log_event("sql_sync", "Administracion guardada en PostgreSQL")
     except Exception as e:
         log_event("sql_sync", f"Error al guardar administración en PostgreSQL: {e}")

@@ -64,8 +64,8 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_auditoria:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_auditoria_by_empresa: {str(e)}")
+        log_event("db_sql", f"error_get_auditoria:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_auditoria_by_empresa: {str(e)}")
         return []
 
 
@@ -81,8 +81,8 @@ def get_turnos_by_empresa(empresa_id: str, fecha_inicio: str, fecha_fin: str) ->
         )
         return getattr(response, "data", None) or []
     except Exception as e:
-        log_event("db_sql", f"error_get_turnos:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_turnos: {str(e)}")
+        log_event("db_sql", f"error_get_turnos:{type(e).__name__}")
+        log_event("db_sql", f"error:detallado Supabase get_turnos: {str(e)}")
         return []
 
 
@@ -141,8 +141,8 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_administraciones:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_administraciones_dia: {str(e)}")
+        log_event("db_sql", f"error_get_administraciones:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_administraciones_dia: {str(e)}")
         return []
 
 
@@ -181,8 +181,8 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_emergencias_by_paciente: {str(e)}")
+        log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_emergencias_by_paciente: {str(e)}")
         return []
 
 
@@ -205,8 +205,8 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_emergencias:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_emergencias_by_empresa: {str(e)}")
+        log_event("db_sql", f"error_get_emergencias:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_emergencias_by_empresa: {str(e)}")
         return []
 
 
@@ -264,8 +264,8 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_inventario:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_inventario_by_empresa: {str(e)}")
+        log_event("db_sql", f"error_get_inventario:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_inventario_by_empresa: {str(e)}")
         return []
 
 
@@ -303,8 +303,8 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_facturacion:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_facturacion_by_empresa: {str(e)}")
+        log_event("db_sql", f"error_get_facturacion:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_facturacion_by_empresa: {str(e)}")
         return []
 
 
@@ -342,8 +342,8 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
         return data
     except Exception as e:
-        log_event("db_sql", f"error_get_balance:{type(e).__name__}:{e}")
-        print(f"Error Supabase en get_balance_by_empresa: {str(e)}")
+        log_event("db_sql", f"error_get_balance:{type(e).__name__}")
+        log_event("db_sql", f"error:Supabase en get_balance_by_empresa: {str(e)}")
         return []
 
 
@@ -374,8 +374,8 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
         )
         return getattr(response, "data", None) or []
     except Exception as e:
-        log_event("db_sql", f"error_get_checkins:{type(e).__name__}:{e}")
-        print(f"Error detallado Supabase get_checkins: {str(e)}")
+        log_event("db_sql", f"error_get_checkins:{type(e).__name__}")
+        log_event("db_sql", f"error:detallado Supabase get_checkins: {str(e)}")
         return []
 
 

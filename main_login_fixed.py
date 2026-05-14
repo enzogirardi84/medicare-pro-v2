@@ -171,32 +171,48 @@ def verificar_credenciales():
     st.session_state.authenticating = True
     st.session_state.auth_error = None
     
-    # Simular validación (reemplazar con tu lógica real)
-    # NOTA: No usar time.sleep() en callbacks reales - usar st.spinner fuera
-    if usuario == "admin" and password == "1234":
-        # ÉXITO: Actualizar todos los estados de UNA VEZ
-        st.session_state.usuario_autenticado = True
-        st.session_state.usuario_actual = {
-            "usuario": usuario,
-            "nombre": "Administrador",
-            "rol": "admin",
-            "login_time": datetime.now().isoformat()
-        }
-        st.session_state.login_timestamp = datetime.now()
-        
-        # Limpiar inputs por seguridad
-        st.session_state.input_usuario = ""
-        st.session_state.input_password = ""
-        
-        # Marcar transición completa después de un breve delay visual
-        # Esto permite que el CSS haga el efecto fade
-        st.session_state.transition_complete = True
-        
-    else:
-        # FALLO: Volver a estado normal
+    # Validacion contra base de datos real
+    from core.database import supabase
+    from core.password_crypto import verificar_password
+
+    if not supabase:
+        st.session_state.auth_error = "Servicio no disponible"
         st.session_state.authenticating = False
-        st.session_state.auth_error = "Credenciales incorrectas"
-        st.session_state.usuario_autenticado = False
+        return
+
+    try:
+        response = (
+            supabase.table("usuarios")
+            .select("login, pass_hash, rol, empresa, nombre, estado")
+            .eq("login", usuario.lower().strip())
+            .limit(1)
+            .execute()
+        )
+        if response.data and len(response.data) > 0:
+            user_row = response.data[0]
+            if user_row.get("estado") == "Bloqueado":
+                st.session_state.auth_error = "Usuario bloqueado"
+                st.session_state.authenticating = False
+                return
+            if verificar_password(password, user_row.get("pass_hash", "")):
+                st.session_state.usuario_autenticado = True
+                st.session_state.usuario_actual = {
+                    "usuario": usuario,
+                    "nombre": user_row.get("nombre", usuario),
+                    "rol": user_row.get("rol", "operativo"),
+                    "login_time": datetime.now().isoformat()
+                }
+                st.session_state.login_timestamp = datetime.now()
+                st.session_state.input_usuario = ""
+                st.session_state.input_password = ""
+                st.session_state.transition_complete = True
+                return
+    except Exception:
+        pass
+
+    st.session_state.authenticating = False
+    st.session_state.auth_error = "Credenciales incorrectas"
+    st.session_state.usuario_autenticado = False
 
 # ============================================================
 # VISTA DE LOGIN CON ESTADO DE TRANSICIÓN

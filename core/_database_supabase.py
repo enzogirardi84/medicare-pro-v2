@@ -44,18 +44,18 @@ def _proxy_env_loopback_blackhole_activo() -> bool:
 def init_supabase():
     if create_client is None:
         log_event("db", "supabase_client_not_installed")
-        print("Error Supabase en init_supabase: modulo Supabase no disponible.")
+        log_event("db_sql", "error:Supabase en init_supabase: modulo Supabase no disponible.")
         return None
     try:
         url = st.secrets.get("SUPABASE_URL", "")
         key = st.secrets.get("SUPABASE_KEY", "")
     except Exception as e:
         log_event("db", f"supabase_secrets_error:{type(e).__name__}:{e}")
-        print(f"Error Supabase en init_supabase: credenciales no configuradas en secrets. {e}")
+        log_event("db_sql", f"error:Supabase en init_supabase: credenciales no configuradas en secrets. {e}")
         return None
     if not url or "tu-proyecto-aqui" in url or not key:
         log_event("db", "supabase_secrets_empty_or_placeholder")
-        print("Error Supabase en init_supabase: credenciales vacias o con placeholder.")
+        log_event("db_sql", "error:Supabase en init_supabase: credenciales vacias o con placeholder.")
         return None
     options = None
     if _proxy_env_loopback_blackhole_activo():
@@ -79,11 +79,11 @@ def init_supabase():
         return client
     except _SupabaseAPIError as e:
         log_event("db", f"supabase_init_apierror:{e}")
-        print(f"Error Supabase en init_supabase: el servidor de Supabase no responde. {e}")
+        log_event("db_sql", f"error:Supabase en init_supabase: el servidor de Supabase no responde. {e}")
         return None
     except Exception as e:
         log_event("db", f"supabase_init_exception:{type(e).__name__}:{e}")
-        print(f"Error Supabase en init_supabase: no se pudo inicializar el cliente. {e}")
+        log_event("db_sql", f"error:Supabase en init_supabase: no se pudo inicializar el cliente. {e}")
         return None
 
 
