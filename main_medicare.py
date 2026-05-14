@@ -151,11 +151,6 @@ from core.seguridad_extendida import verificar_https, generar_csrf_token, regist
 verificar_https()
 generar_csrf_token()  # Inicializar token CSRF para esta sesion
 
-# Registrar acceso solo una vez por sesion
-if not st.session_state.get("_acceso_registrado"):
-    registrar_acceso("login_ok", f"Modulo inicial: {st.session_state.get('modulo_actual', '?')}")
-    st.session_state["_acceso_registrado"] = True
-
 # Inicialización segura de variables críticas (evita KeyError en reruns parciales)
 for _guard_key, _guard_default in (
     ("modulo_actual", None),
@@ -414,6 +409,11 @@ st.session_state["_modulo_anterior_log"] = vista_actual
 if not vista_actual:
     st.warning("No se pudo resolver un módulo visible para este usuario.")
     st.stop()
+
+# Registrar acceso inicial solo una vez por sesion
+if not st.session_state.get("_acceso_registrado"):
+    registrar_acceso("login_ok", f"Modulo inicial: {vista_actual}")
+    st.session_state["_acceso_registrado"] = True
 
 # ============================================================
 # CONTEXTO CLÍNICO / NOTIFICACIONES
