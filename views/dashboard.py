@@ -220,3 +220,11 @@ def render_dashboard(mi_empresa, rol):
     if not es_movil:
         st.markdown("#### Listados ejecutivos")
     render_listados_ejecutivos(agenda_enriquecida, meds_suspendidas, mi_empresa, rol, es_movil)
+
+    # Reporte Ejecutivo PDF
+    st.divider()
+    try:
+        from core.reporte_ejecutivo import render_reporte_ejecutivo
+        render_reporte_ejecutivo(mi_empresa)
+    except Exception:
+        pass
