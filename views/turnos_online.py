@@ -1,3 +1,4 @@
+"""Turnos Online - Gestion de agenda con profesional manual."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -11,48 +12,26 @@ from core.database import guardar_datos
 from core.utils import ahora, filtrar_registros_empresa, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
 
-
 HORARIOS_DISPONIBLES = [
     '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-    '11:00', '11:30', '12:00', '12:30',
+    '11:00', '11:30', '12:00',
     '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
     '17:00', '17:30', '18:00',
 ]
 
-PROFESIONALES_POR_DEFECTO = ['Dr. Garcia', 'Dra. Lopez', 'Dr. Martinez', 'Dra. Rodriguez', '-- Otro (especificar) --']
-
 
 def render_turnos_online(mi_empresa, rol):
-    st.markdown(
-        """
+    st.markdown("""
         <div class="mc-hero">
             <h2 class="mc-hero-title">Turnos Online</h2>
-            <p class="mc-hero-text">Gestion de agenda de turnos: slots disponibles, reservas y administracion de la agenda profesional.</p>
-            <div class="mc-chip-row">
-                <span class="mc-chip">Agenda</span>
-                <span class="mc-chip">Slots disponibles</span>
-                <span class="mc-chip">Reservas</span>
-            </div>
+            <p class="mc-hero-text">Crea slots, asigna turnos a pacientes y administra la agenda con profesionales cargados manualmente.</p>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    bloque_mc_grid_tarjetas(
-        [
-            ('Agenda', 'Configura los slots disponibles por profesional.'),
-            ('Reservar', 'Asigna turnos a pacientes desde el sistema.'),
-            ('Administrar', 'Cancela o reprograma turnos existentes.'),
-        ]
-    )
-    st.caption(
-        'Los turnos se almacenan localmente. Puedes configurar los horarios disponibles '
-        'y asignarlos a pacientes registrados.'
-    )
+    """, unsafe_allow_html=True)
 
     if 'turnos_online_db' not in st.session_state:
         st.session_state['turnos_online_db'] = []
-
     turnos_db = st.session_state['turnos_online_db']
+
     pacientes = filtrar_registros_empresa(
         st.session_state.get('pacientes_db', []), mi_empresa, rol
     )
@@ -63,24 +42,26 @@ def render_turnos_online(mi_empresa, rol):
         elif isinstance(p, str):
             lista_pacientes.append(p)
 
-    tab_agenda, tab_reservar, tab_admin = st.tabs(['Agenda', 'Reservar turno', 'Administrar'])
+    tabs = st.tabs(['Crear slots', 'Reservar turno', 'Administrar'])
 
-    with tab_agenda:
-        st.markdown('#### Configurar slots disponibles')
+    # ============ TAB: CREAR SLOTS ============
+    with tabs[0]:
         with st.form('agenda_form', clear_on_submit=True):
-            col_a1, col_a2 = st.columns(2)
-            prof_sel = col_a1.selectbox('Profesional', PROFESIONALES_POR_DEFECTO)
-            profesional = col_a1.text_input('Nombre del profesional', placeholder='Ej: Dr. Perez') if prof_sel == '-- Otro (especificar) --' else prof_sel
-            fecha = col_a2.date_input('Fecha', value=ahora().date() + timedelta(days=1))
-            horarios = st.multiselect('Horarios disponibles', HORARIOS_DISPONIBLES, default=HORARIOS_DISPONIBLES[:4])
+            st.markdown('##### Nuevo slot')
+            c1, c2 = st.columns(2)
+            profesional = c1.text_input('Profesional *', placeholder='Ej: Dr. Juan Perez')
+            fecha = c2.date_input('Fecha', value=ahora().date() + timedelta(days=1))
+            horarios = st.multiselect('Horarios disponibles *', HORARIOS_DISPONIBLES, default=HORARIOS_DISPONIBLES[:4])
 
             if st.form_submit_button('Guardar slots', width='stretch', type='primary'):
-                if not horarios:
+                if not profesional.strip():
+                    st.error('El nombre del profesional es obligatorio.')
+                elif not horarios:
                     st.error('Debes seleccionar al menos un horario.')
                 else:
                     for h in horarios:
                         turnos_db.append({
-                            'profesional': profesional,
+                            'profesional': profesional.strip(),
                             'fecha': fecha.strftime('%d/%m/%Y'),
                             'horario': h,
                             'paciente': '',
@@ -89,73 +70,95 @@ def render_turnos_online(mi_empresa, rol):
                             'fecha_registro': ahora().isoformat(),
                         })
                     guardar_datos(spinner=True)
-                    queue_toast(f'{len(horarios)} slots creados para {profesional} el {fecha.strftime("%d/%m/%Y")}.')
-                    log_event('turnos_online_slots', f'{profesional} {fecha}')
+                    queue_toast(f'{len(horarios)} slots creados para {profesional.strip()} el {fecha.strftime("%d/%m/%Y")}.')
+                    log_event('turnos_slots', f'{profesional.strip()} {fecha}')
                     st.rerun()
 
-    with tab_reservar:
-        st.markdown('#### Reservar turno')
+    # ============ TAB: RESERVAR ============
+    with tabs[1]:
         disponibles = [t for t in turnos_db if t.get('estado') == 'Disponible']
-        if disponibles:
-            with st.form('reservar_form', clear_on_submit=True):
-                col_r1, col_r2 = st.columns(2)
-                slot_idx = col_r1.selectbox(
-                    'Seleccionar slot',
-                    range(len(disponibles)),
-                    format_func=lambda i: f'{disponibles[i]["profesional"]} - {disponibles[i]["fecha"]} {disponibles[i]["horario"]}',
-                )
-                if lista_pacientes:
-                    paciente_turno = col_r2.selectbox('Paciente', lista_pacientes)
-                else:
-                    paciente_turno = col_r2.text_input('Nombre del paciente')
-                    st.caption('No hay pacientes registrados. Ingresa el nombre manualmente.')
-
-                if st.form_submit_button('Reservar turno', width='stretch', type='primary'):
-                    if not paciente_turno:
-                        st.error('Debes seleccionar o ingresar un paciente.')
-                    else:
-                        disponibles[slot_idx]['paciente'] = paciente_turno
-                        disponibles[slot_idx]['estado'] = 'Reservado'
-                        disponibles[slot_idx]['reservado_por'] = user.get('nombre', 'Sistema')
-                        guardar_datos(spinner=True)
-                        queue_toast(f'Turno reservado para {paciente_turno}.')
-                        log_event('turnos_online_reservar', f'{paciente_turno} - slot {slot_idx}')
-                        st.rerun()
-        else:
+        if not disponibles:
             bloque_estado_vacio(
                 'Sin slots disponibles',
                 'No hay horarios disponibles para reservar.',
-                sugerencia='Crea slots en la pestana Agenda.',
+                sugerencia='Crea slots en la pestana Crear slots.',
             )
-
-    with tab_admin:
-        st.markdown('#### Turnos reservados')
-        reservados = [t for t in turnos_db if t.get('estado') == 'Reservado']
-        if reservados:
-            df_res = pd.DataFrame(reservados)
-            df_mostrar = df_res.rename(columns={
-                'fecha': 'Fecha', 'horario': 'Horario',
-                'profesional': 'Profesional', 'paciente': 'Paciente',
-            }).drop(columns=['empresa', 'fecha_registro', 'reservado_por', 'estado'], errors='ignore')
-
-            limite = seleccionar_limite_registros(
-                'Turnos a mostrar', len(df_mostrar),
-                key='turnos_limite', default=30, opciones=(10, 20, 30, 50, 100),
-            )
-            mostrar_dataframe_con_scroll(df_mostrar.tail(limite).iloc[::-1], height=350)
-
-            st.markdown('#### Cancelar turno')
-            for i, t in enumerate(reservados):
-                with st.container(border=True):
-                    st.markdown(f'**{t["profesional"]}** - {t["fecha"]} {t["horario"]} - {t["paciente"]}')
-                    if st.button('Cancelar turno', key=f'cancelar_turno_{i}', width='stretch'):
-                        t['estado'] = 'Cancelado'
-                        t['paciente'] = ''
-                        guardar_datos(spinner=True)
-                        queue_toast('Turno cancelado.')
-                        st.rerun()
         else:
+            st.markdown(f'##### {len(disponibles)} slots disponibles')
+            with st.form('reservar_form', clear_on_submit=True):
+                # Mostrar slots en un selectbox con info clara
+                slot_opciones = [
+                    f'{s["profesional"]} - {s["fecha"]} {s["horario"]}'
+                    for s in disponibles
+                ]
+                slot_sel = st.selectbox('Seleccionar turno', slot_opciones)
+                slot_idx = slot_opciones.index(slot_sel)
+
+                st.caption(f'Profesional: {disponibles[slot_idx]["profesional"]}')
+                st.caption(f'Fecha: {disponibles[slot_idx]["fecha"]} - {disponibles[slot_idx]["horario"]} hs')
+
+                if lista_pacientes:
+                    paciente_turno = st.selectbox('Paciente', [''] + lista_pacientes)
+                    if not paciente_turno:
+                        paciente_turno = st.text_input('O ingresa el nombre manualmente', placeholder='Nombre del paciente')
+                else:
+                    paciente_turno = st.text_input('Paciente *', placeholder='Nombre del paciente')
+
+                if st.form_submit_button('Reservar turno', width='stretch', type='primary'):
+                    if not paciente_turno or (isinstance(paciente_turno, str) and not paciente_turno.strip()):
+                        st.error('Debes ingresar un paciente.')
+                    else:
+                        disponibles[slot_idx]['paciente'] = paciente_turno.strip() if isinstance(paciente_turno, str) else paciente_turno
+                        disponibles[slot_idx]['estado'] = 'Reservado'
+                        disponibles[slot_idx]['reservado_por'] = st.session_state.get('u_actual', {}).get('nombre', 'Sistema')
+                        guardar_datos(spinner=True)
+                        queue_toast(f'Turno reservado para {paciente_turno}.')
+                        log_event('turnos_reservar', f'{paciente_turno}')
+                        st.rerun()
+
+    # ============ TAB: ADMINISTRAR ============
+    with tabs[2]:
+        reservados = [t for t in turnos_db if t.get('estado') == 'Reservado']
+        cancelados = [t for t in turnos_db if t.get('estado') == 'Cancelado']
+
+        if not reservados and not cancelados:
             bloque_estado_vacio(
-                'Sin reservas',
-                'No hay turnos reservados actualmente.',
+                'Sin movimientos',
+                'No hay turnos reservados ni cancelados.',
             )
+        else:
+            if reservados:
+                st.markdown(f'##### Turnos reservados ({len(reservados)})')
+                for i, t in enumerate(reservados):
+                    with st.container(border=True):
+                        cols = st.columns([2, 1, 1, 1])
+                        cols[0].markdown(f'**{t["profesional"]}**')
+                        cols[1].markdown(f'{t["fecha"]}')
+                        cols[2].markdown(f'{t["horario"]} hs')
+                        cols[3].markdown(f'{t["paciente"]}')
+                        if st.button('Cancelar', key=f'can_{i}', width='content'):
+                            t['estado'] = 'Cancelado'
+                            t['paciente'] = ''
+                            guardar_datos(spinner=True)
+                            queue_toast('Turno cancelado.')
+                            st.rerun()
+
+            if cancelados:
+                with st.expander(f'Historial de cancelaciones ({len(cancelados)})', expanded=False):
+                    df_can = pd.DataFrame(cancelados)
+                    df_mostrar = df_can.rename(columns={
+                        'fecha': 'Fecha', 'horario': 'Horario',
+                        'profesional': 'Profesional',
+                    }).drop(columns=['empresa', 'fecha_registro', 'reservado_por', 'paciente', 'estado'], errors='ignore')
+                    mostrar_dataframe_con_scroll(df_mostrar.tail(20).iloc[::-1], height=200)
+
+            # Resumen
+            with st.expander('Ver todos los slots', expanded=False):
+                if turnos_db:
+                    df_all = pd.DataFrame(turnos_db)
+                    df_all = df_all.rename(columns={
+                        'fecha': 'Fecha', 'horario': 'Horario',
+                        'profesional': 'Profesional', 'paciente': 'Paciente',
+                        'estado': 'Estado',
+                    }).drop(columns=['empresa', 'fecha_registro', 'reservado_por'], errors='ignore')
+                    mostrar_dataframe_con_scroll(df_all.tail(50).iloc[::-1], height=300)
