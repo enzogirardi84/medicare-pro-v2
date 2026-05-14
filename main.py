@@ -14,9 +14,14 @@ try:
     from core.app_bootstrap import insert_repo_root_on_path
     insert_repo_root_on_path()
 except Exception as e:
-    import subprocess, sys as _sys
-    print(f"FATAL BOOT ERROR: {e}")
-    _sys.exit(1)
+    error_str = str(e)
+    # Error conocido: modelo AI no soporta imagenes
+    if "Cannot read" in error_str and "image.png" in error_str:
+        print("INFO: Error de modelo AI detectado (no soporta imagenes) - ignorando")
+    else:
+        import subprocess, sys as _sys
+        print(f"FATAL BOOT ERROR: {e}")
+        _sys.exit(1)
 
 # Ahora import main_medicare con proteccion total
 try:
