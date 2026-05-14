@@ -139,7 +139,8 @@ Documentos firmados: {len(cons_pac)} registros
                 pdf.set_text_color(0, 0, 0)
                 pdf.ln(6)
             pdf.cell(0, 6, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-            pdf_bytes = pdf.output(dest="S").encode("latin-1", errors="replace")
+            raw = pdf.output(dest="S")
+            pdf_bytes = raw.encode("latin-1", errors="replace") if isinstance(raw, str) else bytes(raw)
             st.download_button("Descargar PDF", pdf_bytes, f"resumen_{dni}_{datetime.now().strftime('%Y%m%d')}.pdf", "application/pdf")
 
     st.caption(f"Documento generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} | Medicare Pro")
