@@ -838,8 +838,8 @@ def _trim_logs_db_for_save() -> None:
     st.session_state["logs_db"] = logs[-max_logs:]
     log_event("db", f"logs_db_trim:{exceso}")
 
-    # Trim ALL db lists to prevent payload bloat (max 500 items c/u)
-    _MAX_LIST_ITEMS = 500
+    # Trim ALL db lists to prevent payload bloat (max 200 items each)
+    _MAX_LIST_ITEMS = 200
     for key in list(st.session_state.keys()):
         if key.endswith("_db") and isinstance(st.session_state[key], list):
             if len(st.session_state[key]) > _MAX_LIST_ITEMS:

@@ -118,7 +118,7 @@ def render_estudios(paciente_sel, user, rol=None):
                         ext = ext_optimizada or ext
                     img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                 elif foto_estudio is not None:
-                    raw_bytes, ext_optimizada = optimizar_imagen_bytes(foto_estudio.getvalue())
+                    raw_bytes, ext_optimizada = optimizar_imagen_bytes(foto_estudio.getvalue(), max_size=(800, 800), quality=60)
                     img_b64 = base64.b64encode(raw_bytes).decode("utf-8")
                     ext = ext_optimizada or "jpg"
 
