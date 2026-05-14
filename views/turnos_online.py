@@ -56,7 +56,12 @@ def render_turnos_online(mi_empresa, rol):
     pacientes = filtrar_registros_empresa(
         st.session_state.get('pacientes_db', []), mi_empresa, rol
     )
-    lista_pacientes = [p.get('id', p) for p in pacientes] if pacientes else []
+    lista_pacientes = []
+    for p in (pacientes or []):
+        if isinstance(p, dict):
+            lista_pacientes.append(p.get('id', str(p)))
+        elif isinstance(p, str):
+            lista_pacientes.append(p)
 
     tab_agenda, tab_reservar, tab_admin = st.tabs(['Agenda', 'Reservar turno', 'Administrar'])
 
