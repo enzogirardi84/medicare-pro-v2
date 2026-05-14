@@ -454,6 +454,17 @@ if mostrar_atajo or paciente_sel:
             )
 
 # ============================================================
+# NOTIFICACIONES DE ESCRITORIO (browser push)
+# ============================================================
+st.markdown("""
+<script>
+if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+}
+</script>
+""", unsafe_allow_html=True)
+
+# ============================================================
 # TOASTS
 # ============================================================
 from core.alert_toasts import render_queued_toasts
@@ -482,6 +493,11 @@ if st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapid
     except Exception as exc:
         log_event("backup", f"error_backup:{type(exc).__name__}:{exc}")
         st.sidebar.error("Error al generar backup")
+
+# Contador de notificaciones
+_notif_count = len(st.session_state.get("_toast_queue", []))
+if _notif_count > 0:
+    st.sidebar.caption(f"🔔 {_notif_count} notificaciones pendientes")
 
 # ============================================================
 # AUTO-SCROLL AL CONTENIDO SI CAMBIÓ EL MÓDULO
