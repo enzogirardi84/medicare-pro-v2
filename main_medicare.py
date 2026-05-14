@@ -90,6 +90,12 @@ except Exception as exc:
 aplicar_css_base()
 
 # ============================================================
+# ATAJOS DE TECLADO
+# ============================================================
+from core.atajos_teclado import inject_atajos_teclado, render_ayuda_atajos
+inject_atajos_teclado()
+
+# ============================================================
 # HANDLER GLOBAL: Error conocido de imagen (Anthropic/IA)
 # ============================================================
 try:
@@ -537,6 +543,14 @@ if ("Notification" in window && Notification.permission === "default") {
 from core.alert_toasts import render_queued_toasts
 
 render_queued_toasts()
+
+# ============================================================
+# PANEL DE SEGURIDAD / AUTO-BACKUP
+# ============================================================
+from core.seguridad_operaciones import render_panel_seguridad, deshacer_ultima_operacion
+
+render_panel_seguridad()
+render_ayuda_atajos()
 
 # ============================================================
 # BACKUP RAPIDO (visible siempre)
