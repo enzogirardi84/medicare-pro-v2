@@ -193,6 +193,103 @@ def _exportar_conversacion(conv: list) -> bytes:
     return "\n".join(lines).encode("utf-8")
 
 
+def _listar_vacunas(paciente_sel) -> str:
+    vacs = [v for v in st.session_state.get("vacunacion_db", []) if v.get("paciente") == paciente_sel]
+    if not vacs:
+        return "Sin vacunas registradas."
+    ultimas = {}
+    for v in vacs:
+        vac = v["vacuna"]
+        if vac not in ultimas or (v.get("fecha_aplicacion") or "") > (ultimas[vac].get("fecha_aplicacion") or ""):
+            ultimas[vac] = v
+    texto = "Vacunas aplicadas:\n"
+    for v, reg in sorted(ultimas.items()):
+        texto += f"- {v}: {reg.get('dosis','?')} ({reg.get('fecha_aplicacion','?')})\n"
+    return texto
+
+
+def _alergias(paciente_sel) -> str:
+    detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    al = detalles.get("alergias", "").strip()
+    pat = detalles.get("patologias", "").strip()
+    texto = ""
+    if al:
+        texto += f"Alergias: {al}\n"
+    if pat:
+        texto += f"Patologias: {pat}\n"
+    return texto or "Sin alergias ni patologias registradas."
+
+
+def _stock_critico(mi_empresa) -> str:
+    inventario = st.session_state.get("inventario_db", [])
+    items = [i for i in inventario if i.get("empresa") == mi_empresa and int(i.get("stock", 0) or 0) <= 10]
+    if not items:
+        return "Stock normal. No hay items criticos."
+    texto = "Stock critico (<=10 unidades):\n"
+    for i in items[:10]:
+        texto += f"- {i.get('nombre', i.get('insumo', '?'))}: {i.get('stock', 0)} unidades\n"
+    return texto
+
+
+def _facturacion(mi_empresa) -> str:
+    facturas = st.session_state.get("facturacion_db", [])
+    fact_emp = [f for f in facturas if f.get("empresa") == mi_empresa]
+    if not fact_emp:
+        return "Sin movimientos de facturacion."
+    total = sum(float(f.get("monto", 0) or 0) for f in fact_emp)
+    cobrado = sum(float(f.get("monto", 0) or 0) for f in fact_emp if "Cobrado" in f.get("estado", ""))
+    pendiente = sum(float(f.get("monto", 0) or 0) for f in fact_emp if "Pendiente" in f.get("estado", ""))
+    return f"Facturacion: Total ${total:,.2f} | Cobrado ${cobrado:,.2f} | Pendiente ${pendiente:,.2f}"
+
+
+def _proximos_cumple() -> str:
+    from datetime import timedelta
+    hoy = datetime.now().date()
+    prox = hoy + timedelta(days=30)
+    detalles = st.session_state.get("detalles_pacientes_db", {})
+    cumples = []
+    for pid, det in detalles.items():
+        fnac = det.get("fnac", det.get("fecha_nacimiento", ""))
+        if not fnac:
+            continue
+        try:
+            nac = datetime.strptime(fnac, "%d/%m/%Y").date().replace(year=hoy.year)
+            if hoy <= nac <= prox:
+                edad = hoy.year - datetime.strptime(fnac, "%d/%m/%Y").date().year
+                cumples.append(f"- {pid} ({edad} anios) el {nac.strftime('%d/%m')}")
+        except Exception:
+            continue
+    return "Proximos cumpleanios (30 dias):\n" + "\n".join(cumples[:10]) if cumples else "Sin cumpleanios proximos."
+
+
+def _conteo_pacientes() -> str:
+    pacientes = st.session_state.get("pacientes_db", [])
+    detalles = st.session_state.get("detalles_pacientes_db", {})
+    activos = sum(1 for p in pacientes if isinstance(detalles.get(p, {}), dict) and detalles[p].get("estado", "Activo") == "Activo")
+    altas = sum(1 for p in pacientes if isinstance(detalles.get(p, {}), dict) and detalles[p].get("estado") == "De Alta")
+    return f"Pacientes: {len(pacientes)} totales | {activos} activos | {altas} de alta"
+
+
+def _balance(paciente_sel) -> str:
+    balances = [b for b in st.session_state.get("balance_db", []) if b.get("paciente") == paciente_sel]
+    if not balances:
+        return "Sin registro de balance."
+    ult = balances[-1]
+    ingresos = sum(float(b.get("ingresos", 0) or 0) for b in balances[-10:])
+    egresos = sum(float(b.get("egresos", 0) or 0) for b in balances[-10:])
+    return f"Balance ultimos 10: Ingresos {ingresos:.0f}ml | Egresos {egresos:.0f}ml | Balance {ingresos-egresos:.0f}ml"
+
+
+def _consentimientos(paciente_sel) -> str:
+    cons = [c for c in st.session_state.get("consentimientos_db", []) if c.get("paciente") == paciente_sel]
+    if not cons:
+        return "Sin documentos firmados."
+    texto = "Documentos firmados:\n"
+    for c in cons[-5:]:
+        texto += f"- {c.get('fecha','?')}: {c.get('observaciones','')[:60]}\n"
+    return texto
+
+
 # ============================================================
 # NAVEGACION INTELIGENTE
 # ============================================================
@@ -253,8 +350,11 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
         cols = st.columns(4)
         acciones = [
             ("Datos paciente", "datos"), ("Medicacion", "med"), ("Signos vitales", "vitales"),
-            ("Estudios", "ests"), ("Evoluciones", "evol"), ("Turnos", "turns"),
-            ("Exportar chat", "export"), ("Limpiar chat", "clear"),
+            ("Estudios", "ests"), ("Ultima evolucion", "evol"), ("Turnos", "turns"),
+            ("Vacunas", "vac"), ("Alergias", "alerg"), ("Recetas activas", "rec"),
+            ("Stock critico", "stock"), ("Facturacion", "fact"), ("Prox. cumple", "cumple"),
+            ("Pacientes activos", "pacs"), ("Balance hidrico", "bal"), ("Consentimientos", "cons"),
+            ("Exportar chat", "export"), ("Limpiar chat", "clear"), ("Ayuda", "help"),
         ]
         for i, (label, acc) in enumerate(acciones):
             with cols[i % 4]:
@@ -269,11 +369,24 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
     elif act == "export":
         data = _exportar_conversacion(conv)
         st.download_button("Descargar conversacion (.txt)", data, f"chat_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", "text/plain", key="chat_export")
+    elif act == "help":
+        resp = "Acciones disponibles:\n- Datos del paciente, Medicacion, Signos vitales\n- Estudios, Evoluciones, Turnos, Vacunas\n- Alergias, Recetas activas, Stock critico\n- Facturacion, Balance hidrico, Consentimientos\n- Pacientes activos, Proximos cumpleanios\n- Exportar chat, Limpiar chat"
+        conv.append({"rol": "bot", "texto": resp, "hora": datetime.now().strftime("%H:%M"), "fuentes": []})
     elif act:
-        resp = {"datos": _datos_paciente, "med": _medicaciones, "vitales": _vitales,
-                "ests": _estudios, "evol": _evoluciones, "turns": _turnos}.get(act, lambda x: "")(paciente_sel)
-        if resp:
-            conv.append({"rol": "bot", "texto": resp, "hora": datetime.now().strftime("%H:%M"), "fuentes": []})
+        handlers = {
+            "datos": _datos_paciente, "med": _medicaciones, "vitales": _vitales,
+            "ests": _estudios, "evol": _evoluciones, "turns": _turnos,
+            "vac": lambda p: _listar_vacunas(p), "alerg": lambda p: _alergias(p),
+            "rec": lambda p: _medicaciones(p), "stock": lambda _: _stock_critico(mi_empresa),
+            "fact": lambda _: _facturacion(mi_empresa), "cumple": lambda _: _proximos_cumple(),
+            "pacs": lambda _: _conteo_pacientes(), "bal": lambda p: _balance(p),
+            "cons": lambda p: _consentimientos(p),
+        }
+        fn = handlers.get(act)
+        if fn:
+            resp = fn(paciente_sel)
+            if resp:
+                conv.append({"rol": "bot", "texto": resp, "hora": datetime.now().strftime("%H:%M"), "fuentes": []})
 
     st.divider()
 
