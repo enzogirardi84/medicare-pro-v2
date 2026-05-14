@@ -90,27 +90,6 @@ except Exception as exc:
 aplicar_css_base()
 
 # ============================================================
-# JS ERROR TRACKER - captura errores del navegador
-# ============================================================
-st.markdown("""
-<script>
-window.onerror = function(msg, url, line, col, error) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/_stcore/upload_file', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.send(JSON.stringify({
-        type: 'js_error',
-        message: msg,
-        url: url,
-        line: line,
-        col: col,
-        stack: error ? error.stack : ''
-    }));
-};
-</script>
-""", unsafe_allow_html=True)
-
-# ============================================================
 # HANDLER GLOBAL: Error conocido de imagen (Anthropic/IA)
 # ============================================================
 try:
@@ -619,13 +598,6 @@ if _modulo_previo_scroll != vista_actual:
 # ============================================================
 t0_view = time.monotonic()
 ok_view = True
-
-# Indicador debug: modulo cargando
-st.markdown(f"""
-<div style="background:#059669;color:#fff;padding:6px 12px;border-radius:8px;font-size:0.8rem;text-align:center;margin-bottom:8px;">
-Modulo cargado: <strong>{vista_actual}</strong> | Paciente: {paciente_sel or 'No seleccionado'}
-</div>
-""", unsafe_allow_html=True)
 
 try:
     render_current_view(
