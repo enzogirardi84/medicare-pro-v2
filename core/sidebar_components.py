@@ -167,6 +167,16 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
             st.sidebar.caption(f"  • {_nom}" + (f" — {_frec}" if _frec else ""))
         if len(activas) > 3:
             st.sidebar.caption(f"  ... y {len(activas) - 3} más")
+
+    # Alerta de medicacion: cruzar indicaciones activas con alergias
+    if alergias:
+        try:
+            from core.alertas_medicacion import verificar_alergias_medicacion
+            alertas = verificar_alergias_medicacion(paciente_sel)
+            for a in alertas:
+                st.sidebar.error(f"🚨 {a['mensaje'][:120]}", icon=None)
+        except Exception:
+            pass
     else:
         st.sidebar.caption("💊 Sin medicación activa.")
 
