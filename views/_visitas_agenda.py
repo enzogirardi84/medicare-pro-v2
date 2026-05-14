@@ -13,6 +13,31 @@ from core.utils import (
     parse_agenda_datetime,
 )
 
+# Fix 2026-05-14: imports SQL movidos al top con guard de ImportError.
+# Si core.db_sql o core.nextgen_sync no se pueden importar (ej. supabase no
+# disponible en deploy), antes la app rompía con pantalla azul al abrir
+# Visitas. Ahora cae en fallback local con aviso visible.
+_SQL_BACKEND_DISPONIBLE = True
+_SQL_BACKEND_ERROR: str | None = None
+try:
+    from core.db_sql import get_turnos_by_empresa  # type: ignore
+    from core.nextgen_sync import _obtener_uuid_empresa  # type: ignore
+except Exception as _exc_sql:  # ImportError o cualquier fallo de carga
+    _SQL_BACKEND_DISPONIBLE = False
+    _SQL_BACKEND_ERROR = f"{type(_exc_sql).__name__}: {_exc_sql}"
+
+    def get_turnos_by_empresa(*_args, **_kwargs):  # type: ignore
+        return []
+
+    def _obtener_uuid_empresa(*_args, **_kwargs):  # type: ignore
+        return None
+
+    try:
+        from core.app_logging import log_event  # type: ignore
+        log_event("visitas_sql", f"backend_sql_no_disponible:{_SQL_BACKEND_ERROR}")
+    except Exception:
+        pass
+
 _VISITAS_SQL_STATUS_KEY = "_mc_visitas_sql_status"
 
 
@@ -44,8 +69,14 @@ def estado_visitas_sql(session_state: dict) -> dict:
 
 
 def _agenda_empresa(mi_empresa, rol):
-    from core.db_sql import get_turnos_by_empresa
-    from core.nextgen_sync import _obtener_uuid_empresa
+    # Fix 2026-05-14: imports movidos al top con guard. Si SQL no está disponible
+    # se cae directo a fallback local sin intentar consulta remota.
+    if not _SQL_BACKEND_DISPONIBLE:
+        registrar_estado_visitas_sql(
+            st.session_state, ok=False, empresa=mi_empresa, rows=0,
+            error=RuntimeError(_SQL_BACKEND_ERROR or "backend SQL no inicializado"),
+        )
+        return filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
 
     agenda_sql = []
     uso_sql = False

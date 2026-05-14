@@ -1,11 +1,18 @@
-"""Entry point for Streamlit Cloud - Medicare Billing Pro."""
+"""Entry point for Streamlit Cloud - Medicare Enterprise PRO.
+REDIRIGE al programa principal (main_medicare.py)"""
 import sys
 from pathlib import Path
 
-# Add medicare_billing_pro to path
-billing_path = Path(__file__).resolve().parent / "medicare_billing_pro"
-if str(billing_path) not in sys.path:
-    sys.path.insert(0, str(billing_path))
+# Asegurar que el repo root esté en el path
+repo_root = Path(__file__).resolve().parent
+root_str = str(repo_root)
+if root_str not in sys.path:
+    sys.path.insert(0, root_str)
 
-# Import and run the billing app (billing_app.py evita conflicto con este main.py)
-import billing_app
+# Importar y ejecutar el programa principal
+from main_medicare import *
+
+# Ejecutar la lógica principal
+if __name__ == "__main__":
+    # Streamlit ejecutará esto automáticamente
+    pass

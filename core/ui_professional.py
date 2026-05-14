@@ -156,22 +156,21 @@ def configure_professional_page(
     layout: str = "wide",
     initial_sidebar_state: str = "expanded"
 ):
-    """Configura la página con configuración profesional."""
-    st.set_page_config(
-        page_title=f"{icon} {title}",
-        page_icon=icon,
-        layout=layout,
-        initial_sidebar_state=initial_sidebar_state,
-        menu_items={
-            'Get Help': 'https://github.com/enzogirardi84/medicare-pro-v2',
-            'Report a bug': 'https://github.com/enzogirardi84/medicare-pro-v2/issues',
-            'About': '## Medicare Pro\nSistema médico enterprise v2.0'
-        }
-    )
-    
-    # Aplicar tema CSS
+    """Configura la página con tema profesional.
+
+    Fix 2026-05-14: st.set_page_config() FUE REMOVIDO de esta función.
+    El único st.set_page_config() del programa debe vivir en main_medicare.py
+    como primera llamada Streamlit. Llamar set_page_config dos veces lanza
+    StreamlitAPIException y produce pantalla en blanco con showErrorDetails=false.
+
+    Si necesitás cambiar título/icono/layout, hacelo directamente en
+    main_medicare.py (la única llamada autorizada).
+    Los parámetros title/icon/layout/initial_sidebar_state quedan por
+    compatibilidad con llamadores existentes pero se ignoran.
+    """
+    _ = (title, icon, layout, initial_sidebar_state)  # firma estable, sin efecto
+    # Aplicar tema CSS (única responsabilidad de esta función)
     apply_professional_theme()
-    
     # Configurar tema en session state
     st.session_state['ui_theme'] = 'professional'
 
@@ -316,10 +315,18 @@ if __name__ == "__main__":
     render_alert("Sistema funcionando correctamente. Último backup: hace 2 horas.", "success")
     
     # Card con tabla
-    st.markdown(card("Últimos Pacientes", data_table(
-        ["Nombre", "DNI", "Estado"],
-        [
-            ["Juan Pérez", "37.108.100", badge("Activo", "success")],
-            ["María García", "29.456.789", badge("Pendiente", "warning")],
-        ]
-    )), unsafe_allow_html=True)
+    # Fix 2026-05-14: archivo venía truncado en mitad de esta expresión causando
+    # SyntaxError fatal al importar core.ui_professional → pantalla azul al boot.
+    st.markdown(
+        card(
+            "Últimos Pacientes",
+            data_table(
+                ["Nombre", "DNI", "Estado"],
+                [
+                    ["Juan Pérez", "37.108.100", badge("Activo", "success")],
+                    ["María García", "29.456.789", badge("Pendiente", "warning")],
+                ],
+            ),
+        ),
+        unsafe_allow_html=True,
+    )

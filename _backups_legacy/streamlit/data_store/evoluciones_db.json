@@ -1,0 +1,57 @@
+[
+  {
+    "nota": "Se realiza curación de la herida: limpieza con suero fisiológico al 0.9% a presión, lavado suave, secado de piel perilesional sin frotar. Se aplica apósito de alginato de calcio en cavidad para gestionar exudado y hidrocoloide grueso como apósito secundario.",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Enzo Nicolas Girardi",
+    "paciente": "Lourdes Vengolea  (Osde ) - 38883955",
+    "plantilla": "Libre"
+  },
+  {
+    "nota": "pte, con via perifercia permeable, se realiza control de signos vitales, tolera dieta, se realiza cambio de sonda vesical, se toma muestra de urocultivo, presento episodios de febrícula, se administra dipirona.",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Enzo Nicolas Girardi",
+    "paciente": "Jorge Quevedo (Federada) - 35410143",
+    "plantilla": "Libre"
+  },
+  {
+    "nota": "El paciente es fumador y sufre de asma.",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Darío Lanfranco",
+    "paciente": "Juan Carlos Rodriguez (Municipal) - 30123123",
+    "plantilla": "Libre"
+  },
+  {
+    "nota": "pte, presenta hipertension arterial, se administra amlodipina 10mg, dipirona.",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Juan Suarez",
+    "paciente": "Federico Lopez - 87855484",
+    "plantilla": "Libre"
+  },
+  {
+    "nota": "Paciente permanece en estado crítico con pronóstico reservado. Tras la carga de fluidos, la PA asciende a 105/65 mmHg. Se mantiene vigilancia estrecha ante signos de deterioro neurológico o falla respiratoria.",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Enzo Nicolas Girardi",
+    "paciente": "Lourdes Vengolea  (Osde ) - 38883955",
+    "plantilla": "Libre"
+  },
+  {
+    "nota": "evolucion favorable ñ",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Darío Lanfranco",
+    "paciente": "Juan Carlos Rodriguez (Municipal) - 30123123",
+    "plantilla": "Libre"
+  },
+  {
+    "nota": "Paciente ote, poco comunicativo, con app de hipertensión arterial, que al csv se encuentra con normotenso, se moviliza por sus medios, con buena tolerancia gástrica, presenta escara sacra grado 3, se realiza higiene personal.",
+    "fecha": "16/04/2026 23:29",
+    "firma": "Lourdes Patricia Vengolea",
+    "paciente": "Enzo Rivero - 32423532566",
+    "plantilla": "Libre"
+  },
+  {
+    "paciente": "Lourdes Vengolea  (Osde ) - 38883955",
+    "nota": "Paciente permanece en estado crítico con pronóstico reservado. Tras la carga de fluidos, la PA asciende a 105/65 mmHg. Se mantiene vigilancia estrecha ante signos de deterioro neurológico o falla respiratoria.",
+    "fecha": "08/04/2026 02:43",
+    "firma": "Enzo Girardi"
+  }
+]

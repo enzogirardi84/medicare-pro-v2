@@ -323,7 +323,32 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
         else:
             render_fn(paciente_sel, mi_empresa, user, rol)
     except Exception as exc:
-        log_event("ui", f"modulo_fallo:{tab_name}:{type(exc).__name__}")
-        st.error(f"Error critico en el modulo **{tab_name}**: {exc}")
-        st.exception(exc)
-        render_modulo_fallo_ui(tab_name, exc)
+        # Fix 2026-05-14 anti-pantalla-azul: bloque visible aunque showErrorDetails=False
+        import traceback as _tb
+        log_event("ui", "modulo_fallo:" + tab_name + ":" + type(exc).__name__ + ":" + str(exc))
+        try:
+            from core.error_tracker import report_exception
+            report_exception(
+                module="navigation." + tab_name,
+                exc_info=exc,
+                context="render_current_view tab_name=" + tab_name,
+                severity="error",
+            )
+        except Exception:
+            pass
+        _html_aviso = (
+            "<div style=\"background:#fff;color:#0f172a;padding:14px 18px;"
+            "border-left:4px solid #dc2626;border-radius:6px;margin:10px 0;\">"
+            "<strong style=\"color:#dc2626;\">Error al cargar el modulo</strong>"
+            "<br><span style=\"font-size:.9em;\">"
+            "Reporta esto al admin con la hora exacta. Detalle tecnico abajo."
+            "</span></div>"
+        )
+        st.markdown(_html_aviso, unsafe_allow_html=True)
+        st.error("Error en modulo **" + tab_name + "**: " + type(exc).__name__ + ": " + str(exc))
+        with st.expander("Detalle tecnico (para soporte)"):
+            st.code("".join(_tb.format_exception(type(exc), exc, exc.__traceback__)), language="python")
+        try:
+            render_modulo_fallo_ui(tab_name, exc)
+        except Exception:
+            pass
