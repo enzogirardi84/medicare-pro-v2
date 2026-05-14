@@ -31,10 +31,17 @@ def lista_plegable(
 
 
 def aviso_sin_paciente() -> None:
-    st.warning(
-        "Necesitás un **paciente activo** para usar esta vista. "
-        "En el panel izquierdo, elegí un paciente en el selector (o cargá uno en **Admisión** si todavía no está en la lista)."
-    )
+    st.markdown("""
+    <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:16px;padding:24px 20px;margin:10px 0;text-align:center;border:1px solid rgba(255,255,255,0.1);">
+        <h4 style="color:#fff;margin:0 0 8px;font-size:1.1rem;">Paciente no seleccionado</h4>
+        <p style="color:#cbd5e1;margin:0 0 4px;font-size:0.9rem;">
+            Usa el panel lateral izquierdo para seleccionar un paciente.
+        </p>
+        <p style="color:#94a3b8;margin:0;font-size:0.8rem;">
+            Si no hay pacientes, crea uno en el módulo <strong>Admisión</strong>.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def bloque_estado_vacio(
