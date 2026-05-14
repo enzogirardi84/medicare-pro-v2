@@ -60,10 +60,14 @@ def render_estadisticas(mi_empresa, rol):
     for p in pacientes:
         if isinstance(p, dict):
             pacientes_dicts.append(p)
-        elif isinstance(p, str) and p in _detalles:
-            d = dict(_detalles[p])
-            d['id'] = p
-            pacientes_dicts.append(d)
+        elif isinstance(p, str):
+            if p in _detalles:
+                d = dict(_detalles[p])
+                d['id'] = p
+                pacientes_dicts.append(d)
+            else:
+                # String ID sin detalles: crear un dict basico
+                pacientes_dicts.append({'id': p, 'estado': 'Activo'})
     pacientes = pacientes_dicts
     facturacion = filtrar_registros_empresa(
         st.session_state.get('facturacion_db', []), mi_empresa, rol
