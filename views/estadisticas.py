@@ -83,7 +83,18 @@ def render_estadisticas(mi_empresa, rol):
     # Metricas principales
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     col_m1.metric('Pacientes activos', sum(1 for p in pacientes if p.get('estado', 'Activo') == 'Activo'))
-    col_m2.metric('Altas del ano', sum(1 for p in pacientes if parse_fecha_hora(p.get('fecha_alta', '')).date() >= inicio_ano if parse_fecha_hora(p.get('fecha_alta', '')) != datetime.min))
+    altas_ano = 0
+    for p in pacientes:
+        fa = p.get('fecha_alta', '')
+        if isinstance(fa, str) and fa.strip():
+            dt = parse_fecha_hora(fa)
+            if dt and dt != datetime.min and hasattr(dt, 'date'):
+                try:
+                    if dt.date() >= inicio_ano:
+                        altas_ano += 1
+                except TypeError:
+                    pass
+    col_m2.metric('Altas del ano', altas_ano)
     col_m3.metric('Facturacion total', f"${sum(float(f.get('monto', 0) or 0) for f in facturacion):,.2f}")
     col_m4.metric('Stock critico', sum(1 for item in inventario if int(item.get('stock', 0) or 0) <= int(item.get('stock_minimo', 0) or 0)) if inventario else 0)
 
