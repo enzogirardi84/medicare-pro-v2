@@ -461,6 +461,29 @@ from core.alert_toasts import render_queued_toasts
 render_queued_toasts()
 
 # ============================================================
+# BACKUP RAPIDO (visible siempre)
+# ============================================================
+if st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapido"):
+    try:
+        from core.database import _db_keys, dumps_db_sorted
+        claves = _db_keys()
+        data = {k: st.session_state[k] for k in claves if k in st.session_state}
+        import json, io
+        backup_str = json.dumps(data, indent=2, ensure_ascii=False, default=str)
+        st.sidebar.download_button(
+            label="Guardar archivo",
+            data=backup_str.encode("utf-8"),
+            file_name=f"medicare_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json",
+            width='stretch',
+            key="download_backup"
+        )
+        log_event("backup", "backup_descargado")
+    except Exception as exc:
+        log_event("backup", f"error_backup:{type(exc).__name__}:{exc}")
+        st.sidebar.error("Error al generar backup")
+
+# ============================================================
 # AUTO-SCROLL AL CONTENIDO SI CAMBIÓ EL MÓDULO
 # ============================================================
 _modulo_previo_scroll = st.session_state.get("_mc_modulo_previo_scroll")
