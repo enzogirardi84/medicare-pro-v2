@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from core.app_logging import log_event
-from core.utils import ahora, es_control_total, filtrar_registros_empresa, parse_fecha_hora
+from core.utils import ahora, es_control_total, filtrar_registros_empresa, mapa_detalles_pacientes, parse_fecha_hora
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
 
 
@@ -54,6 +54,17 @@ def render_estadisticas(mi_empresa, rol):
     pacientes = filtrar_registros_empresa(
         st.session_state.get('pacientes_db', []), mi_empresa, rol
     )
+    # pacientes pueden ser strings (IDs) - convertir a dicts con detalles
+    _detalles = mapa_detalles_pacientes(st.session_state)
+    pacientes_dicts = []
+    for p in pacientes:
+        if isinstance(p, dict):
+            pacientes_dicts.append(p)
+        elif isinstance(p, str) and p in _detalles:
+            d = dict(_detalles[p])
+            d['id'] = p
+            pacientes_dicts.append(d)
+    pacientes = pacientes_dicts
     facturacion = filtrar_registros_empresa(
         st.session_state.get('facturacion_db', []), mi_empresa, rol
     )
