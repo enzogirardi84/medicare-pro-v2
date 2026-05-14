@@ -1,10 +1,37 @@
 """Calculadora de dosis pediatricas por peso - Medicacion segura para ninos."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import streamlit as st
 
 from core.app_logging import log_event
 from core.view_helpers import aviso_sin_paciente
+
+
+# Cargar vademecum completo
+_VADEMECUM_PATH = Path(__file__).resolve().parents[1] / "assets" / "vademecum.json"
+_VADEMECUM = []
+if _VADEMECUM_PATH.exists():
+    try:
+        _VADEMECUM = json.loads(_VADEMECUM_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+
+
+def _completar_con_vademecum() -> dict:
+    """Combina MEDICAMENTOS (con dosis) + vademecum (solo nombres)."""
+    combinado = dict(MEDICAMENTOS)
+    for nombre in _VADEMECUM:
+        nombre = nombre.strip()
+        if not nombre or nombre in combinado:
+            continue
+        # Solo farmacos, no insumos
+        if any(p in nombre.lower() for p in ["abocath", "aguja", "sonda", "guante", "jeringa", "cateter", "baja lengua"]):
+            continue
+        combinado[nombre] = None  # Marcar como sin datos de dosis
+    return combinado
 
 # ============================================================
 # BASE DE DATOS FARMACOLOGICA PEDIATRICA
@@ -211,6 +238,9 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
         aviso_sin_paciente()
         return
 
+    # Combinar dosis conocidas + vademecum
+    _TODOS_MEDICAMENTOS = _completar_con_vademecum()
+
     st.markdown("""
         <div class="mc-hero">
             <h2 class="mc-hero-title">Calculadora de Dosis Pediatricas</h2>
@@ -261,10 +291,15 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
     with c2:
         medicamento = st.selectbox(
             "Medicamento *",
-            sorted(MEDICAMENTOS.keys()),
-            help="Seleccionar el medicamento a calcular",
+            sorted(_TODOS_MEDICAMENTOS.keys()),
+            help="Seleccionar el medicamento a calcular. Cargado desde vademecum + base pediatrica.",
         )
-        st.caption(f"Via de administracion: {MEDICAMENTOS[medicamento]['via']}")
+
+        info = _TODOS_MEDICAMENTOS[medicamento]
+        if info is None:
+            st.caption("Medicamento del vademecum. No hay datos de dosis pediatrica en la base.")
+        else:
+            st.caption(f"Via de administracion: {info['via']}")
 
     st.divider()
 
@@ -272,25 +307,30 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
         if peso <= 0:
             st.error("El peso debe ser mayor a 0.")
         else:
-            resultado = calcular_dosis(medicamento, peso)
-            info = MEDICAMENTOS[medicamento]
+            info = _TODOS_MEDICAMENTOS[medicamento]
+            if info is None:
+                st.warning(f"'{medicamento}' esta en el vademecum pero no tiene datos de dosis pediatrica cargados. Consulta la literatura medica.")
+                log_event("calculadora_dosis", f"sin_datos:{medicamento}")
+            else:
+                resultado = calcular_dosis(medicamento, peso)
+                info = MEDICAMENTOS[medicamento]
 
-            st.markdown("### Resultado del calculo")
+                st.markdown("### Resultado del calculo")
 
-            # Tarjeta principal con dosis
-            cols = st.columns([1, 1, 1])
-            cols[0].metric("Dosis por dosis", f"{resultado['dosis_min_mg']} - {resultado['dosis_max_mg']} mg")
-            cols[1].metric("Dosis recomendada", f"{resultado['dosis_recomendada_mg']} mg")
-            cols[2].metric("Maximo por dosis", f"{resultado['dosis_max_por_dosis_mg']} mg")
+                # Tarjeta principal con dosis
+                cols = st.columns([1, 1, 1])
+                cols[0].metric("Dosis por dosis", f"{resultado['dosis_min_mg']} - {resultado['dosis_max_mg']} mg")
+                cols[1].metric("Dosis recomendada", f"{resultado['dosis_recomendada_mg']} mg")
+                cols[2].metric("Maximo por dosis", f"{resultado['dosis_max_por_dosis_mg']} mg")
 
-            cols2 = st.columns([1, 1, 1])
-            cols2[0].metric("Intervalo", resultado["intervalo"])
-            cols2[1].metric("Dosis diaria max", f"{resultado['dosis_diaria_max_mg']} mg/dia")
-            cols2[2].metric("Presentacion", resultado["presentacion"][:30], help=resultado["presentacion"])
+                cols2 = st.columns([1, 1, 1])
+                cols2[0].metric("Intervalo", resultado["intervalo"])
+                cols2[1].metric("Dosis diaria max", f"{resultado['dosis_diaria_max_mg']} mg/dia")
+                cols2[2].metric("Presentacion", resultado["presentacion"][:30], help=resultado["presentacion"])
 
-            # Detalle del calculo
-            with st.expander("Ver detalle del calculo", expanded=True):
-                st.markdown(f"""
+                # Detalle del calculo
+                with st.expander("Ver detalle del calculo", expanded=True):
+                    st.markdown(f"""
 **Calculo para {resultado['medicamento']}:**
 - Peso del paciente: **{peso} kg**
 - Dosis por kg: {resultado['dosis_por_kg']}
@@ -300,38 +340,35 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
 - Intervalo: {resultado['intervalo']}
 - Via: {resultado['via']}
 - Dosis diaria maxima: {resultado['dosis_diaria_max_mg']} mg
-                """)
+                    """)
 
-            # Presentaciones disponibles
-            with st.expander("Presentaciones disponibles", expanded=False):
-                st.markdown(f"**{resultado['presentacion']}**")
-                # Calcular volumenes
-                for desc in resultado["presentacion"].split(","):
-                    desc = desc.strip()
-                    if "mg/" in desc:
-                        try:
-                            conc = desc.split("mg/")[0].strip()
-                            vol = desc.split("mg/")[1].strip()
-                            conc_val = float(conc.split()[-1])
-                            vol_min = round(resultado['dosis_min_mg'] / conc_val, 1)
-                            vol_max = round(resultado['dosis_max_mg'] / conc_val, 1)
-                            vol_rec = round(resultado['dosis_recomendada_mg'] / conc_val, 1)
-                            st.markdown(
-                                f"- **{desc}**: {vol_min}-{vol_max} ml (recomendado: {vol_rec} ml)"
-                            )
-                        except (ValueError, IndexError):
-                            st.markdown(f"- {desc}")
+                # Presentaciones disponibles
+                with st.expander("Presentaciones disponibles", expanded=False):
+                    st.markdown(f"**{resultado['presentacion']}**")
+                    for desc in resultado["presentacion"].split(","):
+                        desc = desc.strip()
+                        if "mg/" in desc:
+                            try:
+                                conc = desc.split("mg/")[0].strip()
+                                vol = desc.split("mg/")[1].strip()
+                                conc_val = float(conc.split()[-1])
+                                vol_min = round(resultado['dosis_min_mg'] / conc_val, 1)
+                                vol_max = round(resultado['dosis_max_mg'] / conc_val, 1)
+                                vol_rec = round(resultado['dosis_recomendada_mg'] / conc_val, 1)
+                                st.markdown(f"- **{desc}**: {vol_min}-{vol_max} ml (recomendado: {vol_rec} ml)")
+                            except (ValueError, IndexError):
+                                st.markdown(f"- {desc}")
 
-            # Observaciones
-            st.markdown("### Observaciones")
-            st.info(resultado["observaciones"])
+                # Observaciones
+                st.markdown("### Observaciones")
+                st.info(resultado["observaciones"])
 
-            # Alertas
-            if resultado["alerta"]:
-                st.error(f"ALERTA: {resultado['alerta']}", icon="🚨")
+                # Alertas
+                if resultado["alerta"]:
+                    st.error(f"ALERTA: {resultado['alerta']}", icon="🚨")
 
-            # Log
-            log_event("calculadora_dosis", f"{medicamento} - {peso}kg - {paciente_sel}")
+                # Log
+                log_event("calculadora_dosis", f"{medicamento} - {peso}kg - {paciente_sel}")
 
     # Informacion de seguridad
     with st.expander("Informacion de seguridad", expanded=False):
