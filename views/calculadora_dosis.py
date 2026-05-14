@@ -20,20 +20,51 @@ if _VADEMECUM_PATH.exists():
         pass
 
 
+def _normalizar_medicamento(nombre: str) -> tuple:
+    """Parsea nombre de medicamento extrayendo concentracion.
+    Ej: 'Ibuprofeno 400mg' -> ('Ibuprofeno', 400)
+        'Amoxicilina 500mg/5ml' -> ('Amoxicilina', 500)
+        'Paracetamol' -> ('Paracetamol', None)
+    """
+    import re
+    nombre = nombre.strip()
+    # Intentar extraer concentracion al final
+    m = re.match(r"^(.+?)\s+(\d+)\s*mg(?:\/\d+ml)?$", nombre)
+    if m:
+        return m.group(1).strip(), int(m.group(2))
+    # Sin concentracion
+    return nombre, None
+
+
 def _completar_con_vademecum() -> dict:
-    """Combina MEDICAMENTOS (con dosis) + vademecum (solo nombres)."""
+    """Combina MEDICAMENTOS (con dosis) + vademecum (solo nombres).
+    Reconoce nombres con concentracion: 'Ibuprofeno 400mg' -> 'Ibuprofeno'
+    """
     combinado = dict(MEDICAMENTOS)
     for nombre in _VADEMECUM:
         nombre = nombre.strip()
-        if not nombre or nombre in combinado:
+        if not nombre:
             continue
         # Saltar insumos no farmacos
         if any(p in nombre.lower() for p in ["abocath", "aguja", "sonda", "guante", "jeringa", "cateter", "baja lengua",
                                                 "bajo lengua", "alcohol", "gasas", "algo torn", "cotonete", "esparadrapo"]):
             continue
-        # Si ya existe con nombre similar, agregar como alias
-        if not any(nombre.lower() in k.lower() or k.lower() in nombre.lower() for k in MEDICAMENTOS):
-            combinado[nombre] = None  # Sin datos de dosis
+
+        base_nombre, _ = _normalizar_medicamento(nombre)
+
+        # Buscar si el base_nombre ya esta en MEDICAMENTOS
+        encontrado = None
+        for k in MEDICAMENTOS:
+            if base_nombre.lower() in k.lower() or k.lower() in base_nombre.lower():
+                encontrado = k
+                break
+
+        if encontrado:
+            # Es un alias de un medicamento con datos - agregar con referencia
+            if nombre not in combinado:
+                combinado[nombre] = encontrado  # Referencia al nombre con datos
+        elif nombre not in combinado:
+            combinado[nombre] = None  # Sin datos
     return combinado
 
 # ============================================================
@@ -201,9 +232,27 @@ MEDICAMENTOS = {
 }
 
 
-def calcular_dosis(medicamento: str, peso_kg: float) -> dict:
+def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = None) -> dict:
     """Calcula dosis pediatrica segun peso del paciente."""
-    info = MEDICAMENTOS[medicamento]
+    # Resolver si es una referencia (string) o tiene datos directos
+    info = None
+    if todos_medicamentos and isinstance(todos_medicamentos.get(medicamento), str):
+        # Es una referencia a otro nombre
+        medicamento_real = todos_medicamentos[medicamento]
+        info = MEDICAMENTOS.get(medicamento_real)
+    else:
+        info = MEDICAMENTOS.get(medicamento)
+
+    if info is None:
+        # Intentar buscar por nombre base
+        base, _ = _normalizar_medicamento(medicamento)
+        for k, v in MEDICAMENTOS.items():
+            if base.lower() in k.lower() or k.lower() in base.lower():
+                info = v
+                break
+
+    if info is None:
+        raise ValueError(f"No hay datos de dosis pediatrica para '{medicamento}'")
     dosis_min, dosis_max = info["dosis_mg_kg"]
     dosis_por_dosis_min = round(peso_kg * dosis_min, 1)
     dosis_por_dosis_max = round(peso_kg * dosis_max, 1)
@@ -296,10 +345,13 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
         # Mostrar indicador de disponibilidad
         _labels = {}
         for m in _todos:
-            if _TODOS_MEDICAMENTOS[m] is not None:
-                _labels[m] = m + " (con dosis pediatrica)"
-            else:
+            val = _TODOS_MEDICAMENTOS[m]
+            if val is None:
                 _labels[m] = m + " (solo vademecum)"
+            elif isinstance(val, str):
+                _labels[m] = m + " (como " + val + ")"
+            else:
+                _labels[m] = m + " (con dosis pediatrica)"
 
         medicamento = st.selectbox(
             "Medicamento *",
@@ -311,6 +363,8 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
         info = _TODOS_MEDICAMENTOS[medicamento]
         if info is None:
             st.caption("Medicamento del vademecum sin dosis pediatrica cargada. Selecciona uno con '(con dosis pediatrica)' para calcular.")
+        elif isinstance(info, str):
+            st.caption(f"Disponible como '{info}'. Via y dosis segun base de datos.")
         else:
             st.caption(f"Via: {info['via']} | Intervalo: {info['intervalo_hs']} | Dosis calculada segun peso")
 
@@ -325,8 +379,13 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 st.warning(f"'{medicamento}' solo esta en el vademecum (sin dosis pediatrica cargada). Selecciona un medicamento que diga '(con dosis pediatrica)' para calcular.")
                 log_event("calculadora_dosis", f"sin_datos:{medicamento}")
             else:
-                resultado = calcular_dosis(medicamento, peso)
-                info = MEDICAMENTOS[medicamento]
+                resultado = calcular_dosis(medicamento, peso, _TODOS_MEDICAMENTOS)
+                # Obtener info del medicamento (puede ser referencia)
+                raw = _TODOS_MEDICAMENTOS[medicamento]
+                if isinstance(raw, str):
+                    info = MEDICAMENTOS[raw]  # Referencia a otro nombre
+                else:
+                    info = raw
 
                 st.markdown("### Resultado del calculo")
 
