@@ -29,9 +29,9 @@ except Exception:
 # MAIN APP - with comprehensive error catching
 # ============================================================
 try:
-    # This does st.set_page_config, render_login, and the full app
-    exec(open("main_medicare.py", encoding="utf-8").read())
+    import main_medicare  # noqa: F401
 except Exception as e:
+    import traceback
     st.error(f"Error critico en la aplicacion: {type(e).__name__}: {e}")
     st.exception(e)
     st.info("Si ves esto, la app fallo en la carga principal. Revisa los logs de Streamlit Cloud.")
