@@ -184,7 +184,11 @@ for py in archivos_py:
         continue
     # Buscar </script> dentro de cadenas Python
     if '</script>' in content:
-        warning("JS", f"</script> encontrado en {py.relative_to(REPO)} - puede romper HTML")
+        try:
+            rel = py.relative_to(REPO)
+        except ValueError:
+            rel = py.name
+        warning("JS", f"</script> encontrado en {rel} - puede romper HTML")
 
 # ============================================================
 # 9. FILES - Archivos criticos faltantes
