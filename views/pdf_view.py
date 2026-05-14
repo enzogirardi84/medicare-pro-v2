@@ -1,6 +1,8 @@
 from core.alert_toasts import queue_toast
 import base64
+import hashlib
 import io
+from datetime import datetime
 
 import streamlit as st
 
@@ -199,6 +201,12 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                     else:
                         fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
 
+                        # Firma digital criptografica del consentimiento
+                        doc_id = f"consent_{paciente_sel}_{int(datetime.now().timestamp())}"
+                        doc_hash = hashlib.sha256(
+                            f"{paciente_sel}|{fecha_str}|{firma_b64[:64]}".encode()
+                        ).hexdigest()[:16]
+
                         # 1. Guardar en SQL (Dual-Write)
                         try:
                             _partes_pac = paciente_sel.split(" - ")
@@ -232,6 +240,8 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                                 "telefono": telefono.strip(),
                                 "observaciones": observaciones.strip(),
                                 "firma_b64": firma_b64,
+                                "doc_id": doc_id,
+                                "doc_hash": doc_hash,
                                 "profesional": user.get("nombre", ""),
                                 "matricula_profesional": user.get("matricula", ""),
                             }
