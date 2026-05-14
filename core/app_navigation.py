@@ -313,6 +313,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(paciente_sel)
         elif tab_name == "Dashboard":
             render_fn(mi_empresa, rol)
+        elif tab_name in ("Estadisticas", "Turnos Online"):
+            render_fn(mi_empresa, rol)
         elif tab_name == "Percentilo":
             render_fn(paciente_sel, user)
         elif tab_name in ("Cierre Diario", "Auditoria", "Auditoria Legal", "Asistencia en Vivo"):
