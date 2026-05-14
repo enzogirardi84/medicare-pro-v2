@@ -49,8 +49,15 @@ def cargar_texto_asset(nombre_archivo, _mtime: float = 0.0):
 @st.cache_data(show_spinner=False)
 def cargar_json_asset(nombre_archivo):
     ruta = ASSETS_DIR / nombre_archivo
-    with ruta.open("r", encoding="utf-8") as archivo:
-        return json.load(archivo)
+    try:
+        with ruta.open("r", encoding="utf-8") as archivo:
+            return json.load(archivo)
+    except FileNotFoundError:
+        log_event("utils_ui", f"asset_no_encontrado:{nombre_archivo}")
+        return {}
+    except Exception as exc:
+        log_event("utils_ui", f"error_cargar_asset:{type(exc).__name__}:{exc}")
+        return {}
 
 
 def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):

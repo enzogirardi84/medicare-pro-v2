@@ -16,19 +16,23 @@ DATA_FILE = Path(".streamlit/local_data.json")
 
 def _ensure_data_file():
     """Crea el archivo si no existe."""
-    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    if not DATA_FILE.exists():
-        initial = {
-            "pacientes": [],
-            "historial": [],
-            "evoluciones": [],
-            "signos_vitales": [],
-            "materiales": [],
-            "recetas": [],
-            "visitas": []
-        }
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(initial, f, indent=2)
+    try:
+        DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+        if not DATA_FILE.exists():
+            initial = {
+                "pacientes": [],
+                "historial": [],
+                "evoluciones": [],
+                "signos_vitales": [],
+                "materiales": [],
+                "recetas": [],
+                "visitas": []
+            }
+            with open(DATA_FILE, 'w', encoding='utf-8') as f:
+                json.dump(initial, f, indent=2)
+    except Exception as exc:
+        from core.app_logging import log_event
+        log_event("guardado", f"error_ensure_data:{type(exc).__name__}:{exc}")
 
 def _load_data() -> Dict:
     """Carga datos del archivo."""
@@ -49,9 +53,13 @@ def _load_data() -> Dict:
 
 def _save_data(data: Dict):
     """Guarda datos en el archivo."""
-    _ensure_data_file()
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        _ensure_data_file()
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as exc:
+        from core.app_logging import log_event
+        log_event("guardado", f"error_save_data:{type(exc).__name__}:{exc}")
 
 def guardar_registro(
     tipo: str,  # 'signos_vitales', 'evolucion', 'material', 'receta', etc.

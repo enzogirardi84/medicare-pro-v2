@@ -16,7 +16,7 @@ def aplicar_css_base() -> None:
                1. FONDO RAÍZ Y HEADER
                ========================================================= */
             .stApp {
-                background-color: #0f172a !important;
+                background-color: #1a1a2e !important;
             }
             .stApp > header {
                 background-color: transparent !important;
