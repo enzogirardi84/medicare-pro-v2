@@ -16,8 +16,8 @@ jobs:
   auto-healing:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Instalar dependencias
@@ -26,7 +26,7 @@ jobs:
         run: python scripts/auto_healing.py
         continue-on-error: true
       - name: Subir reporte
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: auto-healing-report
           path: scripts/auto_healing_report.json
@@ -38,8 +38,8 @@ jobs:
     needs: auto-healing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Instalar dependencias
@@ -70,7 +70,7 @@ jobs:
     needs: auto-healing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Buscar secrets expuestos
         run: |
           echo "=== BUSCANDO SECRETS ==="
@@ -91,7 +91,7 @@ jobs:
     needs: auto-healing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Verificar tamanio archivos
         run: |
           echo "=== TAMANIO ARCHIVOS ==="
