@@ -718,6 +718,8 @@ def _guardar_datos_ejecutar_core():
 
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
+    
+    # Optimizacion: si solo cambio una clave, solo serializar esa
     payload_bytes, _ = dumps_db_sorted(data)
     payload_hash = hashlib.sha256(payload_bytes).hexdigest()
 
