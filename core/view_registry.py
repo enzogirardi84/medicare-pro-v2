@@ -44,6 +44,14 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
     "Diagnosticos": ("views.diagnosticos", "render_diagnosticos"),
     "APS / Dispensario": ("views.dispensario_aps", "render_dispensario_aps"),
+    # Nuevos modulos 2026-05-14
+    "Laboratorio": ("views.laboratorio", "render_laboratorio"),
+    "Vacunacion": ("views.vacunacion", "render_vacunacion"),
+    "Estadisticas": ("views.estadisticas", "render_estadisticas"),
+    "Portal del Paciente": ("views.portal_paciente", "render_portal_paciente"),
+    "Factura Electronica": ("views.factura_electronica", "render_factura_electronica"),
+    "Turnos Online": ("views.turnos_online", "render_turnos_online"),
+    "Chatbot IA": ("views.chatbot_ia", "render_chatbot_ia"),
 }
 
 VIEW_NAV_LABELS_BASE: Dict[str, str] = {
@@ -77,6 +85,14 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Auditoria Legal": "\u2696 Legal",
     "Diagnosticos": "\u2705 Diagnosticos",
     "APS / Dispensario": "\U0001F3E5 APS / Dispensario",
+    # Nuevos modulos 2026-05-14
+    "Laboratorio": "Laboratorio",
+    "Vacunacion": "Vacunacion",
+    "Estadisticas": "Estadisticas",
+    "Portal del Paciente": "Portal Paciente",
+    "Factura Electronica": "Factura Electronica",
+    "Turnos Online": "Turnos Online",
+    "Chatbot IA": "Chatbot IA",
 }
 
 
