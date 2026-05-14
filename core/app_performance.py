@@ -30,7 +30,8 @@ def procesar_guardado_pendiente_seguro() -> bool:
     st.session_state["_guardar_datos_pendiente"] = False
     try:
         from core.database import guardar_datos
-        guardar_datos(spinner=False, force=True)
+        # Usar spinner=False y evitar force=True para respetar throttle
+        guardar_datos(spinner=False, force=False)
     except Exception as e:
         log_event("db", f"procesar_guardado_pendiente_error:{type(e).__name__}")
     return True
