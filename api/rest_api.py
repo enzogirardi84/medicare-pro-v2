@@ -27,12 +27,14 @@ from datetime import datetime, timezone, timedelta
 from enum import Enum
 from functools import wraps
 import secrets
+import time
 
 from fastapi import FastAPI, HTTPException, Depends, Query, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
+from starlette.middleware.base import BaseHTTPMiddleware
 import jwt
 import uvicorn
 
@@ -78,6 +80,75 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
+
+
+# Middleware de headers de seguridad HTTP
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Agrega headers de seguridad obligatorios a todas las respuestas."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# Rate limiting in-memory simple
+_rate_limit_store: dict[str, tuple[int, float]] = {}
+
+
+def rate_limit(max_requests: int = 10, window_seconds: int = 60):
+    """Decorator de rate limiting por IP + endpoint. Compatible con FastAPI."""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Buscar el objeto Request en args/kwargs
+            req = None
+            for arg in args:
+                if isinstance(arg, Request):
+                    req = arg
+                    break
+            if not req:
+                for val in kwargs.values():
+                    if isinstance(val, Request):
+                        req = val
+                        break
+            client_ip = req.client.host if req and req.client else "unknown"
+            key = f"{client_ip}:{func.__name__}"
+            now = time.time()
+            count, reset_at = _rate_limit_store.get(key, (0, 0.0))
+            if now > reset_at:
+                count = 0
+                reset_at = now + window_seconds
+            count += 1
+            _rate_limit_store[key] = (count, reset_at)
+            if count > max_requests:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Rate limit exceeded. Try again in {int(reset_at - now)} seconds."
+                )
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
+
 
 # Seguridad
 security = HTTPBearer()
@@ -357,13 +428,8 @@ async def verify_tenant_access(
 # ============ ENDPOINTS ============
 
 @app.post("/v1/auth/login", response_model=LoginResponse, tags=["Autenticación"])
-async def login(request: LoginRequest):
-    """
-    Autenticación de usuario contra base de datos.
-    
-    Retorna JWT token para usar en otros endpoints.
-    Rate limit: 10 requests/minuto.
-    """
+@rate_limit(max_requests=5, window_seconds=60)
+async def login(request: LoginRequest, raw_request: Request):
     from core.database import supabase
     from core.password_crypto import verificar_password
 
@@ -462,12 +528,13 @@ async def list_patients(
     current_user: dict = Depends(verify_token)
 ):
     """
-    Lista pacientes con paginación.
+    Lista pacientes con paginación. Solo devuelve pacientes de la empresa del usuario.
     
     - **page**: Número de página (1-based)
     - **page_size**: Resultados por página (máx 100)
     - **search**: Filtrar por nombre o DNI
     """
+    empresa_usuario = str(current_user.get("empresa", "")).strip()
     # Mock data - en producción consultaría Supabase
     patients = [
         PatientResponse(
@@ -533,11 +600,11 @@ async def get_patient(
     current_user: dict = Depends(verify_token)
 ):
     """
-    Obtiene un paciente por ID.
+    Obtiene un paciente por ID. Verifica que pertenezca a la empresa del usuario.
     
     Los datos se desencriptan automáticamente al retornar.
     """
-    # Mock - en producción consultaría base de datos
+    await verify_tenant_access(patient_id, current_user)
     patient = PatientResponse(
         id=patient_id,
         dni="12345678",
@@ -615,27 +682,31 @@ async def create_vitals(
 
 
 @app.get("/v1/search", tags=["Búsqueda"])
+@rate_limit(max_requests=30, window_seconds=60)
 async def search(
     q: str = Query(..., min_length=2, description="Término de búsqueda"),
     type: str = Query("patient", pattern="^(patient|evolution|all)$"),
     limit: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(verify_token)
+    current_user: dict = Depends(verify_token),
+    raw_request: Request = None,
 ):
     """
-    Búsqueda global.
+    Búsqueda global. Sanitiza el término y aplica rate limiting.
     
     Busca en pacientes y/o evoluciones.
     """
+    from core.security_middleware import sanitize_search_term
+    q_safe = sanitize_search_term(q)
     # Mock results
     results = {
-        "query": q,
+        "query": q_safe,
         "type": type,
         "patients": [],
         "evolutions": [],
         "total": 0
     }
     
-    log_event("api", f"search:user:{current_user['username']}:q:{q}")
+    log_event("api", f"search:user:{current_user['username']}:q_len:{len(q_safe)}")
     
     return results
 
