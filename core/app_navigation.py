@@ -259,27 +259,14 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         label = f"{emoji}  {cat}  ·  {n_mods}"
 
         with st.expander(label, expanded=is_active):
-            subgrupos = obtener_subgrupos_categoria(cat)
-            if subgrupos:
-                for idx, (sg_nombre, sg_modulos) in enumerate(subgrupos.items()):
-                    sg_filtrados = [m for m in sg_modulos if m in menu_set]
-                    if not sg_filtrados:
-                        continue
-                    if idx > 0:
-                        st.markdown(
-                            '<div class="mc-nav-divider"></div>',
-                            unsafe_allow_html=True,
-                        )
-                    st.markdown(
-                        f'<div class="mc-nav-subheader">'
-                        f"<span class=\"mc-nav-subicon\">▸</span> {sg_nombre} "
-                        f'<span class="mc-nav-badge">{len(sg_filtrados)}</span>'
-                        f"</div>",
-                        unsafe_allow_html=True,
-                    )
-                    _render_modulos_sub(sg_filtrados, vista_actual, view_nav_labels)
-            else:
-                _render_modulos_sub(mods_in_cat, vista_actual, view_nav_labels)
+            # Renderizar todos los módulos de la categoría juntos, sin sub-etiquetas
+            todos = [
+                m
+                for sg in obtener_subgrupos_categoria(cat).values()
+                for m in sg
+                if m in menu_set
+            ] or mods_in_cat
+            _render_modulos_sub(todos, vista_actual, view_nav_labels)
 
     return st.session_state.get("modulo_actual", vista_actual)
 
