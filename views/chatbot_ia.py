@@ -354,7 +354,7 @@ def _proximos_cumple() -> str:
 
 
 def _conteo_pacientes() -> str:
-    pacientes = st.session_state.get("pacientes_db", [])
+    pacientes = [p for p in st.session_state.get("pacientes_db", []) if isinstance(p, str)]
     detalles = st.session_state.get("detalles_pacientes_db", {})
     activos = sum(1 for p in pacientes if isinstance(detalles.get(p, {}), dict) and detalles[p].get("estado", "Activo") == "Activo")
     altas = sum(1 for p in pacientes if isinstance(detalles.get(p, {}), dict) and detalles[p].get("estado") == "De Alta")
