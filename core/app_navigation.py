@@ -186,82 +186,21 @@ def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
                 )
 
 
-def _render_modulos_mobile(modulos, modulo_actual=None, view_nav_labels=None):
-    """Móvil: popover o expander con botones en grilla 3 columnas."""
-    if not modulos:
-        return
-    if hasattr(st, "popover"):
-        with st.popover("Menú de módulos", width='stretch'):
-            for i in range(0, len(modulos), 3):
-                fila = modulos[i:i + 3]
-                cols = st.columns(3)
-                for j, modulo in enumerate(fila):
-                    nombre_raw = str(modulo)
-                    if not nombre_raw:
-                        continue
-                    label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-                    icono, texto = _split_icon_label(label)
-                    tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-                    with cols[j]:
-                        if st.button(
-                            f"{icono} {texto}",
-                            key=f"nav_pop_{nombre_raw}",
-                            use_container_width=True,
-                            type=tipo,
-                        ):
-                            set_modulo_actual(nombre_raw, rerun=True)
-        return
-
-    if "menu_nav_abierto" not in st.session_state:
-        st.session_state["menu_nav_abierto"] = False
-
-    def cambiar_modulo_mobile(mod_seleccionado):
-        set_modulo_actual(mod_seleccionado)
-        st.session_state["menu_nav_abierto"] = False
-
-    with st.expander("Menú de módulos", expanded=st.session_state["menu_nav_abierto"]):
-        for i in range(0, len(modulos), 3):
-            fila = modulos[i:i + 3]
-            cols = st.columns(3)
-            for j, modulo in enumerate(fila):
-                nombre_raw = str(modulo)
-                if not nombre_raw:
-                    continue
-                label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-                icono, texto = _split_icon_label(label)
-                tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-                with cols[j]:
-                    st.button(
-                        f"{icono} {texto}",
-                        key=f"nav_exp_{nombre_raw}",
-                        use_container_width=True,
-                        type=tipo,
-                        on_click=cambiar_modulo_mobile,
-                        args=(nombre_raw,),
-                    )
-
-
-# ── Render principal (acordeón en desktop, popover en móvil) ─────────────────
+# ── Render principal (acordeón igual en desktop y móvil) ─────────────────
 
 
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     """
     Renderiza la navegación de módulos como acordeón por categorías.
 
-    - Escritorio: cada categoría es un ``st.expander``. Solo la categoría activa
-      aparece expandida. Dentro se muestran sub‑grupos (``st.caption``) y botones.
-    - Móvil: popover único con lista vertical.
+    Desktop y móvil comparten el mismo acordeón. Cada categoría es un
+    ``st.expander``. Solo la categoría activa aparece expandida en la primera
+    carga; al hacer clic en un módulo todas colapsan (experiencia premium).
     """
     if not menu:
         return None
     menu_set = frozenset(menu) if menu_set is None else menu_set
 
-    # ── Móvil ──
-    if cliente_es_movil_probable():
-        _render_modulos_mobile(menu, vista_actual, view_nav_labels)
-        return st.session_state.get("modulo_actual", vista_actual)
-
-    # ── Desktop: acordeón ──
     cats_ok = categorias_con_modulos_en_menu(menu_set)
     if not cats_ok:
         return vista_actual
@@ -273,8 +212,6 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         None,
     )
 
-    # Versión: al hacer clic en un módulo se incrementa, forzando nuevas
-    # claves de expander que arrancan colapsadas (experiencia premium).
     nav_version = st.session_state.get("_nav_version", 0)
     primera_vez = (nav_version == 0)
 
