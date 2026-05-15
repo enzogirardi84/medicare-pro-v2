@@ -88,7 +88,6 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Diagnosticos": [],
     "APS / Dispensario": list(_ROL_TODOS) + [AUD],
     # Nuevos modulos 2026-05-14
-    "Laboratorio": list(_ROL_CLINICA),
     "Vacunacion": list(_ROL_CLINICA),
     "Estadisticas": list(_ROL_COORD_OPER),
     "Factura Electronica": list(_ROL_COORD_OPER),

@@ -45,7 +45,6 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Diagnosticos": ("views.diagnosticos", "render_diagnosticos"),
     "APS / Dispensario": ("views.dispensario_aps", "render_dispensario_aps"),
     # Nuevos modulos 2026-05-14
-    "Laboratorio": ("views.laboratorio", "render_laboratorio"),
     "Vacunacion": ("views.vacunacion", "render_vacunacion"),
     "Estadisticas": ("views.estadisticas", "render_estadisticas"),
     "Factura Electronica": ("views.factura_electronica", "render_factura_electronica"),
@@ -86,7 +85,6 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Diagnosticos": "\u2705 Diagnosticos",
     "APS / Dispensario": "\U0001F3E5 APS / Dispensario",
     # Nuevos modulos 2026-05-14
-    "Laboratorio": "Laboratorio",
     "Vacunacion": "Vacunacion",
     "Estadisticas": "Estadisticas",
     "Factura Electronica": "Factura Electronica",

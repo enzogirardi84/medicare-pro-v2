@@ -29,7 +29,6 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Telemedicina",
         "Diagnosticos",
         "APS / Dispensario",
-        "Laboratorio",
         "Vacunacion",
         "Calc. Dosis Pediatricas",
         "Chatbot IA",
@@ -75,8 +74,8 @@ _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
             "Escalas Clinicas", "Balance", "Percentilo",
             "Historial", "Diagnosticos",
         ],
-        "Laboratorio": [
-            "Laboratorio", "Vacunacion",
+        "Vacunación": [
+            "Vacunacion",
         ],
         "Apoyo": [
             "Asistente Clinico", "Telemedicina",
