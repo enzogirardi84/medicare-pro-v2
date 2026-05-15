@@ -255,8 +255,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         is_active = (cat == cat_activa)
-        n_mods = len(mods_in_cat)
-        label = f"{emoji}  {cat}  ·  {n_mods}"
+        label = f"{emoji}  {cat}"
 
         with st.expander(label, expanded=is_active):
             # Renderizar todos los módulos de la categoría juntos, sin sub-etiquetas
