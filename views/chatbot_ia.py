@@ -229,9 +229,18 @@ def _vitales(paciente_sel) -> str:
         return "Sin signos vitales registrados."
     ult = vitales[-1]
     texto = f"Ultimos signos vitales ({ult.get('fecha', '?')}):"
-    for campo, etiqueta in [("ta", "TA"), ("fc", "FC"), ("fr", "FR"), ("temp", "Temp"), ("sat", "Sat O2"), ("hgt", "HGT")]:
-        if ult.get(campo):
-            texto += f"\n- {etiqueta}: {ult[campo]}"
+    campos = [
+        ("TA", "TA"), ("FC", "FC"), ("FR", "FR"),
+        ("Sat", "Sat O2"), ("Temp", "Temp"), ("HGT", "HGT"),
+    ]
+    for clave, etiqueta in campos:
+        valor = ult.get(clave)
+        if not valor:
+            valor = ult.get(clave.lower()) or ult.get(clave.upper()) or ult.get(clave.capitalize())
+        if valor:
+            texto += f"\n- {etiqueta}: {valor}"
+    if texto.count("\n") == 1:
+        texto += "\n- (Sin valores numericos registrados)"
     return texto
 
 
