@@ -126,6 +126,12 @@ from streamlit import fragment as st_fragment
 _NAV_COLS = 3
 
 
+def _nav_select_y_colapsar(modulo):
+    """Selecciona un módulo y fuerza el colapso de todas las cortinas."""
+    set_modulo_actual(modulo)
+    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
+
+
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
     """Renderiza una grilla compacta de botones de módulos.
 
@@ -156,8 +162,28 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
 
 
 def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
-    """Versión interna con 3 columnas y `use_container_width` para el acordeón."""
-    render_modulos_grid(modulos, modulo_actual, view_nav_labels)
+    """Versión interna con 3 columnas para el acordeón (colapsa al hacer clic)."""
+    if not modulos:
+        return
+    for i in range(0, len(modulos), _NAV_COLS):
+        fila = modulos[i:i + _NAV_COLS]
+        cols = st.columns(_NAV_COLS)
+        for j, modulo in enumerate(fila):
+            nombre_raw = str(modulo)
+            if not nombre_raw:
+                continue
+            label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+            icono, texto = _split_icon_label(label)
+            tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+            with cols[j]:
+                st.button(
+                    f"{icono} {texto}",
+                    key=f"nav_a_{nombre_raw}",
+                    use_container_width=True,
+                    type=tipo,
+                    on_click=_nav_select_y_colapsar,
+                    args=(nombre_raw,),
+                )
 
 
 def _render_modulos_mobile(modulos, modulo_actual=None, view_nav_labels=None):
@@ -242,11 +268,15 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
     categorias_modulos = get_categorias_modulos()
 
-    # Categoría que contiene el módulo actual
     cat_activa = next(
         (c for c, mods in categorias_modulos.items() if vista_actual in mods),
         None,
     )
+
+    # Versión: al hacer clic en un módulo se incrementa, forzando nuevas
+    # claves de expander que arrancan colapsadas (experiencia premium).
+    nav_version = st.session_state.get("_nav_version", 0)
+    primera_vez = (nav_version == 0)
 
     for cat in cats_ok:
         mods_in_cat = [m for m in categorias_modulos.get(cat, []) if m in menu_set]
@@ -254,11 +284,12 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
             continue
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
-        is_active = (cat == cat_activa)
         label = f"{emoji}  {cat}"
+        expandido = primera_vez and (cat == cat_activa)
 
-        with st.expander(label, expanded=is_active):
-            # Renderizar todos los módulos de la categoría juntos, sin sub-etiquetas
+        with st.expander(
+            label, expanded=expandido, key=f"_nav_e_{cat}_{nav_version}"
+        ):
             todos = [
                 m
                 for sg in obtener_subgrupos_categoria(cat).values()
