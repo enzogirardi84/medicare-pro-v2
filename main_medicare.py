@@ -344,7 +344,7 @@ nombre_usuario = user.get("nombre", "Usuario")
 
 paciente_sel = render_patient_selector(
     mi_empresa, rol, obtener_pacientes_visibles, mapa_detalles_pacientes
-) or paciente_sel
+) or st.session_state.get("paciente_actual")
 
 # Grilla de módulos responsive (chunking nativo st.columns + CSS simple)
 vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
