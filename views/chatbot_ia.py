@@ -44,18 +44,26 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
         from core.ai_assistant import LLM_ENABLED, LLM_PROVIDER, LLM_API_KEY, LLM_MODEL
         if not LLM_ENABLED:
             return None
-        prompt = f"Contexto del paciente: {contexto}\n\nPregunta: {consulta}\n\nResponde de forma clara, concisa y profesional. Si no sabes algo, sugiere consultar con un medico."
+        system_msg = (
+            "Eres un asistente medico profesional que analiza datos clinicos en tiempo real. "
+            "Recibes un contexto completo del paciente (datos personales, medicacion, signos vitales, "
+            "estudios, evoluciones, vacunas, alergias, balance hidrico, etc.). "
+            "Responde SOLO basandote en los datos proporcionados en el contexto. "
+            "Si te preguntan algo que no esta en el contexto, indica que no hay datos registrados. "
+            "Responde de forma clara, concisa y profesional en el mismo idioma de la pregunta."
+        )
+        prompt = f"Contexto completo del sistema:\n{contexto}\n\nPregunta del usuario:\n{consulta}"
         if LLM_PROVIDER == "openai":
             from openai import OpenAI
-            resp = OpenAI(api_key=LLM_API_KEY, timeout=15).chat.completions.create(
-                model=LLM_MODEL, messages=[{"role": "system", "content": "Eres un asistente medico profesional."}, {"role": "user", "content": prompt}],
-                max_tokens=600, temperature=0.3
+            resp = OpenAI(api_key=LLM_API_KEY, timeout=20).chat.completions.create(
+                model=LLM_MODEL, messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
+                max_tokens=800, temperature=0.2
             )
             return resp.choices[0].message.content.strip()
         elif LLM_PROVIDER == "anthropic":
             import anthropic
             resp = anthropic.Anthropic(api_key=LLM_API_KEY).completions.create(
-                model=LLM_MODEL, prompt=f"Human: {prompt}\n\nAssistant:", max_tokens_to_sample=600, temperature=0.3
+                model=LLM_MODEL, prompt=f"Human: {system_msg}\n\n{prompt}\n\nAssistant:", max_tokens_to_sample=800, temperature=0.2
             )
             return resp.completion.strip()
     except Exception as e:
@@ -108,12 +116,31 @@ def _respuesta_local(consulta: str) -> str:
 # ============================================================
 # DATOS DEL PACIENTE
 # ============================================================
+def _edad(fnac_str: str) -> str:
+    try:
+        nac = datetime.strptime(fnac_str, "%d/%m/%Y")
+        edad_dias = (datetime.now() - nac).days
+        if edad_dias < 30:
+            return f"{edad_dias} dias"
+        elif edad_dias < 365:
+            return f"{edad_dias // 30} meses"
+        else:
+            anios = edad_dias // 365
+            meses = (edad_dias % 365) // 30
+            return f"{anios} anios {meses} meses" if meses else f"{anios} anios"
+    except Exception:
+        return fnac_str
+
+
 def _datos_paciente(paciente_sel) -> str:
     detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     partes = paciente_sel.split(" - ", 1)
     nombre = partes[0] if partes else paciente_sel
     dni = partes[1] if len(partes) > 1 else "S/D"
+    fnac = detalles.get("fnac", detalles.get("fecha_nacimiento", ""))
     texto = f"Paciente: {nombre} (DNI: {dni})"
+    if fnac:
+        texto += f"\nFecha nac: {fnac} ({_edad(fnac)})"
     if detalles.get("alergias"):
         texto += f"\nAlergias: {detalles['alergias']}"
     if detalles.get("patologias"):
@@ -122,7 +149,45 @@ def _datos_paciente(paciente_sel) -> str:
         texto += f"\nObra social: {detalles['obra_social']}"
     if detalles.get("telefono"):
         texto += f"\nTelefono: {detalles['telefono']}"
+    if detalles.get("direccion"):
+        texto += f"\nDireccion: {detalles['direccion']}"
+    if detalles.get("contacto_emergencia"):
+        texto += f"\nContacto emergencia: {detalles['contacto_emergencia']}"
     return texto
+
+
+def _contexto_completo(paciente_sel: str, mi_empresa: str) -> str:
+    """Arma un contexto completo con TODOS los datos del sistema para la IA."""
+    partes = []
+    partes.append("=== DATOS DEL PACIENTE ===")
+    partes.append(_datos_paciente(paciente_sel))
+    partes.append("\n=== INDICACIONES / MEDICACION ===")
+    partes.append(_medicaciones(paciente_sel))
+    partes.append("\n=== SIGNOS VITALES ===")
+    partes.append(_vitales(paciente_sel))
+    partes.append("\n=== ESTUDIOS ===")
+    partes.append(_estudios(paciente_sel))
+    partes.append("\n=== EVOLUCIONES ===")
+    partes.append(_evoluciones(paciente_sel))
+    partes.append("\n=== VACUNAS ===")
+    partes.append(_listar_vacunas(paciente_sel))
+    partes.append("\n=== ALERGIAS Y PATOLOGIAS ===")
+    partes.append(_alergias(paciente_sel))
+    partes.append("\n=== TURNOS ===")
+    partes.append(_turnos(paciente_sel))
+    partes.append("\n=== BALANCE HIDRICO ===")
+    partes.append(_balance(paciente_sel))
+    partes.append("\n=== CONSENTIMIENTOS ===")
+    partes.append(_consentimientos(paciente_sel))
+    partes.append("\n=== INVENTARIO (STOCK CRITICO) ===")
+    partes.append(_stock_critico(mi_empresa))
+    partes.append("\n=== FACTURACION ===")
+    partes.append(_facturacion(mi_empresa))
+    partes.append("\n=== PACIENTES DEL SISTEMA ===")
+    partes.append(_conteo_pacientes())
+    partes.append("\n=== PROXIMOS CUMPLEANIOS ===")
+    partes.append(_proximos_cumple())
+    return "\n".join(partes)
 
 
 def _medicaciones(paciente_sel) -> str:
@@ -296,7 +361,7 @@ def _consentimientos(paciente_sel) -> str:
 MODULOS_MAP = {
     "receta": "Recetas", "indicacion": "Recetas", "medicamento": "Recetas", "medicacion": "Recetas",
     "turno": "Turnos Online", "agenda": "Turnos Online",
-    "estudio": "Estudios", "laboratorio": "Laboratorio",
+    "estudio": "Estudios", "laboratorio": "Estudios",
     "evolucion": "Evolucion", "clinica": "Clinica",
     "vacuna": "Vacunacion",
     "factura": "Factura Electronica", "cobro": "Caja",
@@ -390,6 +455,14 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
 
     st.divider()
 
+    # Auto-scroll al ultimo mensaje
+    st.markdown("""
+        <script>
+        function chatScroll(){var c=parent.document.querySelector('[data-testid="stVerticalBlock"] [style*="overflow"]');if(c){c.scrollTop=c.scrollHeight;}}
+        setTimeout(chatScroll,100);setTimeout(chatScroll,500);
+        </script>
+    """, unsafe_allow_html=True)
+
     # Chat
     chat = st.container(height=400, border=True)
     with chat:
@@ -427,8 +500,9 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
             respuesta = ""
             fuentes = []
 
-            # 1. IA
-            resp_ia = preguntar_a_ia(texto, _datos_paciente(paciente_sel))
+            # 1. IA con contexto completo del sistema
+            ctx = _contexto_completo(paciente_sel, mi_empresa)
+            resp_ia = preguntar_a_ia(texto, ctx)
             if resp_ia:
                 respuesta = resp_ia
             else:
@@ -444,9 +518,7 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
                 else:
                     # 3. Local
                     respuesta = _respuesta_local(texto)
-                    if respuesta and "default" not in str(type(respuesta)):
-                        pass
-                    else:
+                    if not respuesta or respuesta.startswith("No tengo informacion"):
                         res = buscar_en_web(texto)
                         if res:
                             respuesta = "Info encontrada:\n" + "\n".join(f"- {r['titulo']}: {r['url']}" for r in res)
