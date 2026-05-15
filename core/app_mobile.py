@@ -78,71 +78,70 @@ def cliente_es_tablet_probable() -> bool:
 
 
 def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles_fn):
-    """Selector alternativo de pacientes para móviles (expander colapsable)."""
+    """Selector de pacientes para móviles (siempre visible, sin expander)."""
     if not cliente_es_movil_probable():
         return None
 
     es_tablet = cliente_es_tablet_probable()
 
-    with st.expander(
-        "Selector de paciente",
-        expanded=(st.session_state.get("paciente_actual") is None),
-    ):
-        st.caption("Buscá por nombre, DNI o empresa.")
+    buscar = st.text_input(
+        "Buscar paciente",
+        placeholder="Nombre, DNI o palabra clave",
+        key="mc_buscar_paciente_mobile",
+    )
 
-        buscar = st.text_input(
-            "Buscar paciente",
-            placeholder="Nombre, DNI o palabra clave",
-            key="mc_buscar_paciente_mobile",
+    p_f = obtener_pacientes_fn(
+        st.session_state,
+        mi_empresa,
+        rol,
+        incluir_altas=False,
+        busqueda=buscar,
+    )
+
+    limite = 25 if es_tablet else 15
+
+    if not buscar and len(p_f) > limite:
+        st.caption(f"Mostrando {limite} pacientes. Escribí para filtrar.")
+        p_f = p_f[:limite]
+
+    if not p_f:
+        st.warning("No hay pacientes visibles.")
+        return None
+
+    opciones = [item[0] for item in p_f]
+    display_map = {item[0]: item[1] for item in p_f}
+
+    valor_actual = st.session_state.get("paciente_actual")
+    idx_actual = opciones.index(valor_actual) if valor_actual in opciones else 0
+
+    st.caption("Paciente activo")
+    paciente_sel_mobile = st.selectbox(
+        "Seleccionar paciente",
+        opciones,
+        index=idx_actual,
+        format_func=lambda x: display_map.get(x, x),
+        label_visibility="collapsed",
+    )
+
+    _cambio_paciente = (
+        paciente_sel_mobile is not None
+        and paciente_sel_mobile != st.session_state.get("paciente_actual")
+    )
+    if _cambio_paciente:
+        set_paciente_actual(st.session_state, paciente_sel_mobile)
+
+    if paciente_sel_mobile:
+        det = mapa_detalles_fn(st.session_state).get(paciente_sel_mobile, {})
+        cols_pac = st.columns([1, 3])
+        cols_pac[0].markdown(
+            f"<span style='font-size:.75rem;color:#94a3b8;'>"
+            f"{det.get('dni', 'S/D')}</span>",
+            unsafe_allow_html=True,
+        )
+        cols_pac[1].markdown(
+            f"<span style='font-size:.75rem;color:#94a3b8;'>"
+            f"{det.get('obra_social', 'S/D')}</span>",
+            unsafe_allow_html=True,
         )
 
-        p_f = obtener_pacientes_fn(
-            st.session_state,
-            mi_empresa,
-            rol,
-            incluir_altas=False,
-            busqueda=buscar,
-        )
-
-        limite = 25 if es_tablet else 15
-
-        if not buscar and len(p_f) > limite:
-            st.caption(f"Mostrando {limite} pacientes. Escribí para filtrar.")
-            p_f = p_f[:limite]
-
-        if not p_f:
-            st.warning("No hay pacientes visibles.")
-            return None
-
-        opciones = [item[0] for item in p_f]
-        display_map = {item[0]: item[1] for item in p_f}
-
-        valor_actual = st.session_state.get("paciente_actual")
-        idx_actual = opciones.index(valor_actual) if valor_actual in opciones else 0
-
-        paciente_sel_mobile = st.selectbox(
-            "Seleccionar paciente",
-            opciones,
-            index=idx_actual,
-            format_func=lambda x: display_map.get(x, x),
-        )
-
-        _cambio_paciente = (
-            paciente_sel_mobile is not None
-            and paciente_sel_mobile != st.session_state.get("paciente_actual")
-        )
-        if _cambio_paciente:
-            set_paciente_actual(st.session_state, paciente_sel_mobile)
-            # El selectbox ya trigger un rerun automaticamente
-
-        if paciente_sel_mobile:
-            det = mapa_detalles_fn(st.session_state).get(paciente_sel_mobile, {})
-            st.success(str(paciente_sel_mobile))
-            st.caption(
-                f"DNI: {det.get('dni', 'S/D')} | "
-                f"OS: {det.get('obra_social', 'S/D')}"
-            )
-
-        # Solo propagar al caller si el paciente cambió en esta interaccion
-        return paciente_sel_mobile if _cambio_paciente else None
-    return None
+    return paciente_sel_mobile if _cambio_paciente else None
