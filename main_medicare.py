@@ -43,7 +43,7 @@ from core.app_session import (
     limpiar_sesion_app,
 )
 from core.app_theme import aplicar_css_base
-from core.app_mobile import cliente_es_movil_probable, render_mobile_patient_selector
+from core.app_mobile import render_patient_selector
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401
@@ -55,7 +55,6 @@ from core.seo_streamlit import (
 )
 from core.sidebar_components import (
     render_sidebar_contexto_clinico as _render_sidebar_contexto_clinico,
-    render_sidebar_pacientes_y_alertas as _render_sidebar_pacientes_y_alertas_fn,
 )
 from core.ui_professional import apply_professional_theme
 from core.view_registry import build_view_maps
@@ -305,22 +304,6 @@ with st.sidebar:
         key="sidebar_logout",
         on_click=_logout_callback,
     )
-    st.divider()
-
-    # En móvil, el sidebar NO tiene selector de pacientes (usa el central)
-    if not cliente_es_movil_probable():
-        paciente_sel = _render_sidebar_pacientes_y_alertas_fn(
-            mi_empresa,
-            rol,
-            obtener_pacientes_fn=obtener_pacientes_visibles,
-            obtener_alertas_fn=obtener_alertas_clinicas,
-            mapa_detalles_fn=mapa_detalles_pacientes,
-            es_control_total_fn=es_control_total,
-            valor_por_modo_liviano_fn=valor_por_modo_liviano,
-            limite_pacientes_fn=limite_pacientes_sidebar,
-        )
-    else:
-        paciente_sel = None
 
 # Rerun limpio tras logout (fuera del contexto del botón para evitar desconexión websocket)
 if st.session_state.pop("_mc_logout_requested", False):
@@ -359,60 +342,9 @@ if not vista_actual:
 # ============================================================
 nombre_usuario = user.get("nombre", "Usuario")
 
-# Selector alternativo en móvil + mostrar botones nativos de sidebar (el custom JS no funciona en iframe sandboxed de Streamlit Cloud)
-# CSS de rescate para mostrar controles nativos de sidebar en móvil.
-# Usamos st.html (sin iframe) para que el CSS alcance los elementos shell de Streamlit.
-# st.markdown puede aislar el <style> y no afectar el header/sidebar nativos.
-if cliente_es_movil_probable():
-    st.html(
-        """
-        <style>
-        @media (max-width: 767px) {
-            /* Forzar visibilidad del header de Streamlit en móvil (ahi vive el botón hamburguesa) */
-            [data-testid="stHeader"],
-            header[data-testid="stHeader"] {
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                height: auto !important;
-                min-height: 44px !important;
-            }
-            /* Forzar visibilidad de TODOS los botones nativos de sidebar */
-            [data-testid="stSidebarCollapsedControl"],
-            [data-testid="collapsedControl"],
-            [data-testid="stExpandSidebarButton"],
-            [data-testid="stSidebarCollapseButton"],
-            button[kind="headerNoPadding"],
-            button[kind="header"],
-            [aria-label="Open sidebar"],
-            [aria-label="Close sidebar"] {
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                pointer-events: auto !important;
-                width: auto !important;
-                height: auto !important;
-                min-width: 44px !important;
-                min-height: 44px !important;
-            }
-            /* Si Streamlit pone el botón colapsado en un div oculto, mostrarlo */
-            [data-testid="stSidebarCollapsedControl"] {
-                position: fixed !important;
-                top: 8px !important;
-                left: 8px !important;
-                z-index: 1000000 !important;
-            }
-        }
-        </style>
-        """
-    )
-
-paciente_mobile = render_mobile_patient_selector(
+paciente_sel = render_patient_selector(
     mi_empresa, rol, obtener_pacientes_visibles, mapa_detalles_pacientes
-)
-
-if paciente_mobile:
-    paciente_sel = paciente_mobile
+) or paciente_sel
 
 # Grilla de módulos responsive (chunking nativo st.columns + CSS simple)
 vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
@@ -440,7 +372,7 @@ if not paciente_sel:
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(37,99,235,0.05));border:1px solid rgba(14,165,233,0.2);border-radius:20px;padding:28px 24px;margin:10px 0 20px;text-align:center;">
         <h3 style="margin:0 0 8px;color:#e2e8f0;">Bienvenido, {nombre_usuario}</h3>
-        <p style="margin:0 0 4px;color:#94a3b8;">Selecciona un paciente del panel lateral izquierdo para comenzar.</p>
+        <p style="margin:0 0 4px;color:#94a3b8;">Selecciona un paciente del selector superior para comenzar.</p>
         <p style="margin:0;color:#64748b;font-size:0.85rem;">Clinica: {mi_empresa} · Rol: {rol}</p>
     </div>
     """, unsafe_allow_html=True)

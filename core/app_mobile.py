@@ -77,11 +77,9 @@ def cliente_es_tablet_probable() -> bool:
     return False
 
 
-def render_mobile_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles_fn):
-    """Selector de pacientes para móviles (siempre visible, sin expander)."""
-    if not cliente_es_movil_probable():
-        return None
-
+def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles_fn):
+    """Selector de pacientes central (visible siempre, sin expander)."""
+    from core.app_mobile import cliente_es_tablet_probable
     es_tablet = cliente_es_tablet_probable()
 
     buscar = st.text_input(
