@@ -371,12 +371,17 @@ def _balance(paciente_sel) -> str:
 
 
 def _consentimientos(paciente_sel) -> str:
-    cons = [c for c in st.session_state.get("consentimientos_db", []) if _coincide_paciente(paciente_sel, c.get("paciente", ""))]
+    raw = st.session_state.get("consentimientos_db")
+    if not isinstance(raw, list):
+        return "Sin documentos firmados."
+    cons = [c for c in raw if isinstance(c, dict) and _coincide_paciente(paciente_sel, c.get("paciente", "") or c.get("paciente_id", ""))]
     if not cons:
         return "Sin documentos firmados."
     texto = "Documentos firmados:\n"
     for c in cons[-5:]:
-        texto += f"- {c.get('fecha','?')}: {c.get('observaciones','')[:60]}\n"
+        fecha = c.get("fecha") or c.get("fecha_firma") or c.get("created_at", "?")
+        obs = str(c.get("observaciones") or c.get("notas") or "")
+        texto += f"- {fecha}: {obs[:60]}\n"
     return texto
 
 
