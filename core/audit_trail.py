@@ -267,16 +267,26 @@ class AuditTrail:
             return "other"
     
     def _persist_entry(self, entry: AuditEntry):
-        """Persiste entrada a storage inmutable."""
+        """Persiste entrada a storage inmutable (session_state + Supabase)."""
         # Guardar en session_state de Streamlit
         if 'audit_trail' not in st.session_state:
             st.session_state['audit_trail'] = []
-        
-        # Convertir a dict para almacenamiento
+
         entry_dict = asdict(entry)
         st.session_state['audit_trail'].append(entry_dict)
-        
-        # TODO: Persistir a Supabase/SQL con permisos append-only
+
+        # Persistir a Supabase (append-only)
+        self._persist_to_supabase(entry_dict)
+
+    def _persist_to_supabase(self, entry_dict: dict):
+        """Inserta entrada de auditoría en Supabase (solo append, sin UPDATE/DELETE)."""
+        try:
+            from core._database_supabase import supabase
+            if supabase is None:
+                return
+            supabase.table("audit_trail").insert(entry_dict).execute()
+        except Exception:
+            pass  # Falla silenciosa — no debe bloquear la app
     
     def verify_chain(self) -> bool:
         """

@@ -1,5 +1,6 @@
 """Datos y helpers de emergencias. Extraído de views/emergencias.py."""
 import base64
+import html
 import io
 
 from PIL import Image
@@ -117,7 +118,7 @@ def _firma_a_b64(canvas_result):
 
 
 def _badge_html(texto, clase):
-    return f"<span class='mc-chip {clase}'>{texto}</span>"
+    return f"<span class='mc-chip {html.escape(clase)}'>{html.escape(texto)}</span>"
 
 
 def _triage_meta(grado):

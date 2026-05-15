@@ -1,3 +1,4 @@
+import html
 from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
@@ -269,14 +270,14 @@ def render_red_profesionales(mi_empresa, user, rol):
             st.markdown(
                 f"""
                 <div class="mc-card">
-                    <h3>{vista.get("nombre", "")}</h3>
-                    <p><strong>{vista.get("tipo", "")}</strong> | {vista.get("titulo", "")}</p>
-                    <p>Especialidad: {vista.get("especialidad", "S/D")} | Matricula: {vista.get("matricula", "S/D")}</p>
-                    <p>Organizacion: {vista.get("organizacion", "S/D")} | Modalidad: {vista.get("modalidad", "S/D")}</p>
-                    <p>Zona: {vista.get("zona", "S/D")} | Disponibilidad: {vista.get("disponibilidad", "S/D")}</p>
-                    <p>{vista.get("descripcion", "")}</p>
-                    <p><strong>Servicios:</strong> {servicios_txt}</p>
-                    <p><strong>WhatsApp:</strong> {vista.get("whatsapp", "S/D")}</p>
+                    <h3>{html.escape(vista.get("nombre", ""))}</h3>
+                    <p><strong>{html.escape(vista.get("tipo", ""))}</strong> | {html.escape(vista.get("titulo", ""))}</p>
+                    <p>Especialidad: {html.escape(vista.get("especialidad", "S/D"))} | Matricula: {html.escape(vista.get("matricula", "S/D"))}</p>
+                    <p>Organizacion: {html.escape(vista.get("organizacion", "S/D"))} | Modalidad: {html.escape(vista.get("modalidad", "S/D"))}</p>
+                    <p>Zona: {html.escape(vista.get("zona", "S/D"))} | Disponibilidad: {html.escape(vista.get("disponibilidad", "S/D"))}</p>
+                    <p>{html.escape(vista.get("descripcion", ""))}</p>
+                    <p><strong>Servicios:</strong> {html.escape(servicios_txt)}</p>
+                    <p><strong>WhatsApp:</strong> {html.escape(vista.get("whatsapp", "S/D"))}</p>
                 </div>
                 """,
                 unsafe_allow_html=True,

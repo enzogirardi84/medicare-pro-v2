@@ -1,5 +1,6 @@
 """Tabs UI de emergencias. Extraído de views/emergencias.py."""
 import base64
+import html
 from uuid import uuid4
 
 import streamlit as st
@@ -265,10 +266,10 @@ def _render_tab_panel(paciente_sel, detalles, eventos, es_movil):
         st.markdown(
             f"""
             <div class="mc-note">
-                <strong>Paciente:</strong> {paciente_sel}<br>
-                <strong>Domicilio:</strong> {detalles.get("direccion", "S/D")}<br>
-                <strong>Telefono:</strong> {detalles.get("telefono", "S/D")}<br>
-                <strong>Alergias:</strong> {detalles.get("alergias", "Sin datos")}
+                <strong>Paciente:</strong> {html.escape(paciente_sel)}<br>
+                <strong>Domicilio:</strong> {html.escape(detalles.get("direccion", "S/D"))}<br>
+                <strong>Telefono:</strong> {html.escape(detalles.get("telefono", "S/D"))}<br>
+                <strong>Alergias:</strong> {html.escape(detalles.get("alergias", "Sin datos"))}
             </div>
             """,
             unsafe_allow_html=True,

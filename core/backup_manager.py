@@ -400,35 +400,67 @@ class BackupManager:
         
         log_event("backup", f"Files backup completed: {len(paths)} sources")
     
+    def _derive_fernet_key(self, password: str) -> bytes:
+        """Deriva una clave Fernet válida (base64 URL-safe, 32 bytes) desde un password."""
+        import base64
+        raw = hashlib.sha256(password.encode()).digest()  # 32 bytes
+        return base64.urlsafe_b64encode(raw)
+
     def _encrypt_file(self, file_path: Path, password: str) -> Path:
-        """Encripta archivo usandoAES."""
+        """Encripta archivo usando Fernet (AES-256-CBC + HMAC)."""
         try:
             from cryptography.fernet import Fernet
-            
-            # Derivar key de password
-            key = hashlib.sha256(password.encode()).digest()
+
+            key = self._derive_fernet_key(password)
             f = Fernet(key)
-            
-            # Leer y encriptar
+
             with open(file_path, 'rb') as file:
                 data = file.read()
-            
+
             encrypted = f.encrypt(data)
-            
-            # Guardar
+
             enc_path = file_path.with_suffix(file_path.suffix + ".enc")
             with open(enc_path, 'wb') as file:
                 file.write(encrypted)
-            
-            # Eliminar original
+
             file_path.unlink()
-            
+
             log_event("backup", f"File encrypted: {enc_path}")
             return enc_path
-            
+
         except ImportError:
             log_event("backup_error", "cryptography not installed, skipping encryption")
             return file_path
+
+    def _decrypt_file(self, file_path: Path, password: str) -> Path:
+        """Desencripta archivo cifrado con _encrypt_file."""
+        from cryptography.fernet import InvalidToken
+        try:
+            from cryptography.fernet import Fernet
+
+            key = self._derive_fernet_key(password)
+            f = Fernet(key)
+
+            with open(file_path, 'rb') as file:
+                encrypted = file.read()
+
+            decrypted = f.decrypt(encrypted)
+
+            dec_path = file_path.with_suffix('')  # remove .enc
+            with open(dec_path, 'wb') as file:
+                file.write(decrypted)
+
+            file_path.unlink()
+
+            log_event("backup", f"File decrypted: {dec_path}")
+            return dec_path
+
+        except ImportError:
+            log_event("backup_error", "cryptography not installed, cannot decrypt")
+            raise
+        except InvalidToken:
+            log_event("backup_error", "Invalid encryption password or corrupted file")
+            raise
     
     def _calculate_checksum(self, file_path: Path) -> str:
         """Calcula SHA256 checksum."""
@@ -524,16 +556,18 @@ class BackupManager:
         
         return current_checksum == job.checksum
     
-    def restore_backup(self, job_id: str, target_dir: Optional[str] = None) -> bool:
+    def restore_backup(self, job_id: str, target_dir: Optional[str] = None,
+                       decrypt_password: Optional[str] = None) -> bool:
         """
         Restaura un backup.
-        
+
         WARNING: Operación destructiva. Usar con precaución.
-        
+
         Args:
             job_id: ID del backup a restaurar
             target_dir: Directorio destino (None = original)
-        
+            decrypt_password: Password para desencriptar (default: BACKUP_PASSWORD env)
+
         Returns:
             True si la restauración fue exitosa
         """
@@ -541,31 +575,54 @@ class BackupManager:
         if not job or not job.file_path:
             log_event("backup_error", f"Backup job {job_id} not found")
             return False
-        
-        # Verificar primero
+
         if not self.verify_backup(job_id):
             log_event("backup_error", f"Backup {job_id} integrity check failed")
             return False
-        
+
+        restore_dir = None
         try:
             file_path = Path(job.file_path)
-            
-            # Desencriptar si es necesario
-            # TODO: Implementar desencriptación
-            
-            # Extraer
+
+            # Desencriptar si el archivo termina en .enc
+            if file_path.suffix == '.enc':
+                password = decrypt_password or os.getenv("BACKUP_PASSWORD")
+                if not password:
+                    log_event("backup_error",
+                              "Backup está encriptado pero no hay password "
+                              "(pasar decrypt_password o variable BACKUP_PASSWORD)")
+                    return False
+                log_event("backup", f"Decrypting backup: {file_path.name}")
+                file_path = self._decrypt_file(file_path, password)
+
+            # Extraer tar.gz a directorio temporal
+            backup_stem = file_path.stem  # e.g. "daily_full_20260425_020000"
             restore_dir = Path(target_dir) if target_dir else Path("restore_temp")
-            restore_dir.mkdir(exist_ok=True)
-            
-            with tarfile.open(file_path, "r:gz") as tar:
-                tar.extractall(restore_dir)
-            
+            restore_dir.mkdir(parents=True, exist_ok=True)
+            extract_to = restore_dir / backup_stem
+
+            if not extract_to.exists():
+                with tarfile.open(file_path, "r:gz") as tar:
+                    tar.extractall(restore_dir)
+
+            # Leer manifest
+            manifest_path = extract_to / "manifest.json"
+            if manifest_path.exists():
+                with open(manifest_path) as f:
+                    manifest = json.load(f)
+            else:
+                manifest = {"databases": [], "files": []}
+
             # Restaurar databases
-            # TODO: Implementar restauración de DBs
-            
+            db_dir = extract_to / "databases"
+            if db_dir.exists():
+                self._restore_databases(manifest.get("databases", []), db_dir)
+
             # Restaurar archivos
-            # TODO: Implementar restauración de archivos
-            
+            files_dir = extract_to / "files"
+            if files_dir.exists():
+                self._restore_files(manifest.get("files", []), files_dir)
+
             audit_log(
                 AuditEventType.DATA_RESTORE,
                 resource_type="backup",
@@ -573,13 +630,127 @@ class BackupManager:
                 action="RESTORE",
                 description=f"Backup restored: {job_id}"
             )
-            
+
             log_event("backup", f"Backup {job_id} restored successfully")
             return True
-            
+
         except Exception as e:
             log_event("backup_error", f"Restore failed: {e}")
             return False
+        finally:
+            if restore_dir and restore_dir.exists():
+                shutil.rmtree(restore_dir, ignore_errors=True)
+
+    def _restore_databases(self, databases: List[str], db_dir: Path):
+        """Restaura bases de datos desde un backup."""
+        for db_name in databases:
+            if db_name == "supabase":
+                self._restore_supabase(db_dir / "supabase_backup.sql")
+            elif db_name == "local":
+                self._restore_sqlite(db_dir / "local_backup.db")
+            elif db_name == "session_state":
+                self._restore_session_state(db_dir / "session_state.json")
+
+    def _restore_supabase(self, backup_file: Path):
+        """Restaura Supabase usando pg_restore."""
+        if not backup_file.exists():
+            log_event("backup_error", "Supabase backup file not found for restore")
+            return
+        import re
+        db_url = os.getenv("DATABASE_URL", "")
+        if not db_url:
+            log_event("backup_error", "DATABASE_URL not set for Supabase restore")
+            return
+        try:
+            match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(\w+)', db_url)
+            if not match:
+                log_event("backup_error", "Invalid DATABASE_URL format")
+                return
+            db_user, db_password, db_host, db_port, db_name = match.groups()
+        except Exception as e:
+            log_event("backup_error", f"Failed to parse DATABASE_URL: {e}")
+            return
+        try:
+            env = os.environ.copy()
+            env["PGPASSWORD"] = db_password
+            result = subprocess.run(
+                [
+                    "pg_restore",
+                    "-h", db_host, "-p", db_port,
+                    "-U", db_user,
+                    "-d", db_name,
+                    "--clean", "--if-exists",
+                    str(backup_file)
+                ],
+                capture_output=True, text=True, timeout=600, env=env
+            )
+            if result.returncode == 0:
+                log_event("backup", "Supabase restore completed")
+            else:
+                log_event("backup_error", f"pg_restore failed: {result.stderr[:500]}")
+        except FileNotFoundError:
+            log_event("backup_error", "pg_restore not found, skipping Supabase restore")
+        except Exception as e:
+            log_event("backup_error", f"Supabase restore failed: {e}")
+
+    def _restore_sqlite(self, backup_file: Path):
+        """Restaura base SQLite local desde backup."""
+        if not backup_file.exists():
+            log_event("backup_error", "SQLite backup file not found for restore")
+            return
+        try:
+            local_db = Path("local_data.db")
+            if local_db.exists():
+                backup_path = local_db.with_suffix(local_db.suffix + ".before_restore")
+                shutil.copy2(local_db, backup_path)
+                log_event("backup", f"Current SQLite backed up to {backup_path}")
+            shutil.copy2(backup_file, local_db)
+            log_event("backup", "SQLite restore completed")
+        except Exception as e:
+            log_event("backup_error", f"SQLite restore failed: {e}")
+
+    def _restore_session_state(self, backup_file: Path):
+        """Restaura session_state de Streamlit desde backup JSON."""
+        if not backup_file.exists():
+            log_event("backup_error", "Session state backup file not found for restore")
+            return
+        try:
+            import streamlit as st
+            with open(backup_file) as f:
+                data = json.load(f)
+            for key, value in data.items():
+                st.session_state[key] = value
+            log_event("backup", f"Session state restore completed ({len(data)} keys)")
+        except Exception as e:
+            log_event("backup_error", f"Session state restore failed: {e}")
+
+    def _restore_files(self, original_paths: List[str], files_dir: Path):
+        """Restaura archivos desde backup a sus ubicaciones originales."""
+        restored_count = 0
+        for original_path_str in original_paths:
+            original = Path(original_path_str)
+            backup_item = files_dir / original.name
+            if not backup_item.exists():
+                log_event("backup_error", f"Backup file/dir not found: {backup_item}")
+                continue
+            try:
+                if original.exists():
+                    backup_orig = original.with_suffix(original.suffix + ".before_restore")
+                    if not backup_orig.exists():
+                        shutil.move(str(original), str(backup_orig))
+                        log_event("backup", f"Current file backed up to {backup_orig}")
+                    else:
+                        shutil.rmtree(str(original), ignore_errors=True)
+                if backup_item.is_dir():
+                    shutil.copytree(backup_item, original, dirs_exist_ok=True)
+                else:
+                    original.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(backup_item, original)
+                restored_count += 1
+                log_event("backup", f"Restored: {original}")
+            except Exception as e:
+                log_event("backup_error", f"Failed to restore {original}: {e}")
+        log_event("backup", f"Files restore completed: {restored_count}/{len(original_paths)} items")
     
     def get_backup_list(self) -> List[Dict[str, Any]]:
         """Lista todos los backups disponibles."""

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import html
 from datetime import datetime
 
 import streamlit as st
@@ -136,7 +137,7 @@ def render_laboratorio(paciente_sel, mi_empresa, user, rol):
                         an = r.get("archivo_nombre", "resultado")
                         ab = r["archivo_b64"]
                         cols_btn[0].markdown(
-                            f'<a href="data:{at};base64,{ab}" download="{an}" target="_blank">Ver archivo</a>',
+                            f'<a href="data:{html.escape(at)};base64,{html.escape(ab)}" download="{html.escape(an)}" target="_blank">Ver archivo</a>',
                             unsafe_allow_html=True,
                         )
 

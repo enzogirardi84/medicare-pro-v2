@@ -304,10 +304,10 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     st.error("Marcada como URGENTE")
                 st.markdown(f"**Fecha:** `{fecha}`", unsafe_allow_html=True)
                 if plantilla:
-                    st.markdown(f"**Plantilla:** {plantilla}", unsafe_allow_html=True)
+                    st.markdown(f"**Plantilla:** {html.escape(plantilla)}", unsafe_allow_html=True)
                 if nota:
                     st.markdown("**Nota:**", unsafe_allow_html=True)
-                    st.markdown(nota, unsafe_allow_html=True)
+                    st.markdown(html.escape(nota), unsafe_allow_html=True)
                 if firma and firma.strip():
                     st.success("Firmado digitalmente")
 

@@ -1,4 +1,4 @@
-"""Navegación de módulos: query params, grilla responsive, resolución de vistas.
+"""Navegación de módulos: query params, acordeón por categorías, resolución de vistas.
 
 Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
@@ -13,14 +13,21 @@ import streamlit as st
 from core.app_logging import log_event
 from core.app_mobile import cliente_es_movil_probable
 from core.nav_helpers import (
-    MC_FILTRO_TODAS,
     categorias_con_modulos_en_menu,
-    etiqueta_filtro_categoria,
     get_categorias_modulos,
+    modulos_en_categoria,
+    obtener_subgrupos_categoria,
 )
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 
-_VIEW_FN_CACHE: dict = {}  # Cache de funciones render por nombre de módulo (se limpia en re-deploy por reload del módulo)
+_VIEW_FN_CACHE: dict = {}
+
+_CATEGORY_EMOJIS = {
+    "Clínica": "\U0001FA7A",
+    "Gestión": "\U0001F4CA",
+    "Emergencias": "\U0001F691",
+    "Legal y documentación": "\u2696\ufe0f",
+}
 
 
 def set_modulo_actual(modulo_seleccionado, rerun=False):
@@ -68,14 +75,12 @@ def procesar_query_params_navegacion(menu_set):
             return
         modulo_nuevo = str(raw_mod[0] if isinstance(raw_mod, list) else raw_mod).strip()
         if not modulo_nuevo or modulo_nuevo not in menu_set:
-            # Limpiar param inválido sin rerun
             try:
                 del st.query_params["modulo"]
             except Exception:
                 pass
             return
         if st.session_state.get("modulo_actual") == modulo_nuevo:
-            # Ya está en el módulo pedido; solo limpiar param
             try:
                 del st.query_params["modulo"]
             except Exception:
@@ -116,70 +121,20 @@ def resolve_current_view(menu, menu_set=None):
 from streamlit import fragment as st_fragment
 
 
-def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
-    """Renderiza la navegación de módulos.
+# ── Grilla de botones (usada tanto desde acordeón como desde móvil) ──────────
 
-    - Escritorio: filas de 6 botones nativas (st.columns) + CSS simple para estética.
-    - Móvil: popover con botones verticales al 100% para cierre automatico.
+
+def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
+    """Renderiza una grilla compacta de botones de módulos (4 columnas).
+
+    Expuesta públicamente para tests.
     """
     if not modulos:
         return
-
-    es_movil = cliente_es_movil_probable()
-
-    if es_movil:
-        if hasattr(st, "popover"):
-            with st.popover("Menu de modulos", width='stretch'):
-                for modulo in modulos:
-                    nombre_raw = str(modulo)
-                    if not nombre_raw:
-                        continue
-                    label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-                    icono, texto = _split_icon_label(label)
-                    btn_label = f"{icono} {texto}".strip()
-                    tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-                    if st.button(
-                        btn_label,
-                        key=f"nav_pop_{nombre_raw}",
-                        width='stretch',
-                        type=tipo,
-                    ):
-                        set_modulo_actual(nombre_raw, rerun=True)
-            return
-
-        if "menu_nav_abierto" not in st.session_state:
-            st.session_state["menu_nav_abierto"] = False
-
-        def cambiar_modulo_mobile(modulo_seleccionado):
-            set_modulo_actual(modulo_seleccionado)
-            st.session_state["menu_nav_abierto"] = False
-
-        # ── Fallback para Streamlit sin st.popover ──
-        with st.expander("Menu de modulos", expanded=st.session_state["menu_nav_abierto"]):
-            for modulo in modulos:
-                nombre_raw = str(modulo)
-                if not nombre_raw:
-                    continue
-                label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-                icono, texto = _split_icon_label(label)
-                btn_label = f"{icono} {texto}".strip()
-                tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-                st.button(
-                    btn_label,
-                    key=f"nav_exp_{nombre_raw}",
-                    width='stretch',
-                    type=tipo,
-                    on_click=cambiar_modulo_mobile,
-                    args=(nombre_raw,),
-                )
-        return
-
-    # Escritorio: filas de 4 columnas para evitar textos cortados.
-    chunk_size = 4
-    for i in range(0, len(modulos), chunk_size):
-        fila_modulos = modulos[i:i + chunk_size]
-        cols = st.columns(chunk_size)
-        for j, modulo in enumerate(fila_modulos):
+    for i in range(0, len(modulos), 4):
+        fila = modulos[i:i + 4]
+        cols = st.columns(4)
+        for j, modulo in enumerate(fila):
             nombre_raw = str(modulo)
             if not nombre_raw:
                 continue
@@ -190,7 +145,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             with cols[j]:
                 st.button(
                     btn_label,
-                    key=f"nav_btn_{nombre_raw}",
+                    key=f"nav_m_{nombre_raw}",
                     width='stretch',
                     type=tipo,
                     on_click=set_modulo_actual,
@@ -198,48 +153,104 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 )
 
 
+_render_modulos_grid_inline = render_modulos_grid
+
+
+def _render_modulos_mobile(modulos, modulo_actual=None, view_nav_labels=None):
+    """Móvil: popover o expander con botones verticales."""
+    if not modulos:
+        return
+    if hasattr(st, "popover"):
+        with st.popover("Menú de módulos", width='stretch'):
+            for modulo in modulos:
+                nombre_raw = str(modulo)
+                if not nombre_raw:
+                    continue
+                label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+                icono, texto = _split_icon_label(label)
+                btn_label = f"{icono} {texto}".strip()
+                tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+                if st.button(btn_label, key=f"nav_pop_{nombre_raw}", width='stretch', type=tipo):
+                    set_modulo_actual(nombre_raw, rerun=True)
+        return
+
+    if "menu_nav_abierto" not in st.session_state:
+        st.session_state["menu_nav_abierto"] = False
+
+    def cambiar_modulo_mobile(mod_seleccionado):
+        set_modulo_actual(mod_seleccionado)
+        st.session_state["menu_nav_abierto"] = False
+
+    with st.expander("Menú de módulos", expanded=st.session_state["menu_nav_abierto"]):
+        for modulo in modulos:
+            nombre_raw = str(modulo)
+            if not nombre_raw:
+                continue
+            label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+            icono, texto = _split_icon_label(label)
+            btn_label = f"{icono} {texto}".strip()
+            tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+            st.button(
+                btn_label, key=f"nav_exp_{nombre_raw}", width='stretch', type=tipo,
+                on_click=cambiar_modulo_mobile, args=(nombre_raw,),
+            )
+
+
+# ── Render principal (acordeón en desktop, popover en móvil) ─────────────────
+
+
 def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
-    """Renderiza la navegación de módulos con filtro por categoría + botonera nativa (st.columns)."""
+    """
+    Renderiza la navegación de módulos como acordeón por categorías.
+
+    - Escritorio: cada categoría es un ``st.expander``. Solo la categoría activa
+      aparece expandida. Dentro se muestran sub‑grupos (``st.caption``) y botones.
+    - Móvil: popover único con lista vertical.
+    """
     if not menu:
         return None
     menu_set = frozenset(menu) if menu_set is None else menu_set
-    st.subheader("Panel de Módulos del Sistema")
-    st.caption("Filtrá por área o mostrá todos los módulos habilitados para tu rol.")
 
+    # ── Móvil ──
+    if cliente_es_movil_probable():
+        _render_modulos_mobile(menu, vista_actual, view_nav_labels)
+        return st.session_state.get("modulo_actual", vista_actual)
+
+    # ── Desktop: acordeón ──
     cats_ok = categorias_con_modulos_en_menu(menu_set)
-    filtro_opciones = [MC_FILTRO_TODAS] + cats_ok
-
-    if "mc_nav_filtro_cat" not in st.session_state or st.session_state["mc_nav_filtro_cat"] not in filtro_opciones:
-        st.session_state["mc_nav_filtro_cat"] = MC_FILTRO_TODAS
-
-    filtro = st.selectbox(
-        "Area del sistema",
-        filtro_opciones,
-        key="mc_nav_filtro_cat",
-        format_func=etiqueta_filtro_categoria,
-        label_visibility="collapsed",
-    )
+    if not cats_ok:
+        return vista_actual
 
     categorias_modulos = get_categorias_modulos()
-    if filtro == MC_FILTRO_TODAS:
-        pill_options = list(menu)
-        default_sel = vista_actual if vista_actual in menu_set else pill_options[0]
-    else:
-        mods_in_cat = [m for m in categorias_modulos.get(filtro, []) if m in menu_set]
-        if not mods_in_cat:
-            st.caption("No hay módulos en esta área para tu usuario.")
-            pill_options = list(menu)
-            default_sel = vista_actual if vista_actual in menu_set else pill_options[0]
-        elif vista_actual in mods_in_cat:
-            pill_options = mods_in_cat
-            default_sel = vista_actual
-        else:
-            pill_options = [vista_actual] + [m for m in mods_in_cat if m != vista_actual]
-            default_sel = vista_actual
 
-    render_modulos_grid(pill_options, default_sel, view_nav_labels)
-    # Leer modulo_actual del session_state post-render para capturar cambios del on_click callback
-    return st.session_state.get("modulo_actual", default_sel)
+    # Categoría que contiene el módulo actual
+    cat_activa = next(
+        (c for c, mods in categorias_modulos.items() if vista_actual in mods),
+        None,
+    )
+
+    for cat in cats_ok:
+        mods_in_cat = [m for m in categorias_modulos.get(cat, []) if m in menu_set]
+        if not mods_in_cat:
+            continue
+
+        emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
+        is_active = (cat == cat_activa)
+        label = f"{emoji}  {cat}"
+
+        with st.expander(label, expanded=is_active):
+            subgrupos = obtener_subgrupos_categoria(cat)
+            if subgrupos:
+                for sg_nombre, sg_modulos in subgrupos.items():
+                    sg_filtrados = [m for m in sg_modulos if m in menu_set]
+                    if not sg_filtrados:
+                        continue
+                    st.caption(f"▸ {sg_nombre}")
+                    _render_modulos_grid_inline(sg_filtrados, vista_actual, view_nav_labels)
+            else:
+                _render_modulos_grid_inline(mods_in_cat, vista_actual, view_nav_labels)
+
+    return st.session_state.get("modulo_actual", vista_actual)
 
 
 def _get_render_fn(tab_name, view_config):

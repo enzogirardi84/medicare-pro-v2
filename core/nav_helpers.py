@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-"""Helpers para la navegación por categorías en el sidebar de módulos."""
-from core.module_catalog import categorias_navegacion_sidebar
+"""Helpers para la navegación por categorías y sub‑grupos en el panel de módulos."""
+from typing import Dict, List
+
 from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
+from core.module_catalog import (
+    categorias_navegacion_sidebar,
+    subgrupos_por_categoria,
+)
 
 MC_FILTRO_TODAS = "Todas las áreas"
 
@@ -49,3 +54,14 @@ def etiqueta_filtro_categoria(nombre: str) -> str:
         "Legal y documentación": "\u2696\ufe0f",
     }
     return f"{prefijos.get(nombre, '')}  {nombre}".strip()
+
+
+def obtener_subgrupos_categoria(categoria: str) -> Dict[str, List[str]]:
+    """Retorna los sub‑grupos visuales de una categoría."""
+    return subgrupos_por_categoria(categoria, alertas_app_visible=ALERTAS_APP_PACIENTE_VISIBLE)
+
+
+def modulos_en_categoria(categoria: str, menu_set: set[str] | frozenset[str]) -> List[str]:
+    """Retorna los módulos de *categoria* que están en *menu_set*."""
+    cats = get_categorias_modulos()
+    return [m for m in cats.get(categoria, []) if m in menu_set]
