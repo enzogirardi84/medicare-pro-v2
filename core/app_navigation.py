@@ -121,57 +121,69 @@ def resolve_current_view(menu, menu_set=None):
 from streamlit import fragment as st_fragment
 
 
-# ── Grilla de botones (usada tanto desde acordeón como desde móvil) ──────────
+# ── Grilla de botones (3 columnas, más equilibrada dentro del acordeón) ──────
+
+_NAV_COLS = 3
 
 
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
-    """Renderiza una grilla compacta de botones de módulos (4 columnas).
+    """Renderiza una grilla compacta de botones de módulos.
 
-    Expuesta públicamente para tests.
+    Expuesta públicamente para tests. Usa 3 columnas para una distribución
+    más equilibrada dentro de los expanders.
     """
     if not modulos:
         return
-    for i in range(0, len(modulos), 4):
-        fila = modulos[i:i + 4]
-        cols = st.columns(4)
+    for i in range(0, len(modulos), _NAV_COLS):
+        fila = modulos[i:i + _NAV_COLS]
+        cols = st.columns(_NAV_COLS)
         for j, modulo in enumerate(fila):
             nombre_raw = str(modulo)
             if not nombre_raw:
                 continue
             label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
             icono, texto = _split_icon_label(label)
-            btn_label = f"{icono} {texto}".strip()
             tipo = "primary" if nombre_raw == modulo_actual else "secondary"
             with cols[j]:
                 st.button(
-                    btn_label,
-                    key=f"nav_m_{nombre_raw}",
-                    width='stretch',
+                    f"{icono} {texto}",
+                    key=f"nav_g_{nombre_raw}",
+                    use_container_width=True,
                     type=tipo,
                     on_click=set_modulo_actual,
                     args=(nombre_raw,),
                 )
 
 
-_render_modulos_grid_inline = render_modulos_grid
+def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
+    """Versión interna con 3 columnas y `use_container_width` para el acordeón."""
+    render_modulos_grid(modulos, modulo_actual, view_nav_labels)
 
 
 def _render_modulos_mobile(modulos, modulo_actual=None, view_nav_labels=None):
-    """Móvil: popover o expander con botones verticales."""
+    """Móvil: popover o expander con botones en grilla 3 columnas."""
     if not modulos:
         return
     if hasattr(st, "popover"):
         with st.popover("Menú de módulos", width='stretch'):
-            for modulo in modulos:
-                nombre_raw = str(modulo)
-                if not nombre_raw:
-                    continue
-                label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-                icono, texto = _split_icon_label(label)
-                btn_label = f"{icono} {texto}".strip()
-                tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-                if st.button(btn_label, key=f"nav_pop_{nombre_raw}", width='stretch', type=tipo):
-                    set_modulo_actual(nombre_raw, rerun=True)
+            for i in range(0, len(modulos), 3):
+                fila = modulos[i:i + 3]
+                cols = st.columns(3)
+                for j, modulo in enumerate(fila):
+                    nombre_raw = str(modulo)
+                    if not nombre_raw:
+                        continue
+                    label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+                    icono, texto = _split_icon_label(label)
+                    tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+                    with cols[j]:
+                        if st.button(
+                            f"{icono} {texto}",
+                            key=f"nav_pop_{nombre_raw}",
+                            use_container_width=True,
+                            type=tipo,
+                        ):
+                            set_modulo_actual(nombre_raw, rerun=True)
         return
 
     if "menu_nav_abierto" not in st.session_state:
@@ -182,18 +194,25 @@ def _render_modulos_mobile(modulos, modulo_actual=None, view_nav_labels=None):
         st.session_state["menu_nav_abierto"] = False
 
     with st.expander("Menú de módulos", expanded=st.session_state["menu_nav_abierto"]):
-        for modulo in modulos:
-            nombre_raw = str(modulo)
-            if not nombre_raw:
-                continue
-            label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
-            icono, texto = _split_icon_label(label)
-            btn_label = f"{icono} {texto}".strip()
-            tipo = "primary" if nombre_raw == modulo_actual else "secondary"
-            st.button(
-                btn_label, key=f"nav_exp_{nombre_raw}", width='stretch', type=tipo,
-                on_click=cambiar_modulo_mobile, args=(nombre_raw,),
-            )
+        for i in range(0, len(modulos), 3):
+            fila = modulos[i:i + 3]
+            cols = st.columns(3)
+            for j, modulo in enumerate(fila):
+                nombre_raw = str(modulo)
+                if not nombre_raw:
+                    continue
+                label = (view_nav_labels or {}).get(nombre_raw, nombre_raw)
+                icono, texto = _split_icon_label(label)
+                tipo = "primary" if nombre_raw == modulo_actual else "secondary"
+                with cols[j]:
+                    st.button(
+                        f"{icono} {texto}",
+                        key=f"nav_exp_{nombre_raw}",
+                        use_container_width=True,
+                        type=tipo,
+                        on_click=cambiar_modulo_mobile,
+                        args=(nombre_raw,),
+                    )
 
 
 # ── Render principal (acordeón en desktop, popover en móvil) ─────────────────
@@ -236,19 +255,31 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         is_active = (cat == cat_activa)
-        label = f"{emoji}  {cat}"
+        n_mods = len(mods_in_cat)
+        label = f"{emoji}  {cat}  ·  {n_mods}"
 
         with st.expander(label, expanded=is_active):
             subgrupos = obtener_subgrupos_categoria(cat)
             if subgrupos:
-                for sg_nombre, sg_modulos in subgrupos.items():
+                for idx, (sg_nombre, sg_modulos) in enumerate(subgrupos.items()):
                     sg_filtrados = [m for m in sg_modulos if m in menu_set]
                     if not sg_filtrados:
                         continue
-                    st.caption(f"▸ {sg_nombre}")
-                    _render_modulos_grid_inline(sg_filtrados, vista_actual, view_nav_labels)
+                    if idx > 0:
+                        st.markdown(
+                            '<div class="mc-nav-divider"></div>',
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown(
+                        f'<div class="mc-nav-subheader">'
+                        f"<span class=\"mc-nav-subicon\">▸</span> {sg_nombre} "
+                        f'<span class="mc-nav-badge">{len(sg_filtrados)}</span>'
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+                    _render_modulos_sub(sg_filtrados, vista_actual, view_nav_labels)
             else:
-                _render_modulos_grid_inline(mods_in_cat, vista_actual, view_nav_labels)
+                _render_modulos_sub(mods_in_cat, vista_actual, view_nav_labels)
 
     return st.session_state.get("modulo_actual", vista_actual)
 

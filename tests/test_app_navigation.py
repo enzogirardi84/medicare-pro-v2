@@ -15,8 +15,8 @@ def test_render_modulos_grid_desktop_usa_cuatro_columnas():
             view_nav_labels={},
         )
 
-    assert app_navigation.st.columns.call_args_list[0].args[0] == 4
-    assert app_navigation.st.columns.call_args_list[1].args[0] == 4
+    assert app_navigation.st.columns.call_args_list[0].args[0] == 3
+    assert app_navigation.st.columns.call_args_list[1].args[0] == 3
 
 
 def test_set_modulo_actual_preserva_modulo_anterior():
