@@ -11,6 +11,7 @@ import html as html_mod
 import streamlit as st
 
 from core.app_logging import log_event
+from core.farmacopea import buscar_medicamento, formatear_info_medicamento
 
 
 # ============================================================
@@ -500,8 +501,11 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
             respuesta = ""
             fuentes = []
 
-            # 1. IA con contexto completo del sistema
+            # 1. IA con contexto completo del sistema + farmacopea si menciona medicamento
             ctx = _contexto_completo(paciente_sel, mi_empresa)
+            info_med = buscar_medicamento(texto)
+            if info_med:
+                ctx += "\n\n=== INFORMACION DEL MEDICAMENTO CONSULTADO ===\n" + formatear_info_medicamento(info_med)
             resp_ia = preguntar_a_ia(texto, ctx)
             if resp_ia:
                 respuesta = resp_ia
@@ -519,12 +523,17 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
                     # 3. Local
                     respuesta = _respuesta_local(texto)
                     if not respuesta or respuesta.startswith("No tengo informacion"):
-                        res = buscar_en_web(texto)
-                        if res:
-                            respuesta = "Info encontrada:\n" + "\n".join(f"- {r['titulo']}: {r['url']}" for r in res)
-                            fuentes = res
+                        # 4. Farmacopea (buscar medicamento en la consulta)
+                        info_med = buscar_medicamento(texto)
+                        if info_med:
+                            respuesta = formatear_info_medicamento(info_med)
                         else:
-                            respuesta = "No tengo informacion sobre eso. Escribi 'buscar: tu pregunta' para buscar en internet."
+                            res = buscar_en_web(texto)
+                            if res:
+                                respuesta = "Info encontrada:\n" + "\n".join(f"- {r['titulo']}: {r['url']}" for r in res)
+                                fuentes = res
+                            else:
+                                respuesta = "No tengo informacion sobre eso. Escribi 'buscar: tu pregunta' para buscar en internet."
 
         conv.append({"rol": "bot", "texto": respuesta, "hora": hora, "fuentes": fuentes})
         log_event("chatbot", f"consulta:{texto[:60]}")
