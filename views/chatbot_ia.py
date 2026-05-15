@@ -117,6 +117,22 @@ def _respuesta_local(consulta: str) -> str:
 # ============================================================
 # DATOS DEL PACIENTE
 # ============================================================
+def _nombre_paciente(paciente_sel: str) -> str:
+    """Extrae solo el nombre del paciente (sin DNI)."""
+    return paciente_sel.split(" - ", 1)[0].strip() if paciente_sel else ""
+
+
+def _coincide_paciente(paciente_sel: str, valor_bd: str) -> bool:
+    """Compara paciente_sel con valor de BD tolerando formatos distintos."""
+    if not valor_bd:
+        return False
+    if paciente_sel == valor_bd:
+        return True
+    nom = _nombre_paciente(paciente_sel).lower()
+    val = valor_bd.strip().lower()
+    return nom in val or val in nom
+
+
 def _edad(fnac_str: str) -> str:
     try:
         nac = datetime.strptime(fnac_str, "%d/%m/%Y")
@@ -193,7 +209,7 @@ def _contexto_completo(paciente_sel: str, mi_empresa: str) -> str:
 
 def _medicaciones(paciente_sel) -> str:
     inds = [r for r in st.session_state.get("indicaciones_db", [])
-            if r.get("paciente") == paciente_sel
+            if _coincide_paciente(paciente_sel, r.get("paciente", ""))
             and str(r.get("estado_receta", "Activa")).lower() not in ("suspendida", "cancelada")]
     if not inds:
         return "Sin indicaciones activas."
@@ -203,12 +219,12 @@ def _medicaciones(paciente_sel) -> str:
         dosis = i.get("dosis", "")
         freq = i.get("frecuencia", "")
         via = i.get("via", "")
-        texto += f"- {med} {dosis} {freq} {via}\n".strip() + "\n"
+        texto += f"- {med} {dosis} {freq} {via}".strip() + "\n"
     return texto
 
 
 def _vitales(paciente_sel) -> str:
-    vitales = [r for r in st.session_state.get("vitales_db", []) if r.get("paciente") == paciente_sel]
+    vitales = [r for r in st.session_state.get("vitales_db", []) if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
     if not vitales:
         return "Sin signos vitales registrados."
     ult = vitales[-1]
@@ -220,7 +236,7 @@ def _vitales(paciente_sel) -> str:
 
 
 def _estudios(paciente_sel) -> str:
-    ests = [r for r in st.session_state.get("estudios_db", []) if r.get("paciente") == paciente_sel]
+    ests = [r for r in st.session_state.get("estudios_db", []) if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
     if not ests:
         return "Sin estudios registrados."
     texto = "Ultimos estudios:\n"
@@ -230,7 +246,7 @@ def _estudios(paciente_sel) -> str:
 
 
 def _evoluciones(paciente_sel) -> str:
-    evols = [r for r in st.session_state.get("evoluciones_db", []) if r.get("paciente") == paciente_sel]
+    evols = [r for r in st.session_state.get("evoluciones_db", []) if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
     if not evols:
         return "Sin evoluciones registradas."
     ult = evols[-1]
@@ -240,7 +256,7 @@ def _evoluciones(paciente_sel) -> str:
 
 
 def _turnos(paciente_sel) -> str:
-    turnos = [t for t in st.session_state.get("turnos_online_db", []) if t.get("paciente") == paciente_sel and t.get("estado") == "Reservado"]
+    turnos = [t for t in st.session_state.get("turnos_online_db", []) if _coincide_paciente(paciente_sel, t.get("paciente", "")) and t.get("estado") == "Reservado"]
     if not turnos:
         return "Sin turnos reservados."
     texto = "Turnos reservados:\n"
@@ -260,7 +276,7 @@ def _exportar_conversacion(conv: list) -> bytes:
 
 
 def _listar_vacunas(paciente_sel) -> str:
-    vacs = [v for v in st.session_state.get("vacunacion_db", []) if v.get("paciente") == paciente_sel]
+    vacs = [v for v in st.session_state.get("vacunacion_db", []) if _coincide_paciente(paciente_sel, v.get("paciente", ""))]
     if not vacs:
         return "Sin vacunas registradas."
     ultimas = {}
@@ -337,17 +353,16 @@ def _conteo_pacientes() -> str:
 
 
 def _balance(paciente_sel) -> str:
-    balances = [b for b in st.session_state.get("balance_db", []) if b.get("paciente") == paciente_sel]
+    balances = [b for b in st.session_state.get("balance_db", []) if _coincide_paciente(paciente_sel, b.get("paciente", ""))]
     if not balances:
         return "Sin registro de balance."
-    ult = balances[-1]
     ingresos = sum(float(b.get("ingresos", 0) or 0) for b in balances[-10:])
     egresos = sum(float(b.get("egresos", 0) or 0) for b in balances[-10:])
     return f"Balance ultimos 10: Ingresos {ingresos:.0f}ml | Egresos {egresos:.0f}ml | Balance {ingresos-egresos:.0f}ml"
 
 
 def _consentimientos(paciente_sel) -> str:
-    cons = [c for c in st.session_state.get("consentimientos_db", []) if c.get("paciente") == paciente_sel]
+    cons = [c for c in st.session_state.get("consentimientos_db", []) if _coincide_paciente(paciente_sel, c.get("paciente", ""))]
     if not cons:
         return "Sin documentos firmados."
     texto = "Documentos firmados:\n"
