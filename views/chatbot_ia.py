@@ -318,7 +318,7 @@ def _stock_critico(mi_empresa) -> str:
         return "Stock normal. No hay items criticos."
     texto = "Stock critico (<=10 unidades):\n"
     for i in items[:10]:
-        texto += f"- {i.get('nombre', i.get('insumo', '?'))}: {i.get('stock', 0)} unidades\n"
+        texto += f"- {i.get('item') or i.get('nombre') or i.get('insumo', '?')}: {i.get('stock', 0)} unidades\n"
     return texto
 
 
