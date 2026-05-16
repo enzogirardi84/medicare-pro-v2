@@ -222,13 +222,16 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
 
     with st.form("evol_cuidador", clear_on_submit=False):
         with st.expander("1. Actividad y Ejercicio", expanded=True):
-            sv_cols = st.columns(5)
-            ta_sistolica = sv_cols[0].number_input("TA sist (mmHg)", min_value=0, max_value=300, value=120, step=1, key="evc_ta_sis")
-            ta_diastolica = sv_cols[0].number_input("TA dias (mmHg)", min_value=0, max_value=200, value=80, step=1, key="evc_ta_dias")
-            fc = sv_cols[1].number_input("FC (lpm)", min_value=0, max_value=300, value=80, step=1, key="evc_fc")
-            fr = sv_cols[2].number_input("FR (rpm)", min_value=0, max_value=100, value=16, step=1, key="evc_fr")
-            temperatura = sv_cols[3].number_input("Temp (C)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, key="evc_temp")
-            spo2 = sv_cols[4].number_input("SpO2 (%)", min_value=0, max_value=100, value=96, step=1, key="evc_spo2")
+            sv_ta, sv_fc, sv_fr, sv_temp, sv_spo2 = st.columns(5)
+            with sv_ta:
+                st.markdown("TA (mmHg)")
+                ta_sistolica = st.number_input("Sist", min_value=0, max_value=300, value=120, step=1, key="evc_ta_sis", label_visibility="collapsed")
+                ta_diastolica = st.number_input("Dias", min_value=0, max_value=200, value=80, step=1, key="evc_ta_dias", label_visibility="collapsed")
+            fc = sv_fc.number_input("FC (lpm)", min_value=0, max_value=300, value=80, step=1, key="evc_fc")
+            fr = sv_fr.number_input("FR (rpm)", min_value=0, max_value=100, value=16, step=1, key="evc_fr")
+            temperatura = sv_temp.number_input("Temp (C)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, key="evc_temp")
+            spo2 = sv_spo2.number_input("SpO2 (%)", min_value=0, max_value=100, value=96, step=1, key="evc_spo2")
+            glucemia = st.number_input("Glucemia capilar (mg/dL)", min_value=0, max_value=600, value=0, step=1, key="evc_glucemia", help="Dejar en 0 si no se midio")
             c_act1, c_act2 = st.columns(2)
             higiene = c_act1.selectbox("Higiene", ["", "Se baño solo", "Baño en cama", "Cambio de pañal"], key="evc_higiene")
             movilidad = c_act2.selectbox("Movilidad", ["", "Reposo en cama", "Camino con ayuda", "Camino solo"], key="evc_movilidad")
@@ -251,7 +254,6 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 ["", "Comio toda su porcion", "Comio poco", "No quiso comer", "Alimentacion por sonda"],
                 key="evc_alimentacion",
             )
-            glucemia = st.number_input("Glucemia capilar (mg/dL)", min_value=0, max_value=600, value=0, step=1, key="evc_glucemia", help="Dejar en 0 si no se midio")
 
         with st.expander("4. Respiracion", expanded=False):
             respiracion = st.selectbox(
