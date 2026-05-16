@@ -131,8 +131,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
         return
 
     with st.form("evol_cuidador", clear_on_submit=False):
-        with st.container(border=True):
-            st.markdown("**1. Actividad y Ejercicio**")
+        with st.expander("1. Actividad y Ejercicio", expanded=True):
             sv_cols = st.columns(4)
             ta_sistolica = sv_cols[0].number_input("TA sist (mmHg)", min_value=0, max_value=300, value=120, step=1, key="evc_ta_sis")
             ta_diastolica = sv_cols[0].number_input("TA dias (mmHg)", min_value=0, max_value=200, value=80, step=1, key="evc_ta_dias")
@@ -142,8 +141,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             higiene = c_act1.selectbox("Higiene", ["", "Se bano solo", "Bano en cama", "Cambio de panial"], key="evc_higiene")
             movilidad = c_act2.selectbox("Movilidad", ["", "Reposo en cama", "Camino con ayuda", "Camino solo"], key="evc_movilidad")
 
-        with st.container(border=True):
-            st.markdown("**2. Cognitivo - Perceptivo**")
+        with st.expander("2. Cognitivo - Perceptivo", expanded=False):
             animo = st.selectbox(
                 "Estado neurologico / Animo",
                 ["", "Despierto y tranquilo", "Somnoliento", "Apatico", "Irritable", "Desorientado"],
@@ -155,8 +153,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             if dolor_presente:
                 dolor_eva = col_dolor2.slider("Escala EVA (1-10)", min_value=1, max_value=10, value=5, key="evc_dolor_eva", help="1 = dolor minimo, 10 = dolor maximo")
 
-        with st.container(border=True):
-            st.markdown("**3. Nutricional - Metabolico**")
+        with st.expander("3. Nutricional - Metabolico", expanded=False):
             c_nut1, c_nut2 = st.columns(2)
             alimentacion = c_nut1.selectbox(
                 "Alimentacion",
@@ -165,8 +162,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             )
             curaciones = c_nut2.checkbox("Se realizaron curaciones planas", key="evc_curaciones")
 
-        with st.container(border=True):
-            st.markdown("**4. Eliminacion**")
+        with st.expander("4. Eliminacion", expanded=False):
             c_eli1, c_eli2 = st.columns(2)
             diuresis = c_eli1.selectbox(
                 "Diuresis",
@@ -179,8 +175,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 key="evc_deposicion",
             )
 
-        with st.container(border=True):
-            st.markdown("**5. Sueno - Descanso**")
+        with st.expander("5. Sueno - Descanso", expanded=False):
             descanso = st.selectbox(
                 "Descanso",
                 ["", "Durmio bien toda la noche", "Le costo dormir", "Estuvo inquieto"],
