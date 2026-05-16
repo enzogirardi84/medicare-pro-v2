@@ -230,15 +230,21 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
     elif p_f:
         st.caption(f"{len(p_f)} paciente(s) visibles")
 
+    _SEL_PLACEHOLDER_SB = "__sel__"
     paciente_actual = st.session_state.get("paciente_actual")
-    opciones_ids = [item[0] for item in p_f]
-    index_actual = opciones_ids.index(paciente_actual) if paciente_actual in opciones_ids else 0
+    opciones_ids = [_SEL_PLACEHOLDER_SB] + [item[0] for item in p_f]
+    # Si hay un paciente activo previamente seleccionado por el usuario, mantenerlo
+    if paciente_actual and paciente_actual in [item[0] for item in p_f]:
+        index_actual = opciones_ids.index(paciente_actual)
+    else:
+        index_actual = 0  # placeholder
 
     _stored_sel = st.session_state.get("paciente_actual_select")
     if isinstance(_stored_sel, tuple):
         st.session_state.pop("paciente_actual_select", None)
 
     _display_map = {item[0]: item[1] for item in p_f} if p_f else {}
+    _display_map[_SEL_PLACEHOLDER_SB] = "— Seleccionar paciente —"
     paciente_sel = (
         st.selectbox(
             "Seleccionar Paciente",
@@ -250,14 +256,12 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
         if p_f
         else None
     )
-    if paciente_sel:
+    if paciente_sel and paciente_sel != _SEL_PLACEHOLDER_SB:
         set_paciente_actual(st.session_state, paciente_sel)
-        # El selectbox de Streamlit ya dispara rerun nativo al cambiar;
-        # st.rerun() adicional causa doble recarga innecesaria.
         det_sidebar = mapa_detalles_fn(st.session_state).get(paciente_sel, {})
         sidebar_patient_card(paciente_sel, det_sidebar)
 
-    if paciente_sel:
+    if paciente_sel and paciente_sel != _SEL_PLACEHOLDER_SB:
         alertas = obtener_alertas_fn(st.session_state, paciente_sel)
         if alertas:
             with st.expander(f"🚨 Alertas clínicas ({len(alertas)})", expanded=True):
