@@ -455,14 +455,23 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
         st.session_state[prev_key] = pick_wa
     st.text_area("Texto del mensaje", key=msg_key, height=200)
     texto_final_wa = st.session_state.get(msg_key, "").strip()
-    tel_wa = _normalizar_telefono_whatsapp(tel_paciente)
-    if tel_wa and texto_final_wa:
-        link_wpp = f"https://wa.me/{tel_wa}?text={urllib.parse.quote(texto_final_wa)}"
-        st.link_button("Abrir WhatsApp con este mensaje", link_wpp, width='stretch', type="primary")
-    elif not tel_paciente:
-        st.warning("Este paciente no tiene telefono registrado. Cargalo en Admision para poder avisar por WhatsApp.")
-    else:
-        st.warning("Completa el mensaje antes de abrir WhatsApp.")
+
+    _wpp_num_key = f"_wpp_num_manual_{paciente_sel}"
+    if _wpp_num_key not in st.session_state:
+        st.session_state[_wpp_num_key] = ""
+    tel_manual = st.text_input("Telefono del paciente (WhatsApp)", value=st.session_state[_wpp_num_key] if not tel_paciente else tel_paciente, key=_wpp_num_key, placeholder="Ej: 5493584302024")
+    tel_destino = _normalizar_telefono_whatsapp(tel_manual) or tel_manual.replace(" ", "").replace("-", "")
+    c_w1, c_w2 = st.columns([1, 1])
+    with c_w1:
+        if tel_destino and texto_final_wa:
+            link_wpp = f"https://wa.me/{tel_destino}?text={urllib.parse.quote(texto_final_wa)}"
+            st.link_button("Enviar mensaje por WhatsApp", link_wpp, width='stretch', type="primary")
+        elif not tel_destino:
+            st.warning("Ingresa un numero de telefono.")
+    with c_w2:
+        if tel_destino:
+            link_abrir = f"https://wa.me/{tel_destino}"
+            st.link_button("Abrir WhatsApp (solo numero)", link_abrir, width='stretch')
 
     if agenda_paciente:
         st.divider()

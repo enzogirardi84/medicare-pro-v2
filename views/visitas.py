@@ -71,13 +71,13 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         st.success("Visita agendada.")
         if rec_wpp.get("tel") and rec_wpp.get("texto"):
             st.link_button(
-                "WhatsApp: avisar al paciente sobre esta visita",
+                "Enviar aviso por WhatsApp",
                 f"https://wa.me/{rec_wpp['tel']}?text={urllib.parse.quote(rec_wpp['texto'])}",
                 width='stretch',
                 type="primary",
             )
         elif not str(tel_paciente or "").strip():
-            st.info("Para avisar por WhatsApp, carga el telefono del paciente en Admision.")
+            st.info("Para avisar por WhatsApp, carga el telefono del paciente en Admision o usa la seccion de abajo.")
 
     agenda_paciente = _enriquecer_agenda(_agenda_paciente(mi_empresa, paciente_sel, rol))
     sql_status = estado_visitas_sql(st.session_state)
