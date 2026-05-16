@@ -4,11 +4,15 @@ Vista exclusiva para superadmin: verifica Supabase, tablas SQL, datos locales, e
 estado del sistema, logs, memoria y configuración.
 """
 import importlib.util
+import json
 import time
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
+
+SCROLL = 'style="max-height:380px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;"'
 
 
 def render_diagnosticos(user=None):
@@ -36,9 +40,16 @@ def render_diagnosticos(user=None):
 
     # === TAB 1: ESTADO SUPABASE ===
     with tab1:
-        st.markdown("### Estado de la Conexión y Tablas SQL")
+        col_refresh, col_clear = st.columns([3, 1])
+        with col_refresh:
+            ejecutar = st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", width='stretch')
+        with col_clear:
+            forzar = st.button("Forzar refresh", help="Ignora cache y fuerza nueva lectura")
+        if forzar:
+            for k in ("_ultimo_diagnostico", "_ultimo_diagnostico_ts", "_mc_diag_df_tablas"):
+                st.session_state.pop(k, None)
 
-        if st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", width='stretch'):
+        if ejecutar or forzar:
             with st.spinner("Diagnosticando Supabase..."):
                 from core.diagnosticos import diagnosticar_supabase
                 diag = diagnosticar_supabase()
@@ -93,7 +104,6 @@ def render_diagnosticos(user=None):
             st.markdown("#### Tablas SQL")
             tablas_data = diag.get("tablas", {})
             
-            # Caché para dataframe de tablas (evita recrear en cada rerun si no cambió el diagnóstico)
             df_cache_key = "_mc_diag_df_tablas"
             diag_hash = hash(str(sorted(tablas_data.items())))
             cached_df = st.session_state.get(df_cache_key)
@@ -114,15 +124,11 @@ def render_diagnosticos(user=None):
                         estado = "✅ OK"
                         color = "🟢"
                     filas_estado.append({
-                        "": color,
-                        "Tabla": f"`{tabla}`",
+                        "": color, "Tabla": f"`{tabla}`",
                         "Existe": "Sí" if info["existe"] else "No",
                         "Filas": info.get("filas", 0),
-                        "Estado": estado,
-                        "Error": info.get("error") or ""
+                        "Estado": estado, "Error": info.get("error") or ""
                     })
-                
-                import pandas as pd
                 df_tablas = pd.DataFrame(filas_estado)
                 st.session_state[df_cache_key] = {"hash": diag_hash, "df": df_tablas}
             
@@ -179,7 +185,6 @@ def render_diagnosticos(user=None):
                 st.code(", ".join(schema["columnas"]))
                 if schema.get("muestra"):
                     st.markdown("**Ejemplo de fila:**")
-                    import json
                     st.json(schema["muestra"])
 
     # === TAB 3: DATOS LOCALES ===
@@ -198,7 +203,6 @@ def render_diagnosticos(user=None):
 
         # Conteos por tipo
         st.markdown("#### Registros en Archivo Local")
-        import pandas as pd
         tipos = ["pacientes", "historial", "evoluciones", "signos_vitales", "materiales", "recetas", "visitas"]
         conteos = []
         for t in tipos:
@@ -239,40 +243,33 @@ def render_diagnosticos(user=None):
         with col1:
             st.markdown("#### 🖥️ Estado del Sistema")
             
-            # Memoria RAM
             try:
                 import psutil
                 mem = psutil.virtual_memory()
                 ram_used = mem.used / (1024**3)
                 ram_total = mem.total / (1024**3)
                 ram_percent = mem.percent
-                
                 if ram_percent > 90:
-                    st.error(f"⚠️ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) - CRÍTICO")
+                    st.error(f"⚠️ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) — CRÍTICO")
                 elif ram_percent > 75:
-                    st.warning(f"⚡ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) - Alto")
+                    st.warning(f"⚡ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) — Alto")
                 else:
                     st.success(f"✅ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB)")
-            except ImportError:
-                st.info("ℹ️ Instalar `psutil` para ver uso de RAM")
-            
-            # Disco
-            try:
-                import psutil
+
                 disk = psutil.disk_usage('/')
                 disk_percent = disk.percent
                 disk_used = disk.used / (1024**3)
                 disk_total = disk.total / (1024**3)
                 if disk_percent > 90:
-                    st.error(f"⚠️ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) - CRÍTICO")
+                    st.error(f"⚠️ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) — CRÍTICO")
                 elif disk_percent > 75:
-                    st.warning(f"⚡ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) - Alto")
+                    st.warning(f"⚡ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) — Alto")
                 else:
                     st.success(f"✅ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB)")
             except ImportError:
-                st.info("ℹ️ Instalar `psutil` para ver uso de disco")
+                st.info("ℹ️ Instalar `psutil` para ver RAM y disco")
             except Exception as e:
-                st.info(f"ℹ️ Disco: no disponible ({type(e).__name__})")
+                st.info(f"ℹ️ Disco/RAM: no disponible ({type(e).__name__})")
             
             try:
                 import streamlit as st_mod
@@ -315,12 +312,12 @@ def render_diagnosticos(user=None):
             
             if errores:
                 st.error(f"⚠️ {len(errores)} errores recientes detectados")
-                
-                with st.expander("Ver errores recientes", expanded=False):
-                    for err in errores:
-                        ts = err.get("timestamp", "?")
-                        msg = err.get("message", "Sin mensaje")
-                        st.markdown(f"**{ts}**: `{msg[:150]}{'...' if len(msg) > 150 else ''}`")
+                st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
+                for err in errores:
+                    ts = err.get("timestamp", "?")
+                    msg = err.get("message", "Sin mensaje")
+                    st.markdown(f"**{ts}**: `{msg[:150]}{'...' if len(msg) > 150 else ''}`")
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.success("✅ No hay errores recientes en el log")
         except Exception as e:
@@ -356,15 +353,7 @@ def render_diagnosticos(user=None):
         # Botón de diagnóstico completo
         if st.button("🔄 Ejecutar Diagnóstico Completo del Sistema", type="primary", width='stretch'):
             with st.spinner("Analizando todo el sistema..."):
-                progress = st.progress(0)
-                
-                # Simular pasos de diagnóstico
-                time.sleep(0.5)
-                progress.progress(25)
-                
-                # Verificar dependencias (usa nombres de import, no de pip)
                 dependencias_faltantes = []
-                # Mapa: (nombre_pip, nombre_import)
                 deps = [
                     ("streamlit", "streamlit"),
                     ("pandas", "pandas"),
@@ -375,11 +364,7 @@ def render_diagnosticos(user=None):
                 for pip_name, import_name in deps:
                     if importlib.util.find_spec(import_name) is None:
                         dependencias_faltantes.append(pip_name)
-                
-                time.sleep(0.5)
-                progress.progress(50)
-                
-                # Verificar conexiones
+
                 errores_conexion = []
                 try:
                     from core.database import supabase
@@ -387,19 +372,12 @@ def render_diagnosticos(user=None):
                         errores_conexion.append("Supabase no inicializado")
                 except Exception as e:
                     errores_conexion.append(f"Error Supabase: {str(e)[:50]}")
-                
-                time.sleep(0.5)
-                progress.progress(75)
-                
-                # Verificar session state
+
                 problemas_session = []
                 required_keys = ["pacientes_db", "evoluciones_db", "vitales_db"]
                 for key in required_keys:
                     if key not in st.session_state:
                         problemas_session.append(f"Falta: {key}")
-                
-                time.sleep(0.3)
-                progress.progress(100)
                 
                 # Mostrar resultados
                 st.markdown("#### 📊 Resultados del Diagnóstico")
@@ -433,7 +411,6 @@ def render_diagnosticos(user=None):
                 total_problemas = len(dependencias_faltantes) + len(errores_conexion) + len(problemas_session)
                 
                 if total_problemas == 0:
-                    st.balloons()
                     st.success("🎉 Sistema completamente saludable. No se detectaron problemas.")
                 else:
                     st.error(f"⚠️ Se detectaron {total_problemas} problemas que requieren atención")
@@ -495,6 +472,7 @@ def render_diagnosticos(user=None):
             st.success("No hay errores que coincidan con los filtros actuales.")
         else:
             st.write(f"Mostrando {len(errores)} errores:")
+            st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
             for rec in errores:
                 eid = rec.get("id", "?")
                 ts = rec.get("timestamp", "?")[:19].replace("T", " ")
@@ -505,7 +483,6 @@ def render_diagnosticos(user=None):
                 cnt = rec.get("count", 1)
                 resuelto = rec.get("resolved", False)
 
-                badge_color = "red" if sev == "critical" else ("orange" if sev == "error" else "gray")
                 resuelto_icon = "✅" if resuelto else "❌"
 
                 with st.container(border=True):
@@ -526,6 +503,7 @@ def render_diagnosticos(user=None):
                     with st.expander("Stack trace", expanded=False):
                         st.code(rec.get("stack_trace", "Sin traza"), language="text")
                         st.caption(f"Contexto: {rec.get('context', '—')} | Usuario: {rec.get('user', '—')} | ID: {eid}")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         st.divider()
         # Acciones globales
