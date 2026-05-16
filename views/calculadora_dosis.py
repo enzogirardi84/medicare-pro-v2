@@ -36,11 +36,19 @@ def _normalizar_medicamento(nombre: str) -> tuple:
     return nombre, None
 
 
+def _normalizar_para_match(s: str) -> str:
+    import unicodedata, re
+    s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('ascii')
+    s = re.sub(r'[^a-z0-9]+', '', s.lower())
+    return s
+
 def _completar_con_vademecum() -> dict:
     """Combina MEDICAMENTOS (con dosis) + vademecum (solo nombres).
     Reconoce nombres con concentracion: 'Ibuprofeno 400mg' -> 'Ibuprofeno'
     """
     combinado = dict(MEDICAMENTOS)
+    # Pre-compute normalized keys for matching
+    _KEYS_NORM = {k: _normalizar_para_match(k) for k in MEDICAMENTOS}
     for nombre in _VADEMECUM:
         nombre = nombre.strip()
         if not nombre:
@@ -52,10 +60,11 @@ def _completar_con_vademecum() -> dict:
 
         base_nombre, _ = _normalizar_medicamento(nombre)
 
-        # Buscar si el base_nombre ya esta en MEDICAMENTOS
+        # Buscar si el base_nombre ya esta en MEDICAMENTOS (con y sin acentos)
         encontrado = None
+        norm_base = _normalizar_para_match(base_nombre)
         for k in MEDICAMENTOS:
-            if base_nombre.lower() in k.lower() or k.lower() in base_nombre.lower():
+            if norm_base in _KEYS_NORM[k] or _KEYS_NORM[k] in norm_base:
                 encontrado = k
                 break
 
