@@ -2,6 +2,7 @@
 
 Extraído de views/visitas.py.
 """
+import time
 from datetime import datetime, timedelta
 
 import streamlit as st
@@ -69,14 +70,21 @@ def estado_visitas_sql(session_state: dict) -> dict:
 
 
 def _agenda_empresa(mi_empresa, rol):
-    # Fix 2026-05-14: imports movidos al top con guard. Si SQL no está disponible
-    # se cae directo a fallback local sin intentar consulta remota.
+    _cache_key = f"_agenda_cache_{mi_empresa}"
+    _cached = st.session_state.get(_cache_key)
+    if _cached and isinstance(_cached, dict):
+        _age = time.monotonic() - _cached.get("ts", 0)
+        if _age < 30:
+            return _cached["data"]
+
     if not _SQL_BACKEND_DISPONIBLE:
         registrar_estado_visitas_sql(
             st.session_state, ok=False, empresa=mi_empresa, rows=0,
             error=RuntimeError(_SQL_BACKEND_ERROR or "backend SQL no inicializado"),
         )
-        return filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
+        _result = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
+        st.session_state[_cache_key] = {"data": _result, "ts": time.monotonic()}
+        return _result
 
     agenda_sql = []
     uso_sql = False
@@ -125,8 +133,11 @@ def _agenda_empresa(mi_empresa, rol):
         registrar_estado_visitas_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0, error=e)
 
     if uso_sql:
-        return agenda_sql
-    return filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
+        _result = agenda_sql
+    else:
+        _result = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
+    st.session_state[_cache_key] = {"data": _result, "ts": time.monotonic()}
+    return _result
 
 
 def _agenda_paciente(mi_empresa, paciente_sel, rol):

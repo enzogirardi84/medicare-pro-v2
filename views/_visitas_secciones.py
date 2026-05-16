@@ -68,6 +68,7 @@ except ImportError:
 
 def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon, direccion):
     """Registra una fichada (LLEGADA/SALIDA) en Supabase y session_state."""
+    _sql_ok = False
     try:
         from core.db_sql import insert_checkin
         from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
@@ -95,16 +96,21 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
                 "observaciones": "Manual" if lat == 0.0 and lon == 0.0 else ""
             }
             insert_checkin(datos_sql)
+            _sql_ok = True
     except Exception as e:
         from core.app_logging import log_event
         log_event("visitas_sql", f"error_dual_write_checkin_{tipo.lower()}:{type(e).__name__}")
 
+    # Guardia por paciente (no global)
+    _gk = f"_guardia_{paciente_sel}"
     if tipo == "LLEGADA":
-        st.session_state["guardia_activa"] = True
-        st.session_state["guardia_inicio"] = ahora().isoformat()
+        st.session_state[_gk] = {"activa": True, "inicio": ahora().isoformat()}
     elif tipo == "SALIDA":
-        st.session_state["guardia_activa"] = False
-        st.session_state["guardia_fin"] = ahora().isoformat()
+        _guardia = st.session_state.get(_gk, {})
+        if _guardia.get("activa"):
+            _guardia["activa"] = False
+            _guardia["fin"] = ahora().isoformat()
+            st.session_state[_gk] = _guardia
 
     if "checkin_db" not in st.session_state or not isinstance(st.session_state["checkin_db"], list):
         st.session_state["checkin_db"] = []
@@ -119,8 +125,26 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
     from core.database import _trim_db_list
     _trim_db_list("checkin_db", 1000)
     guardar_datos(spinner=True)
-    queue_toast(f"{tipo} registrada.")
+    if _sql_ok:
+        queue_toast(f"{tipo} registrada (servidor + local).")
+    else:
+        queue_toast(f"{tipo} registrada (solo local, servidor no disponible).")
     st.rerun()
+
+
+def _hora_en_ventana(item, hora_dt, ventana):
+    """Check if an agenda item's time falls within `ventana` of `hora_dt`."""
+    try:
+        item_fh = item.get("fecha_hora_programada", "")
+        if not item_fh:
+            return False
+        item_dt = datetime.strptime(item_fh[:19], "%Y-%m-%d %H:%M:%S")
+        return abs(item_dt - hora_dt) <= ventana
+    except (ValueError, TypeError):
+        return False
+
+
+_AGENDA_CACHE_PREFIX = "_agenda_cache_"
 
 
 def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
@@ -182,12 +206,14 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
             chk_sql = get_checkins_by_empresa(empresa_uuid, limit=500)
             registrar_estado_checkins_sql(st.session_state, ok=True, empresa=mi_empresa, rows=len(chk_sql or []))
             if chk_sql:
+                _pac_norm = paciente_sel.strip().lower()
+                _prof_norm = nombre_usuario.strip().lower()
                 for c in chk_sql:
                     dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
                     if pd.notnull(dt) and dt.strftime("%d/%m/%Y") == hoy_str:
-                        paciente_nombre = c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A"
-                        prof_nombre = c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido"
-                        if paciente_sel.startswith(paciente_nombre) and prof_nombre == nombre_usuario:
+                        paciente_nombre = c.get("pacientes", {}).get("nombre_completo", "") if isinstance(c.get("pacientes"), dict) else ""
+                        prof_nombre = c.get("usuarios", {}).get("nombre", "") if isinstance(c.get("usuarios"), dict) else ""
+                        if _pac_norm.startswith(paciente_nombre.strip().lower()) and prof_nombre.strip().lower() == _prof_norm:
                             fichadas_hoy.append({
                                 "paciente": paciente_sel,
                                 "profesional": nombre_usuario,
@@ -280,20 +306,43 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
             idx_prof = profesionales.index(nombre_usuario) if nombre_usuario in profesionales else 0
             prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
             if st.form_submit_button("Agendar Visita", width='stretch', type="primary"):
+                _fh_prog = datetime.combine(fecha_ag, hora_ag)
+                if _fh_prog < ahora().replace(tzinfo=None) - timedelta(hours=1):
+                    st.error("No se puede agendar una visita en el pasado. Corregi la fecha u hora.")
+                    st.stop()
                 hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
                 fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
-                fecha_hora_programada = datetime.combine(fecha_ag, hora_ag).strftime("%Y-%m-%d %H:%M:%S")
+                fecha_hora_programada = _fh_prog.strftime("%Y-%m-%d %H:%M:%S")
+                _agenda_cache_key = _AGENDA_CACHE_PREFIX + mi_empresa
+                if _agenda_cache_key in st.session_state:
+                    del st.session_state[_agenda_cache_key]
+                _hora_dt = _fh_prog
+                _ventana_30 = timedelta(minutes=30)
+                _agenda_actual = _agenda_empresa(mi_empresa, rol)
+                _pendientes_local = st.session_state.get("agenda_db", [])
+                _todos = _agenda_actual + _pendientes_local
                 conflicto = next(
                     (
-                        item for item in _agenda_empresa(mi_empresa, rol)
+                        item for item in _todos
                         if item.get("profesional") == prof_ag
                         and item.get("fecha") == fecha_ag_str
-                        and normalizar_hora_texto(item.get("hora", ""), default="") == hora_limpia
                         and item.get("estado", "Pendiente") not in {"Cancelada", "Realizada"}
                         and item.get("paciente") != paciente_sel
                     ),
                     None,
                 )
+                if not conflicto:
+                    conflicto = next(
+                        (
+                            item for item in _todos
+                            if item.get("profesional") == prof_ag
+                            and item.get("fecha") == fecha_ag_str
+                            and item.get("estado", "Pendiente") not in {"Cancelada", "Realizada"}
+                            and item.get("paciente") != paciente_sel
+                            and _hora_en_ventana(item, _hora_dt, _ventana_30)
+                        ),
+                        None,
+                    )
                 if conflicto:
                     st.error(f"{prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}.")
                 else:
@@ -464,8 +513,17 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             opciones_accion = [f"{x['Fecha y Hora']} | {x['Profesional']} | {x['Estado']}" for _, x in df_filtrado.sort_values("_fecha_dt").iterrows()]
             seleccion = c_a1.selectbox("Accion rapida sobre una visita", ["Sin cambios"] + opciones_accion, key=f"agenda_accion_sel_{paciente_sel}")
             accion = c_a2.selectbox("Accion", ["Marcar realizada", "Cancelar"], key=f"agenda_accion_tipo_{paciente_sel}")
+            _confirm_key = f"_agenda_confirm_{paciente_sel}"
+            if _confirm_key not in st.session_state:
+                st.session_state[_confirm_key] = False
             if st.button("Aplicar cambio de agenda", width='stretch', key=f"agenda_apply_{paciente_sel}"):
-                if seleccion != "Sin cambios":
+                if seleccion == "Sin cambios":
+                    st.warning("Selecciona una visita primero.")
+                elif not st.session_state[_confirm_key]:
+                    st.session_state[_confirm_key] = True
+                    st.rerun()
+                else:
+                    st.session_state[_confirm_key] = False
                     def _fmt_sel(dt):
                         try:
                             return dt.strftime("%d/%m/%Y %H:%M") if hasattr(dt, "year") and dt.year > 1900 else "Sin fecha"
@@ -496,6 +554,8 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
                         guardar_datos(spinner=True)
                         queue_toast("Agenda actualizada correctamente.")
                         st.rerun()
+            if st.session_state[_confirm_key]:
+                st.warning(f"Confirmar: presiona nuevamente 'Aplicar cambio' para {accion.lower()} la visita seleccionada.")
             st.markdown("##### Agenda semanal del paciente")
             semana_ref = st.date_input("Semana de referencia", value=ahora().date(), key=f"agenda_semana_ref_{paciente_sel}")
             inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
