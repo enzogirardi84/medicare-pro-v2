@@ -7,6 +7,7 @@ from views._evolucion_panel import (
     CANVAS_DISPONIBLE,
     get_canvas,
 )
+from views._evolucion_cuidador import _render_panel_cuidador
 
 
 def render_evolucion(paciente_sel, user, rol=None):
@@ -18,10 +19,12 @@ def render_evolucion(paciente_sel, user, rol=None):
     puede_registrar = puede_accion(rol, "evolucion_registrar")
     puede_borrar = puede_accion(rol, "evolucion_borrar")
 
-    st.markdown("## Evolución y cuidados clínicos")
-    tab_clinica, tab_enfermeria = st.tabs(["Evolución clínica", "Plan de enfermería"])
+    st.markdown("## Evolucion y cuidados clinicos")
+    tab_clinica, tab_cuidador, tab_enfermeria = st.tabs(["Evolucion clinica", "Registro del cuidador", "Plan de enfermeria"])
     with tab_clinica:
         _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar)
+    with tab_cuidador:
+        _render_panel_cuidador(paciente_sel, user, puede_registrar)
     with tab_enfermeria:
         from views.enfermeria import render_enfermeria
 

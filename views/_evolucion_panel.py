@@ -302,12 +302,18 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}"):
                 if es_urgente:
                     st.error("Marcada como URGENTE")
+                if ev.get("tipo_evolucion") == "cuidador":
+                    st.info("Registro de cuidador")
                 st.markdown(f"**Fecha:** `{fecha}`", unsafe_allow_html=True)
                 if plantilla:
                     st.markdown(f"**Plantilla:** {html.escape(plantilla)}", unsafe_allow_html=True)
                 if nota:
                     st.markdown("**Nota:**", unsafe_allow_html=True)
                     st.markdown(html.escape(nota), unsafe_allow_html=True)
+                cuidador_data = ev.get("cuidador_data")
+                if cuidador_data:
+                    with st.expander("Ver datos completos del cuidador", expanded=False):
+                        st.json(cuidador_data)
                 if firma and firma.strip():
                     st.success("Firmado digitalmente")
 
