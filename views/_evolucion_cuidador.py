@@ -7,10 +7,13 @@ from core.alert_toasts import queue_toast
 
 
 def _generar_texto_evolucion(
-    ta_sistolica, ta_diastolica, fc, temperatura,
+    ta_sistolica, ta_diastolica, fc, temperatura, spo2, fr,
+    glucemia,
     higiene, movilidad,
     animo, dolor_presente, dolor_eva,
     alimentacion,
+    respiracion,
+    piel_mucosas,
     herida_mecanismo, herida_profundidad,
     herida_localizacion,
     herida_lecho, herida_exudado,
@@ -18,6 +21,8 @@ def _generar_texto_evolucion(
     diuresis, deposicion,
     descanso,
     medicacion_administrada,
+    proximo_control,
+    familiar_presente, familiar_nombre,
     observaciones_extra,
 ) -> str:
     parrafos = []
@@ -27,10 +32,17 @@ def _generar_texto_evolucion(
         sv_partes.append(f"TA {ta_sistolica}/{ta_diastolica} mmHg")
     if fc:
         sv_partes.append(f"FC {fc} lpm")
+    if fr:
+        sv_partes.append(f"FR {fr} rpm")
     if temperatura:
         sv_partes.append(f"Temp {temperatura} C")
+    if spo2:
+        sv_partes.append(f"SpO2 {spo2}%")
     if sv_partes:
         parrafos.append("Signos vitales: " + ", ".join(sv_partes) + ".")
+
+    if glucemia:
+        parrafos.append(f"Glucemia capilar: {glucemia} mg/dL.")
 
     mapa_animo = {
         "Despierto y tranquilo": "Paciente vigil y tranquilo",
@@ -58,6 +70,29 @@ def _generar_texto_evolucion(
     if alimentacion in mapa_alimentacion:
         parrafos.append(mapa_alimentacion[alimentacion] + ".")
 
+    mapa_respiracion = {
+        "Sin asistencia": "Respiracion espontanea sin asistencia",
+        "Con oxigeno por canula": "Recibe oxigeno suplementario por canula nasal",
+        "Con mascara": "Recibe oxigeno por mascara de reservorio",
+        "Disnea en reposo": "Presenta disnea en reposo",
+        "Disnea con esfuerzo": "Presenta disnea con esfuerzos minimos",
+        "Tos productiva": "Tos productiva con expectoracion mucosa",
+        "Tos seca": "Tos seca sin expectoracion",
+    }
+    if respiracion in mapa_respiracion:
+        parrafos.append(mapa_respiracion[respiracion] + ".")
+
+    mapa_piel = {
+        "Hidratada": "Piel hidratada, mucosa oral humeda, signo de pliegue negativo",
+        "Seca": "Piel seca, mucosa oral discretamente seca",
+        "Edematosa": "Edema en miembros inferiores, signo de Godet positivo",
+        "Cianotica": "Cianosis en extremidades",
+        "Icterica": "Coloracion icterica de piel y mucosas",
+        "Con eritema": "Presenta eritema en zona de presion",
+    }
+    if piel_mucosas in mapa_piel:
+        parrafos.append(mapa_piel[piel_mucosas] + ".")
+
     mapa_mecanismo = {
         "Incisas": "Herida incisa por objeto afilado, bordes limpios",
         "Contusas": "Herida contusa por impacto, con bordes irregulares y hematoma perilesional",
@@ -77,11 +112,8 @@ def _generar_texto_evolucion(
                 "Grado IV": "Grado IV (expone musculo, tendones u hueso)",
             }
             txt += ", " + mapa_profundidad.get(herida_profundidad, herida_profundidad)
-        detalles_herida = []
         if herida_localizacion:
-            detalles_herida.append(f"localizada en {herida_localizacion}")
-        if detalles_herida:
-            txt += ", " + ", ".join(detalles_herida)
+            txt += f", localizada en {herida_localizacion}"
         mapa_lecho = {
             "Granulacion": "lecho con tejido de granulacion",
             "Fibrina": "lecho cubierto de fibrina",
@@ -156,6 +188,15 @@ def _generar_texto_evolucion(
     if medicacion_administrada:
         parrafos.append("Se administra medicacion segun indicacion correspondiente al horario, sin eventualidades.")
 
+    if familiar_presente:
+        txt = "Familiar o acompanante presente durante la evaluacion"
+        if familiar_nombre:
+            txt += f" ({familiar_nombre})"
+        parrafos.append(txt + ".")
+
+    if proximo_control:
+        parrafos.append(f"Proximo control: {proximo_control}.")
+
     if observaciones_extra and observaciones_extra.strip():
         parrafos.append(f"Observaciones: {observaciones_extra.strip()}.")
 
@@ -181,11 +222,13 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
 
     with st.form("evol_cuidador", clear_on_submit=False):
         with st.expander("1. Actividad y Ejercicio", expanded=True):
-            sv_cols = st.columns(4)
+            sv_cols = st.columns(5)
             ta_sistolica = sv_cols[0].number_input("TA sist (mmHg)", min_value=0, max_value=300, value=120, step=1, key="evc_ta_sis")
             ta_diastolica = sv_cols[0].number_input("TA dias (mmHg)", min_value=0, max_value=200, value=80, step=1, key="evc_ta_dias")
             fc = sv_cols[1].number_input("FC (lpm)", min_value=0, max_value=300, value=80, step=1, key="evc_fc")
-            temperatura = sv_cols[2].number_input("Temp (C)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, key="evc_temp")
+            fr = sv_cols[2].number_input("FR (rpm)", min_value=0, max_value=100, value=16, step=1, key="evc_fr")
+            temperatura = sv_cols[3].number_input("Temp (C)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, key="evc_temp")
+            spo2 = sv_cols[4].number_input("SpO2 (%)", min_value=0, max_value=100, value=96, step=1, key="evc_spo2")
             c_act1, c_act2 = st.columns(2)
             higiene = c_act1.selectbox("Higiene", ["", "Se baño solo", "Baño en cama", "Cambio de pañal"], key="evc_higiene")
             movilidad = c_act2.selectbox("Movilidad", ["", "Reposo en cama", "Camino con ayuda", "Camino solo"], key="evc_movilidad")
@@ -208,82 +251,57 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 ["", "Comio toda su porcion", "Comio poco", "No quiso comer", "Alimentacion por sonda"],
                 key="evc_alimentacion",
             )
+            glucemia = st.number_input("Glucemia capilar (mg/dL)", min_value=0, max_value=600, value=0, step=1, key="evc_glucemia", help="Dejar en 0 si no se midio")
+
+        with st.expander("4. Respiracion", expanded=False):
+            respiracion = st.selectbox(
+                "Estado respiratorio",
+                ["", "Sin asistencia", "Con oxigeno por canula", "Con mascara", "Disnea en reposo", "Disnea con esfuerzo", "Tos productiva", "Tos seca"],
+                key="evc_respiracion",
+            )
+
+        with st.expander("5. Piel y Mucosas", expanded=False):
+            piel_mucosas = st.selectbox(
+                "Estado de piel y mucosas",
+                ["", "Hidratada", "Seca", "Edematosa", "Cianotica", "Icterica", "Con eritema"],
+                key="evc_piel",
+            )
 
         with st.expander("6. Heridas y curaciones", expanded=False):
             st.caption("Completar solo si el paciente presenta alguna lesion o herida activa.")
             c_her1, c_her2 = st.columns(2)
-            herida_mecanismo = c_her1.selectbox(
-                "Clasificacion segun mecanismo",
-                ["", "Incisas", "Contusas", "Punzantes", "Laceraciones", "Abrasiones", "Avulsiones", "Ulceras"],
-                key="evc_herida_mec",
-            )
-            herida_profundidad = c_her2.selectbox(
-                "Clasificacion segun profundidad",
-                ["", "Grado I", "Grado II", "Grado III", "Grado IV"],
-                key="evc_herida_prof",
-            )
-            herida_localizacion = st.text_input(
-                "Localizacion de la herida",
-                placeholder="Ej: sacro, talon derecho, pierna izquierda",
-                key="evc_herida_loc",
-            )
+            herida_mecanismo = c_her1.selectbox("Clasificacion segun mecanismo", ["", "Incisas", "Contusas", "Punzantes", "Laceraciones", "Abrasiones", "Avulsiones", "Ulceras"], key="evc_herida_mec")
+            herida_profundidad = c_her2.selectbox("Clasificacion segun profundidad", ["", "Grado I", "Grado II", "Grado III", "Grado IV"], key="evc_herida_prof")
+            herida_localizacion = st.text_input("Localizacion de la herida", placeholder="Ej: sacro, talon derecho, pierna izquierda", key="evc_herida_loc")
             c_her3, c_her4 = st.columns(2)
-            herida_lecho = c_her3.selectbox(
-                "Estado del lecho",
-                ["", "Granulacion", "Fibrina", "Necrotico", "Mixto", "Epitelizacion"],
-                key="evc_herida_lecho",
-            )
-            herida_exudado = c_her4.selectbox(
-                "Tipo de exudado",
-                ["", "Sin exudado", "Seroso", "Serohematico", "Purulento", "Hemorragico"],
-                key="evc_herida_exud",
-            )
-            herida_infeccion = st.multiselect(
-                "Signos de infeccion (opcional)",
-                ["Eritema", "Edema", "Calor local", "Mal olor", "Secrecion purulenta", "Fiebre"],
-                key="evc_herida_inf",
-            )
-            herida_curacion = st.text_input(
-                "Tipo de curacion realizada",
-                placeholder="Ej: curacion con solucion fisiologica y gasa esteril",
-                key="evc_herida_cura",
-            )
+            herida_lecho = c_her3.selectbox("Estado del lecho", ["", "Granulacion", "Fibrina", "Necrotico", "Mixto", "Epitelizacion"], key="evc_herida_lecho")
+            herida_exudado = c_her4.selectbox("Tipo de exudado", ["", "Sin exudado", "Seroso", "Serohematico", "Purulento", "Hemorragico"], key="evc_herida_exud")
+            herida_infeccion = st.multiselect("Signos de infeccion (opcional)", ["Eritema", "Edema", "Calor local", "Mal olor", "Secrecion purulenta", "Fiebre"], key="evc_herida_inf")
+            herida_curacion = st.text_input("Tipo de curacion realizada", placeholder="Ej: curacion con solucion fisiologica y gasa esteril", key="evc_herida_cura")
 
-        with st.expander("4. Eliminacion", expanded=False):
+        with st.expander("7. Eliminacion", expanded=False):
             c_eli1, c_eli2 = st.columns(2)
-            diuresis = c_eli1.selectbox(
-                "Diuresis",
-                ["", "Orino bien", "No orino", "Tiene sonda vesical", "Orina escasa", "Orina frecuente", "Incontinencia urinaria", "Miccion dolorosa"],
-                key="evc_diuresis",
-            )
-            deposicion = c_eli2.selectbox(
-                "Deposicion",
-                ["", "No hizo deposicion", "Deposicion normal", "Diarrea", "Estrenimiento", "Deposicion con esfuerzo", "Incontinencia fecal"],
-                key="evc_deposicion",
-            )
+            diuresis = c_eli1.selectbox("Diuresis", ["", "Orino bien", "No orino", "Tiene sonda vesical", "Orina escasa", "Orina frecuente", "Incontinencia urinaria", "Miccion dolorosa"], key="evc_diuresis")
+            deposicion = c_eli2.selectbox("Deposicion", ["", "No hizo deposicion", "Deposicion normal", "Diarrea", "Estrenimiento", "Deposicion con esfuerzo", "Incontinencia fecal"], key="evc_deposicion")
 
-        with st.expander("5. Sueno - Descanso", expanded=False):
-            descanso = st.selectbox(
-                "Descanso",
-                ["", "Durmio bien toda la noche", "Le costo dormir", "Estuvo inquieto"],
-                key="evc_descanso",
-            )
+        with st.expander("8. Sueno - Descanso", expanded=False):
+            descanso = st.selectbox("Descanso", ["", "Durmio bien toda la noche", "Le costo dormir", "Estuvo inquieto"], key="evc_descanso")
 
         st.divider()
-        st.markdown("**6. Medicacion**")
-        medicacion_administrada = st.checkbox(
-            "Se administro la medicacion correspondiente al turno",
-            value=False,
-            key="evc_med_check",
-        )
+        st.markdown("**Medicacion**")
+        medicacion_administrada = st.checkbox("Se administro la medicacion correspondiente al turno", value=False, key="evc_med_check")
 
         st.divider()
-        observaciones_extra = st.text_area(
-            "Observaciones (opcional)",
-            placeholder="Si paso algo fuera de lo comun, describilo aca con tus palabras.",
-            height=80,
-            key="evc_obs",
-        )
+        col_fam1, col_fam2, col_fam3 = st.columns([1, 2, 2])
+        familiar_presente = col_fam1.checkbox("Familiar presente", key="evc_familiar_check")
+        familiar_nombre = col_fam2.text_input("Nombre del familiar/acompanante", placeholder="Opcional", key="evc_familiar_nombre") if familiar_presente else ""
+        # dummy to keep col_fam3 for alignment
+        if not familiar_presente:
+            col_fam3.markdown("")
+
+        proximo_control = st.text_input("Proximo control (fecha/hora)", placeholder="Ej: manana a las 10:00", key="evc_prox_control")
+
+        observaciones_extra = st.text_area("Observaciones (opcional)", placeholder="Si paso algo fuera de lo comun, describilo aca con tus palabras.", height=80, key="evc_obs")
 
         st.divider()
         col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
@@ -298,12 +316,17 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             ta_diastolica=ta_diastolica,
             fc=fc,
             temperatura=temperatura,
+            spo2=spo2,
+            fr=fr,
+            glucemia=glucemia,
             higiene=higiene,
             movilidad=movilidad,
             animo=animo,
             dolor_presente=dolor_presente,
             dolor_eva=dolor_eva,
             alimentacion=alimentacion,
+            respiracion=respiracion,
+            piel_mucosas=piel_mucosas,
             herida_mecanismo=herida_mecanismo,
             herida_profundidad=herida_profundidad,
             herida_localizacion=herida_localizacion,
@@ -315,6 +338,9 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             deposicion=deposicion,
             descanso=descanso,
             medicacion_administrada=medicacion_administrada,
+            proximo_control=proximo_control,
+            familiar_presente=familiar_presente,
+            familiar_nombre=familiar_nombre,
             observaciones_extra=observaciones_extra,
         )
 
@@ -323,15 +349,18 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             st.code(texto_generado, language="text", line_numbers=True)
 
         if guardar_btn:
-            if not any([ta_sistolica, ta_diastolica, fc, temperatura,
+            if not any([ta_sistolica, ta_diastolica, fc, temperatura, spo2, fr,
+                        glucemia,
                         higiene, movilidad, animo,
                         dolor_presente,
-                        alimentacion,
+                        alimentacion, respiracion, piel_mucosas,
                         herida_mecanismo, herida_profundidad,
                         herida_localizacion,
                         herida_lecho, herida_exudado, herida_infeccion, herida_curacion,
                         diuresis, deposicion, descanso,
-                        medicacion_administrada]) and not observaciones_extra.strip():
+                        medicacion_administrada,
+                        familiar_presente,
+                        proximo_control]) and not observaciones_extra.strip():
                 st.error("Debe completar al menos un campo antes de guardar.")
             else:
                 fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
@@ -350,12 +379,17 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         "ta_diastolica": ta_diastolica,
                         "fc": fc,
                         "temperatura": temperatura,
+                        "spo2": spo2,
+                        "fr": fr,
+                        "glucemia": glucemia,
                         "higiene": higiene,
                         "movilidad": movilidad,
                         "animo": animo,
                         "dolor_presente": dolor_presente,
                         "dolor_eva": dolor_eva,
                         "alimentacion": alimentacion,
+                        "respiracion": respiracion,
+                        "piel_mucosas": piel_mucosas,
                         "herida_mecanismo": herida_mecanismo,
                         "herida_profundidad": herida_profundidad,
                         "herida_localizacion": herida_localizacion,
@@ -367,6 +401,9 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         "deposicion": deposicion,
                         "descanso": descanso,
                         "medicacion_administrada": medicacion_administrada,
+                        "proximo_control": proximo_control,
+                        "familiar_presente": familiar_presente,
+                        "familiar_nombre": familiar_nombre,
                         "observaciones_extra": observaciones_extra.strip(),
                     },
                 })

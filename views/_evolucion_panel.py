@@ -316,10 +316,14 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         mapa_etiquetas = {
                             "ta_sistolica": "TA sistolica", "ta_diastolica": "TA diastolica",
                             "fc": "Frec. cardiaca", "temperatura": "Temperatura",
+                            "spo2": "SpO2", "fr": "Frec. respiratoria",
+                            "glucemia": "Glucemia capilar",
                             "higiene": "Higiene", "movilidad": "Movilidad",
                             "animo": "Estado neurologico",
                             "dolor_eva": "Dolor EVA",
                             "alimentacion": "Alimentacion",
+                            "respiracion": "Estado respiratorio",
+                            "piel_mucosas": "Piel y mucosas",
                             "herida_mecanismo": "Tipo de herida (mecanismo)",
                             "herida_profundidad": "Profundidad de herida",
                             "herida_localizacion": "Localizacion",
@@ -331,6 +335,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             "deposicion": "Deposicion",
                             "descanso": "Descanso",
                             "medicacion_administrada": "Medicacion administrada",
+                            "proximo_control": "Proximo control",
+                            "familiar_presente": "Familiar presente",
+                            "familiar_nombre": "Nombre del familiar",
                             "observaciones_extra": "Observaciones",
                         }
                         for key, label in mapa_etiquetas.items():
