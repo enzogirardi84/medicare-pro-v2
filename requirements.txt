@@ -22,6 +22,6 @@ bleach>=6.0.0
 python-dotenv>=1.0.0
 typing-extensions>=4.8.0
 fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
+uvicorn[standard]>=0.47.0
 streamlit-geolocation>=0.0.10
 plotly>=5.18.0
