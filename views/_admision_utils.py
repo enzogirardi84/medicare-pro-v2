@@ -264,6 +264,7 @@ def _dataframe_pacientes(registros):
             "Obra social": item["obra_social"] or "S/D",
             "Estado": item["estado"],
             "Telefono": item["telefono"] or "S/D",
+            "Email": item.get("email", "") or "S/D",
             "Direccion": item["direccion"] or "S/D",
         })
     return pd.DataFrame(filas)
