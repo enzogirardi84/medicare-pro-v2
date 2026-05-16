@@ -91,7 +91,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Estadisticas": "Estadisticas",
     # "Factura Electronica": "Factura Electronica",  # ocultado
     "Turnos Online": "Turnos Online",
-    "Chatbot IA": "Chatbot IA",
+    "Chatbot IA": "🤖 Chatbot",
     "Calc. Dosis Pediatricas": "Calc. Dosis",
     "Reportes Ejecutivos": "\U0001F4CA Reportes",
     "Reportes Financieros": "\U0001F4B0 Financiero",

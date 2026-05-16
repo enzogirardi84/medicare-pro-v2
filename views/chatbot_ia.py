@@ -406,7 +406,7 @@ MODULOS_MAP = {
     "inventario": "Inventario", "stock": "Inventario",
     "historial": "Historial",
     "balance": "Balance",
-    "chat": "Chatbot IA",
+    "chat": "Chatbot 🤖",
 }
 
 
