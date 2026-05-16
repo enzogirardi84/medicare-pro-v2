@@ -412,6 +412,25 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 from core.database import _trim_db_list
                 _trim_db_list("evoluciones_db", 500)
 
+                # Guardar signos vitales automaticamente en vitales_db
+                if any([ta_sistolica, ta_diastolica, fc, fr, temperatura, spo2, glucemia]):
+                    st.session_state.setdefault("vitales_db", [])
+                    ta_str = f"{ta_sistolica}/{ta_diastolica}" if ta_sistolica and ta_diastolica else ""
+                    st.session_state["vitales_db"].append({
+                        "paciente": paciente_sel,
+                        "TA": ta_str,
+                        "FC": fc,
+                        "FR": fr,
+                        "Sat": spo2,
+                        "Temp": temperatura,
+                        "HGT": glucemia if glucemia else "",
+                        "fecha": fecha_n,
+                        "observaciones": observaciones_extra.strip()[:200],
+                        "registrado_por": user.get("nombre", "Sistema"),
+                        "origen": "Registro inteligente",
+                    })
+                    _trim_db_list("vitales_db", 1000)
+
                 registrar_auditoria_legal(
                     "Evolucion Clinica",
                     paciente_sel,
