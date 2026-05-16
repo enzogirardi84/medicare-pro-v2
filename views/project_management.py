@@ -1,3 +1,6 @@
+import re
+from html import escape
+
 import pandas as pd
 import streamlit as st
 
@@ -80,6 +83,8 @@ MILESTONES = [
         "Accion": "Configurar el proyecto en NestJS y conectar Prisma con la base de Supabase (antes de tocar el frente).",
         "Tarea Enzo": "Entregar el diccionario limpio de medicamentos y reglas de negocio (ej. que pasa si un enfermero se olvida de fichar).",
         "Resultado": "Base normalizada: pacientes, visitas, usuarios y medicamentos lista para miles de registros.",
+        "Estado": "Completado",
+        "Progreso": 100,
     },
     {
         "Hito": "2. Puerta de Entrada y Seguridad",
@@ -87,6 +92,8 @@ MILESTONES = [
         "Accion": "Sistema de login y roles (Superadmin, Admin, Coordinador y Usuario) en el backend enterprise.",
         "Tarea Enzo": "Definir que puede ver cada uno (ej. el enfermero no ve cuanto factura la clinica).",
         "Resultado": "Login disenado funcionando de verdad; solo entran autorizados.",
+        "Estado": "En progreso",
+        "Progreso": 60,
     },
     {
         "Hito": "3. Corazon Operativo",
@@ -94,6 +101,8 @@ MILESTONES = [
         "Accion": "En NestJS: logica de visitas y GPS; endpoints para que el movil envie ubicacion y quede guardada. Integracion con Python para mapas o estadisticas de visitas.",
         "Tarea Enzo": "Priorizar con equipo clinico que migrar primero en campo.",
         "Resultado": "Visitas cargadas en el nuevo edificio (backend NestJS + servicios Python donde aplique).",
+        "Estado": "Pendiente",
+        "Progreso": 0,
     },
     {
         "Hito": "4. Estetica",
@@ -101,8 +110,20 @@ MILESTONES = [
         "Accion": "Angular: dashboard en tiempo real para el dueno (deudores, visitas hechas, alertas medicas).",
         "Tarea Enzo": "Aceptacion de producto y salida controlada.",
         "Resultado": "Lanzamiento de la version MediCare PRO.",
+        "Estado": "Pendiente",
+        "Progreso": 0,
     },
 ]
+
+
+def _parse_ventana(v: str):
+    """Parsea 'Mes 1' -> (1, 1), 'Mes 3-4' -> (3, 4)."""
+    m = re.match(r"Mes\s*(\d+)(?:\s*[-]\s*(\d+))?", v)
+    if m:
+        start = int(m.group(1))
+        end = int(m.group(2)) if m.group(2) else start
+        return start, end
+    return None, None
 
 ROLE_MATRIX = [
     {"Categoria": "Sistema", "Modulo": "Panel Global (Clinicas)", "SuperAdmin": "Si", "Coordinador": "No", "Operativo": "No", "Administrador": "No"},
@@ -269,10 +290,71 @@ def render_project_management(mi_empresa, user=None, rol=None):
             _render_listado("Arquitectura objetivo (resumen)", TARGET_ARCHITECTURE)
 
     with tab_hitos:
-        st.markdown("#### Hitos del roadmap")
-        df_hitos = pd.DataFrame(MILESTONES)
-        with lista_plegable("Hitos (tabla)", count=len(df_hitos), expanded=False, height=420):
-            mostrar_dataframe_con_scroll(df_hitos, height=360)
+        st.markdown("#### Roadmap de migracion silenciosa")
+
+        # Barra de progreso general
+        _progresos = [m.get("Progreso", 0) for m in MILESTONES]
+        _promedio = sum(_progresos) / len(_progresos) if _progresos else 0
+        _completados = sum(1 for p in _progresos if p == 100)
+        _total = len(_progresos)
+        c_p1, c_p2, c_p3 = st.columns(3)
+        c_p1.metric("Progreso general", f"{_promedio:.0f}%")
+        c_p2.metric("Hitos completados", f"{_completados}/{_total}")
+        c_p3.metric("Hitos pendientes", f"{_total - _completados}/{_total}")
+        st.progress(_promedio / 100)
+
+        # Timeline visual
+        _color_map = {"Completado": "#22c55e", "En progreso": "#3b82f6", "Pendiente": "#94a3b8"}
+        for i, m in enumerate(MILESTONES):
+            _estado = m.get("Estado", "Pendiente")
+            _color = _color_map.get(_estado, "#94a3b8")
+            _prog = m.get("Progreso", 0)
+            with st.container(border=True):
+                c_t1, c_t2 = st.columns([6, 1])
+                c_t1.markdown(f"**{m['Hito']}**  \n{m['Accion']}")
+                c_t2.markdown(
+                    f"<div style='background:{_color};color:#fff;padding:2px 8px;border-radius:12px;"
+                    f"text-align:center;font-size:0.8em'>{_estado}</div>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(f"_{m['Ventana']}_ — {m['Resultado']}")
+                st.progress(_prog / 100)
+                if _prog < 100 and m.get("Tarea Enzo"):
+                    st.caption(f"**Pendiente:** {m['Tarea Enzo']}")
+
+        # Gantt horizontal
+        with st.expander("Cronograma visual (Gantt)", expanded=False):
+            _gantt_data = []
+            for m in MILESTONES:
+                _s, _e = _parse_ventana(m.get("Ventana", ""))
+                if _s is None:
+                    continue
+                _gantt_data.append({"Hito": m["Hito"], "Inicio": _s, "Fin": _e, "Estado": m.get("Estado", "Pendiente")})
+            if _gantt_data:
+                _max_mes = max(r["Fin"] for r in _gantt_data)
+                _html_rows = []
+                for r in _gantt_data:
+                    _left = (r["Inicio"] - 1) / _max_mes * 100
+                    _width = (r["Fin"] - r["Inicio"] + 1) / _max_mes * 100
+                    _c = _color_map.get(r["Estado"], "#94a3b8")
+                    _label = escape(r["Hito"])
+                    _html_rows.append(
+                        f"""<div style="display:flex;align-items:center;margin:4px 0;gap:8px">
+                            <div style="width:160px;font-size:0.85em;text-align:right;flex-shrink:0">{_label}</div>
+                            <div style="flex:1;height:24px;background:#e2e8f0;border-radius:4px;position:relative">
+                                <div style="position:absolute;left:{_left:.1f}%;width:{_width:.1f}%;height:100%;
+                                    background:{_c};border-radius:4px;opacity:0.85"></div>
+                            </div>
+                            <div style="width:50px;font-size:0.75em;color:#64748b">{r['Inicio']}-{r['Fin']}</div>
+                        </div>"""
+                    )
+                st.markdown(
+                    "<div style='font-size:0.85em;color:#64748b;margin-bottom:4px'>Mes</div>"
+                    + "".join(_html_rows),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("No se pudieron generar los rangos del cronograma.")
 
         with st.container(border=True):
             st.markdown("**Lectura operativa**")
@@ -322,6 +404,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
                 st.info("El JQL no devolvió issues. Ajustá la consulta en secrets o revisá permisos del usuario del token.")
             else:
                 df_j = pd.DataFrame(filas)
+                # Metricas por estado
+                _status_counts = df_j["Estado"].value_counts()
+                _status_cols = st.columns(min(len(_status_counts), 6))
+                for _col, (_est, _cnt) in zip(_status_cols, _status_counts.items()):
+                    _col.metric(_est, int(_cnt))
                 with st.container(border=True):
                     st.dataframe(
                         df_j,
