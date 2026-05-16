@@ -170,7 +170,11 @@ def render_clinica(paciente_sel, user=None):
         _hay_crit_ult = any(v == "critico" for v in _estados_ult.values())
         _hay_alert_ult = any(v == "alerta" for v in _estados_ult.values())
         _semaforo = "🔴 CRÍTICO" if _hay_crit_ult else ("🟡 Alerta" if _hay_alert_ult else "🟢 Normal")
-        st.markdown(f"##### Último control registrado — {ultimo.get('fecha', 'S/D')[:16]}  **{_semaforo}**")
+        ultima_fecha = ultimo.get('fecha', 'S/D')
+        if isinstance(ultima_fecha, str) and " " in ultima_fecha and "/" in ultima_fecha.split(" ", 1)[0]:
+            partes = ultima_fecha.split(" ", 1)
+            ultima_fecha = f"{partes[0]} — *{partes[1]} hs*"
+        st.markdown(f"##### Último control registrado — {ultima_fecha}  **{_semaforo}**")
         if _hay_crit_ult or _hay_alert_ult:
             _msgs = [
                 f"{k}={ultimo.get(k, '-')}" for k, est in _estados_ult.items()

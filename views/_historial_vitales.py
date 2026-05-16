@@ -61,7 +61,15 @@ def _evaluar_vital(clave: str, valor_raw) -> str:
 def _render_signos_vitales_con_alertas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
     claves_vitales = ["TA", "FC", "FR", "Sat", "Temp", "HGT"]
     for idx, reg in enumerate(registros):
-        fecha = reg.get("fecha", reg.get("fecha_hora", "S/D"))
+        fecha_raw = reg.get("fecha", reg.get("fecha_hora", "S/D"))
+        # Separar fecha y hora si vienen juntas (formato: dd/mm/aaaa HH:MM)
+        fecha_mostrar = fecha_raw
+        hora_mostrar = ""
+        if isinstance(fecha_raw, str) and " " in fecha_raw:
+            partes = fecha_raw.split(" ", 1)
+            if "/" in partes[0] and ":" in partes[1]:
+                fecha_mostrar = partes[0]
+                hora_mostrar = partes[1]
         firma = reg.get("firma", reg.get("firmado_por", reg.get("profesional", "S/D")))
         estados = {k: _evaluar_vital(k, reg.get(k)) for k in claves_vitales}
         hay_critico = any(e == "critico" for e in estados.values())
@@ -69,7 +77,10 @@ def _render_signos_vitales_con_alertas(registros: List[Dict[str, Any]], paciente
         titulo_badge = " 🔴 CRÍTICO" if hay_critico else (" 🟡 Alerta" if hay_alerta else "")
         with st.container(border=True):
             col_h1, col_h2 = st.columns([3, 1])
-            col_h1.markdown(f"**{fecha}**{titulo_badge}")
+            if hora_mostrar:
+                col_h1.markdown(f"**{fecha_mostrar}** — *{hora_mostrar} hs*{titulo_badge}")
+            else:
+                col_h1.markdown(f"**{fecha_mostrar}**{titulo_badge}")
             col_h2.caption(f"Por: {firma}")
             cols = st.columns(len(claves_vitales))
             for i, clave in enumerate(claves_vitales):
