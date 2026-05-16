@@ -43,6 +43,19 @@ def _normalizar_para_match(s: str) -> str:
     return s
 
 @st.cache_data(ttl=3600)
+def _parse_intervalo(text: str) -> tuple[float, float]:
+    """Extrae rango de horas desde string 'cada X-Y hs'.
+    Retorna (min_hs, max_hs). Si no hay rango, max_hs = min_hs.
+    """
+    import re
+    m = re.search(r"cada\s+([\d.]+)\s*(?:-\s*([\d.]+))?\s*hs", text)
+    if m:
+        min_hs = float(m.group(1))
+        max_hs = float(m.group(2)) if m.group(2) else min_hs
+        return (min_hs, max_hs)
+    # Fallback: no se pudo parsear (ej. "dosis unica")
+    return (0, 0)
+
 def _completar_con_vademecum() -> dict:
     """Combina MEDICAMENTOS (con dosis) + vademecum (solo nombres).
     Reconoce nombres con concentracion: 'Ibuprofeno 400mg' -> 'Ibuprofeno'
@@ -686,19 +699,19 @@ MEDICAMENTOS = {
 }
 
 
-def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = None) -> dict:
-    """Calcula dosis pediatrica segun peso del paciente."""
-    # Resolver si es una referencia (string) o tiene datos directos
+def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = None,
+                   intervalo_seleccionado_hs: float = None) -> dict:
+    """Calcula dosis pediatrica segun peso del paciente.
+    Si se provee intervalo_seleccionado_hs, se usa para dosis diarias.
+    """
     info = None
     if todos_medicamentos and isinstance(todos_medicamentos.get(medicamento), str):
-        # Es una referencia a otro nombre
         medicamento_real = todos_medicamentos[medicamento]
         info = MEDICAMENTOS.get(medicamento_real)
     else:
         info = MEDICAMENTOS.get(medicamento)
 
     if info is None:
-        # Intentar buscar por nombre base
         base, _ = _normalizar_medicamento(medicamento)
         for k, v in MEDICAMENTOS.items():
             if base.lower() in k.lower() or k.lower() in base.lower():
@@ -707,24 +720,23 @@ def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = 
 
     if info is None:
         raise ValueError(f"No hay datos de dosis pediatrica para '{medicamento}'")
+
+    intervalo = intervalo_seleccionado_hs or info["intervalo_min_hs"]
+    dosis_por_dia = 24 / intervalo
+
     dosis_min, dosis_max = info["dosis_mg_kg"]
     dosis_por_dosis_min = round(peso_kg * dosis_min, 1)
     dosis_por_dosis_max = round(peso_kg * dosis_max, 1)
 
-    # Dosis max por dosis (no superar el maximo absoluto)
     max_por_dosis = info["dosis_max_por_dosis_mg"]
     dosis_recomendada = min(dosis_por_dosis_max, max_por_dosis)
 
-    # Dosis diaria total
-    dosis_diaria_min = round(peso_kg * dosis_min * (24 / info["intervalo_min_hs"]), 1)
+    dosis_diaria_min = round(peso_kg * dosis_min * dosis_por_dia, 1)
     dosis_diaria_max_por_peso = round(peso_kg * info["dosis_max_diaria_mg_kg"], 1)
-    # Capping: la dosis diaria max no debe superar (max_por_dosis * dosis/dia)
     dosis_diaria_max = min(
         dosis_diaria_max_por_peso,
-        round(max_por_dosis * (24 / info["intervalo_min_hs"]), 1)
+        round(max_por_dosis * dosis_por_dia, 1)
     )
-
-    presentacion = info["presentacion"]
 
     return {
         "medicamento": medicamento,
@@ -734,10 +746,12 @@ def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = 
         "dosis_max_mg": dosis_por_dosis_max,
         "dosis_recomendada_mg": dosis_recomendada,
         "intervalo": info["intervalo_hs"],
+        "intervalo_seleccionado_hs": round(intervalo, 1),
+        "dosis_por_dia": round(dosis_por_dia),
         "dosis_diaria_min_mg": dosis_diaria_min,
         "dosis_diaria_max_mg": dosis_diaria_max,
         "dosis_max_por_dosis_mg": max_por_dosis,
-        "presentacion": presentacion,
+        "presentacion": info["presentacion"],
         "via": info["via"],
         "observaciones": info["observaciones"],
         "alerta": info["alerta"],
@@ -752,7 +766,12 @@ def _mostrar_resultado(resultado):
     cols[2].metric("Maximo por dosis", f"{r['dosis_max_por_dosis_mg']} mg")
 
     cols2 = st.columns([1, 1, 1])
-    cols2[0].metric("Intervalo", r["intervalo"])
+    int_sel = r.get("intervalo_seleccionado_hs")
+    if int_sel:
+        dosis_x_dia = r.get("dosis_por_dia", round(24 / int_sel))
+        cols2[0].metric("Intervalo", f"cada {int_sel} hs ({dosis_x_dia}/dia)")
+    else:
+        cols2[0].metric("Intervalo", r["intervalo"])
     cols2[1].metric("Dosis diaria max", f"{r['dosis_diaria_max_mg']} mg/dia")
     cols2[2].metric("Dosis diaria min", f"{r.get('dosis_diaria_min_mg', '?')} mg/dia")
 
@@ -887,7 +906,21 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
             if isinstance(info, str):
                 st.caption(f"Disponible como '{info}'. Via y dosis segun base de datos.")
             else:
-                st.caption(f"Via: {info['via']} | Intervalo: {info['intervalo_hs']} | Dosis calculada segun peso")
+                int_min, int_max = _parse_intervalo(info["intervalo_hs"])
+                if int_min > 0 and int_max > int_min:
+                    intervalo_sel = st.slider(
+                        "Intervalo de administracion (hs)",
+                        min_value=int_min, max_value=int_max,
+                        value=int_max, step=1.0,
+                        help=f"Rango recomendado: {info['intervalo_hs']}",
+                        key="int_selector"
+                    )
+                else:
+                    intervalo_sel = int_min or info["intervalo_min_hs"]
+                    st.caption(f"Intervalo: cada {intervalo_sel:.0f} hs")
+                st.session_state["int_selector_val"] = intervalo_sel
+                dosis_por_dia = 24 / intervalo_sel
+                st.caption(f"Dosis por dia: ~{round(dosis_por_dia)} toma(s) | Via: {info['via']}")
                 if info.get("alerta"):
                     st.error(f"ALERTA: {info['alerta']}", icon="🚨")
 
@@ -930,7 +963,9 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 st.info(obs)
                 log_event("calculadora_dosis", f"MANUAL:{res['medicamento']} - {peso}kg - {paciente_sel}")
         else:
-            resultado = calcular_dosis(medicamento, peso, _TODOS_MEDICAMENTOS)
+            intervalo_sel = st.session_state.get("int_selector_val", None)
+            resultado = calcular_dosis(medicamento, peso, _TODOS_MEDICAMENTOS,
+                                       intervalo_seleccionado_hs=intervalo_sel)
             raw = _TODOS_MEDICAMENTOS[medicamento]
             if isinstance(raw, str):
                 info = MEDICAMENTOS[raw]
@@ -941,6 +976,8 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
             _mostrar_resultado(resultado)
 
             with st.expander("Ver detalle del calculo", expanded=True):
+                int_sel = resultado.get("intervalo_seleccionado_hs", info["intervalo_min_hs"])
+                dosis_x_dia = resultado.get("dosis_por_dia", round(24 / int_sel))
                 st.markdown(f"""
 **Calculo para {resultado['medicamento']}:**
 - Peso del paciente: **{peso} kg**
@@ -948,7 +985,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
 - Dosis minima: {resultado['dosis_min_mg']} mg (peso x {info['dosis_mg_kg'][0]} mg/kg)
 - Dosis maxima: {resultado['dosis_max_mg']} mg (peso x {info['dosis_mg_kg'][1]} mg/kg)
 - Dosis recomendada: {resultado['dosis_recomendada_mg']} mg (limitado a max {resultado['dosis_max_por_dosis_mg']} mg)
-- Intervalo: {resultado['intervalo']}
+- Intervalo seleccionado: cada {int_sel} hs ({dosis_x_dia} toma(s)/dia)
 - Via: {resultado['via']}
 - Dosis diaria minima: {resultado.get('dosis_diaria_min_mg', '?')} mg
 - Dosis diaria maxima: {resultado['dosis_diaria_max_mg']} mg
