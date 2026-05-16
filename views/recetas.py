@@ -26,7 +26,6 @@ from views._recetas_indicaciones import (
 )
 from views._recetas_prescripcion import (
     render_nueva_prescripcion as _render_nueva_prescripcion,
-    render_indicacion_papel as _render_indicacion_papel,
 )
 from views._recetas_turno import (
     render_administracion_turno as _render_administracion_turno,
@@ -76,7 +75,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     rol = rol or user.get("rol", "")
     nombre_usuario = _nombre_usuario(user)
     puede_prescribir = puede_accion(rol, "recetas_prescribir")
-    puede_cargar_papel = puede_accion(rol, "recetas_cargar_papel")
     puede_registrar_dosis = puede_accion(rol, "recetas_registrar_dosis")
     puede_cambiar_estado = puede_accion(rol, "recetas_cambiar_estado")
 
@@ -90,9 +88,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     if puede_prescribir:
         _render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuario, es_movil, vademecum_base)
-
-    if puede_cargar_papel:
-        _render_indicacion_papel(paciente_sel, mi_empresa, user, rol, nombre_usuario, es_movil)
 
     st.divider()
 
