@@ -65,7 +65,7 @@ def resumen_medicacion_activa(paciente_sel, mi_empresa):
     ]
     activas = [
         r for r in todas
-        if str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
+        if str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada", "completada")
     ]
     if not activas:
         return

@@ -1,3 +1,5 @@
+from datetime import datetime as _dt, timedelta as _td
+
 from core.alert_toasts import queue_toast
 import time as _time
 
@@ -143,6 +145,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                     for ind in inds_sql:
                         extra = ind.get("datos_extra", {}) or {}
                         recs_todas.append({
+                            "_sql_id": ind.get("id", ""),
                             "paciente": paciente_sel,
                             "med": ind.get("medicamento", ""),
                             "fecha": ind.get("fecha_indicacion", "")[:16].replace("T", " ") if ind.get("fecha_indicacion") else "",
@@ -197,6 +200,30 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         sql_status = estado_recetas_sql(st.session_state)
         if sql_status and not sql_status.get("ok"):
             st.caption("Modo local/cache activo para recetas y administracion. La lectura SQL no respondio en esta vista.")
+
+    # --- Auto-marcar como Completada las indicaciones cuyo ciclo vencio ---
+    _hoy = _dt.now().date()
+    for r in recs_todas:
+        if r.get("estado_receta", "Activa") != "Activa":
+            continue
+        try:
+            _dur = int(r.get("dias_duracion", 0) or 0)
+            if _dur <= 0:
+                continue
+            _fecha_str = str(r.get("fecha", ""))[:10]
+            _inicio = _dt.strptime(_fecha_str, "%d/%m/%Y").date() if "/" in _fecha_str else _dt.fromisoformat(_fecha_str).date()
+            if (_inicio + _td(days=_dur)) < _hoy:
+                r["estado_receta"] = "Completada"
+                r["estado_clinico"] = "Completada"
+                _sql_id = r.get("_sql_id", "")
+                if _sql_id:
+                    try:
+                        from core._db_sql_clinico import update_estado_indicacion
+                        update_estado_indicacion(_sql_id, "Completada")
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
 
