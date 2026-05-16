@@ -42,54 +42,50 @@ def inyectar_css():
     st.markdown(_css_estilos(), unsafe_allow_html=True)
 
 
-def card_clinica(titulo, contenido, badge_text=None, badge_type="ok"):
+def _html_card_clinica(titulo, contenido, badge_text=None, badge_type="ok") -> str:
     badge_type = str(badge_type or "ok")
     if badge_type not in {"ok", "warning", "danger", "info"}:
         badge_type = "ok"
     badge_html = (
         f'<span class="badge-{badge_type}">{escape(str(badge_text))}</span>' if badge_text else ""
     )
-    st.markdown(
-        f"""
-    <div class="clinical-card">
+    return f"""<div class="clinical-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div class="card-title" style="margin: 0;">{escape(str(titulo))}</div>
             {badge_html}
         </div>
         <div class="card-text">{contenido}</div>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
+    </div>"""
 
 
-def alerta_caja(titulo, detalle, nivel="info"):
+def card_clinica(titulo, contenido, badge_text=None, badge_type="ok"):
+    st.markdown(_html_card_clinica(titulo, contenido, badge_text, badge_type), unsafe_allow_html=True)
+
+
+def _html_alerta_caja(titulo, detalle, nivel="info") -> str:
     nivel = str(nivel or "info")
     if nivel not in {"ok", "warning", "danger", "info"}:
         nivel = "info"
-    clase = f"alert-{nivel}"
-    st.markdown(
-        f"""
-    <div class="alert-box {clase}">
+    return f"""<div class="alert-box alert-{nivel}">
         <strong>{escape(str(titulo))}</strong><br>{escape(str(detalle))}
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
+    </div>"""
 
 
-def timeline_event(fecha, titulo, detalle, color_dot="#3B82F6"):
+def alerta_caja(titulo, detalle, nivel="info"):
+    st.markdown(_html_alerta_caja(titulo, detalle, nivel), unsafe_allow_html=True)
+
+
+def _html_timeline_event(fecha, titulo, detalle, color_dot="#3B82F6") -> str:
     color_dot = _hex_color(color_dot)
-    st.markdown(
-        f"""
-    <div class="timeline-item">
+    return f"""<div class="timeline-item">
         <div class="timeline-dot" style="background: {color_dot};"></div>
         <div class="timeline-date">{escape(str(fecha))} - <b>{escape(str(titulo))}</b></div>
         <div class="timeline-content">{escape(str(detalle))}</div>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
+    </div>"""
+
+
+def timeline_event(fecha, titulo, detalle, color_dot="#3B82F6"):
+    st.markdown(_html_timeline_event(fecha, titulo, detalle, color_dot), unsafe_allow_html=True)
 
 
 def metrica_clinica(label, valor, delta=None, tendencia=None):

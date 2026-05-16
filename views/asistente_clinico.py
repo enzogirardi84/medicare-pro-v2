@@ -14,6 +14,9 @@ from typing import Optional
 import streamlit as st
 
 from components.clinical_cards import (
+    _html_alerta_caja,
+    _html_card_clinica,
+    _html_timeline_event,
     alerta_caja,
     card_clinica,
     inyectar_css,
@@ -137,22 +140,13 @@ def _tab_alertas(dashboard: dict):
 
     if crit:
         st.markdown("### Criticas")
-        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
-        for a in crit:
-            alerta_caja(a["titulo"], a["detalle"], nivel="danger")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'<div {SCROLL}>{"".join(_html_alerta_caja(a["titulo"], a["detalle"], nivel="danger") for a in crit)}</div>', unsafe_allow_html=True)
     if warn:
         st.markdown("### Advertencias")
-        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
-        for a in warn:
-            alerta_caja(a["titulo"], a["detalle"], nivel="warning")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'<div {SCROLL}>{"".join(_html_alerta_caja(a["titulo"], a["detalle"], nivel="warning") for a in warn)}</div>', unsafe_allow_html=True)
     if info:
         st.markdown("### Informativas")
-        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
-        for a in info:
-            alerta_caja(a["titulo"], a["detalle"], nivel="info")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'<div {SCROLL}>{"".join(_html_alerta_caja(a["titulo"], a["detalle"], nivel="info") for a in info)}</div>', unsafe_allow_html=True)
 
 
 def _tab_resumen_clinico(dashboard: dict, datos: dict):
@@ -237,18 +231,19 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
             st.caption("No hay registros de consumos de insumos.")
 
 
-def renderizar_tarjeta_indicacion(ind: dict):
+def _html_tarjeta_indicacion(ind: dict) -> str:
     estado = ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))
     badge_type = "ok" if "activa" in str(estado).lower() else "warning"
-
     med = str(ind.get("med", "Medicacion"))
     fecha = str(ind.get("fecha", "-"))
     via = escape(str(ind.get("via", "-")))
     frecuencia = escape(str(ind.get("frecuencia", "-")))
-
     contenido_html = f"<b>Fecha:</b> {fecha}<br><b>Via:</b> {via}<br><b>Frecuencia:</b> {frecuencia}"
+    return _html_card_clinica(titulo=med, contenido=contenido_html, badge_text=estado, badge_type=badge_type)
 
-    card_clinica(titulo=med, contenido=contenido_html, badge_text=estado, badge_type=badge_type)
+
+def renderizar_tarjeta_indicacion(ind: dict):
+    st.markdown(_html_tarjeta_indicacion(ind), unsafe_allow_html=True)
 
 
 def _tab_farmacologia(dashboard: dict, datos: dict):
@@ -285,34 +280,29 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
         # 1. Renderizar PRIMERO las Activas
         if indicaciones_activas:
             st.markdown("### Indicaciones Activas")
-            st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
-            for ind in indicaciones_activas:
-                renderizar_tarjeta_indicacion(ind)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(f'<div {SCROLL}>{"".join(_html_tarjeta_indicacion(ind) for ind in indicaciones_activas)}</div>', unsafe_allow_html=True)
         else:
             st.info("No hay indicaciones farmacologicas activas en este momento.")
 
         # 2. Renderizar DESPUES las Suspendidas / Historicas
         if indicaciones_suspendidas:
             st.markdown("### Historial: Indicaciones Suspendidas")
-            st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
-            for ind in indicaciones_suspendidas[-30:]:
-                renderizar_tarjeta_indicacion(ind)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(f'<div {SCROLL}>{"".join(_html_tarjeta_indicacion(ind) for ind in indicaciones_suspendidas[-30:])}</div>', unsafe_allow_html=True)
     else:
         st.info("No hay indicaciones registradas para este paciente.")
 
     if administracion:
         st.markdown("### Administraciones registradas")
-        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
-        for adm in administracion[-50:]:
-            timeline_event(
+        adm_html = "".join(
+            _html_timeline_event(
                 adm.get("fecha", "-"),
                 adm.get("med", "Administracion"),
                 f"Profesional: {adm.get('profesional', '-')} | Dosis: {adm.get('dosis', '-')} | Via: {adm.get('via', '-')}",
                 color_dot="#10B981",
             )
-        st.markdown('</div>', unsafe_allow_html=True)
+            for adm in administracion[-50:]
+        )
+        st.markdown(f'<div {SCROLL}>{adm_html}</div>', unsafe_allow_html=True)
     else:
         st.caption("No hay registros de administracion medica.")
 
@@ -356,13 +346,11 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     eventos_filtrados = [e for e in eventos if filtros.get(e[0], True)]
     eventos_filtrados.sort(key=lambda x: _parse_fecha(str(x[1])) or datetime.min, reverse=True)
 
-    st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
     if eventos_filtrados:
-        for _, fecha, titulo, detalle, color in eventos_filtrados[:50]:
-            timeline_event(fecha, titulo, detalle, color_dot=color)
+        tl_html = "".join(_html_timeline_event(fecha, titulo, detalle, color_dot=color) for _, fecha, titulo, detalle, color in eventos_filtrados[:50])
+        st.markdown(f'<div {SCROLL}>{tl_html}</div>', unsafe_allow_html=True)
     else:
         st.caption("No hay eventos que coincidan con los filtros seleccionados.")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     st.divider()
     st.markdown("### Pase de Guardia / Auditoria")
