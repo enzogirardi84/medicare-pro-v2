@@ -1,6 +1,6 @@
 streamlit>=1.40.0
 openai>=1.0.0
-anthropic>=0.20.0
+anthropic>=0.97.0
 orjson>=3.9.10
 bcrypt>=4.1.0
 pandas>=2.2.0,<3.0.0
