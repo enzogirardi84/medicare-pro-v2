@@ -12,6 +12,9 @@ def _generar_texto_evolucion(
     animo, dolor_presente, dolor_eva,
     alimentacion,
     herida_mecanismo, herida_profundidad,
+    herida_localizacion, herida_tamano,
+    herida_lecho, herida_exudado,
+    herida_infeccion, herida_curacion,
     diuresis, deposicion,
     descanso,
     medicacion_administrada,
@@ -74,7 +77,36 @@ def _generar_texto_evolucion(
                 "Grado IV": "Grado IV (expone musculo, tendones u hueso)",
             }
             txt += ", " + mapa_profundidad.get(herida_profundidad, herida_profundidad)
-        parrafos.append(txt + ". Se realiza curacion segun protocolo.")
+        detalles_herida = []
+        if herida_localizacion:
+            detalles_herida.append(f"localizada en {herida_localizacion}")
+        if herida_tamano:
+            detalles_herida.append(f"de aproximadamente {herida_tamano}")
+        if detalles_herida:
+            txt += ", " + ", ".join(detalles_herida)
+        mapa_lecho = {
+            "Granulacion": "lecho con tejido de granulacion",
+            "Fibrina": "lecho cubierto de fibrina",
+            "Necrotico": "lecho con tejido necrotico",
+            "Mixto": "lecho mixto con tejido de granulacion y fibrina",
+            "Epitelizacion": "lecho en fase de epitelizacion",
+        }
+        if herida_lecho in mapa_lecho:
+            txt += ", " + mapa_lecho[herida_lecho]
+        mapa_exudado = {
+            "Seroso": "exudado seroso escaso",
+            "Serohematico": "exudado serohematico",
+            "Purulento": "exudado purulento",
+            "Hemorragico": "exudado hemorragico",
+            "Sin exudado": "sin exudado",
+        }
+        if herida_exudado in mapa_exudado:
+            txt += ", " + mapa_exudado[herida_exudado]
+        if herida_infeccion:
+            txt += ", con signos de infeccion: " + herida_infeccion
+        parrafos.append(txt + ".")
+        if herida_curacion:
+            parrafos.append(f"Se realiza {herida_curacion}.")
 
     mapa_higiene = {
         "Se bano solo": "Higiene personal realizada de forma autonoma",
@@ -192,6 +224,37 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 ["", "Grado I", "Grado II", "Grado III", "Grado IV"],
                 key="evc_herida_prof",
             )
+            herida_localizacion = st.text_input(
+                "Localizacion de la herida",
+                placeholder="Ej: sacro, talon derecho, pierna izquierda",
+                key="evc_herida_loc",
+            )
+            herida_tamano = st.text_input(
+                "Tamano aproximado",
+                placeholder="Ej: 3x2 cm, 5 cm de longitud",
+                key="evc_herida_tam",
+            )
+            c_her3, c_her4 = st.columns(2)
+            herida_lecho = c_her3.selectbox(
+                "Estado del lecho",
+                ["", "Granulacion", "Fibrina", "Necrotico", "Mixto", "Epitelizacion"],
+                key="evc_herida_lecho",
+            )
+            herida_exudado = c_her4.selectbox(
+                "Tipo de exudado",
+                ["", "Sin exudado", "Seroso", "Serohematico", "Purulento", "Hemorragico"],
+                key="evc_herida_exud",
+            )
+            herida_infeccion = st.multiselect(
+                "Signos de infeccion (opcional)",
+                ["Eritema", "Edema", "Calor local", "Mal olor", "Secrecion purulenta", "Fiebre"],
+                key="evc_herida_inf",
+            )
+            herida_curacion = st.text_input(
+                "Tipo de curacion realizada",
+                placeholder="Ej: curacion con solucion fisiologica y gasa esteril",
+                key="evc_herida_cura",
+            )
 
         with st.expander("4. Eliminacion", expanded=False):
             c_eli1, c_eli2 = st.columns(2)
@@ -250,6 +313,12 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             alimentacion=alimentacion,
             herida_mecanismo=herida_mecanismo,
             herida_profundidad=herida_profundidad,
+            herida_localizacion=herida_localizacion,
+            herida_tamano=herida_tamano,
+            herida_lecho=herida_lecho,
+            herida_exudado=herida_exudado,
+            herida_infeccion=", ".join(herida_infeccion),
+            herida_curacion=herida_curacion,
             diuresis=diuresis,
             deposicion=deposicion,
             descanso=descanso,
@@ -273,6 +342,8 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         dolor_presente,
                         alimentacion,
                         herida_mecanismo, herida_profundidad,
+                        herida_localizacion, herida_tamano,
+                        herida_lecho, herida_exudado, herida_infeccion, herida_curacion,
                         diuresis, deposicion, descanso,
                         medicacion_administrada]) and not observaciones_extra.strip():
                 st.error("Debe completar al menos un campo antes de guardar.")
@@ -301,6 +372,12 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         "alimentacion": alimentacion,
                         "herida_mecanismo": herida_mecanismo,
                         "herida_profundidad": herida_profundidad,
+                        "herida_localizacion": herida_localizacion,
+                        "herida_tamano": herida_tamano,
+                        "herida_lecho": herida_lecho,
+                        "herida_exudado": herida_exudado,
+                        "herida_infeccion": ", ".join(herida_infeccion),
+                        "herida_curacion": herida_curacion,
                         "diuresis": diuresis,
                         "deposicion": deposicion,
                         "descanso": descanso,
