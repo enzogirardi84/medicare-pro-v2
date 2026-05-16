@@ -1,11 +1,12 @@
-from core.alert_toasts import queue_toast
 import base64
 import hashlib
 import io
+import zipfile
 from datetime import datetime
 
 import streamlit as st
 
+from core.alert_toasts import queue_toast
 from core.clinical_exports import (
     build_backup_pdf_bytes,
     build_consent_pdf_bytes,
@@ -26,13 +27,77 @@ from core.db_sql import get_consentimientos_by_paciente, insert_consentimiento
 from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
 from core.app_logging import log_event
 
+try:
+    from PyPDF2 import PdfMerger as _PdfMerger
+    _PYPDF_DISPONIBLE = True
+except ImportError:
+    _PYPDF_DISPONIBLE = False
+
 CANVAS_DISPONIBLE = False
 try:
     from streamlit_drawable_canvas import st_canvas
-
     CANVAS_DISPONIBLE = True
 except ImportError:
-    pass  # Intencional: canvas es opcional para firmas
+    pass
+
+
+def _render_pdf_preview(payload: bytes, label: str = "Documento"):
+    if not payload:
+        return
+    _size_kb = len(payload) / 1024
+    _page_count = "?"
+    try:
+        from PyPDF2 import PdfReader
+        _reader = PdfReader(io.BytesIO(payload))
+        _page_count = len(_reader.pages)
+    except Exception:
+        pass
+    _b64 = base64.b64encode(payload).decode()
+    _src = f"data:application/pdf;base64,{_b64}"
+    with st.expander(f"Vista previa — {label} ({_page_count} pág, {_size_kb:.0f} KB)", expanded=False):
+        st.markdown(
+            f'<iframe src="{_src}" width="100%" height="500" style="border:1px solid #ddd;border-radius:6px"></iframe>',
+            unsafe_allow_html=True,
+        )
+
+
+def _build_combined_pdf_bytes(session_state, paciente_sel, mi_empresa, user):
+    if not _PYPDF_DISPONIBLE:
+        return None
+    _parts = []
+    for _builder in [build_history_pdf_bytes, build_backup_pdf_bytes, build_consent_pdf_bytes]:
+        try:
+            _b = _builder(session_state, paciente_sel, mi_empresa, user)
+            if _b:
+                _parts.append(_b)
+        except Exception:
+            continue
+    if not _parts:
+        return None
+    try:
+        _merger = _PdfMerger()
+        for _p in _parts:
+            _merger.append(io.BytesIO(_p))
+        _out = io.BytesIO()
+        _merger.write(_out)
+        return _out.getvalue()
+    except Exception as e:
+        log_event("combined_pdf_error", str(e))
+        return None
+
+
+def _build_batch_pdf_zip(session_state, pacientes, mi_empresa, user):
+    _zip_buf = io.BytesIO()
+    with zipfile.ZipFile(_zip_buf, "w", zipfile.ZIP_DEFLATED) as _zf:
+        for _pac in pacientes:
+            try:
+                _pdf = build_history_pdf_bytes(session_state, _pac, mi_empresa, user)
+                if _pdf:
+                    _name = f"HC_{_pac.replace(' ', '_').replace('/', '-')}.pdf"
+                    _zf.writestr(_name, _pdf)
+            except Exception:
+                continue
+    return _zip_buf.getvalue()
 
 
 def _render_lazy_download(container, key_base, prepare_label, download_label, build_fn, file_name, mime, unavailable_message=None):
@@ -79,41 +144,52 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     puede_exportar_respaldo = puede_accion(rol, "pdf_exportar_respaldo")
     puede_guardar_consentimiento = puede_accion(rol, "pdf_guardar_consentimiento")
     puede_descargar_consentimiento = puede_accion(rol, "pdf_descargar_consentimiento")
+    puede_batch = puede_exportar_historia
 
     st.markdown("## Documentos del paciente")
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
 
-    tab_docs, tab_cons = st.tabs(["📄 Exportar documentos", "✍️ Consentimiento legal"])
+    _template = st.selectbox(
+        "Formato del PDF",
+        ["Clasico", "Detallado (con graficos)", "Compacto"],
+        key="pdf_template_sel",
+    )
+
+    tab_docs, tab_cons = st.tabs(["Exportar documentos", "Consentimiento legal"])
 
     with tab_docs:
         st.caption("Presiona **Preparar**, espera la generacion, luego **Descargar**.")
         col_d1, col_d2 = st.columns(2)
 
         with col_d1:
-            st.markdown("#### 📋 Historia Clínica PDF")
+            st.markdown("**Historia Clinica PDF**")
             st.caption("Evoluciones, signos vitales, medicacion, emergencias y mas.")
             if puede_exportar_historia:
                 _render_lazy_download(
                     st,
                     key_base=f"pdf_hc_{paciente_sel}",
                     prepare_label="Preparar Historia Clinica (PDF)",
-                    download_label="⬇️ Descargar Historia Clinica (PDF)",
+                    download_label="Descargar Historia Clinica (PDF)",
                     build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
                     file_name=f"HC_{paciente_sel.replace(' ', '_')}.pdf",
                     mime="application/pdf",
+                )
+                _render_pdf_preview(
+                    st.session_state.get(f"lazy_export_pdf_hc_{paciente_sel}"),
+                    "Historia Clinica",
                 )
             else:
                 st.info("Disponible para roles clinicos y de control.")
 
         with col_d2:
-            st.markdown("#### 📊 Exportacion Completa Excel")
+            st.markdown("**Exportacion Completa Excel**")
             st.caption("Incluye cobros, insumos, medicacion, signos vitales y todos los modulos.")
             if puede_exportar_excel:
                 _render_lazy_download(
                     st,
                     key_base=f"pdf_excel_{paciente_sel}",
                     prepare_label="Preparar Excel completo",
-                    download_label="⬇️ Descargar Historia Clinica (Excel)",
+                    download_label="Descargar Historia Clinica (Excel)",
                     build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
                     file_name=f"HC_{paciente_sel.replace(' ', '_')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -132,6 +208,28 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                     build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
                     file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
                     mime="application/pdf",
+                )
+                _render_pdf_preview(
+                    st.session_state.get(f"lazy_export_pdf_respaldo_{paciente_sel}"),
+                    "Respaldo Clinico",
+                )
+
+        if _PYPDF_DISPONIBLE and (puede_exportar_historia or puede_exportar_respaldo):
+            with st.expander("PDF combinado (todo en uno)", expanded=False):
+                st.caption("Historia clinica + Respaldo + Consentimiento en un solo archivo.")
+                _render_lazy_download(
+                    st,
+                    key_base=f"pdf_combo_{paciente_sel}",
+                    prepare_label="Preparar PDF combinado",
+                    download_label="Descargar PDF completo",
+                    build_fn=lambda: _build_combined_pdf_bytes(st.session_state, paciente_sel, mi_empresa, user),
+                    file_name=f"Completo_{paciente_sel.replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                    unavailable_message="No se pudo generar el PDF combinado (verifica que exista al menos un documento).",
+                )
+                _render_pdf_preview(
+                    st.session_state.get(f"lazy_export_pdf_combo_{paciente_sel}"),
+                    "PDF combinado",
                 )
 
     with tab_cons:
@@ -201,13 +299,11 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                     else:
                         fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
 
-                        # Firma digital criptografica del consentimiento
                         doc_id = f"consent_{paciente_sel}_{int(datetime.now().timestamp())}"
                         doc_hash = hashlib.sha256(
                             f"{paciente_sel}|{fecha_str}|{firma_b64[:64]}".encode()
                         ).hexdigest()[:16]
 
-                        # 1. Guardar en SQL (Dual-Write)
                         try:
                             _partes_pac = paciente_sel.split(" - ")
                             _dni_cons = _partes_pac[1].strip() if len(_partes_pac) > 1 else detalles.get("dni", "")
@@ -226,7 +322,6 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                         except Exception as e:
                             log_event("error_consentimiento_sql", str(e))
 
-                        # 2. Guardar en JSON (Legacy)
                         if not isinstance(st.session_state.get("consentimientos_db"), list):
                             st.session_state["consentimientos_db"] = []
                         st.session_state["consentimientos_db"].append(
@@ -274,6 +369,10 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                 mime="application/pdf",
                 unavailable_message="Todavia no hay consentimiento guardado para este paciente.",
             )
+            _render_pdf_preview(
+                st.session_state.get(f"lazy_export_consent_pdf_{paciente_sel}"),
+                "Consentimiento",
+            )
         else:
             st.caption("La descarga del consentimiento queda reservada a roles clinicos y de control.")
 
@@ -290,3 +389,26 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                     log_event("pdf_view_error", str(e))
         elif puede_descargar_consentimiento:
             st.warning("Todavia no hay consentimientos guardados. Completa el formulario y guarda primero.")
+
+    # Batch PDF
+    if puede_batch:
+        with st.expander("Exportacion por lote (todos los pacientes)", expanded=False):
+            st.caption("Genera PDF de historia clinica para cada paciente de la empresa activa.")
+            if st.button("Preparar lote (ZIP)", key="batch_pdf_btn"):
+                _pacientes = sorted(st.session_state.get("pacientes_db", []))
+                if not _pacientes:
+                    st.warning("No hay pacientes cargados en esta sesion.")
+                else:
+                    with st.spinner(f"Generando {len(_pacientes)} PDFs..."):
+                        _zip_bytes = _build_batch_pdf_zip(st.session_state, _pacientes, mi_empresa, user)
+                    if _zip_bytes:
+                        st.success(f"{len(_pacientes)} PDFs generados.")
+                        st.download_button(
+                            "Descargar ZIP con todos los PDFs",
+                            data=_zip_bytes,
+                            file_name=f"Lote_HC_{ahora().strftime('%d%m%Y')}.zip",
+                            mime="application/zip",
+                            width='stretch',
+                        )
+                    else:
+                        st.warning("No se pudo generar ningun PDF. Verifica ReportLab/disponibilidad.")
