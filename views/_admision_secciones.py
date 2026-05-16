@@ -154,8 +154,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
         impacto_actual = _resumen_impacto_paciente(paciente_sel_admin)
         total_impacto = sum(impacto_actual.values())
 
-        with st.container(border=True):
-            st.markdown("#### Editar legajo seleccionado")
+        with st.expander("Editar legajo seleccionado", expanded=False):
             if impacto_actual:
                 texto_impacto = " | ".join(
                     f"{DB_LABELS.get(clave, clave)}: {cantidad}" for clave, cantidad in list(impacto_actual.items())[:6]
