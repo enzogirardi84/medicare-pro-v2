@@ -10,7 +10,8 @@ def _generar_texto_evolucion(
     ta_sistolica, ta_diastolica, fc, temperatura,
     higiene, movilidad,
     animo, dolor_presente, dolor_eva,
-    alimentacion, curaciones,
+    alimentacion,
+    herida_mecanismo, herida_profundidad,
     diuresis, deposicion,
     descanso,
     medicacion_administrada,
@@ -54,8 +55,26 @@ def _generar_texto_evolucion(
     if alimentacion in mapa_alimentacion:
         parrafos.append(mapa_alimentacion[alimentacion] + ".")
 
-    if curaciones:
-        parrafos.append("Se realizan curaciones planas segun indicacion, sin signos de infeccion.")
+    mapa_mecanismo = {
+        "Incisas": "Herida incisa por objeto afilado, bordes limpios",
+        "Contusas": "Herida contusa por impacto, con bordes irregulares y hematoma perilesional",
+        "Punzantes": "Herida punzante con orificio de entrada puntiforme y riesgo de infeccion profunda",
+        "Laceraciones": "Laceracion con bordes dentados e irregulares por friccion violenta",
+        "Abrasiones": "Abrasion superficial por friccion, afecta solo epidermis",
+        "Avulsiones": "Avulsion con desprendimiento parcial del tejido",
+        "Ulceras": "Ulcera cronica con perdida de sustancia y cicatrizacion lenta",
+    }
+    if herida_mecanismo in mapa_mecanismo:
+        txt = mapa_mecanismo[herida_mecanismo]
+        if herida_profundidad:
+            mapa_profundidad = {
+                "Grado I": "Grado I (superficial, solo epidermis)",
+                "Grado II": "Grado II (espesor parcial, epidermis y dermis)",
+                "Grado III": "Grado III (espesor total, hasta tejido celular subcutaneo)",
+                "Grado IV": "Grado IV (expone musculo, tendones u hueso)",
+            }
+            txt += ", " + mapa_profundidad.get(herida_profundidad, herida_profundidad)
+        parrafos.append(txt + ". Se realiza curacion segun protocolo.")
 
     mapa_higiene = {
         "Se bano solo": "Higiene personal realizada de forma autonoma",
@@ -154,13 +173,25 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 dolor_eva = col_dolor2.slider("Escala EVA (1-10)", min_value=1, max_value=10, value=5, key="evc_dolor_eva", help="1 = dolor minimo, 10 = dolor maximo")
 
         with st.expander("3. Nutricional - Metabolico", expanded=False):
-            c_nut1, c_nut2 = st.columns(2)
-            alimentacion = c_nut1.selectbox(
+            alimentacion = st.selectbox(
                 "Alimentacion",
                 ["", "Comio toda su porcion", "Comio poco", "No quiso comer", "Alimentacion por sonda"],
                 key="evc_alimentacion",
             )
-            curaciones = c_nut2.checkbox("Se realizaron curaciones planas", key="evc_curaciones")
+
+        with st.expander("6. Heridas y curaciones", expanded=False):
+            st.caption("Completar solo si el paciente presenta alguna lesion o herida activa.")
+            c_her1, c_her2 = st.columns(2)
+            herida_mecanismo = c_her1.selectbox(
+                "Clasificacion segun mecanismo",
+                ["", "Incisas", "Contusas", "Punzantes", "Laceraciones", "Abrasiones", "Avulsiones", "Ulceras"],
+                key="evc_herida_mec",
+            )
+            herida_profundidad = c_her2.selectbox(
+                "Clasificacion segun profundidad",
+                ["", "Grado I", "Grado II", "Grado III", "Grado IV"],
+                key="evc_herida_prof",
+            )
 
         with st.expander("4. Eliminacion", expanded=False):
             c_eli1, c_eli2 = st.columns(2)
@@ -217,7 +248,8 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             dolor_presente=dolor_presente,
             dolor_eva=dolor_eva,
             alimentacion=alimentacion,
-            curaciones=curaciones,
+            herida_mecanismo=herida_mecanismo,
+            herida_profundidad=herida_profundidad,
             diuresis=diuresis,
             deposicion=deposicion,
             descanso=descanso,
@@ -239,7 +271,8 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             if not any([ta_sistolica, ta_diastolica, fc, temperatura,
                         higiene, movilidad, animo,
                         dolor_presente,
-                        alimentacion, curaciones,
+                        alimentacion,
+                        herida_mecanismo, herida_profundidad,
                         diuresis, deposicion, descanso,
                         medicacion_administrada]) and not observaciones_extra.strip():
                 st.error("Debe completar al menos un campo antes de guardar.")
@@ -266,7 +299,8 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         "dolor_presente": dolor_presente,
                         "dolor_eva": dolor_eva,
                         "alimentacion": alimentacion,
-                        "curaciones": curaciones,
+                        "herida_mecanismo": herida_mecanismo,
+                        "herida_profundidad": herida_profundidad,
                         "diuresis": diuresis,
                         "deposicion": deposicion,
                         "descanso": descanso,

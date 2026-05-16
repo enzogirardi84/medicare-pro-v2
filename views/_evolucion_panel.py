@@ -320,7 +320,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             "animo": "Estado neurologico",
                             "dolor_eva": "Dolor EVA",
                             "alimentacion": "Alimentacion",
-                            "curaciones": "Curaciones planas",
+                            "herida_mecanismo": "Tipo de herida (mecanismo)",
+                            "herida_profundidad": "Profundidad de herida",
                             "diuresis": "Diuresis",
                             "deposicion": "Deposicion",
                             "descanso": "Descanso",
@@ -331,7 +332,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             val = cuidador_data.get(key)
                             if val is None or val == "" or val is False:
                                 continue
-                            if key in ("medicacion_administrada", "curaciones"):
+                            if key == "medicacion_administrada":
                                 st.markdown(f"- {label}: **Si**")
                             elif key == "dolor_eva" and cuidador_data.get("dolor_presente"):
                                 st.markdown(f"- Dolor presente: **Si (EVA {int(val)}/10)**")
