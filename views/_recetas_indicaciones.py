@@ -56,23 +56,15 @@ def construir_texto_indicacion(
     return " | ".join([p for p in partes if str(p).strip()])
 
 
-def resumen_medicacion_activa(paciente_sel, mi_empresa):
-    """Bloque compacto de medicación activa con indicador de próximas a vencer."""
-    todas = [
-        r for r in st.session_state.get("indicaciones_db", [])
-        if r.get("paciente") == paciente_sel
-        and r.get("empresa", mi_empresa) == mi_empresa
-    ]
-    activas = [
-        r for r in todas
-        if str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada", "completada")
-    ]
+def resumen_medicacion_activa(activas: list):
+    """Bloque compacto de medicación activa con indicador de próximas a vencer.
+    Recibe directamente la lista ya filtrada (solo Activas, sin Completadas/Suspendidas).
+    """
     if not activas:
         return
 
     hoy = _dt.now().date()
     por_vencer = []
-    vencidas = []
     for r in activas:
         try:
             fecha_inicio = _dt.strptime(str(r.get("fecha", ""))[:10], "%d/%m/%Y").date()
@@ -80,19 +72,13 @@ def resumen_medicacion_activa(paciente_sel, mi_empresa):
             if dias_dur > 0:
                 fecha_fin = fecha_inicio + _td(days=dias_dur)
                 dias_restantes = (fecha_fin - hoy).days
-                if dias_restantes < 0:
-                    vencidas.append((r, abs(dias_restantes)))
-                elif dias_restantes <= 2:
+                if 0 <= dias_restantes <= 2:
                     por_vencer.append((r, dias_restantes))
         except Exception as _exc:
             from core.app_logging import log_event
             log_event("recetas_indicaciones", f"parse_fecha_vencimiento_error:{type(_exc).__name__}:{r.get('fecha','')}")
 
-    with st.expander(f"📊 Medicación activa ({len(activas)} indicación/es)", expanded=bool(vencidas or por_vencer)):
-        if vencidas:
-            for r, dias in vencidas[:3]:
-                nom = (r.get("med") or "")[:60]
-                st.error(f"🔴 VENCIDA hace {dias}d: **{nom}**")
+    with st.expander(f"📊 Medicación activa ({len(activas)} indicación/es)", expanded=bool(por_vencer)):
         if por_vencer:
             for r, dias in por_vencer:
                 nom = (r.get("med") or "")[:60]

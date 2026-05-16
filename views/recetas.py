@@ -83,8 +83,6 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     st.markdown("## Recetas y administración")
     st.caption(f"Profesional en sesión: **{nombre_usuario}**")
 
-    _resumen_medicacion_activa(paciente_sel, mi_empresa)
-
     try:
         vademecum_base = cargar_json_asset("vademecum.json")
     except Exception:
@@ -226,6 +224,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             pass
 
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
+
+    _resumen_medicacion_activa(recs_activas)
 
     if recs_activas:
         _render_administracion_turno(
