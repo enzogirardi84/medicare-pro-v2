@@ -109,7 +109,7 @@ def _generar_texto_evolucion(
     mapa_higiene = {
         "Se baño solo": "Higiene personal realizada de forma autonoma",
         "Baño en cama": "Se realizo higiene en cama con asistencia del personal",
-        "Cambio de panial": "Se realizo cambio de panial, piel integra sin lesiones",
+        "Cambio de pañal": "Se realizo cambio de pañal, piel integra sin lesiones",
     }
     if higiene in mapa_higiene:
         parrafos.append(mapa_higiene[higiene] + ".")
@@ -187,7 +187,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             fc = sv_cols[1].number_input("FC (lpm)", min_value=0, max_value=300, value=80, step=1, key="evc_fc")
             temperatura = sv_cols[2].number_input("Temp (C)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, key="evc_temp")
             c_act1, c_act2 = st.columns(2)
-            higiene = c_act1.selectbox("Higiene", ["", "Se baño solo", "Baño en cama", "Cambio de panial"], key="evc_higiene")
+            higiene = c_act1.selectbox("Higiene", ["", "Se baño solo", "Baño en cama", "Cambio de pañal"], key="evc_higiene")
             movilidad = c_act2.selectbox("Movilidad", ["", "Reposo en cama", "Camino con ayuda", "Camino solo"], key="evc_movilidad")
 
         with st.expander("2. Cognitivo - Perceptivo", expanded=False):
