@@ -315,12 +315,15 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     with st.expander("Ver detalle del registro", expanded=False):
                         mapa_etiquetas = {
                             "ta_sistolica": "TA sistolica", "ta_diastolica": "TA diastolica",
-                            "fc": "Frec. cardiaca", "temperatura": "Temperatura", "spo2": "SpO2",
-                            "animo": "Animo", "conducta": "Conducta",
-                            "alimentacion": "Alimentacion", "higiene": "Higiene",
-                            "eliminacion": "Eliminacion", "respiracion": "Respiracion",
-                            "dolor": "Dolor", "movilidad": "Movilidad",
-                            "piel": "Piel", "sueno": "Sueno",
+                            "fc": "Frec. cardiaca", "temperatura": "Temperatura",
+                            "higiene": "Higiene", "movilidad": "Movilidad",
+                            "animo": "Estado neurologico",
+                            "dolor_eva": "Dolor EVA",
+                            "alimentacion": "Alimentacion",
+                            "curaciones": "Curaciones planas",
+                            "diuresis": "Diuresis",
+                            "deposicion": "Deposicion",
+                            "descanso": "Descanso",
                             "medicacion_administrada": "Medicacion administrada",
                             "observaciones_extra": "Observaciones",
                         }
@@ -328,8 +331,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             val = cuidador_data.get(key)
                             if val is None or val == "" or val is False:
                                 continue
-                            if key == "medicacion_administrada":
-                                st.markdown(f"- **{label}:** Si")
+                            if key in ("medicacion_administrada", "curaciones", "deposicion"):
+                                st.markdown(f"- {label}: **Si**")
+                            elif key == "dolor_eva" and cuidador_data.get("dolor_presente"):
+                                st.markdown(f"- Dolor presente: **Si (EVA {int(val)}/10)**")
+                            elif key == "dolor_eva":
+                                continue
                             elif key == "observaciones_extra":
                                 st.markdown(f"**{label}:** {val}")
                             else:
