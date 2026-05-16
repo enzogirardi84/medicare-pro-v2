@@ -168,8 +168,8 @@ def _generar_texto_evolucion_cuidador(
 
 
 def _render_panel_cuidador(paciente_sel, user, puede_registrar):
-    st.markdown("##### Registro de evolucion para cuidadores")
-    st.caption("Completá el estado del paciente de forma sencilla. Al guardar se genera un texto profesional.")
+    st.markdown("##### Registro inteligente de evolucion")
+    st.caption("Completá el estado del paciente de forma sencilla. Al guardar se genera un texto profesional automaticamente.")
 
     if not puede_registrar:
         st.caption("La carga de evoluciones queda deshabilitada para este rol.")
@@ -311,10 +311,10 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 registrar_auditoria_legal(
                     "Evolucion Clinica",
                     paciente_sel,
-                    "Nueva evolucion de cuidador",
+                    "Nueva evolucion inteligente",
                     user.get("nombre", ""),
                     user.get("matricula", ""),
-                    "Se registro evolucion mediante panel de cuidador.",
+                    "Se registro evolucion mediante panel inteligente.",
                 )
                 guardar_datos(spinner=True)
 

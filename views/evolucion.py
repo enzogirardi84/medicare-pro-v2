@@ -20,7 +20,7 @@ def render_evolucion(paciente_sel, user, rol=None):
     puede_borrar = puede_accion(rol, "evolucion_borrar")
 
     st.markdown("## Evolucion y cuidados clinicos")
-    tab_clinica, tab_cuidador, tab_enfermeria = st.tabs(["Evolucion clinica", "Registro del cuidador", "Plan de enfermeria"])
+    tab_clinica, tab_cuidador, tab_enfermeria = st.tabs(["Evolucion clinica", "Registro inteligente", "Plan de enfermeria"])
     with tab_clinica:
         _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar)
     with tab_cuidador:
