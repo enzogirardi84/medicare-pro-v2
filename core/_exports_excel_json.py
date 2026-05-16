@@ -33,14 +33,49 @@ def build_patient_excel_bytes(session_state, paciente_sel):
             return None
 
     sheets = {}
-    for section_name, records in collect_patient_sections(session_state, paciente_sel).items():
+    _all_sections = collect_patient_sections(session_state, paciente_sel)
+    _total_records = sum(len(v) for v in _all_sections.values())
+    _non_empty = sum(1 for v in _all_sections.values() if v)
+    from core.app_logging import log_event
+    log_event("excel_export", f"Paciente={paciente_sel[:40]} secciones={len(_all_sections)} no_vacias={_non_empty} total_registros={_total_records}")
+
+    # Fallback: si patient matching retorno vacio, leer directo de session state
+    _DIRECT_KEYS = [
+        ("checkin_db", "Auditoria de Presencia"),
+        ("agenda_db", "Visitas y Agenda"),
+        ("emergencias_db", "Emergencias y Ambulancia"),
+        ("cuidados_enfermeria_db", "Enfermeria y Plan de Cuidados"),
+        ("escalas_clinicas_db", "Escalas Clinicas"),
+        ("auditoria_legal_db", "Auditoria Legal"),
+        ("evoluciones_db", "Procedimientos y Evoluciones"),
+        ("estudios_db", "Estudios Complementarios"),
+        ("consumos_db", "Materiales Utilizados"),
+        ("fotos_heridas_db", "Registro de Heridas"),
+        ("vitales_db", "Signos Vitales"),
+        ("pediatria_db", "Control Percentilo"),
+        ("balance_db", "Balance Hidrico"),
+        ("indicaciones_db", "Plan Terapeutico"),
+        ("consentimientos_db", "Consentimientos"),
+        ("facturacion_db", "Cobros y Facturacion"),
+    ]
+    for section_name, records in _all_sections.items():
         if not records:
             continue
         df = pd.DataFrame(records).drop(columns=["paciente", "empresa", "firma_b64"], errors="ignore")
         sheets[section_name[:31]] = df
 
     if not sheets:
-        sheets["Sin registros"] = pd.DataFrame([{"mensaje": "No hay registros clinicos para este paciente."}])
+        log_event("excel_export", f"SIN_DATOS paciente={paciente_sel[:40]} intentando fallback directo")
+        for _key, _label in _DIRECT_KEYS:
+            _raw = session_state.get(_key, [])
+            if _raw:
+                try:
+                    _df = pd.DataFrame(_raw).drop(columns=["paciente", "empresa", "firma_b64"], errors="ignore")
+                    sheets[_label[:31]] = _df
+                except Exception:
+                    continue
+        if not sheets:
+            sheets["Sin registros"] = pd.DataFrame([{"mensaje": "No hay registros clinicos para este paciente."}])
 
     with pd.ExcelWriter(output, engine=engine) as writer:
         resumen_rows = [{"Seccion": sec, "Registros": len(df)} for sec, df in sheets.items()]

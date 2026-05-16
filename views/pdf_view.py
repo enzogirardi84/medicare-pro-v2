@@ -180,6 +180,29 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     unavailable_message="Excel no disponible (falta openpyxl o xlsxwriter).",
                 )
+                with st.expander("Diagnostico: datos disponibles para Excel", expanded=False):
+                    _diag_keys = [
+                        ("vitales_db", "Signos Vitales"),
+                        ("evoluciones_db", "Evoluciones"),
+                        ("agenda_db", "Visitas"),
+                        ("consumos_db", "Materiales"),
+                        ("indicaciones_db", "Plan Terapeutico"),
+                        ("emergencias_db", "Emergencias"),
+                        ("cuidados_enfermeria_db", "Enfermeria"),
+                        ("escalas_clinicas_db", "Escalas"),
+                        ("estudios_db", "Estudios"),
+                        ("checkin_db", "Check-in"),
+                        ("balance_db", "Balance"),
+                        ("pediatria_db", "Pediatria"),
+                        ("facturacion_db", "Facturacion"),
+                        ("consentimientos_db", "Consentimientos"),
+                    ]
+                    _diag_lines = []
+                    for _k, _l in _diag_keys:
+                        _cnt = len(st.session_state.get(_k, []))
+                        _diag_lines.append(f"- {_l}: **{_cnt}** registros en sesion")
+                    st.markdown("\n".join(_diag_lines))
+                    st.caption("Si ves registros aqui pero el Excel sale vacio, el filtro por paciente no esta coincidiendo. Se agrego un fallback que incluye todo.")
             else:
                 st.caption("Excel reservado a rol Operativo o Auditoria.")
 
