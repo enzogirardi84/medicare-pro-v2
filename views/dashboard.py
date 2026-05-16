@@ -270,6 +270,7 @@ def render_dashboard(mi_empresa, rol):
             for d in [(hoy - timedelta(days=i)) for i in range(29, -1, -1)]
         ])
         if not _cal_df.empty and _cal_df["actividad"].sum() > 0:
+            _cal_df["fecha"] = pd.to_datetime(_cal_df["fecha"])
             _cal_df["dia_num"] = _cal_df["fecha"].dt.weekday
             _cal_df["semana"] = _cal_df["fecha"].dt.isocalendar().week.astype(int)
             _cal_df["label"] = _cal_df["fecha"].dt.strftime("%d/%m")
