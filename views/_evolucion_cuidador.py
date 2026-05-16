@@ -12,7 +12,7 @@ def _generar_texto_evolucion(
     animo, dolor_presente, dolor_eva,
     alimentacion,
     herida_mecanismo, herida_profundidad,
-    herida_localizacion, herida_tamano,
+    herida_localizacion,
     herida_lecho, herida_exudado,
     herida_infeccion, herida_curacion,
     diuresis, deposicion,
@@ -80,8 +80,6 @@ def _generar_texto_evolucion(
         detalles_herida = []
         if herida_localizacion:
             detalles_herida.append(f"localizada en {herida_localizacion}")
-        if herida_tamano:
-            detalles_herida.append(f"de aproximadamente {herida_tamano}")
         if detalles_herida:
             txt += ", " + ", ".join(detalles_herida)
         mapa_lecho = {
@@ -229,11 +227,6 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 placeholder="Ej: sacro, talon derecho, pierna izquierda",
                 key="evc_herida_loc",
             )
-            herida_tamano = st.text_input(
-                "Tamano aproximado",
-                placeholder="Ej: 3x2 cm, 5 cm de longitud",
-                key="evc_herida_tam",
-            )
             c_her3, c_her4 = st.columns(2)
             herida_lecho = c_her3.selectbox(
                 "Estado del lecho",
@@ -314,7 +307,6 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             herida_mecanismo=herida_mecanismo,
             herida_profundidad=herida_profundidad,
             herida_localizacion=herida_localizacion,
-            herida_tamano=herida_tamano,
             herida_lecho=herida_lecho,
             herida_exudado=herida_exudado,
             herida_infeccion=", ".join(herida_infeccion),
@@ -342,7 +334,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         dolor_presente,
                         alimentacion,
                         herida_mecanismo, herida_profundidad,
-                        herida_localizacion, herida_tamano,
+                        herida_localizacion,
                         herida_lecho, herida_exudado, herida_infeccion, herida_curacion,
                         diuresis, deposicion, descanso,
                         medicacion_administrada]) and not observaciones_extra.strip():
@@ -373,7 +365,6 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         "herida_mecanismo": herida_mecanismo,
                         "herida_profundidad": herida_profundidad,
                         "herida_localizacion": herida_localizacion,
-                        "herida_tamano": herida_tamano,
                         "herida_lecho": herida_lecho,
                         "herida_exudado": herida_exudado,
                         "herida_infeccion": ", ".join(herida_infeccion),

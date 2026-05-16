@@ -323,7 +323,6 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             "herida_mecanismo": "Tipo de herida (mecanismo)",
                             "herida_profundidad": "Profundidad de herida",
                             "herida_localizacion": "Localizacion",
-                            "herida_tamano": "Tamano",
                             "herida_lecho": "Estado del lecho",
                             "herida_exudado": "Exudado",
                             "herida_infeccion": "Signos de infeccion",
