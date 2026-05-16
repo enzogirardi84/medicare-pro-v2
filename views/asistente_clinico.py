@@ -6,6 +6,7 @@ un resumen ejecutivo con alertas, metricas y tendencias.
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime
 from html import escape
 from typing import Optional
@@ -62,18 +63,42 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
     else:
         alerta_caja("Estado: ESTABLE", "Sin alertas criticas detectadas. Continuar seguimiento.", nivel="ok")
 
-    # Metricas principales
+    # Datos demográficos del paciente
+    edad = dashboard.get("edad_paciente")
+    edad_str = f"{edad} años" if edad else "S/D"
+    diag_str = escape("; ".join(dashboard.get("diagnosticos_list", [])) or "Sin diagnóstico registrado")
+    ult_act = dashboard.get("ultima_actualizacion_hs")
+    if ult_act is not None:
+        if ult_act < 1:
+            act_str = "< 1h"
+        elif ult_act < 24:
+            act_str = f"{int(ult_act)}h"
+        else:
+            act_str = f"{int(ult_act/24)}d"
+    else:
+        act_str = "Sin datos"
+
+    c_info1, c_info2, c_info3 = st.columns(3)
+    with c_info1:
+        st.markdown(f"<div class='card-text'><strong>Edad:</strong> {edad_str} &nbsp;|&nbsp; <strong>Actualización:</strong> {act_str}</div>", unsafe_allow_html=True)
+    with c_info2:
+        st.markdown(f"<div class='card-text'><strong>Diagnóstico:</strong> {diag_str}</div>", unsafe_allow_html=True)
+    with c_info3:
+        st.markdown("", unsafe_allow_html=True)
+
+    # Metricas principales con delta de última actualización
+    delta_str = f"({act_str})" if ult_act is not None else None
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
-        metrica_clinica("TA (mmHg)", dashboard["ultima_ta"])
+        metrica_clinica("TA (mmHg)", dashboard["ultima_ta"], delta=delta_str)
     with c2:
-        metrica_clinica("FC (lat/min)", dashboard["ultima_fc"])
+        metrica_clinica("FC (lat/min)", dashboard["ultima_fc"], delta=delta_str)
     with c3:
-        metrica_clinica("Temp (°C)", dashboard["ultima_temp"])
+        metrica_clinica("Temp (°C)", dashboard["ultima_temp"], delta=delta_str)
     with c4:
-        metrica_clinica("Glu (mg/dL)", dashboard["ultima_glu"])
+        metrica_clinica("Glu (mg/dL)", dashboard["ultima_glu"], delta=delta_str)
     with c5:
-        metrica_clinica("SatO2 (%)", dashboard["ultima_spo2"])
+        metrica_clinica("SatO2 (%)", dashboard["ultima_spo2"], delta=delta_str)
 
     st.divider()
 
@@ -98,6 +123,9 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
         _tab_auditoria(paciente_sel, dashboard, datos)
 
 
+SCROLL = 'style="max-height:380px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;"'
+
+
 def _tab_alertas(dashboard: dict):
     if not dashboard["alertas"]:
         alerta_caja("Sin alertas", "No se detectaron inconsistencias ni riesgos en este momento.", nivel="ok")
@@ -109,16 +137,22 @@ def _tab_alertas(dashboard: dict):
 
     if crit:
         st.markdown("### Criticas")
+        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
         for a in crit:
             alerta_caja(a["titulo"], a["detalle"], nivel="danger")
+        st.markdown('</div>', unsafe_allow_html=True)
     if warn:
         st.markdown("### Advertencias")
+        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
         for a in warn:
             alerta_caja(a["titulo"], a["detalle"], nivel="warning")
+        st.markdown('</div>', unsafe_allow_html=True)
     if info:
         st.markdown("### Informativas")
+        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
         for a in info:
             alerta_caja(a["titulo"], a["detalle"], nivel="info")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _tab_resumen_clinico(dashboard: dict, datos: dict):
@@ -150,19 +184,57 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
             badge_type="ok",
         )
 
-    st.markdown("### Tendencia TA (últimos registros)")
-    ta_data = dashboard.get("ta_tendencia", [])
-    if ta_data:
-        st.line_chart({"Sistolica": {d["fecha"]: d["sistolica"] for d in ta_data}})
+    # Diagnósticos activos
+    diag_list = dashboard.get("diagnosticos_list", [])
+    if diag_list:
+        st.markdown("### Diagnósticos")
+        diag_html = "<br>".join(f"<span class='badge-info' style='display:inline-block;margin:2px 4px 2px 0'>{escape(d)}</span>" for d in diag_list)
+        st.markdown(f"<div>{diag_html}</div>", unsafe_allow_html=True)
     else:
-        st.caption("No hay datos de presion arterial para graficar.")
+        st.caption("Sin diagnósticos registrados.")
 
-    st.markdown("### Tendencia Glucemia")
-    glu_data = dashboard.get("glu_tendencia", [])
-    if glu_data:
-        st.line_chart({"Glucemia": {d["fecha"]: d["glucemia"] for d in glu_data}})
-    else:
-        st.caption("No hay datos de glucemia para graficar.")
+    col_chart1, col_chart2 = st.columns(2)
+    with col_chart1:
+        st.markdown("### Tendencia TA")
+        ta_data = dashboard.get("ta_tendencia", [])
+        if ta_data:
+            st.line_chart({
+                "Sistólica": {d["fecha"]: d["sistolica"] for d in ta_data},
+                "Diastólica": {d["fecha"]: d["diastolica"] for d in ta_data},
+            })
+        else:
+            st.caption("No hay datos de presión arterial para graficar.")
+    with col_chart2:
+        st.markdown("### Tendencia Glucemia")
+        glu_data = dashboard.get("glu_tendencia", [])
+        if glu_data:
+            st.line_chart({"Glucemia": {d["fecha"]: d["glucemia"] for d in glu_data}})
+        else:
+            st.caption("No hay datos de glucemia para graficar.")
+
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        st.markdown("### Balance Hídrico")
+        bal_data = dashboard.get("balance_tendencia", [])
+        if bal_data:
+            st.line_chart({
+                "Ingresos": {d["fecha"]: d["ingresos"] for d in bal_data},
+                "Egresos": {d["fecha"]: d["egresos"] for d in bal_data},
+            })
+        else:
+            st.caption("No hay datos de balance hídrico para graficar.")
+    with col_b2:
+        st.markdown("### Consumos / Insumos")
+        consumos = datos.get("consumos", [])
+        if consumos:
+            conteo = Counter(str(c.get("insumo", c.get("material", "Otro"))) for c in consumos)
+            st.dataframe(
+                {"Insumo": list(conteo.keys()), "Cantidad": list(conteo.values())},
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.caption("No hay registros de consumos de insumos.")
 
 
 def renderizar_tarjeta_indicacion(ind: dict):
@@ -213,30 +285,34 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
         # 1. Renderizar PRIMERO las Activas
         if indicaciones_activas:
             st.markdown("### Indicaciones Activas")
+            st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
             for ind in indicaciones_activas:
                 renderizar_tarjeta_indicacion(ind)
+            st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.info("No hay indicaciones farmacologicas activas en este momento.")
-
-        st.markdown("---")
 
         # 2. Renderizar DESPUES las Suspendidas / Historicas
         if indicaciones_suspendidas:
             st.markdown("### Historial: Indicaciones Suspendidas")
-            for ind in indicaciones_suspendidas[-15:]:
+            st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
+            for ind in indicaciones_suspendidas[-30:]:
                 renderizar_tarjeta_indicacion(ind)
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("No hay indicaciones registradas para este paciente.")
 
     if administracion:
         st.markdown("### Administraciones registradas")
-        for adm in administracion[-20:]:
+        st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
+        for adm in administracion[-50:]:
             timeline_event(
                 adm.get("fecha", "-"),
                 adm.get("med", "Administracion"),
                 f"Profesional: {adm.get('profesional', '-')} | Dosis: {adm.get('dosis', '-')} | Via: {adm.get('via', '-')}",
                 color_dot="#10B981",
             )
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.caption("No hay registros de administracion medica.")
 
@@ -261,19 +337,32 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     st.markdown("### Timeline de eventos clínicos")
     eventos = []
     for ev in datos.get("evoluciones", []):
-        eventos.append((ev.get("fecha", "-"), "Evolucion", ev.get("texto", ev.get("evolucion", "-")), "#3B82F6"))
+        eventos.append(("Evolución", ev.get("fecha", "-"), "Evolucion", ev.get("texto", ev.get("evolucion", "-")), "#3B82F6"))
     for cu in datos.get("cuidados", []):
-        eventos.append((cu.get("fecha", "-"), "Cuidado", cu.get("detalle", cu.get("cuidado_tipo", "-")), "#8B5CF6"))
+        eventos.append(("Cuidado", cu.get("fecha", "-"), "Cuidado", cu.get("detalle", cu.get("cuidado_tipo", "-")), "#8B5CF6"))
     for es in datos.get("estudios", []):
-        eventos.append((es.get("fecha", es.get("fecha_solicitud", "-")), "Estudio", f"{es.get('tipo', 'Estudio')}: {es.get('nombre', es.get('detalle', '-'))}", "#F59E0B"))
+        eventos.append(("Estudio", es.get("fecha", es.get("fecha_solicitud", "-")), "Estudio", f"{es.get('tipo', 'Estudio')}: {es.get('nombre', es.get('detalle', '-'))}", "#F59E0B"))
     for em in datos.get("emergencias", []):
-        eventos.append((em.get("fecha", "-"), "Emergencia", em.get("motivo", em.get("tipo", "-")), "#EF4444"))
+        eventos.append(("Emergencia", em.get("fecha", "-"), "Emergencia", em.get("motivo", em.get("tipo", "-")), "#EF4444"))
 
-    # Ordenar por fecha aproximada (descendente)
+    tipos_disponibles = sorted(set(e[0] for e in eventos))
+    filtros = {}
+    cols_filtro = st.columns(len(tipos_disponibles)) if tipos_disponibles else []
+    for i, t in enumerate(tipos_disponibles):
+        with cols_filtro[i]:
+            filtros[t] = st.checkbox(t, value=True, key=f"tl_filtro_{t}")
+
     from core.clinical_assistant_service import _parse_fecha
-    eventos.sort(key=lambda x: _parse_fecha(str(x[0])) or datetime.min, reverse=True)
-    for fecha, titulo, detalle, color in eventos[:30]:
-        timeline_event(fecha, titulo, detalle, color_dot=color)
+    eventos_filtrados = [e for e in eventos if filtros.get(e[0], True)]
+    eventos_filtrados.sort(key=lambda x: _parse_fecha(str(x[1])) or datetime.min, reverse=True)
+
+    st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
+    if eventos_filtrados:
+        for _, fecha, titulo, detalle, color in eventos_filtrados[:50]:
+            timeline_event(fecha, titulo, detalle, color_dot=color)
+    else:
+        st.caption("No hay eventos que coincidan con los filtros seleccionados.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.divider()
     st.markdown("### Pase de Guardia / Auditoria")

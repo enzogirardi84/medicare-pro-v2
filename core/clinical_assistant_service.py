@@ -50,6 +50,17 @@ def _horas_desde(fecha: Optional[datetime]) -> Optional[float]:
         return None
     return (_ahora() - fecha).total_seconds() / 3600.0
 
+def _calcular_edad(fnac: Any) -> Optional[int]:
+    if not fnac:
+        return None
+    f = _parse_fecha(str(fnac))
+    if f is None:
+        return None
+    hoy = _ahora()
+    edad = hoy.year - f.year - ((hoy.month, hoy.day) < (f.month, f.day))
+    return edad
+
+
 def _coincide_paciente(item: dict, paciente_id: str) -> bool:
     if paciente_id is None:
         return False
@@ -210,6 +221,28 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
     for em in emergencias:
         if str(em.get("estado","")).lower() in ("activa","pendiente","en curso"):
             alertas.append({"titulo":"Emergencia activa","detalle":f"Emergencia: {em.get('motivo',em.get('tipo','Sin detalle'))}. Estado: {em.get('estado','-')}","nivel":"danger","categoria":"emergencias"})
+    # Riesgo de caídas
+    edad_paciente = _calcular_edad((datos.get("paciente_data") or {}).get("fnac"))
+    if edad_paciente and edad_paciente >= 65:
+        hay_mov_red = any(_contiene_keyword(c.get("observaciones",c.get("detalle","")),("movilidad reducida","inmovil","encamado","ayuda para deambular","dependiente")) for c in cuidados)
+        if hay_mov_red:
+            alertas.append({"titulo":"Riesgo de Caidas","detalle":f"Paciente de {edad_paciente} años con movilidad reducida. Implementar protocolo de prevencion de caidas.","nivel":"warning","categoria":"cuidados"})
+    # Riesgo infeccioso
+    tiene_curacion = any(_contiene_keyword(c.get("cuidado_tipo",c.get("tipo_cuidado","")),("curacion","herida","ulcera","llaga","quemadura")) for c in cuidados)
+    fiebre_contador = 0
+    tiene_fiebre_alta = False
+    for v in vitales:
+        temp = _to_float(v.get("temperatura") or v.get("temp") or v.get("Temp"))
+        if temp is not None:
+            if temp >= 38.5:
+                tiene_fiebre_alta = True
+                fiebre_contador += 1
+            elif temp >= 38.0:
+                fiebre_contador += 1
+    if tiene_fiebre_alta and tiene_curacion:
+        alertas.append({"titulo":"Riesgo Infeccioso","detalle":"Paciente con fiebre y curacion activa/herida. Evaluar signos de infeccion local.","nivel":"danger","categoria":"infeccion"})
+    elif fiebre_contador >= 2:
+        alertas.append({"titulo":"Fiebre Persistente","detalle":f"Se registraron {fiebre_contador} episodios de fiebre (>=38°C). Evaluar foco infeccioso.","nivel":"warning","categoria":"infeccion"})
     return alertas
 
 def analizar_consistencia_datos(datos: dict) -> List[dict]:
@@ -312,6 +345,29 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
             ta_tendencia.append({"fecha": f.strftime("%Y-%m-%d %H:%M"), "sistolica": s, "diastolica": d or 0})
         if f and g is not None:
             glu_tendencia.append({"fecha": f.strftime("%Y-%m-%d %H:%M"), "glucemia": g})
+    # Balance hídrico para gráfico
+    balance_tendencia = []
+    for bl in sorted(balance, key=lambda x: _parse_fecha(x.get("fecha") or x.get("timestamp")) or datetime.min):
+        f = _parse_fecha(bl.get("fecha") or bl.get("timestamp"))
+        ing = _to_float(bl.get("ingresos") or bl.get("ingreso") or 0)
+        egr = _to_float(bl.get("egresos") or bl.get("egreso") or bl.get("diuresis") or 0)
+        bal_calc = _to_float(bl.get("balance"))
+        if bal_calc is None:
+            bal_calc = (ing or 0) - (egr or 0)
+        if f:
+            balance_tendencia.append({"fecha": f.strftime("%Y-%m-%d %H:%M"), "ingresos": ing or 0, "egresos": egr or 0, "balance": bal_calc})
+    # Última actualización de vitales
+    ultima_actualizacion_hs = None
+    for v in vitales:
+        f = _parse_fecha(v.get("fecha") or v.get("timestamp"))
+        if f:
+            hs = _horas_desde(f)
+            if hs is not None and (ultima_actualizacion_hs is None or hs < ultima_actualizacion_hs):
+                ultima_actualizacion_hs = hs
+    # Datos del paciente
+    paciente_data = datos.get("paciente_data") or {}
+    edad_paciente = _calcular_edad(paciente_data.get("fnac"))
+    diagnosticos_list = [d.get("diagnostico", d.get("nombre", "")) for d in diagnosticos if d.get("diagnostico") or d.get("nombre")]
     return {
         "ultima_ta": ultima_ta, "ultima_fc": ultima_fc, "ultima_temp": ultima_temp,
         "ultima_glu": ultima_glu, "ultima_spo2": ultima_spo2,
@@ -326,6 +382,10 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
         "total_consumos": len(consumos), "total_administracion": len(administracion),
         "total_diagnosticos": len(diagnosticos), "total_escalas": len(escalas),
         "total_emergencias": len(emergencias),
+        "edad_paciente": edad_paciente,
+        "diagnosticos_list": diagnosticos_list,
+        "balance_tendencia": balance_tendencia,
+        "ultima_actualizacion_hs": ultima_actualizacion_hs,
     }
 
 def _esc_html(valor: Any) -> str:

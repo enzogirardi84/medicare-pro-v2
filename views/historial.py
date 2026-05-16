@@ -48,10 +48,16 @@ def render_historial(paciente_sel: str, user=None) -> None:
         aviso_sin_paciente()
         return
 
-    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
     estado_badge = "[ARCHIVADO DE ALTA]" if detalles.get("estado") == "De Alta" else ""
-    nombre_chip = html.escape(paciente_sel.split(" (")[0])
-    dni_chip = html.escape(str(detalles.get("dni", "S/D")))
+
+    # Extraer nombre del pacienteID (formato: "Nombre (empresa) - DNI" o "Nombre - DNI")
+    _pid = str(paciente_sel)
+    _dni_desde_id = _pid.rsplit(" - ", 1)[-1] if " - " in _pid else ""
+    _nombre_desde_id = _pid.split(" (")[0]
+
+    nombre_chip = html.escape(_nombre_desde_id)
+    dni_chip = html.escape(str(detalles.get("dni") or _dni_desde_id or "S/D"))
     os_chip = html.escape(str(detalles.get("obra_social", "S/D")))
     tel_chip = html.escape(str(detalles.get("telefono", "S/D")))
     dom = str(detalles.get("direccion", "")).strip()
@@ -59,12 +65,12 @@ def render_historial(paciente_sel: str, user=None) -> None:
 
     chips_extra = ""
     if dom_chip:
-        chips_extra = f'<span class="mc-chip">Dom.: {dom_chip[:40]}{"…" if len(dom_chip) > 40 else ""}</span>'
+        chips_extra = f'<span class="mc-chip">Dom.: {dom_chip[:40]}{"..." if len(dom_chip) > 40 else ""}</span>'
 
     st.markdown(
         f"""
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Historia clínica digital {estado_badge}</h2>
+            <h2 class="mc-hero-title">Historia clinica digital {estado_badge}</h2>
             <p class="mc-hero-text">
                 Orden sugerido: exportar o respaldar si lo necesitas, revisar el panorama y la linea de tiempo,
                 buscar en toda la historia, y al final abrir cada modulo por seccion para el detalle completo.
