@@ -1,4 +1,3 @@
-import io
 from datetime import datetime, timedelta
 from html import escape
 
@@ -7,7 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
-from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
+from core.view_helpers import bloque_mc_grid_tarjetas, bloque_estado_vacio, lista_plegable
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 from core.db_sql import get_checkins_by_empresa
 from core.nextgen_sync import _obtener_uuid_empresa
@@ -18,17 +17,142 @@ try:
     from fpdf import FPDF
     FPDF_DISPONIBLE = True
 except ImportError:
-    pass  # Intencional: fpdf es opcional para PDFs
+    pass
 
 
 def _obtener_dt(fecha_hora):
-    try:
-        return datetime.strptime(fecha_hora, "%d/%m/%Y %H:%M:%S")
-    except Exception:
+    for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y"):
         try:
-            return datetime.strptime(fecha_hora, "%d/%m/%Y %H:%M")
+            return datetime.strptime(str(fecha_hora or "").strip(), fmt)
         except Exception:
-            return datetime.min
+            continue
+    return datetime.min
+
+
+def _parsear_duracion(tiempo_str: str) -> float:
+    """Parsea '2h 30m' a horas como float. Retorna 0.0 si no se puede."""
+    if not isinstance(tiempo_str, str) or "h" not in tiempo_str:
+        return 0.0
+    partes = [p for p in tiempo_str.replace("h", "").replace("m", "").split() if p.strip().isdigit()]
+    if not partes:
+        return 0.0
+    try:
+        h = int(partes[0])
+        m = int(partes[1]) if len(partes) > 1 else 0
+        return round(h + m / 60.0, 1)
+    except (ValueError, IndexError):
+        return 0.0
+
+
+def _generar_pdf_rrhh(mi_empresa, user, fecha_inicio, fecha_fin, df_mostrar, total_horas, total_visitas):
+    """Genera PDF profesional con resumen y detalle de fichajes."""
+    if not FPDF_DISPONIBLE:
+        return b""
+    pdf = FPDF()
+    pdf.set_margins(10, 10, 10)
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # ── Pagina 1: Resumen + Tabla profesional ──
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 18)
+    pdf.cell(0, 12, safe_text(f"REPORTE DE RRHH - {mi_empresa}"), ln=True, align="C")
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 7, safe_text(f"Periodo: {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}"), ln=True, align="C")
+    pdf.cell(0, 7, safe_text(f"Generado: {ahora().strftime('%d/%m/%Y %H:%M')} por {user.get('nombre', 'Sistema')}"), ln=True, align="C")
+    pdf.ln(6)
+
+    # Metricas
+    n_prof = df_mostrar["Profesional"].nunique() if not df_mostrar.empty else 0
+    n_ingresos = len(df_mostrar[df_mostrar["Accion"] == "INGRESO"])
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "RESUMEN GENERAL", ln=True)
+    pdf.set_fill_color(22, 38, 68)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "", 10)
+    col_w = pdf.w / 5
+    headers = ["Fichajes", "Horas", "Profesionales", "Visitas", "Ingresos"]
+    vals = [len(df_mostrar), f"{total_horas:.1f} hs", n_prof, total_visitas, n_ingresos]
+    for i, (h, v) in enumerate(zip(headers, vals)):
+        pdf.cell(col_w, 10, f"{h}: {v}", border=1, align="C", fill=True)
+    pdf.ln(12)
+    pdf.set_text_color(0, 0, 0)
+
+    # Tabla resumen por profesional
+    if not df_mostrar.empty:
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 8, "RESUMEN POR PROFESIONAL", ln=True)
+        pdf.set_font("Arial", "B", 9)
+        pdf.set_fill_color(15, 30, 60)
+        pdf.set_text_color(255, 255, 255)
+        col_prof = 60
+        col_matr = 25
+        col_vis = 25
+        col_horas = 25
+        col_prom = 25
+        total_w = col_prof + col_matr + col_vis + col_horas + col_prom
+        x_start = (pdf.w - total_w) / 2
+        pdf.set_x(x_start)
+        pdf.cell(col_prof, 7, "Profesional", border=1, fill=True, align="C")
+        pdf.cell(col_matr, 7, "Matr.", border=1, fill=True, align="C")
+        pdf.cell(col_vis, 7, "Visitas", border=1, fill=True, align="C")
+        pdf.cell(col_horas, 7, "Horas", border=1, fill=True, align="C")
+        pdf.cell(col_prom, 7, "Hs/Vis", border=1, fill=True, align="C")
+        pdf.ln()
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "", 8)
+
+        df_eg = df_mostrar[df_mostrar["Accion"] == "EGRESO"]
+        for prof, grupo in df_eg.groupby("Profesional"):
+            hh = sum(_parsear_duracion(t) for t in grupo["Tiempo Trabajado"])
+            n_vis = len(grupo)
+            prom = round(hh / n_vis, 2) if n_vis > 0 else 0
+            mat = grupo["Matricula"].iloc[0] if not grupo.empty else "S/D"
+            pdf.set_x(x_start)
+            pdf.cell(col_prof, 6, safe_text(prof[:28]), border=1)
+            pdf.cell(col_matr, 6, safe_text(str(mat)[:10]), border=1, align="C")
+            pdf.cell(col_vis, 6, str(n_vis), border=1, align="C")
+            pdf.cell(col_horas, 6, f"{hh:.1f}", border=1, align="C")
+            pdf.cell(col_prom, 6, f"{prom:.2f}", border=1, align="C")
+            pdf.ln()
+            if pdf.get_y() > 250:
+                pdf.add_page()
+
+    # ── Pagina 2+: Detalle de fichajes ──
+    if pdf.get_y() > 220:
+        pdf.add_page()
+    pdf.ln(4)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "DETALLE DE FICHAJES", ln=True)
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_fill_color(15, 30, 60)
+    pdf.set_text_color(255, 255, 255)
+    cols_det = {"Fecha": 22, "Hora": 14, "Profesional": 48, "Matr.": 16, "Accion": 18, "Paciente": 48, "Tiempo": 18, "GPS": 30}
+    for c, w in cols_det.items():
+        pdf.cell(w, 6, c, border=1, fill=True, align="C")
+    pdf.ln()
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "", 7)
+    for _, fila in df_mostrar.sort_values(by="fecha_dt", ascending=False).head(500).iterrows():
+        if pdf.get_y() > 265:
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 8)
+            pdf.set_fill_color(15, 30, 60)
+            pdf.set_text_color(255, 255, 255)
+            for c, w in cols_det.items():
+                pdf.cell(w, 5, c, border=1, fill=True, align="C")
+            pdf.ln()
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font("Arial", "", 7)
+        pdf.cell(cols_det["Fecha"], 5, safe_text(str(fila.get("Fecha", ""))[:10]), border=1)
+        pdf.cell(cols_det["Hora"], 5, safe_text(str(fila.get("Hora", ""))[:5]), border=1)
+        pdf.cell(cols_det["Profesional"], 5, safe_text(str(fila.get("Profesional", ""))[:24]), border=1)
+        pdf.cell(cols_det["Matr."], 5, safe_text(str(fila.get("Matricula", ""))[:8]), border=1, align="C")
+        pdf.cell(cols_det["Accion"], 5, safe_text(str(fila.get("Accion", ""))[:10]), border=1, align="C")
+        pdf.cell(cols_det["Paciente"], 5, safe_text(str(fila.get("Paciente", ""))[:24]), border=1)
+        pdf.cell(cols_det["Tiempo"], 5, safe_text(str(fila.get("Tiempo Trabajado", ""))[:8]), border=1, align="C")
+        pdf.cell(cols_det["GPS"], 5, safe_text(str(fila.get("GPS", ""))[:15]), border=1)
+        pdf.ln()
+    return pdf_output_bytes(pdf)
 
 
 def render_rrhh(mi_empresa, rol, user):
@@ -151,12 +275,7 @@ def render_rrhh(mi_empresa, rol, user):
 
     df_fichajes = pd.DataFrame(fichajes_lista)
     df_egresos = df_fichajes[df_fichajes["Accion"] == "EGRESO"]
-    total_horas = 0.0
-    for t in df_egresos["Tiempo Trabajado"]:
-        if isinstance(t, str) and "h" in t:
-            partes = t.replace("h", "").replace("m", "").split()
-            if partes:
-                total_horas += int(partes[0]) + (int(partes[1]) if len(partes) > 1 else 0) / 60.0
+    total_horas = sum(_parsear_duracion(t) for t in df_egresos["Tiempo Trabajado"])
 
     col_m1, col_m2, col_m3, col_m4 = st.columns(4)
     col_m1.metric("Total Fichajes", len(df_fichajes))
@@ -165,7 +284,6 @@ def render_rrhh(mi_empresa, rol, user):
     col_m4.metric("Visitas Completadas", len(df_egresos))
 
     seccion = st.radio("Vista", ["Historico", "Resumen", "Gestion"], horizontal=False, label_visibility="collapsed")
-    st.caption("Historico: fila a fila. Resumen: totales por profesional. Gestion: solo para corregir errores de carga.")
 
     if seccion == "Historico":
         prof_filtrar = st.selectbox("Filtrar por Profesional", ["Todos"] + sorted(df_fichajes["Profesional"].unique().tolist()))
@@ -179,58 +297,53 @@ def render_rrhh(mi_empresa, rol, user):
         else:
             limite = st.slider("Filas historicas", min_value=20, max_value=max_historico, value=min(120, len(df_mostrar)), step=20)
         df_hist = df_mostrar.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"], errors="ignore").head(limite)
-        with lista_plegable("Histórico de fichajes", count=len(df_hist), expanded=False, height=520):
+        with lista_plegable("Historico de fichajes", count=len(df_hist), expanded=False, height=520):
             mostrar_dataframe_con_scroll(df_hist, height=460)
 
         csv_data = dataframe_csv_bytes(df_mostrar.drop(columns=["fecha_dt"], errors='ignore'))
         st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", width='stretch')
 
         if FPDF_DISPONIBLE and st.checkbox("Preparar PDF RRHH", value=False):
-            pdf = FPDF(orientation='L')
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 12, safe_text(f"REPORTE OFICIAL DE RRHH - {mi_empresa}"), ln=True, align='C')
-            pdf.set_font("Arial", '', 11)
-            pdf.cell(0, 8, safe_text(f"Periodo: {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}"), ln=True, align='C')
-            pdf.ln(8)
-            pdf.set_font("Arial", 'B', 9)
-            for _, fila in df_mostrar.sort_values(by="fecha_dt", ascending=False).head(200).iterrows():
-                pdf.cell(0, 7, safe_text(f"{fila['Fecha']} {fila['Hora']} | {fila['Profesional']} | {fila['Accion']} | {fila['Paciente']} | {fila['Tiempo Trabajado']}"), ln=True)
-            pdf_bytes = pdf_output_bytes(pdf)
-            st.download_button("Descargar PDF RRHH", data=pdf_bytes, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}.pdf", mime="application/pdf", width='stretch')
-        return
+            pdf = _generar_pdf_rrhh(mi_empresa, user, fecha_inicio, fecha_fin, df_mostrar, total_horas, len(df_egresos))
+            st.download_button("Descargar PDF RRHH", data=pdf, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.pdf", mime="application/pdf", width='stretch')
 
-    if seccion == "Resumen":
+    elif seccion == "Resumen":
         resumen_rows = []
         for profesional, grupo in df_egresos.groupby("Profesional"):
-            horas_totales = 0.0
-            for t in grupo["Tiempo Trabajado"]:
-                if isinstance(t, str) and "h" in t:
-                    partes = [p.strip() for p in t.replace("h", "").replace("m", "").split() if p.strip().isdigit()]
-                    if partes:
-                        horas_totales += int(partes[0]) + (int(partes[1]) if len(partes) > 1 else 0) / 60.0
+            hh = sum(_parsear_duracion(t) for t in grupo["Tiempo Trabajado"])
             resumen_rows.append({
                 "Profesional": profesional,
                 "Matricula": grupo["Matricula"].iloc[0] if not grupo.empty else "S/D",
                 "Visitas": len(grupo),
-                "Horas Totales": round(horas_totales, 1),
+                "Horas Totales": round(hh, 1),
+                "Prom. hs/visita": round(hh / len(grupo), 2) if len(grupo) > 0 else 0,
             })
         if not resumen_rows:
             st.info("Todavia no hay egresos completos en el periodo para calcular horas trabajadas.")
             return
         resumen_prof = pd.DataFrame(resumen_rows).sort_values(by=["Horas Totales", "Visitas"], ascending=False)
-        limite_resumen = seleccionar_limite_registros(
-            "Profesionales en resumen",
-            len(resumen_prof),
-            key=f"rrhh_resumen_{mi_empresa}",
-            default=20,
-            opciones=(10, 20, 30, 50, 100),
-        )
-        df_res = resumen_prof.head(limite_resumen)
-        with lista_plegable("Resumen por profesional", count=len(df_res), expanded=False, height=440):
-            mostrar_dataframe_con_scroll(df_res, height=380)
-        st.success(f"Total horas en el periodo: {resumen_prof['Horas Totales'].sum():.1f} hs")
-        return
+        c_r1, c_r2 = st.columns([2, 1])
+        with c_r1:
+            limite_resumen = seleccionar_limite_registros(
+                "Profesionales en resumen", len(resumen_prof),
+                key=f"rrhh_resumen_{mi_empresa}", default=20,
+                opciones=(10, 20, 30, 50, 100),
+            )
+            df_res = resumen_prof.head(limite_resumen)
+            with lista_plegable("Resumen por profesional", count=len(df_res), expanded=False, height=440):
+                mostrar_dataframe_con_scroll(df_res, height=380)
+            st.success(f"Total horas en el periodo: {resumen_prof['Horas Totales'].sum():.1f} hs")
+        with c_r2:
+            st.markdown("##### Horas por profesional")
+            _chart_df = resumen_prof.head(15).copy()
+            if not _chart_df.empty and _chart_df["Horas Totales"].sum() > 0:
+                import altair as alt
+                _chart = alt.Chart(_chart_df).mark_bar(cornerRadiusEnd=4).encode(
+                    x=alt.X("Horas Totales:Q", title="Hs"),
+                    y=alt.Y("Profesional:N", sort="-x", title=None),
+                    tooltip=["Profesional:N", "Horas Totales:Q", "Visitas:Q"],
+                ).configure_axis(labelFontSize=11, titleFontSize=12).configure_view(strokeWidth=0)
+                st.altair_chart(_chart, width="stretch")
 
     st.warning("Solo para correccion de errores. Eliminar un fichaje recalcula automaticamente los tiempos.")
     df_gestion = df_fichajes.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"], errors='ignore')
