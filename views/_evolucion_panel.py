@@ -331,7 +331,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             val = cuidador_data.get(key)
                             if val is None or val == "" or val is False:
                                 continue
-                            if key in ("medicacion_administrada", "curaciones", "deposicion"):
+                            if key in ("medicacion_administrada", "curaciones"):
                                 st.markdown(f"- {label}: **Si**")
                             elif key == "dolor_eva" and cuidador_data.get("dolor_presente"):
                                 st.markdown(f"- Dolor presente: **Si (EVA {int(val)}/10)**")

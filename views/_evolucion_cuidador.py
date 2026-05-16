@@ -84,16 +84,26 @@ def _generar_texto_evolucion(
     mapa_diuresis = {
         "Orino bien": "Diuresis conservada, orina espontanea sin alteraciones",
         "No orino": "No registra diuresis en el turno",
-        "Tiene sonda": "Porta sonda vesical, diuresis conservada",
+        "Tiene sonda vesical": "Porta sonda vesical, diuresis conservada",
+        "Orina escasa": "Diuresis disminuida, orina escasa en el turno",
+        "Orina frecuente": "Polaquiuria, micciones frecuentes en el turno",
+        "Incontinencia urinaria": "Episodios de incontinencia urinaria en el turno",
+        "Miccion dolorosa": "Refiere dolor o ardor al orinar",
     }
     if diuresis in mapa_diuresis:
         parrafos.append(mapa_diuresis[diuresis] + ".")
 
     # Deposicion
-    if deposicion:
-        parrafos.append("Deposicion presente, caracteristicas dentro de parametros.")
-    else:
-        parrafos.append("No registra deposicion en el turno.")
+    mapa_deposicion = {
+        "No hizo deposicion": "No registra deposicion en el turno",
+        "Deposicion normal": "Deposicion presente, caracteristicas dentro de parametros",
+        "Diarrea": "Deposiciones liquidas multiples en el turno",
+        "Estrenimiento": "Estrenimiento, sin deposicion en mas de 72 horas",
+        "Deposicion con esfuerzo": "Deposicion presente pero con esfuerzo",
+        "Incontinencia fecal": "Episodios de incontinencia fecal en el turno",
+    }
+    if deposicion in mapa_deposicion:
+        parrafos.append(mapa_deposicion[deposicion] + ".")
 
     # Descanso
     mapa_descanso = {
@@ -168,8 +178,16 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
 
         with p3:
             st.markdown("**Eliminacion**")
-            diuresis = st.selectbox("Diuresis (Orina)", ["", "Orino bien", "No orino", "Tiene sonda"], key="evc_diuresis")
-            deposicion = st.checkbox("Hizo deposicion", key="evc_deposicion")
+            diuresis = st.selectbox(
+                "Diuresis",
+                ["", "Orino bien", "No orino", "Tiene sonda vesical", "Orina escasa", "Orina frecuente", "Incontinencia urinaria", "Miccion dolorosa"],
+                key="evc_diuresis",
+            )
+            deposicion = st.selectbox(
+                "Deposicion",
+                ["", "No hizo deposicion", "Deposicion normal", "Diarrea", "Estrenimiento", "Deposicion con esfuerzo", "Incontinencia fecal"],
+                key="evc_deposicion",
+            )
             st.markdown("")
             st.markdown("**Sueno - Descanso**")
             descanso = st.selectbox(
