@@ -86,10 +86,10 @@ def render_chart_card(titulo, chart, height=300):
 def render_kpi_row(metrics, cols=4):
     """Renderiza fila de KPIs. metrics = [(valor, etiqueta, delta, icono, color), ...]"""
     for i in range(0, len(metrics), cols):
-        with st.columns(cols) as row:
-            for j, (valor, etiqueta, delta, icono, color) in enumerate(metrics[i:i+cols]):
-                with row[j]:
-                    render_metric_card(valor, etiqueta, delta, icono, color)
+        row = st.columns(cols)
+        for j, (valor, etiqueta, delta, icono, color) in enumerate(metrics[i:i+cols]):
+            with row[j]:
+                render_metric_card(valor, etiqueta, delta, icono, color)
 
 
 def placeholder_chart(altura=200):
