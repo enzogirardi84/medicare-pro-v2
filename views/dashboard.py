@@ -183,8 +183,11 @@ def render_dashboard(mi_empresa, rol):
     ]
     pendientes_hoy = [x for x in agenda_enriquecida if x["_fecha_dt"].date() == hoy and x["estado_calc"] in {"Pendiente", "En curso", "Vencida"}]
     proximas_48 = [x for x in agenda_enriquecida if x["_fecha_dt"] != datetime.min and ahora_local <= x["_fecha_dt"] <= proximas_48h_limite]
-    _fe_urg = lambda x: parse_fecha_hora(f"{x.get('fecha_evento', '')} {x.get('hora_evento', '')}")
-    urgencias_30 = [x for x in emergencias if _fe_urg(x) not in (None, datetime.min) and _fe_urg(x) >= hace_30_dias]
+    urgencias_30 = []
+    for x in emergencias:
+        _dt = parse_fecha_hora(f"{x.get('fecha_evento', '')} {x.get('hora_evento', '')}")
+        if _dt not in (None, datetime.min) and _dt >= hace_30_dias:
+            urgencias_30.append(x)
     meds_suspendidas = [x for x in indicaciones if str(x.get("estado_receta", "Activa")) in {"Suspendida", "Modificada"}]
     fact_mes = _sumar_importe(facturacion)
     balance_actual = sum(float(x.get("balance", 0) or 0) for x in balance[-30:])
@@ -226,7 +229,7 @@ def render_dashboard(mi_empresa, rol):
     ]
     render_kpi_row(kpi_data, cols=4 if not es_movil else 2)
 
-    if fact_mes:
+    if fact_mes is not None:
         st.caption(f"Facturacion cargada en el sistema: ${fact_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
     # Activity data: compute once, reuse for 7-day chart + 30-day heatmap
@@ -301,82 +304,72 @@ def render_dashboard(mi_empresa, rol):
         st.markdown("#### Listados ejecutivos")
     render_listados_ejecutivos(agenda_enriquecida, meds_suspendidas, mi_empresa, rol, es_movil)
 
-    # Mapa geográfico de visitas
-    st.divider()
-    st.markdown("#### Mapa de visitas (GPS real)")
-    _gps_data = []
-    with st.spinner("Procesando datos de GPS..."):
-        for c in checkins:
-            gps_str = c.get("gps", "")
-            if gps_str and "," in gps_str:
-                try:
-                    lat_str, lon_str = gps_str.split(",", 1)
-                    lat_v = float(lat_str)
-                    lon_v = float(lon_str)
-                    if lat_v != 0.0 or lon_v != 0.0:
-                        _gps_data.append({
-                            "lat": lat_v,
-                            "lon": lon_v,
-                            "paciente": c.get("paciente", ""),
-                            "tipo": c.get("tipo", ""),
-                            "fecha": c.get("fecha_hora", ""),
-                        })
-                except (ValueError, TypeError):
-                    continue
-    if _gps_data:
-        _df_gps = pd.DataFrame(_gps_data)
-        _lat_center = _df_gps["lat"].mean()
-        _lon_center = _df_gps["lon"].mean()
+    # Mapa geográfico de visitas + Reporte PDF (solo escritorio)
+    if not es_movil:
+        st.divider()
+        st.markdown("#### Mapa de visitas (GPS real)")
+        _gps_data = []
+        with st.spinner("Procesando datos de GPS..."):
+            for c in checkins:
+                gps_str = c.get("gps", "")
+                if gps_str and "," in gps_str:
+                    try:
+                        lat_str, lon_str = gps_str.split(",", 1)
+                        lat_v = float(lat_str)
+                        lon_v = float(lon_str)
+                        if lat_v != 0.0 or lon_v != 0.0:
+                            _gps_data.append({
+                                "lat": lat_v, "lon": lon_v,
+                                "paciente": c.get("paciente", ""),
+                                "tipo": c.get("tipo", ""),
+                                "fecha": c.get("fecha_hora", ""),
+                            })
+                    except (ValueError, TypeError):
+                        continue
+        if _gps_data:
+            _df_gps = pd.DataFrame(_gps_data)
+            _lat_center = _df_gps["lat"].mean()
+            _lon_center = _df_gps["lon"].mean()
 
-        _markers_html = ""
-        for _, r in _df_gps.iterrows():
-            _name = escape(str(r.get("paciente", "")))
-            _type = escape(str(r.get("tipo", "")))
-            _date = escape(str(r.get("fecha", "")))
-            _popup = f"{_name}<br/>{_type}<br/>{_date}".replace("'", "\\'")
-            _markers_html += f"""
-L.marker([{r['lat']}, {r['lon']}]).addTo(_map)
-    .bindPopup('{_popup}');"""
+            _markers_html = ""
+            for _, r in _df_gps.iterrows():
+                _name = escape(str(r.get("paciente", "")))
+                _type = escape(str(r.get("tipo", "")))
+                _date = escape(str(r.get("fecha", "")))
+                _popup = f"{_name}<br/>{_type}<br/>{_date}".replace("'", "\\'")
+                _markers_html += f"""
+L.marker([{r['lat']}, {r['lon']}]).addTo(_map).bindPopup('{_popup}');"""
 
-        _html_map = f"""
+            _html_map = f"""
 <!DOCTYPE html>
-<html>
-<head>
+<html><head>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  body {{ margin:0; padding:0; }}
-  #map {{ height:100vh; width:100%; }}
-</style>
-</head>
-<body>
+<style>body {{ margin:0; padding:0; }} #map {{ height:100vh; width:100%; }}</style>
+</head><body>
 <div id="map"></div>
 <script>
 var _map = L.map('map').setView([{_lat_center}, {_lon_center}], 13);
 L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
 }}).addTo(_map);
 {_markers_html}
-</script>
-</body>
-</html>"""
+</script></body></html>"""
 
-        col_map_1, col_map_2 = st.columns([2, 1])
-        with col_map_1:
-            st.components.v1.html(_html_map, height=500)
-        with col_map_2:
-            st.caption(f"{len(_gps_data)} visitas con GPS")
-            _df_gps_show = _df_gps[["paciente", "tipo", "fecha"]].copy()
-            _df_gps_show.columns = ["Paciente", "Tipo", "Fecha"]
-            st.dataframe(_df_gps_show.tail(10), use_container_width=True, height=300, hide_index=True)
-    else:
-        st.caption("Sin datos de GPS disponibles. Las visitas fichadas con GPS aparecerán aquí.")
+            col_map_1, col_map_2 = st.columns([2, 1])
+            with col_map_1:
+                st.components.v1.html(_html_map, height=500)
+            with col_map_2:
+                st.caption(f"{len(_gps_data)} visitas con GPS")
+                _df_gps_show = _df_gps[["paciente", "tipo", "fecha"]].copy()
+                _df_gps_show.columns = ["Paciente", "Tipo", "Fecha"]
+                st.dataframe(_df_gps_show.tail(10), use_container_width=True, height=300, hide_index=True)
+        else:
+            st.caption("Sin datos de GPS disponibles. Las visitas fichadas con GPS aparecerán aquí.")
 
-    # Reporte Ejecutivo PDF
-    st.divider()
-    try:
-        from core.reporte_ejecutivo import render_reporte_ejecutivo
-        render_reporte_ejecutivo(mi_empresa)
-    except Exception as _e:
-        log_event("dashboard", f"reporte_ejecutivo:{type(_e).__name__}")
+        st.divider()
+        try:
+            from core.reporte_ejecutivo import render_reporte_ejecutivo
+            render_reporte_ejecutivo(mi_empresa)
+        except Exception as _e:
+            log_event("dashboard", f"reporte_ejecutivo:{type(_e).__name__}")

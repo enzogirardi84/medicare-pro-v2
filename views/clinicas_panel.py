@@ -1,6 +1,6 @@
-from core.alert_toasts import queue_toast
 """Panel global SuperAdmin: clinicas registradas, suspension logica y reactivacion."""
 
+from core.alert_toasts import queue_toast
 import io
 
 import pandas as pd

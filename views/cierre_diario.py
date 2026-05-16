@@ -57,7 +57,7 @@ def render_cierre_diario(mi_empresa, user):
     stock_actual = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
 
     total_insumos = sum(c.get("cantidad", 0) for c in consumos_dia)
-    total_facturado = sum(f.get("monto", 0) for f in facturacion_dia)
+    total_facturado = sum(float(f.get("monto", 0) or 0) for f in facturacion_dia)
     stock_critico = len([s for s in stock_actual if s.get("stock", 0) <= 10])
 
     col_m1, col_m2, col_m3 = st.columns(3)
@@ -180,7 +180,7 @@ def render_cierre_diario(mi_empresa, user):
             fecha_str_pdf = fecha_str if fecha_para_pdf is None else (fecha_para_pdf.strftime("%d/%m/%Y") if isinstance(fecha_para_pdf, date) else str(fecha_para_pdf))
             consumos_pdf = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str_pdf) and c.get("empresa") == mi_empresa]
             facturacion_pdf = [f for f in st.session_state.get("facturacion_db", []) if f.get("fecha", "").startswith(fecha_str_pdf) and f.get("empresa") == mi_empresa]
-            total_facturado_pdf = sum(f.get("monto", 0) for f in facturacion_pdf)
+            total_facturado_pdf = sum(float(f.get("monto", 0) or 0) for f in facturacion_pdf)
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 15)

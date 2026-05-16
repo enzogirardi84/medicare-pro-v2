@@ -96,8 +96,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     cache_key_caja = f"_caja_cache_{paciente_sel}_{len(fact_empresa)}"
     if cache_key_caja not in st.session_state:
         fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
-        total_cobrado = sum((f.get("monto") or 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
-        total_pendiente = sum((f.get("monto") or 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
+        total_cobrado = sum(float(f.get("monto", 0) or 0) for f in fact_paciente if "Cobrado" in f.get("estado", ""))
+        total_pendiente = sum(float(f.get("monto", 0) or 0) for f in fact_paciente if "Pendiente" in f.get("estado", ""))
         st.session_state[cache_key_caja] = {
             "fact_paciente": fact_paciente,
             "total_cobrado": total_cobrado,
