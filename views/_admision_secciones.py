@@ -170,80 +170,81 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                 estados_disponibles.append(estado_actual)
 
             with st.form("adm_edit_form"):
-                st.markdown("##### Datos personales")
-                col_e1, col_e2, col_e3 = st.columns(3)
-                nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
-                dni_edit = col_e2.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
-                fnac_edit = col_e3.date_input(
-                    "Fecha de nacimiento",
-                    value=_parsear_fecha_guardada(detalle_sel.get("fnac", "")),
-                    min_value=date(1900, 1, 1),
-                    max_value=ahora().date(),
-                )
-
-                col_e4, col_e5, col_e6 = st.columns(3)
-                sexo_opciones = ["F", "M", "Otro"]
-                sexo_actual = detalle_sel.get("sexo", "F")
-                if sexo_actual not in sexo_opciones:
-                    sexo_opciones.append(sexo_actual)
-                sexo_edit = col_e4.selectbox("Sexo", sexo_opciones, index=sexo_opciones.index(sexo_actual))
-                estado_edit = col_e5.selectbox("Estado", estados_disponibles, index=estados_disponibles.index(estado_actual))
-                email_edit = col_e6.text_input("Email", value=detalle_sel.get("email", ""))
-
-                st.markdown("##### Contacto y direccion")
-                col_e7, col_e8 = st.columns(2)
-                telefono_edit = col_e7.text_input("WhatsApp / telefono", value=detalle_sel.get("telefono", ""))
-                if admin_total:
-                    empresa_edit = col_e8.text_input("Empresa / clinica", value=detalle_sel.get("empresa", mi_empresa))
-                else:
-                    empresa_edit = mi_empresa
-                    col_e8.info(f"Clinica fija: {mi_empresa}")
-
-                col_e9, col_e10 = st.columns(2)
-                contacto_emergencia_nombre_edit = col_e9.text_input("Contacto de emergencia (nombre)", value=detalle_sel.get("contacto_emergencia_nombre", ""))
-                contacto_emergencia_tel_edit = col_e10.text_input("Contacto de emergencia (telefono)", value=detalle_sel.get("contacto_emergencia_telefono", ""))
-
-                direccion_edit = st.text_input("Direccion exacta", value=detalle_sel.get("direccion", ""))
-                obra_edit = st.text_input("Obra social / prepaga", value=detalle_sel.get("obra_social", ""))
-
-                st.markdown("##### Datos de ingreso")
-                col_e11, col_e12, col_e13 = st.columns(3)
-                fecha_ingreso_edit = col_e11.date_input(
-                    "Fecha de ingreso",
-                    value=_parsear_fecha_guardada(detalle_sel.get("fecha_ingreso", "")),
-                    min_value=date(1900, 1, 1),
-                    max_value=ahora().date(),
-                )
-                diagnostico_ingreso_edit = col_e12.text_input(
-                    "Diagnostico principal de ingreso",
-                    value=detalle_sel.get("diagnostico_ingreso", ""),
-                )
-                motivo_ingreso_edit = col_e13.text_input(
-                    "Motivo de consulta / ingreso",
-                    value=detalle_sel.get("motivo_ingreso", ""),
-                )
-                if estado_edit == "De Alta":
-                    fecha_egreso_default = _parsear_fecha_guardada(detalle_sel.get("fecha_egreso", ""))
-                    if fecha_egreso_default == date(1990, 1, 1):
-                        fecha_egreso_default = ahora().date()
-                    fecha_egreso_edit = st.date_input(
-                        "Fecha de egreso",
-                        value=fecha_egreso_default,
+                with st.expander("Datos personales", expanded=True):
+                    col_e1, col_e2, col_e3 = st.columns(3)
+                    nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
+                    dni_edit = col_e2.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
+                    fnac_edit = col_e3.date_input(
+                        "Fecha de nacimiento",
+                        value=_parsear_fecha_guardada(detalle_sel.get("fnac", "")),
                         min_value=date(1900, 1, 1),
                         max_value=ahora().date(),
                     )
-                else:
-                    fecha_egreso_edit = None
 
-                st.markdown("##### Alertas clinicas")
-                col_e14, col_e15 = st.columns(2)
-                alergias_edit = col_e14.text_area("Alergias", value=detalle_sel.get("alergias", ""), height=90)
-                patologias_edit = col_e15.text_area(
-                    "Patologias previas / riesgos",
-                    value=detalle_sel.get("patologias", ""),
-                    height=90,
-                )
+                    col_e4, col_e5, col_e6 = st.columns(3)
+                    sexo_opciones = ["F", "M", "Otro"]
+                    sexo_actual = detalle_sel.get("sexo", "F")
+                    if sexo_actual not in sexo_opciones:
+                        sexo_opciones.append(sexo_actual)
+                    sexo_edit = col_e4.selectbox("Sexo", sexo_opciones, index=sexo_opciones.index(sexo_actual))
+                    estado_edit = col_e5.selectbox("Estado", estados_disponibles, index=estados_disponibles.index(estado_actual))
+                    email_edit = col_e6.text_input("Email", value=detalle_sel.get("email", ""))
 
+                with st.expander("Contacto y direccion", expanded=False):
+                    col_e7, col_e8 = st.columns(2)
+                    telefono_edit = col_e7.text_input("WhatsApp / telefono", value=detalle_sel.get("telefono", ""))
+                    if admin_total:
+                        empresa_edit = col_e8.text_input("Empresa / clinica", value=detalle_sel.get("empresa", mi_empresa))
+                    else:
+                        empresa_edit = mi_empresa
+                        col_e8.info(f"Clinica fija: {mi_empresa}")
+
+                    col_e9, col_e10 = st.columns(2)
+                    contacto_emergencia_nombre_edit = col_e9.text_input("Contacto de emergencia (nombre)", value=detalle_sel.get("contacto_emergencia_nombre", ""))
+                    contacto_emergencia_tel_edit = col_e10.text_input("Contacto de emergencia (telefono)", value=detalle_sel.get("contacto_emergencia_telefono", ""))
+
+                    direccion_edit = st.text_input("Direccion exacta", value=detalle_sel.get("direccion", ""))
+                    obra_edit = st.text_input("Obra social / prepaga", value=detalle_sel.get("obra_social", ""))
+
+                with st.expander("Datos de ingreso", expanded=False):
+                    col_e11, col_e12, col_e13 = st.columns(3)
+                    fecha_ingreso_edit = col_e11.date_input(
+                        "Fecha de ingreso",
+                        value=_parsear_fecha_guardada(detalle_sel.get("fecha_ingreso", "")),
+                        min_value=date(1900, 1, 1),
+                        max_value=ahora().date(),
+                    )
+                    diagnostico_ingreso_edit = col_e12.text_input(
+                        "Diagnostico principal de ingreso",
+                        value=detalle_sel.get("diagnostico_ingreso", ""),
+                    )
+                    motivo_ingreso_edit = col_e13.text_input(
+                        "Motivo de consulta / ingreso",
+                        value=detalle_sel.get("motivo_ingreso", ""),
+                    )
+                    if estado_edit == "De Alta":
+                        fecha_egreso_default = _parsear_fecha_guardada(detalle_sel.get("fecha_egreso", ""))
+                        if fecha_egreso_default == date(1990, 1, 1):
+                            fecha_egreso_default = ahora().date()
+                        fecha_egreso_edit = st.date_input(
+                            "Fecha de egreso",
+                            value=fecha_egreso_default,
+                            min_value=date(1900, 1, 1),
+                            max_value=ahora().date(),
+                        )
+                    else:
+                        fecha_egreso_edit = None
+
+                with st.expander("Alertas clinicas", expanded=False):
+                    col_e14, col_e15 = st.columns(2)
+                    alergias_edit = col_e14.text_area("Alergias", value=detalle_sel.get("alergias", ""), height=90)
+                    patologias_edit = col_e15.text_area(
+                        "Patologias previas / riesgos",
+                        value=detalle_sel.get("patologias", ""),
+                        height=90,
+                    )
+
+                st.markdown("---")
                 if st.form_submit_button("Guardar cambios del legajo", width='stretch', type="primary"):
                     campos_legajo, error_legajo = _validar_legajo(
                         nombre_edit,
@@ -323,11 +324,10 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                             queue_toast("Legajo actualizado correctamente.")
                             st.rerun()
 
-        if admin_total:
-            with st.container(border=True):
-                st.markdown("#### Eliminar paciente y registros asociados")
+        with st.expander("Eliminar paciente y registros asociados (solo si el legajo fue cargado por error)", expanded=False):
+            if admin_total:
                 st.warning(
-                    "Usa esta accion solo si el legajo fue cargado por error. Se borraran tambien los registros clinicos, legales y operativos vinculados."
+                    "Accion irreversible. Se borraran tambien los registros clinicos, legales y operativos vinculados."
                 )
                 if impacto_actual:
                     for clave, cantidad in impacto_actual.items():
@@ -371,10 +371,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                     _sincronizar_eliminacion_paciente_sql_best_effort(detalle_sel)
                     queue_toast("Paciente eliminado correctamente.")
                     st.rerun()
+            else:
+                st.info("El borrado total del legajo solo esta disponible para usuarios con permisos de administrador.")
 
         # ── Historial de admisiones ─────────────────────────────────────
-        with st.container(border=True):
-            st.markdown("#### Historial de admisiones")
+        with st.expander("Historial de admisiones", expanded=False):
             eventos_adm = [r for r in st.session_state.get("auditoria_legal_db", [])
                           if isinstance(r, dict) and r.get("paciente") == paciente_sel_admin
                           and r.get("seccion") == "Admision"]
@@ -446,54 +447,54 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
             )
 
     with st.form("adm_form", clear_on_submit=True):
-        st.markdown("##### Datos personales")
-        col_a, col_b, col_c = st.columns(3)
-        n = col_a.text_input("Nombre y apellido *", placeholder="Juan Perez")
-        d = col_b.text_input("DNI del paciente *", placeholder="35123456", key="_adm_dni_preview")
-        f_nac = col_c.date_input(
-            "Fecha de nacimiento",
-            value=date(1990, 1, 1),
-            min_value=date(1900, 1, 1),
-            max_value=ahora().date(),
-        )
+        with st.expander("Datos personales", expanded=True):
+            col_a, col_b, col_c = st.columns(3)
+            n = col_a.text_input("Nombre y apellido *", placeholder="Juan Perez")
+            d = col_b.text_input("DNI del paciente *", placeholder="35123456", key="_adm_dni_preview")
+            f_nac = col_c.date_input(
+                "Fecha de nacimiento",
+                value=date(1990, 1, 1),
+                min_value=date(1900, 1, 1),
+                max_value=ahora().date(),
+            )
 
-        col_d, col_e, col_f = st.columns(3)
-        se = col_d.selectbox("Sexo", ["F", "M", "Otro"])
-        o = col_e.text_input("Obra social / prepaga", placeholder="OSDE / PAMI / Particular")
-        email_alta = col_f.text_input("Email", placeholder="paciente@correo.com")
+            col_d, col_e, col_f = st.columns(3)
+            se = col_d.selectbox("Sexo", ["F", "M", "Otro"])
+            o = col_e.text_input("Obra social / prepaga", placeholder="OSDE / PAMI / Particular")
+            email_alta = col_f.text_input("Email", placeholder="paciente@correo.com")
 
-        st.markdown("##### Contacto y direccion")
-        col_g, col_h = st.columns(2)
-        tel = col_g.text_input("WhatsApp / telefono", placeholder="3584302024")
-        contacto_emergencia_nombre = col_h.text_input("Contacto de emergencia (nombre)", placeholder="Familiar a cargo")
+        with st.expander("Contacto y direccion", expanded=False):
+            col_g, col_h = st.columns(2)
+            tel = col_g.text_input("WhatsApp / telefono", placeholder="3584302024")
+            contacto_emergencia_nombre = col_h.text_input("Contacto de emergencia (nombre)", placeholder="Familiar a cargo")
 
-        col_i, col_j = st.columns(2)
-        contacto_emergencia_tel = col_i.text_input("Contacto de emergencia (telefono)", placeholder="3584302024")
-        dir_p = col_j.text_input("Direccion exacta", placeholder="Calle 123, barrio, ciudad")
+            col_i, col_j = st.columns(2)
+            contacto_emergencia_tel = col_i.text_input("Contacto de emergencia (telefono)", placeholder="3584302024")
+            dir_p = col_j.text_input("Direccion exacta", placeholder="Calle 123, barrio, ciudad")
 
-        st.markdown("##### Datos de ingreso")
-        col_k, col_l, col_m = st.columns(3)
-        fecha_ingreso_alta = col_k.date_input(
-            "Fecha de ingreso",
-            value=ahora().date(),
-            min_value=date(1900, 1, 1),
-            max_value=ahora().date(),
-        )
-        diagnostico_ingreso = col_l.text_input(
-            "Diagnostico principal de ingreso",
-            placeholder="Ej: Neumonia, Fractura de cadera, ACV isquemico...",
-            key="_adm_diag_ingreso",
-        )
-        motivo_ingreso = col_m.text_input(
-            "Motivo de consulta / ingreso",
-            placeholder="Ej: Disnea, dolor abdominal, trauma...",
-            key="_adm_motivo_ingreso",
-        )
+        with st.expander("Datos de ingreso", expanded=False):
+            col_k, col_l, col_m = st.columns(3)
+            fecha_ingreso_alta = col_k.date_input(
+                "Fecha de ingreso",
+                value=ahora().date(),
+                min_value=date(1900, 1, 1),
+                max_value=ahora().date(),
+            )
+            diagnostico_ingreso = col_l.text_input(
+                "Diagnostico principal de ingreso",
+                placeholder="Ej: Neumonia, Fractura de cadera, ACV isquemico...",
+                key="_adm_diag_ingreso",
+            )
+            motivo_ingreso = col_m.text_input(
+                "Motivo de consulta / ingreso",
+                placeholder="Ej: Disnea, dolor abdominal, trauma...",
+                key="_adm_motivo_ingreso",
+            )
 
-        st.markdown("##### Alertas clinicas")
-        col_n, col_o = st.columns(2)
-        alergias = col_n.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
-        patologias = col_o.text_area("Patologias previas / riesgos", placeholder="Ej: DBT, HTA, marcapasos...", height=90)
+        with st.expander("Alertas clinicas", expanded=False):
+            col_n, col_o = st.columns(2)
+            alergias = col_n.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
+            patologias = col_o.text_area("Patologias previas / riesgos", placeholder="Ej: DBT, HTA, marcapasos...", height=90)
 
         if admin_total:
             emp_d = st.text_input("Empresa / clinica", value=mi_empresa)
