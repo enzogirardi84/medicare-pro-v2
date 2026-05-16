@@ -45,7 +45,7 @@ def _generar_texto_evolucion_cuidador(
         "Cooperador": "Cooperador durante los cuidados",
         "Agitado": "Agitado durante la evaluacion",
         "Confuso": "Confuso, requiere contencion y reorientacion",
-        "Apatico": "Apatico, con poca respuesta a estimulos",
+        "Desmotivado": "Desmotivado, con poca respuesta a estimulos",
         "Agresivo": "Agresivo, requiere contencion verbal y fisica",
     }
     if conducta in mapa_conducta:
@@ -191,7 +191,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
         with st.expander("Neurologico y conducta", expanded=True):
             c1, c2 = st.columns(2)
             animo = c1.selectbox("Animo / Neurologico", ["", "Despierto", "Somnoliento", "Tranquilo", "Irritable", "Desorientado", "Ansioso"], key="evc_animo")
-            conducta = c2.selectbox("Conducta", ["", "Cooperador", "Agitado", "Confuso", "Apatico", "Agresivo"], key="evc_conducta")
+            conducta = c2.selectbox("Conducta", ["", "Cooperador", "Agitado", "Confuso", "Desmotivado", "Agresivo"], key="evc_conducta")
 
         with st.expander("Alimentacion e higiene", expanded=True):
             c1, c2 = st.columns(2)
