@@ -42,6 +42,7 @@ def _normalizar_para_match(s: str) -> str:
     s = re.sub(r'[^a-z0-9]+', '', s.lower())
     return s
 
+@st.cache_data(ttl=3600)
 def _completar_con_vademecum() -> dict:
     """Combina MEDICAMENTOS (con dosis) + vademecum (solo nombres).
     Reconoce nombres con concentracion: 'Ibuprofeno 400mg' -> 'Ibuprofeno'
@@ -716,9 +717,13 @@ def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = 
 
     # Dosis diaria total
     dosis_diaria_min = round(peso_kg * dosis_min * (24 / info["intervalo_min_hs"]), 1)
-    dosis_diaria_max = round(peso_kg * info["dosis_max_diaria_mg_kg"], 1)
+    dosis_diaria_max_por_peso = round(peso_kg * info["dosis_max_diaria_mg_kg"], 1)
+    # Capping: la dosis diaria max no debe superar (max_por_dosis * dosis/dia)
+    dosis_diaria_max = min(
+        dosis_diaria_max_por_peso,
+        round(max_por_dosis * (24 / info["intervalo_min_hs"]), 1)
+    )
 
-    # Presentacion sugerida
     presentacion = info["presentacion"]
 
     return {
@@ -729,6 +734,7 @@ def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = 
         "dosis_max_mg": dosis_por_dosis_max,
         "dosis_recomendada_mg": dosis_recomendada,
         "intervalo": info["intervalo_hs"],
+        "dosis_diaria_min_mg": dosis_diaria_min,
         "dosis_diaria_max_mg": dosis_diaria_max,
         "dosis_max_por_dosis_mg": max_por_dosis,
         "presentacion": presentacion,
@@ -748,7 +754,7 @@ def _mostrar_resultado(resultado):
     cols2 = st.columns([1, 1, 1])
     cols2[0].metric("Intervalo", r["intervalo"])
     cols2[1].metric("Dosis diaria max", f"{r['dosis_diaria_max_mg']} mg/dia")
-    cols2[2].metric("Presentacion", r["presentacion"][:30], help=r["presentacion"])
+    cols2[2].metric("Dosis diaria min", f"{r.get('dosis_diaria_min_mg', '?')} mg/dia")
 
     with st.expander("Presentaciones disponibles", expanded=False):
         st.markdown(f"**{r['presentacion']}**")
@@ -811,12 +817,42 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 edad_dias = (datetime.now() - nac).days
                 if edad_dias < 30:
                     st.caption(f"Edad: {edad_dias} dias")
+                    _edad_anios = 0
                 elif edad_dias < 365:
                     st.caption(f"Edad: {edad_dias // 30} meses")
+                    _edad_anios = edad_dias / 365
                 else:
                     anios = edad_dias // 365
                     meses = (edad_dias % 365) // 30
                     st.caption(f"Edad: {anios} anios {meses} meses")
+                    _edad_anios = anios + meses / 12
+                # Advertencia si peso no corresponde a la edad
+                p50_1a = 10   # kg, peso mediano 1 ano
+                p50_3a = 14   # 3 anos
+                p50_5a = 18   # 5 anos
+                p50_10a = 32  # 10 anos
+                p50_14a = 50  # 14 anos
+                esperado = 3.5  # recien nacido
+                if _edad_anios >= 14:
+                    esperado = p50_14a
+                elif _edad_anios >= 10:
+                    esperado = p50_10a
+                elif _edad_anios >= 5:
+                    esperado = p50_5a
+                elif _edad_anios >= 3:
+                    esperado = p50_3a
+                elif _edad_anios >= 1:
+                    esperado = p50_1a
+                elif _edad_anios >= 0.5:
+                    esperado = 7.5
+                elif _edad_anios >= 0.25:
+                    esperado = 5.5
+                if peso < esperado * 0.6 or peso > esperado * 1.8:
+                    st.warning(
+                        f"El peso ({peso} kg) parece anormal para la edad "
+                        f"(esperado ~{esperado} kg). Verifique los datos.",
+                        icon="⚠️"
+                    )
             except Exception:
                 pass
 
@@ -864,16 +900,24 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
             if not st.session_state.get("m_nombre", "").strip():
                 st.error("Debe ingresar el nombre del medicamento en 'Ingreso manual'.")
             else:
+                m_min = st.session_state["m_min"]
+                m_max = st.session_state["m_max"]
+                m_int = st.session_state["m_int"]
+                m_maxdosis = st.session_state["m_maxdosis"]
+                m_diaria = st.session_state["m_diaria"]
+                dosis_diaria_max_por_peso = round(peso * m_diaria, 1)
+                dosis_diaria_max_cap = round(m_maxdosis * (24 / m_int), 1)
                 res = {
                     "medicamento": st.session_state["m_nombre"].strip(),
                     "peso": peso,
-                    "dosis_por_kg": f"{st.session_state['m_min']}-{st.session_state['m_max']} mg/kg/dosis",
-                    "dosis_min_mg": round(peso * st.session_state["m_min"], 1),
-                    "dosis_max_mg": round(peso * st.session_state["m_max"], 1),
-                    "dosis_recomendada_mg": min(round(peso * st.session_state["m_max"], 1), st.session_state["m_maxdosis"]),
-                    "intervalo": f"cada {st.session_state['m_int']} hs",
-                    "dosis_diaria_max_mg": round(peso * st.session_state["m_diaria"], 1),
-                    "dosis_max_por_dosis_mg": st.session_state["m_maxdosis"],
+                    "dosis_por_kg": f"{m_min}-{m_max} mg/kg/dosis",
+                    "dosis_min_mg": round(peso * m_min, 1),
+                    "dosis_max_mg": round(peso * m_max, 1),
+                    "dosis_recomendada_mg": min(round(peso * m_max, 1), m_maxdosis),
+                    "intervalo": f"cada {m_int} hs",
+                    "dosis_diaria_min_mg": round(peso * m_min * (24 / m_int), 1),
+                    "dosis_diaria_max_mg": min(dosis_diaria_max_por_peso, dosis_diaria_max_cap),
+                    "dosis_max_por_dosis_mg": m_maxdosis,
                     "presentacion": st.session_state["m_pres"],
                     "via": st.session_state["m_via"],
                     "observaciones": st.session_state["m_obs"],
@@ -886,7 +930,6 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 st.info(obs)
                 log_event("calculadora_dosis", f"MANUAL:{res['medicamento']} - {peso}kg - {paciente_sel}")
         else:
-            info = _TODOS_MEDICAMENTOS[medicamento]
             resultado = calcular_dosis(medicamento, peso, _TODOS_MEDICAMENTOS)
             raw = _TODOS_MEDICAMENTOS[medicamento]
             if isinstance(raw, str):
@@ -907,6 +950,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
 - Dosis recomendada: {resultado['dosis_recomendada_mg']} mg (limitado a max {resultado['dosis_max_por_dosis_mg']} mg)
 - Intervalo: {resultado['intervalo']}
 - Via: {resultado['via']}
+- Dosis diaria minima: {resultado.get('dosis_diaria_min_mg', '?')} mg
 - Dosis diaria maxima: {resultado['dosis_diaria_max_mg']} mg
                 """)
 
