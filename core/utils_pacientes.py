@@ -17,12 +17,17 @@ from core.utils_roles import (
 _PACIENTES_SQL_STATUS_KEY = "_mc_pacientes_sql_status"
 
 
+_MC_MAPA_CACHE_KEY = "_mc_mapa_pacientes_cache"
+
+
 def mapa_detalles_pacientes(session_state: dict) -> dict:
+    cache_key = _MC_MAPA_CACHE_KEY
+    if cache_key in session_state:
+        return session_state[cache_key]
     m = session_state.get("detalles_pacientes_db")
     if not isinstance(m, dict):
         m = {}
         session_state["detalles_pacientes_db"] = m
-    # Si esta vacio, intentar cargar desde SQL
     if not m:
         try:
             from core._db_sql_pacientes import get_pacientes_by_empresa
@@ -48,8 +53,10 @@ def mapa_detalles_pacientes(session_state: dict) -> dict:
                             "patologias": p.get("patologias", ""),
                             "fecha_nacimiento": p.get("fecha_nacimiento", ""),
                         }
-        except Exception:
-            pass
+        except Exception as _exc:
+            from core.app_logging import log_event
+            log_event("utils_pacientes", f"mapa_detalles_sql_error:{type(_exc).__name__}:{_exc}")
+    session_state[cache_key] = m
     return m
 
 

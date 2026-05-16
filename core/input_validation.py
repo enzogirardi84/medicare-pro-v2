@@ -71,13 +71,17 @@ def sanitizar_sql(texto: str) -> str:
 
 
 def validar_dni_seguro(dni: str) -> bool:
-    """Valida DNI de forma segura."""
+    """Valida DNI de forma segura (7-8 dígitos, rango 7M-99M)."""
     s = (dni or "").strip()
     if not s.isdigit():
         return False
-    if len(s) < 7000000 or len(s) > 99999999:
+    if len(s) < 7 or len(s) > 8:
         return False
-    return True
+    try:
+        val = int(s)
+        return 7000000 <= val <= 99999999
+    except (ValueError, TypeError):
+        return False
 
 
 def validar_monto(monto: float, maximo: float = 500000.0) -> bool:

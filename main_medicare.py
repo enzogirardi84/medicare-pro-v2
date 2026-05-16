@@ -288,9 +288,9 @@ if st.session_state.get("_modo_offline"):
 # SIDEBAR
 # ============================================================
 def _logout_callback():
-    # Invalidar caches clinicos para prevenir fuga de datos entre sesiones
+    st.session_state["logeado"] = False
     for k in list(st.session_state.keys()):
-        if k.startswith("_sql_clin_"):
+        if k.startswith("_sql_clin_") or k.startswith("_mc_"):
             st.session_state.pop(k, None)
     for _key in ("u_actual", "modulo_actual", "paciente_actual"):
         st.session_state.pop(_key, None)
@@ -561,9 +561,8 @@ except Exception as exc:
         "main",
         f"render_current_view_fallo:{vista_actual}:{type(exc).__name__}:{exc}",
     )
-    st.error(f"Error crítico al cargar el módulo **{vista_actual}**: {exc}")
-    st.exception(exc)
-    st.caption(f"Detalle técnico: {type(exc).__name__}: {exc}")
+    st.error(f"Error al cargar el módulo **{vista_actual}**. Consulta los logs del sistema.")
+    st.caption("Ocurrió un error inesperado. El equipo de soporte fue notificado.")
     try:
         report_exception(
             module=f"main.render_current_view.{vista_actual}",

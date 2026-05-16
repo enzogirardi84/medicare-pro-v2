@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 
 # Aseguramos que Python encuentre los módulos del proyecto
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.database import supabase, guardar_datos
 from core.db_serialize import loads_json_any

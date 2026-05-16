@@ -34,6 +34,7 @@ def buscar_en_web(consulta: str, max_res: int = 3) -> List[Dict]:
                     break
     except Exception as e:
         log_event("chatbot", f"error_busqueda:{e}")
+        st.warning("No se pudo realizar la búsqueda web.")
     return resultados
 
 
@@ -63,12 +64,13 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             return resp.choices[0].message.content.strip()
         elif LLM_PROVIDER == "anthropic":
             import anthropic
-            resp = anthropic.Anthropic(api_key=LLM_API_KEY).completions.create(
+            resp = anthropic.Anthropic(api_key=LLM_API_KEY, timeout=20).completions.create(
                 model=LLM_MODEL, prompt=f"Human: {system_msg}\n\n{prompt}\n\nAssistant:", max_tokens_to_sample=800, temperature=0.2
             )
             return resp.completion.strip()
     except Exception as e:
         log_event("chatbot", f"error_ia:{e}")
+        st.warning("No se pudo obtener respuesta de la IA.")
     return None
 
 
@@ -86,7 +88,7 @@ CONOCIMIENTO = {
     "domicilio": "Visitas domiciliarias en un radio de 15 km. Costo adicional segun distancia.",
     "estudio": "Resultados en 48-72 hs habiles. Consulta en Estudios.",
     "laboratorio": "Subi resultados completos en Laboratorio.",
-    "factura": "Emitimos factura electronica AFIP/ARCA. Solicitala en Factura Electronica.",
+    "factura": "Emitimos factura electronica AFIP/ARCA. Consulte con su coordinador.",
     "vacuna": "Aplicamos calendario nacional. Consulta en Vacunacion.",
     "covid": "Protocolo: barbijo obligatorio en instalaciones. Sintomas respiratorios: avisar al ingresar.",
     "receta": "Recetas electronicas validas por 30 dias desde su emision.",
@@ -150,26 +152,29 @@ def _edad(fnac_str: str) -> str:
 
 
 def _datos_paciente(paciente_sel) -> str:
-    detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    if not isinstance(paciente_sel, str) or not paciente_sel:
+        return "Paciente no seleccionado."
+    detalles = st.session_state.get("detalles_pacientes_db", {})
+    if not isinstance(detalles, dict):
+        return "Error: detalles_pacientes_db no es un diccionario."
+    detalles = detalles.get(paciente_sel, {})
+    if not isinstance(detalles, dict):
+        detalles = {}
     partes = paciente_sel.split(" - ", 1)
     nombre = partes[0] if partes else paciente_sel
     dni = partes[1] if len(partes) > 1 else "S/D"
-    fnac = detalles.get("fnac", detalles.get("fecha_nacimiento", ""))
+    fnac = detalles.get("fnac") or detalles.get("fecha_nacimiento") or ""
     texto = f"Paciente: {nombre} (DNI: {dni})"
     if fnac:
         texto += f"\nFecha nac: {fnac} ({_edad(fnac)})"
-    if detalles.get("alergias"):
-        texto += f"\nAlergias: {detalles['alergias']}"
-    if detalles.get("patologias"):
-        texto += f"\nPatologias: {detalles['patologias']}"
-    if detalles.get("obra_social"):
-        texto += f"\nObra social: {detalles['obra_social']}"
-    if detalles.get("telefono"):
-        texto += f"\nTelefono: {detalles['telefono']}"
-    if detalles.get("direccion"):
-        texto += f"\nDireccion: {detalles['direccion']}"
-    if detalles.get("contacto_emergencia"):
-        texto += f"\nContacto emergencia: {detalles['contacto_emergencia']}"
+    for campo, etiqueta in [("alergias", "Alergias"), ("patologias", "Patologias"),
+                             ("obra_social", "Obra social"), ("telefono", "Telefono"),
+                             ("direccion", "Direccion"), ("contacto_emergencia", "Contacto emergencia")]:
+        val = detalles.get(campo)
+        if val and str(val).strip():
+            texto += f"\n{etiqueta}: {val}"
+    if detalles.get("email"):
+        texto += f"\nEmail: {detalles['email']}"
     return texto
 
 
@@ -229,15 +234,16 @@ def _vitales(paciente_sel) -> str:
         return "Sin signos vitales registrados."
     ult = vitales[-1]
     texto = f"Ultimos signos vitales ({ult.get('fecha', '?')}):"
-    campos = [
-        ("TA", "TA"), ("FC", "FC"), ("FR", "FR"),
-        ("Sat", "Sat O2"), ("Temp", "Temp"), ("HGT", "HGT"),
-    ]
-    for clave, etiqueta in campos:
-        valor = ult.get(clave)
-        if not valor:
-            valor = ult.get(clave.lower()) or ult.get(clave.upper()) or ult.get(clave.capitalize())
-        if valor:
+    alias = {"TA": ["TA", "tension_arterial", "presion"], "FC": ["FC", "frecuencia_cardiaca", "pulso"],
+             "FR": ["FR", "frecuencia_respiratoria"], "Sat": ["Sat", "saturacion", "sat_o2", "SpO2"],
+             "Temp": ["Temp", "temperatura"], "HGT": ["HGT", "glucemia", "glucosa"]}
+    for etiqueta, variantes in alias.items():
+        valor = None
+        for v in variantes:
+            valor = ult.get(v) or ult.get(v.upper()) or ult.get(v.lower()) or ult.get(v.capitalize())
+            if valor:
+                break
+        if valor and str(valor).strip():
             texto += f"\n- {etiqueta}: {valor}"
     if texto.count("\n") == 1:
         texto += "\n- (Sin valores numericos registrados)"
@@ -338,6 +344,8 @@ def _proximos_cumple() -> str:
     hoy = datetime.now().date()
     prox = hoy + timedelta(days=30)
     detalles = st.session_state.get("detalles_pacientes_db", {})
+    if not isinstance(detalles, dict):
+        return "Error: datos de pacientes no disponibles."
     cumples = []
     for pid, det in detalles.items():
         fnac = det.get("fnac", det.get("fecha_nacimiento", ""))
@@ -365,8 +373,8 @@ def _balance(paciente_sel) -> str:
     balances = [b for b in st.session_state.get("balance_db", []) if _coincide_paciente(paciente_sel, b.get("paciente", ""))]
     if not balances:
         return "Sin registro de balance."
-    ingresos = sum(float(b.get("ingresos", 0) or 0) for b in balances[-10:])
-    egresos = sum(float(b.get("egresos", 0) or 0) for b in balances[-10:])
+    ingresos = sum(float(b.get("ingresos") or b.get("ingreso", 0) or 0) for b in balances[-10:])
+    egresos = sum(float(b.get("egresos") or b.get("egreso", 0) or 0) for b in balances[-10:])
     return f"Balance ultimos 10: Ingresos {ingresos:.0f}ml | Egresos {egresos:.0f}ml | Balance {ingresos-egresos:.0f}ml"
 
 
@@ -394,7 +402,7 @@ MODULOS_MAP = {
     "estudio": "Estudios", "laboratorio": "Estudios",
     "evolucion": "Evolucion", "clinica": "Clinica",
     "vacuna": "Vacunacion",
-    "factura": "Factura Electronica", "cobro": "Caja",
+    "cobro": "Caja",
     "inventario": "Inventario", "stock": "Inventario",
     "historial": "Historial",
     "balance": "Balance",
@@ -504,7 +512,7 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
             if msg.get("fuentes"):
                 for f in msg["fuentes"]:
                     st.markdown(f'<div class="cb-time"><a href="{escape(f["url"])}" target="_blank">{escape(f["titulo"])}</a></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="cb-time">{msg.get("hora","")}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="cb-time">{escape(str(msg.get("hora","")))}</div>', unsafe_allow_html=True)
 
     # Input
     with st.form("chatbot_form", clear_on_submit=True):

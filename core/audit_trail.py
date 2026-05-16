@@ -407,6 +407,11 @@ def audit_log(
     if st.session_state.get('logeado') and st.session_state.get('u_actual'):
         user_id = st.session_state['u_actual'].get('usuario_login', 'unknown')
     
+    _safe_session = {}
+    if hasattr(st.session_state, 'to_dict'):
+        _raw = st.session_state.to_dict()
+        _safe_keys = {"modulo_actual", "rol", "empresa", "nombre", "u_actual", "ui_theme", "paciente_sel"}
+        _safe_session = {k: _raw[k] for k in _safe_keys if k in _raw}
     trail.log(
         event_type=event_type,
         user_id=user_id,
@@ -415,7 +420,7 @@ def audit_log(
         action=action,
         description=description,
         metadata=metadata,
-        session_state=st.session_state.to_dict() if hasattr(st.session_state, 'to_dict') else {}
+        session_state=_safe_session
     )
 
 

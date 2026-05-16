@@ -330,7 +330,9 @@ def limpiar_cache_app() -> int:
         if key.startswith("_mc_cache_") and key not in protected:
             st.session_state.pop(key, None)
             total += 1
-    # Limpiar fetch de alertas y otros _mc_ transitorios
+    # Limpiar fetch de alertas, mapa pacientes y otros _mc_ transitorios
+    if st.session_state.pop("_mc_mapa_pacientes_cache", None) is not None:
+        total += 1
     for key in list(st.session_state.keys()):
         if key.startswith("_mc_alertas_fetch_") and key not in protected:
             st.session_state.pop(key, None)
@@ -841,6 +843,8 @@ def _trim_logs_db_for_save() -> None:
     # Trim ALL db lists to prevent payload bloat (max 200 items each)
     _MAX_LIST_ITEMS = 200
     for key in list(st.session_state.keys()):
+        if key == "logs_db":  # already trimmed above with configurable limit
+            continue
         if key.endswith("_db") and isinstance(st.session_state[key], list):
             if len(st.session_state[key]) > _MAX_LIST_ITEMS:
                 st.session_state[key] = st.session_state[key][-_MAX_LIST_ITEMS:]

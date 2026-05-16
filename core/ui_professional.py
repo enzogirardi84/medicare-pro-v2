@@ -16,7 +16,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import streamlit as st
 
-from core._ui_professional_css import CUSTOM_CSS, PROFESSIONAL_THEME
+from core._ui_professional_css import CUSTOM_CSS
 
 
 

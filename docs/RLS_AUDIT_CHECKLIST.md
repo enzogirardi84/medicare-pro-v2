@@ -1,6 +1,6 @@
 # Auditoria RLS Supabase
 
-Objetivo: confirmar tabla por tabla que los datos clinicos, administrativos y de facturacion no quedan expuestos por consultas anonimas o roles equivocados.
+Objetivo: confirmar tabla por tabla que los datos clinicos y administrativos no quedan expuestos por consultas anonimas o roles equivocados.
 
 ## Ejecutar
 
@@ -15,14 +15,13 @@ Objetivo: confirmar tabla por tabla que los datos clinicos, administrativos y de
 - `usuarios`, `empresas`
 - `pacientes`, `visitas`, `evoluciones`, `recetas`, `signos_vitales`
 - `caja`, `auditoria_legal`
-- `billing_clientes`, `billing_presupuestos`, `billing_prefacturas`, `billing_cobros`, `billing_facturas_arca`
+
 
 ## Criterio De Aprobacion
 
-- RLS activo en todas las tablas con datos personales, clinicos o financieros.
+- RLS activo en todas las tablas con datos personales o clinicos.
 - Politicas separadas para lectura, alta, edicion y borrado cuando aplique.
 - Acceso de auditoria limitado a lectura y exportacion controlada.
-- Acceso financiero limitado a roles de coordinacion/operacion autorizados.
 - `service_role` reservado para procesos del servidor y tareas administrativas auditadas.
 
 ## Evidencia Minima

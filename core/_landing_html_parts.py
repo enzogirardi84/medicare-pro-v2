@@ -1271,39 +1271,44 @@ _PART_5 = """
                 <main class="mc-lp-main">
                 <section class="mc-lp-hero">
                   <div class="mc-lp-copy">
-                    <div class="mc-lp-hero-badge">Enterprise · Implementación y acompañamiento</div>
-                    <p class="mc-lp-kicker">Un solo entorno para todo el recorrido del paciente</p>
-                    <h1 class="mc-lp-h1">Operación clínica seria, con trazabilidad <em>demostrable</em></h1>
+                    <div class="mc-lp-hero-badge">Enterprise · Salud domiciliaria · Auditoría clínica</div>
+                    <p class="mc-lp-kicker">Gestión integral para instituciones de salud y operación domiciliaria</p>
+                    <h1 class="mc-lp-h1">Unifique su operación clínica con trazabilidad <em>completa y defendible</em></h1>
                     <p class="mc-lp-lead">
-                      Pensado para instituciones que necesitan orden en terreno, historia clínica coherente y documentación
-                      lista para auditoría, sin depender de planillas ni herramientas sueltas.
+                      <strong>MediCare Enterprise PRO</strong> es una plataforma integral de gestión sanitaria que centraliza
+                      historia clínica, agenda de visitas, fichadas con GPS, emergencias, farmacopea, indicaciones médicas,
+                      telemedicina, RRHH, inventario, facturación y auditoría legal en un solo entorno web seguro.
+                      Diseñada para instituciones de salud domiciliaria, clínicas y equipos multidisciplinarios que necesitan
+                      orden operativo, documentación profesional y respaldo auditable sin depender de planillas, capturas
+                      sueltas ni sistemas desconectados.
                     </p>
 
                     <div class="mc-lp-cta-group">
                       <a class="mc-lp-btn-primary" href="#mc-lp-contact" aria-label="Solicitar demo en vivo de MediCare PRO">Solicitar demo en vivo</a>
-                      <a class="mc-lp-btn-primary" href="__BILLING_APP_URL__" target="_blank" rel="noopener" aria-label="Abrir Medicare Billing Pro">🧾 Billing Pro</a>
-                      <a class="mc-lp-btn-outline" href="#mc-lp-modulos" aria-label="Ver módulos del sistema">Ver módulos</a>
+                      <a class="mc-lp-btn-outline" href="#mc-lp-modulos" aria-label="Ver módulos del sistema">Explorar funcionalidades</a>
                     </div>
 
                     <div class="mc-lp-pill-row">
                       <span class="mc-lp-pill"><strong>Web</strong> y celular</span>
                       <span class="mc-lp-pill"><strong>Roles</strong> y permisos</span>
-                      <span class="mc-lp-pill"><strong>Trazabilidad</strong> lista</span>
-                      <span class="mc-lp-pill"><strong>App paciente</strong> triage y GPS</span>
+                      <span class="mc-lp-pill"><strong>Trazabilidad</strong> total</span>
+                      <span class="mc-lp-pill"><strong>App paciente</strong> con triage</span>
+                      <span class="mc-lp-pill"><strong>Farmacopea</strong> integrada</span>
+                      <span class="mc-lp-pill"><strong>Chatbot</strong> clínico IA</span>
                     </div>
 
                     <div class="mc-lp-proof-row">
                       <div class="mc-lp-proof">
-                        <b>Agenda + GPS</b>
-                        <span>Visitas con contexto geográfico y control operativo verificable.</span>
+                        <b>Agenda + GPS + Fichadas</b>
+                        <span>Visitas con control geográfico, horario y documentación de cada intervención profesional.</span>
                       </div>
                       <div class="mc-lp-proof">
-                        <b>Historia en vivo</b>
-                        <span>Vitales, evolución, estudios y escalas en un solo flujo clínico.</span>
+                        <b>Historia clínica completa</b>
+                        <span>Vitales, evolución, escalas, pediatría, estudios, recetas y planes en un solo flujo clínico.</span>
                       </div>
                       <div class="mc-lp-proof">
-                        <b>Respaldo legal</b>
-                        <span>PDF, consentimientos y exportes con presentación profesional.</span>
+                        <b>Auditoría y respaldo legal</b>
+                        <span>PDF profesionales, consentimientos informados, recetas firmadas y exportes con trazabilidad lista para presentar.</span>
                       </div>
                     </div>
                   </div>
@@ -1313,23 +1318,23 @@ _PART_5 = """
                       <span class="mc-lp-board-side-label">Vista operativa</span>
                       <div class="mc-lp-status-indicator">Tiempo real</div>
                     </div>
-                    <p class="mc-lp-board-title">Tablero unificado para dirección y terreno</p>
+                    <p class="mc-lp-board-title">Tablero unificado para dirección, clínica y operaciones</p>
 
                     <div class="mc-lp-flow">
                       <div class="mc-lp-flow-card mc-lp-flow-card-active">
                         <div class="mc-lp-flow-icon mc-lp-flow-icon-op" aria-hidden="true"></div>
                         <div class="mc-lp-flow-body">
-                          <b>Visita con fichada GPS</b>
-                          <p>Control de llegada, salida y tiempo en terreno.</p>
+                          <b>Dashboard ejecutivo</b>
+                          <p>KPIs en tiempo real: pacientes activos, visitas del día, urgencias, agenda y balance registrado.</p>
                         </div>
-                        <span class="mc-lp-flow-tag">Operación</span>
+                        <span class="mc-lp-flow-tag">Dirección</span>
                       </div>
 
                       <div class="mc-lp-flow-card">
                         <div class="mc-lp-flow-icon mc-lp-flow-icon-cli" aria-hidden="true"></div>
                         <div class="mc-lp-flow-body">
-                          <b>Historia clínica en vivo</b>
-                          <p>Indicaciones, evolución, estudios, escalas y adjuntos.</p>
+                          <b>Historia clínica digital</b>
+                          <p>Indicaciones, evolución, estudios, escalas clínicas, percentilos y adjuntos en un solo lugar.</p>
                         </div>
                         <span class="mc-lp-flow-tag">Clínica</span>
                       </div>
@@ -1337,8 +1342,8 @@ _PART_5 = """
                       <div class="mc-lp-flow-card">
                         <div class="mc-lp-flow-icon mc-lp-flow-icon-leg" aria-hidden="true"></div>
                         <div class="mc-lp-flow-body">
-                          <b>Cierre documental</b>
-                          <p>PDF, consentimientos, recetas y exportes para respaldo.</p>
+                          <b>Documentación profesional</b>
+                          <p>PDF ejecutivos, consentimientos informados, recetas digitales con firma y trazabilidad legal.</p>
                         </div>
                         <span class="mc-lp-flow-tag">Legal</span>
                       </div>
@@ -1346,50 +1351,50 @@ _PART_5 = """
                       <div class="mc-lp-flow-card">
                         <div class="mc-lp-flow-icon mc-lp-flow-icon-urg" aria-hidden="true"></div>
                         <div class="mc-lp-flow-body">
-                          <b>App del paciente</b>
-                          <p>Alertas, triage y ubicación para respuesta rápida.</p>
+                          <b>Emergencias + App paciente</b>
+                          <p>Triage, alertas, GPS y respuesta coordinada con antecedentes clínicos al instante.</p>
                         </div>
                         <span class="mc-lp-flow-tag">Urgencia</span>
                       </div>
                     </div>
 
                     <div class="mc-lp-board-footer">
-                      <span><strong>Trazabilidad</strong> y documentación alineadas a la operación en salud y auditoría interna.</span>
+                      <span><strong>Más de 35 módulos</strong> integrados en una misma plataforma web. Acceso por roles, cifrado extremo a extremo, visible desde celular y escritorio.</span>
                     </div>
                   </aside>
                 </section>
 
                 <section class="mc-lp-stats" aria-labelledby="mc-lp-stats-title">
                   <header class="mc-lp-stats-head">
-                    <h2 id="mc-lp-stats-title" class="mc-lp-stats-h2">Un entorno integrado para clínica, operación y respaldo</h2>
+                    <h2 id="mc-lp-stats-title" class="mc-lp-stats-h2">Una plataforma, todas las áreas de su institución</h2>
                   </header>
                   <div class="mc-lp-stat-grid">
                     <div class="mc-lp-stat-item">
-                      <span class="mc-lp-stat-num">1</span>
+                      <span class="mc-lp-stat-num">35+</span>
                       <div class="mc-lp-stat-body">
-                        <h3>Núcleo operativo</h3>
-                        <p>Una sola plataforma para clínica, coordinación, RRHH y documentación.</p>
+                        <h3>Módulos integrados</h3>
+                        <p>Dashboard, agenda, visitas, admisión, historia clínica, recetas, estudios, emergencias, telemedicina, inventario, caja, RRHH, auditoría legal y más.</p>
                       </div>
                     </div>
                     <div class="mc-lp-stat-item">
                       <span class="mc-lp-stat-num">GPS</span>
                       <div class="mc-lp-stat-body">
                         <h3>Fichadas verificables</h3>
-                        <p>Llegada y salida con contexto operativo en cada visita.</p>
+                        <p>Cada visita registra geolocalización, hora de llegada y salida, profesional actuante y documentación asociada.</p>
                       </div>
                     </div>
                     <div class="mc-lp-stat-item">
-                      <span class="mc-lp-stat-num">PDF</span>
+                      <span class="mc-lp-stat-num">IA</span>
                       <div class="mc-lp-stat-body">
-                        <h3>Respaldo defendible</h3>
-                        <p>Reportes, consentimientos y recetas con salida profesional.</p>
+                        <h3>Asistente clínico inteligente</h3>
+                        <p>Chatbot con acceso a datos del paciente, farmacopea y búsqueda web para respaldo en tiempo real durante la consulta.</p>
                       </div>
                     </div>
                     <div class="mc-lp-stat-item">
                       <span class="mc-lp-stat-num">Roles</span>
                       <div class="mc-lp-stat-body">
-                        <h3>Accesos por perfil</h3>
-                        <p>Cada usuario entra con permisos alineados a su responsabilidad.</p>
+                        <h3>Seguridad por perfiles</h3>
+                        <p>Administrador, coordinador, clínico, operativo y auditor. Cada usuario accede solo a la información de su responsabilidad.</p>
                       </div>
                     </div>
                   </div>
@@ -1397,10 +1402,11 @@ _PART_5 = """
 
                 <section class="mc-lp-section-head">
                   <span class="mc-lp-section-kicker">Propuesta de valor</span>
-                  <h2 class="mc-lp-section-title">Menos fricción operativa, más credibilidad institucional</h2>
+                  <h2 class="mc-lp-section-title">Menos fricción operativa, más control y credibilidad institucional</h2>
                   <p class="mc-lp-section-sub">
-                    Una narrativa única entre clínica, coordinación y documentación: ideal para dirección médica, operaciones
-                    y equipos que presentan resultados ante auditoría, financiadores o familia.
+                    Unifique la operación clínica, la coordinación de visitas, la documentación legal y el control de gestión
+                    en una sola plataforma. Ideal para dirección médica, supervisión de operaciones y equipos que necesitan
+                    presentar resultados ante auditoría, financiadores o familiares con respaldo profesional y trazabilidad completa.
                   </p>
                 </section>
             """
@@ -1410,83 +1416,95 @@ _PART_5 = """
 _PART_6 = """
                 <section id="mc-lp-modulos" class="mc-lp-bento">
                   <article class="mc-lp-cell mc-lp-cell-hero">
-                    <span class="mc-lp-cell-eyebrow">Coordinación</span>
-                    <h3>Dirección con visibilidad: menos improvisación, más control</h3>
+                    <span class="mc-lp-cell-eyebrow">Coordinación y gestión</span>
+                    <h3>Dirección con visibilidad total de la operación</h3>
                     <p>
-                      Agenda, recursos, pacientes y seguimiento en un solo lugar. La operación deja de depender de planillas
-                      paralelas, capturas sueltas o acuerdos informales difíciles de auditar.
+                      Dashboard ejecutivo con KPIS en tiempo real, agenda de visitas por profesional y paciente, fichadas
+                      con GPS, control de guardias, RRHH con presentismo y reportes exportables. La operación completa
+                      deja de depender de planillas paralelas, capturas sueltas o acuerdos informales difíciles de auditar.
                     </p>
                     <div class="mc-lp-cell-list">
-                      <div class="mc-lp-cell-item"><strong>Visitas y guardias</strong> con estados, tiempos y contexto.</div>
-                      <div class="mc-lp-cell-item"><strong>Profesionales y clínicas</strong> ordenados por empresa y perfil.</div>
-                      <div class="mc-lp-cell-item"><strong>Auditoría y cierre</strong> listos para revisión interna o externa.</div>
+                      <div class="mc-lp-cell-item"><strong>Dashboard ejecutivo</strong> con KPIs, gráficos semanales y calendario de actividad.</div>
+                      <div class="mc-lp-cell-item"><strong>Visitas con fichada GPS</strong> y control de horarios por profesional.</div>
+                      <div class="mc-lp-cell-item"><strong>Auditoría legal integrada</strong> con trazabilidad de cada acción del sistema.</div>
+                      <div class="mc-lp-cell-item"><strong>Reportes ejecutivos PDF</strong> con resumen de pacientes, facturación y stock.</div>
                     </div>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-wide">
                     <span class="mc-lp-cell-eyebrow">Historia clínica</span>
-                    <h3>Registro clínico unificado, listo para el día a día</h3>
+                    <h3>Registro clínico digital completo y unificado</h3>
                     <p>
-                      Evolución, escalas, pediatría, estudios y medicación en el mismo recorrido. Menos saltos entre pantallas
-                      para el equipo y una historia clínica continua para la institución.
+                      Admisión de pacientes, signos vitales, evolución diaria, escalas clínicas, percentilos pediátricos,
+                      estudios y resultados, indicaciones médicas y recetas digitales con firma. Todo en el mismo recorrido
+                      clínico, sin saltar entre pantallas ni sistemas.
                     </p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
-                    <span class="mc-lp-cell-eyebrow">Recetas</span>
-                    <h3>Firma y documentación</h3>
-                    <p>Recetas, consentimientos y PDFs con salida prolija para familia, auditoría o archivo.</p>
+                    <span class="mc-lp-cell-eyebrow">Farmacopea</span>
+                    <h3>Medicación segura</h3>
+                    <p>Vademécum integrado con 50+ fármacos, calculadora de dosis pediátricas y alertas de interacciones. Indicaciones médicas con plan de administración.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
                     <span class="mc-lp-cell-eyebrow">Emergencias</span>
-                    <h3>Respuesta con contexto</h3>
-                    <p>Triage, traslado y antecedentes clínicos en un mismo flujo operativo.</p>
+                    <h3>Respuesta coordinada</h3>
+                    <p>Triage con niveles de prioridad, traslado, alertas a profesionales y acceso inmediato a antecedentes clínicos del paciente.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
-                    <span class="mc-lp-cell-eyebrow">RRHH</span>
-                    <h3>Presentismo y control</h3>
-                    <p>Fichajes, tiempos, asistencia y trazabilidad sin sumar herramientas paralelas.</p>
+                    <span class="mc-lp-cell-eyebrow">Telemedicina + App</span>
+                    <h3>Asistencia remota</h3>
+                    <p>Sala de teleconsulta por paciente y día. App del paciente con alertas, GPS, triage y comunicación directa con el equipo.</p>
+                  </article>
+
+                  <article class="mc-lp-cell mc-lp-cell-mini">
+                    <span class="mc-lp-cell-eyebrow">RRHH y caja</span>
+                    <h3>Control administrativo</h3>
+                    <p>Fichajes, asistencia, inventario de materiales, caja diaria y balance hídrico integrados al mismo ecosistema.</p>
                   </article>
                 </section>
 
                 <section class="mc-lp-two-up">
                   <div class="mc-lp-panel">
-                    <h3>Si la información vive en silos</h3>
+                    <h3>Sin MediCare: cuando la información vive en silos</h3>
                     <p>
-                      Crecen los errores, las demoras y el riesgo reputacional. Unificar clínica, operación y respaldo
-                      documental mejora la percepción del servicio y reduce el costo oculto del desorden.
+                      Historia clínica en papel o PDF suelto, agenda en planillas, visitas sin control horario,
+                      recetas a mano, comunicación por WhatsApp, facturación en otro sistema. El resultado:
+                      errores, demoras, riesgo legal y costo operativo oculto que crece con cada paciente.
                     </p>
                   </div>
 
                   <div class="mc-lp-panel">
                     <h3>Con MediCare Enterprise PRO</h3>
                     <div class="mc-lp-checks">
-                      <div class="mc-lp-check">Agenda, visitas y coordinación en tiempo real</div>
-                      <div class="mc-lp-check">Historia clínica y documentación en el mismo entorno</div>
-                      <div class="mc-lp-check">Fichadas, RRHH y control operativo con menos fricción</div>
-                      <div class="mc-lp-check">Exportes y respaldo para auditoría o presentaciones</div>
+                      <div class="mc-lp-check">Dashboard ejecutivo con KPIs, alertas y calendario de actividad</div>
+                      <div class="mc-lp-check">Historia clínica digital con firma, recetas y documentación exportable</div>
+                      <div class="mc-lp-check">Visitas con fichada GPS, control horario y geolocalización verificable</div>
+                      <div class="mc-lp-check">Auditoría legal con trazabilidad completa de cada acción del sistema</div>
+                      <div class="mc-lp-check">Chatbot clínico con IA, farmacopea integrada y calculadora de dosis</div>
+                      <div class="mc-lp-check">Emergencias, telemedicina, app paciente y RRHH en un mismo entorno</div>
                     </div>
                   </div>
                 </section>
 
                 <section class="mc-lp-mini-grid">
                   <div class="mc-lp-mini-card">
-                    <b>Telemedicina</b>
-                    <span>Sala por paciente y día, integrada al legajo y al seguimiento clínico.</span>
+                    <b>Dashboard ejecutivo</b>
+                    <span>KPIs, gráficos de actividad semanal, calendario heatmap de 30 días y mapa geográfico de visitas con GPS.</span>
                   </div>
                   <div class="mc-lp-mini-card">
-                    <b>Pediatría</b>
-                    <span>Curvas, controles y evolución ordenada para seguimiento continuo.</span>
+                    <b>Chatbot clínico IA</b>
+                    <span>Asistente inteligente con acceso a datos del paciente, farmacopea, búsqueda web y contexto clínico completo.</span>
                   </div>
                   <div class="mc-lp-mini-card">
-                    <b>Caja e inventario</b>
-                    <span>Prácticas, estados, materiales y movimientos en el mismo ecosistema.</span>
+                    <b>Calculadora de dosis</b>
+                    <span>Dosis pediátricas con 321 medicamentos del vademécum, alertas de seguridad y guía de dilución.</span>
                   </div>
                   <div class="mc-lp-mini-card">
-                    <b>Red profesional</b>
-                    <span>Instituciones, profesionales y empresas conectadas en un solo directorio.</span>
+                    <b>Seguridad y cumplimiento</b>
+                    <span>Cifrado en tránsito, autenticación por roles, 2FA opcional, rate limiting y sanitización de datos contra XSS.</span>
                   </div>
                 </section>
             """
@@ -1496,15 +1514,15 @@ _PART_6 = """
 _PART_7 = """
                 <section id="mc-lp-contact" class="mc-lp-contact">
                   <div class="mc-lp-contact-head">
-                    <p>Implementación y soporte</p>
-                    <h3>Hablemos de su operación</h3>
-                    <span>Demos guiadas, propuestas por volumen y acompañamiento en la puesta en marcha.</span>
+                    <p>Implementación y soporte directo</p>
+                    <h3>Agendemos una demo guiada</h3>
+                    <span>Sin compromiso. Recorremos juntos los módulos que necesita su institución, resolvemos dudas técnicas y armamos una propuesta a medida del volumen de operación.</span>
                   </div>
 
                   <div class="mc-lp-contact-grid">
                     <div class="mc-lp-contact-card">
                       <p class="nm">Enzo N. Girardi</p>
-                      <p class="rl">Desarrollo y soporte</p>
+                      <p class="rl">Desarrollo técnico y soporte</p>
                       <div class="mc-lp-btns">
                         <a class="mc-lp-wa" href="https://wa.me/5493584302024" target="_blank" rel="noopener" aria-label="Contactar a Enzo Girardi por WhatsApp">WhatsApp</a>
                         <a class="mc-lp-em" href="mailto:enzogirardi84@gmail.com" aria-label="Enviar email a Enzo Girardi">Email</a>
@@ -1522,34 +1540,25 @@ _PART_7 = """
                   </div>
 
                   <div class="mc-lp-incident">
-                    <p>No carga la app o aparece un error raro: mandá captura y hora aproximada para acelerar el soporte.</p>
+                    <p>¿Ya usa MediCare PRO y necesita soporte técnico? Reporte incidencias con captura de pantalla y hora aproximada para atención prioritaria.</p>
                     <div class="mc-lp-btns">
-                      <a class="mc-lp-su" href="mailto:enzogirardi84@gmail.com?subject=MediCare%20Enterprise%20-%20Incidencia%20tecnica" rel="noopener" aria-label="Abrir correo para reportar incidencia técnica">Abrir correo de incidencia</a>
+                      <a class="mc-lp-su" href="mailto:enzogirardi84@gmail.com?subject=MediCare%20Enterprise%20-%20Incidencia%20tecnica" rel="noopener" aria-label="Abrir correo para reportar incidencia técnica">Reportar incidencia</a>
                     </div>
                   </div>
                 </section>
 
                 <p class="mc-lp-tagline">
-                  <strong>MediCare Enterprise PRO</strong> · Software para operación clínica y domiciliaria con enfoque en
-                  trazabilidad, roles y documentación profesional. Acceso al sistema solo para personal autorizado.
+                  <strong>MediCare Enterprise PRO</strong> · Plataforma integral de gestión sanitaria con enfoque en
+                  operación clínica, coordinación domiciliaria, trazabilidad documental y auditoría profesional.
+                  Acceso exclusivo para personal autorizado. Cifrado HTTPS · Autenticación por roles · 2FA opcional.
                 </p>
 
-                <section class="mc-lp-product-access" aria-label="Acceso a Medicare Billing Pro">
-                  <div>
-                    <p>Módulo administrativo conectado</p>
-                    <h3>Medicare Billing Pro</h3>
-                    <span>
-                      Facturación médica, clientes fiscales, presupuestos, pre-facturas, cobros y reportes contables
-                      con guardado en Supabase y acceso con las mismas credenciales institucionales.
-                    </span>
-                  </div>
-                  <a class="mc-lp-product-link" href="__BILLING_APP_URL__" target="_blank" rel="noopener" aria-label="Abrir Medicare Billing Pro">🧾 Abrir Billing Pro</a>
-                </section>
+
 
                 <div class="mc-lp-cta-wrap">
-                  <p>Acceso al sistema</p>
-                  <h3>Ingresá a la demo operativa</h3>
-                  <span>Explorá módulos, permisos y documentos en un entorno de prueba.</span>
+                  <p>¿Ya conoce la plataforma?</p>
+                  <h3>Ingrese a la demo operativa</h3>
+                  <span>Explore módulos, permisos, documentación y herramientas clínicas en un entorno de prueba completo.</span>
                   <br><br>
                   <a class="mc-lp-btn-primary" href="?login=1" style="min-height:52px;padding:0 32px;font-size:1rem;text-transform:uppercase;letter-spacing:0.12em;">🚀 Ingresar al sistema</a>
                 </div>

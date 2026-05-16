@@ -175,8 +175,8 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
             alertas = verificar_alergias_medicacion(paciente_sel)
             for a in alertas:
                 st.sidebar.error(f"🚨 {a['mensaje'][:120]}", icon=None)
-        except Exception:
-            pass
+        except Exception as _e:
+            log_event("sidebar", f"alerta_medicacion:{type(_e).__name__}")
     else:
         st.sidebar.caption("💊 Sin medicación activa.")
 

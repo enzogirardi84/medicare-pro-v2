@@ -268,6 +268,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                 ),
                                 empresa=detalles_actualizados.get("empresa", mi_empresa),
                             )
+                            st.session_state.pop("_mc_mapa_pacientes_cache", None)
                             guardar_datos(spinner=True)
                             _sincronizar_edicion_paciente_sql_best_effort(
                                 detalle_anterior=detalle_anterior,
@@ -320,6 +321,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                         f"Paciente eliminado desde admision. {detalle_texto}",
                         empresa=detalle_empresa,
                     )
+                    st.session_state.pop("_mc_mapa_pacientes_cache", None)
                     guardar_datos(spinner=True)
                     _sincronizar_eliminacion_paciente_sql_best_effort(detalle_sel)
                     queue_toast("Paciente eliminado correctamente.")
@@ -466,6 +468,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                         "Alta inicial del legajo del paciente.",
                         empresa=campos_legajo["empresa"],
                     )
+                    st.session_state.pop("_mc_mapa_pacientes_cache", None)
                     guardar_datos(spinner=True)
                     _sincronizar_alta_paciente_best_effort(
                         campos_legajo["nombre"],

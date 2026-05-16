@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 
 # Aseguramos que Python encuentre los módulos del proyecto
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.database import cargar_datos, supabase
 from core.utils import parse_fecha_hora

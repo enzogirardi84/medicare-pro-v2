@@ -43,7 +43,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "RRHH y Fichajes",
         "Clinicas (panel global)",
         "Estadisticas",
-        "Factura Electronica",
+        # "Factura Electronica",  # ocultado
         "Turnos Online",
     ],
     "Emergencias": [
@@ -91,7 +91,7 @@ _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
             "RRHH y Fichajes", "Clinicas (panel global)",
         ],
         "Reportes": [
-            "Estadisticas", "Factura Electronica", "Turnos Online",
+            "Estadisticas", "Turnos Online",
         ],
     },
 }

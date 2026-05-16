@@ -729,28 +729,28 @@ def calcular_dosis(medicamento: str, peso_kg: float, todos_medicamentos: dict = 
     }
 
 
-def _mostrar_resultado(resultado, presentacion, dosis_min, dosis_max, dosis_rec, dosis_max_por_dosis):
-    """Renderiza las tarjetas de resultado y presentaciones disponibles."""
+def _mostrar_resultado(resultado):
+    r = resultado
     cols = st.columns([1, 1, 1])
-    cols[0].metric("Dosis por dosis", f"{dosis_min} - {dosis_max} mg")
-    cols[1].metric("Dosis recomendada", f"{dosis_rec} mg")
-    cols[2].metric("Maximo por dosis", f"{dosis_max_por_dosis} mg")
+    cols[0].metric("Dosis por dosis", f"{r['dosis_min_mg']} - {r['dosis_max_mg']} mg")
+    cols[1].metric("Dosis recomendada", f"{r['dosis_recomendada_mg']} mg")
+    cols[2].metric("Maximo por dosis", f"{r['dosis_max_por_dosis_mg']} mg")
 
     cols2 = st.columns([1, 1, 1])
-    cols2[0].metric("Intervalo", resultado["intervalo"])
-    cols2[1].metric("Dosis diaria max", f"{resultado['dosis_diaria_max_mg']} mg/dia")
-    cols2[2].metric("Presentacion", presentacion[:30], help=presentacion)
+    cols2[0].metric("Intervalo", r["intervalo"])
+    cols2[1].metric("Dosis diaria max", f"{r['dosis_diaria_max_mg']} mg/dia")
+    cols2[2].metric("Presentacion", r["presentacion"][:30], help=r["presentacion"])
 
     with st.expander("Presentaciones disponibles", expanded=False):
-        st.markdown(f"**{presentacion}**")
-        for desc in presentacion.split(","):
+        st.markdown(f"**{r['presentacion']}**")
+        for desc in r["presentacion"].split(","):
             desc = desc.strip()
             if "mg/" in desc:
                 try:
                     conc_val = float(desc.split("mg/")[0].strip().split()[-1])
-                    vol_min = round(dosis_min / conc_val, 1)
-                    vol_max = round(dosis_max / conc_val, 1)
-                    vol_rec = round(dosis_rec / conc_val, 1)
+                    vol_min = round(r["dosis_min_mg"] / conc_val, 1)
+                    vol_max = round(r["dosis_max_mg"] / conc_val, 1)
+                    vol_rec = round(r["dosis_recomendada_mg"] / conc_val, 1)
                     st.markdown(f"- **{desc}**: {vol_min}-{vol_max} ml (recomendado: {vol_rec} ml)")
                 except (ValueError, IndexError):
                     st.markdown(f"- {desc}")
@@ -843,6 +843,8 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 st.caption(f"Disponible como '{info}'. Via y dosis segun base de datos.")
             else:
                 st.caption(f"Via: {info['via']} | Intervalo: {info['intervalo_hs']} | Dosis calculada segun peso")
+                if info.get("alerta"):
+                    st.error(f"ALERTA: {info['alerta']}", icon="🚨")
 
     st.divider()
 
@@ -869,7 +871,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                     "alerta": None,
                 }
                 st.markdown(f"### Resultado del calculo — {res['medicamento']} (ingreso manual)")
-                _mostrar_resultado(res, res["presentacion"], res["dosis_min_mg"], res["dosis_max_mg"], res["dosis_recomendada_mg"], res["dosis_max_por_dosis_mg"])
+                _mostrar_resultado(res)
                 st.markdown("### Observaciones")
                 obs = res["observaciones"] or "Sin observaciones."
                 st.info(obs)
@@ -884,7 +886,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 info = raw
 
             st.markdown("### Resultado del calculo")
-            _mostrar_resultado(resultado, resultado["presentacion"], resultado["dosis_min_mg"], resultado["dosis_max_mg"], resultado["dosis_recomendada_mg"], resultado["dosis_max_por_dosis_mg"])
+            _mostrar_resultado(resultado)
 
             with st.expander("Ver detalle del calculo", expanded=True):
                 st.markdown(f"""

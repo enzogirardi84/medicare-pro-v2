@@ -17,7 +17,5 @@ fastReruns = true
 gatherUsageStats = false
 
 [client]
-# FIX pantalla azul (2026-05-14): activado para diagnosticar errores en producción.
-# Volver a false cuando el módulo Visitas y Agenda esté estable.
-showErrorDetails = true
-toolbarMode = "viewer"
+showErrorDetails = false
+toolbarMode = "minimal"

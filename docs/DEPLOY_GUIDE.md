@@ -108,32 +108,7 @@ SUPABASE_URL=https://TU-PROYECTO.supabase.co
 SUPABASE_KEY=TU_CLAVE_PUBLICABLE_O_SERVICE
 ```
 
-### Medicare Billing Pro en internet
 
-`render.yaml` define dos servicios web:
-
-- `medicare-enterprise-pro`: la app principal.
-- `medicare-billing-pro`: Billing Pro, ejecutado desde `medicare_billing_pro/main.py`.
-
-Para que todo quede en Supabase y no dependa de archivos locales, configurar en Render:
-
-```text
-SUPABASE_URL=https://TU-PROYECTO.supabase.co
-SUPABASE_KEY=TU_CLAVE_PUBLICABLE_O_SERVICE
-SUPABASE_SERVICE_ROLE_KEY=TU_SERVICE_ROLE_KEY
-BILLING_ALLOW_LOCAL_FALLBACK=false
-BILLING_SECRET=valor-seguro-generado-para-produccion
-```
-
-Usar `SUPABASE_SERVICE_ROLE_KEY` en Render/Streamlit porque Billing Pro corre del lado servidor. Esto permite guardar en tablas con RLS sin crear politicas publicas para la anon key.
-
-En el servicio principal, configurar además:
-
-```text
-BILLING_APP_URL=https://URL-PUBLICA-DE-MEDICARE-BILLING-PRO
-```
-
-Antes de usar Billing Pro en producción, ejecutar `medicare_billing_pro/migracion_supabase.sql` en el SQL Editor de Supabase. Esa migración crea las tablas `billing_clientes`, `billing_presupuestos`, `billing_prefacturas` y `billing_cobros`.
 
 ### Dominio propio con Donweb
 

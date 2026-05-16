@@ -588,19 +588,3 @@ def verificar_timeout_sesion(session_state, timeout_minutes: int = 30) -> bool:
     return (time.time() - last) / 60.0 > timeout_minutes
 
 
-# ============================================================
-# Funciones necesarias para medicare_billing_pro/billing_app.py
-# ============================================================
-def require_auth() -> bool:
-    """Verifica si hay sesión activa. Usado por billing_app."""
-    user = st.session_state.get("u_actual")
-    return bool(user and isinstance(user, dict))
-
-
-def render_logout_button():
-    """Renderiza botón de cerrar sesión. Usado por billing_app."""
-    if st.button("🚪 Cerrar sesión", width='stretch', key="billing_logout"):
-        for key in ["u_actual", "billing_user", "billing_empresa_nombre", "billing_empresa_id"]:
-            st.session_state.pop(key, None)
-        st.session_state["logeado"] = False
-        st.rerun()

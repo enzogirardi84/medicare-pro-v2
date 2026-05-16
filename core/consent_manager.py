@@ -25,6 +25,7 @@ import streamlit as st
 
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
+from core.input_validation import sanitizar_html
 
 
 class ConsentType(Enum):
@@ -308,9 +309,9 @@ class ConsentTemplate:
         # Combinar
         values = {**defaults, **field_values}
         
-        # Reemplazar placeholders
+        # Reemplazar placeholders (escapando HTML para prevenir XSS)
         for key, value in values.items():
-            content = content.replace(f"{{{key}}}", str(value))
+            content = content.replace(f"{{{key}}}", sanitizar_html(str(value)))
         
         return content
 

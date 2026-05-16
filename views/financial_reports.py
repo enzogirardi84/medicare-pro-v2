@@ -20,12 +20,11 @@ from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 
 
-def render_financial_reports():
+def render_financial_reports(mi_empresa=None, rol=None):
     """Renderiza panel de reportes financieros."""
-    # Verificar permisos
     user = st.session_state.get("u_actual", {})
     if user.get("rol") not in ["admin", "superadmin", "recepcionista"]:
-        st.error("🔒 Acceso denegado. Solo administradores y recepción.")
+        st.error("Acceso denegado. Solo administradores y recepción.")
         return
     
     st.title("📊 Reportes Financieros y Analíticos")
@@ -181,10 +180,16 @@ def render_financial_dashboard():
         }
         df_estado = pd.DataFrame(data)
         
-        import plotly.express as px
         try:
-            fig = px.pie(df_estado, values="Cantidad", names="Estado", hole=0.4)
-            st.plotly_chart(fig, width='stretch')
+            import plotly.express as px
+            fig = px.pie(df_estado, values="Cantidad", names="Estado", hole=0.4,
+                         template="plotly_dark", color_discrete_sequence=["#10b981", "#f59e0b", "#ef4444"])
+            fig.update_layout(margin=dict(l=10, r=10, t=10, b=10),
+                              paper_bgcolor="rgba(0,0,0,0)",
+                              font=dict(color="#e2e8f0"),
+                              showlegend=True)
+            fig.update_traces(textposition="inside", textinfo="percent+label")
+            st.plotly_chart(fig, use_container_width=True)
         except Exception:
             st.bar_chart(df_estado.set_index("Estado"))
     

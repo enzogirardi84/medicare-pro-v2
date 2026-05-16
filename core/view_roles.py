@@ -90,10 +90,12 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     # Nuevos modulos 2026-05-14
     "Vacunacion": list(_ROL_CLINICA),
     "Estadisticas": list(_ROL_COORD_OPER),
-    "Factura Electronica": list(_ROL_COORD_OPER),
+    # "Factura Electronica": list(_ROL_COORD_OPER),  # ocultado
     "Turnos Online": list(_ROL_TODOS),
     "Chatbot IA": list(_ROL_TODOS),
     "Calc. Dosis Pediatricas": list(_ROL_TODOS),
+    "Reportes Ejecutivos": list(_ROL_COORD_OPER),
+    "Reportes Financieros": list(_ROL_COORD_OPER),
 }
 
 

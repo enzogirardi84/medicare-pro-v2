@@ -99,6 +99,7 @@ def aplicar_css_base() -> None:
                METRICAS - valores destacados
                ========================================================= */
             [data-testid="stMetricValue"] {
+                color: #38bdf8 !important;
                 background: linear-gradient(135deg, #38bdf8, #818cf8) !important;
                 -webkit-background-clip: text !important;
                 -webkit-text-fill-color: transparent !important;
@@ -130,12 +131,10 @@ def aplicar_css_base() -> None:
             }
 
             /* =========================================================
-               HEADERS - con gradiente sutil
+               HEADERS
                ========================================================= */
             h1, h2, h3, h4 {
-                background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%) !important;
-                -webkit-background-clip: text !important;
-                -webkit-text-fill-color: transparent !important;
+                color: #e2e8f0 !important;
                 font-weight: 600 !important;
             }
 
@@ -166,7 +165,6 @@ def aplicar_css_base() -> None:
                ========================================================= */
             .stDataFrame {
                 border-radius: 10px !important;
-                overflow: hidden !important;
             }
             div[data-testid="stDataFrame"] table {
                 font-size: 0.85rem !important;
