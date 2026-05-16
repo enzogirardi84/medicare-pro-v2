@@ -236,7 +236,7 @@ def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str)
     try:
         response = _supabase_execute_with_retry(
             "get_cuidados",
-            lambda: supabase.table("cuidados_enfermeria").select("*").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).order("fecha_registro", desc=False).execute(),
+            lambda: supabase.table("cuidados_enfermeria").select("*, usuarios:usuario_id(nombre)").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).order("fecha_registro", desc=False).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -312,7 +312,7 @@ def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_pediatria",
-            lambda: supabase.table("pediatria").select("*").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
+            lambda: supabase.table("pediatria").select("*, usuarios:usuario_id(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
@@ -350,7 +350,7 @@ def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_escalas",
-            lambda: supabase.table("escalas_clinicas").select("*").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
+            lambda: supabase.table("escalas_clinicas").select("*, usuarios:usuario_id(nombre)").eq("paciente_id", paciente_id).order("fecha_registro", desc=True).execute(),
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}

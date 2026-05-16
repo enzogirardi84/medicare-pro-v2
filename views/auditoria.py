@@ -239,75 +239,165 @@ def render_auditoria(mi_empresa, user):
             st.download_button("Descargar auditoría PDF", data=st.session_state[pdf_key], file_name=nombre_pdf, mime="application/pdf", width='stretch')
         return
 
-    st.subheader("Auditoria de Asistencia por Profesional")
-    profesionales_lista = list(set([v.get("nombre", "") for v in st.session_state.get("usuarios_db", {}).values()]))
-    profesionales_historicos = list(set([c.get("profesional", "") for c in st.session_state.get("checkin_db", [])]))
-    profesionales_lista = sorted([p for p in set(profesionales_lista + profesionales_historicos) if p])
+    # --- Asistencia por profesional ---
+    st.subheader("Asistencia por profesional")
+
+    # 1. Hybrid Read: SQL + local fallback + enriquecer nombres
+    _checkins_sql = []
+    _empresa_uuid = None
+    try:
+        from core.db_sql import get_checkins_by_empresa
+        from core.nextgen_sync import _obtener_uuid_empresa
+        _empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+    except ImportError:
+        _empresa_uuid = None
+
+    _local_checkins = st.session_state.get("checkin_db", [])
+    _local_map = {}
+    for _lc in _local_checkins:
+        _key = (_lc.get("paciente", ""), _lc.get("fecha_hora", "")[:16])
+        _local_map[_key] = _lc.get("profesional", "")
+
+    if _empresa_uuid:
+        try:
+            chk_sql = get_checkins_by_empresa(_empresa_uuid, limit=2000)
+            if chk_sql:
+                for c in chk_sql:
+                    dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
+                    fecha_str = dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else ""
+                    prof_sql = c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido"
+                    pac_sql = c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A"
+                    if prof_sql == "Desconocido" and pac_sql != "N/A":
+                        prof_sql = _local_map.get((pac_sql, fecha_str[:16]), prof_sql)
+                    _checkins_sql.append({
+                        "profesional": prof_sql,
+                        "paciente": pac_sql,
+                        "fecha_hora": fecha_str,
+                        "tipo": c.get("tipo_registro", ""),
+                        "gps": f"{c.get('latitud', '')},{c.get('longitud', '')}" if c.get("latitud") else "-",
+                    })
+        except Exception as e:
+            from core.app_logging import log_event
+            log_event("auditoria_asistencia_sql", str(e))
+
+    _checkins_todos = _checkins_sql if _checkins_sql else _local_checkins
+
+    # 2. Construir lista de profesionales disponibles
+    profesionales_sql = sorted({c["profesional"] for c in _checkins_sql if c.get("profesional") and c["profesional"] != "Desconocido"})
+    profesionales_locales = sorted({c.get("profesional", "") for c in _local_checkins if c.get("profesional")})
+    profesionales_lista = sorted(set(profesionales_sql + profesionales_locales))
 
     if not profesionales_lista:
-        st.warning("No hay nombres de profesionales en usuarios ni en fichadas de check-in todavia.")
+        st.warning("No hay profesionales con registros de asistencia todavia.")
         return
 
     prof_sel = st.selectbox("Seleccionar Profesional", profesionales_lista, key="prof_rrhh_audit")
     col_r1, col_r2 = st.columns(2)
-    fecha_rrhh_desde = col_r1.date_input("Desde", value=ahora().date().replace(day=1), key="rrhh_desde_audit")
-    fecha_rrhh_hasta = col_r2.date_input("Hasta", value=ahora().date(), key="rrhh_hasta_audit")
+    fecha_desde = col_r1.date_input("Desde", value=ahora().date().replace(day=1), key="rrhh_desde_audit")
+    fecha_hasta = col_r2.date_input("Hasta", value=ahora().date(), key="rrhh_hasta_audit")
 
+    # 3. Filtrar por profesional y fecha
     chks_prof = []
-    for c in st.session_state.get("checkin_db", []):
+    for c in _checkins_todos:
         if c.get("profesional") != prof_sel:
             continue
         fecha_raw = c.get("fecha_hora", "")
         fecha_dt = pd.to_datetime(fecha_raw, format="%d/%m/%Y %H:%M:%S", errors="coerce")
         if pd.isna(fecha_dt):
             fecha_dt = pd.to_datetime(fecha_raw, format="%d/%m/%Y %H:%M", errors="coerce")
-        if pd.notna(fecha_dt) and fecha_rrhh_desde <= fecha_dt.date() <= fecha_rrhh_hasta:
+        if pd.notna(fecha_dt) and fecha_desde <= fecha_dt.date() <= fecha_hasta:
             chks_prof.append(c)
 
-    if chks_prof:
-        st.success(f"{len(chks_prof)} registros de asistencia para {prof_sel} en el periodo seleccionado")
-    else:
+    if not chks_prof:
         st.warning(
             f"Sin fichadas para **{prof_sel}** en ese periodo. Amplia fechas o verifica que existan LLEGADA/SALIDA en **Visitas**."
         )
+        return
 
-    if chks_prof:
-        df_chk = pd.DataFrame(chks_prof).iloc[::-1].reset_index(drop=True)
-        total_chk = len(df_chk)
-        limite = st.selectbox("Registros asistencia por página", [20, 40, 80, 120], index=1, key="audit_chk_limite")
-        paginas_chk = max((total_chk - 1) // limite + 1, 1)
-        pag_chk = st.number_input("Página asistencia", min_value=1, max_value=paginas_chk, value=1, step=1)
-        ini_chk = (int(pag_chk) - 1) * limite
-        fin_chk = ini_chk + limite
-        df_chk_page = df_chk.iloc[ini_chk:fin_chk]
-        st.caption(f"Mostrando {len(df_chk_page)} de {total_chk} fichada(s) en el período.")
-        with lista_plegable("Asistencia del profesional (tabla)", count=len(df_chk_page), expanded=False, height=460):
-            mostrar_dataframe_con_scroll(df_chk_page, height=400)
+    st.success(f"{len(chks_prof)} registros de asistencia para {prof_sel} en el periodo seleccionado")
 
-        if FPDF_DISPONIBLE and st.checkbox("Preparar PDF de asistencia", value=False):
+    # 4. Dashboard de métricas
+    df_chk_raw = pd.DataFrame(chks_prof).copy()
+    df_chk_raw["fecha_dt"] = pd.to_datetime(df_chk_raw["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
+    df_chk_raw["fecha_dt"] = df_chk_raw["fecha_dt"].fillna(
+        pd.to_datetime(df_chk_raw["fecha_hora"], format="%d/%m/%Y %H:%M", errors="coerce")
+    )
+    df_chk_raw["dia"] = df_chk_raw["fecha_dt"].dt.date
+    df_chk_raw["hora"] = df_chk_raw["fecha_dt"].dt.hour
+    df_valida = df_chk_raw.dropna(subset=["fecha_dt"]).reset_index(drop=True)
+
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    _dias_unicos = df_valida["dia"].nunique() if not df_valida.empty else 0
+    col_m1.metric("Total fichadas", len(df_valida))
+    col_m2.metric("Dias con actividad", _dias_unicos)
+    _top_pac = df_valida["paciente"].value_counts().idxmax() if not df_valida.empty and "paciente" in df_valida.columns else "-"
+    col_m3.metric("Paciente mas visitado", _top_pac)
+    _hora_pico = df_valida["hora"].value_counts().idxmax() if not df_valida.empty else "-"
+    col_m4.metric("Hora pico", f"{_hora_pico}:00" if _hora_pico != "-" else "-")
+
+    with st.expander("Distribucion horaria", expanded=False):
+        if not df_valida.empty:
+            _bins_hora = list(range(0, 25))
+            _hist_hora = pd.cut(df_valida["hora"], bins=_bins_hora, right=False, include_lowest=True)
+            _dist_hora = _hist_hora.value_counts().sort_index()
+            _df_hora = pd.DataFrame({"Hora": [f"{int(b.left):02d}:00-{int(b.right):02d}:00" for b in _dist_hora.index], "Fichadas": _dist_hora.values})
+            st.bar_chart(_df_hora.set_index("Hora"))
+        else:
+            st.info("Sin datos para graficar distribucion horaria.")
+
+    with st.expander("Top pacientes visitados", expanded=False):
+        if not df_valida.empty and "paciente" in df_valida.columns:
+            _top10 = df_valida["paciente"].value_counts().head(10)
+            st.dataframe(_top10.reset_index().rename(columns={"index": "Paciente", "paciente": "Visitas"}), use_container_width=True)
+
+    # 5. Tabla paginada
+    df_chk = df_valida.iloc[::-1].reset_index(drop=True) if not df_valida.empty else pd.DataFrame()
+    total_chk = len(df_chk)
+    limite = st.selectbox("Registros por pagina", [20, 40, 80, 120], index=1, key="audit_chk_limite")
+    paginas_chk = max((total_chk - 1) // limite + 1, 1)
+    pag_chk = st.number_input("Pagina", min_value=1, max_value=paginas_chk, value=1, step=1, key="audit_chk_pag")
+    ini_chk = (int(pag_chk) - 1) * limite
+    fin_chk = ini_chk + limite
+    df_chk_page = df_chk.iloc[ini_chk:fin_chk]
+    st.caption(f"Mostrando {len(df_chk_page)} de {total_chk} fichada(s) en el periodo.")
+    with lista_plegable("Asistencia del profesional (tabla)", count=len(df_chk_page), expanded=False, height=460):
+        _cols_tabla = [c for c in ["fecha_hora", "paciente", "tipo", "gps"] if c in df_chk_page.columns]
+        mostrar_dataframe_con_scroll(df_chk_page[_cols_tabla], height=400)
+
+    # 6. Exportaciones
+    col_exp1, col_exp2 = st.columns(2)
+    csv_bytes = dataframe_csv_bytes(df_chk[_cols_tabla]) if not df_chk.empty else b""
+    col_exp1.download_button(
+        "Descargar CSV",
+        data=csv_bytes,
+        file_name=f"Asistencia_{sanitize_filename_component(prof_sel, 'prof')}_{fecha_desde.strftime('%d%m%Y')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+    if FPDF_DISPONIBLE:
+        if col_exp2.checkbox("Preparar PDF", value=False, key="audit_pdf_chk"):
+            _pdf_data = df_chk[_cols_tabla] if len(df_chk) <= 500 else df_chk.head(500)[_cols_tabla]
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 15)
-            pdf.cell(0, 12, safe_text(f"REPORTE RRHH - {mi_empresa}"), ln=True, align='C')
+            pdf.cell(0, 12, safe_text(f"REPORTE ASISTENCIA - {mi_empresa}"), ln=True, align='C')
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text(f"Profesional: {prof_sel}"), ln=True)
             pdf.set_font("Arial", 'I', 10)
-            pdf.cell(0, 8, safe_text(f"Periodo: {fecha_rrhh_desde.strftime('%d/%m/%Y')} - {fecha_rrhh_hasta.strftime('%d/%m/%Y')}"), ln=True)
+            pdf.cell(0, 8, safe_text(f"Periodo: {fecha_desde.strftime('%d/%m/%Y')} - {fecha_hasta.strftime('%d/%m/%Y')}"), ln=True)
             pdf.ln(10)
             pdf.set_font("Arial", 'B', 10)
             pdf.cell(30, 8, safe_text("Fecha"), border=1)
-            pdf.cell(45, 8, safe_text("Paciente"), border=1)
+            pdf.cell(60, 8, safe_text("Paciente"), border=1)
             pdf.cell(35, 8, safe_text("Accion"), border=1)
-            pdf.cell(40, 8, safe_text("GPS"), border=1)
-            pdf.cell(40, 8, safe_text("Duracion"), border=1, ln=True)
+            pdf.cell(55, 8, safe_text("GPS"), border=1, ln=True)
             pdf.set_font("Arial", '', 9)
-            for c in reversed(chks_prof[-200:]):
-                pdf.cell(30, 8, safe_text(c.get("fecha_hora", "")[:16]), border=1)
-                pdf.cell(45, 8, safe_text(str(c.get("paciente", "-"))[:25]), border=1)
-                pdf.cell(35, 8, safe_text(str(c.get("tipo", "-"))[:15]), border=1)
-                pdf.cell(40, 8, safe_text(str(c.get("gps", "-"))[:25]), border=1)
-                pdf.cell(40, 8, safe_text("-"), border=1, ln=True)
-
+            for _, r in _pdf_data.iterrows():
+                pdf.cell(30, 8, safe_text(str(r.get("fecha_hora", ""))[:16]), border=1)
+                pdf.cell(60, 8, safe_text(str(r.get("paciente", "-"))[:35]), border=1)
+                pdf.cell(35, 8, safe_text(str(r.get("tipo", "-"))[:15]), border=1)
+                pdf.cell(55, 8, safe_text(str(r.get("gps", "-"))[:30]), border=1, ln=True)
             pdf_bytes = pdf_output_bytes(pdf)
-            nombre_pdf = f"Asistencia_{sanitize_filename_component(prof_sel, 'profesional')}_{fecha_rrhh_desde.strftime('%d%m%Y')}.pdf"
-            st.download_button("Descargar reporte asistencia PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", width='stretch')
+            nombre_pdf = f"Asistencia_{sanitize_filename_component(prof_sel, 'prof')}_{fecha_desde.strftime('%d%m%Y')}.pdf"
+            st.download_button("Descargar PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", use_container_width=True)

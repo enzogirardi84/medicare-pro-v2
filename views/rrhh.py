@@ -196,8 +196,15 @@ def render_rrhh(mi_empresa, rol, user):
     fichajes_lista = []
     rastreador_ingresos = {}
     
-    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
+    # 1. Intentar leer desde PostgreSQL (Hybrid Read) + enriquecer nombres desde local
     checkins = []
+    # Mapa local (paciente -> fecha -> profesional) para resolver nombres que SQL no pudo resolver
+    _local_checkins = st.session_state.get("checkin_db", [])
+    _local_map = {}
+    for _lc in _local_checkins:
+        _key = (_lc.get("paciente", ""), _lc.get("fecha_hora", "")[:16])
+        _local_map[_key] = _lc.get("profesional", "")
+
     try:
         empresa_uuid = _obtener_uuid_empresa(mi_empresa)
         if empresa_uuid:
@@ -205,11 +212,17 @@ def render_rrhh(mi_empresa, rol, user):
             if chk_sql:
                 for c in chk_sql:
                     dt = pd.to_datetime(c.get("fecha_hora", ""), errors="coerce")
+                    fecha_str = dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else ""
+                    prof_sql = c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido"
+                    pac_sql = c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A"
+                    # Si SQL no resolvio nombre, buscar en datos locales por paciente+fecha
+                    if prof_sql == "Desconocido" and pac_sql != "N/A":
+                        prof_sql = _local_map.get((pac_sql, fecha_str[:16]), prof_sql)
                     checkins.append({
                         "empresa": mi_empresa,
-                        "profesional": c.get("usuarios", {}).get("nombre", "Desconocido") if isinstance(c.get("usuarios"), dict) else "Desconocido",
-                        "paciente": c.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(c.get("pacientes"), dict) else "N/A",
-                        "fecha_hora": dt.strftime("%d/%m/%Y %H:%M:%S") if pd.notnull(dt) else "",
+                        "profesional": prof_sql,
+                        "paciente": pac_sql,
+                        "fecha_hora": fecha_str,
                         "tipo": c.get("tipo_registro", ""),
                         "gps": f"{c.get('latitud', '')},{c.get('longitud', '')}" if c.get("latitud") else "-",
                         "id_sql": c.get("id")
@@ -219,7 +232,7 @@ def render_rrhh(mi_empresa, rol, user):
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not checkins:
-        checkins = [c for c in st.session_state.get("checkin_db", []) if c.get("empresa") == mi_empresa or acceso_total]
+        checkins = [c for c in _local_checkins if c.get("empresa") == mi_empresa or acceso_total]
         
     checkins_ordenados = sorted(checkins, key=lambda c: _obtener_dt(c.get("fecha_hora", "")))
 
