@@ -355,20 +355,29 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     st.divider()
     st.markdown("### Pase de Guardia / Auditoria")
 
+    semaforo = dashboard.get("semaforo", "desconocido")
+    badge_pase = {"rojo": "danger", "amarillo": "warning", "verde": "ok"}.get(semaforo, "info")
+    texto_estado = {"rojo": "CRITICO - Requiere intervencion", "amarillo": "ATENCION - Monitoreo necesario", "verde": "ESTABLE"}.get(semaforo, "Desconocido")
+
+    card_clinica(
+        "Resumen del informe",
+        f"<b>Estado:</b> {texto_estado}<br>"
+        f"<b>Alertas:</b> {dashboard['alertas_criticas']} criticas, {dashboard['alertas_warning']} advertencias, {dashboard['alertas_info']} informativas<br>"
+        f"<b>Indicaciones activas:</b> {dashboard['indicaciones_activas']} | <b>Estudios pendientes:</b> {dashboard['estudios_pendientes']}",
+        badge_text=semaforo.upper(),
+        badge_type=badge_pase,
+    )
+
     html_informe = generar_html_informe_profesional(paciente_sel, datos, dashboard)
 
-    # Vista previa del informe profesional sin scroll interno.
-    if hasattr(st, "html"):
-        st.html(html_informe)
-    else:
-        st.components.v1.html(html_informe, height=1200, scrolling=False)
+    st.caption("Vista previa del informe (desplazable)")
+    st.components.v1.html(html_informe, height=500, scrolling=True)
 
-    # Botones de descarga: PDF profesional (principal) y HTML (alternativa)
-    pdf_bytes = generar_pdf_informe_profesional(paciente_sel, datos, dashboard)
     col_d1, col_d2 = st.columns(2)
     with col_d1:
+        pdf_bytes = generar_pdf_informe_profesional(paciente_sel, datos, dashboard)
         st.download_button(
-            label="Descargar informe PDF",
+            label="Descargar PDF",
             data=pdf_bytes,
             file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.pdf",
             mime="application/pdf",
@@ -376,7 +385,7 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
         )
     with col_d2:
         st.download_button(
-            label="Descargar informe HTML",
+            label="Descargar HTML",
             data=html_informe.encode("utf-8"),
             file_name=f"pase_guardia_{paciente_sel.replace(' ', '_').replace('/', '-')}.html",
             mime="text/html",
