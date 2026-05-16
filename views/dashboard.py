@@ -3,6 +3,7 @@ from html import escape
 
 import altair as alt
 import pandas as pd
+import pydeck as pdk
 import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
@@ -325,9 +326,31 @@ def render_dashboard(mi_empresa, rol):
                     continue
     if _gps_data:
         _df_gps = pd.DataFrame(_gps_data)
+        _lat_center = _df_gps["lat"].mean()
+        _lon_center = _df_gps["lon"].mean()
+        _view = pdk.ViewState(latitude=_lat_center, longitude=_lon_center, zoom=12, pitch=0)
+        _layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=_df_gps,
+            get_position='[lon, lat]',
+            get_radius=120,
+            get_fill_color=[59, 130, 246, 180],
+            pickable=True,
+            auto_highlight=True,
+            tooltip={
+                "html": "<b>{paciente}</b><br/>{tipo}<br/>{fecha}",
+                "style": {"backgroundColor": "#1e293b", "color": "#e2e8f0"},
+            },
+        )
+        _deck = pdk.Deck(
+            layers=[_layer],
+            initial_view_state=_view,
+            map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+            tooltip={"text": "{paciente}"},
+        )
         col_map_1, col_map_2 = st.columns([2, 1])
         with col_map_1:
-            st.map(_df_gps.rename(columns={"lat": "latitude", "lon": "longitude"}), use_container_width=True)
+            st.pydeck_chart(_deck, use_container_width=True)
         with col_map_2:
             st.caption(f"{len(_gps_data)} visitas con GPS")
             _df_gps_show = _df_gps[["paciente", "tipo", "fecha"]].copy()
