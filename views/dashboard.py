@@ -3,7 +3,6 @@ from html import escape
 
 import altair as alt
 import pandas as pd
-import pydeck as pdk
 import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
@@ -328,29 +327,44 @@ def render_dashboard(mi_empresa, rol):
         _df_gps = pd.DataFrame(_gps_data)
         _lat_center = _df_gps["lat"].mean()
         _lon_center = _df_gps["lon"].mean()
-        _view = pdk.ViewState(latitude=_lat_center, longitude=_lon_center, zoom=12, pitch=0)
-        _layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=_df_gps,
-            get_position='[lon, lat]',
-            get_radius=120,
-            get_fill_color=[59, 130, 246, 180],
-            pickable=True,
-            auto_highlight=True,
-            tooltip={
-                "html": "<b>{paciente}</b><br/>{tipo}<br/>{fecha}",
-                "style": {"backgroundColor": "#1e293b", "color": "#e2e8f0"},
-            },
-        )
-        _deck = pdk.Deck(
-            layers=[_layer],
-            initial_view_state=_view,
-            map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-            tooltip={"text": "{paciente}"},
-        )
+
+        _markers_html = ""
+        for _, r in _df_gps.iterrows():
+            _name = escape(str(r.get("paciente", "")))
+            _type = escape(str(r.get("tipo", "")))
+            _date = escape(str(r.get("fecha", "")))
+            _popup = f"{_name}<br/>{_type}<br/>{_date}".replace("'", "\\'")
+            _markers_html += f"""
+L.marker([{r['lat']}, {r['lon']}]).addTo(_map)
+    .bindPopup('{_popup}');"""
+
+        _html_map = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  body {{ margin:0; padding:0; }}
+  #map {{ height:100vh; width:100%; }}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+var _map = L.map('map').setView([{_lat_center}, {_lon_center}], 13);
+L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+}}).addTo(_map);
+{_markers_html}
+</script>
+</body>
+</html>"""
+
         col_map_1, col_map_2 = st.columns([2, 1])
         with col_map_1:
-            st.pydeck_chart(_deck, use_container_width=True)
+            st.components.v1.html(_html_map, height=500)
         with col_map_2:
             st.caption(f"{len(_gps_data)} visitas con GPS")
             _df_gps_show = _df_gps[["paciente", "tipo", "fecha"]].copy()
