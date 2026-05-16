@@ -174,7 +174,7 @@ def render_pediatria(paciente_sel, user):
     st.divider()
     with st.form("pedia", clear_on_submit=True):
         st.markdown("##### Nuevo Control")
-        tipo_ctrl = st.radio("Tipo de control", ["Percentilo (menor)", "Adulto"], horizontal=True, key="tipo_ctrl_ped")
+        tipo_ctrl = st.radio("Tipo de control", ["Menor", "Adulto"], horizontal=True, key="tipo_ctrl_ped")
         col_time1, col_time2 = st.columns(2)
         fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key="fecha_ped")
         hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_ped")
