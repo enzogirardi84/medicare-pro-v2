@@ -101,262 +101,239 @@ def render_historial(paciente_sel: str, user=None) -> None:
     secciones_con_datos_base = {nombre: registros for nombre, registros in secciones_base.items() if registros}
     total_registros_base = sum(len(registros) for registros in secciones_base.values())
     ultimo_base = _ultimo_evento_global(secciones_base)
-    render_resumen_clinico(paciente_sel, detalles, secciones_base, total_registros_base, ultimo_base)
 
-    st.caption(
-        "Vista integral con PDF clinico, resumen rapido, metricas, linea de tiempo, busqueda global y detalle por modulo."
-    )
-
-    st.markdown("##### Opciones de visualización")
-    col_filt1, col_filt2, col_filt3, col_filt4 = st.columns(4)
-    opcion_limite = col_filt1.selectbox("Límite por sección", list(LIMITES_REGISTROS.keys()))
+    # ── Filtros globales compactos ───────────────────────────────────────
+    col_filt1, col_filt2, col_filt3, col_filt4 = st.columns([1.2, 1.2, 1, 1])
+    opcion_limite = col_filt1.selectbox("Limite por seccion", list(LIMITES_REGISTROS.keys()), label_visibility="collapsed")
     limite = LIMITES_REGISTROS.get(opcion_limite, 200)
     solo_con_datos = col_filt2.checkbox("Solo secciones con datos", value=True, key=f"hist_solo_datos_{paciente_sel}")
     limite_timeline = col_filt3.selectbox(
-        "Eventos en línea de tiempo",
+        "Eventos timeline",
         [15, 25, 40, 60],
         index=1,
         key=f"hist_tl_n_{paciente_sel}",
+        label_visibility="collapsed",
     )
-    col_filt4.info(f"Hasta {limite} ítems al ver una sección.")
-
-    st.markdown(
-        """
-        <div class="mc-module-shell">
-            <div class="mc-module-shell-head">
-                <div class="mc-module-shell-kicker">Centro documental</div>
-                <h3 class="mc-module-shell-title">Guardar, imprimir o auditar la historia clinica</h3>
-                <p class="mc-module-shell-copy">
-                    El PDF clinico es la salida principal para archivo y soporte. Excel, respaldo y JSON quedan disponibles
-                    para auditoria, integracion o contingencia.
-                </p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    r1, r2, r3, r4 = st.columns([1.35, 1.0, 1.0, 0.95])
-    _render_lazy_download(
-        r1,
-        key_base=f"historial_pdf_{paciente_sel}",
-        prepare_label="Preparar PDF clinico",
-        download_label="Descargar PDF clinico",
-        build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
-        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-        unavailable_message="No se pudo generar el PDF clinico. Verifica ReportLab y los datos cargados.",
-    )
-    _render_lazy_download(
-        r2,
-        key_base=f"historial_excel_{paciente_sel}",
-        prepare_label="Preparar Excel",
-        download_label="Descargar Excel",
-        build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
-        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        unavailable_message="Excel no disponible en este equipo.",
-    )
-    _render_lazy_download(
-        r3,
-        key_base=f"historial_respaldo_{paciente_sel}",
-        prepare_label="Preparar respaldo PDF",
-        download_label="Descargar respaldo PDF",
-        build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
-        file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-    )
-    _render_lazy_download(
-        r4,
-        key_base=f"historial_json_{paciente_sel}",
-        prepare_label="Preparar JSON",
-        download_label="Descargar JSON",
-        build_fn=lambda: build_patient_json_bytes(st.session_state, paciente_sel),
-        file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.json",
-        mime="application/json",
-    )
-
-    st.divider()
-    if not secciones_con_datos_base:
-        bloque_estado_vacio(
-            "Historia sin registros",
-            "No se encontraron registros clínicos agregados para este paciente.",
-            sugerencia="Los datos aparecen cuando se usan Clínica, Recetas, Evolución y el resto de módulos.",
-        )
-        return
+    col_filt4.caption(f"Hasta {limite} items por seccion.")
 
     secciones = dict(secciones_base)
     if solo_con_datos:
         secciones = {k: v for k, v in secciones.items() if v}
 
-    if not secciones:
-        bloque_estado_vacio(
-            "Filtro demasiado estricto",
-            "No quedan secciones con datos con el filtro «solo secciones con datos».",
-            sugerencia="Desactivá el filtro o registrá información en otros módulos primero.",
-        )
+    if not secciones_con_datos_base:
+        tab_r, tab_t, tab_b, tab_s = st.tabs(["Resumen", "Linea de Tiempo", "Busqueda", "Secciones"])
+        with tab_r:
+            bloque_estado_vacio(
+                "Historia sin registros",
+                "No se encontraron registros clinicos agregados para este paciente.",
+                sugerencia="Los datos aparecen cuando se usan Clinica, Recetas, Evolucion y el resto de modulos.",
+            )
         return
 
-    st.caption(
-        "Panel con desplazamiento vertical: panorámica, búsqueda global y detalle por sección (scroll interno)."
-    )
-    render_panorama(secciones, paciente_sel)
-    render_tarjetas_secciones(secciones_con_datos_base, paciente_sel)
-    render_timeline(secciones, paciente_sel, limite_timeline)
-    render_busqueda_global(secciones, paciente_sel)
+    tab_r, tab_t, tab_b, tab_s = st.tabs([
+        "Resumen y exportaciones",
+        "Linea de Tiempo",
+        "Busqueda global",
+        "Secciones",
+    ])
 
-    st.divider()
-    lista_secciones = list(secciones.keys())
-    key_sec = f"hist_seccion_radio_{paciente_sel}"
-    if key_sec not in st.session_state:
-        st.session_state[key_sec] = lista_secciones[0]
-    else:
-        _prev = st.session_state[key_sec]
-        if _prev not in lista_secciones:
+    # ── TAB 1: RESUMEN ───────────────────────────────────────────────────
+    with tab_r:
+        render_resumen_clinico(paciente_sel, detalles, secciones_base, total_registros_base, ultimo_base)
+        st.markdown("##### Exportar historia clinica")
+        r1, r2, r3, r4 = st.columns([1.35, 1.0, 1.0, 0.95])
+        _render_lazy_download(
+            r1,
+            key_base=f"historial_pdf_{paciente_sel}",
+            prepare_label="Preparar PDF clinico",
+            download_label="Descargar PDF clinico",
+            build_fn=lambda: build_history_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
+            file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+            unavailable_message="No se pudo generar el PDF clinico. Verifica ReportLab y los datos cargados.",
+        )
+        _render_lazy_download(
+            r2,
+            key_base=f"historial_excel_{paciente_sel}",
+            prepare_label="Preparar Excel",
+            download_label="Descargar Excel",
+            build_fn=lambda: build_patient_excel_bytes(st.session_state, paciente_sel),
+            file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            unavailable_message="Excel no disponible en este equipo.",
+        )
+        _render_lazy_download(
+            r3,
+            key_base=f"historial_respaldo_{paciente_sel}",
+            prepare_label="Preparar respaldo PDF",
+            download_label="Descargar respaldo PDF",
+            build_fn=lambda: build_backup_pdf_bytes(st.session_state, paciente_sel, detalles.get("empresa", "")),
+            file_name=f"Respaldo_Clinico_{paciente_sel.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+        )
+        _render_lazy_download(
+            r4,
+            key_base=f"historial_json_{paciente_sel}",
+            prepare_label="Preparar JSON",
+            download_label="Descargar JSON",
+            build_fn=lambda: build_patient_json_bytes(st.session_state, paciente_sel),
+            file_name=f"Historia_Clinica_{paciente_sel.replace(' ', '_')}.json",
+            mime="application/json",
+        )
+        render_panorama(secciones, paciente_sel)
+        render_tarjetas_secciones(secciones_con_datos_base, paciente_sel)
+
+    # ── TAB 2: LINEA DE TIEMPO ──────────────────────────────────────────
+    with tab_t:
+        render_timeline(secciones, paciente_sel, limite_timeline)
+
+    # ── TAB 3: BUSQUEDA GLOBAL ──────────────────────────────────────────
+    with tab_b:
+        render_busqueda_global(secciones, paciente_sel)
+
+    # ── TAB 4: SECCIONES ────────────────────────────────────────────────
+    with tab_s:
+        lista_secciones = list(secciones.keys())
+        key_sec = f"hist_seccion_radio_{paciente_sel}"
+        if key_sec not in st.session_state:
             st.session_state[key_sec] = lista_secciones[0]
+        else:
+            _prev = st.session_state[key_sec]
+            if _prev not in lista_secciones:
+                st.session_state[key_sec] = lista_secciones[0]
 
-    with st.expander(" Explorar por sección", expanded=True):
-        st.caption(
-            "Franja horizontal: en el celular deslizá con el dedo; en PC usá la rueda o la barra inferior. "
-            "Podés plegar este bloque para ganar espacio."
-        )
-        st.markdown(
-            '<div class="mc-hist-cortina-mark" aria-hidden="true"></div>',
-            unsafe_allow_html=True,
-        )
         seccion_actual = st.pills(
-            "Elegí una sección",
+            "Elegir seccion",
             lista_secciones,
             selection_mode="single",
             key=key_sec,
             label_visibility="collapsed",
         )
-    if not seccion_actual:
-        seccion_actual = st.session_state.get(key_sec) or lista_secciones[0]
-    registros = secciones.get(seccion_actual, [])
+        if not seccion_actual:
+            seccion_actual = st.session_state.get(key_sec) or lista_secciones[0]
+        registros = secciones.get(seccion_actual, [])
 
-    if not registros:
-        bloque_estado_vacio(
-            "Sección vacía",
-            "Esta sección no tiene filas para mostrar.",
-            sugerencia="Elegí otra sección en el listado o verificá que existan cargas en ese módulo.",
-        )
-        return
-
-    c_opt1, c_opt2, c_opt3 = st.columns(3)
-    usar_fecha = c_opt1.checkbox(
-        "Filtrar esta sección por fechas de los registros",
-        value=False,
-        key=f"hist_use_fecha_{paciente_sel}",
-    )
-    incluir_sin_fecha = c_opt2.checkbox(
-        "Incluir registros sin fecha (si el filtro está activo)",
-        value=True,
-        key=f"hist_sin_fecha_{paciente_sel}",
-    )
-    orden_etiqueta = c_opt3.radio(
-        "Orden",
-        ["Más recientes primero", "Más antiguos primero"],
-        horizontal=True,
-        key=f"hist_orden_{paciente_sel}",
-    )
-    recientes_primero = orden_etiqueta.startswith("Más recientes")
-
-    hoy = ahora().date()
-    default_desde = hoy - timedelta(days=90)
-    if usar_fecha:
-        rango = st.date_input(
-            "Rango (fecha del registro)",
-            value=(default_desde, hoy),
-            key=f"hist_rango_fecha_{paciente_sel}_{seccion_actual}",
-        )
-        if isinstance(rango, tuple) and len(rango) == 2:
-            d_desde, d_hasta = rango[0], rango[1]
-        elif hasattr(rango, "year"):
-            d_desde = d_hasta = rango
-        else:
-            d_desde, d_hasta = default_desde, hoy
-        if d_desde > d_hasta:
-            d_desde, d_hasta = d_hasta, d_desde
-        registros_fecha = [
-            r
-            for r in registros
-            if registro_en_rango_fechas(
-                r, d_desde, d_hasta, incluir_sin_fecha=incluir_sin_fecha
+        if not registros:
+            bloque_estado_vacio(
+                "Seccion vacia",
+                "Esta seccion no tiene filas para mostrar.",
+                sugerencia="Elegi otra seccion en el listado o verifica que existan cargas en ese modulo.",
             )
-        ]
-    else:
-        registros_fecha = list(registros)
+            return
 
-    buscar = st.text_input(
-        "Buscar texto en esta sección",
-        "",
-        key=f"hist_buscar_{paciente_sel}_{seccion_actual}",
-        placeholder="Profesional, medicación, detalle, estado…",
-    )
-    registros_filtrados = [r for r in registros_fecha if _registro_coincide_busqueda(r, buscar)]
-    if buscar.strip() and not registros_filtrados:
-        bloque_estado_vacio(
-            "Sin coincidencias",
-            "Ningún registro de esta sección coincide con el texto buscado.",
-            sugerencia="Probá otras palabras o limpiá el campo de búsqueda.",
+        with st.expander("Filtros de la seccion", expanded=False):
+            col_f1, col_f2, col_f3 = st.columns(3)
+            usar_fecha = col_f1.checkbox(
+                "Filtrar por fechas",
+                value=False,
+                key=f"hist_use_fecha_{paciente_sel}",
+            )
+            incluir_sin_fecha = col_f2.checkbox(
+                "Incluir sin fecha",
+                value=True,
+                key=f"hist_sin_fecha_{paciente_sel}",
+            )
+            orden_etiqueta = col_f3.radio(
+                "Orden",
+                ["Mas recientes", "Mas antiguos"],
+                horizontal=True,
+                key=f"hist_orden_{paciente_sel}",
+            )
+            recientes_primero = orden_etiqueta.startswith("Mas recientes")
+
+            hoy = ahora().date()
+            default_desde = hoy - timedelta(days=90)
+            if usar_fecha:
+                rango = st.date_input(
+                    "Rango (fecha del registro)",
+                    value=(default_desde, hoy),
+                    key=f"hist_rango_fecha_{paciente_sel}_{seccion_actual}",
+                )
+                if isinstance(rango, tuple) and len(rango) == 2:
+                    d_desde, d_hasta = rango[0], rango[1]
+                elif hasattr(rango, "year"):
+                    d_desde = d_hasta = rango
+                else:
+                    d_desde, d_hasta = default_desde, hoy
+                if d_desde > d_hasta:
+                    d_desde, d_hasta = d_hasta, d_desde
+                registros_fecha = [
+                    r for r in registros
+                    if registro_en_rango_fechas(r, d_desde, d_hasta, incluir_sin_fecha=incluir_sin_fecha)
+                ]
+            else:
+                registros_fecha = list(registros)
+
+            buscar = st.text_input(
+                "Buscar en esta seccion",
+                "",
+                key=f"hist_buscar_{paciente_sel}_{seccion_actual}",
+                placeholder="Profesional, medicacion, detalle, estado...",
+            )
+
+        registros_filtrados = [r for r in registros_fecha if _registro_coincide_busqueda(r, buscar)]
+        if buscar.strip() and not registros_filtrados:
+            bloque_estado_vacio(
+                "Sin coincidencias",
+                "Ningun registro coincide con el texto buscado.",
+                sugerencia="Proba otras palabras o limpia el campo de busqueda.",
+            )
+            return
+
+        registros_base_sec = registros_filtrados if buscar.strip() else registros_fecha
+        if usar_fecha and not registros_base_sec:
+            bloque_estado_vacio(
+                "Fuera de rango",
+                "Ningun registro cae en el rango de fechas indicado.",
+                sugerencia="Amplia las fechas o activa Incluir registros sin fecha si corresponde.",
+            )
+            return
+
+        registros_ordenados = sort_registros_por_fecha(registros_base_sec, recientes_primero=recientes_primero)
+        total_registros_seccion = len(registros_ordenados)
+        limite_pagina = min(max(int(limite), 1), 500)
+        paginas = max((total_registros_seccion - 1) // limite_pagina + 1, 1)
+        col_pag1, col_pag2 = st.columns([2, 1])
+        col_pag1.caption(f"Pagina: {limite_pagina} registro(s)")
+        pagina = col_pag2.number_input(
+            "Pagina",
+            min_value=1,
+            max_value=paginas,
+            value=1,
+            step=1,
+            label_visibility="collapsed",
+            key=f"hist_pag_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 24)}",
         )
-        return
+        inicio = (int(pagina) - 1) * limite_pagina
+        fin = inicio + limite_pagina
+        registros_mostrar = registros_ordenados[inicio:fin]
 
-    registros_base = registros_filtrados if buscar.strip() else registros_fecha
-    if usar_fecha and not registros_base:
-        bloque_estado_vacio(
-            "Fuera de rango",
-            "Ningún registro cae en el rango de fechas indicado.",
-            sugerencia="Ampliá las fechas o activá «Incluir registros sin fecha» si corresponde.",
-        )
-        return
-
-    registros_ordenados = sort_registros_por_fecha(
-        registros_base, recientes_primero=recientes_primero
-    )
-    total_registros_seccion = len(registros_ordenados)
-    limite_pagina = min(max(int(limite), 1), 500)
-    paginas = max((total_registros_seccion - 1) // limite_pagina + 1, 1)
-    col_pag1, col_pag2 = st.columns([2, 1])
-    col_pag1.caption(f"Tamaño de página: {limite_pagina} registro(s)")
-    pagina = col_pag2.number_input(
-        "Página de la sección",
-        min_value=1,
-        max_value=paginas,
-        value=1,
-        step=1,
-        key=f"hist_pag_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 24)}",
-    )
-    inicio = (int(pagina) - 1) * limite_pagina
-    fin = inicio + limite_pagina
-    registros_mostrar = registros_ordenados[inicio:fin]
-
-    st.caption(
-        f"Mostrando {len(registros_mostrar)} de {len(registros_base)} registros en «{seccion_actual}»"
-        f" (página {int(pagina)}/{paginas})"
-        f"{f' (filtrados de {len(registros)})' if (buscar.strip() or usar_fecha) else ''}."
-    )
-
-    csv_bytes = _dataframe_seccion_a_csv(registros_mostrar)
-    if csv_bytes:
-        fn = f"Historia_{_nombre_archivo_seguro(paciente_sel.split('(')[0])}_{_nombre_archivo_seguro(seccion_actual, 40)}.csv"
-        st.download_button(
-            "Descargar esta vista en CSV",
-            csv_bytes,
-            file_name=fn,
-            mime="text/csv; charset=utf-8",
-            key=f"hist_csv_vista_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 30)}",
+        st.caption(
+            f"Mostrando {len(registros_mostrar)} de {len(registros_base_sec)} registros en {seccion_actual}"
+            f" (pagina {int(pagina)}/{paginas})"
+            f"{f' (filtrados de {len(registros)})' if (buscar.strip() or usar_fecha) else ''}."
         )
 
-    if seccion_actual == "Signos Vitales":
-        _render_signos_vitales_con_alertas(registros_mostrar, paciente_sel)
-    elif seccion_actual in SECCIONES_TABLA:
-        _render_seccion_tabla(registros_mostrar, seccion_actual)
-    elif seccion_actual == "Consentimientos":
-        _render_consentimientos(registros_mostrar, paciente_sel)
-    elif seccion_actual == "Estudios Complementarios":
-        _render_estudios(registros_mostrar, paciente_sel)
-    elif seccion_actual == "Registro de Heridas":
-        _render_heridas(registros_mostrar, paciente_sel)
-    else:
-        _render_registros_genericos(registros_mostrar, seccion_actual, paciente_sel)
+        csv_bytes = _dataframe_seccion_a_csv(registros_mostrar)
+        if csv_bytes:
+            fn = f"Historia_{_nombre_archivo_seguro(paciente_sel.split('(')[0])}_{_nombre_archivo_seguro(seccion_actual, 40)}.csv"
+            st.download_button(
+                "Descargar vista en CSV",
+                csv_bytes,
+                file_name=fn,
+                mime="text/csv; charset=utf-8",
+                key=f"hist_csv_vista_{paciente_sel}_{_nombre_archivo_seguro(seccion_actual, 30)}",
+            )
+
+        if seccion_actual == "Signos Vitales":
+            _render_signos_vitales_con_alertas(registros_mostrar, paciente_sel)
+        elif seccion_actual in SECCIONES_TABLA:
+            _render_seccion_tabla(registros_mostrar, seccion_actual)
+        elif seccion_actual == "Consentimientos":
+            _render_consentimientos(registros_mostrar, paciente_sel)
+        elif seccion_actual == "Estudios Complementarios":
+            _render_estudios(registros_mostrar, paciente_sel)
+        elif seccion_actual == "Registro de Heridas":
+            _render_heridas(registros_mostrar, paciente_sel)
+        else:
+            _render_registros_genericos(registros_mostrar, seccion_actual, paciente_sel)

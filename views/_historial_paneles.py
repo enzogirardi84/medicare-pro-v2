@@ -254,45 +254,39 @@ def render_tarjetas_secciones(
 
 def render_timeline(secciones, paciente_sel, limite_timeline):
     """Linea de tiempo global con filtro opcional de fechas."""
-    with st.expander(" Linea de tiempo global", expanded=True):
-        columnas = st.columns([1, 1, 1, 1])
-        mostrar_tl = columnas[0].checkbox(
-            "Mostrar timeline",
-            value=True,
-            key=f"hist_show_tl_{paciente_sel}",
+    columnas = st.columns([1, 1])
+    usar_fecha = columnas[0].checkbox(
+        "Filtrar por fechas",
+        value=False,
+        key=f"hist_tl_usa_fecha_{paciente_sel}",
+    )
+    columnas[1].caption(f"Max {limite_timeline} eventos")
+    hoy = ahora().date()
+    fecha_desde = hoy - timedelta(days=90)
+    fecha_hasta = hoy
+    if usar_fecha:
+        rango = st.date_input(
+            "Rango de fechas",
+            value=(fecha_desde, hoy),
+            key=f"hist_tl_rango_{paciente_sel}",
         )
-        usar_fecha = columnas[1].checkbox(
-            "Filtrar por fechas",
-            value=False,
-            key=f"hist_tl_usa_fecha_{paciente_sel}",
-        )
-        hoy = ahora().date()
-        fecha_desde = hoy - timedelta(days=90)
-        fecha_hasta = hoy
-        if usar_fecha:
-            rango = st.date_input(
-                "Rango de fechas (timeline)",
-                value=(fecha_desde, hoy),
-                key=f"hist_tl_rango_{paciente_sel}",
-            )
-            if isinstance(rango, tuple) and len(rango) == 2:
-                fecha_desde, fecha_hasta = rango
-            elif hasattr(rango, "year"):
-                fecha_desde = fecha_hasta = rango
-            if fecha_desde > fecha_hasta:
-                fecha_desde, fecha_hasta = fecha_hasta, fecha_desde
-        if mostrar_tl:
-            filas_tl = _actividad_reciente_filas(secciones, limite_timeline)
-            if usar_fecha:
-                filas_tl = [
-                    fila for fila in filas_tl if _fecha_en_rango_tl(fila["Fecha"], fecha_desde, fecha_hasta)
-                ]
-            if filas_tl:
-                df_tl = pd.DataFrame(filas_tl)
-                altura = min(320, max(180, 36 + len(filas_tl) * 34))
-                mostrar_dataframe_con_scroll(df_tl, height=altura)
-            else:
-                st.caption("No hay registros con fecha reconocible en el rango seleccionado.")
+        if isinstance(rango, tuple) and len(rango) == 2:
+            fecha_desde, fecha_hasta = rango
+        elif hasattr(rango, "year"):
+            fecha_desde = fecha_hasta = rango
+        if fecha_desde > fecha_hasta:
+            fecha_desde, fecha_hasta = fecha_hasta, fecha_desde
+    filas_tl = _actividad_reciente_filas(secciones, limite_timeline)
+    if usar_fecha:
+        filas_tl = [
+            fila for fila in filas_tl if _fecha_en_rango_tl(fila["Fecha"], fecha_desde, fecha_hasta)
+        ]
+    if filas_tl:
+        df_tl = pd.DataFrame(filas_tl)
+        altura = min(400, max(180, 36 + len(filas_tl) * 34))
+        mostrar_dataframe_con_scroll(df_tl, height=altura)
+    else:
+        st.caption("No hay registros con fecha reconocible en el rango seleccionado.")
 
 
 def render_busqueda_global(secciones, paciente_sel):
