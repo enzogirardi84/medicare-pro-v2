@@ -258,8 +258,14 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
         )
 
         if preview_btn:
-            st.info("### Vista previa del texto profesional")
-            st.markdown(f"```\n{texto_generado}\n```")
+            st.markdown("### Vista previa del texto profesional")
+            st.text_area(
+                "Texto generado",
+                value=texto_generado,
+                height=200,
+                disabled=True,
+                label_visibility="collapsed",
+            )
 
         if guardar_btn:
             if not any([ta_sistolica, ta_diastolica, fc, temperatura, spo2,
