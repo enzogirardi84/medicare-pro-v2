@@ -3,6 +3,16 @@ import streamlit as st
 from core.utils import ahora
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
 
+SCROLL = 'style="max-height:360px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;"'
+
+
+def _coincide(item_paciente: str, paciente_sel: str) -> bool:
+    """Match parcial entre paciente de un registro y el seleccionado."""
+    if not item_paciente or not paciente_sel:
+        return False
+    a, b = str(item_paciente).strip().lower(), str(paciente_sel).strip().lower()
+    return a in b or b in a
+
 
 def render_telemedicina(paciente_sel):
     if not paciente_sel:
@@ -50,8 +60,6 @@ def render_telemedicina(paciente_sel):
         mostrar_iframe = st.checkbox("Cargar vista integrada", value=False, help="Activalo solo en PC o si el equipo responde bien.")
 
         if mostrar_iframe:
-            import streamlit.components.v1 as components
-
             st.divider()
             st.markdown("**Vista integrada (PC / Notebook):**")
             iframe_html = f"""
@@ -59,7 +67,10 @@ def render_telemedicina(paciente_sel):
                 style="width: 100%; height: 520px; border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             </iframe>
             """
-            st.html(iframe_html)
+            if hasattr(st, "html"):
+                st.html(iframe_html)
+            else:
+                st.components.v1.html(iframe_html, height=540, scrolling=False)
 
     with c_vid2:
         st.markdown("### Enlace para compartir")
@@ -73,21 +84,38 @@ def render_telemedicina(paciente_sel):
         st.markdown("### Resumen Clinico Inmediato")
         st.write(f"**Paciente:** {paciente_sel}")
 
-        vitales_paciente = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
+        vitales_paciente = [v for v in st.session_state.get("vitales_db", []) if _coincide(v.get("paciente"), paciente_sel)]
 
         if vitales_paciente:
             ult = vitales_paciente[-1]
             st.success(f"**Ultimo control:** {ult.get('fecha', 'S/D')}")
-            claves_excluidas = ["paciente", "fecha", "id", "observaciones", "firma"]
-            cols_v = st.columns(2)
-            i = 0
+            claves_excluidas = {"paciente", "fecha", "id", "observaciones", "firma"}
+            items_v = []
             for clave, valor in ult.items():
-                if clave not in claves_excluidas and valor not in [None, "", " "]:
-                    nombre_formateado = str(clave).replace("_", " ").title()
+                if clave not in claves_excluidas and valor not in (None, "", " "):
+                    items_v.append((str(clave).replace("_", " ").title(), valor))
+            if items_v:
+                cols_v = st.columns(2)
+                for i, (nombre, valor) in enumerate(items_v):
                     with cols_v[i % 2]:
-                        st.metric(label=nombre_formateado, value=valor)
-                    i += 1
+                        st.metric(label=nombre, value=valor)
         else:
-            st.warning(
-                "No hay signos vitales cargados para este paciente. Para ver datos aca, registra un control en **Clinica (signos vitales)** antes o durante la teleconsulta."
-            )
+            st.warning("No hay signos vitales cargados para este paciente. Para ver datos aca, registra un control en **Clinica (signos vitales)** antes o durante la teleconsulta.")
+
+        # Historial de teleconsultas del paciente
+        consultas = st.session_state.get("telemedicine_consultations", {})
+        if consultas:
+            consultas_paciente = [c for c in consultas.values() if isinstance(c, dict) and _coincide(c.get("patient_name", c.get("patient_id", "")), paciente_sel)]
+            if consultas_paciente:
+                st.divider()
+                st.markdown("### Historial de teleconsultas")
+                iconos = {"completed": "✅", "in_progress": "🟢", "waiting": "⏳", "scheduled": "🔵", "cancelled": "❌", "no_show": "⚠️"}
+                items = []
+                for c in sorted(consultas_paciente, key=lambda x: x.get("scheduled_time", ""), reverse=True)[:10]:
+                    est = c.get("status", "desconocido")
+                    ico = iconos.get(est, "⚪")
+                    nom = str(c.get("patient_name", "S/D"))
+                    fec = str(c.get("scheduled_time", ""))[:16]
+                    items.append(f"{ico} <b>{nom}</b> — {fec} <code>{est}</code>")
+                if items:
+                    st.markdown(f'<div {SCROLL}>{"<br>".join(items)}</div>', unsafe_allow_html=True)
