@@ -312,8 +312,28 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     st.markdown(html.escape(nota), unsafe_allow_html=True)
                 cuidador_data = ev.get("cuidador_data")
                 if cuidador_data:
-                    with st.expander("Ver datos completos del cuidador", expanded=False):
-                        st.json(cuidador_data)
+                    with st.expander("Ver detalle del registro", expanded=False):
+                        mapa_etiquetas = {
+                            "ta_sistolica": "TA sistolica", "ta_diastolica": "TA diastolica",
+                            "fc": "Frec. cardiaca", "temperatura": "Temperatura", "spo2": "SpO2",
+                            "animo": "Animo", "conducta": "Conducta",
+                            "alimentacion": "Alimentacion", "higiene": "Higiene",
+                            "eliminacion": "Eliminacion", "respiracion": "Respiracion",
+                            "dolor": "Dolor", "movilidad": "Movilidad",
+                            "piel": "Piel", "sueno": "Sueno",
+                            "medicacion_administrada": "Medicacion administrada",
+                            "observaciones_extra": "Observaciones",
+                        }
+                        for key, label in mapa_etiquetas.items():
+                            val = cuidador_data.get(key)
+                            if val is None or val == "" or val is False:
+                                continue
+                            if key == "medicacion_administrada":
+                                st.markdown(f"- **{label}:** Si")
+                            elif key == "observaciones_extra":
+                                st.markdown(f"**{label}:** {val}")
+                            else:
+                                st.markdown(f"- {label}: **{val}**")
                 if firma and firma.strip():
                     st.success("Firmado digitalmente")
 
