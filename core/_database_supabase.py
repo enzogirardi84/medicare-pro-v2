@@ -97,7 +97,7 @@ def _init_worker():
 
 _t = _threading.Thread(target=_init_worker, daemon=True)
 _t.start()
-_t.join(timeout=8.0)  # Esperar maximo 8 segundos
+_t.join(timeout=3.0)  # Esperar maximo 3 segundos
 if _supabase_done[0]:
     supabase = _supabase_result[0]
 else:

@@ -36,6 +36,7 @@ def _invalidate_cache_prefix(prefix: str) -> None:
 
 def get_diagnosticos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     """Obtiene diagnosticos activos e historicos de un paciente."""
+    _ensure_diag_table()
     cache_key = f"_sql_diag_pac_{paciente_id}"
     cached = st.session_state.get(cache_key)
     if cached:
@@ -59,6 +60,7 @@ def get_diagnosticos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
 
 def insert_diagnostico(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Inserta un nuevo diagnostico (intenta crear tabla si falla)."""
+    _ensure_diag_table()
     if not _ok():
         return None
     try:
@@ -105,14 +107,16 @@ def delete_diagnostico(diagnostico_id: str) -> bool:
         return False
 
 
-# Intentar crear la tabla si no existe
+# Creacion diferida de la tabla (ya no se ejecuta al importar para no demorar el arranque)
 _DIAG_TABLE_CREATED = False
+_DIAG_TABLE_INTENTADO = False
 
 
 def _ensure_diag_table():
-    global _DIAG_TABLE_CREATED
-    if _DIAG_TABLE_CREATED or not _ok():
+    global _DIAG_TABLE_CREATED, _DIAG_TABLE_INTENTADO
+    if _DIAG_TABLE_CREATED or _DIAG_TABLE_INTENTADO or not _ok():
         return
+    _DIAG_TABLE_INTENTADO = True
     try:
         sql = """
         CREATE TABLE IF NOT EXISTS diagnosticos_paciente (
@@ -140,7 +144,3 @@ def _ensure_diag_table():
         _DIAG_TABLE_CREATED = True
     except Exception as e:
         log_event("db_sql", f"ensure_diag_table_skip:{type(e).__name__}:{e}")
-
-
-# Ejecutar al importar
-_ensure_diag_table()
