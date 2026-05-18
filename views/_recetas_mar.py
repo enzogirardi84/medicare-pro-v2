@@ -59,6 +59,55 @@ def _frecuencia_guardia_visible(freq):
 # Registro de administración
 # ---------------------------------------------------------------------------
 
+def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1):
+    """Descuenta del inventario automaticamente al registrar una dosis como Realizada."""
+    try:
+        st.session_state.setdefault("consumos_db", [])
+        st.session_state["consumos_db"].append({
+            "paciente": paciente_sel,
+            "insumo": nombre_med,
+            "cantidad": cantidad,
+            "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+            "firma": user.get("nombre", "Sistema"),
+            "empresa": mi_empresa,
+        })
+        for item in st.session_state.get("inventario_db", []):
+            if item.get("item", "").lower() == nombre_med.strip().lower() and item.get("empresa") == mi_empresa:
+                item["stock"] = max(0, int(item.get("stock") or 0) - cantidad)
+                break
+        from core.database import _trim_db_list, guardar_datos
+        _trim_db_list("consumos_db", 1000)
+        guardar_datos(spinner=True)
+        try:
+            from core.db_sql import get_inventario_item_by_name, insert_inventario_movimiento
+            from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+            partes = paciente_sel.split(" - ")
+            if len(partes) > 1:
+                dni = partes[1].strip()
+                empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                if empresa_uuid:
+                    pac_uuid = _obtener_uuid_paciente(dni, empresa_uuid)
+                    item = get_inventario_item_by_name(empresa_uuid, nombre_med)
+                    if item:
+                        stock_actual = int(item.get("stock_actual", 0))
+                        mov = {
+                            "inventario_id": item["id"],
+                            "paciente_id": pac_uuid,
+                            "empresa_id": empresa_uuid,
+                            "tipo_movimiento": "Salida",
+                            "cantidad": cantidad,
+                            "stock_anterior": stock_actual,
+                            "stock_nuevo": max(0, stock_actual - cantidad),
+                            "motivo": f"MAR automatico: {nombre_med} - {paciente_sel}",
+                            "referencia_documento": "MAR_AUTO",
+                        }
+                        insert_inventario_movimiento(mov)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
 def registrar_administracion_dosis(
     paciente_sel, mi_empresa, user, fecha_hoy,
     nombre_med, horario_programado_slot, estado_sel, justificacion,
@@ -125,6 +174,8 @@ def registrar_administracion_dosis(
         {"medicamento": nombre_med, "hora_real_administracion": hora_str,
          "firma": nombre_usuario(user), "matricula_profesional": mat_prof, "usuario_login": login_ref},
     )
+    if "Realizada" in estado_sel and "No" not in estado_sel:
+        _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med)
     return True
 
 
