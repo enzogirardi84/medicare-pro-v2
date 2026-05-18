@@ -1,12 +1,21 @@
+from collections import Counter
+from datetime import datetime, timedelta
+
 from core.alert_toasts import queue_toast
+import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
 from core.view_helpers import bloque_estado_vacio, lista_plegable
-from core.utils import cargar_json_asset, seleccionar_limite_registros
+from core.utils import cargar_json_asset, seleccionar_limite_registros, ahora
 from core.db_sql import get_inventario_by_empresa, insert_inventario
 from core.nextgen_sync import _obtener_uuid_empresa
 from core.app_logging import log_event
+
+_COLORES_CATEGORIA = [
+    "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+    "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+]
 
 
 def render_inventario(mi_empresa):
@@ -38,6 +47,8 @@ def render_inventario(mi_empresa):
                         "item": i.get("nombre", ""),
                         "stock": i.get("stock_actual", 0),
                         "stock_minimo": i.get("stock_minimo", 0) or 0,
+                        "categoria": i.get("categoria", ""),
+                        "costo_unitario": i.get("costo_unitario", 0) or 0,
                         "id_sql": i.get("id")
                     })
                 # Sincronizar session_state para que fallback JSON sea consistente
@@ -61,16 +72,35 @@ def render_inventario(mi_empresa):
     stock_bajo = [i for i in inv_mio if _umbral_critico(i) < i.get("stock", 0) <= _umbral_bajo(i)]
     total_unidades = sum(int(i.get("stock", 0) or 0) for i in inv_mio)
 
+    # ── Valor total del inventario ──────────────────────────────
+    _valor_total = sum(
+        float(i.get("stock", 0)) * float(i.get("costo_unitario", 0) or 0)
+        for i in inv_mio
+        if float(i.get("costo_unitario", 0) or 0) > 0
+    )
+
+    # ── Consumo últimos 7 días ────────────────────────────────────
+    _hace_7d = (ahora() - timedelta(days=7)).strftime("%d/%m/%Y")
+    _cons_7d = [
+        c for c in st.session_state.get("consumos_db", [])
+        if c.get("empresa") == mi_empresa and c.get("fecha", "")[:10] >= _hace_7d
+    ]
+    _unid_7d = sum(int(c.get("cantidad", 0) or 0) for c in _cons_7d)
+
     # ── Métricas globales ──────────────────────────────────────
     if inv_mio:
-        _mc1, _mc2, _mc3, _mc4 = st.columns(4)
-        _mc1.metric("Items en inventario", len(inv_mio))
-        _mc2.metric("🔴 Stock crítico", len(stock_critico), help="Segun stock_minimo de cada item o ≤10 por defecto")
-        _mc3.metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock_minimo o ≤25 por defecto")
-        _mc4.metric("Unidades totales", total_unidades)
+        cols = st.columns(5)
+        cols[0].metric("Items en inventario", len(inv_mio))
+        cols[1].metric("🔴 Stock crítico", len(stock_critico), help="Segun stock_minimo de cada item o ≤10 por defecto")
+        cols[2].metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock_minimo o ≤25 por defecto")
+        cols[3].metric("Unidades totales", total_unidades)
+        cols[4].metric("Valor total", f"${_valor_total:,.0f}".replace(",", ".") if _valor_total > 0 else "—", help="Suma stock × costo_unitario")
+
+    # ── Consumo últimos 7 días ─────────────────────────────────
+    if _cons_7d:
+        st.caption(f"📊 Consumos últimos 7 días: **{len(_cons_7d)} registros** ({_unid_7d} unidades)")
 
     # ── Ranking insumos más consumidos ─────────────────────────
-    from collections import Counter
     consumos_empresa = [
         c for c in st.session_state.get("consumos_db", [])
         if c.get("empresa") == mi_empresa
@@ -81,7 +111,7 @@ def render_inventario(mi_empresa):
             _conteo_cons[c.get("insumo", "")] += int(c.get("cantidad", 0) or 0)
         _top5 = _conteo_cons.most_common(5)
         if _top5:
-            with st.expander("📊 Top insumos más consumidos", expanded=False):
+            with st.expander("📊 Top insumos más consumidos (histórico)", expanded=False):
                 for ins, qty in _top5:
                     stock_ins = next((i.get("stock", 0) for i in inv_mio if i.get("item", "").lower() == ins.lower()), None)
                     _sm = next((i.get("stock_minimo", 10) for i in inv_mio if i.get("item", "").lower() == ins.lower()), 10)
@@ -130,47 +160,56 @@ def render_inventario(mi_empresa):
         item_sel = c1.selectbox("1. Catalogo frecuente", lista_base_inv)
         nuevo_item = c2.text_input("2. Escribir insumo nuevo")
         cantidad = c3.number_input("Cantidad", min_value=1, value=10, step=1)
+        c4, c5 = st.columns([1, 1])
+        _cat_input = c4.text_input("Categoria (opcional)", placeholder="Ej: Medicamentos, Descartables")
+        _costo_input = c5.number_input("Costo unitario $ (opcional)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
 
         if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
             item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
             if item_final and item_final != "-- Seleccionar del catalogo --":
-                # 1. Guardar en SQL (Dual-Write)
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     if empresa_uuid:
-                        # Buscar si ya existe en SQL
                         from core.database import supabase
-                        res = supabase.table("inventario").select("id, stock_actual").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
+                        res = supabase.table("inventario").select("id, stock_actual, stock_minimo, costo_unitario").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
                         if res.data:
-                            # Actualizar stock
-                            nuevo_stock_sql = res.data[0]["stock_actual"] + cantidad
-                            supabase.table("inventario").update({"stock_actual": nuevo_stock_sql}).eq("id", res.data[0]["id"]).execute()
+                            existente = res.data[0]
+                            _upd = {"stock_actual": existente["stock_actual"] + cantidad}
+                            if _cat_input.strip():
+                                _upd["categoria"] = _cat_input.strip()
+                            if _costo_input > 0:
+                                _upd["costo_unitario"] = _costo_input
+                            supabase.table("inventario").update(_upd).eq("id", existente["id"]).execute()
                         else:
-                            # Insertar nuevo
-                            datos_sql = {
-                                "empresa_id": empresa_uuid,
-                                "nombre": item_final,
-                                "stock_actual": cantidad
-                            }
+                            datos_sql = {"empresa_id": empresa_uuid, "nombre": item_final, "stock_actual": cantidad}
+                            if _cat_input.strip():
+                                datos_sql["categoria"] = _cat_input.strip()
+                            if _costo_input > 0:
+                                datos_sql["costo_unitario"] = _costo_input
                             insert_inventario(datos_sql)
                         log_event("inventario_sql_insert_update", f"Item: {item_final}")
                 except Exception as e:
                     log_event("error_inventario_sql", str(e))
 
-                # 2. Guardar en JSON (Legacy)
                 encontrado = False
                 if "inventario_db" not in st.session_state:
                     st.session_state["inventario_db"] = []
-                    
                 for i in st.session_state["inventario_db"]:
                     if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
                         i["stock"] = int(i.get("stock") or 0) + cantidad
+                        if _cat_input.strip():
+                            i["categoria"] = _cat_input.strip()
+                        if _costo_input > 0:
+                            i["costo_unitario"] = _costo_input
                         encontrado = True
                         break
-
                 if not encontrado:
-                    st.session_state.setdefault("inventario_db", [])
-                    st.session_state["inventario_db"].append({"item": item_final, "stock": cantidad, "empresa": mi_empresa})
+                    _entry = {"item": item_final, "stock": cantidad, "empresa": mi_empresa}
+                    if _cat_input.strip():
+                        _entry["categoria"] = _cat_input.strip()
+                    if _costo_input > 0:
+                        _entry["costo_unitario"] = _costo_input
+                    st.session_state.setdefault("inventario_db", []).append(_entry)
 
                 from core.database import _trim_db_list
                 _trim_db_list("inventario_db", 1000)
@@ -182,29 +221,37 @@ def render_inventario(mi_empresa):
 
     if inv_mio:
         import pandas as pd
-        df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual", "stock_minimo": "Stock Minimo"})
+        df_stock = pd.DataFrame(inv_mio).rename(columns={
+            "item": "Insumo", "stock": "Stock Actual", "stock_minimo": "Stock Minimo",
+            "categoria": "Categoria", "costo_unitario": "Costo Unit.",
+        })
 
-        # ── Búsqueda y filtro de criticidad ────────────────────────
-        _col_b, _col_f = st.columns([2, 1])
-        _busq_inv = _col_b.text_input(
-            "🔍 Buscar insumo",
-            placeholder="Nombre del insumo...",
-            key="inventario_busqueda",
+        # ── Búsqueda, categoría y filtro de criticidad ──────────────
+        _categorias = sorted(set(i.get("categoria", "") for i in inv_mio if i.get("categoria")))
+        _filtros = st.columns([2, 1.2, 1])
+        _busq_inv = _filtros[0].text_input(
+            "🔍 Buscar insumo", placeholder="Nombre...", key="inventario_busqueda",
         ).strip().lower()
-        _filtro_crit = _col_f.selectbox(
-            "Mostrar",
-            ["Todos", "Solo críticos (≤10)", "Stock bajo (≤25)", "Stock normal (>25)"],
+        _cat_sel = _filtros[1].selectbox(
+            "Categoría", ["Todas"] + _categorias, key="inventario_categoria",
+        )
+        _filtro_crit = _filtros[2].selectbox(
+            "Stock",
+            ["Todos", "Crítico", "Bajo", "Normal (>25)"],
             key="inventario_filtro",
         )
         df_filtrado = df_stock.copy()
         df_filtrado["Stock Actual"] = pd.to_numeric(df_filtrado["Stock Actual"], errors="coerce").fillna(0).astype(int)
         if _busq_inv:
             df_filtrado = df_filtrado[df_filtrado["Insumo"].str.lower().str.contains(_busq_inv, na=False)]
-        if _filtro_crit == "Solo críticos (≤10)":
-            df_filtrado = df_filtrado[df_filtrado["Stock Actual"] <= 10]
-        elif _filtro_crit == "Stock bajo (≤25)":
-            df_filtrado = df_filtrado[(df_filtrado["Stock Actual"] > 10) & (df_filtrado["Stock Actual"] <= 25)]
-        elif _filtro_crit == "Stock normal (>25)":
+        if _cat_sel != "Todas":
+            df_filtrado = df_filtrado[df_filtrado.get("Categoria", "") == _cat_sel]
+        if _filtro_crit == "Crítico":
+            df_filtrado = df_filtrado[df_filtrado["Stock Actual"] <= df_filtrado.get("Stock Minimo", 10)]
+        elif _filtro_crit == "Bajo":
+            _b = df_filtrado["Stock Minimo"].fillna(10) * 2
+            df_filtrado = df_filtrado[(df_filtrado["Stock Actual"] > df_filtrado["Stock Minimo"].fillna(10)) & (df_filtrado["Stock Actual"] <= _b)]
+        elif _filtro_crit == "Normal (>25)":
             df_filtrado = df_filtrado[df_filtrado["Stock Actual"] > 25]
         if _busq_inv or _filtro_crit != "Todos":
             st.caption(f"{len(df_filtrado)} insumo(s) encontrado(s)")
@@ -218,7 +265,7 @@ def render_inventario(mi_empresa):
         )
 
         def _row_umbral(row):
-            sm = row.get("stock_minimo", 10)
+            sm = row.get("Stock Minimo", 10)
             return sm if sm > 0 else 10
 
         def colorear_stock(row):
@@ -230,8 +277,14 @@ def render_inventario(mi_empresa):
                 return ["background-color: #3c3217; color: #ffe08a; font-weight: 600"] * len(row)
             return ["background-color: #122033; color: #ffffff"] * len(row)
 
+        _cols_tabla = ["Insumo", "Stock Actual", "Stock Minimo"]
+        if "Categoria" in df_filtrado.columns and df_filtrado["Categoria"].notna().any():
+            _cols_tabla.append("Categoria")
+        if "Costo Unit." in df_filtrado.columns and (pd.to_numeric(df_filtrado["Costo Unit."], errors="coerce").fillna(0) > 0).any():
+            _cols_tabla.append("Costo Unit.")
+
         styled = (
-            df_filtrado.sort_values(by="Stock Actual", ascending=True)[["Insumo", "Stock Actual", "Stock Minimo"]]
+            df_filtrado.sort_values(by="Stock Actual", ascending=True)[_cols_tabla]
             .head(limite_stock)
             .style.apply(colorear_stock, axis=1)
         )
@@ -249,32 +302,36 @@ def render_inventario(mi_empresa):
     if inv_mio:
         with lista_plegable("Ajuste manual, corrección y baja de insumos", expanded=False, height=None):
             st.markdown("#### Ajuste manual y correccion")
-            col1, col2, col3 = st.columns([2, 1, 1])
-            item_a_editar = col1.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
-            stock_actual = next((i.get("stock", 0) for i in inv_mio if i["item"] == item_a_editar), 0)
-            nuevo_stock = col2.number_input("Nuevo stock real", min_value=0, value=stock_actual, key="new_stock")
-
-            if col3.button("Actualizar stock", width='stretch'):
-                # 1. Actualizar en SQL (Dual-Write)
+            item_a_editar = st.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
+            _item_data = next((i for i in inv_mio if i["item"] == item_a_editar), {})
+            _s_act = _item_data.get("stock", 0)
+            _s_min = int(_item_data.get("stock_minimo", 0) or 0)
+            _costo = float(_item_data.get("costo_unitario", 0) or 0)
+            c_aj1, c_aj2, c_aj3, c_aj4 = st.columns([1, 1, 1, 1])
+            nuevo_stock = c_aj1.number_input("Stock real", min_value=0, value=_s_act, key="new_stock")
+            nuevo_min = c_aj2.number_input("Stock mínimo", min_value=0, value=_s_min, key="new_min")
+            nuevo_costo = c_aj3.number_input("Costo unitario $", min_value=0.0, value=_costo, step=0.5, format="%.2f", key="new_costo")
+            if c_aj4.button("Guardar cambios", width='stretch', type="primary"):
+                cambios = {"stock_actual": nuevo_stock, "stock_minimo": nuevo_min, "costo_unitario": nuevo_costo}
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     if empresa_uuid:
                         from core.database import supabase
                         res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", item_a_editar).execute()
                         if res.data:
-                            supabase.table("inventario").update({"stock_actual": nuevo_stock}).eq("id", res.data[0]["id"]).execute()
+                            supabase.table("inventario").update(cambios).eq("id", res.data[0]["id"]).execute()
                         log_event("inventario_sql_update", f"Item: {item_a_editar}")
                 except Exception as e:
                     log_event("error_inventario_sql_update", str(e))
-
-                # 2. Actualizar en JSON (Legacy)
                 if "inventario_db" in st.session_state:
                     for i in st.session_state["inventario_db"]:
                         if i["item"] == item_a_editar and i.get("empresa") == mi_empresa:
                             i["stock"] = nuevo_stock
+                            i["stock_minimo"] = nuevo_min
+                            i["costo_unitario"] = nuevo_costo
                             break
                 guardar_datos(spinner=True)
-                queue_toast(f"Stock actualizado a {nuevo_stock} unidades.")
+                queue_toast(f"{item_a_editar}: stock={nuevo_stock}, mínimo={nuevo_min}, costo=${nuevo_costo:.2f}")
                 st.rerun()
 
             col_del1, col_del2 = st.columns([3, 1])
