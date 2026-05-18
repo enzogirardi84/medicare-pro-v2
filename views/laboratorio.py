@@ -522,9 +522,9 @@ def _tab_resultados(paciente_sel):
 def _tab_catalogo():
     st.markdown("##### Catalogo de estudios")
 
-    tab_cat, tab_ests = st.tabs(["Categorias", "Estudios / analitos"])
+    seccion = st.radio("Seccion", ["Categorias", "Estudios / analitos"], horizontal=True, label_visibility="collapsed")
 
-    with tab_cat:
+    if seccion == "Categorias":
         c_nombre = st.text_input("Nueva categoria", placeholder="Ej: Hematologia, Bioquimica...", key="cat_new")
         c_desc = st.text_input("Descripcion (opcional)", key="cat_desc")
         if st.button("Agregar categoria") and c_nombre.strip():
@@ -547,65 +547,66 @@ def _tab_catalogo():
                 st.markdown(f"- **{c['nombre']}** — {c.get('descripcion', '')}")
         else:
             st.caption("Sin categorias.")
+        return
 
-    with tab_ests:
-        cats = _categorias()
-        if not cats:
-            st.info("Primero crea una categoria.")
-            return
+    # seccion == "Estudios / analitos"
+    cats = _categorias()
+    if not cats:
+        st.info("Primero crea una categoria.")
+        return
 
-        cat_nombres = [c["nombre"] for c in cats]
-        cat_sel = st.selectbox("Categoria", cat_nombres, key="est_cat_sel")
-        cat_id = next((c["id"] for c in cats if c["nombre"] == cat_sel), None)
+    cat_nombres = [c["nombre"] for c in cats]
+    cat_sel = st.selectbox("Categoria", cat_nombres, key="est_cat_sel")
+    cat_id = next((c["id"] for c in cats if c["nombre"] == cat_sel), None)
 
-        st.markdown("###### Nuevo estudio")
-        col1, col2 = st.columns(2)
-        nombre_e = col1.text_input("Nombre del estudio", placeholder="Ej: Hemoglobina", key="est_new")
-        codigo_e = col2.text_input("Codigo (opcional)", placeholder="LOINC / interno", key="est_code")
-        col3, col4 = st.columns(2)
-        unidad_e = col3.text_input("Unidad", placeholder="g/dL, mg/dL...", key="est_unit")
-        tipo_e = col4.selectbox("Tipo de valor", ["numeric", "text", "select"], key="est_tipo")
-        ref_min = ref_max = ref_texto = None
-        opciones = []
-        if tipo_e == "numeric":
-            col5, col6 = st.columns(2)
-            ref_min = col5.number_input("Ref. minima", value=0.0, step=0.1, key="est_ref_min")
-            ref_max = col6.number_input("Ref. maxima", value=10.0, step=0.1, key="est_ref_max")
-            ref_texto = f"{ref_min} - {ref_max} {unidad_e}"
-        elif tipo_e == "text":
-            ref_texto = st.text_input("Texto de referencia", placeholder="Ej: Negativo, No reactivo", key="est_ref_txt")
-        elif tipo_e == "select":
-            opcs_str = st.text_input("Opciones (separadas por coma)", placeholder="Positivo, Negativo, Dudoso", key="est_opts")
-            opciones = [o.strip() for o in opcs_str.split(",") if o.strip()]
+    st.markdown("###### Nuevo estudio")
+    col1, col2 = st.columns(2)
+    nombre_e = col1.text_input("Nombre del estudio", placeholder="Ej: Hemoglobina", key="est_new")
+    codigo_e = col2.text_input("Codigo (opcional)", placeholder="LOINC / interno", key="est_code")
+    col3, col4 = st.columns(2)
+    unidad_e = col3.text_input("Unidad", placeholder="g/dL, mg/dL...", key="est_unit")
+    tipo_e = col4.selectbox("Tipo de valor", ["numeric", "text", "select"], key="est_tipo")
+    ref_min = ref_max = ref_texto = None
+    opciones = []
+    if tipo_e == "numeric":
+        col5, col6 = st.columns(2)
+        ref_min = col5.number_input("Ref. minima", value=0.0, step=0.1, key="est_ref_min")
+        ref_max = col6.number_input("Ref. maxima", value=10.0, step=0.1, key="est_ref_max")
+        ref_texto = f"{ref_min} - {ref_max} {unidad_e}"
+    elif tipo_e == "text":
+        ref_texto = st.text_input("Texto de referencia", placeholder="Ej: Negativo, No reactivo", key="est_ref_txt")
+    elif tipo_e == "select":
+        opcs_str = st.text_input("Opciones (separadas por coma)", placeholder="Positivo, Negativo, Dudoso", key="est_opts")
+        opciones = [o.strip() for o in opcs_str.split(",") if o.strip()]
 
-        if st.button("Agregar estudio", key="add_est") and nombre_e.strip():
-            ests = _estudios()
-            if any(e["nombre"].lower() == nombre_e.strip().lower() for e in ests):
-                st.warning("Ya existe.")
-            else:
-                ests.append({
-                    "id": _id_unico(),
-                    "categoria_id": cat_id,
-                    "nombre": nombre_e.strip().title(),
-                    "codigo": codigo_e.strip(),
-                    "unidad": unidad_e.strip(),
-                    "tipo_valor": tipo_e,
-                    "valor_referencia_min": float(ref_min) if ref_min is not None else None,
-                    "valor_referencia_max": float(ref_max) if ref_max is not None else None,
-                    "valor_referencia_texto": ref_texto or "",
-                    "opciones": opciones,
-                })
-                guardar_datos(spinner=True)
-                _sync_estudios_sql()
-                st.rerun()
-
-        ests_cat = [e for e in _estudios() if e.get("categoria_id") == cat_id]
-        if ests_cat:
-            df = pd.DataFrame(ests_cat)
-            cols_show = [c for c in ["nombre", "codigo", "unidad", "valor_referencia_texto", "tipo_valor"] if c in df.columns]
-            st.dataframe(df[cols_show], use_container_width=True)
+    if st.button("Agregar estudio", key="add_est") and nombre_e.strip():
+        ests = _estudios()
+        if any(e["nombre"].lower() == nombre_e.strip().lower() for e in ests):
+            st.warning("Ya existe.")
         else:
-            st.caption("Sin estudios en esta categoria.")
+            ests.append({
+                "id": _id_unico(),
+                "categoria_id": cat_id,
+                "nombre": nombre_e.strip().title(),
+                "codigo": codigo_e.strip(),
+                "unidad": unidad_e.strip(),
+                "tipo_valor": tipo_e,
+                "valor_referencia_min": float(ref_min) if ref_min is not None else None,
+                "valor_referencia_max": float(ref_max) if ref_max is not None else None,
+                "valor_referencia_texto": ref_texto or "",
+                "opciones": opciones,
+            })
+            guardar_datos(spinner=True)
+            _sync_estudios_sql()
+            st.rerun()
+
+    ests_cat = [e for e in _estudios() if e.get("categoria_id") == cat_id]
+    if ests_cat:
+        df = pd.DataFrame(ests_cat)
+        cols_show = [c for c in ["nombre", "codigo", "unidad", "valor_referencia_texto", "tipo_valor"] if c in df.columns]
+        st.dataframe(df[cols_show], width='stretch')
+    else:
+        st.caption("Sin estudios en esta categoria.")
 
 
 # ─── TAB: Subir archivo (legacy) ──────────────────────────────
