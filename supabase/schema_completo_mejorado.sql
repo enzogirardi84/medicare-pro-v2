@@ -481,6 +481,39 @@ COMMENT ON TABLE auditoria_legal IS 'Logs de auditoría inmutables para cumplimi
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================
+-- 10. DIAGNÓSTICOS CLÍNICOS CON CIE-10/11
+-- ==========================================
+CREATE TABLE IF NOT EXISTS diagnosticos_paciente (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    paciente_id UUID NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    empresa_id UUID REFERENCES empresas(id) ON DELETE CASCADE,
+
+    cie_codigo VARCHAR(10) NOT NULL,
+    cie_version VARCHAR(5) DEFAULT 'CIE-10',
+    descripcion TEXT NOT NULL,
+    tipo_diagnostico VARCHAR(20) DEFAULT 'Principal',
+    fecha_diagnostico TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    fecha_resolucion TIMESTAMP WITH TIME ZONE,
+    estado VARCHAR(20) DEFAULT 'Activo',
+    profesional TEXT,
+    notas TEXT,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_diag_paciente ON diagnosticos_paciente(paciente_id);
+CREATE INDEX IF NOT EXISTS idx_diag_codigo ON diagnosticos_paciente(cie_codigo);
+CREATE INDEX IF NOT EXISTS idx_diag_estado ON diagnosticos_paciente(estado);
+
+DROP TRIGGER IF EXISTS update_diagnosticos_updated_at ON diagnosticos_paciente;
+CREATE TRIGGER update_diagnosticos_updated_at
+    BEFORE UPDATE ON diagnosticos_paciente
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ==========================================
 -- RESUMEN DE MEJORAS APLICADAS
 -- ==========================================
 -- ✓ Triggers para updated_at automático

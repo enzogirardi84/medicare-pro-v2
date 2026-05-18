@@ -111,6 +111,11 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 placeholder="Escribir aqui la evolucion...",
                 key="evol_nota_textarea"
             )
+            from views._cie_picker import render_cie_picker_compact
+            with st.expander("Diagnostico CIE-10", expanded=False):
+                cie_dx = render_cie_picker_compact("evol_cie")
+                if cie_dx:
+                    st.session_state["evol_cie_dx"] = cie_dx
             desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
             st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
             col_up, col_cam = st.columns(2)
@@ -129,12 +134,15 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
                     if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
                         st.session_state["evoluciones_db"] = []
+                    cie_dx = st.session_state.get("evol_cie_dx")
                     st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
                         "nota": nota.strip(),
                         "fecha": fecha_n,
                         "firma": user.get("nombre", "Sistema"),
                         "plantilla": plantilla,
+                        "cie_codigo": (cie_dx or {}).get("codigo", ""),
+                        "cie_descripcion": (cie_dx or {}).get("descripcion", ""),
                     })
                     from core.database import _trim_db_list
                     _trim_db_list("evoluciones_db", 500)
@@ -201,6 +209,31 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     except Exception as e_nextgen:
                         from core.app_logging import log_event
                         log_event("evolucion", f"nextgen_sync_skip:{type(e_nextgen).__name__}")
+
+                    try:
+                        from core.audit_trail import audit_log, AuditEventType
+                        audit_log(
+                            AuditEventType.EVOLUCION_CREATE,
+                            resource_type="evolucion",
+                            resource_id=f"{paciente_sel}_{fecha_n.replace('/', '')}",
+                            action="CREATE",
+                            description=f"Evolucion clinica de {paciente_sel}",
+                            metadata={"plantilla": plantilla, "profesional": user.get("nombre", "")},
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        from core.digital_signature import sign_evolucion as _sign_evol
+                        _sign_evol(
+                            {"paciente": paciente_sel, "evolucion": nota.strip(),
+                             "plantilla": plantilla, "fecha": fecha_n,
+                             "profesional": user.get("nombre", "")},
+                            user.get("usuario_login", user.get("username", "")),
+                            user.get("nombre", "Profesional"),
+                        )
+                    except Exception as _e_sig:
+                        from core.app_logging import log_event as _le
+                        _le("digital_signature_evol", str(_e_sig))
 
                     queue_toast("Evolucion guardada correctamente.")
                     st.session_state["evol_nota_draft"] = ""

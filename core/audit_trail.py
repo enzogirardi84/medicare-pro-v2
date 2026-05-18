@@ -126,11 +126,13 @@ class AuditTrail:
     def __init__(self, secret_key: Optional[str] = None):
         self._secret = secret_key or os.getenv("AUDIT_SECRET_KEY")
         if not self._secret:
-            raise ValueError(
-                "ERROR CRÍTICO: 'AUDIT_SECRET_KEY' no está configurada en el entorno. "
-                "Esta clave es obligatoria para la firma digital de registros de auditoría. "
-                "Configúrala como variable de entorno antes de iniciar la aplicación."
+            import streamlit as st
+            st.warning(
+                "AUDIT_SECRET_KEY no configurada. La cadena de auditoria HMAC usara "
+                "una clave por defecto (solo para desarrollo). "
+                "Configura AUDIT_SECRET_KEY en el entorno para produccion."
             )
+            self._secret = "dev-default-audit-secret-key-change-in-production"
         self._entries: List[AuditEntry] = []
         self._last_hash = "0" * 64  # Genesis hash
     

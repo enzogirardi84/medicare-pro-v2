@@ -8,6 +8,7 @@ from datetime import time as dt_time
 import streamlit as st
 
 from core.alert_toasts import queue_toast
+from core.app_logging import log_event as _log_event
 from core.database import guardar_datos
 from core.utils import (
     ahora,
@@ -44,6 +45,11 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
             horizontal=True,
             key="tipo_indicacion_receta",
         )
+        from views._cie_picker import render_cie_picker_compact
+        with st.expander("Diagnostico CIE-10 (asociado a la prescripcion)", expanded=False):
+            cie_dx = render_cie_picker_compact("receta_cie")
+            if cie_dx:
+                st.session_state["receta_cie_dx"] = cie_dx
         med_vademecum = "-- Seleccionar del vademecum --"
         med_manual = solucion = detalle_infusion = alternar_con = frecuencia = ""
         volumen_ml = 0
@@ -184,6 +190,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     velocidad_ml_h=velocidad_ml_h, alternar_con=alternar_con,
                     detalle_infusion=detalle_infusion, plan_hidratacion=plan_hidratacion,
                 )
+                cie_dx = st.session_state.get("receta_cie_dx")
                 from core.database import guardar_json_db
                 guardar_json_db("indicaciones_db", {
                     "paciente": paciente_sel, "med": texto_receta,
@@ -200,7 +207,9 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "profesional_estado": nombre_usuario, "matricula_estado": medico_matricula.strip(),
                     "origen_registro": "Indicacion medica en papel" if adjunto_papel else "Prescripcion digital",
                     "adjunto_papel_b64": adjunto_b64, "adjunto_papel_nombre": adjunto_nombre,
-                    "adjunto_papel_tipo": adjunto_tipo, "empresa": mi_empresa,
+                    "adjunto_papel_tipo": adjunto_papel_tipo, "empresa": mi_empresa,
+                    "cie_codigo": (cie_dx or {}).get("codigo", ""),
+                    "cie_descripcion": (cie_dx or {}).get("descripcion", ""),
                 }, spinner=True)
                 registrar_auditoria_legal(
                     "Medicacion", paciente_sel, "Indicacion medica registrada",
@@ -214,6 +223,29 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "solucion": solucion, "volumen_ml": volumen_ml, "velocidad_ml_h": velocidad_ml_h,
                     "alternar_con": alternar_con, "detalle_infusion": detalle_infusion, "plan_hidratacion": plan_hidratacion,
                 })
+                try:
+                    from core.audit_trail import audit_log, AuditEventType
+                    audit_log(
+                        AuditEventType.RECETA_CREATE,
+                        resource_type="receta",
+                        resource_id=f"{paciente_sel}_{ahora().strftime('%Y%m%d%H%M%S')}",
+                        action="CREATE",
+                        description=f"Receta creada: {med_final} por {medico_nombre.strip()}",
+                        metadata={"medico": medico_nombre.strip(), "medicamento": med_final},
+                    )
+                except Exception:
+                    pass
+                try:
+                    from core.digital_signature import sign_receta as _sign_receta
+                    _sign_receta(
+                        {"paciente": paciente_sel, "medicamento": med_final, "via": via,
+                         "frecuencia": frecuencia, "medico": medico_nombre.strip(),
+                         "matricula": medico_matricula.strip(), "fecha": ahora().isoformat()},
+                        user.get("usuario_login", medico_matricula.strip()),
+                        medico_nombre.strip(),
+                    )
+                except Exception as _e_sig:
+                    _log_event("digital_signature_receta", str(_e_sig))
                 st.session_state["_rx_sql_invalidar"] = True
                 queue_toast(f"Prescripcion de {med_final} guardada{' con adjunto de papel' if adjunto_papel else ''}.")
                 st.rerun()

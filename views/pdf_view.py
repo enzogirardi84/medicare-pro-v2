@@ -295,16 +295,30 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                             _dni_cons = _partes_pac[1].strip() if len(_partes_pac) > 1 else detalles.get("dni", "")
                             _emp_uuid = _obtener_uuid_empresa(mi_empresa)
                             paciente_uuid = _obtener_uuid_paciente(_dni_cons, _emp_uuid) if _dni_cons and _emp_uuid else None
-                            if paciente_uuid:
-                                datos_sql = {
-                                    "paciente_id": paciente_uuid,
-                                    "fecha_firma": ahora().isoformat(),
-                                    "tipo_documento": "Consentimiento Domiciliario",
-                                    "archivo_url": None,
-                                    "observaciones": f"Firmante: {firmante.strip()} | DNI: {dni_firmante.strip()} | Vinculo: {vinculo} | Tel: {telefono.strip()}\nObs: {observaciones.strip()}"
-                                }
-                                insert_consentimiento(datos_sql)
-                                log_event("consentimiento_sql_insert", f"Paciente: {paciente_uuid}")
+                            _archivo_url = None
+                            if paciente_uuid and firma_b64:
+                                try:
+                                    from core.database import supabase
+                                    if supabase:
+                                        _firma_bytes = base64.b64decode(firma_b64)
+                                        _firma_path = f"consentimientos/{paciente_uuid}/{doc_id}.png"
+                                        content_type = "image/png"
+                                        supabase.storage.from_("medicare-firmas").upload(
+                                            _firma_path, _firma_bytes,
+                                            {"content-type": content_type}
+                                        )
+                                        _archivo_url = supabase.storage.from_("medicare-firmas").get_public_url(_firma_path)
+                                except Exception as e_st:
+                                    log_event("consentimiento_storage", str(e_st))
+                            datos_sql = {
+                                "paciente_id": paciente_uuid,
+                                "fecha_firma": ahora().isoformat(),
+                                "tipo_documento": "Consentimiento Domiciliario",
+                                "archivo_url": _archivo_url,
+                                "observaciones": f"Firmante: {firmante.strip()} | DNI: {dni_firmante.strip()} | Vinculo: {vinculo} | Tel: {telefono.strip()}\nObs: {observaciones.strip()}"
+                            }
+                            insert_consentimiento(datos_sql)
+                            log_event("consentimiento_sql_insert", f"Paciente: {paciente_uuid}")
                         except Exception as e:
                             log_event("error_consentimiento_sql", str(e))
 

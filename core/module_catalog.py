@@ -20,6 +20,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Clinica",
         "Evolucion",
         "Estudios",
+        "Laboratorio",
         "Recetas",
         "Balance",
         "Escalas Clinicas",
@@ -32,6 +33,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Vacunacion",
         "Calc. Dosis Pediatricas",
         "Chatbot IA",
+        "Diagnosticos CIE-10/11",
     ],
     "Gestión": [
         "Dashboard",
@@ -56,6 +58,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "PDF",
         "Auditoria",
         "Auditoria Legal",
+        "Documentos Legales",
         "Proyecto y Roadmap",
         "Mi Equipo",
     ],
@@ -66,13 +69,13 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
 # livianos (st.caption) y los módulos se agrupan debajo.
 _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
     "Clínica": {
-        "Atención": [
-            "Visitas y Agenda", "Clinica", "Evolucion",
-            "Estudios", "Recetas", "APS / Dispensario",
-        ],
+            "Atención": [
+                "Visitas y Agenda", "Clinica", "Evolucion",
+                "Estudios", "Laboratorio", "Recetas", "APS / Dispensario",
+            ],
         "Evaluación": [
             "Escalas Clinicas", "Balance", "Percentilo",
-            "Historial", "Diagnosticos",
+            "Historial", "Diagnosticos", "Diagnosticos CIE-10/11",
         ],
         "Vacunación": [
             "Vacunacion",

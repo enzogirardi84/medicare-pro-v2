@@ -313,7 +313,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(mi_empresa, rol)
         elif tab_name == "Percentilo":
             render_fn(paciente_sel, user)
-        elif tab_name in ("Cierre Diario", "Auditoria", "Auditoria Legal", "Asistencia en Vivo"):
+        elif tab_name in ("Cierre Diario", "Auditoria", "Auditoria Legal", "Documentos Legales", "Asistencia en Vivo"):
             render_fn(mi_empresa, user)
         elif tab_name == "RRHH y Fichajes":
             render_fn(mi_empresa, rol, user)

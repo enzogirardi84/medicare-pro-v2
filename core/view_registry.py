@@ -27,6 +27,8 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Recetas": ("views.recetas", "render_recetas"),
     "Balance": ("views.balance", "render_balance"),
     "Inventario": ("views.inventario", "render_inventario"),
+    "Laboratorio": ("views.laboratorio", "render_laboratorio"),
+    "Diagnosticos CIE-10/11": ("views.diagnosticos_clinicos", "render_diagnosticos_clinicos"),
     "Caja": ("views.caja", "render_caja"),
     "Emergencias y Ambulancia": ("views.emergencias", "render_emergencias"),
     ALERTAS_APP_PACIENTE_MODULO: ("views.alertas_paciente_app", "render_alertas_paciente_app"),
@@ -42,6 +44,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Proyecto y Roadmap": ("views.project_management", "render_project_management"),
     "Auditoria": ("views.auditoria", "render_auditoria"),
     "Auditoria Legal": ("views.auditoria_legal", "render_auditoria_legal"),
+    "Documentos Legales": ("views.legal_docs", "render_legal_docs"),
     "Diagnosticos": ("views.diagnosticos", "render_diagnosticos"),
     "APS / Dispensario": ("views.dispensario_aps", "render_dispensario_aps"),
     # Nuevos modulos 2026-05-14
@@ -69,6 +72,8 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Recetas": "\U0001F48A Recetas",
     "Balance": "\U0001F4A7 Balance",
     "Inventario": "\U0001F3ED Inventario",
+    "Laboratorio": "\U0001F9EA Laboratorio",
+    "Diagnosticos CIE-10/11": "CIE-10/11",
     "Caja": "\U0001F4B5 Caja",
     "Emergencias y Ambulancia": "\U0001F691 Emergencias",
     ALERTAS_APP_PACIENTE_MODULO: "\U0001F4F1 Alertas",
@@ -84,6 +89,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Proyecto y Roadmap": "\U0001F6E0 Roadmap",
     "Auditoria": "\U0001F50E Auditoria",
     "Auditoria Legal": "\u2696 Legal",
+    "Documentos Legales": "\U0001F4DC Marco Legal",
     "Diagnosticos": "\u2705 Diagnosticos",
     "APS / Dispensario": "\U0001F3E5 APS / Dispensario",
     # Nuevos modulos 2026-05-14
