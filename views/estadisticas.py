@@ -56,7 +56,7 @@ def _chart_barras_mes(df, x_col, y_col, titulo_x='Mes', titulo_y='Cantidad', col
         x=alt.X(f'{x_col}:N', title=titulo_x, axis=alt.Axis(labelAngle=-45)),
         y=alt.Y(f'{y_col}:Q', title=titulo_y),
         color=alt.condition(
-            alt.datum[y_col] == alt.datum[y_col].max(),
+            alt.datum[y_col] == max(alt.datum[y_col]),
             alt.value(COLOR_DANGER),
             alt.value(color),
         ),
