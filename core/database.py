@@ -604,6 +604,12 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
         return None
     finally:
         try:
+            if ok and st.session_state.get("u_actual"):
+                from core.sync_utils import sync_todo
+                sync_todo(st.session_state)
+        except Exception:
+            pass
+        try:
             from core.perf_metrics import record_perf
 
             record_perf("db.cargar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)

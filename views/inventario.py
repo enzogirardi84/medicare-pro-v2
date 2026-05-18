@@ -37,6 +37,7 @@ def render_inventario(mi_empresa):
                         "empresa": mi_empresa,
                         "item": i.get("nombre", ""),
                         "stock": i.get("stock_actual", 0),
+                        "stock_minimo": i.get("stock_minimo", 0) or 0,
                         "id_sql": i.get("id")
                     })
                 # Sincronizar session_state para que fallback JSON sea consistente
@@ -48,16 +49,24 @@ def render_inventario(mi_empresa):
     if not inv_mio:
         inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
         
-    stock_critico = [i for i in inv_mio if i.get("stock", 0) <= 10]
-    stock_bajo = [i for i in inv_mio if 10 < i.get("stock", 0) <= 25]
+    def _umbral_critico(item):
+        sm = int(item.get("stock_minimo", 0) or 0)
+        return sm if sm > 0 else 10
+
+    def _umbral_bajo(item):
+        sm = int(item.get("stock_minimo", 0) or 0)
+        return sm * 2 if sm > 0 else 25
+
+    stock_critico = [i for i in inv_mio if i.get("stock", 0) <= _umbral_critico(i)]
+    stock_bajo = [i for i in inv_mio if _umbral_critico(i) < i.get("stock", 0) <= _umbral_bajo(i)]
     total_unidades = sum(int(i.get("stock", 0) or 0) for i in inv_mio)
 
     # ── Métricas globales ──────────────────────────────────────
     if inv_mio:
         _mc1, _mc2, _mc3, _mc4 = st.columns(4)
         _mc1.metric("Items en inventario", len(inv_mio))
-        _mc2.metric("🔴 Stock crítico (≤10)", len(stock_critico))
-        _mc3.metric("🟡 Stock bajo (≤25)", len(stock_bajo))
+        _mc2.metric("🔴 Stock crítico", len(stock_critico), help="Segun stock_minimo de cada item o ≤10 por defecto")
+        _mc3.metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock_minimo o ≤25 por defecto")
         _mc4.metric("Unidades totales", total_unidades)
 
     # ── Ranking insumos más consumidos ─────────────────────────
@@ -75,17 +84,24 @@ def render_inventario(mi_empresa):
             with st.expander("📊 Top insumos más consumidos", expanded=False):
                 for ins, qty in _top5:
                     stock_ins = next((i.get("stock", 0) for i in inv_mio if i.get("item", "").lower() == ins.lower()), None)
-                    _sem = " 🔴" if stock_ins is not None and stock_ins <= 10 else (" 🟡" if stock_ins is not None and stock_ins <= 25 else "")
+                    _sm = next((i.get("stock_minimo", 10) for i in inv_mio if i.get("item", "").lower() == ins.lower()), 10)
+                    _sem = " 🔴" if stock_ins is not None and stock_ins <= _sm else (" 🟡" if stock_ins is not None and stock_ins <= _sm * 2 else "")
                     st.caption(f"**{ins}** — {qty} u. consumidas{_sem}" + (f" | stock actual: {stock_ins}" if stock_ins is not None else ""))
 
     if stock_critico:
-        with lista_plegable("Stock crítico (≤10 unidades)", count=len(stock_critico), expanded=True, height=260):
+        with lista_plegable("Stock crítico (según stock_minimo)", count=len(stock_critico), expanded=True, height=260):
             for item in stock_critico[:80]:
-                st.error(f"{item.get('item')} → quedan **{item.get('stock', 0)}** unidades")
+                _sm = int(item.get("stock_minimo", 0) or 0)
+                _reponer = max(1, _sm * 2 - int(item.get("stock", 0)))
+                lbl = f"**{_reponer}** para repo. sugerida" if _sm > 0 else ""
+                st.error(f"{item.get('item')} → **{item.get('stock', 0)}** ({lbl})")
     if stock_bajo:
-        with lista_plegable("Stock bajo (≤25 unidades)", count=len(stock_bajo), expanded=False, height=200):
+        with lista_plegable("Stock bajo (por debajo del doble del mínimo)", count=len(stock_bajo), expanded=False, height=200):
             for item in stock_bajo[:80]:
-                st.warning(f"{item.get('item')} → quedan {item.get('stock', 0)} unidades")
+                _sm = int(item.get("stock_minimo", 0) or 0)
+                _reponer = max(1, _sm * 2 - int(item.get("stock", 0)))
+                lbl = f" — reponer **{_reponer}**" if _sm > 0 else ""
+                st.warning(f"{item.get('item')} → {item.get('stock', 0)} unidades{lbl}")
 
     try:
         vademecum_base = cargar_json_asset("vademecum.json")
@@ -166,7 +182,7 @@ def render_inventario(mi_empresa):
 
     if inv_mio:
         import pandas as pd
-        df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual"})
+        df_stock = pd.DataFrame(inv_mio).rename(columns={"item": "Insumo", "stock": "Stock Actual", "stock_minimo": "Stock Minimo"})
 
         # ── Búsqueda y filtro de criticidad ────────────────────────
         _col_b, _col_f = st.columns([2, 1])
@@ -201,16 +217,21 @@ def render_inventario(mi_empresa):
             opciones=(10, 20, 50, 100, 200, 500),
         )
 
+        def _row_umbral(row):
+            sm = row.get("stock_minimo", 10)
+            return sm if sm > 0 else 10
+
         def colorear_stock(row):
             stock = row["Stock Actual"]
-            if stock <= 10:
+            umbral = _row_umbral(row)
+            if stock <= umbral:
                 return ["background-color: #3c1f1f; color: #ffb4b4; font-weight: bold"] * len(row)
-            if stock <= 25:
+            if stock <= umbral * 2:
                 return ["background-color: #3c3217; color: #ffe08a; font-weight: 600"] * len(row)
             return ["background-color: #122033; color: #ffffff"] * len(row)
 
         styled = (
-            df_filtrado.sort_values(by="Stock Actual", ascending=True)[["Insumo", "Stock Actual"]]
+            df_filtrado.sort_values(by="Stock Actual", ascending=True)[["Insumo", "Stock Actual", "Stock Minimo"]]
             .head(limite_stock)
             .style.apply(colorear_stock, axis=1)
         )

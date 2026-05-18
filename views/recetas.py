@@ -195,29 +195,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
         if sql_status and not sql_status.get("ok"):
             st.caption("Modo local/cache activo para recetas y administracion. La lectura SQL no respondio en esta vista.")
 
-    # --- Auto-marcar como Completada las indicaciones cuyo ciclo vencio ---
-    _hoy = _dt.now().date()
-    for r in recs_todas:
-        if r.get("estado_receta", "Activa") != "Activa":
-            continue
-        try:
-            _dur = int(r.get("dias_duracion", 0) or 0)
-            if _dur <= 0:
-                continue
-            _fecha_str = str(r.get("fecha", ""))[:10]
-            _inicio = _dt.strptime(_fecha_str, "%d/%m/%Y").date() if "/" in _fecha_str else _dt.fromisoformat(_fecha_str).date()
-            if (_inicio + _td(days=_dur)) < _hoy:
-                r["estado_receta"] = "Completada"
-                r["estado_clinico"] = "Completada"
-                _sql_id = r.get("_sql_id", "")
-                if _sql_id:
-                    try:
-                        from core._db_sql_clinico import update_estado_indicacion
-                        update_estado_indicacion(_sql_id, "Completada")
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+    from core.sync_utils import auto_vencer_indicaciones
+    auto_vencer_indicaciones(recs_todas)
 
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
 
