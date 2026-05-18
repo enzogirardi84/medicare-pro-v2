@@ -45,11 +45,6 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
             horizontal=True,
             key="tipo_indicacion_receta",
         )
-        from views._cie_picker import render_cie_picker_compact
-        with st.expander("Diagnostico CIE-10 (asociado a la prescripcion)", expanded=False):
-            cie_dx = render_cie_picker_compact("receta_cie")
-            if cie_dx:
-                st.session_state["receta_cie_dx"] = cie_dx
         med_vademecum = "-- Seleccionar del vademecum --"
         med_manual = solucion = detalle_infusion = alternar_con = frecuencia = ""
         volumen_ml = 0
@@ -190,7 +185,6 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     velocidad_ml_h=velocidad_ml_h, alternar_con=alternar_con,
                     detalle_infusion=detalle_infusion, plan_hidratacion=plan_hidratacion,
                 )
-                cie_dx = st.session_state.get("receta_cie_dx")
                 from core.database import guardar_json_db
                 guardar_json_db("indicaciones_db", {
                     "paciente": paciente_sel, "med": texto_receta,
@@ -208,8 +202,6 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "origen_registro": "Indicacion medica en papel" if adjunto_papel else "Prescripcion digital",
                     "adjunto_papel_b64": adjunto_b64, "adjunto_papel_nombre": adjunto_nombre,
                     "adjunto_papel_tipo": adjunto_papel_tipo, "empresa": mi_empresa,
-                    "cie_codigo": (cie_dx or {}).get("codigo", ""),
-                    "cie_descripcion": (cie_dx or {}).get("descripcion", ""),
                 }, spinner=True)
                 registrar_auditoria_legal(
                     "Medicacion", paciente_sel, "Indicacion medica registrada",
