@@ -117,11 +117,11 @@ def render_estadisticas(mi_empresa, rol):
 
     hoy = ahora().date()
     anos_disponibles = sorted(set(
-        dt.year for r in (
+        p.year for r in (
             list(pacientes) + list(facturacion) + list(evoluciones)
         )
         for campo in ('fecha', 'fecha_alta')
-        if parse_fecha_hora(r.get(campo, '')).year > 2000
+        if (p := parse_fecha_hora(r.get(campo, ''))) and p.year > 2000
     ), reverse=True) or [hoy.year]
 
     c_ano, _ = st.columns([1, 3])
