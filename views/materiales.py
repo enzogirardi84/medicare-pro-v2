@@ -87,16 +87,35 @@ def render_materiales(paciente_sel, mi_empresa, user):
                         break
                 if stock_actualizado:
                     st.session_state.setdefault("consumos_db", [])
-                    st.session_state["consumos_db"].append(
-                        {
-                            "paciente": paciente_sel,
-                            "insumo": insumo_sel,
-                            "cantidad": cant_usada,
-                            "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-                            "firma": user.get("nombre", "Sistema"),
-                            "empresa": mi_empresa,
-                        }
-                    )
+                    consumo_rec = {
+                        "paciente": paciente_sel,
+                        "insumo": insumo_sel,
+                        "cantidad": cant_usada,
+                        "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+                        "firma": user.get("nombre", "Sistema"),
+                        "empresa": mi_empresa,
+                    }
+                    st.session_state["consumos_db"].append(consumo_rec)
+                    try:
+                        st.session_state.setdefault("facturacion_db", [])
+                        _precio = None
+                        for i in st.session_state.get("inventario_db", []):
+                            if i.get("item") == insumo_sel and i.get("empresa") == mi_empresa:
+                                _precio = i.get("costo_unitario")
+                                break
+                        if _precio is not None:
+                            _importe = float(_precio) * cant_usada
+                            st.session_state["facturacion_db"].append({
+                                "paciente": paciente_sel,
+                                "insumo": insumo_sel,
+                                "cantidad": cant_usada,
+                                "importe": _importe,
+                                "fecha_emision": ahora().strftime("%d/%m/%Y"),
+                                "firma": user.get("nombre", "Sistema"),
+                                "empresa": mi_empresa,
+                            })
+                    except Exception:
+                        pass
                     from core.database import _trim_db_list
                     _trim_db_list("consumos_db", 1000)
                     guardar_datos(spinner=True)

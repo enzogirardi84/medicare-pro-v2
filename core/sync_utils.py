@@ -136,12 +136,58 @@ def sync_pendientes_consumos_sql(session_state: dict):
         return 0
 
 
+def sync_pendientes_facturacion_sql(session_state: dict):
+    """Sincroniza facturacion_db pendiente a SQL."""
+    pendientes = [
+        f for f in session_state.get("facturacion_db", [])
+        if not f.get("id_sql") and f.get("paciente") and f.get("importe")
+    ]
+    if not pendientes:
+        return 0
+    try:
+        from core.db_sql import insert_facturacion
+        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+        sinc = 0
+        for f in pendientes:
+            empresa = f.get("empresa", "")
+            pac = str(f.get("paciente", ""))
+            partes = pac.split(" - ")
+            if len(partes) <= 1:
+                continue
+            dni = partes[1].strip()
+            empresa_uuid = _obtener_uuid_empresa(empresa)
+            if not empresa_uuid:
+                continue
+            pac_uuid = _obtener_uuid_paciente(dni, empresa_uuid)
+            if not pac_uuid:
+                continue
+            datos = {
+                "paciente_id": pac_uuid,
+                "empresa_id": empresa_uuid,
+                "fecha_emision": f.get("fecha_emision", ""),
+                "concepto": f"Insumo: {f.get('insumo', '')}",
+                "importe": float(f.get("importe", 0)),
+                "estado": "Pendiente",
+            }
+            result = insert_facturacion(datos)
+            if result:
+                f["id_sql"] = result.get("id")
+                sinc += 1
+        if sinc:
+            log_event("sync_utils", f"sync_facturacion: {sinc} registros sincronizados a SQL")
+        return sinc
+    except Exception as e:
+        log_event("sync_utils", f"sync_facturacion_error:{type(e).__name__}:{e}")
+        return 0
+
+
 def sync_todo(session_state: dict):
     """Ejecuta todas las sincronizaciones pendientes."""
     total = 0
     total += auto_vencer_indicaciones(session_state.get("indicaciones_db", []))
     total += sync_pendientes_agenda_sql(session_state)
     total += sync_pendientes_consumos_sql(session_state)
+    total += sync_pendientes_facturacion_sql(session_state)
     if total:
         log_event("sync_utils", f"sync_todo: {total} operaciones realizadas")
     return total
