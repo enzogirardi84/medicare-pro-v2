@@ -126,10 +126,15 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 
     consentimiento = consentimientos[-1]
     detalles = mapa_detalles_pacientes(session_state).get(paciente_sel, {})
+    from datetime import datetime as _dt
+    ts_generacion = _dt.now().strftime("%d/%m/%Y %H:%M")
+    doc_id = consentimiento.get("doc_id") or f"CONS-{paciente_sel[:16]}-{int(_dt.now().timestamp())}"
+    doc_hash = consentimiento.get("doc_hash") or "—"
 
     pdf = FPDF()
+    pdf.alias_nb_pages()
     pdf.set_margins(14, 12, 14)
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
     _pdf_header_oscuro(
         pdf, detalles.get("empresa", mi_empresa),
@@ -138,54 +143,98 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
         badge_txt="Consentimiento",
         badge_rgb=(13, 90, 80),
     )
-    pdf.ln(4)
+    pdf.ln(3)
 
+    _section_title(pdf, "Marco legal")
+    pdf.set_font("Arial", "", 8)
+    _write_multiline_text(pdf, (
+        "Ley 26.529 (Derechos del Paciente) · Art. 5: Consentimiento informado, libre y expreso. "
+        "Art. 6: Excepciones por riesgo vital. Art. 7: Revocabilidad en cualquier momento. "
+        "Ley 25.326 (Proteccion de Datos Personales) · Art. 7: Datos sensibles. "
+        "Ley 25.506 (Firma Digital) · Decreto 262/2020 · Codigo Civil y Comercial Art. 288."
+    ), line_height=4.5)
+    pdf.ln(2)
+
+    _section_title(pdf, "Datos del paciente")
+    _write_pairs(pdf, [
+        ("Apellido y nombre", paciente_sel),
+        ("DNI", detalles.get("dni", "S/D")),
+        ("Domicilio", detalles.get("direccion", "S/D")),
+        ("Telefono", detalles.get("telefono", "S/D")),
+        ("Obra social", detalles.get("obra_social", "S/D")),
+    ])
+    pdf.ln(1)
+
+    _section_title(pdf, "Datos del firmante")
+    _write_pairs(pdf, [
+        ("Nombre", consentimiento.get("firmante", paciente_sel)),
+        ("DNI", consentimiento.get("dni_firmante", detalles.get("dni", "S/D"))),
+        ("Vinculo con el paciente", consentimiento.get("vinculo", "Paciente")),
+        ("Telefono de contacto", consentimiento.get("telefono", detalles.get("telefono", "S/D"))),
+    ])
+    pdf.ln(1)
+
+    _section_title(pdf, "Profesional interviniente")
+    prof_nombre = (profesional or {}).get("nombre", consentimiento.get("profesional", "S/D"))
+    prof_matricula = (profesional or {}).get("matricula", consentimiento.get("matricula_profesional", "S/D"))
+    _write_pairs(pdf, [
+        ("Profesional", prof_nombre),
+        ("Matricula", prof_matricula),
+    ])
+    pdf.ln(1)
+
+    cie_codigo = consentimiento.get("cie_codigo", "")
+    cie_desc = consentimiento.get("cie_descripcion", "")
+    if cie_codigo:
+        _section_title(pdf, "Diagnostico asociado")
+        _write_pairs(pdf, [
+            ("Codigo CIE-10", cie_codigo),
+            ("Descripcion", cie_desc),
+        ])
+        pdf.ln(1)
+
+    _section_title(pdf, "Declaracion de consentimiento")
+    pdf.set_font("Arial", "", 10)
     texto = (
         "Por medio del presente, dejo constancia de que he recibido informacion clara, suficiente y comprensible "
-        "respecto de la modalidad de atencion y/o terapia en domicilio propuesta para el paciente. "
-        "Se me explicaron los objetivos asistenciales, la frecuencia estimada de controles, el alcance de las "
-        "prestaciones, los cuidados generales esperables, las pautas de alarma clinica y la necesidad de mantener "
-        "condiciones adecuadas de acceso, higiene y seguridad para el desarrollo de la atencion. "
+        "respecto de la modalidad de atencion y/o terapia en domicilio propuesta para el paciente "
+        "arriba identificado. Se me explicaron los objetivos asistenciales, la frecuencia estimada de "
+        "controles, el alcance de las prestaciones, los cuidados generales esperables, las pautas de "
+        "alarma clinica y la necesidad de mantener condiciones adecuadas de acceso, higiene y seguridad "
+        "para el desarrollo de la atencion."
         "\n\n"
-        "En consecuencia, en mi caracter de paciente y/o familiar responsable, presto conformidad para recibir "
-        "atencion sanitaria, controles, curaciones, seguimiento clinico y/o terapia en el domicilio informado, "
-        "autorizando asimismo el registro clinico, administrativo y documental correspondiente dentro del sistema."
+        "En consecuencia, en mi caracter de paciente y/o familiar responsable, presto conformidad para "
+        "recibir atencion sanitaria, controles, curaciones, seguimiento clinico y/o terapia en el "
+        "domicilio informado, autorizando asimismo el registro clinico, administrativo y documental "
+        "correspondiente dentro del sistema de historia clinica digital."
         "\n\n"
-        "Declaro que los datos aportados son veridicos y que he podido realizar preguntas, recibiendo respuesta "
-        "satisfactoria por parte del profesional interviniente."
+        "Declaro que los datos personales aportados son veridicos y que he podido realizar todas las "
+        "preguntas que considere necesarias, recibiendo respuesta satisfactoria por parte del profesional "
+        "interviniente. He sido informado de mi derecho a revocar este consentimiento en cualquier "
+        "momento conforme el Art. 7 de la Ley 26.529."
     )
-    pdf.set_font("Arial", "", 11)
-    _write_multiline_text(pdf, texto, line_height=7)
-    pdf.ln(6)
+    _write_multiline_text(pdf, texto, line_height=6.5)
+    pdf.ln(3)
 
-    _write_pairs(
-        pdf,
-        [
-            ("Paciente", paciente_sel),
-            ("DNI paciente", detalles.get("dni", "S/D")),
-            ("Domicilio", detalles.get("direccion", "S/D")),
-            ("Fecha", consentimiento.get("fecha", "S/D")),
-            ("Firmante", consentimiento.get("firmante", paciente_sel)),
-            ("DNI firmante", consentimiento.get("dni_firmante", detalles.get("dni", "S/D"))),
-            ("Vinculo", consentimiento.get("vinculo", "Paciente")),
-            ("Telefono", consentimiento.get("telefono", detalles.get("telefono", "S/D"))),
-            ("Observaciones", consentimiento.get("observaciones", "")),
-            ("Profesional responsable", (profesional or {}).get("nombre", "S/D")),
-            ("Matricula", (profesional or {}).get("matricula", "S/D")),
-        ],
-    )
-
-    pdf.ln(6)
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, safe_text("Clausulas de conformidad"), ln=True)
+    _section_title(pdf, "Clausulas y derechos del paciente")
     pdf.set_font("Arial", "", 9)
     clausulas = [
         "1. El firmante acepta la atencion domiciliaria en el domicilio consignado.",
-        "2. El firmante se compromete a informar cambios clinicos relevantes y dificultades de acceso.",
-        "3. La firma acredita conformidad con la modalidad de prestacion y con el registro documental.",
+        "2. El firmante se compromete a informar cambios clinicos relevantes y dificultades de acceso al domicilio.",
+        "3. La firma acredita conformidad con la modalidad de prestacion y con el registro documental en el sistema.",
+        "4. El paciente puede revocar este consentimiento en cualquier momento (Ley 26.529 Art. 7).",
+        "5. Los datos personales seran tratados con confidencialidad (Ley 25.326).",
+        "6. El paciente tiene derecho a acceder, rectificar y suprimir sus datos personales.",
+        "7. Este documento tiene validez legal como instrumento publico en soporte digital.",
     ]
     for clausula in clausulas:
         _write_multiline_text(pdf, clausula, line_height=5)
+    pdf.ln(3)
+
+    fecha_str = consentimiento.get("fecha", "S/D")
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 6, safe_text(f"Fecha de firma: {fecha_str}"), ln=True)
+    pdf.ln(4)
 
     firma_bytes = None
     if consentimiento.get("firma_b64"):
@@ -196,26 +245,65 @@ def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
                 tmp.write(firma_bytes)
                 tmp_path = tmp.name
-            pdf.image(tmp_path, x=30, y=210, w=60)
+            y_antes = pdf.get_y()
+            if y_antes > 225:
+                pdf.add_page()
+                y_antes = pdf.get_y()
+            pdf.image(tmp_path, x=pdf.l_margin, w=55)
+            y_desp = pdf.get_y()
         except Exception as _exc:
             log_event("clinical_exports", f"fallo_firma_consentimiento:{type(_exc).__name__}")
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
 
-    y_firma = max(pdf.get_y() + 24, 240)
-    if y_firma > 262:
+    y_firma = max(pdf.get_y() + 18, 248)
+    if y_firma > 268:
         pdf.add_page()
-        y_firma = 230
+        y_firma = 50
 
-    pdf.line(25, y_firma, 90, y_firma)
-    pdf.set_xy(25, y_firma + 2)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(65, 5, safe_text("Firma paciente / familiar"), align="C")
+    ancho_mitad = (pdf.w - pdf.l_margin - pdf.r_margin) / 2 - 4
+    x_izq = pdf.l_margin
+    x_der = pdf.l_margin + ancho_mitad + 8
 
-    pdf.line(120, y_firma, 185, y_firma)
-    pdf.set_xy(120, y_firma + 2)
-    pdf.cell(65, 5, safe_text("Firma y sello profesional"), align="C")
+    pdf.set_draw_color(40, 55, 90)
+    pdf.set_line_width(0.4)
+    pdf.line(x_izq, y_firma, x_izq + ancho_mitad, y_firma)
+    pdf.set_xy(x_izq, y_firma + 2)
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(40, 55, 90)
+    pdf.cell(ancho_mitad, 5, safe_text("Firma del paciente / familiar / tutor"), align="C", ln=True)
+    pdf.set_x(x_izq)
+    pdf.set_font("Arial", "", 7)
+    pdf.set_text_color(100, 116, 139)
+    aclaracion = consentimiento.get("firmante", "")
+    if consentimiento.get("dni_firmante"):
+        aclaracion += f" - DNI: {consentimiento['dni_firmante']}"
+    pdf.cell(ancho_mitad, 4, safe_text(aclaracion), align="C")
+
+    pdf.set_draw_color(40, 55, 90)
+    pdf.line(x_der, y_firma, x_der + ancho_mitad, y_firma)
+    pdf.set_xy(x_der, y_firma + 2)
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(40, 55, 90)
+    pdf.cell(ancho_mitad, 5, safe_text("Firma y sello del profesional"), align="C", ln=True)
+    pdf.set_x(x_der)
+    pdf.set_font("Arial", "", 7)
+    pdf.set_text_color(100, 116, 139)
+    pdf.cell(ancho_mitad, 4, safe_text(f"{prof_nombre} - Mat. {prof_matricula}"), align="C")
+    pdf.set_text_color(0, 0, 0)
+
+    pdf.set_y(max(pdf.get_y() + 8, 275))
+    pdf.set_draw_color(200, 210, 220)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+    pdf.ln(2)
+    pdf.set_font("Arial", "", 5.5)
+    pdf.set_text_color(130, 140, 155)
+    _write_multiline_text(pdf, (
+        f"Doc ID: {doc_id} | Hash: {doc_hash} | Generado: {ts_generacion} | "
+        "MediCare PRO — Valor legal: Ley 25.506 (Firma Digital), Decreto 262/2020, "
+        "Ley 26.529 (Derechos del Paciente Art. 5, 6, 7)"
+    ), line_height=3)
 
     return pdf_output_bytes(pdf)
 
