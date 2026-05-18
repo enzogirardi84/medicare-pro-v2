@@ -102,8 +102,12 @@ def _query_flag(nombre: str) -> bool:
 
 def ensure_entered_app_default() -> None:
     """Portada por defecto; ?login=1 o ?directo=1 salta la publicidad (pruebas / acceso directo)."""
-    if "entered_app" not in st.session_state:
-        st.session_state.entered_app = _query_flag("login") or _query_flag("directo")
+    if "entered_app" not in st.session_state or _query_flag("login") or _query_flag("directo"):
+        st.session_state.entered_app = (
+            st.session_state.get("entered_app", False)
+            or _query_flag("login")
+            or _query_flag("directo")
+        )
 
 
 def obtener_logo_landing() -> str:
