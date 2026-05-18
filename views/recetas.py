@@ -21,6 +21,7 @@ from views._recetas_mar import (
     render_cortina_mar_hospitalaria as _render_cortina_mar_hospitalaria,
     render_marco_clinico_cortina as _render_marco_clinico_cortina,
 )
+from views._recetas_stock import render_control_medicacion_stock as _render_control_stock
 from views._recetas_indicaciones import (
     resumen_medicacion_activa as _resumen_medicacion_activa,
 )
@@ -221,6 +222,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     recs_activas = [r for r in recs_todas if r.get("estado_receta", "Activa") == "Activa"]
 
     _resumen_medicacion_activa(recs_activas)
+
+    _render_control_stock(paciente_sel, mi_empresa, user, recs_activas)
 
     if recs_activas:
         _render_administracion_turno(

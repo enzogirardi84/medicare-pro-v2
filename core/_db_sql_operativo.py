@@ -381,6 +381,53 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
         return []
 
 
+def get_inventario_item_by_name(empresa_id: str, nombre_item: str) -> Optional[Dict[str, Any]]:
+    """Busca un item de inventario por nombre exacto para una empresa."""
+    if not _ok() or not nombre_item:
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "get_inventario_item",
+            lambda: supabase.table("inventario").select("*").eq("empresa_id", empresa_id).eq("nombre", nombre_item).limit(1).execute(),
+        )
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_get_inventario_item:{type(e).__name__}")
+        return None
+
+
+def insert_inventario_movimiento(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Inserta un movimiento en inventario_movimientos. El trigger SQL auto-actualiza stock_actual."""
+    if not _ok():
+        return None
+    try:
+        response = _supabase_execute_with_retry(
+            "insert_inventario_mov",
+            lambda: supabase.table("inventario_movimientos").insert(datos).execute(),
+        )
+        _invalidate_cache_prefix(f"_sql_op_inv_{datos.get('empresa_id', '')}")
+        return response.data[0] if response and response.data else None
+    except Exception as e:
+        log_event("db_sql", f"error_insert_inventario_mov:{type(e).__name__}")
+        return None
+
+
+def update_inventario_stock_sql(inventario_id: str, nuevo_stock: int, empresa_id: str) -> bool:
+    """Actualiza directamente stock_actual en inventario (fallback si trigger no funciona)."""
+    if not _ok():
+        return False
+    try:
+        response = _supabase_execute_with_retry(
+            "update_inventario_stock",
+            lambda: supabase.table("inventario").update({"stock_actual": nuevo_stock}).eq("id", inventario_id).execute(),
+        )
+        _invalidate_cache_prefix(f"_sql_op_inv_{empresa_id}")
+        return bool(response and response.data)
+    except Exception as e:
+        log_event("db_sql", f"error_update_inventario_stock:{type(e).__name__}")
+        return False
+
+
 def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not _ok():
         return None
