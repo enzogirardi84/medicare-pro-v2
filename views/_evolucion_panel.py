@@ -111,11 +111,6 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 placeholder="Escribir aqui la evolucion...",
                 key="evol_nota_textarea"
             )
-            from views._cie_picker import render_cie_picker_compact
-            with st.expander("Diagnostico CIE-10", expanded=False):
-                cie_dx = render_cie_picker_compact("evol_cie")
-                if cie_dx:
-                    st.session_state["evol_cie_dx"] = cie_dx
             desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
             st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
             col_up, col_cam = st.columns(2)
@@ -134,15 +129,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
                     if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
                         st.session_state["evoluciones_db"] = []
-                    cie_dx = st.session_state.get("evol_cie_dx")
                     st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
                         "nota": nota.strip(),
                         "fecha": fecha_n,
                         "firma": user.get("nombre", "Sistema"),
                         "plantilla": plantilla,
-                        "cie_codigo": (cie_dx or {}).get("codigo", ""),
-                        "cie_descripcion": (cie_dx or {}).get("descripcion", ""),
                     })
                     from core.database import _trim_db_list
                     _trim_db_list("evoluciones_db", 500)

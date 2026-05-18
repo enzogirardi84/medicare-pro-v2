@@ -32,7 +32,6 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Vacunacion",
         "Calc. Dosis Pediatricas",
         "Chatbot IA",
-        "Diagnosticos CIE-10/11",
     ],
     "Gestión": [
         "Dashboard",
@@ -74,7 +73,7 @@ _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
             ],
         "Evaluación": [
             "Escalas Clinicas", "Balance", "Percentilo",
-            "Historial", "Diagnosticos", "Diagnosticos CIE-10/11",
+            "Historial", "Diagnosticos",
         ],
         "Vacunación": [
             "Vacunacion",
