@@ -465,13 +465,26 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
     with c_w1:
         if tel_destino and texto_final_wa:
             link_wpp = f"https://wa.me/{tel_destino}?text={urllib.parse.quote(texto_final_wa)}"
-            st.link_button("Enviar mensaje por WhatsApp", link_wpp, width='stretch', type="primary")
+            res = st.link_button("Enviar mensaje por WhatsApp", link_wpp, width='stretch', type="primary")
+            if res:
+                st.session_state["_ultimo_mensaje_wa"] = {
+                    "paciente": paciente_sel,
+                    "texto": texto_final_wa,
+                    "tel": tel_destino,
+                }
         elif not tel_destino:
             st.warning("Ingresa un numero de telefono.")
     with c_w2:
         if tel_destino:
             link_abrir = f"https://wa.me/{tel_destino}"
             st.link_button("Abrir WhatsApp (solo numero)", link_abrir, width='stretch')
+        _wa_ultimo = st.session_state.get("_ultimo_mensaje_wa")
+        if _wa_ultimo and _wa_ultimo.get("paciente") == paciente_sel:
+            st.link_button(
+                "Reenviar ultimo mensaje",
+                f"https://wa.me/{_wa_ultimo['tel']}?text={urllib.parse.quote(_wa_ultimo['texto'])}",
+                width='stretch',
+            )
 
     if agenda_paciente:
         st.divider()

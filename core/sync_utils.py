@@ -181,6 +181,32 @@ def sync_pendientes_facturacion_sql(session_state: dict):
         return 0
 
 
+def backup_diario_sql(session_state: dict):
+    """Exporta las claves _db del session_state a la tabla backup_diario en SQL."""
+    _db_keys = [k for k in session_state.keys() if k.endswith("_db") and isinstance(session_state[k], list)]
+    if not _db_keys:
+        return 0
+    try:
+        import json
+        from datetime import date
+        from core.database import supabase
+        if supabase is None:
+            return 0
+        payload = {
+            "fecha": str(date.today()),
+            "datos": {k: session_state[k] for k in _db_keys},
+            "tipo": "backup_diario_auto",
+        }
+        response = supabase.table("backup_diario").insert(payload).execute()
+        if response and response.data:
+            log_event("sync_utils", f"backup_diario: {len(_db_keys)} claves respaldadas")
+            return 1
+        return 0
+    except Exception as e:
+        log_event("sync_utils", f"backup_diario_error:{type(e).__name__}:{e}")
+        return 0
+
+
 def sync_todo(session_state: dict):
     """Ejecuta todas las sincronizaciones pendientes."""
     total = 0
@@ -188,6 +214,7 @@ def sync_todo(session_state: dict):
     total += sync_pendientes_agenda_sql(session_state)
     total += sync_pendientes_consumos_sql(session_state)
     total += sync_pendientes_facturacion_sql(session_state)
+    total += backup_diario_sql(session_state)
     if total:
         log_event("sync_utils", f"sync_todo: {total} operaciones realizadas")
     return total
