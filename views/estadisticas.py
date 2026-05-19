@@ -319,18 +319,21 @@ def render_estadisticas(mi_empresa, rol):
 
         st.divider()
         st.markdown('#### Evoluciones por profesional')
-        prof_evol = Counter(e.get('firma', e.get('profesional', 'S/D')) for e in evoluciones)
-        if prof_evol:
-            df_prof = pd.DataFrame([
-                {'Profesional': k, 'Evoluciones': v}
-                for k, v in prof_evol.most_common(15)
-            ])
-            render_chart_card(
-                'Top profesionales que mas registran evoluciones',
-                _chart_barras_mes(df_prof, 'Profesional', 'Evoluciones', titulo_y='Cantidad', color=COLOR_SUCCESS),
-            )
+        if len(evoluciones) < 20000:
+            prof_evol = Counter(e.get('firma', e.get('profesional', 'S/D')) for e in evoluciones)
+            if prof_evol:
+                df_prof = pd.DataFrame([
+                    {'Profesional': k, 'Evoluciones': v}
+                    for k, v in prof_evol.most_common(15)
+                ])
+                render_chart_card(
+                    'Top profesionales que mas registran evoluciones',
+                    _chart_barras_mes(df_prof, 'Profesional', 'Evoluciones', titulo_y='Cantidad', color=COLOR_SUCCESS),
+                )
+            else:
+                st.caption('Sin datos de profesional en evoluciones.')
         else:
-            st.caption('Sin datos de profesional en evoluciones.')
+            st.caption(f'Demasiados registros ({len(evoluciones)}) para agrupar por profesional.')
 
     # ================================================================
     # TAB 4: STOCK
@@ -339,15 +342,17 @@ def render_estadisticas(mi_empresa, rol):
         st.markdown('#### Estado de inventario')
         if inventario:
             total_items = len(inventario)
-            total_units = sum(_parse_stock(i.get('stock')) for i in inventario)
+            total_units = 0
             items_con_minimo = 0
             items_criticos = []
             for item in inventario:
+                stock = _parse_stock(item.get('stock'))
+                total_units += stock
                 sm = item.get('stock_minimo')
                 if sm is not None and str(sm).strip():
                     items_con_minimo += 1
                     try:
-                        if _parse_stock(item.get('stock')) <= _parse_stock(sm):
+                        if stock <= _parse_stock(sm):
                             items_criticos.append(item)
                     except (ValueError, TypeError):
                         pass
@@ -358,7 +363,7 @@ def render_estadisticas(mi_empresa, rol):
             mc3.metric('Stock critico', len(items_criticos))
             mc4.metric('Items con minimo configurado', items_con_minimo)
 
-            if items_criticos:
+            if items_criticos and len(items_criticos) <= 500:
                 st.divider()
                 st.markdown('#### Items con stock critico')
                 df_stock = pd.DataFrame([
@@ -367,7 +372,7 @@ def render_estadisticas(mi_empresa, rol):
                         'Stock': _parse_stock(item.get('stock')),
                         'Minimo': _parse_stock(item.get('stock_minimo')),
                     }
-                    for item in items_criticos
+                    for item in items_criticos[:500]
                 ])
                 render_chart_card(
                     'Items por debajo del stock minimo',
@@ -386,6 +391,8 @@ def render_estadisticas(mi_empresa, rol):
                         ],
                     ).configure_axis(labelFontSize=11, titleFontSize=12).configure_view(strokeWidth=0),
                 )
+            elif items_criticos:
+                st.warning(f'{len(items_criticos)} items con stock critico. Agrupe por categoria para verlos.')
             else:
                 if items_con_minimo > 0:
                     st.success('No hay items con stock critico.')
