@@ -218,7 +218,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                         f"({_info['dosis_mg_kg'][0]}-{_info['dosis_mg_kg'][1]} mg/kg)"
                     )
         except Exception as _e_dc:
-            pass
+            _log_event("recetas", f"dosis_calc_error:{type(_e_dc).__name__}:{_e_dc}")
 
         st.session_state[_draft_key] = {
             "tipo_indicacion": tipo_indicacion,

@@ -369,8 +369,8 @@ class BackupManager:
                 recipient=None,  # Broadcast
                 priority=priority
             )
-        except Exception:
-            pass
+        except Exception as _e_bk:
+            log_event("backup", f"notify_error:{type(_e_bk).__name__}:{_e_bk}")
     
     def _cleanup_old_backups(self) -> None:
         """Elimina backups antiguos según política de retención."""
@@ -390,8 +390,8 @@ class BackupManager:
                 if backup.file_path:
                     try:
                         Path(backup.file_path).unlink(missing_ok=True)
-                    except Exception:
-                        pass
+                    except Exception as _e_bk_unlink:
+                        log_event("backup", f"cleanup_unlink_error:{type(_e_bk_unlink).__name__}:{_e_bk_unlink}")
                 
                 # Eliminar de Supabase Storage
                 if backup.storage_path and backup.storage_path.startswith("supabase:"):
@@ -400,8 +400,8 @@ class BackupManager:
                         if supabase:
                             path = backup.storage_path.replace("supabase:backups/", "")
                             supabase.storage.from_("backups").remove([path])
-                    except Exception:
-                        pass
+                    except Exception as _e_bk_storage:
+                        log_event("backup", f"cleanup_storage_error:{type(_e_bk_storage).__name__}:{_e_bk_storage}")
                 
                 self._backups.remove(backup)
             

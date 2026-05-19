@@ -8,6 +8,7 @@ from pathlib import Path
 from fpdf import FPDF
 
 from core.export_utils import pdf_output_bytes, safe_text
+from core._patient_index import get_patient_records
 from core.utils import decodificar_base64_seguro, mapa_detalles_pacientes
 from core.app_logging import log_event
 
@@ -122,7 +123,7 @@ def build_history_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional
 
 
 def build_consent_pdf_bytes(session_state, paciente_sel, mi_empresa, profesional=None):
-    consentimientos = [x for x in session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
+    consentimientos = get_patient_records("consentimientos_db", paciente_sel)
     if not consentimientos:
         return None
 

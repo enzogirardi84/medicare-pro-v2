@@ -8,6 +8,7 @@ from datetime import datetime
 
 import streamlit as st
 
+from core._patient_index import get_patient_records
 from core.alert_toasts import queue_toast
 from core.clinical_exports import (
     build_backup_pdf_bytes,
@@ -361,7 +362,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
         else:
             st.caption("Guardar consentimientos queda reservado a roles asistenciales y de coordinacion.")
 
-        consentimientos_paciente = [x for x in st.session_state.get("consentimientos_db", []) if x.get("paciente") == paciente_sel]
+        consentimientos_paciente = get_patient_records("consentimientos_db", paciente_sel)
         if puede_descargar_consentimiento:
             _render_export_block(
                 st, key_base=f"consent_pdf_{paciente_sel}",

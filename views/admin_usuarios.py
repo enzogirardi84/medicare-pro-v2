@@ -99,7 +99,8 @@ def render_admin_usuarios():
                     if "pass_hash" in _u:
                         _u["password_hash"] = _u["pass_hash"]
                 st.session_state["usuarios_db"] = usuarios
-                guardar_datos(spinner=False)
+                with st.spinner("Guardando..."):
+                    guardar_datos()
                 st.success(f"Usuario '{uid}' creado")
                 log_event("admin_usuarios", f"creado:{uid}:{nuevo_rol}")
                 st.rerun()

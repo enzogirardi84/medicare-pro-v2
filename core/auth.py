@@ -147,6 +147,7 @@ def render_login():
         st.session_state["logeado"] = False
     if not st.session_state.get("logeado") and _render_bloque_verificacion_email_2fa():
         st.stop()
+        return
 
     if not st.session_state.get("logeado"):
         from core.ui_liviano import headers_sugieren_equipo_liviano
@@ -253,31 +254,37 @@ def render_login():
                     if not u.strip():
                         st.warning("Ingresá tu usuario (login).")
                         st.stop()
+                        return
                     pin_rec_s = str(pin_rec or "").strip()
                     p1s = str(p1 or "").strip()
                     p2s = str(p2 or "").strip()
                     if not pin_rec_s or not p1s or not p2s:
                         st.warning("Completá usuario, PIN y la nueva contraseña en ambos campos.")
                         st.stop()
+                        return
                     if p1s != p2s:
                         log_event("auth", "error: Las contraseñas nuevas no coinciden.")
                         st.error("Las contraseñas nuevas no coinciden.")
                         st.stop()
+                        return
                     u_limpio_pre = u.strip().lower()
                     ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
                     if not ok_lock:
                         log_event("auth", f"error: {lock_msg}")
                         st.error(lock_msg)
                         st.stop()
+                        return
                     db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
                     if err_db:
                         log_event("auth", f"error: {err_db}")
                         st.error(err_db)
                         st.stop()
+                        return
                     if db_f is None:
                         log_event("auth", "error: No se pudieron cargar los datos.")
                         st.error("No se pudieron cargar los datos.")
                         st.stop()
+                        return
                     for k, v in db_f.items():
                         st.session_state[k] = v
                     completar_claves_db_session()
@@ -290,6 +297,7 @@ def render_login():
                         log_event("auth", f"error: {MSG_PIN_RESET_FALLIDO}")
                         st.error(MSG_PIN_RESET_FALLIDO)
                         st.stop()
+                        return
                     user_data = normalizar_usuario_sistema(
                         dict(st.session_state["usuarios_db"][usuario_encontrado])
                     )
@@ -306,6 +314,7 @@ def render_login():
                         log_event("auth", f"error: {MSG_PIN_RESET_FALLIDO}")
                         st.error(MSG_PIN_RESET_FALLIDO)
                         st.stop()
+                        return
                     if user_data.get("estado", "Activo") == "Bloqueado":
                         registrar_fallo_login(u_limpio)
                         log_event("auth", "error: Tu usuario está **bloqueado**. Contactá al coordinador para reactivar el acceso antes de cambiar la clave.")
@@ -313,6 +322,7 @@ def render_login():
                             "Tu usuario está **bloqueado**. Contactá al coordinador para reactivar el acceso antes de cambiar la clave."
                         )
                         st.stop()
+                        return
                     if login_bloqueado_por_clinica(user_data):
                         registrar_fallo_login(u_limpio)
                         log_event("auth", "error: La clínica asignada a tu usuario está suspendida. No se puede cambiar la contraseña hasta la reactivación.")
@@ -320,22 +330,26 @@ def render_login():
                             "La clínica asignada a tu usuario está suspendida. No se puede cambiar la contraseña hasta la reactivación."
                         )
                         st.stop()
+                        return
                     if not str(obtener_pin_usuario(user_data) or "").strip():
                         log_event("auth", "error: Tu cuenta **no tiene PIN de recuperación** en Mi equipo. Pedí una clave nueva a coordinación.")
                         st.error(
                             "Tu cuenta **no tiene PIN de recuperación** en Mi equipo. Pedí una clave nueva a coordinación."
                         )
                         st.stop()
+                        return
                     if not _pin_coincide_tiempo_constante(user_data, pin_rec_s):
                         registrar_fallo_login(u_limpio)
                         log_event("auth", f"error: {MSG_PIN_RESET_FALLIDO}")
                         st.error(MSG_PIN_RESET_FALLIDO)
                         st.stop()
+                        return
                     msg_pw = mensaje_password_no_cumple_politica(p1s)
                     if msg_pw:
                         log_event("auth", f"error: {msg_pw}")
                         st.error(msg_pw)
                         st.stop()
+                        return
                     with st.spinner("Guardando tu nueva contraseña…"):
                         limpiar_fallos_login(u_limpio)
                         establecer_password_nuevo(
@@ -349,10 +363,12 @@ def render_login():
                         "Listo. Ya podés **iniciar sesión** con tu usuario y la contraseña nueva (elegí **Iniciar sesión** arriba)."
                     )
                     st.stop()
+                    return
                 elif submit and modo_auth == "login":
                     if not u.strip() or not p.strip():
                         st.warning("Ingresá usuario y contraseña.")
                         st.stop()
+                        return
                     else:
                         u_limpio_pre = u.strip().lower()
                         ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
@@ -504,6 +520,7 @@ def render_login():
                                         log_event("auth", f"error: {MSG_LOGIN_CREDENCIALES_FALLIDAS}")
                                         st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
         st.stop()
+        return
 
 
 def verificar_clinica_sesion_activa():

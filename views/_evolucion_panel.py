@@ -322,8 +322,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             description=f"Evolucion clinica de {paciente_sel}",
                             metadata={"plantilla": plantilla, "profesional": user.get("nombre", "")},
                         )
-                    except Exception:
-                        pass
+                    except Exception as _e_audit:
+                        log_event("evolucion", f"audit_error:{type(_e_audit).__name__}:{_e_audit}")
                     try:
                         from core.digital_signature import sign_evolucion as _sign_evol
                         _sign_evol(

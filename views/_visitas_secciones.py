@@ -579,7 +579,8 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
                             ):
                                 item["estado"] = "Realizada" if accion == "Marcar realizada" else "Cancelada"
                                 break
-                        guardar_datos(spinner=True)
+                    with st.spinner("Guardando..."):
+                        guardar_datos()
                         queue_toast("Agenda actualizada correctamente.")
                         st.rerun()
             if st.session_state[_confirm_key]:

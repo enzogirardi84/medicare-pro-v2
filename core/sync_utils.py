@@ -28,11 +28,11 @@ def auto_vencer_indicaciones(indicaciones: list):
                     try:
                         from core._db_sql_clinico import update_estado_indicacion
                         update_estado_indicacion(_sql_id, "Completada")
-                    except Exception:
-                        pass
+                    except Exception as _e_sync_inner:
+                        log_event("sync", f"sync_error:{type(_e_sync_inner).__name__}:{_e_sync_inner}")
                 _modificadas += 1
-        except Exception:
-            pass
+        except Exception as _e_sync_outer:
+            log_event("sync", f"sync_error:{type(_e_sync_outer).__name__}:{_e_sync_outer}")
     if _modificadas:
         log_event("sync_utils", f"auto_vencer: {_modificadas} indicaciones marcadas como Completadas")
     return _modificadas

@@ -44,9 +44,9 @@ def render_balance(paciente_sel, user):
 
     with st.form("bal", clear_on_submit=True):
         col_meta1, col_meta2, col_meta3 = st.columns(3)
-        fecha_bal = col_meta1.date_input("Fecha de control", value=ahora().date(), key="fecha_bal")
-        hora_bal_str = col_meta2.text_input("Hora exacta (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_bal")
-        turno = col_meta3.selectbox("Turno de guardia", ["Manana (06 a 14hs)", "Tarde (14 a 22hs)", "Noche (22 a 06hs)"])
+        fecha_bal = col_meta1.date_input("Fecha de control", value=ahora().date(), label_visibility="collapsed", key=f"fecha_bal_{paciente_sel}")
+        hora_bal_str = col_meta2.text_input("Hora exacta (HH:MM)", value=ahora().strftime("%H:%M"), label_visibility="collapsed", key=f"hora_bal_{paciente_sel}")
+        turno = col_meta3.selectbox("Turno de guardia", ["Manana (06 a 14hs)", "Tarde (14 a 22hs)", "Noche (22 a 06hs)"], label_visibility="collapsed")
 
         st.divider()
         c1, c2 = st.columns(2)

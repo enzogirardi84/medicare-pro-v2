@@ -203,7 +203,8 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                             referencia=u_id.strip().lower(),
                         )
                         sincronizar_clinicas_desde_datos(st.session_state)
-                        guardar_datos(spinner=True)
+                        with st.spinner("Guardando..."):
+                            guardar_datos()
                         queue_toast(f"Usuario {u_id} habilitado correctamente.")
                         st.rerun()
     else:

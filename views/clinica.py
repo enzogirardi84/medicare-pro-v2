@@ -282,8 +282,8 @@ def render_clinica(paciente_sel, user=None):
     with st.form("vitales_f", clear_on_submit=True):
         st.markdown("##### Nuevo control de signos vitales")
         col_time1, col_time2 = st.columns([1.15, 0.85] if es_movil else 2)
-        fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key="fecha_vits")
-        hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key="hora_vits")
+        fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key=f"fecha_vits_{paciente_sel}")
+        hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key=f"hora_vits_{paciente_sel}")
         ta = st.text_input(
             "Tension arterial (TA)",
             "120/80",
@@ -299,9 +299,9 @@ def render_clinica(paciente_sel, user=None):
             hgt = st.number_input("HGT (mg/dL)", 0, 999, 110, step=1, help="Normal: 70-180 mg/dL")
         else:
             r_s1, r_s2, r_s3 = st.columns(3)
-            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75, help="Normal: 60-100 lpm")
-            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16, help="Normal: 12-20 rpm")
-            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96, help="Normal: ≥94%")
+            fc = r_s1.number_input("F.C. (lpm)", 30, 220, 75, help="Normal: 60-100 lpm", label_visibility="collapsed")
+            fr = r_s2.number_input("F.R. (rpm)", 8, 60, 16, help="Normal: 12-20 rpm", label_visibility="collapsed")
+            sat = r_s3.number_input("SatO2 (%)", 70, 100, 96, help="Normal: ≥94%", label_visibility="collapsed")
             r_s4, r_s5 = st.columns(2)
             temp = r_s4.number_input("Temperatura (C)", 34.0, 42.0, 36.5, step=0.1, help="Normal: 36-37.5°C")
             hgt = r_s5.number_input("HGT (mg/dL)", 0, 999, 110, step=1, help="Normal: 70-180 mg/dL")
@@ -353,8 +353,8 @@ def render_clinica(paciente_sel, user=None):
                     )
                     for alert in clinical_alerts:
                         log_event("clinica_alerts", f"{alert.severity}:{alert.rule_name}")
-                except Exception:
-                    pass
+                except Exception as _e_ca:
+                    log_event("clinica", f"clinical_alerts_error:{type(_e_ca).__name__}:{_e_ca}")
 
                 guardar_datos(spinner=True)
                 st.session_state.pop(f"_ce_secs_{paciente_sel}", None)

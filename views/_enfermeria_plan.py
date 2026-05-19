@@ -181,26 +181,27 @@ def _render_plan_cuidados_enfermeria_legacy(
         with st.container(border=True):
             st.markdown("### Nuevo registro de enfermería")
             c1, c2, c3 = st.columns(3)
-            tipo_cuidado = c1.selectbox("Tipo de cuidado", TIPOS_CUIDADO, key="enf_tipo")
-            turno = c2.selectbox("Turno", ["Mañana", "Tarde", "Noche", "Guardia"], key="enf_turno")
-            prioridad = c3.selectbox("Prioridad", ["Baja", "Moderada", "Alta"], key="enf_prioridad")
+            tipo_cuidado = c1.selectbox("Tipo de cuidado", TIPOS_CUIDADO, label_visibility="collapsed", key=f"enf_tipo_{paciente_sel}")
+            turno = c2.selectbox("Turno", ["Mañana", "Tarde", "Noche", "Guardia"], label_visibility="collapsed", key=f"enf_turno_{paciente_sel}")
+            prioridad = c3.selectbox("Prioridad", ["Baja", "Moderada", "Alta"], label_visibility="collapsed", key=f"enf_prioridad_{paciente_sel}")
 
             d1, d2, d3 = st.columns(3)
-            riesgo_caidas = d1.selectbox("Riesgo de caídas", ["Bajo", "Moderado", "Alto"], key="enf_riesgo_caidas")
-            riesgo_upp = d2.selectbox("Riesgo UPP", ["Bajo", "Moderado", "Alto"], key="enf_riesgo_upp")
-            dolor = d3.selectbox("Dolor referido", [str(x) for x in range(11)], index=0, key="enf_dolor")
+            riesgo_caidas = d1.selectbox("Riesgo de caídas", ["Bajo", "Moderado", "Alto"], label_visibility="collapsed", key=f"enf_riesgo_caidas_{paciente_sel}")
+            riesgo_upp = d2.selectbox("Riesgo UPP", ["Bajo", "Moderado", "Alto"], label_visibility="collapsed", key=f"enf_riesgo_upp_{paciente_sel}")
+            dolor = d3.selectbox("Dolor referido", [str(x) for x in range(11)], index=0, label_visibility="collapsed", key=f"enf_dolor_{paciente_sel}")
 
             if tipo_cuidado in {"Curacion simple", "Curacion avanzada", "Prevencion de UPP"}:
                 st.markdown("#### Detalle de curación y piel")
                 h1, h2, h3 = st.columns(3)
-                zona = h1.text_input("Zona / lesión", placeholder="Sacra, talón, pierna, abdomen", key="enf_zona")
+                zona = h1.text_input("Zona / lesión", placeholder="Sacra, talón, pierna, abdomen", label_visibility="collapsed", key=f"enf_zona_{paciente_sel}")
                 aspecto = h2.selectbox(
                     "Aspecto",
                     ["Limpia", "Exudado leve", "Exudado moderado", "Infectada", "Granulación"],
-                    key="enf_aspecto",
+                    label_visibility="collapsed",
+                    key=f"enf_aspecto_{paciente_sel}",
                 )
                 dolor_curacion = h3.selectbox(
-                    "Dolor en curación", ["Sin dolor", "Leve", "Moderado", "Severo"], key="enf_dolor_curacion"
+                    "Dolor en curación", ["Sin dolor", "Leve", "Moderado", "Severo"], label_visibility="collapsed", key=f"enf_dolor_curacion_{paciente_sel}"
                 )
             else:
                 zona = ""
@@ -210,13 +211,13 @@ def _render_plan_cuidados_enfermeria_legacy(
             objetivo = st.text_input(
                 "Objetivo del cuidado",
                 placeholder="Ej: mantener herida limpia y seca / vigilar saturación / prevenir caídas",
-                key="enf_objetivo",
+                key=f"enf_objetivo_{paciente_sel}",
             )
-            intervencion = st.text_area("Intervención realizada", height=110, key="enf_intervencion")
-            respuesta = st.text_area("Respuesta del paciente", height=90, key="enf_respuesta")
-            observaciones = st.text_area("Observaciones de enfermería", height=90, key="enf_observaciones")
-            incidente = st.checkbox("Hubo incidente o evento adverso", key="enf_incidente")
-            detalle_incidente = st.text_area("Detalle del incidente", height=80, key="enf_det_inc") if incidente else ""
+            intervencion = st.text_area("Intervención realizada", height=110, key=f"enf_intervencion_{paciente_sel}")
+            respuesta = st.text_area("Respuesta del paciente", height=90, key=f"enf_respuesta_{paciente_sel}")
+            observaciones = st.text_area("Observaciones de enfermería", height=90, key=f"enf_observaciones_{paciente_sel}")
+            incidente = st.checkbox("Hubo incidente o evento adverso", key=f"enf_incidente_{paciente_sel}")
+            detalle_incidente = st.text_area("Detalle del incidente", height=80, key=f"enf_det_inc_{paciente_sel}") if incidente else ""
 
             if st.button("Guardar registro de enfermería", width='stretch', type="primary", key="enf_guardar"):
                 if not intervencion.strip():

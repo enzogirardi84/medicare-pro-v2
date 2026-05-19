@@ -146,21 +146,21 @@ def render_escalas_clinicas(paciente_sel, user):
 
         if escala == "Glasgow":
             c1, c2, c3 = st.columns(3)
-            ocular = c1.selectbox("Respuesta ocular", [1, 2, 3, 4], index=3)
-            verbal = c2.selectbox("Respuesta verbal", [1, 2, 3, 4, 5], index=4)
-            motora = c3.selectbox("Respuesta motora", [1, 2, 3, 4, 5, 6], index=5)
+            ocular = c1.selectbox("Respuesta ocular", [1, 2, 3, 4], index=3, label_visibility="collapsed")
+            verbal = c2.selectbox("Respuesta verbal", [1, 2, 3, 4, 5], index=4, label_visibility="collapsed")
+            motora = c3.selectbox("Respuesta motora", [1, 2, 3, 4, 5, 6], index=5, label_visibility="collapsed")
             puntaje = _glasgow(ocular, verbal, motora)
             resumen = "Compromiso severo" if puntaje <= 8 else "Compromiso moderado" if puntaje <= 12 else "Leve / normal"
             st.metric("Puntaje Glasgow", puntaje)
         elif escala == "Braden":
             c1, c2, c3 = st.columns(3)
-            sensorial = c1.selectbox("Percepcion sensorial", [1, 2, 3, 4], index=3)
-            humedad = c2.selectbox("Humedad", [1, 2, 3, 4], index=3)
-            actividad = c3.selectbox("Actividad", [1, 2, 3, 4], index=3)
+            sensorial = c1.selectbox("Percepcion sensorial", [1, 2, 3, 4], index=3, label_visibility="collapsed")
+            humedad = c2.selectbox("Humedad", [1, 2, 3, 4], index=3, label_visibility="collapsed")
+            actividad = c3.selectbox("Actividad", [1, 2, 3, 4], index=3, label_visibility="collapsed")
             c4, c5, c6 = st.columns(3)
-            movilidad = c4.selectbox("Movilidad", [1, 2, 3, 4], index=3)
-            nutricion = c5.selectbox("Nutricion", [1, 2, 3, 4], index=3)
-            friccion = c6.selectbox("Friccion / roce", [1, 2, 3], index=2)
+            movilidad = c4.selectbox("Movilidad", [1, 2, 3, 4], index=3, label_visibility="collapsed")
+            nutricion = c5.selectbox("Nutricion", [1, 2, 3, 4], index=3, label_visibility="collapsed")
+            friccion = c6.selectbox("Friccion / roce", [1, 2, 3], index=2, label_visibility="collapsed")
             puntaje = _braden(sensorial, humedad, actividad, movilidad, nutricion, friccion)
             resumen = "Alto riesgo UPP" if puntaje <= 12 else "Riesgo moderado" if puntaje <= 16 else "Bajo riesgo"
             st.metric("Puntaje Braden", puntaje)

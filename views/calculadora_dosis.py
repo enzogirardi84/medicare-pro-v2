@@ -872,8 +872,8 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                         f"(esperado ~{esperado} kg). Verifique los datos.",
                         icon="⚠️"
                     )
-            except Exception:
-                pass
+            except Exception as _e_dc:
+                log_event("calculadora_dosis", f"edad_peso_error:{type(_e_dc).__name__}:{_e_dc}")
 
     with c2:
         _MANUAL_KEY = "✏️ Ingreso manual..."
