@@ -628,7 +628,7 @@ def render_advanced_settings(is_admin: bool):
     with col2:
         if st.button("🔄 Forzar Guardado", width='stretch'):
             try:
-                guardar_datos()
+                guardar_datos(spinner=False)
                 st.success("✅ Datos guardados")
             except Exception as e:
                 log_event("settings", "error: guardar_datos_fallo")
@@ -640,7 +640,7 @@ def render_advanced_settings(is_admin: bool):
     st.subheader("🚨 Zona de Peligro")
     
     with st.expander("⚠️ Acciones Destructivas"):
-        log_event("settings", "error: acciones_destructivas_mostradas")
+        log_event("settings", "acciones_destructivas_expandidas")
         st.error("Las siguientes acciones pueden causar pérdida de datos.")
         
         if st.button("🗑️ Limpiar Datos de Sesión", type="secondary"):

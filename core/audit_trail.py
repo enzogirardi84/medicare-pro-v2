@@ -129,10 +129,11 @@ class AuditTrail:
             import streamlit as st
             st.warning(
                 "AUDIT_SECRET_KEY no configurada. La cadena de auditoria HMAC usara "
-                "una clave por defecto (solo para desarrollo). "
+                "una clave aleatoria por sesion (no persistente). "
                 "Configura AUDIT_SECRET_KEY en el entorno para produccion."
             )
-            self._secret = "dev-default-audit-secret-key-change-in-production"
+            import secrets as _sec
+            self._secret = _sec.token_hex(32)
         self._entries: List[AuditEntry] = []
         self._last_hash = "0" * 64  # Genesis hash
     

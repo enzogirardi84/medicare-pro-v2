@@ -76,7 +76,7 @@ def _mostrar_alertas_vitales_preview(ta, fc, fr, sat, temp, hgt):
             alertas_warn.append(f"{clave} = {val} {r['unidad']} — fuera de rango normal ({r['min']}–{r['max']})")
 
     for msg in alertas_crit:
-        log_event("clinica", f"error: valor critico - {msg}")
+        log_event("clinica", f"alerta_clinica_critica: {msg}")
         st.error(f"🔴 CRÍTICO: {msg}")
     for msg in alertas_warn:
         st.warning(f"🟡 Alerta: {msg}")
@@ -156,7 +156,7 @@ def render_clinica(paciente_sel, user=None):
 
     alergias = str(det.get("alergias", "")).strip()
     if alergias:
-        log_event("clinica", f"error: alergias registradas - {alergias}")
+        log_event("clinica", f"alergias_mostradas: {alergias[:80]}")
         st.error(f"Alergias registradas: {alergias}")
 
     vits = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]

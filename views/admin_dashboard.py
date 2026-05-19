@@ -198,7 +198,7 @@ def render_users_tab():
             st.rerun()
     
     with col2:
-        if st.button("🔄 Reset Password", width='stretch'):
+        if st.button("🔄 Restablecer contraseña", width='stretch'):
             st.info("Seleccione usuario de la tabla")
     
     with col3:

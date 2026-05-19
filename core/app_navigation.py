@@ -284,8 +284,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
                 if st.button(f"← Volver a {_mod_ant[:20]}", key="nav_volver", use_container_width=True):
                     set_modulo_actual(_mod_ant, rerun=True)
             st.divider()
-    except Exception:
-        pass
+    except Exception as _e_bread:
+        log_event("app_navigation", f"breadcrumb_fallo:{type(_e_bread).__name__}")
 
     try:
         aplicar_compactacion_movil_por_vista(tab_name)

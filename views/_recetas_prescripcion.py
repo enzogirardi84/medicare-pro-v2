@@ -61,19 +61,23 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
         plan_hidratacion = []
 
         if tipo_indicacion == "Medicacion":
+            _vdem_options = ["-- Seleccionar del vademecum --"] + vademecum_base
+            _idx_vdem = _vdem_options.index(_saved["med_vademecum"]) if _saved.get("med_vademecum", "") in _vdem_options else 0
+            _idx_via = _VIAS.index(_saved["via"]) if _saved.get("via", "") in _VIAS else 0
+            _idx_frec = _FRECUENCIAS.index(_saved["frecuencia"]) if _saved.get("frecuencia", "") in _FRECUENCIAS else 0
             if es_movil:
-                med_vademecum = st.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base, value=_saved.get("med_vademecum", "-- Seleccionar del vademecum --"))
+                med_vademecum = st.selectbox("Medicamento", _vdem_options, index=_idx_vdem)
                 med_manual = st.text_input("O escribir manualmente", value=_saved.get("med_manual", ""))
-                via = st.selectbox("Via de administracion", _VIAS, value=_saved.get("via", _VIAS[0]))
-                frecuencia = st.selectbox("Frecuencia", _FRECUENCIAS, value=_saved.get("frecuencia", _FRECUENCIAS[0]))
+                via = st.selectbox("Via de administracion", _VIAS, index=_idx_via)
+                frecuencia = st.selectbox("Frecuencia", _FRECUENCIAS, index=_idx_frec)
                 dias = st.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 7))
             else:
                 c1, c2 = st.columns([3, 1])
-                med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base, value=_saved.get("med_vademecum", "-- Seleccionar del vademecum --"))
+                med_vademecum = c1.selectbox("Medicamento", _vdem_options, index=_idx_vdem)
                 med_manual = c2.text_input("O escribir manualmente", value=_saved.get("med_manual", ""))
                 col3, col4, col5 = st.columns([2, 2, 1])
-                via = col3.selectbox("Via de administracion", _VIAS, value=_saved.get("via", _VIAS[0]))
-                frecuencia = col4.selectbox("Frecuencia", _FRECUENCIAS, value=_saved.get("frecuencia", _FRECUENCIAS[0]))
+                via = col3.selectbox("Via de administracion", _VIAS, index=_idx_via)
+                frecuencia = col4.selectbox("Frecuencia", _FRECUENCIAS, index=_idx_frec)
                 dias = col5.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 7))
             hora_inicio = st.time_input("Hora inicial de administracion", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_receta")
             horarios_sugeridos = horarios_programados_desde_frecuencia(frecuencia, hora_inicio.strftime("%H:%M"))
@@ -84,15 +88,16 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
         else:
             via = "Via Endovenosa"
             frecuencia = "Infusion continua"
+            _idx_sol = _SOLUCIONES.index(_saved["solucion"]) if _saved.get("solucion", "") in _SOLUCIONES else 0
             if es_movil:
-                solucion = st.selectbox("Solucion principal", _SOLUCIONES, key="solucion_receta", value=_saved.get("solucion", _SOLUCIONES[0]))
+                solucion = st.selectbox("Solucion principal", _SOLUCIONES, index=_idx_sol, key="solucion_receta")
                 volumen_ml = st.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key="volumen_receta")
                 dias = st.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key="dias_infusion_receta")
                 velocidad_ml_h = st.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key="velocidad_receta")
                 hora_inicio = st.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_infusion_receta")
             else:
                 c1, c2, c3 = st.columns([2, 1, 1])
-                solucion = c1.selectbox("Solucion principal", _SOLUCIONES, key="solucion_receta", value=_saved.get("solucion", _SOLUCIONES[0]))
+                solucion = c1.selectbox("Solucion principal", _SOLUCIONES, index=_idx_sol, key="solucion_receta")
                 volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key="volumen_receta")
                 dias = c3.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key="dias_infusion_receta")
                 c4, c5 = st.columns([1, 2])
