@@ -397,8 +397,3 @@ L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
             st.caption("Sin datos de GPS disponibles. Las visitas fichadas con GPS aparecerán aquí.")
 
         st.divider()
-        try:
-            from core.reporte_ejecutivo import render_reporte_ejecutivo
-            render_reporte_ejecutivo(mi_empresa)
-        except Exception as _e:
-            log_event("dashboard", f"reporte_ejecutivo:{type(_e).__name__}")
