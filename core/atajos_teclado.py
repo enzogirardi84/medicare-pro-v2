@@ -4,38 +4,54 @@ from __future__ import annotations
 
 import streamlit as st
 
-from core.app_logging import log_event
-
 
 def inject_atajos_teclado():
     """Inyecta atajos de teclado via JavaScript."""
     st.markdown("""
     <script>
     document.addEventListener('keydown', function(e) {
-        // Ctrl+Shift+H = Ir a Historial
-        if (e.ctrlKey && e.shiftKey && e.key === 'H') {
-            e.preventDefault();
-            window.parent.location.href = window.parent.location.pathname + '?modulo=Historial';
+        // Skip if typing in an input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            // Allow Ctrl+G even in inputs (save)
+            if (!(e.ctrlKey && e.key === 'g')) return;
         }
-        // Ctrl+Shift+D = Ir a Dashboard
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        // Ctrl+E = Evolucion
+        if (e.ctrlKey && !e.shiftKey && e.key === 'e') {
             e.preventDefault();
-            window.parent.location.href = window.parent.location.pathname + '?modulo=Dashboard';
+            window.parent.location.href = updateQueryParam('modulo', 'Evolucion');
         }
-        // Ctrl+Shift+A = Ir a Admision
-        if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        // Ctrl+R = Recetas
+        if (e.ctrlKey && !e.shiftKey && e.key === 'r') {
             e.preventDefault();
-            window.parent.location.href = window.parent.location.pathname + '?modulo=Admision';
+            window.parent.location.href = updateQueryParam('modulo', 'Recetas');
         }
-        // Ctrl+Shift+E = Ir a Evolucion
-        if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+        // Ctrl+G = Guardar
+        if (e.ctrlKey && !e.shiftKey && e.key === 'g') {
             e.preventDefault();
-            window.parent.location.href = window.parent.location.pathname + '?modulo=Evolucion';
+            // Click the first save button found
+            var btns = document.querySelectorAll('button[kind="primary"]');
+            for (var i = 0; i < btns.length; i++) {
+                if (btns[i].textContent.includes('Guardar') || btns[i].textContent.includes('guardar')) {
+                    btns[i].click();
+                    break;
+                }
+            }
         }
-        // Escape = Cerrar expanders
-        if (e.key === 'Escape') {
-            var details = document.querySelectorAll('details[open]');
-            details.forEach(function(d) { d.removeAttribute('open'); });
+        // Ctrl+D = Dashboard
+        if (e.ctrlKey && !e.shiftKey && e.key === 'd') {
+            e.preventDefault();
+            window.parent.location.href = updateQueryParam('modulo', 'Dashboard');
+        }
+        // Ctrl+F = Focus search
+        if (e.ctrlKey && !e.shiftKey && e.key === 'f') {
+            e.preventDefault();
+            var searchInput = document.querySelector('input[placeholder*="paciente" i]');
+            if (searchInput) searchInput.focus();
+        }
+        function updateQueryParam(key, value) {
+            var url = new URL(window.parent.location.href);
+            url.searchParams.set(key, value);
+            return url.toString();
         }
     });
     </script>
@@ -46,11 +62,12 @@ def render_ayuda_atajos():
     """Muestra ayuda de atajos de teclado."""
     with st.expander("Atajos de teclado", expanded=False):
         st.markdown("""
-        | Atajo | Accion |
+        | Atajo | Acción |
         |-------|--------|
-        | Ctrl+Shift+H | Ir a Historial |
-        | Ctrl+Shift+D | Ir a Dashboard |
-        | Ctrl+Shift+A | Ir a Admision |
-        | Ctrl+Shift+E | Ir a Evolucion |
+        | Ctrl+E | Ir a Evolución |
+        | Ctrl+R | Ir a Recetas |
+        | Ctrl+G | Guardar cambios |
+        | Ctrl+D | Ir a Dashboard |
+        | Ctrl+F | Buscar paciente |
         | Escape | Cerrar ventanas |
         """)

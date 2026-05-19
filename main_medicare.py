@@ -468,6 +468,20 @@ if ("Notification" in window && Notification.permission === "default") {
 """, unsafe_allow_html=True)
 
 # ============================================================
+# CONFIRMACIÓN AL CERRAR SIN GUARDAR
+# ============================================================
+_unsaved = st.session_state.get("_guardar_datos_pendiente", False) or st.session_state.get("_draft_pending", False)
+if _unsaved:
+    st.markdown("""
+    <script>
+    window.addEventListener('beforeunload', function(e) {
+        e.preventDefault();
+        e.returnValue = '';
+    });
+    </script>
+    """, unsafe_allow_html=True)
+
+# ============================================================
 # TOASTS
 # ============================================================
 from core.alert_toasts import render_queued_toasts

@@ -42,6 +42,13 @@ from core.app_logging import log_event
 
 
 def render_dashboard(mi_empresa, rol):
+    _widgets = st.session_state.setdefault("_dashboard_widgets", {
+        "resumen_turno": True,
+        "acciones_rapidas": True,
+        "stock_critico": True,
+        "pendientes_facturar": True,
+        "vitales_alertas": True,
+    })
     from core.ui_liviano import headers_sugieren_equipo_liviano
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
@@ -76,6 +83,17 @@ def render_dashboard(mi_empresa, rol):
         st.caption(
             "Las metricas de la primera fila son conteos del momento; la segunda fila mezcla ventana de 48 h, 30 dias y senales clinicas. Los listados al final se pueden acotar con el selector de cantidad."
         )
+
+    with st.expander("⚙️ Personalizar dashboard", expanded=False):
+        _cols = st.columns(3)
+        _widget_keys = list(_widgets.keys())
+        for i, _wk in enumerate(_widget_keys):
+            with _cols[i % 3]:
+                _widgets[_wk] = st.toggle(
+                    _wk.replace("_", " ").title(),
+                    value=_widgets[_wk],
+                    key=f"dw_{_wk}",
+                )
 
     rol_n = str(rol or "").strip().lower()
     if rol_n in {"superadmin", "admin"}:
@@ -124,76 +142,79 @@ def render_dashboard(mi_empresa, rol):
     agenda = filtrar_registros_empresa(st.session_state.get("agenda_db", []), mi_empresa, rol)
     checkins = filtrar_registros_empresa(st.session_state.get("checkin_db", []), mi_empresa, rol)
 
-    # ── Alerta de stock crítico ─────────────────────────────────
-    try:
-        from core._insumos_map import sugerencias_reposicion
+    if _widgets.get("stock_critico"):
+        # ── Alerta de stock crítico ─────────────────────────────────
+        try:
+            from core._insumos_map import sugerencias_reposicion
 
-        _stock_crit = sugerencias_reposicion(mi_empresa)
-        if _stock_crit:
-            with st.expander(
-                f"🔴 Stock crítico — {len(_stock_crit)} insumo(s) por debajo del mínimo",
-                expanded=True,
-            ):
-                for item in _stock_crit[:10]:
-                    st.markdown(
-                        f"- **{item['item']}**: {item['stock']} uds. "
-                        f"(mínimo {item['stock_minimo']}) → reponer **{item['sugerido']}**"
-                    )
-    except Exception:
-        pass
+            _stock_crit = sugerencias_reposicion(mi_empresa)
+            if _stock_crit:
+                with st.expander(
+                    f"🔴 Stock crítico — {len(_stock_crit)} insumo(s) por debajo del mínimo",
+                    expanded=True,
+                ):
+                    for item in _stock_crit[:10]:
+                        st.markdown(
+                            f"- **{item['item']}**: {item['stock']} uds. "
+                            f"(mínimo {item['stock_minimo']}) → reponer **{item['sugerido']}**"
+                        )
+        except Exception:
+            pass
 
-    # ── ACCIONES RÁPIDAS ───────────────────────────────────────────
-    _pac = st.session_state.get("paciente_actual")
-    if _pac:
-        st.markdown("### ⚡ Acciones rápidas")
-        _cols = st.columns(5)
-        _acciones = [
-            ("📝", "Evolución", "Evolucion"),
-            ("❤️", "Signos vitales", "Clinica"),
-            ("💊", "Medicación", "Recetas"),
-            ("📋", "Admisión", "Admision"),
-        ]
-        _rol = str(st.session_state.get("u_actual", {}).get("rol", "")).lower()
-        if _rol in ("superadmin", "admin", "administrativo"):
-            _acciones.append(("💰", "Caja / Facturar", "Caja"))
-        for _col, (_ico, _txt, _mod) in zip(_cols, _acciones):
-            with _col:
-                if st.button(f"{_ico} {_txt}", key=f"da_{_mod}", use_container_width=True):
-                    st.session_state["modulo_actual"] = _mod
-                    st.session_state["modulo_anterior"] = "Dashboard"
-                    st.rerun()
-        st.divider()
+    if _widgets.get("acciones_rapidas"):
+        # ── ACCIONES RÁPIDAS ───────────────────────────────────────────
+        _pac = st.session_state.get("paciente_actual")
+        if _pac:
+            st.markdown("### ⚡ Acciones rápidas")
+            _cols = st.columns(5)
+            _acciones = [
+                ("📝", "Evolución", "Evolucion"),
+                ("❤️", "Signos vitales", "Clinica"),
+                ("💊", "Medicación", "Recetas"),
+                ("📋", "Admisión", "Admision"),
+            ]
+            _rol = str(st.session_state.get("u_actual", {}).get("rol", "")).lower()
+            if _rol in ("superadmin", "admin", "administrativo"):
+                _acciones.append(("💰", "Caja / Facturar", "Caja"))
+            for _col, (_ico, _txt, _mod) in zip(_cols, _acciones):
+                with _col:
+                    if st.button(f"{_ico} {_txt}", key=f"da_{_mod}", use_container_width=True):
+                        st.session_state["modulo_actual"] = _mod
+                        st.session_state["modulo_anterior"] = "Dashboard"
+                        st.rerun()
+            st.divider()
 
-    # ── Resumen de turno ─────────────────────────────────────────
-    try:
-        from core.utils import ahora as _ahora
-        _hoy = _ahora().strftime("%d/%m/%Y")
-        _emp = mi_empresa
-        # Administraciones de hoy
-        _ads_hoy = [
-            a for a in st.session_state.get("administracion_med_db", [])
-            if a.get("fecha", "").startswith(_hoy) and a.get("empresa") == _emp and "Realizada" in a.get("estado", "")
-        ]
-        _evos_hoy = [
-            e for e in st.session_state.get("evoluciones_db", [])
-            if e.get("fecha", "").startswith(_hoy) and e.get("paciente")
-        ]
-        _consumos_hoy = [
-            c for c in st.session_state.get("consumos_db", [])
-            if c.get("fecha", "").startswith(_hoy) and c.get("empresa") == _emp
-        ]
-        _pend_fact = [
-            f for f in st.session_state.get("facturacion_db", [])
-            if f.get("estado", "").startswith("Pendiente") and f.get("empresa") == _emp
-        ]
-        with st.expander("📋 Resumen de turno (hoy)", expanded=False):
-            ca, cb, cc, cd = st.columns(4)
-            ca.metric("💊 Dosis administradas", len(_ads_hoy))
-            cb.metric("📝 Evoluciones registradas", len(_evos_hoy))
-            cc.metric("📦 Insumos consumidos", sum(int(c.get("cantidad", 0)) for c in _consumos_hoy))
-            cd.metric("⏳ Pendientes facturar", len(_pend_fact))
-    except Exception:
-        pass
+    if _widgets.get("resumen_turno"):
+        # ── Resumen de turno ─────────────────────────────────────────
+        try:
+            from core.utils import ahora as _ahora
+            _hoy = _ahora().strftime("%d/%m/%Y")
+            _emp = mi_empresa
+            # Administraciones de hoy
+            _ads_hoy = [
+                a for a in st.session_state.get("administracion_med_db", [])
+                if a.get("fecha", "").startswith(_hoy) and a.get("empresa") == _emp and "Realizada" in a.get("estado", "")
+            ]
+            _evos_hoy = [
+                e for e in st.session_state.get("evoluciones_db", [])
+                if e.get("fecha", "").startswith(_hoy) and e.get("paciente")
+            ]
+            _consumos_hoy = [
+                c for c in st.session_state.get("consumos_db", [])
+                if c.get("fecha", "").startswith(_hoy) and c.get("empresa") == _emp
+            ]
+            _pend_fact = [
+                f for f in st.session_state.get("facturacion_db", [])
+                if f.get("estado", "").startswith("Pendiente") and f.get("empresa") == _emp
+            ]
+            with st.expander("📋 Resumen de turno (hoy)", expanded=False):
+                ca, cb, cc, cd = st.columns(4)
+                ca.metric("💊 Dosis administradas", len(_ads_hoy))
+                cb.metric("📝 Evoluciones registradas", len(_evos_hoy))
+                cc.metric("📦 Insumos consumidos", sum(int(c.get("cantidad", 0)) for c in _consumos_hoy))
+                cd.metric("⏳ Pendientes facturar", len(_pend_fact))
+        except Exception:
+            pass
 
     # ── Estado del último backup ─────────────────────────────────
     _ultimo_backup_ts = st.session_state.get("_ultimo_backup_ts", 0)
@@ -355,7 +376,8 @@ def render_dashboard(mi_empresa, rol):
             st.write("")
             render_metric_card(activos, "Pacientes activos", icono="👤", color=COLOR_PRIMARY)
 
-    render_vitales_alertas(st.session_state.get("vitales_db", []), _pac_ids)
+    if _widgets.get("vitales_alertas"):
+        render_vitales_alertas(st.session_state.get("vitales_db", []), _pac_ids)
 
     if not es_movil:
         st.divider()

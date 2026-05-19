@@ -22,6 +22,7 @@ from core.utils import (
 )
 from views._recetas_indicaciones import construir_texto_indicacion as _construir_texto_indicacion
 from views._recetas_utils import archivo_a_base64 as _archivo_a_base64
+from views.calculadora_dosis import _completar_con_vademecum
 
 try:
     from streamlit_drawable_canvas import st_canvas
@@ -172,6 +173,40 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "Verificá antes de prescribir."
                 )
 
+        # ============================================================
+        # SUGERENCIA DE DOSIS PEDIÁTRICA POR PESO
+        # ============================================================
+        try:
+            _peso_paciente = None
+            _vitales = st.session_state.get("vitales_db", [])
+            for _v in reversed(_vitales):
+                if _v.get("paciente") == paciente_sel:
+                    _p = _v.get("peso", _v.get("weight", ""))
+                    if _p:
+                        try:
+                            _peso_paciente = float(_p)
+                            break
+                        except (ValueError, TypeError):
+                            pass
+            if _peso_paciente and med_final_preview and med_final_preview != "-- Seleccionar del vademecum --" and tipo_indicacion == "Medicacion":
+                from views.calculadora_dosis import _normalizar_medicamento
+                _med_base, _conc = _normalizar_medicamento(med_final_preview)
+                _vademecum_dict = _completar_con_vademecum()
+                _info = _vademecum_dict.get(_med_base, {})
+                if isinstance(_info, str):
+                    _info = _vademecum_dict.get(_info, {})
+                if _info and isinstance(_info, dict) and _info.get("dosis_mg_kg") and len(_info["dosis_mg_kg"]) == 2:
+                    _dmin = _info["dosis_mg_kg"][0] * _peso_paciente
+                    _dmax = _info["dosis_mg_kg"][1] * _peso_paciente
+                    _dosis_sugerida = f"{_dmin:.0f} - {_dmax:.0f} mg"
+                    st.info(
+                        f"⚕️ **Dosis sugerida para {_peso_paciente:.0f} kg:** "
+                        f"{_dosis_sugerida} "
+                        f"({_info['dosis_mg_kg'][0]}-{_info['dosis_mg_kg'][1]} mg/kg)"
+                    )
+        except Exception as _e_dc:
+            pass
+
         st.session_state[_draft_key] = {
             "tipo_indicacion": tipo_indicacion,
             "med_vademecum": med_vademecum,
@@ -189,6 +224,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
         }
         _draft_data = st.session_state[_draft_key]
         if _draft_data.get("med_manual", "").strip() or _draft_data.get("solucion", "").strip():
+            st.session_state["_draft_pending"] = True
             st.caption("💾 Borrador guardado automáticamente")
         if st.button("Guardar prescripcion medica", width='stretch', type="primary"):
             med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum
@@ -287,6 +323,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                 except Exception as _e_sig:
                     _log_event("digital_signature_receta", str(_e_sig))
                 st.session_state["_rx_sql_invalidar"] = True
+                st.session_state["_draft_pending"] = False
                 queue_toast(f"Prescripcion de {med_final} guardada{' con adjunto de papel' if adjunto_papel else ''}.")
                 st.session_state.pop(_draft_key, None)
                 st.rerun()

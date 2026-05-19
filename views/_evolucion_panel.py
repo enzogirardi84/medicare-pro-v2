@@ -118,6 +118,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 key="evol_nota_textarea"
             )
             st.session_state[_draft_key] = nota
+            if nota.strip():
+                st.session_state["_draft_pending"] = True
             if st.session_state.get(_draft_key, "").strip():
                 st.caption("💾 Borrador guardado automáticamente")
             desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
@@ -262,6 +264,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         from core.app_logging import log_event as _le
                         _le("digital_signature_evol", str(_e_sig))
 
+                    st.session_state["_draft_pending"] = False
                     queue_toast("Evolucion guardada correctamente.")
                     st.session_state.pop(_draft_key, None)
                     st.session_state[f"evol_plantilla_prev_{paciente_sel}"] = "Libre"
@@ -311,20 +314,17 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         st.divider()
         st.markdown("#### Historial de Evoluciones Clinicas", unsafe_allow_html=True)
 
-        busqueda_evol = st.text_input(
-            "Buscar en notas",
-            placeholder="Palabras clave: diagnóstico, medicamento, profesional...",
-            key=f"busq_evol_{paciente_sel}",
-        ).strip().lower()
-        if busqueda_evol:
+        _evol_search = st.text_input("🔍 Buscar en evoluciones", placeholder="Palabra clave...", key="evol_fulltext_search")
+        if _evol_search.strip():
+            _q = _evol_search.strip().lower()
             evs_paciente = [
                 e for e in evs_paciente
-                if busqueda_evol in str(e.get("nota", "")).lower()
-                or busqueda_evol in str(e.get("firma", "")).lower()
-                or busqueda_evol in str(e.get("plantilla", "")).lower()
-                or busqueda_evol in str(e.get("fecha", "")).lower()
+                if _q in str(e.get("nota", "")).lower()
+                or _q in str(e.get("texto", "")).lower()
+                or _q in str(e.get("detalle", "")).lower()
             ]
-            st.caption(f"{len(evs_paciente)} resultado(s) para '{busqueda_evol}'")
+            if not evs_paciente:
+                st.info(f"Sin resultados para '{_evol_search}'")
 
         limite_evol = seleccionar_limite_registros(
             "Evoluciones a mostrar",

@@ -303,6 +303,32 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
+        # ============================================================
+        # AJUSTE DE STOCK MASIVO
+        # ============================================================
+        st.markdown("### 📦 Ajuste de stock masivo")
+        st.caption("Seleccioná varios items y aplicá un mismo ajuste a todos")
+        _items_all = [i.get("item", "") for i in inv_mio]
+        _selected = st.multiselect("Items a ajustar", options=_items_all, key="batch_inv_items")
+        if _selected:
+            _ajuste = st.number_input("Cantidad a sumar/restar", value=0, step=1, key="batch_inv_qty")
+            _razon = st.text_input("Motivo del ajuste", placeholder="Ej: inventario físico", key="batch_inv_reason")
+            if st.button("✅ Aplicar ajuste masivo", type="primary", key="batch_inv_apply"):
+                if _razon.strip():
+                    _count = 0
+                    for _inv in inv_mio:
+                        if _inv.get("item", "") in _selected:
+                            _inv["stock"] = max(0, int(_inv.get("stock", 0)) + _ajuste)
+                            _count += 1
+                    st.session_state["inventario_db"] = inv_mio
+                    guardar_datos(spinner=False)
+                    st.success(f"✅ {_count} items ajustados ({_ajuste:+d} unidades)")
+                    log_event("inventario", f"batch_ajuste:{_count}items:{_ajuste:+d}:{_razon}")
+                    st.rerun()
+                else:
+                    st.warning("Indicá un motivo para el ajuste")
+        st.divider()
+
         with lista_plegable("Ajuste manual, corrección y baja de insumos", expanded=False, height=None):
             st.markdown("#### Ajuste manual y correccion")
             item_a_editar = st.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
