@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 from core.app_logging import log_event
@@ -159,7 +160,7 @@ def render_clinica(paciente_sel, user=None):
         log_event("clinica", f"alergias_mostradas: {alergias[:80]}")
         st.error(f"Alergias registradas: {alergias}")
 
-    vits = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
+    vits = get_patient_records("vitales_db", paciente_sel)
 
     if vits:
         vits_ordenados = sorted(vits, key=lambda x: _parse_fecha_hora(x.get("fecha", "")))

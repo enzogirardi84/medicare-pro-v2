@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 from core.db_sql import get_pediatria_by_paciente, insert_pediatria
@@ -110,7 +111,7 @@ def render_pediatria(paciente_sel, user):
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not ped:
-        ped = [x for x in st.session_state.get("pediatria_db", []) if x.get("paciente") == paciente_sel]
+        ped = get_patient_records("pediatria_db", paciente_sel)
 
     if ped:
         ped_ord = sorted(ped, key=lambda x: _parse_fecha_hora(x.get("fecha", "")))

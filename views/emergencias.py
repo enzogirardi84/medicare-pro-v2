@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from core.app_logging import log_event
+from core._patient_index import get_patient_records
 from core.db_sql import get_emergencias_by_paciente
 from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
 from core.utils import ahora, mapa_detalles_pacientes
@@ -63,7 +64,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not eventos:
-        eventos = [x for x in st.session_state.get("emergencias_db", []) if x.get("paciente") == paciente_sel]
+        eventos = get_patient_records("emergencias_db", paciente_sel)
         
     activos = [x for x in eventos if x.get("triage_grado") in {"Grado 1 - Rojo", "Grado 2 - Amarillo"}]
     traslados = [x for x in eventos if x.get("ambulancia_solicitada")]

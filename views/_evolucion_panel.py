@@ -9,6 +9,7 @@ import streamlit as st
 from core._exports_history import build_history_pdf_bytes
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.guardado_universal import guardar_registro
 from core.app_logging import log_event
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
@@ -117,7 +118,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     _templates_db = st.session_state.setdefault("settings_db", {}).setdefault("evol_templates", _EVOL_TEMPLATES)
 
     if puede_registrar:
-        evs_all = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
+        evs_all = get_patient_records("evoluciones_db", paciente_sel)
         if evs_all:
             ultima_ev = max(evs_all, key=lambda x: x.get("fecha", ""))
             _c1, _c2, _c3 = st.columns(3)
@@ -382,7 +383,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         st.warning("⚠️ Usando datos locales (modo offline)")
 
     if not uso_sql:
-        evs_paciente = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
+        evs_paciente = get_patient_records("evoluciones_db", paciente_sel)
 
     if evs_paciente:
         st.divider()
@@ -561,7 +562,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             sugerencia="Usá el formulario de arriba para cargar la primera evolución con firma.",
         )
 
-    fotos_heridas = [x for x in st.session_state.get("fotos_heridas_db", []) if x.get("paciente") == paciente_sel]
+    fotos_heridas = get_patient_records("fotos_heridas_db", paciente_sel)
     if fotos_heridas:
         st.divider()
         st.markdown("#### Línea de tiempo de heridas y lesiones (fotos clínicas)")

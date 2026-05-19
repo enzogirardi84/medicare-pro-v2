@@ -9,6 +9,7 @@ import streamlit as st
 from core.alert_toasts import queue_toast
 from core.app_logging import log_event
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.db_sql import get_cuidados_enfermeria, insert_cuidado_enfermeria
 from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 from core.utils import (
@@ -50,14 +51,11 @@ TIPOS_CUIDADO = [
 
 def _render_contexto_clinico_enfermeria(paciente_sel, detalles):
     """Bloque compacto con signos vitales recientes e indicaciones activas del paciente."""
-    vitales = [
-        v for v in st.session_state.get("vitales_db", [])
-        if v.get("paciente") == paciente_sel
-    ]
+    vitales = get_patient_records("vitales_db", paciente_sel)
+    indicaciones_all = get_patient_records("indicaciones_db", paciente_sel)
     indicaciones = [
-        i for i in st.session_state.get("indicaciones_db", [])
-        if i.get("paciente") == paciente_sel
-        and str(i.get("estado_receta", "Activa")).strip() not in {"Suspendida", "Cancelada"}
+        i for i in indicaciones_all
+        if str(i.get("estado_receta", "Activa")).strip() not in {"Suspendida", "Cancelada"}
     ]
 
     tiene_vitales = bool(vitales)
@@ -405,6 +403,6 @@ def cargar_registros_enfermeria(paciente_sel, mi_empresa):
         log_event("error_leer_cuidados_sql", str(e))
 
     if not registros:
-        registros = [x for x in st.session_state.get("cuidados_enfermeria_db", []) if x.get("paciente") == paciente_sel]
+        registros = get_patient_records("cuidados_enfermeria_db", paciente_sel)
 
     return registros

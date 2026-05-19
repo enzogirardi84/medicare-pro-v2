@@ -96,6 +96,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Chatbot IA": list(_ROL_TODOS),
     "Calc. Dosis Pediatricas": list(_ROL_TODOS),
     "Reportes Financieros": list(_ROL_COORD_OPER),
+    "Admin Feature Flags": [],
 }
 
 

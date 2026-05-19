@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from features.balance import formato_shift_ml, totales_balance_hidrico_ml
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
@@ -93,7 +94,7 @@ def render_balance(paciente_sel, user):
             queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
             st.rerun()
 
-    blp = [x for x in st.session_state.get("balance_db", []) if x.get("paciente") == paciente_sel]
+    blp = get_patient_records("balance_db", paciente_sel)
 
     if not blp:
         bloque_estado_vacio(

@@ -683,6 +683,14 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
                 )
                 return
             st.session_state["_guardar_datos_ultimo_intento_ts"] = ahora_ts
+            # Invalidate patient indexes after save
+            try:
+                from core._patient_index import invalidate_index
+                for _ik in list(st.session_state.keys()):
+                    if _ik.startswith("_idx_ts_"):
+                        st.session_state[_ik] = 0.0
+            except Exception:
+                pass
     ctx = st.spinner("Guardando cambios...") if mostrar else nullcontext()
     try:
         with ctx:

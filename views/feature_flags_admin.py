@@ -34,15 +34,15 @@ def render_feature_flags_admin():
         st.error("🔒 Acceso denegado. Solo administradores.")
         return
     
-    st.title("🚩 Feature Flags Administration")
+    st.title("🚩 Administración de Feature Flags")
     st.caption("Control de funcionalidades y rollouts graduales")
     
     # Tabs
     tabs = st.tabs([
-        "🌎 Global Flags",
-        "👤 User Flags", 
-        "📊 Analytics",
-        "📝 History"
+        "🌎 Flags Globales",
+        "👤 Flags por Usuario",
+        "📊 Analíticas",
+        "📝 Historial"
     ])
     
     flags = get_feature_flags()
@@ -62,7 +62,7 @@ def render_feature_flags_admin():
 
 def render_global_flags(flags: FeatureFlags):
     """Renderiza flags globales del sistema."""
-    st.header("🌎 Global Feature Flags")
+    st.header("🌎 Flags Globales")
     
     # Categorías de flags
     categories = {
@@ -137,7 +137,7 @@ def render_global_flags(flags: FeatureFlags):
 
 def render_user_flags(flags: FeatureFlags):
     """Renderiza flags específicos por usuario."""
-    st.header("👤 User-Specific Flags")
+    st.header("👤 Flags por Usuario")
     
     st.info("🚧 Feature: Activar funcionalidades beta para usuarios específicos")
     
@@ -183,7 +183,7 @@ def render_user_flags(flags: FeatureFlags):
 
 def render_flags_analytics():
     """Renderiza analytics de uso de features."""
-    st.header("📊 Feature Usage Analytics")
+    st.header("📊 Analíticas")
     
     # Métricas simuladas
     col1, col2, col3, col4 = st.columns(4)
@@ -239,7 +239,7 @@ def render_flags_analytics():
 
 def render_flags_history():
     """Renderiza historial de cambios en flags."""
-    st.header("📝 Feature Flag Change History")
+    st.header("📝 Historial")
     
     # Simular historial
     history = [
@@ -308,7 +308,7 @@ def render_feature_flag_toggles():
         render_feature_flag_toggles()
     """
     st.sidebar.divider()
-    st.sidebar.subheader("🚩 Features")
+    st.sidebar.subheader("🚩 Activar/Desactivar Flags")
     
     flags = get_feature_flags()
     

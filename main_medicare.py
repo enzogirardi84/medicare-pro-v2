@@ -22,43 +22,20 @@ except Exception as _exc_import_et:
     setup_global_hooks = lambda: None
     def report_exception(**kwargs):
         pass
-from core.app_navigation import (
-    procesar_query_params_navegacion,
-    render_current_view,
-    render_module_nav,
-    resolve_current_view,
-    resolve_menu_for_role,
-)
-from core import utils as core_utils
-from core.alertas_app_paciente_ui import render_banner_alertas_criticas_si_aplica
 from core.auth import check_inactividad, render_login, verificar_clinica_sesion_activa
-from core.notificaciones_superiores import render_franja_avisos_operativos
-from core.app_performance import (
-    procesar_guardado_pendiente_seguro,
-    render_metricas_admin_sidebar,
-)
 from core.app_session import (
     eliminar_overlay_residual,
     inicializar_db_state_seguro,
 )
 from core.app_theme import aplicar_css_base
-from core.app_mobile import render_patient_selector
-from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
-from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401
-from core.perf_metrics import record_perf
 from core.seo_streamlit import (
     PAGE_TITLE_PUBLIC,
     inyectar_head_seo,
     inyectar_redirect_apex_si_configurado,
 )
-from core.sidebar_components import (
-    render_sidebar_contexto_clinico as _render_sidebar_contexto_clinico,
-)
-from core.ui_professional import apply_professional_theme
-from core.view_registry import build_view_maps
 
-APP_BUILD_TAG = "Build 2026-05-09 - Optimizado: velocidad, cache, UI"
+APP_BUILD_TAG = "Build 2026-05-19 - Optimizado: velocidad, cache, UI"
 
 st.set_page_config(
     page_title=PAGE_TITLE_PUBLIC,
@@ -117,27 +94,6 @@ ensure_entered_app_default()
 
 if not st.session_state.get("entered_app"):
     render_publicidad_y_detener()
-
-# ============================================================
-# IMPORTS DINÁMICOS / FALLBACKS
-# ============================================================
-cargar_texto_asset = core_utils.cargar_texto_asset
-es_control_total = getattr(core_utils, "es_control_total", lambda rol, usuario_actual=None: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"})
-inicializar_db_state = core_utils.inicializar_db_state
-mapa_detalles_pacientes = getattr(core_utils, "mapa_detalles_pacientes", lambda ss: ss.get("detalles_pacientes_db") if isinstance(ss.get("detalles_pacientes_db"), dict) else {})
-obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
-obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
-obtener_pacientes_visibles = getattr(core_utils, "obtener_pacientes_visibles", lambda session_state, mi_empresa, rol, incluir_altas=False, busqueda="": [])
-valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
-
-descripcion_acceso_rol = getattr(
-    core_utils, "descripcion_acceso_rol",
-    lambda rol: (
-        "Acceso de gestion y control total"
-        if str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"}
-        else "Acceso asistencial limitado al registro clinico del paciente"
-    ),
-)
 
 # ============================================================
 # SESIÓN / BOOTSTRAP DB
@@ -225,6 +181,51 @@ if not isinstance(user, dict) or not user:
 # IMPORTS PESADOS SOLO CON SESIÓN VÁLIDA
 # ============================================================
 from core.database import completar_claves_db_session, should_cleanup_cache, limpiar_cache_app
+
+from core import utils as core_utils
+from core.app_navigation import (
+    procesar_query_params_navegacion,
+    render_current_view,
+    render_module_nav,
+    resolve_current_view,
+    resolve_menu_for_role,
+)
+from core.alertas_app_paciente_ui import render_banner_alertas_criticas_si_aplica
+from core.notificaciones_superiores import render_franja_avisos_operativos
+from core.app_performance import (
+    procesar_guardado_pendiente_seguro,
+    render_metricas_admin_sidebar,
+)
+from core.app_mobile import render_patient_selector
+from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
+from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401
+from core.perf_metrics import record_perf
+from core.sidebar_components import (
+    render_sidebar_contexto_clinico as _render_sidebar_contexto_clinico,
+)
+from core.ui_professional import apply_professional_theme
+from core.view_registry import build_view_maps
+
+# ============================================================
+# IMPORTS DINÁMICOS / FALLBACKS
+# ============================================================
+cargar_texto_asset = core_utils.cargar_texto_asset
+es_control_total = getattr(core_utils, "es_control_total", lambda rol, usuario_actual=None: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"})
+inicializar_db_state = core_utils.inicializar_db_state
+mapa_detalles_pacientes = getattr(core_utils, "mapa_detalles_pacientes", lambda ss: ss.get("detalles_pacientes_db") if isinstance(ss.get("detalles_pacientes_db"), dict) else {})
+obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
+obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
+obtener_pacientes_visibles = getattr(core_utils, "obtener_pacientes_visibles", lambda session_state, mi_empresa, rol, incluir_altas=False, busqueda="": [])
+valor_por_modo_liviano = getattr(core_utils, "valor_por_modo_liviano", lambda normal, liviano, session_state=None: normal)
+
+descripcion_acceso_rol = getattr(
+    core_utils, "descripcion_acceso_rol",
+    lambda rol: (
+        "Acceso de gestion y control total"
+        if str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"}
+        else "Acceso asistencial limitado al registro clinico del paciente"
+    ),
+)
 
 completar_claves_db_session()
 

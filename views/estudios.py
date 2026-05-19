@@ -8,6 +8,7 @@ import streamlit as st
 
 from core.app_logging import log_event
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros, parse_fecha_hora
 
@@ -235,7 +236,7 @@ def render_estudios(paciente_sel, user, rol=None):
         registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0, error=e)
         
     if not uso_sql:
-        estudios_pac = [e for e in st.session_state.get("estudios_db", []) if e.get("paciente") == paciente_sel]
+        estudios_pac = get_patient_records("estudios_db", paciente_sel)
         sql_status = estado_estudios_sql(st.session_state)
         if sql_status and not sql_status.get("ok"):
             st.caption("Modo local/cache activo para estudios. La lectura SQL no respondio en esta vista.")

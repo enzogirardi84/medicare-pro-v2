@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, registrar_auditoria_legal, seleccionar_limite_registros
 from core.db_sql import get_escalas_by_paciente, insert_escala
@@ -106,7 +107,7 @@ def render_escalas_clinicas(paciente_sel, user):
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not registros:
-        registros = [x for x in st.session_state.get("escalas_clinicas_db", []) if x.get("paciente") == paciente_sel]
+        registros = get_patient_records("escalas_clinicas_db", paciente_sel)
         # Ordenar JSON por fecha descendente para igualar SQL
         registros.sort(key=lambda x: x.get("fecha", ""), reverse=True)
 

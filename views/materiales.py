@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.app_logging import log_event
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
@@ -130,7 +131,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                     log_event("materiales", "error: no se pudo actualizar stock")
                     st.error("Error al actualizar el stock.")
 
-    cons_paciente = [c for c in st.session_state.get("consumos_db", []) if c.get("paciente") == paciente_sel]
+    cons_paciente = get_patient_records("consumos_db", paciente_sel)
     if cons_paciente:
         st.divider()
         st.markdown("#### Materiales registrados para este paciente")

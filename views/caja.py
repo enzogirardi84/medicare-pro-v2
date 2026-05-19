@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core._patient_index import get_patient_records
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, sanitize_filename_component
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
@@ -205,9 +206,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     with tabs_caja[1]:
         st.markdown("##### ⏳ Pendientes de Facturar")
         pendientes = [
-            f for f in st.session_state.get("facturacion_db", [])
+            f for f in get_patient_records("facturacion_db", paciente_sel)
             if f.get("estado", "").startswith("Pendiente")
-            and f.get("paciente") == paciente_sel
         ]
         if not pendientes:
             st.success("✨ No hay movimientos pendientes para este paciente.")
