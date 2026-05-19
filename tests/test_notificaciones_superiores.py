@@ -17,9 +17,22 @@ def test_clasificar_inventario_agotado_y_bajo():
         {"item": "Otro", "stock": 50, "empresa": "Clinica A"},
         {"item": "Externo", "stock": 0, "empresa": "Clinica B"},
     ]
-    ag, bj = clasificar_inventario_alerta(db, "Clinica A", stock_bajo_max=10)
+    ag, bj, cr = clasificar_inventario_alerta(db, "Clinica A", stock_bajo_max=10)
     assert [x[0] for x in ag] == ["Guantes"]
     assert [x[0] for x in bj] == ["Agua"]
+    assert cr == []
+
+
+def test_clasificar_inventario_critico():
+    db = [
+        {"item": "Gasas", "stock": 5, "stock_minimo": 10, "empresa": "Clinica A"},
+        {"item": "Jeringas", "stock": 20, "stock_minimo": 10, "empresa": "Clinica A"},
+        {"item": "Guantes", "stock": 0, "stock_minimo": 10, "empresa": "Clinica A"},
+    ]
+    ag, bj, cr = clasificar_inventario_alerta(db, "Clinica A", stock_bajo_max=10)
+    assert [x[0] for x in ag] == ["Guantes"]  # stock 0
+    assert [x[0] for x in cr] == ["Gasas"]    # stock 5 <= minimo 10
+    assert len(bj) == 0                        # Jeringas: 20 > 10, no baja
 
 
 def test_filtrar_avisos_por_fecha():

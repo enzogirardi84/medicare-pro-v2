@@ -27,7 +27,7 @@ STOCK_BAJO_MAX = 10
 _MOD_INVENTARIO = "Inventario"
 
 
-def _chips_inventario_html(na: int, nb: int) -> str:
+def _chips_inventario_html(na: int, nb: int, nc: int = 0) -> str:
     """Chips compactos (mejor en móvil que cajas altas)."""
     parts: list[str] = []
     if na:
@@ -37,6 +37,15 @@ def _chips_inventario_html(na: int, nb: int) -> str:
             f'<span class="mc-inv-chip__n">{na}</span>'
             f'<span class="mc-inv-chip__txt">sin stock</span>'
             f'<span class="mc-inv-chip__hint">urgente</span>'
+            f"</span>"
+        )
+    if nc:
+        parts.append(
+            f'<span class="mc-inv-chip mc-inv-chip--critical" title="Stock por debajo del mínimo definido">'
+            f'<span class="mc-inv-chip__dot" aria-hidden="true"></span>'
+            f'<span class="mc-inv-chip__n">{nc}</span>'
+            f'<span class="mc-inv-chip__txt">crítico</span>'
+            f'<span class="mc-inv-chip__hint">bajo mínimo</span>'
             f"</span>"
         )
     if nb:
@@ -149,17 +158,28 @@ def clasificar_inventario_alerta(
     mi_empresa: str,
     *,
     stock_bajo_max: int = STOCK_BAJO_MAX,
-) -> tuple[list[tuple[str, int]], list[tuple[str, int]]]:
+) -> tuple[list[tuple[str, int]], list[tuple[str, int]], list[tuple[str, int, int]]]:
     """
-    Devuelve (agotados, bajos) como listas de (nombre_item, stock).
-    Agotados: stock <= 0. Bajos: 0 < stock <= stock_bajo_max.
+    Devuelve (agotados, bajos, criticos).
+      - Agotados: stock <= 0.
+      - Bajos: 0 < stock <= stock_bajo_max (y sin stock_minimo definido).
+      - Criticos: stock > 0 pero stock <= stock_minimo.
     """
     emp = (mi_empresa or "").strip()
     agotados: list[tuple[str, int]] = []
     bajos: list[tuple[str, int]] = []
+    criticos: list[tuple[str, int, int]] = []  # (item, stock, stock_minimo)
     if not emp:
-        return agotados, bajos
-        
+        return agotados, bajos, criticos
+
+    def _clasificar(item: str, stock: int, stock_minimo: int = 0):
+        if stock <= 0:
+            agotados.append((item, stock))
+        elif stock_minimo > 0 and stock <= stock_minimo:
+            criticos.append((item, stock, stock_minimo))
+        elif stock <= stock_bajo_max:
+            bajos.append((item, stock))
+
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     try:
         from core.db_sql import get_inventario_by_empresa
@@ -169,23 +189,23 @@ def clasificar_inventario_alerta(
             inv_sql = get_inventario_by_empresa(empresa_uuid)
             if isinstance(inv_sql, Sequence) and not isinstance(inv_sql, (str, bytes, bytearray)) and inv_sql:
                 for i in inv_sql:
-                    item = i.get("nombre", "")
-                    stock = i.get("stock_actual", 0)
-                    if stock <= 0:
-                        agotados.append((item, stock))
-                    elif stock <= stock_bajo_max:
-                        bajos.append((item, stock))
+                    _clasificar(
+                        i.get("nombre", ""),
+                        i.get("stock_actual", 0),
+                        i.get("stock_minimo", 0) or 0,
+                    )
                 agotados.sort(key=lambda x: x[0].lower())
                 bajos.sort(key=lambda x: (x[1], x[0].lower()))
-                return agotados, bajos
+                criticos.sort(key=lambda x: (x[1], x[0].lower()))
+                return agotados, bajos, criticos
     except Exception as _exc:
         from core.app_logging import log_event
         log_event("notificaciones", f"fallo_inventario_sql:{type(_exc).__name__}")
 
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not isinstance(inventario_db, list):
-        return agotados, bajos
-        
+        return agotados, bajos, criticos
+
     for row in inventario_db:
         if not isinstance(row, dict):
             continue
@@ -198,13 +218,13 @@ def clasificar_inventario_alerta(
             stock = int(row.get("stock", 0) or 0)
         except (TypeError, ValueError):
             stock = 0
-        if stock <= 0:
-            agotados.append((item, stock))
-        elif stock <= stock_bajo_max:
-            bajos.append((item, stock))
+        stock_minimo = int(row.get("stock_minimo", 0) or 0)
+        _clasificar(item, stock, stock_minimo)
+
     agotados.sort(key=lambda x: x[0].lower())
     bajos.sort(key=lambda x: (x[1], x[0].lower()))
-    return agotados, bajos
+    criticos.sort(key=lambda x: (x[1], x[0].lower()))
+    return agotados, bajos, criticos
 
 
 _SESSION_INV_DISMISS = "_mc_inv_dismiss_firma"
@@ -226,27 +246,31 @@ def render_alerta_inventario_banda_superior(
     ``menu``: módulos permitidos para el usuario; si incluye Inventario, se ofrece el botón «Ir a Inventario».
     """
     puede_ir_inventario = bool(menu) and _MOD_INVENTARIO in menu
-    agotados, bajos = clasificar_inventario_alerta(st.session_state.get("inventario_db") or [], mi_empresa)
+    agotados, bajos, criticos = clasificar_inventario_alerta(
+        st.session_state.get("inventario_db") or [], mi_empresa
+    )
     # Clave persistente por usuario dentro de la sesion
     _dismiss_key = _clave_inv_dismiss()
     # Migrar clave vieja si existe
     if st.session_state.get(_SESSION_INV_DISMISS) and not st.session_state.get(_dismiss_key):
         st.session_state[_dismiss_key] = st.session_state[_SESSION_INV_DISMISS]
-    if not agotados and not bajos:
+    if not agotados and not bajos and not criticos:
         toast_alerta_si_firma_cambia("insumos_alerta", "", None)
         st.session_state.pop(_dismiss_key, None)
         st.session_state.pop(_SESSION_INV_DISMISS, None)
         return
 
-    na, nb = len(agotados), len(bajos)
-    total = na + nb
-    f_inv = firma_inventario_alerta(agotados, bajos)
-    if na and nb:
-        msg_inv = f"Insumos: {na} sin stock, {nb} con stock bajo (≤{STOCK_BAJO_MAX} u.)."
-    elif na:
-        msg_inv = f"Insumos: {na} ítem(s) sin stock."
-    else:
-        msg_inv = f"Insumos: {nb} ítem(s) con stock bajo (≤{STOCK_BAJO_MAX} u.)."
+    na, nb, nc = len(agotados), len(bajos), len(criticos)
+    total = na + nb + nc
+    f_inv = firma_inventario_alerta(agotados, bajos, criticos)
+    partes_msg = []
+    if na:
+        partes_msg.append(f"{na} sin stock")
+    if nc:
+        partes_msg.append(f"{nc} crítico(s) (bajo mínimo)")
+    if nb:
+        partes_msg.append(f"{nb} con stock bajo (≤{STOCK_BAJO_MAX} u.)")
+    msg_inv = "Insumos: " + ", ".join(partes_msg) + "."
     toast_alerta_si_firma_cambia("insumos_alerta", f_inv, msg_inv, icon="📦")
 
     minificado = st.session_state.get(_dismiss_key) == f_inv
@@ -294,8 +318,15 @@ def render_alerta_inventario_banda_superior(
             )
         return
 
-    chips_html = _chips_inventario_html(na, nb)
-    accent = "mc-inv-alert--mixed" if na and nb else ("mc-inv-alert--critical" if na else "mc-inv-alert--caution")
+    chips_html = _chips_inventario_html(na, nb, nc)
+    if na:
+        accent = "mc-inv-alert--critical"
+    elif nc:
+        accent = "mc-inv-alert--mixed"
+    elif nb:
+        accent = "mc-inv-alert--caution"
+    else:
+        accent = "mc-inv-alert--caution"
 
     if puede_ir_inventario:
         foot_plain = (
@@ -354,7 +385,20 @@ def render_alerta_inventario_banda_superior(
                 unsafe_allow_html=True,
             )
             st.markdown("\n".join(f"- {escape(n)}" for n, _s in agotados))
-        if agotados and bajos:
+        if agotados and (criticos or bajos):
+            st.divider()
+        if criticos:
+            st.markdown(
+                '<p class="mc-inv-md-sec mc-inv-md-sec--critical">Stock crítico (por debajo del mínimo)</p>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "\n".join(
+                    f"- **{escape(n)}** — {s} u. (mínimo {m} u.)"
+                    for n, s, m in criticos
+                ),
+            )
+        if criticos and bajos:
             st.divider()
         if bajos:
             st.markdown(

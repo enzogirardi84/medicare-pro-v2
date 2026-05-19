@@ -191,6 +191,24 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     velocidad_ml_h=velocidad_ml_h, alternar_con=alternar_con,
                     detalle_infusion=detalle_infusion, plan_hidratacion=plan_hidratacion,
                 )
+                # Verificar interacciones medicamentosas
+                try:
+                    from core.drug_interactions import DrugInteractionMonitor, render_prescription_alerts
+
+                    _existing_meds = [
+                        i.get("med", "") for i in st.session_state.get("indicaciones_db", [])
+                        if i.get("paciente") == paciente_sel and i.get("estado_clinico") == "Activa"
+                    ]
+                    if _existing_meds and med_final:
+                        monitor = DrugInteractionMonitor()
+                        alerts, _ = monitor.check_prescription(
+                            paciente_sel, paciente_sel, [med_final], _existing_meds,
+                        )
+                        if alerts:
+                            render_prescription_alerts(alerts)
+                except Exception as _e_di:
+                    _log_event("recetas_prescripcion", f"interaccion_check:{type(_e_di).__name__}")
+
                 from core.database import guardar_json_db
                 guardar_json_db("indicaciones_db", {
                     "paciente": paciente_sel, "med": texto_receta,

@@ -363,23 +363,44 @@ def _merge_mapas_personalizados(mapa_base: MapType, clave_ss: str) -> MapType:
 
 
 def _evalua_condiciones_compuestas(texto: str, clave: str) -> bool:
-    """Evalúa condiciones compuestas: ``+`` (Y), ``-`` (Y NO).
+    """Evalúa condiciones compuestas: ``+`` = AND, ``-`` = Y NO.
 
-    Ejemplos:
-      - ``"curacion + infectada"`` → True solo si ``texto`` contiene ambas.
-      - ``"curacion - infectada"`` → True si contiene ``curacion`` pero NO ``infectada``.
-      - ``"curacion"`` → True si contiene ``curacion`` (substring simple).
+    Sintaxis:
+      ``"termino"``              → True si ``termino`` está en ``texto``.
+      ``"a + b"``                → True si ``a`` Y ``b`` están en ``texto``.
+      ``"a - b"``                → True si ``a`` está Y ``b`` NO está en ``texto``.
+      ``"a + b - c"``            → True si ``a`` Y ``b`` están, Y ``c`` NO.
+
+    Las exclusiones (``-``) se evalúan por cada grupo ``+``.
+    Ej: ``"curacion - infectada"`` → coincide si texto tiene ``curacion``
+        pero NO ``infectada``.
     """
     t = texto.lower()
-    partes = [p.strip() for p in clave.split("+")]
-    for parte in partes:
-        if parte.startswith("-"):
-            term_excluir = parte[1:].strip()
-            if term_excluir and term_excluir in t:
-                return False
-        else:
-            if parte not in t:
-                return False
+    for grupo in clave.split("+"):
+        grupo = grupo.strip()
+        if not grupo:
+            continue
+        tiene = True
+        excluir = False
+        for sub in grupo.split("-"):
+            sub = sub.strip()
+            if not sub:
+                continue
+            if not tiene:
+                # Ya falló un término obligatorio, no seguir evaluando
+                break
+            if excluir:
+                # Término de exclusión: NO debe estar en texto
+                if sub in t:
+                    return False
+            else:
+                # Primer término (obligatorio): DEBE estar en texto
+                if sub not in t:
+                    tiene = False
+                    break
+                excluir = True  # los siguientes son exclusiones
+        if not tiene:
+            return False
     return True
 
 

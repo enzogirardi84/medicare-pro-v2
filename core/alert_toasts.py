@@ -69,10 +69,14 @@ def firma_alertas_por_ids(rows: list[dict[str, Any]] | list[Any]) -> str:
     return f"{len(rows)}:" + "|".join(out_ids)
 
 
-def firma_inventario_alerta(agotados: list[tuple[str, int]], bajos: list[tuple[str, int]]) -> str:
-    if not agotados and not bajos:
+def firma_inventario_alerta(
+    agotados: list[tuple[str, int]],
+    bajos: list[tuple[str, int]],
+    criticos: list[tuple[str, int, int]] | None = None,
+) -> str:
+    if not agotados and not bajos and not criticos:
         return ""
-    raw = repr((agotados, bajos))
+    raw = repr((agotados, bajos, criticos))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:48]
 
 

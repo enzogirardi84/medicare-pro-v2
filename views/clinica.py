@@ -347,6 +347,20 @@ def render_clinica(paciente_sel, user=None):
                 st.session_state["vitales_db"].append(registro)
                 from core.database import _trim_db_list
                 _trim_db_list("vitales_db", 1000)
+
+                # Evaluar alertas clínicas avanzadas (shock, qSOFA, etc.)
+                try:
+                    from core.clinical_alerts import check_vitals_alerts
+
+                    clinical_alerts = check_vitals_alerts(
+                        paciente_sel, paciente_sel, registro,
+                        user_id=user.get("nombre", "system"),
+                    )
+                    for alert in clinical_alerts:
+                        log_event("clinica_alerts", f"{alert.severity}:{alert.rule_name}")
+                except Exception:
+                    pass
+
                 guardar_datos(spinner=True)
                 st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
                 st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)
