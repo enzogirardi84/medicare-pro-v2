@@ -195,7 +195,7 @@ def render_estadisticas(mi_empresa, rol):
             ).properties(height=250)
             col_pie, col_est = st.columns([1, 1])
             with col_pie:
-                st.altair_chart(pie, use_container_width=True)
+                st.altair_chart(pie, width='stretch')
             with col_est:
                 st.markdown(f'**Total pacientes: {total_pac}**')
                 for est, cnt in estados.most_common():

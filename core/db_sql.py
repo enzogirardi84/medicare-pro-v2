@@ -61,28 +61,7 @@ from core._db_sql_operativo import (
     get_checkins_by_empresa,
     insert_checkin,
 )
-from core._db_sql_diag import (
-    get_diagnosticos_by_paciente,
-    insert_diagnostico,
-    update_diagnostico,
-    delete_diagnostico,
-)
-from core._db_sql_lab import (
-    get_lab_categorias,
-    insert_lab_categoria,
-    get_lab_estudios,
-    insert_lab_estudio,
-    update_lab_estudio,
-    get_lab_ordenes,
-    get_lab_ordenes_by_paciente,
-    insert_lab_orden,
-    update_lab_orden,
-    get_lab_orden_items,
-    insert_lab_orden_items,
-    update_lab_orden_item,
-    insert_lab_muestra,
-    get_lab_muestras,
-)
+
 
 __all__ = [
     "check_supabase_connection",
@@ -105,11 +84,4 @@ __all__ = [
     "get_facturacion_by_empresa", "insert_facturacion",
     "get_balance_by_empresa", "insert_balance",
     "get_checkins_by_empresa", "insert_checkin",
-    "get_diagnosticos_by_paciente", "insert_diagnostico", "update_diagnostico", "delete_diagnostico",
-    "get_lab_categorias", "insert_lab_categoria",
-    "get_lab_estudios", "insert_lab_estudio", "update_lab_estudio",
-    "get_lab_ordenes", "get_lab_ordenes_by_paciente",
-    "insert_lab_orden", "update_lab_orden",
-    "get_lab_orden_items", "insert_lab_orden_items", "update_lab_orden_item",
-    "insert_lab_muestra", "get_lab_muestras",
 ]

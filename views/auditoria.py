@@ -348,7 +348,7 @@ def render_auditoria(mi_empresa, user):
     with st.expander("Top pacientes visitados", expanded=False):
         if not df_valida.empty and "paciente" in df_valida.columns:
             _top10 = df_valida["paciente"].value_counts().head(10)
-            st.dataframe(_top10.reset_index().rename(columns={"index": "Paciente", "paciente": "Visitas"}), use_container_width=True)
+            st.dataframe(_top10.reset_index().rename(columns={"index": "Paciente", "paciente": "Visitas"}), width='stretch')
 
     # 5. Tabla paginada
     df_chk = df_valida.iloc[::-1].reset_index(drop=True) if not df_valida.empty else pd.DataFrame()
@@ -372,7 +372,7 @@ def render_auditoria(mi_empresa, user):
         data=csv_bytes,
         file_name=f"Asistencia_{sanitize_filename_component(prof_sel, 'prof')}_{fecha_desde.strftime('%d%m%Y')}.csv",
         mime="text/csv",
-        use_container_width=True,
+        width='stretch',
     )
 
     if FPDF_DISPONIBLE:
@@ -400,4 +400,4 @@ def render_auditoria(mi_empresa, user):
                 pdf.cell(55, 8, safe_text(str(r.get("gps", "-"))[:30]), border=1, ln=True)
             pdf_bytes = pdf_output_bytes(pdf)
             nombre_pdf = f"Asistencia_{sanitize_filename_component(prof_sel, 'prof')}_{fecha_desde.strftime('%d%m%Y')}.pdf"
-            st.download_button("Descargar PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", use_container_width=True)
+            st.download_button("Descargar PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", width='stretch')

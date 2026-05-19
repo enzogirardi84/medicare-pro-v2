@@ -154,7 +154,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 st.button(
                     f"{icono} {texto}",
                     key=f"nav_g_{nombre_raw}",
-                    use_container_width=True,
+                    width='stretch',
                     type=tipo,
                     on_click=set_modulo_actual,
                     args=(nombre_raw,),
@@ -179,7 +179,7 @@ def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
                 st.button(
                     f"{icono} {texto}",
                     key=f"nav_a_{nombre_raw}",
-                    use_container_width=True,
+                    width='stretch',
                     type=tipo,
                     on_click=_nav_select_y_colapsar,
                     args=(nombre_raw,),

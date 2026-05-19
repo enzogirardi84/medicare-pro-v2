@@ -200,7 +200,7 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
     if not vista_todas and "empresa" in show_cols:
         show_cols.remove("empresa")
 
-    df_kwargs: Dict[str, Any] = {"use_container_width": True, "hide_index": True}
+    df_kwargs: Dict[str, Any] = {"width": "stretch", "hide_index": True}
     if "mapa" in show_cols:
         df_kwargs["column_config"] = {
             "mapa": st.column_config.LinkColumn(

@@ -224,7 +224,7 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
             conteo = Counter(str(c.get("insumo", c.get("material", "Otro"))) for c in consumos)
             st.dataframe(
                 {"Insumo": list(conteo.keys()), "Cantidad": list(conteo.values())},
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
             )
         else:

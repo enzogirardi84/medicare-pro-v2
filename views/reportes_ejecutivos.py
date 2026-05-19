@@ -27,7 +27,7 @@ def render_reportes_ejecutivos(mi_empresa, rol):
     with r1:
         st.markdown("##### Reporte Ejecutivo General")
         st.caption("Resumen de pacientes, facturación, stock bajo y actividad reciente.")
-        if st.button("Generar PDF Ejecutivo", key="btn_pdf_ejecutivo", type="primary", use_container_width=True):
+        if st.button("Generar PDF Ejecutivo", key="btn_pdf_ejecutivo", type="primary", width='stretch'):
             with st.spinner("Generando reporte..."):
                 pdf_bytes = generar_reporte_ejecutivo(mi_empresa)
                 if pdf_bytes:
@@ -37,7 +37,7 @@ def render_reportes_ejecutivos(mi_empresa, rol):
                         file_name=f"reporte_ejecutivo_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                         mime="application/pdf",
                         key="dl_pdf_ejecutivo",
-                        use_container_width=True,
+                        width='stretch',
                     )
                     st.success("Reporte listo para descargar.")
                 else:
@@ -46,7 +46,7 @@ def render_reportes_ejecutivos(mi_empresa, rol):
     with r2:
         st.markdown("##### Reporte Financiero")
         st.caption("Dashboard financiero con ingresos, gastos y análisis por obra social.")
-        if st.button("Abrir Reporte Financiero", key="btn_financiero", use_container_width=True):
+        if st.button("Abrir Reporte Financiero", key="btn_financiero", width='stretch'):
             st.session_state["modulo_actual"] = "Estadisticas"
             st.rerun()
 
@@ -56,14 +56,14 @@ def render_reportes_ejecutivos(mi_empresa, rol):
     with r3:
         st.markdown("##### Cierre Diario")
         st.caption("Resumen de operaciones del día, ingresos, egresos y movimientos de caja.")
-        if st.button("Ir a Cierre Diario", key="btn_cierre", use_container_width=True):
+        if st.button("Ir a Cierre Diario", key="btn_cierre", width='stretch'):
             st.session_state["modulo_actual"] = "Cierre Diario"
             st.rerun()
 
     with r4:
         st.markdown("##### Reporte de Auditoría")
         st.caption("Traza de eventos del sistema, accesos y cambios críticos.")
-        if st.button("Ir a Auditoría", key="btn_auditoria", use_container_width=True):
+        if st.button("Ir a Auditoría", key="btn_auditoria", width='stretch'):
             st.session_state["modulo_actual"] = "Auditoria"
             st.rerun()
 
@@ -83,7 +83,7 @@ def render_reportes_ejecutivos(mi_empresa, rol):
 
 
 def _exportar_csv_pacientes():
-    if st.button("Exportar Pacientes (CSV)", use_container_width=True, key="btn_csv_pac"):
+    if st.button("Exportar Pacientes (CSV)", width='stretch', key="btn_csv_pac"):
         pacientes = st.session_state.get("pacientes_db", [])
         detalles = st.session_state.get("detalles_pacientes_db", {})
         rows = []
@@ -112,7 +112,7 @@ def _exportar_csv_pacientes():
 
 
 def _exportar_csv_agenda():
-    if st.button("Exportar Agenda (CSV)", use_container_width=True, key="btn_csv_agenda"):
+    if st.button("Exportar Agenda (CSV)", width='stretch', key="btn_csv_agenda"):
         agenda = st.session_state.get("agenda_db", [])
         if agenda:
             import pandas as pd
@@ -128,7 +128,7 @@ def _exportar_csv_agenda():
 
 
 def _exportar_csv_facturacion():
-    if st.button("Exportar Facturación (CSV)", use_container_width=True, key="btn_csv_fact"):
+    if st.button("Exportar Facturación (CSV)", width='stretch', key="btn_csv_fact"):
         facturas = st.session_state.get("facturacion_db", [])
         if facturas:
             import pandas as pd

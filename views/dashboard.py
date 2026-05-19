@@ -320,7 +320,7 @@ def render_dashboard(mi_empresa, rol):
             ).configure_legend(
                 gradientLength=120, labelFontSize=10
             )
-            st.altair_chart(_heatmap, use_container_width=True)
+            st.altair_chart(_heatmap, width='stretch')
         else:
             st.caption("Sin actividad registrada en los últimos 30 días.")
 
@@ -392,7 +392,7 @@ L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
                 st.caption(f"{len(_gps_data)} visitas con GPS")
                 _df_gps_show = _df_gps[["paciente", "tipo", "fecha"]].copy()
                 _df_gps_show.columns = ["Paciente", "Tipo", "Fecha"]
-                st.dataframe(_df_gps_show.tail(10), use_container_width=True, height=300, hide_index=True)
+                st.dataframe(_df_gps_show.tail(10), width='stretch', height=300, hide_index=True)
         else:
             st.caption("Sin datos de GPS disponibles. Las visitas fichadas con GPS aparecerán aquí.")
 

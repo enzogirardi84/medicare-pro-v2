@@ -189,7 +189,7 @@ def render_financial_dashboard():
                               font=dict(color="#e2e8f0"),
                               showlegend=True)
             fig.update_traces(textposition="inside", textinfo="percent+label")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         except Exception:
             st.bar_chart(df_estado.set_index("Estado"))
     

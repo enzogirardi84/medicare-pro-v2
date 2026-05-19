@@ -80,7 +80,7 @@ def render_chart_card(titulo, chart, height=300):
         return
     with st.container():
         st.markdown(f'<div style="font-size:0.9rem;font-weight:600;color:#e2e8f0;margin-bottom:4px;">{titulo}</div>', unsafe_allow_html=True)
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width='stretch')
 
 
 def render_kpi_row(metrics, cols=4):
@@ -158,12 +158,11 @@ def plotly_chart_donut(df, names, values, titulo="", altura=400):
     return fig
 
 
-def render_plotly_chart(fig, use_container_width=True):
-    """Renderiza un gráfico Plotly en Streamlit con manejo de error."""
+def render_plotly_chart(fig, width='stretch'):
     if fig is None:
         st.caption("Plotly no está instalado. `pip install plotly` para gráficos interactivos.")
         return
     try:
-        st.plotly_chart(fig, use_container_width=use_container_width)
+        st.plotly_chart(fig, width=width)
     except Exception:
         st.caption("Error al renderizar gráfico Plotly.")
