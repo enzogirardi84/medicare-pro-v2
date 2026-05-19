@@ -25,6 +25,7 @@ ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS fecha_nacimiento text;
 ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS sexo text;
 ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS alergias text;
 ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS patologias text;
+ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS fecha_alta text;
 ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
 ALTER TABLE public.pacientes ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS public.checkin_asistencia (
     id uuid primary key default gen_random_uuid(),
     paciente_id uuid references public.pacientes(id) on delete cascade,
     empresa_id uuid references public.empresas(id) on delete cascade,
+    usuario_id uuid references public.usuarios(id) on delete set null,
     tipo text,
     fecha_hora timestamptz,
     latitud float,
