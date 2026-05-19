@@ -119,7 +119,7 @@ def render_clinica(paciente_sel, user=None):
     edad = _edad_desde_fnac(det.get("fnac", ""))
 
     st.markdown(
-        f"""
+        """
         <div class="mc-hero">
             <h2 class="mc-hero-title">Clinica — Signos vitales</h2>
             <p class="mc-hero-text">Control clinico del paciente, alertas automaticas y evolucion en el tiempo. Pensado para uso rapido en domicilio o guardia.</p>

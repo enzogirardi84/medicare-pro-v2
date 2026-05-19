@@ -225,7 +225,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "profesional_estado": nombre_usuario, "matricula_estado": medico_matricula.strip(),
                     "origen_registro": "Indicacion medica en papel" if adjunto_papel else "Prescripcion digital",
                     "adjunto_papel_b64": adjunto_b64, "adjunto_papel_nombre": adjunto_nombre,
-                    "adjunto_papel_tipo": adjunto_papel_tipo, "empresa": mi_empresa,
+                    "adjunto_papel_tipo": adjunto_tipo, "empresa": mi_empresa,
                 }, spinner=True)
                 registrar_auditoria_legal(
                     "Medicacion", paciente_sel, "Indicacion medica registrada",

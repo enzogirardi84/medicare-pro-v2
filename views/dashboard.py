@@ -8,21 +8,16 @@ import pandas as pd
 import streamlit as st
 
 from core.clinicas_control import sincronizar_clinicas_desde_datos
-from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
+from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
 from core.utils import (
     ahora,
     calcular_estado_agenda,
     filtrar_registros_empresa,
     mapa_detalles_pacientes,
-    mostrar_dataframe_con_scroll,
     parse_agenda_datetime,
     parse_fecha_hora,
-    seleccionar_limite_registros,
 )
 from views._dashboard_utils import (
-    _estado_vital_dash,
-    _estado_ta_dash,
-    _evaluar_ultimo_vital,
     _sumar_importe,
 )
 from views._dashboard_bloques import (
@@ -35,14 +30,12 @@ from core.charts import (
     render_metric_card,
     render_kpi_row,
     chart_barras,
-    chart_linea,
     render_chart_card,
     COLOR_PRIMARY,
     COLOR_SUCCESS,
     COLOR_WARNING,
     COLOR_DANGER,
     COLOR_INFO,
-    COLORS_CATEGORICAL,
 )
 from core.app_logging import log_event
 
@@ -160,7 +153,7 @@ def render_dashboard(mi_empresa, rol):
         ]
         _evos_hoy = [
             e for e in st.session_state.get("evoluciones_db", [])
-            if e.get("fecha", "").startswith(_hoy) and e.get("paciente") and paciente_sel and e.get("paciente") == paciente_sel
+            if e.get("fecha", "").startswith(_hoy) and e.get("paciente")
         ]
         _consumos_hoy = [
             c for c in st.session_state.get("consumos_db", [])

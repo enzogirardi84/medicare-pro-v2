@@ -31,10 +31,8 @@ from core.app_navigation import (
 )
 from core import utils as core_utils
 from core.alertas_app_paciente_ui import render_banner_alertas_criticas_si_aplica
-from core.anticolapso import limite_pacientes_sidebar
 from core.auth import check_inactividad, render_login, verificar_clinica_sesion_activa
 from core.notificaciones_superiores import render_franja_avisos_operativos
-from core.release_notes import MC_APP_CHANGELOG
 from core.app_performance import (
     procesar_guardado_pendiente_seguro,
     render_metricas_admin_sidebar,
@@ -42,7 +40,6 @@ from core.app_performance import (
 from core.app_session import (
     eliminar_overlay_residual,
     inicializar_db_state_seguro,
-    limpiar_sesion_app,
 )
 from core.app_theme import aplicar_css_base
 from core.app_mobile import render_patient_selector
@@ -480,7 +477,7 @@ render_queued_toasts()
 # ============================================================
 # PANEL DE SEGURIDAD / AUTO-BACKUP
 # ============================================================
-from core.seguridad_operaciones import render_panel_seguridad, deshacer_ultima_operacion
+from core.seguridad_operaciones import render_panel_seguridad
 
 render_panel_seguridad()
 render_ayuda_atajos()

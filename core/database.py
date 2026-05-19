@@ -513,7 +513,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                 return estructura
         except Exception as _exc:
             from core.app_logging import log_event
-            log_event("db_guardar", f"fallo_guardado_{source}:{type(_exc).__name__}:{_exc}")
+            log_event("db_guardar", f"fallo_guardado_dualwrite:{type(_exc).__name__}:{_exc}")
         # ------------------------------
 
         if shard and not monolito_legacy and not tenant_key:
