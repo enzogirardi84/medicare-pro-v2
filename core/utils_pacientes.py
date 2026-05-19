@@ -52,6 +52,7 @@ def mapa_detalles_pacientes(session_state: dict) -> dict:
                             "alergias": p.get("alergias", ""),
                             "patologias": p.get("patologias", ""),
                             "fecha_nacimiento": p.get("fecha_nacimiento", ""),
+                            "fecha_alta": p.get("fecha_alta", ""),
                         }
         except Exception as _exc:
             from core.app_logging import log_event
