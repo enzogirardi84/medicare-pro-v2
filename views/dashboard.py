@@ -148,6 +148,37 @@ def render_dashboard(mi_empresa, rol):
     except Exception:
         pass
 
+    # ── Resumen de turno ─────────────────────────────────────────
+    try:
+        from core.utils import ahora as _ahora
+        _hoy = _ahora().strftime("%d/%m/%Y")
+        _emp = mi_empresa
+        # Administraciones de hoy
+        _ads_hoy = [
+            a for a in st.session_state.get("administracion_med_db", [])
+            if a.get("fecha", "").startswith(_hoy) and a.get("empresa") == _emp and "Realizada" in a.get("estado", "")
+        ]
+        _evos_hoy = [
+            e for e in st.session_state.get("evoluciones_db", [])
+            if e.get("fecha", "").startswith(_hoy) and e.get("paciente") and paciente_sel and e.get("paciente") == paciente_sel
+        ]
+        _consumos_hoy = [
+            c for c in st.session_state.get("consumos_db", [])
+            if c.get("fecha", "").startswith(_hoy) and c.get("empresa") == _emp
+        ]
+        _pend_fact = [
+            f for f in st.session_state.get("facturacion_db", [])
+            if f.get("estado", "").startswith("Pendiente") and f.get("empresa") == _emp
+        ]
+        with st.expander("📋 Resumen de turno (hoy)", expanded=False):
+            ca, cb, cc, cd = st.columns(4)
+            ca.metric("💊 Dosis administradas", len(_ads_hoy))
+            cb.metric("📝 Evoluciones registradas", len(_evos_hoy))
+            cc.metric("📦 Insumos consumidos", sum(int(c.get("cantidad", 0)) for c in _consumos_hoy))
+            cd.metric("⏳ Pendientes facturar", len(_pend_fact))
+    except Exception:
+        pass
+
     # 1. Intentar leer emergencias desde PostgreSQL (Hybrid Read)
     emergencias = []
     with st.spinner("Cargando emergencias..."):

@@ -310,11 +310,19 @@ def render_inventario(mi_empresa):
             _s_act = _item_data.get("stock", 0)
             _s_min = int(_item_data.get("stock_minimo", 0) or 0)
             _costo = float(_item_data.get("costo_unitario", 0) or 0)
-            c_aj1, c_aj2, c_aj3, c_aj4 = st.columns([1, 1, 1, 1])
+            c_aj1, c_aj2, c_aj3, c_aj4, c_aj5 = st.columns([1, 1, 1, 1, 1])
             nuevo_stock = c_aj1.number_input("Stock real", min_value=0, value=_s_act, key="new_stock")
             nuevo_min = c_aj2.number_input("Stock mínimo", min_value=0, value=_s_min, key="new_min")
             nuevo_costo = c_aj3.number_input("Costo unitario $", min_value=0.0, value=_costo, step=0.5, format="%.2f", key="new_costo")
-            if c_aj4.button("Guardar cambios", width='stretch', type="primary"):
+            # Sugerencia automática de stock mínimo
+            try:
+                from core._insumos_map import stock_minimo_sugerido
+                _sug_min = stock_minimo_sugerido(item_a_editar, mi_empresa)
+                if _sug_min > 0:
+                    c_aj4.caption(f"💡 ≈**{_sug_min}** uds. según consumos")
+            except Exception:
+                pass
+            if c_aj5.button("Guardar cambios", width='stretch', type="primary"):
                 cambios = {"stock_actual": nuevo_stock, "stock_minimo": nuevo_min, "costo_unitario": nuevo_costo}
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)

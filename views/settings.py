@@ -35,6 +35,7 @@ def render_settings_page():
         "🎨 Apariencia",
         "🔔 Notificaciones",
         "🔗 Integraciones",
+        "📦 Reglas de Insumos",
         "🔒 Seguridad",
         "⚡ Avanzado"
     ])
@@ -49,9 +50,12 @@ def render_settings_page():
         render_integration_settings(is_admin)
     
     with tabs[3]:
-        render_security_settings(is_admin)
+        render_insumos_rules_settings(is_admin)
     
     with tabs[4]:
+        render_security_settings(is_admin)
+    
+    with tabs[5]:
         render_advanced_settings(is_admin)
 
 
@@ -553,6 +557,103 @@ def render_advanced_settings(is_admin: bool):
         from core.system_health import get_health_monitor
         monitor = get_health_monitor()
         monitor.render_health_dashboard()
+
+
+def render_insumos_rules_settings(is_admin: bool):
+    """Configuración de reglas personalizadas de insumos automáticos."""
+    st.header("📦 Reglas de Insumos Automáticos")
+    st.caption(
+        "Definí qué insumos se descuentan automáticamente al administrar un "
+        "medicamento o al detectar un procedimiento en la evolución."
+    )
+
+    st.markdown("#### Reglas para Medicamentos")
+    st.caption("Ej: nombre del medicamento → jeringa 5ml + aguja EV")
+    _med_rules: dict = st.session_state.setdefault("_insumos_map_medicamentos", {})
+    _med_keys = list(_med_rules.keys())
+
+    if _med_keys:
+        for i, k in enumerate(_med_keys):
+            with st.container(border=True):
+                ca, cb = st.columns([3, 1])
+                new_k = ca.text_input("Medicamento (palabra clave)", value=k, key=f"med_k_{i}")
+                items_str = ", ".join(
+                    f"{v['item']} x{v['cantidad']}" for v in _med_rules[k]
+                )
+                new_v = ca.text_input("Insumos (formato: 'Jeringa 5ml x1, Aguja EV x1')", value=items_str, key=f"med_v_{i}")
+                if cb.button("🗑️", key=f"med_del_{i}"):
+                    del _med_rules[k]
+                    st.rerun()
+                if new_k != k or new_v != items_str:
+                    if new_k.strip() and new_v.strip():
+                        del _med_rules[k]
+                        _med_rules[new_k.strip()] = [
+                            {"item": p.rsplit("x", 1)[0].strip(), "cantidad": int(p.rsplit("x", 1)[1].strip())}
+                            for p in new_v.split(",") if "x" in p
+                        ]
+                        st.rerun()
+    else:
+        st.info("Sin reglas personalizadas todavía. Agregá una abajo.")
+
+    with st.form("nueva_regla_med"):
+        nm = st.text_input("Palabra clave del medicamento", placeholder="Ej: mi-medicamento")
+        nv = st.text_input("Insumos (separados por coma)", placeholder="Ej: Jeringa 5ml x1, Aguja EV x1")
+        if st.form_submit_button("➕ Agregar regla de medicamento", type="primary"):
+            if nm.strip() and nv.strip():
+                _med_rules[nm.strip()] = [
+                    {"item": p.rsplit("x", 1)[0].strip(), "cantidad": int(p.rsplit("x", 1)[1].strip())}
+                    for p in nv.split(",") if "x" in p
+                ]
+                st.success(f"✅ Regla '{nm.strip()}' agregada")
+                st.rerun()
+
+    st.divider()
+    st.markdown("#### Reglas para Procedimientos")
+    st.caption("Ej: 'baño en cama' → pañal x2, toalla húmeda x4")
+    _proc_rules: dict = st.session_state.setdefault("_insumos_map_procedimientos", {})
+    _proc_keys = list(_proc_rules.keys())
+
+    if _proc_keys:
+        for i, k in enumerate(_proc_keys):
+            with st.container(border=True):
+                ca, cb = st.columns([3, 1])
+                new_k = ca.text_input("Procedimiento", value=k, key=f"proc_k_{i}")
+                items_str = ", ".join(
+                    f"{v['item']} x{v['cantidad']}" for v in _proc_rules[k]
+                )
+                new_v = ca.text_input("Insumos", value=items_str, key=f"proc_v_{i}")
+                if cb.button("🗑️", key=f"proc_del_{i}"):
+                    del _proc_rules[k]
+                    st.rerun()
+                if new_k != k or new_v != items_str:
+                    if new_k.strip() and new_v.strip():
+                        del _proc_rules[k]
+                        _proc_rules[new_k.strip()] = [
+                            {"item": p.rsplit("x", 1)[0].strip(), "cantidad": int(p.rsplit("x", 1)[1].strip())}
+                            for p in new_v.split(",") if "x" in p
+                        ]
+                        st.rerun()
+
+    with st.form("nueva_regla_proc"):
+        nm = st.text_input("Palabra clave del procedimiento", placeholder="Ej: curacion + infectada")
+        nv = st.text_input("Insumos (separados por coma)", placeholder="Ej: Gasas estériles x10, Guantes estériles x2")
+        if st.form_submit_button("➕ Agregar regla de procedimiento", type="primary"):
+            if nm.strip() and nv.strip():
+                _proc_rules[nm.strip()] = [
+                    {"item": p.rsplit("x", 1)[0].strip(), "cantidad": int(p.rsplit("x", 1)[1].strip())}
+                    for p in nv.split(",") if "x" in p
+                ]
+                st.success(f"✅ Regla '{nm.strip()}' agregada")
+                st.rerun()
+
+    if is_admin:
+        st.divider()
+        with st.expander("🗑️ Restablecer reglas predeterminadas"):
+            if st.button("Eliminar TODAS las reglas personalizadas", type="secondary"):
+                st.session_state["_insumos_map_medicamentos"] = {}
+                st.session_state["_insumos_map_procedimientos"] = {}
+                st.success("✅ Reglas personalizadas eliminadas")
+                st.rerun()
 
 
 def get_version() -> str:

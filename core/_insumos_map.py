@@ -243,6 +243,14 @@ PROCEDIMIENTO_A_INSUMOS: MapType = {
         {"item": "Solución fisiológica 500ml", "cantidad": 1},
         {"item": "Apósito estéril", "cantidad": 1},
     ],
+    "curacion + infectada": [
+        {"item": "Gasas estériles", "cantidad": 10},
+        {"item": "Guantes estériles", "cantidad": 2},
+        {"item": "Solución fisiológica 500ml", "cantidad": 1},
+        {"item": "Apósito estéril", "cantidad": 1},
+        {"item": "Povidona iodada", "cantidad": 1},
+        {"item": "Máscara descartable", "cantidad": 1},
+    ],
     "curacion de herida": [
         {"item": "Gasas estériles", "cantidad": 5},
         {"item": "Guantes estériles", "cantidad": 1},
@@ -342,32 +350,82 @@ PROCEDIMIENTO_A_INSUMOS: MapType = {
 # Helpers de búsqueda
 # ---------------------------------------------------------------------------
 
-def _buscar_en_mapa(texto: str, mapa: MapType) -> List[Dict[str, int | str]]:
-    """Busca coincidencias de `texto` en `mapa` (substring, case-insensitive).
+def _merge_mapas_personalizados(mapa_base: MapType, clave_ss: str) -> MapType:
+    """Fusiona el mapa hardcodeado con reglas personalizadas del usuario."""
+    import streamlit as st
 
-    Devuelve la lista de insumos de la primera clave que coincida.
+    personalizadas = st.session_state.get(clave_ss, {})
+    if not personalizadas:
+        return mapa_base
+    fusionado = dict(mapa_base)
+    fusionado.update(personalizadas)
+    return fusionado
+
+
+def _evalua_condiciones_compuestas(texto: str, clave: str) -> bool:
+    """Evalúa condiciones compuestas: ``+`` (Y), ``-`` (Y NO).
+
+    Ejemplos:
+      - ``"curacion + infectada"`` → True solo si ``texto`` contiene ambas.
+      - ``"curacion - infectada"`` → True si contiene ``curacion`` pero NO ``infectada``.
+      - ``"curacion"`` → True si contiene ``curacion`` (substring simple).
+    """
+    t = texto.lower()
+    partes = [p.strip() for p in clave.split("+")]
+    for parte in partes:
+        if parte.startswith("-"):
+            term_excluir = parte[1:].strip()
+            if term_excluir and term_excluir in t:
+                return False
+        else:
+            if parte not in t:
+                return False
+    return True
+
+
+def _buscar_en_mapa(
+    texto: str,
+    mapa: MapType,
+    *,
+    clave_personalizadas_ss: str = "",
+) -> List[Dict[str, int | str]]:
+    """Busca coincidencias de ``texto`` en ``mapa`` con matching inteligente.
+
+    Soporta:
+      - Substring simple (case-insensitive)
+      - Condiciones compuestas (``+`` = AND, ``-`` = EXCLUDE)
+      - Reglas personalizadas del usuario (fusionadas con el mapa base)
+
     Si hay múltiples coincidencias, prioriza la clave más larga (más específica).
     """
     t = texto.lower().strip()
+    if clave_personalizadas_ss:
+        mapa = _merge_mapas_personalizados(mapa, clave_personalizadas_ss)
+
     candidatos = []
     for clave, insumos in mapa.items():
-        if clave in t:
+        if _evalua_condiciones_compuestas(t, clave):
             candidatos.append((len(clave), clave, insumos))
     if not candidatos:
         return []
-    # Prioriza la clave más larga (más específica)
     candidatos.sort(key=lambda x: -x[0])
     return candidatos[0][2]
 
 
 def insumos_para_medicamento(nombre_med: str) -> List[Dict[str, int | str]]:
-    """Retorna los insumos asociados a un medicamento."""
-    return _buscar_en_mapa(nombre_med, MEDICAMENTO_A_INSUMOS)
+    """Retorna los insumos asociados a un medicamento (incluye reglas personalizadas)."""
+    return _buscar_en_mapa(
+        nombre_med, MEDICAMENTO_A_INSUMOS,
+        clave_personalizadas_ss="_insumos_map_medicamentos",
+    )
 
 
 def insumos_para_procedimiento(texto_nota: str) -> List[Dict[str, int | str]]:
-    """Retorna los insumos asociados a un procedimiento detectado en la nota."""
-    return _buscar_en_mapa(texto_nota, PROCEDIMIENTO_A_INSUMOS)
+    """Retorna los insumos asociados a un procedimiento (incluye reglas personalizadas)."""
+    return _buscar_en_mapa(
+        texto_nota, PROCEDIMIENTO_A_INSUMOS,
+        clave_personalizadas_ss="_insumos_map_procedimientos",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -515,6 +573,46 @@ def deducir_insumos(
         )
 
     return auto_creados
+
+
+def stock_minimo_sugerido(nombre_item: str, mi_empresa: str) -> int:
+    """Sugiere un ``stock_minimo`` basado en el historial de consumo.
+
+    Calcula el consumo promedio mensual del item y sugiere la mitad
+    (equivalente a ~2 semanas de cobertura).
+
+    Returns:
+        Cantidad sugerida, o 0 si no hay historial suficiente.
+    """
+    import streamlit as st
+    from datetime import datetime, timedelta
+
+    from dateutil.parser import parse as parse_date
+
+    now = datetime.now()
+    seis_meses_atras = now - timedelta(days=180)
+    item_key = nombre_item.lower().strip()
+    consumos = 0
+    fechas_encontradas = 0
+
+    for c in st.session_state.get("consumos_db", []):
+        if c.get("empresa") != mi_empresa:
+            continue
+        if c.get("insumo", "").lower().strip() != item_key:
+            continue
+        try:
+            f = parse_date(c.get("fecha", ""))
+            if f >= seis_meses_atras:
+                consumos += int(c.get("cantidad", 1))
+                fechas_encontradas += 1
+        except Exception:
+            continue
+
+    if fechas_encontradas < 3:
+        return 0  # historial insuficiente
+    promedio_mensual = consumos / max(1, (now - seis_meses_atras).days / 30)
+    sugerido = max(1, int(promedio_mensual / 2))
+    return sugerido
 
 
 def auto_facturar_servicio(

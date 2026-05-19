@@ -116,7 +116,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     col_m2.metric("Pendiente de Cobro", f"${total_pendiente:,.2f}")
     col_m3.metric("Practicas Registradas", len(fact_paciente))
 
-    tabs_caja = st.tabs(["💰 Registrar cobro", "📋 Historial del paciente", "📊 Auditoría general"])
+    tabs_caja = st.tabs(["💰 Registrar cobro", "⏳ Pendientes de Facturar", "📋 Historial del paciente", "📊 Auditoría general"])
 
     with tabs_caja[0]:
       with st.form("caja_form", clear_on_submit=True):
@@ -202,6 +202,41 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 st.rerun()
 
     with tabs_caja[1]:
+        st.markdown("##### ⏳ Pendientes de Facturar")
+        pendientes = [
+            f for f in st.session_state.get("facturacion_db", [])
+            if f.get("estado", "").startswith("Pendiente")
+            and f.get("paciente") == paciente_sel
+        ]
+        if not pendientes:
+            st.success("✨ No hay movimientos pendientes para este paciente.")
+        else:
+            st.caption(f"{len(pendientes)} item(s) pendiente(s) — asigná el precio y cobrá.")
+            total_pend = sum(float(p.get("monto", 0)) for p in pendientes)
+            st.metric("Total pendiente estimado", f"${total_pend:,.2f}")
+            for i, p in enumerate(pendientes):
+                with st.container(border=True):
+                    pa, pb, pc = st.columns([3, 1, 1])
+                    with pa:
+                        st.markdown(f"**{p.get('serv', '')}**")
+                        st.caption(f"{p.get('fecha', '')}")
+                    with pb:
+                        monto_edit = st.number_input(
+                            "$", min_value=0.0, step=500.0, value=float(p.get("monto", 0)),
+                            key=f"pend_monto_{i}", label_visibility="collapsed",
+                        )
+                    with pc:
+                        if st.button("💰 Cobrar", key=f"pend_cobrar_{i}", use_container_width=True):
+                            p["monto"] = monto_edit
+                            p["estado"] = "Cobrado"
+                            p["metodo"] = "Efectivo"
+                            from core.database import _trim_db_list
+                            _trim_db_list("facturacion_db", 500)
+                            guardar_datos(spinner=True)
+                            queue_toast(f"✅ ${monto_edit:,.2f} cobrado - {p.get('serv', '')[:30]}")
+                            st.rerun()
+
+    with tabs_caja[2]:
         st.caption(f"Mostrando movimientos de **{paciente_sel}**")
         if fact_paciente:
             limite = seleccionar_limite_registros(
@@ -273,7 +308,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 "No hay movimientos de facturacion para este paciente. Registralos en la pestaña **Registrar cobro**."
             )
 
-    with tabs_caja[2]:
+    with tabs_caja[3]:
         if es_control_total(rol_normalizado):
             st.caption("Vista global de la empresa: busca por texto, acota filas y exporta CSV.")
             df_caja = pd.DataFrame(fact_empresa)
