@@ -100,7 +100,6 @@ inject_atajos_teclado()
 # HANDLER GLOBAL: Error conocido de imagen (Anthropic/IA)
 # ============================================================
 try:
-    import streamlit as st
     # Verificar si LLM esta mal configurado
     from core.ai_assistant import LLM_ENABLED, LLM_PROVIDER, LLM_MODEL
     if LLM_ENABLED and LLM_PROVIDER:

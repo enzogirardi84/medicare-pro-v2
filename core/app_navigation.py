@@ -1,10 +1,8 @@
 """Navegación de módulos: query params, acordeón por categorías, resolución de vistas.
 
-
-from __future__ import annotations
-
 Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
+from __future__ import annotations
 
 import html
 from html import escape as html_escape
@@ -22,6 +20,7 @@ from core.nav_helpers import (
     obtener_subgrupos_categoria,
 )
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
+from core.view_helpers import aplicar_compactacion_movil_por_vista
 
 _VIEW_FN_CACHE: dict = {}
 
@@ -274,7 +273,6 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
         st.error("No tienes permisos para acceder a este modulo.")
         return
     try:
-        from core.view_helpers import aplicar_compactacion_movil_por_vista
         aplicar_compactacion_movil_por_vista(tab_name)
     except Exception as _exc:
         log_event("view_dispatch", f"compactacion_movil_falla:{tab_name}:{type(_exc).__name__}")

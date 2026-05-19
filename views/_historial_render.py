@@ -33,7 +33,7 @@ def _ordenar_columnas_tabla(df: pd.DataFrame) -> pd.DataFrame:
     return df[first + rest]
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=120)
 def _preparar_dataframe_seccion(registros: List[Dict[str, Any]], seccion_actual: str) -> pd.DataFrame:
     df = pd.DataFrame(registros).drop(columns=COLUMNAS_EXCLUIDAS_TABLA, errors="ignore")
     if seccion_actual == "Balance Hidrico":

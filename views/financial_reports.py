@@ -91,11 +91,16 @@ def render_financial_dashboard():
     # Filtrar por fecha
     facturas_filtradas = filter_by_date_range(facturacion, fecha_desde, fecha_hasta)
     
-    # KPIs
+    # KPIs (vectorized via DataFrame)
     col1, col2, col3, col4 = st.columns(4)
     
-    total_facturado = sum(f.get("monto", 0) or 0 for f in facturas_filtradas)
-    total_cobrado = sum(f.get("monto_cobrado", 0) or 0 for f in facturas_filtradas)
+    if facturas_filtradas:
+        _df_kpi = pd.DataFrame(facturas_filtradas)
+        total_facturado = _df_kpi["monto"].sum() if "monto" in _df_kpi.columns else 0
+        total_cobrado = _df_kpi["monto_cobrado"].sum() if "monto_cobrado" in _df_kpi.columns else 0
+    else:
+        total_facturado = 0
+        total_cobrado = 0
     total_deuda = total_facturado - total_cobrado
     cantidad_facturas = len(facturas_filtradas)
     
@@ -160,29 +165,26 @@ def render_financial_dashboard():
     with col1:
         st.subheader("Por Tipo de Atención")
         
-        tipo_counts = defaultdict(float)
-        for f in facturas_filtradas:
-            tipo = f.get("tipo", "Consulta")
-            tipo_counts[tipo] += f.get("monto", 0) or 0
-        
-        if tipo_counts:
-            data = [{"Tipo": k, "Monto": v} for k, v in sorted(tipo_counts.items(), key=lambda x: x[1], reverse=True)]
-            df_tipo = pd.DataFrame(data)
+        if facturas_filtradas and "tipo" in _df_kpi.columns and "monto" in _df_kpi.columns:
+            df_tipo = _df_kpi.groupby("tipo")["monto"].sum().reset_index()
+            df_tipo.columns = ["Tipo", "Monto"]
+            df_tipo = df_tipo.sort_values("Monto", ascending=False)
             st.bar_chart(df_tipo.set_index("Tipo"))
     
     with col2:
         st.subheader("Estado de Pagos")
         
-        # Simular estados de pago
-        pagadas = sum(1 for f in facturas_filtradas if (f.get("monto_cobrado", 0) or 0) >= (f.get("monto", 0) or 0))
-        parciales = sum(1 for f in facturas_filtradas if 0 < (f.get("monto_cobrado", 0) or 0) < (f.get("monto", 0) or 0))
-        pendientes = sum(1 for f in facturas_filtradas if (f.get("monto_cobrado", 0) or 0) == 0)
+        if facturas_filtradas and "monto_cobrado" in _df_kpi.columns and "monto" in _df_kpi.columns:
+            pagadas = (_df_kpi["monto_cobrado"] >= _df_kpi["monto"]).sum()
+            parciales = ((_df_kpi["monto_cobrado"] > 0) & (_df_kpi["monto_cobrado"] < _df_kpi["monto"])).sum()
+            pendientes = (_df_kpi["monto_cobrado"] == 0).sum()
+        else:
+            pagadas = parciales = pendientes = 0
         
-        data = {
+        df_estado = pd.DataFrame({
             "Estado": ["Pagadas", "Parciales", "Pendientes"],
-            "Cantidad": [pagadas, parciales, pendientes]
-        }
-        df_estado = pd.DataFrame(data)
+            "Cantidad": [pagadas, parciales, pendientes],
+        })
         
         try:
             import plotly.express as px

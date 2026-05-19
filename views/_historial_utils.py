@@ -78,7 +78,7 @@ def _resumen_linea_tiempo(seccion: str, reg: Dict[str, Any]) -> str:
     return (t[:160] if t else seccion)[:180]
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=120)
 def _actividad_reciente_filas(
     secciones: Dict[str, List[Dict[str, Any]]], limite: int
 ) -> List[Dict[str, str]]:
@@ -133,7 +133,7 @@ def _registro_coincide_busqueda(registro: Dict[str, Any], query: str) -> bool:
     return False
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=120)
 def _busqueda_global_resultados(
     secciones: Dict[str, List[Dict[str, Any]]],
     query: str,
