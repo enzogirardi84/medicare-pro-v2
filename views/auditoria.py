@@ -252,7 +252,8 @@ def render_auditoria(mi_empresa, user):
     except ImportError:
         _empresa_uuid = None
 
-    _local_checkins = st.session_state.get("checkin_db", [])
+    _local_checkins_raw = st.session_state.get("checkin_db", [])
+    _local_checkins = [c for c in _local_checkins_raw if isinstance(c, dict)]
     _local_map = {}
     for _lc in _local_checkins:
         _key = (_lc.get("paciente", ""), _lc.get("fecha_hora", "")[:16])

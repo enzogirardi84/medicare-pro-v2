@@ -199,7 +199,8 @@ def render_rrhh(mi_empresa, rol, user):
     # 1. Intentar leer desde PostgreSQL (Hybrid Read) + enriquecer nombres desde local
     checkins = []
     # Mapa local (paciente -> fecha -> profesional) para resolver nombres que SQL no pudo resolver
-    _local_checkins = st.session_state.get("checkin_db", [])
+    _local_checkins_raw = st.session_state.get("checkin_db", [])
+    _local_checkins = [c for c in _local_checkins_raw if isinstance(c, dict)]
     _local_map = {}
     for _lc in _local_checkins:
         _key = (_lc.get("paciente", ""), _lc.get("fecha_hora", "")[:16])
