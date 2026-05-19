@@ -1,4 +1,5 @@
 from __future__ import annotations
+from html import escape
 
 import streamlit as st
 
@@ -115,6 +116,6 @@ def render_telemedicina(paciente_sel):
                     ico = iconos.get(est, "⚪")
                     nom = str(c.get("patient_name", "S/D"))
                     fec = str(c.get("scheduled_time", ""))[:16]
-                    items.append(f"{ico} <b>{nom}</b> — {fec} <code>{est}</code>")
+                    items.append(f"{ico} <b>{escape(nom)}</b> — {escape(fec)} <code>{escape(est)}</code>")
                 if items:
                     st.markdown(f'<div {SCROLL}>{"<br>".join(items)}</div>', unsafe_allow_html=True)

@@ -202,19 +202,13 @@ def render_clinica(paciente_sel, user=None):
             c5.metric("Temp", f"{ultimo.get('Temp', '-')} C")
             c6.metric("HGT", ultimo.get("HGT", "-"))
         else:
-            r1, r2, r3 = st.columns(3)
-            with r1:
-                c1, c2 = st.columns(2)
-                c1.metric("T.A.", ultimo.get("TA", "-"))
-                c2.metric("F.C.", f"{ultimo.get('FC', '-')} lpm")
-            with r2:
-                c3, c4 = st.columns(2)
-                c3.metric("F.R.", f"{ultimo.get('FR', '-')} rpm")
-                c4.metric("SatO2", f"{ultimo.get('Sat', '-')} %")
-            with r3:
-                c5, c6 = st.columns(2)
-                c5.metric("Temp", f"{ultimo.get('Temp', '-')} C")
-                c6.metric("HGT", ultimo.get("HGT", "-"))
+            r1, r2, r3, r4, r5, r6 = st.columns(6)
+            r1.metric("T.A.", ultimo.get("TA", "-"))
+            r2.metric("F.C.", f"{ultimo.get('FC', '-')} lpm")
+            r3.metric("F.R.", f"{ultimo.get('FR', '-')} rpm")
+            r4.metric("SatO2", f"{ultimo.get('Sat', '-')} %")
+            r5.metric("Temp", f"{ultimo.get('Temp', '-')} C")
+            r6.metric("HGT", ultimo.get("HGT", "-"))
 
         if len(vits_ordenados) >= 2:
             try:

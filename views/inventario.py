@@ -82,11 +82,18 @@ def render_inventario(mi_empresa):
     )
 
     # ── Consumo últimos 7 días ────────────────────────────────────
-    _hace_7d = (ahora() - timedelta(days=7)).strftime("%d/%m/%Y")
-    _cons_7d = [
-        c for c in st.session_state.get("consumos_db", [])
-        if c.get("empresa") == mi_empresa and c.get("fecha", "")[:10] >= _hace_7d
-    ]
+    _hace_7d_dt = ahora() - timedelta(days=7)
+    _cons_7d = []
+    for c in st.session_state.get("consumos_db", []):
+        if c.get("empresa") != mi_empresa:
+            continue
+        _fecha_str = c.get("fecha", "")[:10]
+        try:
+            _fecha_dt = datetime.strptime(_fecha_str, "%d/%m/%Y")
+            if _fecha_dt >= _hace_7d_dt:
+                _cons_7d.append(c)
+        except (ValueError, TypeError):
+            pass
     _unid_7d = sum(int(c.get("cantidad", 0) or 0) for c in _cons_7d)
 
     # ── Métricas globales ──────────────────────────────────────
@@ -216,7 +223,8 @@ def render_inventario(mi_empresa):
 
                 from core.database import _trim_db_list
                 _trim_db_list("inventario_db", 1000)
-                guardar_datos(spinner=True)
+                with st.spinner("Guardando..."):
+                    guardar_datos(spinner=False)
                 queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
                 st.rerun()
 

@@ -143,12 +143,12 @@ def render_login():
     if "logeado" not in st.session_state:
         st.session_state["logeado"] = False
     # Evita pantalla en blanco si quedó logeado=True sin usuario (sesión vieja o estado corrupto).
-    if st.session_state["logeado"] and not st.session_state.get("u_actual"):
+    if st.session_state.get("logeado") and not st.session_state.get("u_actual"):
         st.session_state["logeado"] = False
-    if not st.session_state["logeado"] and _render_bloque_verificacion_email_2fa():
+    if not st.session_state.get("logeado") and _render_bloque_verificacion_email_2fa():
         st.stop()
 
-    if not st.session_state["logeado"]:
+    if not st.session_state.get("logeado"):
         from core.ui_liviano import headers_sugieren_equipo_liviano
 
         es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"

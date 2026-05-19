@@ -197,7 +197,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 })
                 from core.database import _trim_db_list
                 _trim_db_list("facturacion_db", 500)
-                guardar_datos(spinner=True)
+                with st.spinner("Guardando..."):
+                    guardar_datos(spinner=False)
                 queue_toast(f"✅ ${mon:,.2f} registrado - {desc_final.strip()[:30]}...")
                 st.rerun()
 
@@ -232,7 +233,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             p["metodo"] = "Efectivo"
                             from core.database import _trim_db_list
                             _trim_db_list("facturacion_db", 500)
-                            guardar_datos(spinner=True)
+                            with st.spinner("Guardando..."):
+                                guardar_datos(spinner=False)
                             queue_toast(f"✅ ${monto_edit:,.2f} cobrado - {p.get('serv', '')[:30]}")
                             st.rerun()
 

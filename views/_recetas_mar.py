@@ -735,21 +735,21 @@ def render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_ho
             if registrado_por:
                 st.markdown(f"**Registró:** {texto_corto(registrado_por, fallback='Sin firma', max_len=40)}")
 
-            if puede_registrar_dosis:
-                if estado_card == "Realizada":
-                    st.success("Esta administración ya figura como realizada (revisá hora real y quién registró arriba).")
-                elif "no realizada" in estado_l or "suspendida" in estado_l:
-                    st.info("Esta dosis figura como **no realizada** con su justificación. Para corregir o reintentar, usá **Registro manual** más abajo o coordinación según protocolo.")
-                else:
-                    _fk = f"rx_card_{paciente_sel}_{idx}_{str(fecha_hoy).replace('/', '-')}"
-                    with st.form(_fk):
-                        st.markdown("**Registrar desde la ficha**")
-                        _def_hr = _default_hora_real_cortina(fila.get("Hora programada"))
-                        hora_real_c = st.text_input("Hora real (HH:MM)", value=_def_hr, help="No tiene que coincidir con la hora programada.")
-                        accion_c = st.radio("Acción", ["Realizada", "No realizada / Suspendida"], horizontal=True)
-                        justif_c = st.text_input("Justificación (obligatoria si no realizada)", placeholder="Procedimiento, intolerancia, paciente ausente…")
-                        enviar = st.form_submit_button("Guardar registro de esta medicación", width='stretch', type="primary")
-                        if enviar:
+            if estado_card == "Realizada":
+                st.success("Esta administración ya figura como realizada (revisá hora real y quién registró arriba).")
+            elif "no realizada" in estado_l or "suspendida" in estado_l:
+                st.info("Esta dosis figura como **no realizada** con su justificación. Para corregir o reintentar, usá **Registro manual** más abajo o coordinación según protocolo.")
+            else:
+                _fk = f"rx_card_{paciente_sel}_{idx}_{str(fecha_hoy).replace('/', '-')}"
+                with st.form(_fk):
+                    st.markdown("**Registrar desde la ficha**")
+                    _def_hr = _default_hora_real_cortina(fila.get("Hora programada"))
+                    hora_real_c = st.text_input("Hora real (HH:MM)", value=_def_hr, help="No tiene que coincidir con la hora programada.")
+                    accion_c = st.radio("Acción", ["Realizada", "No realizada / Suspendida"], horizontal=True)
+                    justif_c = st.text_input("Justificación (obligatoria si no realizada)", placeholder="Procedimiento, intolerancia, paciente ausente…")
+                    enviar = st.form_submit_button("Guardar registro de esta medicación", disabled=not puede_registrar_dosis, type="primary", use_container_width=True)
+                    if enviar:
+                        with st.spinner("Guardando..."):
                             nombre_med_c = str(fila.get("Medicamento", "") or "").strip()
                             slot_c = str(fila.get("Hora programada", "") or "").strip() or "A demanda"
                             if not nombre_med_c:
@@ -760,11 +760,11 @@ def render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_ho
                                 st.error("Es obligatoria la justificación si marcás no realizada.")
                             elif accion_c.startswith("No realizada"):
                                 if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, nombre_med_c, slot_c,
-                                                                   "No realizada / Suspendida", justif_c, hora_real_admin=str(hora_real_c or "").strip() or None):
+                                                                    "No realizada / Suspendida", justif_c, hora_real_admin=str(hora_real_c or "").strip() or None):
                                     queue_toast("Registro guardado.")
                                     st.rerun()
                             else:
                                 if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, nombre_med_c, slot_c,
-                                                                   "Realizada", "", hora_real_admin=str(hora_real_c or "").strip() or None):
+                                                                    "Realizada", "", hora_real_admin=str(hora_real_c or "").strip() or None):
                                     queue_toast(f"Administración registrada: {nombre_med_c}.")
                                     st.rerun()

@@ -45,13 +45,17 @@ def _fetch_alertas_filtradas(
     (menos filas transferidas). El estado se refina en Python para respetar filas sin
     campo `estado` (se tratan como Pendiente), igual que antes.
     """
-    q = supabase.table("alertas_pacientes").select("*")
-    if not vista_todas:
-        q = q.eq("empresa", emp_key)
-    if filtro_nivel and len(filtro_nivel) < len(OPTIONS_NIVEL):
-        q = q.in_("nivel_urgencia", filtro_nivel)
-    resp = q.order("fecha_hora", desc=True).limit(int(limite)).execute()
-    rows = list(resp.data or [])
+    try:
+        q = supabase.table("alertas_pacientes").select("*")
+        if not vista_todas:
+            q = q.eq("empresa", emp_key)
+        if filtro_nivel and len(filtro_nivel) < len(OPTIONS_NIVEL):
+            q = q.in_("nivel_urgencia", filtro_nivel)
+        resp = q.order("fecha_hora", desc=True).limit(int(limite)).execute()
+        rows = list(resp.data or [])
+    except Exception as _e_alertas:
+        log_event("alertas_app", f"supabase_fetch_fallo:{type(_e_alertas).__name__}")
+        return []
     if filtro_estado:
         rows = [r for r in rows if str(r.get("estado") or "Pendiente") in filtro_estado]
     return rows

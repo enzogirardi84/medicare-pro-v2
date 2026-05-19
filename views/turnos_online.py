@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from html import escape
 
 import pandas as pd
 import streamlit as st
@@ -167,7 +168,7 @@ def render_turnos_online(mi_empresa, rol):
                     cols[1].markdown(f"{t.get('fecha','?')}")
                     cols[2].markdown(f"{t.get('horario','?')} hs")
                     col = color.get(est, "#fff")
-                    cols[3].markdown(f"<span style='color:{col}'>{est}</span>", unsafe_allow_html=True)
+                    cols[3].markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
                     if t.get('paciente'):
                         cols[3].markdown(f"Paciente: {t['paciente']}")
                     else:

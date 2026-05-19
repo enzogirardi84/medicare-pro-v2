@@ -330,13 +330,14 @@ def render_administracion_turno(
                 )
                 justificacion = st.text_input("Justificación clínica (obligatoria si no realizada)")
                 if st.form_submit_button("Guardar registro", width='stretch'):
-                    nombre_med = _extraer_nombre_medicacion(receta_actual.get("med", ""))
-                    if _registrar_administracion_dosis(
-                        paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, hora_sel,
-                        estado_sel, justificacion, hora_real_admin=hora_real_manual.strip() or None,
-                    ):
-                        queue_toast(f"Registro guardado para el horario {hora_sel}.")
-                        st.rerun()
+                    with st.spinner("Guardando..."):
+                        nombre_med = _extraer_nombre_medicacion(receta_actual.get("med", ""))
+                        if _registrar_administracion_dosis(
+                            paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, hora_sel,
+                            estado_sel, justificacion, hora_real_admin=hora_real_manual.strip() or None,
+                        ):
+                            queue_toast(f"Registro guardado para el horario {hora_sel}.")
+                            st.rerun()
     else:
         st.caption("El registro de administracion queda deshabilitado para este rol.")
 

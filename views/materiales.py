@@ -122,7 +122,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
                         pass
                     from core.database import _trim_db_list
                     _trim_db_list("consumos_db", 1000)
-                    guardar_datos(spinner=True)
+                    with st.spinner("Guardando..."):
+                        guardar_datos(spinner=False)
                     queue_toast(f"{cant_usada} x {insumo_sel} registrado correctamente.")
                     st.rerun()
                 else:

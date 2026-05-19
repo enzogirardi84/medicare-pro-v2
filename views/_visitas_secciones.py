@@ -314,6 +314,7 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
                     log_event("visitas", "error: No se puede agendar una visita en el pasado. Corregi la fecha u hora.")
                     st.error("No se puede agendar una visita en el pasado. Corregi la fecha u hora.")
                     st.stop()
+                    return
                 hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
                 fecha_ag_str = fecha_ag.strftime("%d/%m/%Y")
                 fecha_hora_programada = _fh_prog.strftime("%Y-%m-%d %H:%M:%S")

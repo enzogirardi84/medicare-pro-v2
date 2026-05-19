@@ -35,6 +35,17 @@ def _invalidate_cache_prefix(prefix: str) -> None:
             st.session_state.pop(k, None)
 
 
+_MAX_CACHE_ENTRIES = 50
+
+
+def _evict_sql_cache() -> None:
+    _cache_keys = [k for k in st.session_state.keys() if k.startswith("_sql_op_")]
+    if len(_cache_keys) > _MAX_CACHE_ENTRIES:
+        _cache_keys.sort(key=lambda k: st.session_state.get(k, {}).get("ts", 0))
+        for _old_key in _cache_keys[:len(_cache_keys) - _MAX_CACHE_ENTRIES]:
+            st.session_state.pop(_old_key, None)
+
+
 def insert_auditoria(datos: Dict[str, Any]) -> None:
     """Inserta un log de auditoría de forma silenciosa."""
     if not _ok():
@@ -53,7 +64,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
     cache_key = f"_sql_op_aud_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -65,6 +76,7 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_auditoria:{type(e).__name__}")
@@ -130,7 +142,7 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
     cache_key = f"_sql_op_adm_{paciente_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -142,6 +154,7 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_administraciones:{type(e).__name__}")
@@ -170,7 +183,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
     cache_key = f"_sql_op_emerg_p_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -182,6 +195,7 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}")
@@ -194,7 +208,7 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
     cache_key = f"_sql_op_emerg_e_{empresa_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -206,6 +220,7 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias:{type(e).__name__}")
@@ -253,7 +268,7 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_op_inv_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -265,6 +280,7 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_inventario:{type(e).__name__}")
@@ -292,7 +308,7 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_op_fact_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -304,6 +320,7 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_facturacion:{type(e).__name__}")
@@ -331,7 +348,7 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_op_bal_{empresa_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 300:
+        if time.monotonic() - cached.get("ts", 0) < 300:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -343,6 +360,7 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_balance:{type(e).__name__}")

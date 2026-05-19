@@ -39,12 +39,23 @@ def _invalidate_cache_prefix(prefix: str) -> None:
             st.session_state.pop(k, None)
 
 
+_MAX_CACHE_ENTRIES = 50
+
+
+def _evict_sql_cache() -> None:
+    _cache_keys = [k for k in st.session_state.keys() if k.startswith("_sql_clin_")]
+    if len(_cache_keys) > _MAX_CACHE_ENTRIES:
+        _cache_keys.sort(key=lambda k: st.session_state.get(k, {}).get("ts", 0))
+        for _old_key in _cache_keys[:len(_cache_keys) - _MAX_CACHE_ENTRIES]:
+            st.session_state.pop(_old_key, None)
+
+
 def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]]:
     """Obtiene el historial de evoluciones de un paciente. Cache manual a prueba de fallos."""
     cache_key = f"_sql_clin_evol_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -56,6 +67,7 @@ def get_evoluciones_by_paciente(paciente_id: str, limit: int = 50) -> List[Dict[
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_evoluciones:{type(e).__name__}")
@@ -83,7 +95,7 @@ def get_indicaciones_activas(paciente_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_clin_ind_{paciente_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -95,6 +107,7 @@ def get_indicaciones_activas(paciente_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_indicaciones:{type(e).__name__}")
@@ -138,7 +151,7 @@ def get_estudios_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_clin_est_{paciente_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -150,6 +163,7 @@ def get_estudios_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_estudios:{type(e).__name__}")
@@ -193,7 +207,7 @@ def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]
     cache_key = f"_sql_clin_vit_{paciente_id}_{limit}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -205,6 +219,7 @@ def get_signos_vitales(paciente_id: str, limit: int = 50) -> List[Dict[str, Any]
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_vitales:{type(e).__name__}")
@@ -231,7 +246,7 @@ def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str)
     cache_key = f"_sql_clin_cuid_{paciente_id}_{fecha_inicio}_{fecha_fin}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -243,6 +258,7 @@ def get_cuidados_enfermeria(paciente_id: str, fecha_inicio: str, fecha_fin: str)
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_cuidados:{type(e).__name__}")
@@ -269,7 +285,7 @@ def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_clin_cons_{paciente_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -281,6 +297,7 @@ def get_consentimientos_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_consentimientos:{type(e).__name__}")
@@ -307,7 +324,7 @@ def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_clin_ped_{paciente_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -319,6 +336,7 @@ def get_pediatria_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_pediatria:{type(e).__name__}")
@@ -345,7 +363,7 @@ def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
     cache_key = f"_sql_clin_esc_{paciente_id}"
     cached = st.session_state.get(cache_key)
     if cached:
-        if time.monotonic() - cached["ts"] < 90:
+        if time.monotonic() - cached.get("ts", 0) < 90:
             return cached["data"]
         st.session_state.pop(cache_key, None)
     if not _ok():
@@ -357,6 +375,7 @@ def get_escalas_by_paciente(paciente_id: str) -> List[Dict[str, Any]]:
         )
         data = response.data if response and response.data else []
         st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
+        _evict_sql_cache()
         return data
     except Exception as e:
         log_event("db_sql", f"error_get_escalas:{type(e).__name__}")
