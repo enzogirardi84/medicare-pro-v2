@@ -141,22 +141,6 @@ def render_dashboard(mi_empresa, rol):
                 _reponer = max(1, (_sm * 2 if _sm > 0 else 20) - int(item.get("stock", 0)))
                 st.markdown(f"- **{item.get('item')}**: {item.get('stock')} uds. (mínimo {_sm or 10}) → reponer **{_reponer}**")
 
-    # ── Alerta de visitas vencidas del profesional en sesión ────
-    _user_nombre = st.session_state.get("u_actual", {}).get("nombre", "")
-    if _user_nombre:
-        _visitas_vencidas = [
-            x for x in agenda_enriquecida
-            if x.get("profesional") == _user_nombre
-            and x.get("estado_calc") == "Vencida"
-        ]
-        if _visitas_vencidas:
-            st.warning(f"⏰ Tenés **{len(_visitas_vencidas)} visita(s) vencida(s)** sin marcar como realizadas o canceladas.")
-
-    # ── Alerta de turnos vencidos en general ────────────────────
-    _vencidos_total = [x for x in agenda_enriquecida if x.get("estado_calc") == "Vencida"]
-    if _vencidos_total and not _user_nombre:
-        st.caption(f"⏰ {len(_vencidos_total)} turno(s) vencido(s) en la agenda general.")
-
     # 1. Intentar leer emergencias desde PostgreSQL (Hybrid Read)
     emergencias = []
     with st.spinner("Cargando emergencias..."):
@@ -220,6 +204,22 @@ def render_dashboard(mi_empresa, rol):
     meds_suspendidas = [x for x in indicaciones if str(x.get("estado_receta", "Activa")) in {"Suspendida", "Modificada"}]
     fact_mes = _sumar_importe(facturacion)
     balance_actual = sum(float(x.get("balance", 0) or 0) for x in balance[-30:])
+
+    # ── Alerta de visitas vencidas del profesional en sesión ────
+    _user_nombre = st.session_state.get("u_actual", {}).get("nombre", "")
+    if _user_nombre:
+        _visitas_vencidas = [
+            x for x in agenda_enriquecida
+            if x.get("profesional") == _user_nombre
+            and x.get("estado_calc") == "Vencida"
+        ]
+        if _visitas_vencidas:
+            st.warning(f"⏰ Tenés **{len(_visitas_vencidas)} visita(s) vencida(s)** sin marcar como realizadas o canceladas.")
+
+    # ── Alerta de turnos vencidos en general ────────────────────
+    _vencidos_total = [x for x in agenda_enriquecida if x.get("estado_calc") == "Vencida"]
+    if _vencidos_total and not _user_nombre:
+        st.caption(f"⏰ {len(_vencidos_total)} turno(s) vencido(s) en la agenda general.")
 
     render_notificaciones_turno(pacientes, indicaciones, ahora_local, hoy, proximas_48h_limite, _pac_ids)
 
