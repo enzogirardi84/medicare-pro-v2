@@ -68,6 +68,7 @@ def _generar_pdf_historia_clinica(paciente_sel):
 
 
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
+    _draft_key = f"_draft_evolucion_{paciente_sel}"
     st.markdown("##### Evolución clínica")
 
     st.divider()
@@ -101,21 +102,24 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             list(plantillas_evolucion.keys()),
             key="evol_plantilla_sel"
         )
-        plantilla_prev = st.session_state.get("evol_plantilla_prev", "Libre")
+        plantilla_prev = st.session_state.get(f"evol_plantilla_prev_{paciente_sel}", "Libre")
         if plantilla != plantilla_prev:
-            st.session_state["evol_nota_draft"] = plantillas_evolucion.get(plantilla, "")
-            st.session_state["evol_plantilla_prev"] = plantilla
+            st.session_state[_draft_key] = plantillas_evolucion.get(plantilla, "")
+            st.session_state[f"evol_plantilla_prev_{paciente_sel}"] = plantilla
         if plantilla != "Libre":
             st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
                 "Nota medica / Evolucion clinica",
-                value=st.session_state.get("evol_nota_draft", ""),
+                value=st.session_state.get(_draft_key, ""),
                 height=220,
                 placeholder="Escribir aqui la evolucion...",
                 key="evol_nota_textarea"
             )
+            st.session_state[_draft_key] = nota
+            if st.session_state.get(_draft_key, "").strip():
+                st.caption("💾 Borrador guardado automáticamente")
             desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
             st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
             col_up, col_cam = st.columns(2)
@@ -259,8 +263,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         _le("digital_signature_evol", str(_e_sig))
 
                     queue_toast("Evolucion guardada correctamente.")
-                    st.session_state["evol_nota_draft"] = ""
-                    st.session_state["evol_plantilla_prev"] = "Libre"
+                    st.session_state.pop(_draft_key, None)
+                    st.session_state[f"evol_plantilla_prev_{paciente_sel}"] = "Libre"
                     st.rerun()
                 else:
                     log_event("evolucion_panel", "error: La nota medica no puede estar vacia.")

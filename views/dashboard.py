@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta
 from html import escape
 
@@ -141,6 +142,28 @@ def render_dashboard(mi_empresa, rol):
     except Exception:
         pass
 
+    # ── ACCIONES RÁPIDAS ───────────────────────────────────────────
+    _pac = st.session_state.get("paciente_actual")
+    if _pac:
+        st.markdown("### ⚡ Acciones rápidas")
+        _cols = st.columns(5)
+        _acciones = [
+            ("📝", "Evolución", "Evolucion"),
+            ("❤️", "Signos vitales", "Clinica"),
+            ("💊", "Medicación", "Recetas"),
+            ("📋", "Admisión", "Admision"),
+        ]
+        _rol = str(st.session_state.get("u_actual", {}).get("rol", "")).lower()
+        if _rol in ("superadmin", "admin", "administrativo"):
+            _acciones.append(("💰", "Caja / Facturar", "Caja"))
+        for _col, (_ico, _txt, _mod) in zip(_cols, _acciones):
+            with _col:
+                if st.button(f"{_ico} {_txt}", key=f"da_{_mod}", use_container_width=True):
+                    st.session_state["modulo_actual"] = _mod
+                    st.session_state["modulo_anterior"] = "Dashboard"
+                    st.rerun()
+        st.divider()
+
     # ── Resumen de turno ─────────────────────────────────────────
     try:
         from core.utils import ahora as _ahora
@@ -171,6 +194,15 @@ def render_dashboard(mi_empresa, rol):
             cd.metric("⏳ Pendientes facturar", len(_pend_fact))
     except Exception:
         pass
+
+    # ── Estado del último backup ─────────────────────────────────
+    _ultimo_backup_ts = st.session_state.get("_ultimo_backup_ts", 0)
+    if _ultimo_backup_ts:
+        _hace = int(time.time() - _ultimo_backup_ts)
+        if _hace < 86400:
+            st.caption(f"💾 Último backup: hace {_hace//3600}h {(_hace%3600)//60}min")
+        else:
+            st.caption(f"💾 Último backup: hace {_hace//86400}d")
 
     # 1. Intentar leer emergencias desde PostgreSQL (Hybrid Read)
     emergencias = []

@@ -42,6 +42,11 @@ _SOLUCIONES = ["Dextrosa 5%", "Fisiologico 0.9%", "Ringer lactato", "Mixta", "Ot
 def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuario, es_movil, vademecum_base):
     st.subheader("Nueva prescripción médica")
     with st.container(border=True):
+        try:
+            _draft_key = f"_draft_receta_{paciente_sel}"
+            _saved = st.session_state.get(_draft_key, {})
+        except Exception:
+            _saved = {}
         tipo_indicacion = st.radio(
             "Tipo de indicacion",
             ["Medicacion", "Infusion / hidratacion"],
@@ -56,20 +61,20 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
 
         if tipo_indicacion == "Medicacion":
             if es_movil:
-                med_vademecum = st.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
-                med_manual = st.text_input("O escribir manualmente")
-                via = st.selectbox("Via de administracion", _VIAS)
-                frecuencia = st.selectbox("Frecuencia", _FRECUENCIAS)
-                dias = st.number_input("Dias", min_value=1, max_value=90, value=7)
+                med_vademecum = st.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base, value=_saved.get("med_vademecum", "-- Seleccionar del vademecum --"))
+                med_manual = st.text_input("O escribir manualmente", value=_saved.get("med_manual", ""))
+                via = st.selectbox("Via de administracion", _VIAS, value=_saved.get("via", _VIAS[0]))
+                frecuencia = st.selectbox("Frecuencia", _FRECUENCIAS, value=_saved.get("frecuencia", _FRECUENCIAS[0]))
+                dias = st.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 7))
             else:
                 c1, c2 = st.columns([3, 1])
-                med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base)
-                med_manual = c2.text_input("O escribir manualmente")
+                med_vademecum = c1.selectbox("Medicamento", ["-- Seleccionar del vademecum --"] + vademecum_base, value=_saved.get("med_vademecum", "-- Seleccionar del vademecum --"))
+                med_manual = c2.text_input("O escribir manualmente", value=_saved.get("med_manual", ""))
                 col3, col4, col5 = st.columns([2, 2, 1])
-                via = col3.selectbox("Via de administracion", _VIAS)
-                frecuencia = col4.selectbox("Frecuencia", _FRECUENCIAS)
-                dias = col5.number_input("Dias", min_value=1, max_value=90, value=7)
-            hora_inicio = st.time_input("Hora inicial de administracion", value=dt_time(8, 0), key="hora_inicio_receta")
+                via = col3.selectbox("Via de administracion", _VIAS, value=_saved.get("via", _VIAS[0]))
+                frecuencia = col4.selectbox("Frecuencia", _FRECUENCIAS, value=_saved.get("frecuencia", _FRECUENCIAS[0]))
+                dias = col5.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 7))
+            hora_inicio = st.time_input("Hora inicial de administracion", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_receta")
             horarios_sugeridos = horarios_programados_desde_frecuencia(frecuencia, hora_inicio.strftime("%H:%M"))
             if horarios_sugeridos:
                 st.caption(f"Horarios sugeridos para la guardia: {' | '.join(horarios_sugeridos)}")
@@ -79,35 +84,36 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
             via = "Via Endovenosa"
             frecuencia = "Infusion continua"
             if es_movil:
-                solucion = st.selectbox("Solucion principal", _SOLUCIONES, key="solucion_receta")
-                volumen_ml = st.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
-                dias = st.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
-                velocidad_ml_h = st.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=21.0, key="velocidad_receta")
-                hora_inicio = st.time_input("Hora inicial", value=dt_time(8, 0), key="hora_inicio_infusion_receta")
+                solucion = st.selectbox("Solucion principal", _SOLUCIONES, key="solucion_receta", value=_saved.get("solucion", _SOLUCIONES[0]))
+                volumen_ml = st.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key="volumen_receta")
+                dias = st.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key="dias_infusion_receta")
+                velocidad_ml_h = st.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key="velocidad_receta")
+                hora_inicio = st.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_infusion_receta")
             else:
                 c1, c2, c3 = st.columns([2, 1, 1])
-                solucion = c1.selectbox("Solucion principal", _SOLUCIONES, key="solucion_receta")
-                volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=500, key="volumen_receta")
-                dias = c3.number_input("Dias", min_value=1, max_value=90, value=1, key="dias_infusion_receta")
+                solucion = c1.selectbox("Solucion principal", _SOLUCIONES, key="solucion_receta", value=_saved.get("solucion", _SOLUCIONES[0]))
+                volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key="volumen_receta")
+                dias = c3.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key="dias_infusion_receta")
                 c4, c5 = st.columns([1, 2])
-                velocidad_ml_h = c4.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=21.0, key="velocidad_receta")
-                hora_inicio = c5.time_input("Hora inicial", value=dt_time(8, 0), key="hora_inicio_infusion_receta")
+                velocidad_ml_h = c4.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key="velocidad_receta")
+                hora_inicio = c5.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_infusion_receta")
             horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
             detalle_infusion = st.text_area(
                 "Notas / evolucion del medico (opcional)",
                 placeholder="Si quiere agregar alguna indicacion adicional o detalle sobre el plan, escribalo aqui.",
                 key="detalle_infusion_receta",
                 height=80,
+                value=_saved.get("detalle_infusion", ""),
             )
             st.caption(f"Horario visible en la sabana diaria: {hora_inicio.strftime('%H:%M')} — {int(velocidad_ml_h) if velocidad_ml_h else '?'} ml/h")
 
         if es_movil:
-            medico_nombre = st.text_input("Nombre del medico", value=user.get("nombre", ""))
-            medico_matricula = st.text_input("Matricula profesional")
+            medico_nombre = st.text_input("Nombre del medico", value=_saved.get("medico_nombre", user.get("nombre", "")))
+            medico_matricula = st.text_input("Matricula profesional", value=_saved.get("medico_matricula", ""))
         else:
             col_m1, col_m2 = st.columns(2)
-            medico_nombre = col_m1.text_input("Nombre del medico", value=user.get("nombre", ""))
-            medico_matricula = col_m2.text_input("Matricula profesional")
+            medico_nombre = col_m1.text_input("Nombre del medico", value=_saved.get("medico_nombre", user.get("nombre", "")))
+            medico_matricula = col_m2.text_input("Matricula profesional", value=_saved.get("medico_matricula", ""))
 
         st.divider()
         adjunto_papel = st.file_uploader(
@@ -166,6 +172,24 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "Verificá antes de prescribir."
                 )
 
+        st.session_state[_draft_key] = {
+            "tipo_indicacion": tipo_indicacion,
+            "med_vademecum": med_vademecum,
+            "med_manual": med_manual,
+            "via": via,
+            "frecuencia": frecuencia,
+            "dias": dias,
+            "solucion": solucion,
+            "volumen_ml": volumen_ml,
+            "velocidad_ml_h": velocidad_ml_h,
+            "detalle_infusion": detalle_infusion,
+            "medico_nombre": medico_nombre,
+            "medico_matricula": medico_matricula,
+            "hora_inicio": hora_inicio,
+        }
+        _draft_data = st.session_state[_draft_key]
+        if _draft_data.get("med_manual", "").strip() or _draft_data.get("solucion", "").strip():
+            st.caption("💾 Borrador guardado automáticamente")
         if st.button("Guardar prescripcion medica", width='stretch', type="primary"):
             med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum
             if tipo_indicacion == "Medicacion" and (not med_final or med_final == "-- Seleccionar del vademecum --"):
@@ -264,6 +288,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     _log_event("digital_signature_receta", str(_e_sig))
                 st.session_state["_rx_sql_invalidar"] = True
                 queue_toast(f"Prescripcion de {med_final} guardada{' con adjunto de papel' if adjunto_papel else ''}.")
+                st.session_state.pop(_draft_key, None)
                 st.rerun()
 
 

@@ -13,11 +13,13 @@ Permite a administradores configurar:
 """
 
 import streamlit as st
+import time
 from typing import Dict, Any, Optional
 
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 from core.config import settings
+from core.database import guardar_datos
 from core.i18n import render_language_selector
 
 
@@ -62,6 +64,7 @@ def render_settings_page():
 def render_appearance_settings():
     """Configuración de apariencia."""
     st.header("🎨 Apariencia")
+    _s = st.session_state.setdefault("settings_db", {})
     
     # Selector de idioma
     st.subheader("Idioma")
@@ -72,15 +75,22 @@ def render_appearance_settings():
     # Tema
     st.subheader("Tema")
     
+    _theme_opts = ["Claro", "Oscuro", "Auto"]
+    _s_theme = _s.get("app_theme", "Claro")
     theme = st.radio(
         "Tema de color",
-        options=["Claro", "Oscuro", "Auto"],
-        index=0,
+        options=_theme_opts,
+        index=_theme_opts.index(_s_theme) if _s_theme in _theme_opts else 0,
         help="Selecciona el tema de la aplicación"
     )
     
     if st.button("💾 Guardar Tema"):
+        _s["app_theme"] = theme.lower()
         st.session_state["theme"] = theme.lower()
+        try:
+            guardar_datos(spinner=False)
+        except Exception as e:
+            log_event("settings", f"error:guardar_tema:{e}")
         st.success(f"✅ Tema cambiado a {theme}")
         log_event("settings", f"Theme changed to {theme}")
     
@@ -92,12 +102,17 @@ def render_appearance_settings():
     density = st.select_slider(
         "Densidad",
         options=["Compacta", "Normal", "Espaciada"],
-        value="Normal",
+        value=_s.get("app_density", "Normal"),
         help="Ajusta el espaciado entre elementos"
     )
     
     if st.button("💾 Guardar Densidad"):
+        _s["app_density"] = density.lower()
         st.session_state["ui_density"] = density.lower()
+        try:
+            guardar_datos(spinner=False)
+        except Exception as e:
+            log_event("settings", f"error:guardar_densidad:{e}")
         st.success(f"✅ Densidad cambiada a {density}")
     
     st.divider()
@@ -112,18 +127,24 @@ def render_appearance_settings():
         with col1:
             primary_color = st.color_picker(
                 "Color Primario",
-                value="#14b8a6"
+                value=_s.get("app_primary_color", "#14b8a6")
             )
         
         with col2:
             secondary_color = st.color_picker(
                 "Color Secundario",
-                value="#0f172a"
+                value=_s.get("app_secondary_color", "#0f172a")
             )
         
         if st.button("💾 Guardar Colores"):
+            _s["app_primary_color"] = primary_color
+            _s["app_secondary_color"] = secondary_color
             st.session_state["primary_color"] = primary_color
             st.session_state["secondary_color"] = secondary_color
+            try:
+                guardar_datos(spinner=False)
+            except Exception as e:
+                log_event("settings", f"error:guardar_colores:{e}")
             st.success("✅ Colores actualizados")
             
             audit_log(
@@ -138,20 +159,22 @@ def render_appearance_settings():
 def render_notification_settings():
     """Configuración de notificaciones."""
     st.header("🔔 Notificaciones")
+    _s = st.session_state.setdefault("settings_db", {})
     
     # Email notifications
     st.subheader("Notificaciones por Email")
     
     email_enabled = st.toggle(
         "Habilitar notificaciones por email",
-        value=False,
+        value=_s.get("notif_email_enabled", False),
         help="Recibe alertas importantes por correo"
     )
     
+    email = ""
     if email_enabled:
         email = st.text_input(
             "Email para notificaciones",
-            value=st.session_state.get("u_actual", {}).get("email", "")
+            value=_s.get("notif_email_addr", st.session_state.get("u_actual", {}).get("email", ""))
         )
         
         st.multiselect(
@@ -189,13 +212,23 @@ def render_notification_settings():
     # In-app notifications
     st.subheader("Notificaciones en Aplicación")
     
-    st.checkbox("Mostrar toast notifications", value=True)
-    st.checkbox("Mostrar badges en menú", value=True)
-    st.checkbox("Sonido en alertas críticas", value=True)
+    _toast = st.checkbox("Mostrar toast notifications", value=_s.get("notif_toast", True))
+    _badges = st.checkbox("Mostrar badges en menú", value=_s.get("notif_badges", True))
+    _sound = st.checkbox("Sonido en alertas críticas", value=_s.get("notif_sound", True))
     
     st.divider()
     
     if st.button("💾 Guardar Configuración de Notificaciones"):
+        _s["notif_email_enabled"] = email_enabled
+        if email_enabled:
+            _s["notif_email_addr"] = email
+        _s["notif_toast"] = _toast
+        _s["notif_badges"] = _badges
+        _s["notif_sound"] = _sound
+        try:
+            guardar_datos(spinner=False)
+        except Exception as e:
+            log_event("settings", f"error:guardar_notificaciones:{e}")
         st.success("✅ Configuración guardada")
         log_event("settings", "Notification settings updated")
 
@@ -208,25 +241,27 @@ def render_integration_settings(is_admin: bool):
         st.info("🔒 Las integraciones solo pueden ser configuradas por administradores.")
         return
     
+    _s = st.session_state.setdefault("settings_db", {})
+    
     # Supabase
     st.subheader("Supabase (Base de Datos Cloud)")
     
     supabase_enabled = st.toggle(
         "Habilitar sincronización con Supabase",
-        value=settings.ENABLE_SUPABASE_SYNC if hasattr(settings, 'ENABLE_SUPABASE_SYNC') else False,
+        value=_s.get("integ_supabase_enabled", settings.ENABLE_SUPABASE_SYNC if hasattr(settings, 'ENABLE_SUPABASE_SYNC') else False),
         help="Sincroniza datos con Supabase en la nube"
     )
     
     with st.expander("Configuración de Supabase"):
         supabase_url = st.text_input(
             "Supabase URL",
-            value=settings.SUPABASE_URL if hasattr(settings, 'SUPABASE_URL') else "",
+            value=_s.get("integ_supabase_url", settings.SUPABASE_URL if hasattr(settings, 'SUPABASE_URL') else ""),
             type="password"
         )
         
         supabase_key = st.text_input(
             "Supabase Key",
-            value="",
+            value=_s.get("integ_supabase_key", ""),
             type="password",
             help="API Key de Supabase"
         )
@@ -238,7 +273,7 @@ def render_integration_settings(is_admin: bool):
     
     smtp_enabled = st.toggle(
         "Habilitar envío de emails",
-        value=settings.EMAIL_ENABLED if hasattr(settings, 'EMAIL_ENABLED') else False
+        value=_s.get("integ_smtp_enabled", settings.EMAIL_ENABLED if hasattr(settings, 'EMAIL_ENABLED') else False)
     )
     
     with st.expander("Configuración SMTP"):
@@ -247,11 +282,11 @@ def render_integration_settings(is_admin: bool):
         with col1:
             smtp_host = st.text_input(
                 "SMTP Host",
-                value=settings.SMTP_HOST if hasattr(settings, 'SMTP_HOST') else "smtp.gmail.com"
+                value=_s.get("integ_smtp_host", settings.SMTP_HOST if hasattr(settings, 'SMTP_HOST') else "smtp.gmail.com")
             )
             smtp_port = st.number_input(
                 "SMTP Port",
-                value=int(settings.SMTP_PORT) if hasattr(settings, 'SMTP_PORT') else 587,
+                value=_s.get("integ_smtp_port", int(settings.SMTP_PORT) if hasattr(settings, 'SMTP_PORT') else 587),
                 min_value=1,
                 max_value=65535
             )
@@ -259,12 +294,12 @@ def render_integration_settings(is_admin: bool):
         with col2:
             smtp_user = st.text_input(
                 "SMTP Usuario",
-                value=settings.SMTP_USER if hasattr(settings, 'SMTP_USER') else ""
+                value=_s.get("integ_smtp_user", settings.SMTP_USER if hasattr(settings, 'SMTP_USER') else "")
             )
             smtp_password = st.text_input(
                 "SMTP Password",
                 type="password",
-                value=""
+                value=_s.get("integ_smtp_password", "")
             )
     
     st.divider()
@@ -274,13 +309,13 @@ def render_integration_settings(is_admin: bool):
     
     redis_enabled = st.toggle(
         "Habilitar Redis",
-        value=settings.ENABLE_CACHE if hasattr(settings, 'ENABLE_CACHE') else True
+        value=_s.get("integ_redis_enabled", settings.ENABLE_CACHE if hasattr(settings, 'ENABLE_CACHE') else True)
     )
     
     with st.expander("Configuración Redis"):
         redis_url = st.text_input(
             "Redis URL",
-            value=settings.REDIS_URL if hasattr(settings, 'REDIS_URL') else "redis://localhost:6379/0",
+            value=_s.get("integ_redis_url", settings.REDIS_URL if hasattr(settings, 'REDIS_URL') else "redis://localhost:6379/0"),
             help="URL de conexión a Redis"
         )
     
@@ -289,29 +324,49 @@ def render_integration_settings(is_admin: bool):
     # AI/ML
     st.subheader("Inteligencia Artificial")
     
-    st.toggle(
+    ai_enabled = st.toggle(
         "Habilitar asistente de IA",
-        value=settings.ENABLE_AI_ASSISTANT if hasattr(settings, 'ENABLE_AI_ASSISTANT') else False,
+        value=_s.get("integ_ai_enabled", settings.ENABLE_AI_ASSISTANT if hasattr(settings, 'ENABLE_AI_ASSISTANT') else False),
         help="Permite usar asistente de IA para evoluciones"
     )
     
     with st.expander("Configuración de AI Provider"):
+        _ai_providers = ["OpenAI", "Anthropic", "Local (Ollama)", "Ninguno"]
+        _s_ai_provider = _s.get("integ_ai_provider", "Ninguno")
         ai_provider = st.selectbox(
             "Provider",
-            options=["OpenAI", "Anthropic", "Local (Ollama)", "Ninguno"],
-            index=3
+            options=_ai_providers,
+            index=_ai_providers.index(_s_ai_provider) if _s_ai_provider in _ai_providers else 3
         )
         
+        ai_key = ""
         if ai_provider != "Ninguno":
             ai_key = st.text_input(
                 "API Key",
                 type="password",
-                value=""
+                value=_s.get("integ_ai_key", "")
             )
     
     st.divider()
     
     if st.button("💾 Guardar Configuración de Integraciones"):
+        _s["integ_supabase_enabled"] = supabase_enabled
+        _s["integ_supabase_url"] = supabase_url
+        _s["integ_supabase_key"] = supabase_key
+        _s["integ_smtp_enabled"] = smtp_enabled
+        _s["integ_smtp_host"] = smtp_host
+        _s["integ_smtp_port"] = smtp_port
+        _s["integ_smtp_user"] = smtp_user
+        _s["integ_smtp_password"] = smtp_password
+        _s["integ_redis_enabled"] = redis_enabled
+        _s["integ_redis_url"] = redis_url
+        _s["integ_ai_enabled"] = ai_enabled
+        _s["integ_ai_provider"] = ai_provider
+        _s["integ_ai_key"] = ai_key
+        try:
+            guardar_datos(spinner=False)
+        except Exception as e:
+            log_event("settings", f"error:guardar_integraciones:{e}")
         st.success("✅ Integraciones guardadas (requiere reinicio)")
         
         audit_log(
@@ -331,17 +386,19 @@ def render_security_settings(is_admin: bool):
         st.info("🔒 La configuración de seguridad solo está disponible para administradores.")
         return
     
+    _s = st.session_state.setdefault("settings_db", {})
+    
     # 2FA
     st.subheader("Autenticación de Dos Factores (2FA)")
     
-    st.toggle(
+    _sec_2fa_required = st.toggle(
         "Requerir 2FA para todos los usuarios",
-        value=settings.ENABLE_2FA if hasattr(settings, 'ENABLE_2FA') else False
+        value=_s.get("sec_2fa_required", settings.ENABLE_2FA if hasattr(settings, 'ENABLE_2FA') else False)
     )
     
-    st.toggle(
+    _sec_2fa_admin_only = st.toggle(
         "Requerir 2FA solo para administradores",
-        value=True
+        value=_s.get("sec_2fa_admin_only", True)
     )
     
     st.divider()
@@ -353,19 +410,19 @@ def render_security_settings(is_admin: bool):
         "Longitud mínima",
         min_value=6,
         max_value=20,
-        value=8
+        value=_s.get("sec_min_length", 8)
     )
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.checkbox("Requerir mayúsculas", value=True)
+        _sec_req_upper = st.checkbox("Requerir mayúsculas", value=_s.get("sec_req_upper", True))
     
     with col2:
-        st.checkbox("Requerir números", value=True)
+        _sec_req_num = st.checkbox("Requerir números", value=_s.get("sec_req_num", True))
     
     with col3:
-        st.checkbox("Requerir símbolos", value=False)
+        _sec_req_sym = st.checkbox("Requerir símbolos", value=_s.get("sec_req_sym", False))
     
     st.divider()
     
@@ -376,7 +433,7 @@ def render_security_settings(is_admin: bool):
         "Timeout de sesión (minutos)",
         min_value=5,
         max_value=240,
-        value=30,
+        value=_s.get("sec_session_timeout", 30),
         help="Tiempo de inactividad antes de cerrar sesión"
     )
     
@@ -384,7 +441,7 @@ def render_security_settings(is_admin: bool):
         "Intentos máximos de login",
         min_value=3,
         max_value=10,
-        value=5
+        value=_s.get("sec_max_attempts", 5)
     )
     
     st.divider()
@@ -392,15 +449,15 @@ def render_security_settings(is_admin: bool):
     # Auditoría
     st.subheader("Auditoría y Logs")
     
-    st.checkbox("Habilitar auditoría de acciones", value=True)
-    st.checkbox("Log de accesos fallidos", value=True)
-    st.checkbox("Log de cambios de datos", value=True)
+    _sec_audit_enabled = st.checkbox("Habilitar auditoría de acciones", value=_s.get("sec_audit_enabled", True))
+    _sec_log_access = st.checkbox("Log de accesos fallidos", value=_s.get("sec_log_access", True))
+    _sec_log_changes = st.checkbox("Log de cambios de datos", value=_s.get("sec_log_changes", True))
     
     retention_days = st.number_input(
         "Retención de logs (días)",
         min_value=7,
         max_value=365,
-        value=90
+        value=_s.get("sec_retention_days", 90)
     )
     
     st.divider()
@@ -408,17 +465,37 @@ def render_security_settings(is_admin: bool):
     # Backup de seguridad
     st.subheader("Backup de Seguridad")
     
-    st.checkbox("Encriptar backups", value=True)
+    _sec_encrypt_backups = st.checkbox("Encriptar backups", value=_s.get("sec_encrypt_backups", True))
     
-    st.selectbox(
+    _backup_opts = ["Cada hora", "Cada 6 horas", "Diario", "Semanal"]
+    _s_backup_freq = _s.get("sec_backup_freq", "Diario")
+    _backup_freq = st.selectbox(
         "Frecuencia de backup",
-        options=["Cada hora", "Cada 6 horas", "Diario", "Semanal"],
-        index=2
+        options=_backup_opts,
+        index=_backup_opts.index(_s_backup_freq) if _s_backup_freq in _backup_opts else 2
     )
     
     st.divider()
-    
+
     if st.button("💾 Guardar Configuración de Seguridad"):
+        _s["sec_2fa_required"] = _sec_2fa_required
+        _s["sec_2fa_admin_only"] = _sec_2fa_admin_only
+        _s["sec_min_length"] = min_length
+        _s["sec_req_upper"] = _sec_req_upper
+        _s["sec_req_num"] = _sec_req_num
+        _s["sec_req_sym"] = _sec_req_sym
+        _s["sec_session_timeout"] = session_timeout
+        _s["sec_max_attempts"] = max_attempts
+        _s["sec_audit_enabled"] = _sec_audit_enabled
+        _s["sec_log_access"] = _sec_log_access
+        _s["sec_log_changes"] = _sec_log_changes
+        _s["sec_retention_days"] = retention_days
+        _s["sec_encrypt_backups"] = _sec_encrypt_backups
+        _s["sec_backup_freq"] = _backup_freq
+        try:
+            guardar_datos(spinner=False)
+        except Exception as e:
+            log_event("settings", f"error:guardar_seguridad:{e}")
         st.success("✅ Configuración de seguridad guardada")
         
         audit_log(
@@ -430,6 +507,26 @@ def render_security_settings(is_admin: bool):
             metadata={"session_timeout": session_timeout, "max_attempts": max_attempts}
         )
 
+    st.divider()
+    st.subheader("Backup Manual")
+    if st.button("💾 Hacer backup ahora", use_container_width=True):
+        try:
+            from core.database import _db_keys, dumps_db_sorted
+            import json
+            from pathlib import Path
+            from datetime import datetime
+            claves = _db_keys()
+            data = {k: st.session_state[k] for k in claves if k in st.session_state}
+            backup_path = Path(f"backups/backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            backup_path.parent.mkdir(parents=True, exist_ok=True)
+            backup_path.write_text(json.dumps(data, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+            st.success(f"✅ Backup guardado: {backup_path.name}")
+            st.session_state["_ultimo_backup_ts"] = time.time()
+            log_event("backup", f"manual_backup_ok:{backup_path.name}")
+        except Exception as exc:
+            st.error(f"❌ Error: {exc}")
+            log_event("backup", f"manual_backup_fallo:{type(exc).__name__}:{exc}")
+
 
 def render_advanced_settings(is_admin: bool):
     """Configuración avanzada."""
@@ -439,18 +536,20 @@ def render_advanced_settings(is_admin: bool):
         st.info("🔒 Configuración avanzada solo para administradores.")
         return
     
+    _s = st.session_state.setdefault("settings_db", {})
+    
     # Performance
     st.subheader("Performance")
     
-    st.toggle(
+    _adv_aggressive_cache = st.toggle(
         "Habilitar caché agresiva",
-        value=True,
+        value=_s.get("adv_aggressive_cache", True),
         help="Cachea más datos para mejorar velocidad"
     )
     
-    st.toggle(
+    _adv_lazy_loading = st.toggle(
         "Lazy loading de datos",
-        value=True,
+        value=_s.get("adv_lazy_loading", True),
         help="Carga datos bajo demanda"
     )
     
@@ -458,7 +557,7 @@ def render_advanced_settings(is_admin: bool):
         "TTL de caché (segundos)",
         min_value=60,
         max_value=3600,
-        value=300
+        value=_s.get("adv_cache_ttl", 300)
     )
     
     st.divider()
@@ -466,16 +565,32 @@ def render_advanced_settings(is_admin: bool):
     # Logging
     st.subheader("Logging")
     
+    _log_levels = ["DEBUG", "INFO", "WARNING", "ERROR"]
+    _s_log_level = _s.get("adv_log_level", "INFO")
     log_level = st.selectbox(
         "Nivel de log",
-        options=["DEBUG", "INFO", "WARNING", "ERROR"],
-        index=1
+        options=_log_levels,
+        index=_log_levels.index(_s_log_level) if _s_log_level in _log_levels else 1
     )
     
-    st.checkbox("Log a archivo", value=False)
-    st.checkbox("Log estructurado (JSON)", value=True)
+    _adv_log_file = st.checkbox("Log a archivo", value=_s.get("adv_log_file", False))
+    _adv_log_json = st.checkbox("Log estructurado (JSON)", value=_s.get("adv_log_json", True))
     
     st.divider()
+    
+    if st.button("💾 Guardar Configuración Avanzada"):
+        _s["adv_aggressive_cache"] = _adv_aggressive_cache
+        _s["adv_lazy_loading"] = _adv_lazy_loading
+        _s["adv_cache_ttl"] = cache_ttl
+        _s["adv_log_level"] = log_level
+        _s["adv_log_file"] = _adv_log_file
+        _s["adv_log_json"] = _adv_log_json
+        try:
+            guardar_datos(spinner=False)
+        except Exception as e:
+            log_event("settings", f"error:guardar_avanzado:{e}")
+        st.success("✅ Configuración avanzada guardada")
+        log_event("settings", "Advanced settings updated")
     
     # Feature Flags
     st.subheader("Feature Flags")
@@ -504,7 +619,6 @@ def render_advanced_settings(is_admin: bool):
     
     with col2:
         if st.button("🔄 Forzar Guardado", width='stretch'):
-            from core.database import guardar_datos
             try:
                 guardar_datos()
                 st.success("✅ Datos guardados")

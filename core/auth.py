@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 import streamlit as st
 
 from core.app_logging import log_event
@@ -527,25 +529,43 @@ def verificar_clinica_sesion_activa():
 
 def check_inactividad():
     if st.session_state.get("logeado"):
-        if "ultima_actividad" not in st.session_state:
+        last_activity = st.session_state.get("_last_activity")
+        if last_activity is None:
+            st.session_state["_last_activity"] = time.time()
             st.session_state["ultima_actividad"] = ahora()
         else:
-            minutos_inactivos = (ahora() - st.session_state["ultima_actividad"]).total_seconds() / 60.0
-            if minutos_inactivos > SESSION_TIMEOUT_MINUTES:
+            elapsed = time.time() - last_activity
+            remaining = SESSION_TIMEOUT_MINUTES * 60 - elapsed
+
+            if remaining < 60 and remaining > 0 and not st.session_state.get("_timeout_warning_shown"):
+                st.warning(f"⏳ Tu sesión expirará en {int(remaining)} segundos por inactividad. ")
+                if st.button("Sigo aquí", key="keep_alive"):
+                    st.session_state["_last_activity"] = time.time()
+                    st.session_state["ultima_actividad"] = ahora()
+                    st.session_state["_timeout_warning_shown"] = False
+                    st.rerun()
+                st.session_state["_timeout_warning_shown"] = True
+
+            if elapsed > SESSION_TIMEOUT_MINUTES * 60:
                 st.session_state["logeado"] = False
                 st.session_state.pop("ultima_actividad", None)
                 st.session_state.pop("u_actual", None)
                 st.session_state.pop("_mc_onboarding_oculto", None)
+                st.session_state.pop("_last_activity", None)
+                st.session_state.pop("_timeout_warning_shown", None)
                 limpiar_estado_sesion_login_efimero()
                 vaciar_datos_app_en_sesion()
-                st.session_state["_aviso_sesion_expirada"] = f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos)."
+                st.session_state["_aviso_sesion_expirada"] = (
+                    f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos)."
+                )
                 # Guard: evitar tormenta de reruns en móviles con red lenta
                 _ult_rerun_exp = st.session_state.get("_ult_rerun_expiracion_ts", 0)
                 if (ahora().timestamp() - _ult_rerun_exp) > 5:
                     st.session_state["_ult_rerun_expiracion_ts"] = ahora().timestamp()
                     st.rerun()
-            else:
+            elif not st.session_state.get("_timeout_warning_shown"):
                 st.session_state["ultima_actividad"] = ahora()
+                st.session_state["_last_activity"] = time.time()
 
 
 # ── Funciones públicas para tests ───────────────────────────────

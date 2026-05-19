@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import time
+
 import streamlit as st
 
 from core.utils_pacientes import set_paciente_actual
@@ -90,13 +92,27 @@ def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles
         key="mc_buscar_paciente_mobile",
     )
 
-    p_f = obtener_pacientes_fn(
-        st.session_state,
-        mi_empresa,
-        rol,
-        incluir_altas=False,
-        busqueda=buscar,
-    )
+    # Cache de pacientes para evitar re-fetch en cada tecla
+    _cache_key = "_mc_pacientes_cache"
+    _cache_ts_key = "_mc_pacientes_cache_ts"
+    _cache_ttl = 5.0
+    p_f = None
+    if not buscar:
+        _cached = st.session_state.get(_cache_key)
+        _cached_ts = st.session_state.get(_cache_ts_key, 0.0)
+        if _cached is not None and (time.time() - _cached_ts) < _cache_ttl:
+            p_f = _cached
+    if p_f is None:
+        p_f = obtener_pacientes_fn(
+            st.session_state,
+            mi_empresa,
+            rol,
+            incluir_altas=False,
+            busqueda=buscar,
+        )
+        if not buscar:
+            st.session_state[_cache_key] = p_f
+            st.session_state[_cache_ts_key] = time.time()
 
     limite = 25 if es_tablet else 15
 

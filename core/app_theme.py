@@ -6,6 +6,13 @@ import streamlit as st
 
 
 def aplicar_css_base() -> None:
+    # Restore persistent theme on first load
+    if "_theme_restored_v1" not in st.session_state:
+        st.session_state["_theme_restored_v1"] = True
+        _saved = st.session_state.get("settings_db", {}).get("app_theme", "")
+        if _saved and "theme" not in st.session_state:
+            st.session_state["theme"] = _saved
+
     st.markdown("""
         <style>
             /* =========================================================
