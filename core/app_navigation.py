@@ -272,6 +272,21 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
         log_event("app_navigation", "error: No tienes permisos para acceder a este modulo.")
         st.error("No tienes permisos para acceder a este modulo.")
         return
+
+    # Barra de navegación rápida (breadcrumb)
+    try:
+        _mod_ant = st.session_state.get("modulo_anterior", "")
+        if _mod_ant and _mod_ant != tab_name:
+            _crumbs = st.columns([5, 1])
+            with _crumbs[0]:
+                st.caption(f"📍 {tab_name}")
+            with _crumbs[1]:
+                if st.button(f"← Volver a {_mod_ant[:20]}", key="nav_volver", use_container_width=True):
+                    set_modulo_actual(_mod_ant, rerun=True)
+            st.divider()
+    except Exception:
+        pass
+
     try:
         aplicar_compactacion_movil_por_vista(tab_name)
     except Exception as _exc:

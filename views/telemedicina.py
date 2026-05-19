@@ -69,10 +69,7 @@ def render_telemedicina(paciente_sel):
                 style="width: 100%; height: 520px; border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             </iframe>
             """
-            if hasattr(st, "html"):
-                st.html(iframe_html)
-            else:
-                st.components.v1.html(iframe_html, height=540, scrolling=False)
+            st.html(iframe_html)
 
     with c_vid2:
         st.markdown("### Enlace para compartir")

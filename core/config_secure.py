@@ -9,7 +9,6 @@ from functools import lru_cache
 from typing import List, Optional
 from pydantic import field_validator, SecretStr, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
 
 
 class SecureSettings(BaseSettings):

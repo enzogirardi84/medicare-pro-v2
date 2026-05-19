@@ -173,6 +173,10 @@ def _estructura_vacia_por_clave() -> dict[str, dict | list]:
         "grupo_familiar_aps_db": [],
         "turnos_aps_db": [],
         "controles_aps_db": [],
+        # Modulos sin inicializacion explicita previa
+        "vacunacion_db": [],
+        "turnos_online_db": [],
+        "recetas_db": [],
     }
 
 
@@ -291,6 +295,9 @@ def _db_keys():
         "grupo_familiar_aps_db",
         "turnos_aps_db",
         "controles_aps_db",
+        "vacunacion_db",
+        "turnos_online_db",
+        "recetas_db",
     ]
 
 
