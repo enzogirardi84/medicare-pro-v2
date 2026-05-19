@@ -671,6 +671,7 @@ class ClinicalAlertEngine:
         
         # Alertas críticas sin reconocer
         if stats["critical_unack"] > 0:
+            log_event("clinical_alerts", f"error: {stats['critical_unack']} alertas críticas sin reconocer")
             st.error(f"⚠️ {stats['critical_unack']} alertas críticas sin reconocer")
         
         # Lista de alertas

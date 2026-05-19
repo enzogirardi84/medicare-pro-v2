@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 from core.norm_empresa import norm_empresa_key
 from core.database import supabase
@@ -152,6 +153,7 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
                 filtro_nivel=filtro_nivel,
             )
         except Exception as exc:
+            log_event("alertas_app", "error: No se pudo leer alertas_pacientes.")
             st.error(
                 "No se pudo leer **alertas_pacientes**. Ejecuta `supabase/alertas_pacientes.sql` y despliega la Edge Function **submit-alerta-paciente**."
             )
@@ -275,4 +277,5 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
             queue_toast("Actualizado.")
             st.rerun()
         except Exception as exc:
+            log_event("alertas_app", f"error: No se pudo actualizar: {exc}")
             st.error(f"No se pudo actualizar: {exc}")

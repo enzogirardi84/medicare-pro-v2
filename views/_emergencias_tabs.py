@@ -159,8 +159,10 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
 
         if st.button("GUARDAR EVENTO CRITICO", width='stretch', type="primary", key="em_guardar"):
             if not motivo.strip():
+                log_event("emergencias", "error: Debes indicar el motivo principal del evento.")
                 st.error("Debes indicar el motivo principal del evento.")
             elif not profesional.strip() or not matricula.strip():
+                log_event("emergencias", "error: Debes registrar profesional y matricula para dejar respaldo legal.")
                 st.error("Debes registrar profesional y matricula para dejar respaldo legal.")
             else:
                 fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")

@@ -131,6 +131,7 @@ def render_pediatria(paciente_sel, user):
         _PERC_ALERTA = {"P97 - Sobrepeso"}
         _perc_actual = str(ultimo_ped.get("percentil_sug", "") or "")
         if _perc_actual in _PERC_CRITICO:
+            log_event("pediatria", f"error: percentil critico {_perc_actual}")
             st.error(f"🔴 Percentil crítico: **{_perc_actual}** — IMC {ultimo_ped.get('imc', '-')}. Evaluar nutrición y seguimiento.")
         elif _perc_actual in _PERC_ALERTA:
             st.warning(f"🟡 Percentil elevado: **{_perc_actual}** — IMC {ultimo_ped.get('imc', '-')}. Considerar derivación nutricional.")
@@ -265,6 +266,7 @@ def render_pediatria(paciente_sel, user):
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
         if col_btn.button("Borrar ultimo", width='stretch', disabled=not confirmar_borrado):
             if not ped:
+                log_event("pediatria", "error: intento borrar sin registros")
                 st.error("No hay registros para borrar.")
             else:
                 try:

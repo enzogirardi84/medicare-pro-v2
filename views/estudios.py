@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, optimizar_imagen_bytes, puede_accion, seleccionar_limite_registros, parse_fecha_hora
@@ -271,6 +272,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 log_event("estudios_fecha_parse", f"fallo_parse_fecha_critica:{e.get('tipo','S/D')}:{e.get('fecha','')}:{type(_exc).__name__}")
 
     if criticos_sin_respuesta:
+        log_event("estudios", f"error: {len(criticos_sin_respuesta)} estudio(s) critico(s) sin resultado >7d")
         st.error(
             f"🔴 {len(criticos_sin_respuesta)} estudio(s) crítico(s) sin resultado en más de 7 días: "
             + " | ".join(f"{e.get('tipo','S/D')} ({e.get('fecha','')[:10]})" for e in criticos_sin_respuesta[:3])
@@ -293,6 +295,7 @@ def render_estudios(paciente_sel, user, rol=None):
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
         if col_del1.button("Borrar ultimo estudio", width='stretch', disabled=not confirmar_ultimo):
             if not estudios_pac:
+                log_event("estudios", "error: no hay estudios para borrar")
                 st.error("No hay estudios para borrar.")
             else:
                 ultimo_est = estudios_pac[-1]
@@ -427,4 +430,5 @@ def render_estudios(paciente_sel, user, rol=None):
                             else:
                                 st.image(img_bytes, caption="Documento Adjunto", width='stretch')
                         except Exception:
+                            log_event("estudios", "error: no se pudo leer el archivo adjunto")
                             st.error("Error al leer el archivo")

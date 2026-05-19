@@ -9,6 +9,7 @@ import streamlit as st
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
+from core.app_logging import log_event
 
 # NUEVO: Sistema de guardado en Supabase (no ocupa RAM)
 from core.supabase_storage import guardar_signos_vitales_seguro, obtener_signos_vitales_paciente
@@ -75,6 +76,7 @@ def _mostrar_alertas_vitales_preview(ta, fc, fr, sat, temp, hgt):
             alertas_warn.append(f"{clave} = {val} {r['unidad']} — fuera de rango normal ({r['min']}–{r['max']})")
 
     for msg in alertas_crit:
+        log_event("clinica", f"error: valor critico - {msg}")
         st.error(f"🔴 CRÍTICO: {msg}")
     for msg in alertas_warn:
         st.warning(f"🟡 Alerta: {msg}")
@@ -154,6 +156,7 @@ def render_clinica(paciente_sel, user=None):
 
     alergias = str(det.get("alergias", "")).strip()
     if alergias:
+        log_event("clinica", f"error: alergias registradas - {alergias}")
         st.error(f"Alergias registradas: {alergias}")
 
     vits = [v for v in st.session_state.get("vitales_db", []) if v.get("paciente") == paciente_sel]
@@ -183,6 +186,7 @@ def render_clinica(paciente_sel, user=None):
                 if est in ("critico", "alerta")
             ]
             if _hay_crit_ult:
+                log_event("clinica", f"error: valores criticos en ultimo control - {' | '.join(_msgs)}")
                 st.error(f"🔴 Valores críticos en último control: {' | '.join(_msgs)}")
             else:
                 st.warning(f"🟡 Valores fuera de rango en último control: {' | '.join(_msgs)}")
@@ -320,6 +324,7 @@ def render_clinica(paciente_sel, user=None):
                 and all(p.isdigit() for p in ta_limpia.replace(" ", "").split("/") if p)
                 and len([p for p in ta_limpia.replace(" ", "").split("/") if p]) == 2
             ):
+                log_event("clinica", "error: formato de tension arterial invalido")
                 st.error("Formato de Tensión Arterial inválido. Use ###/### (ej: 120/80).")
             else:
                 hora_limpia = hora_toma_str.strip() if ":" in hora_toma_str else ahora().strftime("%H:%M")

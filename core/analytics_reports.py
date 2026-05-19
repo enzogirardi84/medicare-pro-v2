@@ -565,6 +565,7 @@ class AnalyticsEngine:
             if self.export_to_excel(ReportType.CLINICAL_KPIS, time_range_enum, filepath):
                 st.success(f"Reporte exportado: {filepath}")
             else:
+                log_event("analytics", "error: exportar_reporte")
                 st.error("Error al exportar")
 
 

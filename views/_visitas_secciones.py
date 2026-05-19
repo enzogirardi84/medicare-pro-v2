@@ -311,6 +311,7 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
             if st.form_submit_button("Agendar Visita", width='stretch', type="primary"):
                 _fh_prog = datetime.combine(fecha_ag, hora_ag)
                 if _fh_prog < ahora().replace(tzinfo=None) - timedelta(hours=1):
+                    log_event("visitas", "error: No se puede agendar una visita en el pasado. Corregi la fecha u hora.")
                     st.error("No se puede agendar una visita en el pasado. Corregi la fecha u hora.")
                     st.stop()
                 hora_limpia = normalizar_hora_texto(hora_ag.strftime("%H:%M"), default=ahora().strftime("%H:%M"))
@@ -347,6 +348,7 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
                         None,
                     )
                 if conflicto:
+                    log_event("visitas", f"error: {prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}.")
                     st.error(f"{prof_ag} ya tiene una visita activa en ese horario con {conflicto.get('paciente', 'otro paciente')}.")
                 else:
                     if "agenda_db" not in st.session_state or not isinstance(st.session_state["agenda_db"], list):

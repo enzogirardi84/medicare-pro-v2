@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio
 from core.clinical_exports import (
     build_backup_pdf_bytes,
@@ -92,6 +93,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
 
     alergias = str(detalles.get("alergias", "")).strip()
     if alergias:
+        log_event("historial", f"error: Alergias: {alergias}")
         st.error(f" Alergias: {alergias}")
     patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "")).strip()
     if patologias:

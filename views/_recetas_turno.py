@@ -10,6 +10,7 @@ import base64
 import pandas as pd
 import streamlit as st
 
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 from core.anticolapso import anticolapso_activo
 from core.database import guardar_datos
@@ -241,6 +242,7 @@ def render_administracion_turno(
                             continue
                         registros_guardados += 1
             if requiere_motivo:
+                log_event("recetas_turno", "error: Para guardar celdas en rojo, completá el motivo clínico.")
                 st.error("Para guardar celdas en rojo, completá el motivo clínico.")
                 return
             if registros_guardados:
@@ -371,6 +373,7 @@ def render_administracion_turno(
         if st.button("Aplicar cambios", width='stretch'):
             cambio_aplicado = False
             if accion_receta == "Editar indicacion" and not nuevo_texto_receta.strip():
+                log_event("recetas_turno", "error: Debes escribir el nuevo detalle de la indicacion.")
                 st.error("Debes escribir el nuevo detalle de la indicacion.")
             else:
                 r = receta_objetivo

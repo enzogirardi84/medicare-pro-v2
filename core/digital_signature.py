@@ -551,5 +551,6 @@ def render_signature_ui() -> None:
                         if is_valid:
                             st.success("✓ Válida")
                         else:
+                            log_event("digital_signature", "error: firma inválida")
                             st.error("✗ Inválida")
                     st.caption(f"ID: {doc.document_id[:8]}...")

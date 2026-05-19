@@ -129,11 +129,13 @@ def _render_plan_cuidados_enfermeria_legacy(
                 partes_alerta.append("⚠️ Riesgo de CAÍDAS: Alto")
             if riesgo_upp_ult == "Alto":
                 partes_alerta.append("⚠️ Riesgo de UPP: Alto")
+            log_event("enfermeria", "error: Riesgo alto detectado en ultimo registro")
             st.error(" — ".join(partes_alerta) + " (según último registro)")
         elif riesgo_caidas_ult == "Moderado" or riesgo_upp_ult == "Moderado" or prioridad_ult == "Alta":
             st.warning("🟡 Riesgo moderado o prioridad alta en el último registro de enfermería.")
 
         if incidentes_count:
+            log_event("enfermeria", f"error: {incidentes_count} incidente(s) registrado(s)")
             st.error(f"🔴 {incidentes_count} incidente(s) registrado(s) para este paciente.")
 
     try:
@@ -220,6 +222,7 @@ def _render_plan_cuidados_enfermeria_legacy(
 
             if st.button("Guardar registro de enfermería", width='stretch', type="primary", key="enf_guardar"):
                 if not intervencion.strip():
+                    log_event("enfermeria", "error: Debes registrar la intervencion realizada.")
                     st.error("Debés registrar la intervención realizada.")
                 else:
                     fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")
@@ -307,6 +310,7 @@ def _render_plan_cuidados_enfermeria_legacy(
             if ultimo.get("zona"):
                 st.write(f"**Zona / lesión:** {ultimo.get('zona')} — **Aspecto:** {ultimo.get('aspecto', 'S/D')}")
             if ultimo.get("incidente"):
+                log_event("enfermeria", f"error: Incidente informado: {ultimo.get('detalle_incidente', 'Sin detalle')}")
                 st.error(f"⚠️ Incidente informado: {ultimo.get('detalle_incidente', 'Sin detalle')}")
 
         evol_recientes = sorted(

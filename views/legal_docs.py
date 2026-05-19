@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 from datetime import datetime
 
+from core.app_logging import log_event
 from core.view_helpers import bloque_mc_grid_tarjetas
 from core.utils import ahora
 
@@ -284,6 +285,7 @@ def _render_audit_trail_tab(mi_empresa, user):
                 if valid:
                     st.success("Cadena de auditoria intacta — no se detectaron modificaciones.")
                 else:
+                    log_event("legal_docs", "error: cadena de auditoria alterada")
                     st.error("ALERTA: La cadena de auditoria ha sido alterada.")
             except Exception as e:
                 st.warning(f"No se pudo verificar la cadena: {e}")

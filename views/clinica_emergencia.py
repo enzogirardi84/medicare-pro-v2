@@ -10,6 +10,8 @@ Guarda datos inmediatamente en local_data.json
 import streamlit as st
 from datetime import datetime
 
+from core.app_logging import log_event
+
 try:
     from core._database_supabase import supabase as _supabase
     from core.db_sql import insert_signo_vital
@@ -35,6 +37,7 @@ def render(paciente_sel=None, user=None):
         paciente_sel = st.session_state.get("paciente_sel", "")
     
     if not paciente_sel:
+        log_event("clinica_emergencia", "error: paciente no seleccionado")
         st.error("❌ Selecciona un paciente del menú lateral primero")
         return
     
@@ -84,6 +87,7 @@ def render(paciente_sel=None, user=None):
                 and all(p.isdigit() for p in ta_limpia.replace(" ", "").split("/") if p)
                 and len([p for p in ta_limpia.replace(" ", "").split("/") if p]) == 2
             ):
+                log_event("clinica_emergencia", "error: formato de tension arterial invalido")
                 st.error("Formato de Tensión Arterial inválido. Use ###/### (ej: 120/80).")
             else:
                 with st.spinner("Guardando..."):
@@ -103,6 +107,7 @@ def render(paciente_sel=None, user=None):
                     queue_toast(f"✅ {mensaje}")
                     st.rerun()
                 else:
+                    log_event("clinica_emergencia", f"error: {mensaje}")
                     st.error(f"❌ {mensaje}")
     
     # === TABLA DE SIGNOS VITALES GUARDADOS ===

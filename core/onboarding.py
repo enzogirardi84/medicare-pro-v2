@@ -13,6 +13,8 @@ from enum import Enum
 
 import streamlit as st
 
+from core.app_logging import log_event
+
 
 class TourStepType(Enum):
     """Tipos de pasos del tour."""
@@ -218,6 +220,7 @@ class FirstStepsChecklist:
                 try:
                     item.action()
                 except Exception as e:
+                    log_event("onboarding", f"error: Error al ejecutar acción: {e}")
                     st.error(f"Error al ejecutar acción: {e}")
                 break
 

@@ -695,9 +695,11 @@ class IoTMedicalDeviceManager:
                                 else:
                                     st.warning("No se guardó: falta ID de paciente")
                             else:
+                                log_event("iot_devices", "error: No se pudo leer del dispositivo")
                                 st.error("No se pudo leer del dispositivo")
                         
                         except Exception as e:
+                            log_event("iot_devices", f"error: {str(e)}")
                             st.error(f"Error: {str(e)}")
         
         with tab3:

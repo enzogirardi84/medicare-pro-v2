@@ -922,15 +922,18 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 dosis_por_dia = 24 / intervalo_sel
                 st.caption(f"Dosis por dia: ~{round(dosis_por_dia)} toma(s) | Via: {info['via']}")
                 if info.get("alerta"):
+                    log_event("calculadora_dosis", f"error: ALERTA - {info['alerta']}")
                     st.error(f"ALERTA: {info['alerta']}", icon="🚨")
 
     st.divider()
 
     if st.button("Calcular dosis", width="stretch", type="primary", key="calc_dosis"):
         if peso <= 0:
+            log_event("calculadora_dosis", "error: El peso debe ser mayor a 0.")
             st.error("El peso debe ser mayor a 0.")
         elif es_manual:
             if not st.session_state.get("m_nombre", "").strip():
+                log_event("calculadora_dosis", "error: Debe ingresar el nombre del medicamento.")
                 st.error("Debe ingresar el nombre del medicamento en 'Ingreso manual'.")
             else:
                 m_min = st.session_state["m_min"]
@@ -995,6 +998,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
             st.info(resultado["observaciones"])
 
             if resultado["alerta"]:
+                log_event("calculadora_dosis", f"error: ALERTA - {resultado['alerta']}")
                 st.error(f"ALERTA: {resultado['alerta']}", icon="🚨")
 
             log_event("calculadora_dosis", f"{medicamento} - {peso}kg - {paciente_sel}")

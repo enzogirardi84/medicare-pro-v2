@@ -505,6 +505,7 @@ def render_advanced_settings(is_admin: bool):
                 guardar_datos()
                 st.success("✅ Datos guardados")
             except Exception as e:
+                log_event("settings", "error: guardar_datos_fallo")
                 st.error(f"❌ Error: {e}")
     
     st.divider()
@@ -513,6 +514,7 @@ def render_advanced_settings(is_admin: bool):
     st.subheader("🚨 Zona de Peligro")
     
     with st.expander("⚠️ Acciones Destructivas"):
+        log_event("settings", "error: acciones_destructivas_mostradas")
         st.error("Las siguientes acciones pueden causar pérdida de datos.")
         
         if st.button("🗑️ Limpiar Datos de Sesión", type="secondary"):

@@ -12,6 +12,8 @@ import html
 
 import streamlit as st
 
+from core.app_logging import log_event
+
 
 class FABPosition(Enum):
     """Posiciones disponibles para el FAB."""
@@ -111,6 +113,7 @@ class FloatingActionButton:
                 try:
                     action.on_click()
                 except Exception as e:
+                    log_event("fab", f"error: Error en acción: {e}")
                     st.error(f"Error en acción: {e}")
                 break
 

@@ -6,6 +6,7 @@ from html import escape
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.anticolapso import anticolapso_activo
 from core.clinicas_control import sincronizar_clinicas_desde_datos
 from core.database import guardar_datos
@@ -170,6 +171,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 if st.form_submit_button("Habilitar Acceso", width='stretch', type="primary"):
                     err_alta = _validar_alta_usuario_equipo(u_id, u_pw, u_dni, u_pin, u_email)
                     if err_alta:
+                        log_event("mi_equipo", f"error: {err_alta}")
                         st.error(err_alta)
                     else:
                         uid = u_id.strip().lower()
@@ -253,7 +255,6 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                         }
                         usuarios_base.append(fila)
     except Exception as e:
-        from core.app_logging import log_event
         log_event("error_leer_usuarios_sql", str(e))
 
     # 2. Fallback a JSON si SQL falla o esta vacio

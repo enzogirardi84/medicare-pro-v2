@@ -452,6 +452,7 @@ class DrugInteractionMonitor:
                 interactions = DrugInteractionDatabase.check_interactions(drugs)
                 
                 if interactions:
+                    log_event("drug_interactions", f"error: Se encontraron {len(interactions)} interacciones")
                     st.error(f"⚠️ Se encontraron **{len(interactions)}** interacciones")
                     
                     for interaction in interactions:
@@ -533,6 +534,7 @@ class DrugInteractionMonitor:
         
         # Mostrar alertas críticas (bloqueantes)
         if critical:
+            log_event("drug_interactions", "error: INTERACCIONES CRÍTICAS DETECTADAS")
             st.error("## ⚠️ INTERACCIONES CRÍTICAS DETECTADAS")
             st.markdown("<p style='color: #ef4444;'>Estas combinaciones pueden ser peligrosas. Revise cuidadosamente.</p>", unsafe_allow_html=True)
             
@@ -543,6 +545,7 @@ class DrugInteractionMonitor:
             contraindications = [i for i in critical if i.severity == InteractionSeverity.CONTRAINDICATED]
             
             if contraindications:
+                log_event("drug_interactions", "error: CONTRAINDICACIONES ABSOLUTAS detectadas")
                 st.error("🚫 **CONTRAINDICACIONES ABSOLUTAS:** Estas combinaciones NO deben usarse juntas.")
                 
                 with st.form(key="override_contraindication"):
@@ -555,6 +558,7 @@ class DrugInteractionMonitor:
                     
                     if submitted:
                         if not justification or not confirm:
+                            log_event("drug_interactions", "error: No se proporcionó justificación o confirmación para override")
                             st.error("Debe proporcionar justificación y confirmar")
                             return False
                         

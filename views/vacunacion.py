@@ -89,10 +89,13 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
             if st.form_submit_button("Guardar dosis", width="stretch", type="primary"):
                 nombre_final = vacuna_manual.strip() if vacuna == "-- Otra (especificar manualmente) --" else vacuna
                 if not nombre_final:
+                    log_event("vacunacion", "error: vacuna_obligatoria")
                     st.error("Debe especificar la vacuna.")
                 elif not lote.strip():
+                    log_event("vacunacion", "error: lote_obligatorio")
                     st.error("El numero de lote es obligatorio.")
                 elif not aplicador.strip():
+                    log_event("vacunacion", "error: aplicador_obligatorio")
                     st.error("El nombre del aplicador es obligatorio.")
                 else:
                     registro = {

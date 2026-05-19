@@ -17,6 +17,8 @@ import traceback
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
+from core.app_logging import log_event
+
 from core._error_types import (
     ErrorCategory,
     ErrorSeverity,
@@ -260,6 +262,7 @@ def safe_operation(
         if show_error:
             try:
                 import streamlit as st
+                log_event("error_handling", f"error: {error_message}: {str(e)}")
                 st.error(f"{error_message}: {str(e)}")
             except Exception as _exc:
                 logger.warning(f"Fallo al mostrar st.error en manejador de errores: {type(_exc).__name__}:{_exc}")

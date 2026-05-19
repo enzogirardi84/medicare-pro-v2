@@ -147,10 +147,13 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             
             # Validaciones de seguridad
             if not desc_final.strip():
+                log_event("caja", "error: Descripcion vacia.")
                 st.error("⚠️ Descripción vacía. Complete el campo.")
             elif mon <= 0:
+                log_event("caja", "error: El monto debe ser mayor a $0.")
                 st.error("⚠️ El monto debe ser mayor a $0.")
             elif mon > 500000:
+                log_event("caja", "error: Monto maximo permitido: $500,000")
                 st.error("⚠️ Monto máximo permitido: $500,000")
             else:
                 fecha_str = ahora().strftime("%d/%m/%Y %H:%M")

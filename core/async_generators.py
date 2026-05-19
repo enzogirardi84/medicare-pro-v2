@@ -15,6 +15,8 @@ from enum import Enum
 
 import streamlit as st
 
+from core.app_logging import log_event
+
 
 class TaskStatus(Enum):
     """Estados de una tarea asíncrona."""
@@ -159,6 +161,7 @@ class BackgroundTaskManager:
         """Renderizar status de tarea en Streamlit."""
         task = self.get_task(task_id)
         if not task:
+            log_event("async_generators", f"error: Tarea {task_id} no encontrada")
             st.error(f"Tarea {task_id} no encontrada")
             return
         
@@ -384,6 +387,7 @@ def render_pending_tasks_dashboard():
         st.write("**❌ Con errores:**")
         for task in failed_tasks:
             with st.expander(f"Error en: {task.name}"):
+                log_event("async_generators", f"error: {task.error or 'Error desconocido'}")
                 st.error(task.error or "Error desconocido")
     
     # Botón para limpiar
@@ -420,6 +424,7 @@ def render_async_pdf_button(
         elif task_type == "excel":
             task_id = export_excel_background(paciente_id, paciente_nombre)
         else:
+            log_event("async_generators", f"error: Tipo de tarea desconocido: {task_type}")
             st.error(f"Tipo de tarea desconocido: {task_type}")
             return
         

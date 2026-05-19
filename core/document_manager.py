@@ -204,6 +204,7 @@ class DocumentManager:
         # Validar extensión
         ext = Path(original_filename).suffix.lower()
         if ext not in self.ALLOWED_EXTENSIONS:
+            log_event("document_manager", f"error: Extensión no permitida: {ext}")
             st.error(f"❌ Extensión no permitida: {ext}")
             return None
         
@@ -215,6 +216,7 @@ class DocumentManager:
         
         # Validar tamaño
         if len(content) > self.MAX_FILE_SIZE:
+            log_event("document_manager", f"error: Archivo demasiado grande: {len(content) / 1024 / 1024:.1f}MB")
             st.error(f"❌ Archivo demasiado grande: {len(content) / 1024 / 1024:.1f}MB (máx: {self.MAX_FILE_SIZE / 1024 / 1024}MB)")
             return None
         

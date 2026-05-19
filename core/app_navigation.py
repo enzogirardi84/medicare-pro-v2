@@ -270,6 +270,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
     if menu_set is None:
         menu_set = frozenset(resolve_menu_for_role(rol, user, view_config))
     if tab_name not in menu_set:
+        log_event("app_navigation", "error: No tienes permisos para acceder a este modulo.")
         st.error("No tienes permisos para acceder a este modulo.")
         return
     try:

@@ -560,12 +560,14 @@ class ChronicDiseaseDashboard:
                 elif status == ControlStatus.FAIRLY_CONTROLLED:
                     st.warning("⚠️ Diabetes regularmente controlada")
                 else:
+                    log_event("chronic_disease", f"error: Diabetes control status - {status.value}")
                     st.error(f"❌ {status.value}")
                 
                 if messages:
                     for msg in messages:
                         st.write(f"• {msg}")
             else:
+                log_event("chronic_disease", "error: Ingrese ID del paciente (diabetes)")
                 st.error("Ingrese ID del paciente")
         
         # Mostrar tendencia
@@ -614,12 +616,14 @@ class ChronicDiseaseDashboard:
                 elif status == ControlStatus.FAIRLY_CONTROLLED:
                     st.warning("⚠️ HTA regularmente controlada")
                 else:
+                    log_event("chronic_disease", f"error: HTA control status - {status.value}")
                     st.error(f"❌ {status.value}")
                 
                 if messages:
                     for msg in messages:
                         st.write(f"• {msg}")
             else:
+                log_event("chronic_disease", "error: Ingrese ID del paciente (HTA)")
                 st.error("Ingrese ID del paciente")
     
     def _render_alerts_tab(self) -> None:

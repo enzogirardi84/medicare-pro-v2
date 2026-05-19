@@ -6,10 +6,13 @@ import traceback
 
 import streamlit as st
 
+from core.app_logging import log_event
+
 
 def render_modulo_fallo_ui(tab_name: str, exc: BaseException) -> None:
     """Error al renderizar un módulo: mensaje claro + expander con traza para soporte.
     Reporta automáticamente al Vigía de Errores."""
+    log_event("user_feedback", f"error: Fallo al abrir el modulo {tab_name}")
     st.error(f"Fallo al abrir el modulo **{tab_name}**. El resto del sistema puede seguir en uso.")
     st.markdown(
         "**Sugerencias:** volver a elegir el modulo en la barra superior, recargar la pagina (**F5**), "
@@ -38,6 +41,7 @@ def render_modulo_fallo_ui(tab_name: str, exc: BaseException) -> None:
 def render_carga_modulo_fallo(tab_name: str, exc: BaseException) -> None:
     """Error al importar/cargar el modulo (antes de ejecutar la vista).
     Reporta automáticamente al Vigía de Errores."""
+    log_event("user_feedback", f"error: No se pudo cargar el modulo {tab_name}")
     st.error(f"No se pudo cargar el modulo **{tab_name}**.")
     st.caption(f"Detalle: {type(exc).__name__}: {exc}")
     with st.expander("Traza (soporte)", expanded=False):

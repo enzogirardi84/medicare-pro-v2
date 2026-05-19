@@ -211,6 +211,7 @@ def _render_bloque_verificacion_email_2fa() -> bool:
         if fb[0] == "ok":
             st.success(fb[1])
         else:
+            log_event("auth_helpers", f"error: {fb[1]}")
             st.error(fb[1])
 
     p = st.session_state.get(SESSION_KEY)
@@ -235,6 +236,7 @@ def _render_bloque_verificacion_email_2fa() -> bool:
                 user_data["usuario_login"] = uk
                 _completar_login_exitoso(user_data, u_limpio, "Login", "login_ok")
             else:
+                log_event("auth_helpers", f"error: {err}")
                 st.error(err)
 
     def _on_resend():

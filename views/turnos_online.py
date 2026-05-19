@@ -85,8 +85,10 @@ def render_turnos_online(mi_empresa, rol):
 
             if st.form_submit_button("Guardar slots", width="stretch", type="primary"):
                 if not prof.strip():
+                    log_event("turnos_online", "error: profesional_obligatorio")
                     st.error("El nombre del profesional es obligatorio.")
                 elif not horarios:
+                    log_event("turnos_online", "error: horario_obligatorio")
                     st.error("Selecciona al menos un horario.")
                 else:
                     creados = 0
@@ -140,6 +142,7 @@ def render_turnos_online(mi_empresa, rol):
 
                 if st.form_submit_button("Reservar", width="stretch", type="primary"):
                     if not pac or (isinstance(pac, str) and not pac.strip()):
+                        log_event("turnos_online", "error: paciente_obligatorio")
                         st.error("Debes indicar el paciente.")
                     else:
                         s['paciente'] = pac.strip() if isinstance(pac, str) else pac

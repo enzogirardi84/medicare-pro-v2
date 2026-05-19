@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import streamlit as st
 
 from core.alert_toasts import queue_toast
+from core.app_logging import log_event
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, lista_plegable
 from core.utils import (
@@ -60,6 +61,7 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
     _det_map = mapa_detalles_pacientes(st.session_state)
     estado_pac = _det_map.get(paciente_sel, {}).get("estado", "Activo")
     if estado_pac == "De Alta":
+        log_event("visitas", "error: paciente_de_alta")
         st.error("Este paciente se encuentra de alta.")
         return
 

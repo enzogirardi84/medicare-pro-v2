@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.utils import mapa_detalles_pacientes
 from core.view_helpers import aviso_sin_paciente
 
@@ -33,6 +34,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
         cols[1].markdown(f"DNI: {dni}")
         cols[2].markdown(f"OS: {detalles.get('obra_social', 'S/D')}")
         if detalles.get("alergias"):
+            log_event("portal_paciente", f"error: paciente con alergias - {detalles['alergias']}")
             st.error(f"Alergias: {detalles['alergias']}")
 
     # ============ PROXIMOS TURNOS ============

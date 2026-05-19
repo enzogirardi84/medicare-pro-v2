@@ -13,6 +13,7 @@ from core.utils import (
     mostrar_dataframe_con_scroll,
     seleccionar_limite_registros,
 )
+from core.app_logging import log_event as _log_event_dash
 from core.view_helpers import bloque_estado_vacio, lista_plegable
 from views._dashboard_utils import _evaluar_ultimo_vital, _sumar_importe
 
@@ -111,6 +112,7 @@ def render_notificaciones_turno(pacientes, indicaciones, ahora_local, hoy, proxi
         with st.expander(f"🔔 Notificaciones de turno ({len(_notifs)})", expanded=True):
             for icono, nivel, msg in _notifs:
                 if nivel == "error":
+                    _log_event_dash("dashboard_bloques", f"error: {icono} {msg}")
                     st.error(f"{icono} {msg}")
                 else:
                     st.warning(f"{icono} {msg}")
@@ -144,6 +146,7 @@ def render_vitales_alertas(vitales_db, pac_ids):
     if vitales_alertas:
         with st.container():
             if n_crit_vit:
+                _log_event_dash("dashboard_bloques", f"error: {n_crit_vit} paciente(s) con signos vitales CRITICOS")
                 st.error(f"🔴 **{n_crit_vit} paciente(s) con signos vitales CRÍTICOS** en su último control")
             if n_alert_vit:
                 st.warning(f"🟡 **{n_alert_vit} paciente(s) con signos vitales alterados** en su último control")

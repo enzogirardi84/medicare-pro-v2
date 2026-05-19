@@ -11,6 +11,7 @@ import time
 
 import streamlit as st
 
+from core.app_logging import log_event
 
 # ============================================================
 # PAGINACIÓN CURSOR-BASED (más eficiente que OFFSET)
@@ -103,6 +104,7 @@ def fetch_with_cursor(
         return data, next_cursor
         
     except Exception as e:
+        log_event("db_query", f"error: Error en fetch_with_cursor: {e}")
         st.error(f"Error en fetch_with_cursor: {e}")
         return [], None
 
@@ -227,6 +229,7 @@ def fetch_pacientes_optimizado(
         return response.data if response else []
         
     except Exception as e:
+        log_event("db_query", f"error: Error al cargar pacientes: {e}")
         st.error(f"Error al cargar pacientes: {e}")
         return []
 
@@ -265,6 +268,7 @@ def fetch_evoluciones_paciente(
         return response.data if response else []
         
     except Exception as e:
+        log_event("db_query", f"error: Error al cargar evoluciones: {e}")
         st.error(f"Error al cargar evoluciones: {e}")
         return []
 

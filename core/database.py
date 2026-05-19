@@ -763,6 +763,7 @@ def _guardar_datos_ejecutar_core():
                 u = st.session_state.get("u_actual") or {}
                 tk = tenant_key_normalizado(str(u.get("empresa", "") or ""))
                 if not tk:
+                    log_event("database", "error: No se puede guardar - falta empresa en la sesión")
                     st.error("No se puede guardar: falta empresa en la sesión (reiniciá sesión).")
                     return
                 _upsert_supabase_tenant(tk, data)
@@ -818,6 +819,7 @@ def _guardar_datos_ejecutar_core():
         elif guardado_local:
             st.toast("Guardado localmente")
         else:
+            log_event("database", "error: No se pudo guardar en nube ni disco local")
             st.error(
                 "No se pudo guardar en la nube ni en disco local. "
                 "Revisa permisos de escritura, espacio libre y credenciales de Supabase. "

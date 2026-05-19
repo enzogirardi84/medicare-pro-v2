@@ -6,6 +6,7 @@ from datetime import date
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.view_helpers import lista_plegable
@@ -261,10 +262,12 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                             excluir_paciente=paciente_sel_admin,
                         )
                         if error_legajo:
+                            log_event("admision", f"error: {error_legajo}")
                             st.error(error_legajo)
                         else:
                             paciente_nuevo = _paciente_id(campos_legajo["nombre"], campos_legajo["dni"])
                             if paciente_nuevo != paciente_sel_admin and paciente_nuevo in mapa_detalles_pacientes(st.session_state):
+                                log_event("admision", "error: Ya existe un legajo con ese nombre y DNI.")
                                 st.error("Ya existe un legajo con ese nombre y DNI.")
                             else:
                                 detalle_anterior = dict(detalle_sel)
@@ -445,6 +448,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                 break
         if _dup_preview:
             pid_dup, det_dup = _dup_preview
+            log_event("admision", "error: DNI ya registrado")
             st.error(
                 f"⚠️ **DNI ya registrado**: {_nombre_legible(pid_dup)} — "
                 f"Empresa: {det_dup.get('empresa', 'S/D')} — "
@@ -519,10 +523,12 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
         if st.form_submit_button("Habilitar paciente", width='stretch', type="primary"):
             campos_legajo, error_legajo = _validar_legajo(n, d, emp_d, mi_empresa, rol)
             if error_legajo:
+                log_event("admision", f"error: {error_legajo}")
                 st.error(error_legajo)
             else:
                 id_p = _paciente_id(campos_legajo["nombre"], campos_legajo["dni"])
                 if id_p in mapa_detalles_pacientes(st.session_state):
+                    log_event("admision", "error: Ya existe un legajo con ese nombre y DNI.")
                     st.error("Ya existe un legajo con ese nombre y DNI.")
                 else:
                     pacientes_db = list(st.session_state.get("pacientes_db", []))

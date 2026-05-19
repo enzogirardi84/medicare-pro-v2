@@ -602,6 +602,7 @@ class ConsentManager:
         consent = self._consents.get(consent_id)
         
         if not consent:
+            log_event("consent_manager", "error: Consentimiento no encontrado")
             st.error("Consentimiento no encontrado")
             return
         
@@ -675,6 +676,7 @@ class ConsentManager:
                 if verification["valid"]:
                     st.success("✅ Documento verificado - No ha sido modificado")
                 else:
+                    log_event("consent_manager", "error: El documento puede haber sido alterado")
                     st.error("⚠️ ALERTA: El documento puede haber sido alterado")
                 
                 st.json(verification)

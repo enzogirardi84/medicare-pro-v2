@@ -14,6 +14,8 @@ from enum import Enum
 
 import streamlit as st
 
+from core.app_logging import log_event
+
 
 class ConnectionState(Enum):
     """Estados de conexión posibles."""
@@ -474,6 +476,7 @@ def check_connection_before_operation(operation_name: str = "operación") -> boo
         return False
     
     if status.state == ConnectionState.ERROR:
+        log_event("connection", "error: conexion_fallida")
         st.error(f"❌ Error de conexión: {status.error_message}")
         return st.checkbox("Forzar operación de todos modos (guardar localmente)", key="force_offline")
     

@@ -126,6 +126,7 @@ def render_inventario(mi_empresa):
                 _sm = int(item.get("stock_minimo", 0) or 0)
                 _reponer = max(1, _sm * 2 - int(item.get("stock", 0)))
                 lbl = f"**{_reponer}** para repo. sugerida" if _sm > 0 else ""
+                log_event("inventario", f"error: stock critico {item.get('item')} = {item.get('stock', 0)}")
                 st.error(f"{item.get('item')} → **{item.get('stock', 0)}** ({lbl})")
     if stock_bajo:
         with lista_plegable("Stock bajo (por debajo del doble del mínimo)", count=len(stock_bajo), expanded=False, height=200):

@@ -12,6 +12,7 @@ from html import escape
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.utils_pacientes import estado_pacientes_sql, set_paciente_actual
 
 
@@ -272,6 +273,7 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
                     nivel = str(alerta.get("nivel", "media")).lower()
                     msg = f"**{escape(alerta['titulo'])}**  \n{escape(alerta['detalle'])}"
                     if nivel == "critica":
+                        log_event("sidebar", f"error: alerta_critica:{escape(alerta['titulo'])}")
                         st.error(msg)
                     elif nivel == "alta":
                         st.warning(msg)

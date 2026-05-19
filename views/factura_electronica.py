@@ -69,8 +69,10 @@ def render_factura_electronica(paciente_sel, mi_empresa, user, rol):
 
             if st.form_submit_button('Emitir comprobante', width='stretch', type='primary'):
                 if monto <= 0:
+                    log_event("factura", "error: monto debe ser mayor a 0")
                     st.error('El monto debe ser mayor a $0.')
                 elif not concepto.strip():
+                    log_event("factura", "error: concepto obligatorio")
                     st.error('El concepto es obligatorio.')
                 else:
                     registro = {

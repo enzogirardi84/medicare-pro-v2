@@ -679,6 +679,7 @@ class VaccinationManager:
                     if record.next_dose_due:
                         st.info(f"📅 Próxima dosis estimada: {record.next_dose_due[:10]}")
                 else:
+                    log_event("vaccination", "error: Ingrese ID del paciente")
                     st.error("Ingrese ID del paciente")
         
         with tab2:
@@ -703,6 +704,7 @@ class VaccinationManager:
                                 st.write(f"**Edad actual:** {vaccine['age_current_months']} meses")
                                 
                                 if vaccine["days_overdue"] > 0:
+                                    log_event("vaccination", f"error: Vacuna vencida hace {vaccine['days_overdue']} días")
                                     st.error(f"⚠️ Vencida hace {vaccine['days_overdue']} días")
                                 
                                 st.write(f"**Protege contra:** {', '.join(vaccine['diseases_protected'])}")
@@ -710,6 +712,7 @@ class VaccinationManager:
                                 if vaccine["contraindications"]:
                                     st.warning(f"**Contraindicaciones:** {', '.join(vaccine['contraindications'])}")
                 else:
+                    log_event("vaccination", "error: Ingrese ID del paciente")
                     st.error("Ingrese ID del paciente")
         
         with tab3:
@@ -736,6 +739,7 @@ class VaccinationManager:
                         "application/json"
                     )
                 else:
+                    log_event("vaccination", "error: Complete ID y nombre del paciente")
                     st.error("Complete ID y nombre del paciente")
 
 

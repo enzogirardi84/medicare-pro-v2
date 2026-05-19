@@ -9,6 +9,8 @@ from typing import Any, Dict, List
 
 import streamlit as st
 
+from core.app_logging import log_event
+
 _RANGOS_VITALES = {
     "FC":   {"min": 60,   "max": 100,  "critico_min": 40,   "critico_max": 130,  "unidad": "lpm"},
     "FR":   {"min": 12,   "max": 20,   "critico_min": 8,    "critico_max": 30,   "unidad": "rpm"},
@@ -103,6 +105,7 @@ def _render_signos_vitales_con_alertas(registros: List[Dict[str, Any]], paciente
                 )
             if hay_critico:
                 criticos = [k for k, e in estados.items() if e == "critico"]
+                log_event("historial_vitales", f"error: Valores criticos: {', '.join(criticos)}")
                 st.error(f"⚠️ Valores críticos: **{', '.join(criticos)}**. Requiere atención inmediata.")
             elif hay_alerta:
                 alertas = [k for k, e in estados.items() if e == "alerta"]

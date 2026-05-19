@@ -12,6 +12,7 @@ from typing import Any, Optional, Sequence
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.alert_toasts import (
     firma_avisos_sistema,
     firma_inventario_alerta,
@@ -399,6 +400,7 @@ def render_franja_avisos_operativos(mi_empresa: str) -> None:
         msg = f"**Aviso del sistema:** {t}"
         nivel = a.get("nivel", "info")
         if nivel == "danger":
+            log_event("notificaciones", f"error: {t}")
             st.error(msg)
         elif nivel == "warning":
             st.warning(msg)

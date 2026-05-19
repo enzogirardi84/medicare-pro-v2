@@ -19,6 +19,7 @@ from core.clinicas_control import (
 from core.database import guardar_datos
 from core.utils import ahora, registrar_auditoria_legal
 from core.view_helpers import bloque_estado_vacio
+from core.app_logging import log_event
 
 
 def _registrar_cambio_clinica(user, accion: str, nombre_clinica: str, key_norm: str, detalle: str = "") -> None:
@@ -98,6 +99,7 @@ def render_clinicas_panel(mi_empresa, user, rol):
     user = user or {}
     rol_n = str(rol or user.get("rol", "") or "").strip().lower()
     if rol_n not in {"superadmin", "admin"}:
+        log_event("clinicas_panel", "error: acceso denegado - solo superadmin")
         st.error("Solo el perfil SuperAdmin puede acceder al panel global de clinicas.")
         return
 

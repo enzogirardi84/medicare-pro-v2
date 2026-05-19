@@ -74,6 +74,7 @@ class PatientPortal:
         
         # Verificar si tiene acceso habilitado
         if not paciente.get("portal_enabled", False):
+            log_event("patient_portal", "error: Acceso al portal no habilitado")
             st.error("🔒 Acceso al portal no habilitado. Contacte a recepción.")
             return None
         
@@ -117,6 +118,7 @@ class PatientPortal:
                 if session:
                     st.session_state["portal_session"] = session
                 else:
+                    log_event("patient_portal", "error: DNI o contraseña incorrectos")
                     st.error("❌ DNI o contraseña incorrectos")
             
             st.divider()
@@ -295,6 +297,7 @@ class PatientPortal:
                     dias_transcurridos = (datetime.now() - fecha_receta).days
                     
                     if dias_transcurridos > vigencia:
+                        log_event("patient_portal", "error: Receta vencida")
                         st.error("⚠️ Esta receta ha vencido")
                     else:
                         dias_restantes = vigencia - dias_transcurridos
@@ -351,6 +354,7 @@ class PatientPortal:
                 break
         
         if not paciente:
+            log_event("patient_portal", "error: No se encontraron datos del paciente")
             st.error("❌ No se encontraron datos del paciente")
             return
         

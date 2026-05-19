@@ -6,6 +6,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
+from core.app_logging import log_event
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
 
@@ -82,6 +83,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                     if i["item"] == insumo_sel and i.get("empresa") == mi_empresa:
                         stock_actual = i.get("stock", 0)
                         if stock_actual < cant_usada:
+                            log_event("materiales", f"error: stock insuficiente {insumo_sel}, tiene {stock_actual}, pide {cant_usada}")
                             st.error(f"Stock insuficiente para registrar {cant_usada}. Solo hay {stock_actual} unidad(es) disponibles.")
                             break
                         i["stock"] = stock_actual - cant_usada
@@ -124,6 +126,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
                     queue_toast(f"{cant_usada} x {insumo_sel} registrado correctamente.")
                     st.rerun()
                 else:
+                    log_event("materiales", "error: no se pudo actualizar stock")
                     st.error("Error al actualizar el stock.")
 
     cons_paciente = [c for c in st.session_state.get("consumos_db", []) if c.get("paciente") == paciente_sel]
@@ -174,6 +177,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
         if col_btn.button("Borrar ultimo consumo", width='stretch', disabled=not confirmar_borrado):
             if not cons_paciente:
+                log_event("materiales", "error: intento borrar consumo sin registros")
                 st.error("No hay consumos para borrar.")
             else:
                 ultimo_consumo = cons_paciente[-1]

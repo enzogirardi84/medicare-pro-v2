@@ -593,6 +593,7 @@ class FHIRConverter:
                             "application/fhir+json"
                         )
                     else:
+                        log_event("fhir", "error: Paciente no encontrado")
                         st.error("Paciente no encontrado")
         
         with tab2:
@@ -608,11 +609,13 @@ class FHIRConverter:
                     if is_valid:
                         st.success("✅ Recurso FHIR válido")
                     else:
+                        log_event("fhir", "error: Errores de validación")
                         st.error("❌ Errores de validación:")
                         for error in errors:
                             st.write(f"• {error}")
                 
                 except json.JSONDecodeError as e:
+                    log_event("fhir", f"error: JSON inválido: {e}")
                     st.error(f"JSON inválido: {e}")
         
         with tab3:

@@ -587,6 +587,7 @@ class ClinicalReminderManager:
                             if reminder.due_date:
                                 days_left = (reminder.due_date - datetime.now()).days
                                 if days_left < 0:
+                                    log_event("clinical_reminders", "error: recordatorio_vencido")
                                     st.error(f"⚠️ Vencido hace {abs(days_left)} días")
                                 elif days_left == 0:
                                     st.warning("📅 Vence hoy")

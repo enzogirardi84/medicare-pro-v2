@@ -146,6 +146,7 @@ class AppointmentScheduler:
         
         # Verificar disponibilidad
         if not self.is_slot_available(doctor_id, appointment_date, appointment_time, duration):
+            log_event("appointments", "error: El horario seleccionado no esta disponible")
             st.error("❌ El horario seleccionado no está disponible")
             return None
         
@@ -412,6 +413,7 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
                 key="apt_hora"
             )
         else:
+            log_event("appointments", "error: No hay horarios disponibles para esta fecha")
             st.error("❌ No hay horarios disponibles para esta fecha")
             hora = None
     
@@ -432,10 +434,12 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
     
     if st.button("📅 Agendar Turno", width='stretch', type="primary"):
         if not hora:
+            log_event("appointments", "error: Seleccione un horario disponible")
             st.error("❌ Seleccione un horario disponible")
             return
         
         if not motivo:
+            log_event("appointments", "error: Ingrese el motivo de la consulta")
             st.error("❌ Ingrese el motivo de la consulta")
             return
         

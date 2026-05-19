@@ -20,6 +20,7 @@ from datetime import date, datetime, timedelta
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.database import guardar_json_db
 from core.view_helpers import aviso_sin_paciente
 from core.utils import puede_accion, cargar_json_asset
@@ -83,6 +84,7 @@ def _guardar_con_feedback(clave_db, payload, max_items=500):
         st.toast("Guardado correctamente", icon="✅")
         return True
     except Exception as e:
+        log_event("dispensario", f"error al guardar: {e}")
         st.error(f"Error al guardar: {e}")
         st.toast("Falló la conexión. Se guardará localmente.", icon="⚠️")
         return False
@@ -96,6 +98,7 @@ def _guardar_directo():
         st.toast("Guardado correctamente", icon="✅")
         return True
     except Exception as e:
+        log_event("dispensario", f"error al guardar: {e}")
         st.error(f"Error al guardar: {e}")
         st.toast("Falló la conexión. Se guardará localmente.", icon="⚠️")
         return False
@@ -1192,6 +1195,7 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
 
         if st.button("Registrar entrega medicación", width='stretch', key="aps_btn_med"):
             if not medicamento:
+                log_event("dispensario", "error: sin medicamento seleccionado")
                 st.error("Seleccioná un medicamento del vademecum o escribí uno manualmente.")
             else:
                 payload = {
@@ -1226,6 +1230,7 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
             if edad_nino <= 2:
                 st.success(f"✅ Edad válida para leche: {edad_nino} año(s)")
             else:
+                log_event("dispensario", f"error: edad fuera de rango para leche - {edad_nino}")
                 st.error(f"❌ Edad fuera de rango: {edad_nino} año(s). El plan cubre hasta 2 años.")
 
         ya_leche_mes = _ya_entrego_mes(paciente_id, "leche_aps", entregas_db)
@@ -1234,8 +1239,10 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
 
         if st.button("Registrar entrega leche (2 kg)", width='stretch', key="aps_btn_leche"):
             if edad_nino is not None and edad_nino > 2:
+                log_event("dispensario", "error: edad fuera de rango del plan")
                 st.error("No se puede registrar: edad fuera del rango del plan.")
             elif ya_leche_mes:
+                log_event("dispensario", "error: ya retiro cuota mensual de leche")
                 st.error("No se puede registrar: ya retiró la cuota mensual.")
             else:
                 payload = {

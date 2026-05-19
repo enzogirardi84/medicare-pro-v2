@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
@@ -126,8 +127,10 @@ def render_balance(paciente_sel, user):
     neto_3 = int(df_temp["balance"].tail(3).sum()) if len(df_temp) >= 1 else 0
     neto_total = int(df_temp["balance"].sum())
     if neto_3 > 1500:
+        log_event("balance", f"error: Balance positivo acumulado (retencion): +{neto_3} ml en ultimos 3 turnos.")
         st.error(f"🔴 Balance positivo acumulado (retención): **+{neto_3} ml** en los últimos 3 turnos. Evaluar diurético.")
     elif neto_3 < -1500:
+        log_event("balance", f"error: Balance negativo acumulado (perdida severa): {neto_3} ml en ultimos 3 turnos.")
         st.error(f"🔴 Balance negativo acumulado (pérdida severa): **{neto_3} ml** en los últimos 3 turnos. Evaluar reposición.")
     elif neto_3 > 800:
         st.warning(f"🟡 Balance positivo moderado: **+{neto_3} ml** en los últimos 3 turnos.")
@@ -138,6 +141,7 @@ def render_balance(paciente_sel, user):
     if len(blp) >= 3:
         _ultimos3 = list(df_temp["balance"].tail(3))
         if all(b < 0 for b in _ultimos3):
+            log_event("balance", f"error: Tendencia negativa en ultimos 3 turnos ({', '.join(f'{b:+}' for b in _ultimos3)} ml).")
             st.error(f"🔴 Tendencia negativa: los últimos **3 turnos** fueron negativos ({', '.join(f'{b:+}' for b in _ultimos3)} ml). Evaluar reposición hidrosálina.")
         elif all(b > 0 for b in _ultimos3):
             st.warning(f"🟡 Tendencia positiva: los últimos **3 turnos** fueron positivos ({', '.join(f'{b:+}' for b in _ultimos3)} ml). Vigilar retención.")

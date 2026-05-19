@@ -414,6 +414,7 @@ def render_health_dashboard() -> None:
     elif report.overall_status == ComponentStatus.DEGRADED:
         st.warning(f"## {report.overall_status.value}")
     else:
+        log_event("health_check", f"error: sistema no saludable: {report.overall_status.value}")
         st.error(f"## {report.overall_status.value}")
     
     st.caption(f"Última actualización: {report.timestamp}")

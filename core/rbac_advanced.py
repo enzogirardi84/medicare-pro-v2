@@ -606,6 +606,7 @@ class RBACManager:
                 if self.assign_role_to_user(user_id, selected_role, current_user):
                     st.success(f"Rol {role_options[selected_role]} asignado a {user_id}")
                 else:
+                    log_event("rbac", "error: Error al asignar rol")
                     st.error("Error al asignar rol")
             
             # Asignar paciente a médico

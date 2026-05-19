@@ -30,6 +30,7 @@ def render_feature_flags_admin():
     # Verificar permisos
     user = st.session_state.get("u_actual", {})
     if user.get("rol") not in ["admin", "superadmin"]:
+        log_event("feature_flags", "error: acceso denegado - solo administradores")
         st.error("🔒 Acceso denegado. Solo administradores.")
         return
     

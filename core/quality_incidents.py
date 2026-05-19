@@ -629,6 +629,7 @@ class QualityManagementSystem:
             
             if submitted:
                 if not description:
+                    log_event("quality_incidents", "error: Debe proporcionar una descripción del incidente")
                     st.error("❌ Debe proporcionar una descripción del incidente")
                 else:
                     staff_list = [s.strip() for s in involved_staff.split(",") if s.strip()]
@@ -652,6 +653,7 @@ class QualityManagementSystem:
                     
                     # Si es crítico, mostrar alerta adicional
                     if severity == IncidentSeverity.CRITICAL:
+                        log_event("quality_incidents", "error: Incidente crítico reportado")
                         st.error("🚨 ALERTA: Incidente crítico reportado. Se notificará a la dirección médica.")
     
     def _render_quality_indicators(self):

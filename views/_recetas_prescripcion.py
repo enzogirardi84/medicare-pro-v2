@@ -169,10 +169,13 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
         if st.button("Guardar prescripcion medica", width='stretch', type="primary"):
             med_final = med_manual.strip().title() if med_manual.strip() else med_vademecum
             if tipo_indicacion == "Medicacion" and (not med_final or med_final == "-- Seleccionar del vademecum --"):
+                _log_event("recetas_prescripcion", "error: Debe seleccionar o escribir un medicamento.")
                 st.error("Debe seleccionar o escribir un medicamento.")
             elif tipo_indicacion == "Infusion / hidratacion" and not solucion.strip():
+                _log_event("recetas_prescripcion", "error: Debe indicar la solucion principal.")
                 st.error("Debe indicar la solucion principal.")
             elif not medico_matricula.strip():
+                _log_event("recetas_prescripcion", "error: Debe ingresar la matricula del medico.")
                 st.error("Debe ingresar la matricula del medico.")
             else:
                 firma_b64 = firma_a_base64(

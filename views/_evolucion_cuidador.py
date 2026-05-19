@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import streamlit as st
 from core.utils import ahora, registrar_auditoria_legal
+from core.app_logging import log_event
 from core.database import guardar_datos
 from core.alert_toasts import queue_toast
 
@@ -500,6 +501,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         medicacion_administrada,
                         familiar_presente,
                         proximo_control]) and not observaciones_extra.strip():
+                log_event("evolucion_cuidador", "error: Debe completar al menos un campo antes de guardar.")
                 st.error("Debe completar al menos un campo antes de guardar.")
             else:
                 fecha_n = ahora().strftime("%d/%m/%Y %H:%M")

@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 import pandas as pd
 import streamlit as st
 
+from core.app_logging import log_event
 from core.utils import mostrar_dataframe_con_scroll
 from core.view_helpers import lista_plegable
 from views._historial_utils import (
@@ -67,6 +68,7 @@ def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) 
                     try:
                         st.image(base64.b64decode(firma_b64), caption="Firma paciente / familiar", width=260)
                     except Exception:
+                        log_event("historial_render", "error: No se pudo leer la firma del consentimiento.")
                         st.error("No se pudo leer la firma del consentimiento.")
 
 
@@ -94,6 +96,7 @@ def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None
                         else:
                             st.image(archivo, width='stretch')
                     except Exception:
+                        log_event("historial_render", "error: No se pudo leer el adjunto.")
                         st.error("No se pudo leer el adjunto.")
 
 
@@ -109,6 +112,7 @@ def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
                     try:
                         st.image(base64.b64decode(foto_b64), width='stretch')
                     except Exception:
+                        log_event("historial_render", "error: No se pudo leer la foto.")
                         st.error("No se pudo leer la foto.")
 
 
@@ -116,6 +120,7 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any], idx: int, pacien
     estado = registro.get("estado_receta", registro.get("estado_clinico", "Activa"))
     origen = registro.get("origen_registro", "")
     if estado == "Suspendida":
+        log_event("historial_render", "error: Medicacion suspendida")
         st.error(
             f"Medicación suspendida | Fecha: {registro.get('fecha_suspension', 'S/D')} | "
             f"Profesional: {registro.get('profesional_estado', 'S/D')}"

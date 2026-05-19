@@ -731,6 +731,7 @@ class SmartAppointmentManager:
                                         )
                                         st.success(f"Turno agendado: {appt.id}")
                                     except Exception as e:
+                                        log_event("smart_appointments", f"error: schedule_failed:{type(e).__name__}")
                                         st.error(f"Error: {e}")
                     else:
                         st.warning("No hay horarios disponibles")

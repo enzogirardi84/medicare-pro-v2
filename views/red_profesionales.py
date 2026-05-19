@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.app_logging import log_event
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, es_control_total, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
@@ -366,6 +367,7 @@ def render_red_profesionales(mi_empresa, user, rol):
 
             if st.button("Guardar solicitud", width='stretch', type="primary"):
                 if not nombre_paciente.strip() or not telefono.strip():
+                    log_event("red_profesionales", "error: solicitud sin nombre o telefono")
                     st.error("Debe completar al menos nombre y telefono.")
                 else:
                     if "solicitudes_servicios_db" not in st.session_state or not isinstance(st.session_state["solicitudes_servicios_db"], list):

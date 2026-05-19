@@ -33,6 +33,7 @@ def render_admin_dashboard():
     # Verificar permisos
     user = st.session_state.get("u_actual", {})
     if user.get("rol") not in ["admin", "superadmin"]:
+        log_event("admin_dashboard", "error: Acceso denegado. Solo administradores.")
         st.error("🔒 Acceso denegado. Solo administradores.")
         return
     
@@ -259,6 +260,7 @@ def render_audit_tab():
             if is_valid:
                 st.success("✅ Cadena de auditoría válida. No se detectaron modificaciones.")
             else:
+                log_event("admin_dashboard", "error: Se detecto posible tampering en los logs.")
                 st.error("❌ ¡ALERTA! Se detectó posible tampering en los logs.")
     else:
         st.info("No hay entradas de auditoría que coincidan con los filtros.")
@@ -402,9 +404,11 @@ def render_alerts_tab():
     medium = [a for a in alerts if a.get("severity") == "medium"]
     
     if critical:
+        log_event("admin_dashboard", f"error: {len(critical)} Alertas Criticas")
         st.error(f"🚨 {len(critical)} Alertas Críticas")
         for alert in critical:
             with st.container():
+                log_event("admin_dashboard", f"error: {alert.get('title', 'Alerta')} - {alert.get('message', '')}")
                 st.error(f"**{alert.get('title', 'Alerta')}**\n\n{alert.get('message', '')}")
                 st.caption(f"Timestamp: {alert.get('timestamp', 'N/A')}")
     
