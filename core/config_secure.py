@@ -123,19 +123,26 @@ class SecureSettings(BaseSettings):
 
 
 @lru_cache()
-def get_settings() -> SecureSettings:
+def get_settings() -> SecureSettings | None:
     """Retorna configuración cacheada (singleton)."""
-    settings = SecureSettings()
-    settings.validate_production_settings()
-    return settings
+    try:
+        settings = SecureSettings()
+        settings.validate_production_settings()
+        return settings
+    except Exception as _exc:
+        from core.app_logging import log_event
+        log_event("config_secure", f"fallo:{type(_exc).__name__}:{_exc}")
+        return None
 
 
-def get_database_url_with_pool() -> str:
+def get_database_url_with_pool() -> str | None:
     """
     Retorna URL de base de datos optimizada para connection pooling.
     Para Supabase, usa el puerto 6543 del pooler de conexiones.
     """
     settings = get_settings()
+    if settings is None:
+        return None
     url = settings.database_url.get_secret_value()
     
     # Si es Supabase y no tiene el puerto de pool, sugerirlo
@@ -151,5 +158,5 @@ def get_database_url_with_pool() -> str:
     return url
 
 
-# Instancia global
+# Instancia global (puede ser None si falla validación)
 secure_config = get_settings()
