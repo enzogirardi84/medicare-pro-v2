@@ -493,6 +493,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                             "direccion": p.get("direccion", ""),
                             "alergias": p.get("alergias", ""),
                             "patologias": p.get("patologias", ""),
+                            "fecha_alta": p.get("fecha_alta", ""),
                         }
                 
                 # Fijar el cache para evitar guardados innecesarios
