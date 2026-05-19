@@ -62,57 +62,63 @@ def _frecuencia_guardia_visible(freq):
 
 def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1):
     """Descuenta del inventario automaticamente al registrar una dosis como Realizada."""
+    st.session_state.setdefault("consumos_db", [])
+    st.session_state["consumos_db"].append({
+        "paciente": paciente_sel,
+        "insumo": nombre_med,
+        "cantidad": cantidad,
+        "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+        "firma": user.get("nombre", "Sistema"),
+        "empresa": mi_empresa,
+    })
+    med_key = nombre_med.strip().lower()
+    encontrado = False
+    for item in st.session_state.get("inventario_db", []):
+        item_key = item.get("item", "").lower().strip()
+        if item.get("empresa") != mi_empresa:
+            continue
+        if item_key == med_key or med_key in item_key or item_key in med_key:
+            stock_anterior = int(item.get("stock") or 0)
+            item["stock"] = max(0, stock_anterior - cantidad)
+            log_event("recetas_mar", f"stock_descontado:{nombre_med}:{stock_anterior}->{item['stock']}")
+            encontrado = True
+            break
+    if not encontrado:
+        log_event("recetas_mar", f"stock_no_encontrado:{nombre_med}:no hay item en inventario con ese nombre")
+    from core.database import _trim_db_list
+    _trim_db_list("consumos_db", 1000)
     try:
-        st.session_state.setdefault("consumos_db", [])
-        st.session_state["consumos_db"].append({
-            "paciente": paciente_sel,
-            "insumo": nombre_med,
-            "cantidad": cantidad,
-            "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
-            "firma": user.get("nombre", "Sistema"),
-            "empresa": mi_empresa,
-        })
-        for item in st.session_state.get("inventario_db", []):
-            if item.get("item", "").lower() == nombre_med.strip().lower() and item.get("empresa") == mi_empresa:
-                item["stock"] = max(0, int(item.get("stock") or 0) - cantidad)
-                break
-        from core.database import _trim_db_list, guardar_datos
-        _trim_db_list("consumos_db", 1000)
-        guardar_datos(spinner=True)
-        try:
-            from core.db_sql import get_inventario_item_by_name, insert_inventario_movimiento
-            from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
-            partes = paciente_sel.split(" - ")
-            if len(partes) > 1:
-                dni = partes[1].strip()
-                empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-                if empresa_uuid:
-                    pac_uuid = _obtener_uuid_paciente(dni, empresa_uuid)
-                    item = get_inventario_item_by_name(empresa_uuid, nombre_med)
-                    if item:
-                        stock_actual = int(item.get("stock_actual", 0))
-                        mov = {
-                            "inventario_id": item["id"],
-                            "paciente_id": pac_uuid,
-                            "empresa_id": empresa_uuid,
-                            "tipo_movimiento": "Salida",
-                            "cantidad": cantidad,
-                            "stock_anterior": stock_actual,
-                            "stock_nuevo": max(0, stock_actual - cantidad),
-                            "motivo": f"MAR automatico: {nombre_med} - {paciente_sel}",
-                            "referencia_documento": "MAR_AUTO",
-                        }
-                        insert_inventario_movimiento(mov)
-        except Exception:
-            pass
-    except Exception:
-        pass
+        from core.db_sql import get_inventario_item_by_name, insert_inventario_movimiento
+        from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+        partes = paciente_sel.split(" - ")
+        if len(partes) > 1:
+            dni = partes[1].strip()
+            empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+            if empresa_uuid:
+                pac_uuid = _obtener_uuid_paciente(dni, empresa_uuid)
+                item = get_inventario_item_by_name(empresa_uuid, nombre_med)
+                if item:
+                    stock_actual = int(item.get("stock_actual", 0))
+                    mov = {
+                        "inventario_id": item["id"],
+                        "paciente_id": pac_uuid,
+                        "empresa_id": empresa_uuid,
+                        "tipo_movimiento": "Salida",
+                        "cantidad": cantidad,
+                        "stock_anterior": stock_actual,
+                        "stock_nuevo": max(0, stock_actual - cantidad),
+                        "motivo": f"MAR automatico: {nombre_med} - {paciente_sel}",
+                        "referencia_documento": "MAR_AUTO",
+                    }
+                    insert_inventario_movimiento(mov)
+    except Exception as e:
+        log_event("recetas_mar", f"error_sql_stock:{type(e).__name__}:{str(e)[:80]}")
 
 
 def registrar_administracion_dosis(
     paciente_sel, mi_empresa, user, fecha_hoy,
     nombre_med, horario_programado_slot, estado_sel, justificacion,
-    *, hora_real_admin=None,
+    *, hora_real_admin=None, batch=False,
 ):
     if "No realizada" in estado_sel and not justificacion.strip():
         log_event("recetas_mar", "error: Es obligatorio justificar por que no se administro la dosis.")
@@ -139,8 +145,7 @@ def registrar_administracion_dosis(
     mat_prof = str(user.get("matricula", "") or "").strip()
     login_ref = str(user.get("usuario_login", user.get("usuario", "")) or "").strip()
 
-    from core.database import guardar_json_db
-    guardar_json_db("administracion_med_db", {
+    registro = {
         "paciente": paciente_sel,
         "med": nombre_med,
         "fecha": fecha_hoy,
@@ -154,7 +159,15 @@ def registrar_administracion_dosis(
         "registro_iso": ts_evento.isoformat(timespec="seconds"),
         "registro_fecha_hora": ts_evento.strftime("%d/%m/%Y %H:%M:%S"),
         "empresa": mi_empresa,
-    }, spinner=True)
+    }
+    st.session_state.setdefault("administracion_med_db", [])
+    st.session_state["administracion_med_db"].append(registro)
+    from core.database import _trim_db_list
+    _trim_db_list("administracion_med_db", 2000)
+    if not batch:
+        from core.database import guardar_datos
+        guardar_datos(spinner=True)
+
     detalle_audit = (
         f"{nombre_med} | Programada: {slot} | Hora administración/registro: {hora_str} | Estado: {estado_sel}"
     )
@@ -423,9 +436,11 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
             hr = str(fila.get("Hora_real", "") or "").strip()
             if not med:
                 continue
-            if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, med, slot, "Realizada", "", hora_real_admin=hr or None):
+            if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, med, slot, "Realizada", "", hora_real_admin=hr or None, batch=True):
                 n += 1
         if n:
+            from core.database import guardar_datos
+            guardar_datos(spinner=True)
             queue_toast(f"Listo: {n} administración(es) registrada(s).")
             st.rerun()
         else:
