@@ -82,11 +82,12 @@ def _descargar_csv(data, filename):
 def _chart_barras_mes(df, x_col, y_col, titulo_x='Mes', titulo_y='Cantidad', color=COLOR_PRIMARY):
     if df is None or df.empty:
         return None
+    y_max = df[y_col].max()
     return alt.Chart(df).mark_bar(cornerRadiusEnd=4).encode(
         x=alt.X(f'{x_col}:N', title=titulo_x, axis=alt.Axis(labelAngle=-45)),
         y=alt.Y(f'{y_col}:Q', title=titulo_y),
         color=alt.condition(
-            alt.datum[y_col] == max(alt.datum[y_col]),
+            alt.datum[y_col] == y_max,
             alt.value(COLOR_DANGER),
             alt.value(color),
         ),
