@@ -174,6 +174,22 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     )
                     guardar_datos(spinner=True)
 
+                    # Detectar procedimientos en la nota y deducir insumos asociados
+                    try:
+                        from core._insumos_map import deducir_insumos, insumos_para_procedimiento
+
+                        insumos_proc = insumos_para_procedimiento(nota.strip())
+                        if insumos_proc:
+                            detalles = st.session_state.get("db", {})
+                            emp = detalles.get("empresa", "")
+                            deducir_insumos(
+                                insumos_proc, paciente_sel, emp, user,
+                                motivo=f"Evolucion: {plantilla}",
+                            )
+                            guardar_datos(spinner=False)
+                    except Exception as e_proc:
+                        log_event("evolucion", f"error_insumos_proc:{type(e_proc).__name__}:{str(e_proc)[:80]}")
+
                     try:
                         paciente_nombre = paciente_sel
                         paciente_id = paciente_sel

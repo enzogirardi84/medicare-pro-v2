@@ -580,6 +580,23 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                 )
                 guardar_datos(spinner=True)
 
+                # Detectar procedimientos en el texto y deducir insumos asociados
+                try:
+                    from core._insumos_map import deducir_insumos, insumos_para_procedimiento
+
+                    insumos_proc = insumos_para_procedimiento(texto_generado)
+                    if insumos_proc:
+                        detalles = st.session_state.get("db", {})
+                        emp = detalles.get("empresa", "")
+                        deducir_insumos(
+                            insumos_proc, paciente_sel, emp, user,
+                            motivo="Evolucion inteligente",
+                        )
+                        guardar_datos(spinner=False)
+                except Exception as e_proc:
+                    from core.app_logging import log_event
+                    log_event("evolucion_cuidador", f"error_insumos:{type(e_proc).__name__}:{str(e_proc)[:80]}")
+
                 try:
                     from core.nextgen_sync import sync_visita_evolucion_to_nextgen
                     sync_visita_evolucion_to_nextgen(paciente_sel, texto_generado[:500])

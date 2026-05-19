@@ -128,6 +128,19 @@ def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1
         log_event("recetas_mar", f"stock_auto_creado:{nombre_med}")
         queue_toast(f"📦 Se creó '{nombre_med}' en inventario (stock 0). Ajustá el stock desde Inventario.")
 
+    # Asociar insumos secundarios (jeringas, agujas, etc.)
+    try:
+        from core._insumos_map import deducir_insumos, insumos_para_medicamento
+
+        asociados = insumos_para_medicamento(nombre_med)
+        if asociados:
+            deducir_insumos(
+                asociados, paciente_sel, mi_empresa, user,
+                motivo=f"MAR: {nombre_med}",
+            )
+    except Exception as e:
+        log_event("recetas_mar", f"error_insumos_asociados:{type(e).__name__}:{str(e)[:80]}")
+
     try:
         from core.db_sql import get_inventario_item_by_name, insert_inventario_movimiento
         from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
