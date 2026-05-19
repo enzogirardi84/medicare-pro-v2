@@ -372,6 +372,9 @@ def render_clinica(paciente_sel, user=None):
             opciones=(10, 20, 50, 100, 150, 200),
         )
         df_vits = pd.DataFrame(vits[-limite:]).drop(columns=["paciente"], errors="ignore")
+        for _col in ["TA", "FC", "FR", "Sat", "Temp", "HGT"]:
+            if _col in df_vits.columns:
+                df_vits[_col] = df_vits[_col].apply(lambda x: str(x) if x not in (None, "", float("nan")) else "-")
         df_vits["fecha_dt"] = df_vits["fecha"].apply(_parse_fecha_hora)
         df_vits = df_vits.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"])
         rename_map = {

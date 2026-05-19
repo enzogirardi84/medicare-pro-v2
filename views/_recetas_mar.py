@@ -22,10 +22,7 @@ from views._recetas_utils import (
     valor_ml_h_legible,
 )
 
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
+import pandas as pd
 
 
 # ---------------------------------------------------------------------------

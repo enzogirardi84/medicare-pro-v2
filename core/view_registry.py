@@ -52,7 +52,6 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Turnos Online": ("views.turnos_online", "render_turnos_online"),
     "Chatbot IA": ("views.chatbot_ia", "render_chatbot_ia"),
     "Calc. Dosis Pediatricas": ("views.calculadora_dosis", "render_calculadora_dosis"),
-    "Reportes Ejecutivos": ("views.reportes_ejecutivos", "render_reportes_ejecutivos"),
     "Reportes Financieros": ("views.financial_reports", "render_financial_reports"),
 }
 
@@ -95,7 +94,6 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Turnos Online": "Turnos Online",
     "Chatbot IA": "🤖 Chatbot",
     "Calc. Dosis Pediatricas": "Calc. Dosis",
-    "Reportes Ejecutivos": "\U0001F4CA Reportes",
     "Reportes Financieros": "\U0001F4B0 Financiero",
 }
 

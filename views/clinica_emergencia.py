@@ -128,6 +128,9 @@ def render(paciente_sel=None, user=None):
         
         import pandas as pd
         df = pd.DataFrame(tabla_datos)
+        for _col in ["F.C.", "F.R.", "Temp", "SatO2"]:
+            if _col in df.columns:
+                df[_col] = pd.to_numeric(df[_col], errors="coerce")
         
         # Tabla con formato profesional
         st.dataframe(

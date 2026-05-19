@@ -321,8 +321,6 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(mi_empresa, user, rol)
         elif tab_name == "Diagnosticos":
             render_fn(user)
-        elif tab_name == "Reportes Ejecutivos":
-            render_fn(mi_empresa, rol)
         elif tab_name == "Reportes Financieros":
             render_fn(mi_empresa, rol)
         else:

@@ -95,7 +95,6 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Turnos Online": list(_ROL_TODOS),
     "Chatbot IA": list(_ROL_TODOS),
     "Calc. Dosis Pediatricas": list(_ROL_TODOS),
-    "Reportes Ejecutivos": list(_ROL_COORD_OPER),
     "Reportes Financieros": list(_ROL_COORD_OPER),
 }
 

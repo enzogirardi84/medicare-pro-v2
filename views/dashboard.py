@@ -387,7 +387,7 @@ L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
 
             col_map_1, col_map_2 = st.columns([2, 1])
             with col_map_1:
-                st.components.v1.html(_html_map, height=500)
+                st.html(_html_map)
             with col_map_2:
                 st.caption(f"{len(_gps_data)} visitas con GPS")
                 _df_gps_show = _df_gps[["paciente", "tipo", "fecha"]].copy()

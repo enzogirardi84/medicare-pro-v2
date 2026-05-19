@@ -371,7 +371,7 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     html_informe = generar_html_informe_profesional(paciente_sel, datos, dashboard)
 
     st.caption("Vista previa del informe (desplazable)")
-    st.components.v1.html(html_informe, height=500, scrolling=True)
+    st.html(html_informe)
 
     col_d1, col_d2 = st.columns(2)
     with col_d1:
