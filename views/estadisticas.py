@@ -18,6 +18,9 @@ from core.charts import (
     COLOR_PRIMARY, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER, COLOR_INFO,
 )
 
+import io
+import csv
+
 
 def _contar_por_mes(registros, campo_fecha='fecha', filtro_ano=None):
     conteo = Counter()
@@ -47,6 +50,33 @@ def _sumar_por_mes(registros, campo_fecha='fecha', campo_valor='monto', filtro_a
         except Exception:
             continue
     return totales
+
+
+def _parse_stock(v):
+    try:
+        s = str(v or '0').replace(',', '').strip()
+        return int(float(s)) if s else 0
+    except (ValueError, TypeError):
+        return 0
+
+
+def _parse_monto(v):
+    try:
+        if v is None: return 0.0
+        s = str(v).replace(',', '').replace('$', '').strip()
+        return float(s) if s else 0.0
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _descargar_csv(data, filename):
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    if data:
+        writer.writerow(data[0].keys())
+        for row in data:
+            writer.writerow(row.values())
+    st.download_button('Descargar CSV', data=buf.getvalue(), file_name=filename, mime='text/csv')
 
 
 def _chart_barras_mes(df, x_col, y_col, titulo_x='Mes', titulo_y='Cantidad', color=COLOR_PRIMARY):
@@ -110,7 +140,9 @@ def render_estadisticas(mi_empresa, rol):
         evoluciones = filtrar_registros_empresa(
             st.session_state.get('evoluciones_db', []), mi_empresa, rol
         )
-        inventario = st.session_state.get('inventario_db', [])
+        inventario = filtrar_registros_empresa(
+            st.session_state.get('inventario_db', []), mi_empresa, rol
+        )
         checkins = filtrar_registros_empresa(
             st.session_state.get('checkin_db', []), mi_empresa, rol
         )
@@ -151,14 +183,14 @@ def render_estadisticas(mi_empresa, rol):
                             altas += 1
                     except TypeError:
                         pass
-        total_fact = sum(float(f.get('monto', 0) or 0) for f in facturacion)
+        total_fact = sum(_parse_monto(f.get('monto')) for f in facturacion)
         total_evol = len(evoluciones)
         stock_crit = 0
         for item in inventario:
             sm = item.get('stock_minimo')
             if sm is not None and str(sm).strip():
                 try:
-                    if int(item.get('stock', 0) or 0) <= int(sm):
+                    if _parse_stock(item.get('stock')) <= _parse_stock(sm):
                         stock_crit += 1
                 except (ValueError, TypeError):
                     pass
@@ -218,6 +250,7 @@ def render_estadisticas(mi_empresa, rol):
                 'Altas mensuales de pacientes',
                 _chart_barras_mes(df_pac, 'Mes', 'Altas', titulo_y='Cantidad', color=COLOR_PRIMARY),
             )
+            _descargar_csv([{'Mes': k, 'Altas': v} for k, v in sorted(conteo_pac.items())], 'altas_pacientes.csv')
         else:
             bloque_estado_vacio(
                 'Sin datos',
@@ -239,6 +272,7 @@ def render_estadisticas(mi_empresa, rol):
                 'Evolucion de facturacion mensual',
                 chart_linea(df_fact, 'Mes', 'Monto', titulo_x='Mes', titulo_y='Monto ($)'),
             )
+            _descargar_csv([{'Mes': k, 'Monto': v} for k, v in sorted(fact_meses.items())], 'facturacion_mensual.csv')
             st.success(f'Total facturado: **${sum(fact_meses.values()):,.2f}**')
         else:
             bloque_estado_vacio(
@@ -275,6 +309,7 @@ def render_estadisticas(mi_empresa, rol):
                 'Evoluciones clinicas mensuales',
                 _chart_barras_mes(df_evol, 'Mes', 'Evoluciones', titulo_y='Cantidad', color=COLOR_WARNING),
             )
+            _descargar_csv([{'Mes': k, 'Evoluciones': v} for k, v in sorted(conteo_evol.items())], 'evoluciones_mensual.csv')
         else:
             bloque_estado_vacio(
                 'Sin datos',
@@ -304,7 +339,7 @@ def render_estadisticas(mi_empresa, rol):
         st.markdown('#### Estado de inventario')
         if inventario:
             total_items = len(inventario)
-            total_units = sum(int(i.get('stock', 0) or 0) for i in inventario)
+            total_units = sum(_parse_stock(i.get('stock')) for i in inventario)
             items_con_minimo = 0
             items_criticos = []
             for item in inventario:
@@ -312,7 +347,7 @@ def render_estadisticas(mi_empresa, rol):
                 if sm is not None and str(sm).strip():
                     items_con_minimo += 1
                     try:
-                        if int(item.get('stock', 0) or 0) <= int(sm):
+                        if _parse_stock(item.get('stock')) <= _parse_stock(sm):
                             items_criticos.append(item)
                     except (ValueError, TypeError):
                         pass
@@ -329,8 +364,8 @@ def render_estadisticas(mi_empresa, rol):
                 df_stock = pd.DataFrame([
                     {
                         'Item': item.get('item', ''),
-                        'Stock': int(item.get('stock', 0) or 0),
-                        'Minimo': int(item.get('stock_minimo', 0) or 0),
+                        'Stock': _parse_stock(item.get('stock')),
+                        'Minimo': _parse_stock(item.get('stock_minimo')),
                     }
                     for item in items_criticos
                 ])
