@@ -94,6 +94,10 @@ def render_admin_usuarios():
                     "activo": True,
                 }
                 establecer_password_nuevo(usuarios[uid], nuevo_password.strip())
+                for _login in usuarios:
+                    _u = usuarios[_login]
+                    if "pass_hash" in _u:
+                        _u["password_hash"] = _u["pass_hash"]
                 st.session_state["usuarios_db"] = usuarios
                 guardar_datos(spinner=False)
                 st.success(f"Usuario '{uid}' creado")
@@ -108,6 +112,10 @@ def render_admin_usuarios():
     if st.button("🔑 Cambiar contrasena", key="reset_pwd_btn"):
         if _reset_login and _reset_pwd and len(_reset_pwd) >= 6:
             establecer_password_nuevo(usuarios[_reset_login], _reset_pwd)
+            for _login in usuarios:
+                _u = usuarios[_login]
+                if "pass_hash" in _u:
+                    _u["password_hash"] = _u["pass_hash"]
             st.session_state["usuarios_db"] = usuarios
             guardar_datos(spinner=False)
             st.success(f"Contrasena de '{_reset_login}' actualizada")

@@ -375,6 +375,11 @@ def vaciar_datos_app_en_sesion() -> None:
     ):
         st.session_state.pop(k, None)
 
+    # Cleanup drafts
+    for _dk in list(st.session_state.keys()):
+        if _dk.startswith("_draft_") or _dk == "_draft_pending":
+            st.session_state.pop(_dk, None)
+
 def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_legacy: bool = False) -> dict | None:
     """
     Modo clásico: un único JSON (id=1 / local_data). La app no precarga este JSON al arranque: se llama desde login/recuperación.
@@ -567,7 +572,13 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                 pb = _fijar_cache_y_hash(data_local)
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_local:{len(pb)}")
-            return copy.deepcopy(data_local) if data_local else None
+                return copy.deepcopy(data_local)
+            from core.utils import DEFAULT_ADMIN_USER
+            _boot = _estructura_vacia_por_clave()
+            _boot["usuarios_db"] = {"admin": DEFAULT_ADMIN_USER.copy()}
+            st.session_state["_modo_offline"] = True
+            log_event("db", "bootstrap: tenant nuevo")
+            return _boot
 
         try:
             if shard and tk and not monolito_legacy:
@@ -612,8 +623,18 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                     st.code(type(e).__name__, language="text")
                 st.session_state["_aviso_offline_mostrado"] = True
             ok = False
-            return copy.deepcopy(data_local) if data_local else None
-        return None
+            if data_local:
+                return copy.deepcopy(data_local)
+            from core.utils import DEFAULT_ADMIN_USER
+            _boot = _estructura_vacia_por_clave()
+            _boot["usuarios_db"] = {"admin": DEFAULT_ADMIN_USER.copy()}
+            log_event("db", "bootstrap: tenant nuevo")
+            return _boot
+        from core.utils import DEFAULT_ADMIN_USER
+        _boot = _estructura_vacia_por_clave()
+        _boot["usuarios_db"] = {"admin": DEFAULT_ADMIN_USER.copy()}
+        log_event("db", "bootstrap: tenant nuevo")
+        return _boot
     finally:
         try:
             if ok and st.session_state.get("u_actual"):
@@ -860,11 +881,19 @@ def _trim_logs_db_for_save() -> None:
     st.session_state["logs_db"] = logs[-max_logs:]
     log_event("db", f"logs_db_trim:{exceso}")
 
-    # Trim ALL db lists to prevent payload bloat (max 200 items each)
-    _MAX_LIST_ITEMS = 200
+    # Trim ALL db lists to prevent payload bloat (configurable limit via feature flag)
+    try:
+        from core.feature_flags import MAX_LIST_ITEMS_GLOBAL
+        _max_items = int(MAX_LIST_ITEMS_GLOBAL or 200)
+    except Exception:
+        _max_items = 200
+
+    _TRIM_THRESHOLD = _max_items * 2
     for key in list(st.session_state.keys()):
-        if key == "logs_db":  # already trimmed above with configurable limit
+        if key == "logs_db":
             continue
         if key.endswith("_db") and isinstance(st.session_state[key], list):
-            if len(st.session_state[key]) > _MAX_LIST_ITEMS:
-                st.session_state[key] = st.session_state[key][-_MAX_LIST_ITEMS:]
+            if len(st.session_state[key]) > _TRIM_THRESHOLD:
+                old_len = len(st.session_state[key])
+                st.session_state[key] = st.session_state[key][-_max_items:]
+                log_event("db", f"trim_global:{key}:{old_len}->{_max_items}")

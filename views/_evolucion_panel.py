@@ -196,9 +196,19 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     _imagen_nombre = ""
                     _imagen_tipo = ""
                     if _imagen_subida is not None:
-                        _imagen_b64 = base64.b64encode(_imagen_subida.read()).decode()
+                        _imagen_bytes = _imagen_subida.read()
+                        MAX_IMG_BYTES = 2 * 1024 * 1024
+                        if len(_imagen_bytes) > MAX_IMG_BYTES:
+                            st.warning("⚠️ La imagen supera 2MB. Se redimensionará automáticamente.")
+                            try:
+                                _imagen_bytes = optimizar_imagen_bytes(_imagen_bytes, max_size=1280, quality=70)
+                            except Exception:
+                                _imagen_bytes = _imagen_bytes[:MAX_IMG_BYTES]
+                        _imagen_b64 = base64.b64encode(_imagen_bytes).decode()
                         _imagen_nombre = _imagen_subida.name
                         _imagen_tipo = _imagen_subida.type
+                        if len(_imagen_b64) > 500_000:
+                            st.caption(f"📷 Imagen: {len(_imagen_b64)//1024}KB base64")
                     st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
                         "nota": nota.strip(),

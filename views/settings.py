@@ -93,7 +93,7 @@ def render_appearance_settings():
     )
     
     if st.button("💾 Guardar Tema"):
-        _s["app_theme"] = theme.lower()
+        _s["app_theme"] = theme
         st.session_state["theme"] = theme.lower()
         try:
             guardar_datos(spinner=False)

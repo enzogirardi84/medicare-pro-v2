@@ -48,3 +48,7 @@ ENABLE_NEXTGEN_API_DUAL_WRITE = False
 
 # True: activa el Vigía de Errores (captura centralizada con panel de diagnóstico).
 ERROR_TRACKER_ENABLED = True
+
+# Tope global de items por cada lista _db en session_state (excepto logs_db que usa MAX_LOGS_DB_ENTRIES).
+# Solo se truncan listas que superan 2x este valor, respetando max_items por módulo.
+MAX_LIST_ITEMS_GLOBAL = 200

@@ -163,6 +163,12 @@ def _dataframe_seccion_a_csv(registros: List[Dict[str, Any]]) -> Optional[bytes]
         df = pd.DataFrame(registros)
         df = df.drop(columns=["paciente", "empresa"], errors="ignore")
         df = df.drop(columns=[c for c in drop_csv if c in df.columns], errors="ignore")
+        _dangerous_prefixes = ("=", "+", "-", "@", "|")
+        def _sanitize(val):
+            if isinstance(val, str) and val.startswith(_dangerous_prefixes):
+                return "'" + val
+            return val
+        df = df.map(_sanitize)
         return df.to_csv(index=False).encode("utf-8-sig")
     except Exception:
         return None

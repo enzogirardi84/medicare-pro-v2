@@ -75,7 +75,7 @@ def _render_signos_vitales_con_alertas(registros: List[Dict[str, Any]], paciente
             if "/" in partes[0] and ":" in partes[1]:
                 fecha_mostrar = partes[0]
                 hora_mostrar = partes[1]
-        firma = reg.get("firma", reg.get("firmado_por", reg.get("profesional", "S/D")))
+        firma = reg.get("registrado_por", reg.get("firma", reg.get("firmado_por", reg.get("profesional", "S/D"))))
         estados = {k: _evaluar_vital(k, reg.get(k)) for k in claves_vitales}
         hay_critico = any(e == "critico" for e in estados.values())
         hay_alerta = any(e == "alerta" for e in estados.values())

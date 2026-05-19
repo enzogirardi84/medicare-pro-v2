@@ -103,6 +103,8 @@ def _intentar_login_emergencia(u_limpio: str, p_plain: str, loader_ph) -> bool:
     user_data = DEFAULT_ADMIN_USER.copy()
     user_data["usuario_login"] = "admin"
     aplicar_hash_tras_login_ok(user_data, p_plain, rounds=bcrypt_rounds_config())
+    if not isinstance(st.session_state.get("usuarios_db"), dict):
+        st.session_state["usuarios_db"] = {}
     st.session_state["usuarios_db"]["admin"] = user_data
     if loader_ph is not None:
         loader_ph.empty()

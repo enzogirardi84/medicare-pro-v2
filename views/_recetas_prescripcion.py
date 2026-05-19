@@ -52,7 +52,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
             "Tipo de indicacion",
             ["Medicacion", "Infusion / hidratacion"],
             horizontal=True,
-            key="tipo_indicacion_receta",
+            key=f"tipo_indicacion_receta_{paciente_sel}",
         )
         med_vademecum = "-- Seleccionar del vademecum --"
         med_manual = solucion = detalle_infusion = alternar_con = frecuencia = ""
@@ -79,7 +79,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                 via = col3.selectbox("Via de administracion", _VIAS, index=_idx_via)
                 frecuencia = col4.selectbox("Frecuencia", _FRECUENCIAS, index=_idx_frec)
                 dias = col5.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 7))
-            hora_inicio = st.time_input("Hora inicial de administracion", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_receta")
+            hora_inicio = st.time_input("Hora inicial de administracion", value=_saved.get("hora_inicio", dt_time(8, 0)), key=f"hora_inicio_receta_{paciente_sel}")
             horarios_sugeridos = horarios_programados_desde_frecuencia(frecuencia, hora_inicio.strftime("%H:%M"))
             if horarios_sugeridos:
                 st.caption(f"Horarios sugeridos para la guardia: {' | '.join(horarios_sugeridos)}")
@@ -90,24 +90,24 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
             frecuencia = "Infusion continua"
             _idx_sol = _SOLUCIONES.index(_saved["solucion"]) if _saved.get("solucion", "") in _SOLUCIONES else 0
             if es_movil:
-                solucion = st.selectbox("Solucion principal", _SOLUCIONES, index=_idx_sol, key="solucion_receta")
-                volumen_ml = st.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key="volumen_receta")
-                dias = st.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key="dias_infusion_receta")
-                velocidad_ml_h = st.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key="velocidad_receta")
-                hora_inicio = st.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_infusion_receta")
+                solucion = st.selectbox("Solucion principal", _SOLUCIONES, index=_idx_sol, key=f"solucion_receta_{paciente_sel}")
+                volumen_ml = st.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key=f"volumen_receta_{paciente_sel}")
+                dias = st.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key=f"dias_infusion_receta_{paciente_sel}")
+                velocidad_ml_h = st.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key=f"velocidad_receta_{paciente_sel}")
+                hora_inicio = st.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key=f"hora_inicio_infusion_receta_{paciente_sel}")
             else:
                 c1, c2, c3 = st.columns([2, 1, 1])
-                solucion = c1.selectbox("Solucion principal", _SOLUCIONES, index=_idx_sol, key="solucion_receta")
-                volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key="volumen_receta")
-                dias = c3.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key="dias_infusion_receta")
+                solucion = c1.selectbox("Solucion principal", _SOLUCIONES, index=_idx_sol, key=f"solucion_receta_{paciente_sel}")
+                volumen_ml = c2.number_input("Volumen total (ml)", min_value=0, step=50, value=_saved.get("volumen_ml", 500), key=f"volumen_receta_{paciente_sel}")
+                dias = c3.number_input("Dias", min_value=1, max_value=90, value=_saved.get("dias", 1), key=f"dias_infusion_receta_{paciente_sel}")
                 c4, c5 = st.columns([1, 2])
-                velocidad_ml_h = c4.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key="velocidad_receta")
-                hora_inicio = c5.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key="hora_inicio_infusion_receta")
+                velocidad_ml_h = c4.number_input("Velocidad (ml/h)", min_value=0.0, step=1.0, value=_saved.get("velocidad_ml_h", 21.0), key=f"velocidad_receta_{paciente_sel}")
+                hora_inicio = c5.time_input("Hora inicial", value=_saved.get("hora_inicio", dt_time(8, 0)), key=f"hora_inicio_infusion_receta_{paciente_sel}")
             horarios_sugeridos = [hora_inicio.strftime("%H:%M")]
             detalle_infusion = st.text_area(
                 "Notas / evolucion del medico (opcional)",
                 placeholder="Si quiere agregar alguna indicacion adicional o detalle sobre el plan, escribalo aqui.",
-                key="detalle_infusion_receta",
+                key=f"detalle_infusion_receta_{paciente_sel}",
                 height=80,
                 value=_saved.get("detalle_infusion", ""),
             )
@@ -125,7 +125,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
         adjunto_papel = st.file_uploader(
             "📷 Adjuntar foto de la orden en papel (opcional)",
             type=["pdf", "png", "jpg", "jpeg"],
-            key="adjunto_receta",
+            key=f"adjunto_receta_{paciente_sel}",
             help="Si tenés la indicación escrita a mano o impresa por el médico, subí la foto para respaldo legal.",
         )
 
@@ -137,18 +137,18 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                 "Metodo de firma medica",
                 ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
                 horizontal=True,
-                key="metodo_firma_receta",
+                key=f"metodo_firma_receta_{paciente_sel}",
             )
             if metodo_firma.startswith("Subir"):
                 firma_subida = st.file_uploader(
                     "Subir imagen de la firma medica",
                     type=["png", "jpg", "jpeg"],
-                    key="firma_upload_receta",
+                    key=f"firma_upload_receta_{paciente_sel}",
                 )
             else:
                 st.caption("Si el telefono va lento, vuelve a la opcion de subir foto.")
                 firma_canvas = st_canvas(
-                    key="firma_receta_activa",
+                    key=f"firma_receta_activa_{paciente_sel}",
                     background_color="#ffffff",
                     height=firma_cfg["height"],
                     width=firma_cfg["width"],
@@ -289,7 +289,7 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     "medico_nombre": medico_nombre.strip(), "medico_matricula": medico_matricula.strip(),
                     "firma_b64": firma_b64, "firmado_por": nombre_usuario,
                     "estado_clinico": "Activa", "estado_receta": "Activa",
-                    "frecuencia": frecuencia, "hora_inicio": hora_inicio.strftime("%H:%M"),
+                    "via": via, "frecuencia": frecuencia, "hora_inicio": hora_inicio.strftime("%H:%M"),
                     "horarios_programados": horarios_sugeridos, "tipo_indicacion": tipo_indicacion,
                     "solucion": solucion, "volumen_ml": volumen_ml, "velocidad_ml_h": velocidad_ml_h,
                     "alternar_con": alternar_con, "detalle_infusion": detalle_infusion,

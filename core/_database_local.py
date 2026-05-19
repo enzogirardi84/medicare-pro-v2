@@ -6,6 +6,8 @@ from __future__ import annotations
 Extraído de core/database.py.
 """
 import json
+import os
+import random
 import time
 from pathlib import Path
 
@@ -14,6 +16,25 @@ from core.db_serialize import dumps_db_sorted, loads_db_payload, loads_json_any
 LOCAL_DB_PATH = Path(__file__).resolve().parent.parent / ".streamlit" / "local_data.json"
 LOCAL_DB_DIR = Path(__file__).resolve().parent.parent / ".streamlit" / "data_store"
 LOCAL_TENANTS_DIR = LOCAL_DB_DIR / "tenants"
+
+
+def _lock_file(lock_path: Path, timeout: float = 5.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            return True
+        except FileExistsError:
+            time.sleep(random.uniform(0.05, 0.15))
+    return False
+
+
+def _unlock_file(lock_path: Path) -> None:
+    try:
+        lock_path.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 def _tenant_local_fs_key(tenant_key: str) -> str:
@@ -36,7 +57,12 @@ def _guardar_local(data, payload_bytes: bytes | None = None):
         LOCAL_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         LOCAL_DB_DIR.mkdir(parents=True, exist_ok=True)
         if payload_bytes is not None:
-            LOCAL_DB_PATH.write_bytes(payload_bytes)
+            lock_path = Path(str(LOCAL_DB_PATH) + ".lock")
+            if _lock_file(lock_path):
+                try:
+                    LOCAL_DB_PATH.write_bytes(payload_bytes)
+                finally:
+                    _unlock_file(lock_path)
             return True
         manifest = {
             "version": 2,
@@ -44,18 +70,35 @@ def _guardar_local(data, payload_bytes: bytes | None = None):
             "updated_at": time.time(),
         }
         for key, value in data.items():
-            (LOCAL_DB_DIR / f"{key}.json").write_text(
-                json.dumps(value, ensure_ascii=False, indent=2, default=str),
-                encoding="utf-8",
-            )
-        (LOCAL_DB_DIR / "_manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        LOCAL_DB_PATH.write_text(
-            json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
-            encoding="utf-8",
-        )
+            _p = LOCAL_DB_DIR / f"{key}.json"
+            lock_path = Path(str(_p) + ".lock")
+            if _lock_file(lock_path):
+                try:
+                    _p.write_text(
+                        json.dumps(value, ensure_ascii=False, indent=2, default=str),
+                        encoding="utf-8",
+                    )
+                finally:
+                    _unlock_file(lock_path)
+        _manifest_path = LOCAL_DB_DIR / "_manifest.json"
+        _mlock = Path(str(_manifest_path) + ".lock")
+        if _lock_file(_mlock):
+            try:
+                _manifest_path.write_text(
+                    json.dumps(manifest, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+            finally:
+                _unlock_file(_mlock)
+        lock_path = Path(str(LOCAL_DB_PATH) + ".lock")
+        if _lock_file(lock_path):
+            try:
+                LOCAL_DB_PATH.write_text(
+                    json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
+                    encoding="utf-8",
+                )
+            finally:
+                _unlock_file(lock_path)
         return True
     except Exception:
         return False
@@ -107,13 +150,19 @@ def _guardar_local_tenant(tenant_key: str, data: dict, payload_bytes: bytes | No
             return False
         LOCAL_TENANTS_DIR.mkdir(parents=True, exist_ok=True)
         path = LOCAL_TENANTS_DIR / f"{fs_key}.json"
-        if payload_bytes is not None:
-            path.write_bytes(payload_bytes)
-        else:
-            path.write_text(
-                json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
-                encoding="utf-8",
-            )
+        lock_path = Path(str(path) + ".lock")
+        if not _lock_file(lock_path):
+            return False
+        try:
+            if payload_bytes is not None:
+                path.write_bytes(payload_bytes)
+            else:
+                path.write_text(
+                    json.dumps(data, ensure_ascii=False, separators=(",", ":"), default=str),
+                    encoding="utf-8",
+                )
+        finally:
+            _unlock_file(lock_path)
         return True
     except Exception:
         return False

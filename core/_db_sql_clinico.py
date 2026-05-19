@@ -69,7 +69,7 @@ def insert_evolucion(datos_evolucion: Dict[str, Any]) -> Optional[Dict[str, Any]
     try:
         response = _supabase_execute_with_retry(
             "insert_evolucion",
-            lambda: supabase.table("evoluciones").insert(datos_evolucion).execute(),
+            lambda: supabase.table("evoluciones").upsert(datos_evolucion, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_evol_{datos_evolucion.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -108,7 +108,7 @@ def insert_indicacion(datos_indicacion: Dict[str, Any]) -> Optional[Dict[str, An
     try:
         response = _supabase_execute_with_retry(
             "insert_indicacion",
-            lambda: supabase.table("indicaciones").insert(datos_indicacion).execute(),
+            lambda: supabase.table("indicaciones").upsert(datos_indicacion, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_ind_{datos_indicacion.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -163,7 +163,7 @@ def insert_estudio(datos_estudio: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_estudio",
-            lambda: supabase.table("estudios").insert(datos_estudio).execute(),
+            lambda: supabase.table("estudios").upsert(datos_estudio, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_est_{datos_estudio.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -217,7 +217,7 @@ def insert_signo_vital(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_vitales",
-            lambda: supabase.table("signos_vitales").insert(datos).execute(),
+            lambda: supabase.table("signos_vitales").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_vit_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -255,7 +255,7 @@ def insert_cuidado_enfermeria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]
     try:
         response = _supabase_execute_with_retry(
             "insert_cuidado",
-            lambda: supabase.table("cuidados_enfermeria").insert(datos).execute(),
+            lambda: supabase.table("cuidados_enfermeria").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_cuid_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -293,7 +293,7 @@ def insert_consentimiento(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_consentimiento",
-            lambda: supabase.table("consentimientos").insert(datos).execute(),
+            lambda: supabase.table("consentimientos").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_cons_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -331,7 +331,7 @@ def insert_pediatria(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_pediatria",
-            lambda: supabase.table("pediatria").insert(datos).execute(),
+            lambda: supabase.table("pediatria").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_ped_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -369,7 +369,7 @@ def insert_escala(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_escala",
-            lambda: supabase.table("escalas_clinicas").insert(datos).execute(),
+            lambda: supabase.table("escalas_clinicas").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_clin_esc_{datos.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None

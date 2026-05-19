@@ -265,7 +265,8 @@ def guardar_evolucion_local(
             "paciente_id": paciente_id,
             "paciente_nombre": paciente_nombre,
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "evolucion": evolucion,
+            "nota": evolucion,
+            "evolucion": evolucion,  # compatibilidad
             "indicaciones": indicaciones,
             "created_at": datetime.now().isoformat(),
             "synced_cloud": supabase_ok

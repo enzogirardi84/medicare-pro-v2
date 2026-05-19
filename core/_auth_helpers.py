@@ -114,10 +114,15 @@ def _auth_strip_modulo_query_param() -> None:
 
 
 def _buscar_usuario_por_login(login_texto: str):
+    usuarios = st.session_state.get("usuarios_db", {})
+    if not isinstance(usuarios, dict):
+        log_event("auth", "error: usuarios_db no es dict, reparando")
+        st.session_state["usuarios_db"] = {}
+        usuarios = {}
     login_normalizado = str(login_texto or "").strip().lower()
     if not login_normalizado:
         return None
-    for key_db in st.session_state.get("usuarios_db", {}).keys():
+    for key_db in usuarios.keys():
         if str(key_db or "").strip().lower() == login_normalizado:
             return key_db
     return None

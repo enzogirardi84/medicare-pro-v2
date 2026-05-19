@@ -42,7 +42,7 @@ def insert_auditoria(datos: Dict[str, Any]) -> None:
     try:
         _supabase_execute_with_retry(
             "insert_auditoria",
-            lambda: supabase.table("auditoria_legal").insert(datos).execute(),
+            lambda: supabase.table("auditoria_legal").upsert(datos, on_conflict="id").execute(),
         )
     except Exception as e:
         log_event("db_sql", f"error_insert_auditoria:{type(e).__name__}")
@@ -96,7 +96,7 @@ def insert_turno(datos_turno: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_turno",
-            lambda: supabase.table("turnos").insert(datos_turno).execute(),
+            lambda: supabase.table("turnos").upsert(datos_turno, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_turn_{datos_turno.get('empresa_id', '')}")
         try:
@@ -156,7 +156,7 @@ def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any
     try:
         response = _supabase_execute_with_retry(
             "insert_administracion",
-            lambda: supabase.table("administracion_med").insert(datos_admin).execute(),
+            lambda: supabase.table("administracion_med").upsert(datos_admin, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_adm_{datos_admin.get('paciente_id', '')}")
         return response.data[0] if response and response.data else None
@@ -219,7 +219,7 @@ def insert_emergencia(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_emergencia",
-            lambda: supabase.table("emergencias").insert(datos).execute(),
+            lambda: supabase.table("emergencias").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_emerg_e_{datos.get('empresa_id', '')}")
         _invalidate_cache_prefix(f"_sql_op_emerg_p_{datos.get('paciente_id', '')}")
@@ -278,7 +278,7 @@ def insert_inventario(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_inventario",
-            lambda: supabase.table("inventario").insert(datos).execute(),
+            lambda: supabase.table("inventario").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_inv_{datos.get('empresa_id', '')}")
         return response.data[0] if response and response.data else None
@@ -317,7 +317,7 @@ def insert_facturacion(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_facturacion",
-            lambda: supabase.table("facturacion").insert(datos).execute(),
+            lambda: supabase.table("facturacion").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_fact_{datos.get('empresa_id', '')}")
         return response.data[0] if response and response.data else None
@@ -356,7 +356,7 @@ def insert_balance(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_balance",
-            lambda: supabase.table("balance").insert(datos).execute(),
+            lambda: supabase.table("balance").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_bal_{datos.get('empresa_id', '')}")
         return response.data[0] if response and response.data else None
@@ -406,7 +406,7 @@ def insert_inventario_movimiento(datos: Dict[str, Any]) -> Optional[Dict[str, An
     try:
         response = _supabase_execute_with_retry(
             "insert_inventario_mov",
-            lambda: supabase.table("inventario_movimientos").insert(datos).execute(),
+            lambda: supabase.table("inventario_movimientos").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_inv_{datos.get('empresa_id', '')}")
         return response.data[0] if response and response.data else None
@@ -437,7 +437,7 @@ def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "insert_checkin",
-            lambda: supabase.table("checkin_asistencia").insert(datos).execute(),
+            lambda: supabase.table("checkin_asistencia").upsert(datos, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_chk_{datos.get('empresa_id', '')}")
         try:

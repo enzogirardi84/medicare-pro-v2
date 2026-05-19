@@ -8,7 +8,7 @@ import streamlit as st
 
 from core.app_logging import log_event
 from core.alert_toasts import queue_toast
-from core.database import guardar_datos
+from core.database import guardar_datos, obtener_estado_guardado
 from core.view_helpers import lista_plegable
 from core.utils import (
     ahora,
@@ -552,6 +552,9 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                     log_event("admision", "error: Ya existe un legajo con ese nombre y DNI.")
                     st.error("Ya existe un legajo con ese nombre y DNI.")
                 else:
+                    _backup_pacientes = list(st.session_state.get("pacientes_db", []))
+                    _backup_detalles = dict(st.session_state.get("detalles_pacientes_db", {}))
+
                     pacientes_db = list(st.session_state.get("pacientes_db", []))
                     pacientes_db.append(id_p)
                     st.session_state["pacientes_db"] = list(dict.fromkeys(pacientes_db))
@@ -600,12 +603,21 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                     )
                     st.session_state.pop("_mc_mapa_pacientes_cache", None)
                     guardar_datos(spinner=True)
-                    _sincronizar_alta_paciente_best_effort(
-                        campos_legajo["nombre"],
-                        campos_legajo["dni"],
-                        campos_legajo["empresa"],
-                    )
-                    queue_toast(f"Paciente {campos_legajo['nombre']} dado de alta correctamente.")
-                    st.rerun()
+
+                    _estado_guardado = obtener_estado_guardado()
+                    if _estado_guardado.get("estado") in ("error", "sin_cambios"):
+                        st.session_state["pacientes_db"] = _backup_pacientes
+                        st.session_state["detalles_pacientes_db"] = _backup_detalles
+                        st.session_state.pop("paciente_actual", None)
+                        st.error("Error al guardar el paciente. Revisa la conexion e intenta de nuevo.")
+                        log_event("admision", "error: guardado fallo tras alta paciente")
+                    else:
+                        _sincronizar_alta_paciente_best_effort(
+                            campos_legajo["nombre"],
+                            campos_legajo["dni"],
+                            campos_legajo["empresa"],
+                        )
+                        queue_toast(f"Paciente {campos_legajo['nombre']} dado de alta correctamente.")
+                        st.rerun()
 
     st.caption("Los pacientes quedan disponibles en visitas, historia clinica y documentos.")
