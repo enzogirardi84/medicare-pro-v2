@@ -61,7 +61,13 @@ def _frecuencia_guardia_visible(freq):
 # ---------------------------------------------------------------------------
 
 def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1):
-    """Descuenta del inventario automaticamente al registrar una dosis como Realizada."""
+    """Descuenta del inventario automaticamente al registrar una dosis como Realizada.
+
+    Automatizaciones:
+      - Cachea el mapeo medicamento->item de inventario para evitar scan lineal repetido.
+      - Si el medicamento no existe en inventario, lo crea automaticamente con stock 0.
+      - Notifica al usuario via toast cuando se crea un item nuevo.
+    """
     st.session_state.setdefault("consumos_db", [])
     st.session_state["consumos_db"].append({
         "paciente": paciente_sel,
@@ -71,22 +77,57 @@ def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1
         "firma": user.get("nombre", "Sistema"),
         "empresa": mi_empresa,
     })
-    med_key = nombre_med.strip().lower()
-    encontrado = False
-    for item in st.session_state.get("inventario_db", []):
-        item_key = item.get("item", "").lower().strip()
-        if item.get("empresa") != mi_empresa:
-            continue
-        if item_key == med_key or med_key in item_key or item_key in med_key:
-            stock_anterior = int(item.get("stock") or 0)
-            item["stock"] = max(0, stock_anterior - cantidad)
-            log_event("recetas_mar", f"stock_descontado:{nombre_med}:{stock_anterior}->{item['stock']}")
-            encontrado = True
-            break
-    if not encontrado:
-        log_event("recetas_mar", f"stock_no_encontrado:{nombre_med}:no hay item en inventario con ese nombre")
     from core.database import _trim_db_list
     _trim_db_list("consumos_db", 1000)
+
+    med_key = nombre_med.strip().lower()
+    inv_db = st.session_state.get("inventario_db", [])
+    st.session_state.setdefault("_med_inventario_cache", {})
+    cache_key = (med_key, mi_empresa)
+    cached_item_key = st.session_state["_med_inventario_cache"].get(cache_key)
+    encontrado = False
+
+    # Fase 1 — cache (O(1) lookup, evita scan lineal)
+    if cached_item_key:
+        for item in inv_db:
+            if item.get("item", "").lower().strip() == cached_item_key and item.get("empresa") == mi_empresa:
+                stock_anterior = int(item.get("stock") or 0)
+                item["stock"] = max(0, stock_anterior - cantidad)
+                log_event("recetas_mar", f"stock_descontado:{nombre_med}:{stock_anterior}->{item['stock']}")
+                encontrado = True
+                break
+        if not encontrado:
+            # cache obsoleto (item fue eliminado de inventario)
+            st.session_state["_med_inventario_cache"].pop(cache_key, None)
+
+    # Fase 2 — scan lineal con fuzzy match (solo si cache miss)
+    if not encontrado:
+        for item in inv_db:
+            item_key = item.get("item", "").lower().strip()
+            if item.get("empresa") != mi_empresa:
+                continue
+            if item_key == med_key or med_key in item_key or item_key in med_key:
+                stock_anterior = int(item.get("stock") or 0)
+                item["stock"] = max(0, stock_anterior - cantidad)
+                log_event("recetas_mar", f"stock_descontado:{nombre_med}:{stock_anterior}->{item['stock']}")
+                st.session_state["_med_inventario_cache"][cache_key] = item_key
+                encontrado = True
+                break
+
+    # Fase 3 — auto-crear item en inventario si no existe
+    if not encontrado:
+        st.session_state.setdefault("inventario_db", [])
+        st.session_state["inventario_db"].append({
+            "item": nombre_med.strip(),
+            "stock": 0,
+            "empresa": mi_empresa,
+            "auto_creado_por_mar": True,
+        })
+        _trim_db_list("inventario_db", 1000)
+        st.session_state["_med_inventario_cache"][cache_key] = med_key
+        log_event("recetas_mar", f"stock_auto_creado:{nombre_med}")
+        queue_toast(f"📦 Se creó '{nombre_med}' en inventario (stock 0). Ajustá el stock desde Inventario.")
+
     try:
         from core.db_sql import get_inventario_item_by_name, insert_inventario_movimiento
         from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
