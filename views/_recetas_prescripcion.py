@@ -188,6 +188,14 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                             break
                         except (ValueError, TypeError):
                             pass
+            if not _peso_paciente:
+                _det = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+                _dp = _det.get("peso", "")
+                if _dp:
+                    try:
+                        _peso_paciente = float(_dp)
+                    except (ValueError, TypeError):
+                        pass
             if _peso_paciente and med_final_preview and med_final_preview != "-- Seleccionar del vademecum --" and tipo_indicacion == "Medicacion":
                 from views.calculadora_dosis import _normalizar_medicamento
                 _med_base, _conc = _normalizar_medicamento(med_final_preview)

@@ -501,6 +501,27 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                 key="_adm_motivo_ingreso",
             )
 
+            col_n2, col_o2 = st.columns(2)
+            peso_ingreso = col_n2.number_input(
+                "Peso (kg)",
+                min_value=0.0,
+                max_value=300.0,
+                value=0.0,
+                step=0.1,
+                format="%.1f",
+                help="Usado para cálculo automático de dosis pediátricas",
+                key="_adm_peso_ingreso",
+            )
+            talla_ingreso = col_o2.number_input(
+                "Talla / Altura (cm)",
+                min_value=0.0,
+                max_value=250.0,
+                value=0.0,
+                step=0.5,
+                format="%.1f",
+                key="_adm_talla_ingreso",
+            )
+
         with st.expander("Alertas clinicas", expanded=False):
             col_n, col_o = st.columns(2)
             alergias = col_n.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
@@ -534,6 +555,8 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                     pacientes_db = list(st.session_state.get("pacientes_db", []))
                     pacientes_db.append(id_p)
                     st.session_state["pacientes_db"] = list(dict.fromkeys(pacientes_db))
+                    _peso_val = float(peso_ingreso or 0)
+                    _talla_val = float(talla_ingreso or 0)
                     asegurar_detalles_pacientes_en_sesion(st.session_state)[id_p] = {
                         "dni": campos_legajo["dni"],
                         "fnac": f_nac.strftime("%d/%m/%Y"),
@@ -551,7 +574,20 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                         "diagnostico_ingreso": diagnostico_ingreso.strip(),
                         "motivo_ingreso": motivo_ingreso.strip(),
                         "fecha_ingreso": fecha_ingreso_alta.strftime("%d/%m/%Y"),
+                        "peso": _peso_val if _peso_val > 0 else "",
+                        "talla": _talla_val if _talla_val > 0 else "",
                     }
+                    # Guardar peso en vitales_db para uso en cálculo de dosis
+                    if _peso_val > 0:
+                        _vitales = st.session_state.setdefault("vitales_db", [])
+                        _vitales.append({
+                            "paciente": id_p,
+                            "peso": _peso_val,
+                            "talla": _talla_val if _talla_val > 0 else "",
+                            "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                            "empresa": campos_legajo["empresa"],
+                            "origen": "admision",
+                        })
                     st.session_state["paciente_actual"] = id_p
                     registrar_auditoria_legal(
                         "Admision",
