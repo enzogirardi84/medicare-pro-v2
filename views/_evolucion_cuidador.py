@@ -582,15 +582,24 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
 
                 # Detectar procedimientos en el texto y deducir insumos asociados
                 try:
-                    from core._insumos_map import deducir_insumos, insumos_para_procedimiento
+                    from core._insumos_map import (
+                        auto_facturar_servicio,
+                        deducir_insumos,
+                        insumos_para_procedimiento,
+                    )
 
                     insumos_proc = insumos_para_procedimiento(texto_generado)
+                    detalles = st.session_state.get("db", {})
+                    emp = detalles.get("empresa", "")
                     if insumos_proc:
-                        detalles = st.session_state.get("db", {})
-                        emp = detalles.get("empresa", "")
                         deducir_insumos(
                             insumos_proc, paciente_sel, emp, user,
                             motivo="Evolucion inteligente",
+                        )
+                        # Auto-facturar
+                        proc_nombres = [p["item"] for p in insumos_proc]
+                        auto_facturar_servicio(
+                            paciente_sel, emp, user, " / ".join(proc_nombres[:3]),
                         )
                         guardar_datos(spinner=False)
                 except Exception as e_proc:

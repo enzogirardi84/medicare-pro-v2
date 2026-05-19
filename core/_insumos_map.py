@@ -515,3 +515,84 @@ def deducir_insumos(
         )
 
     return auto_creados
+
+
+def auto_facturar_servicio(
+    paciente_sel: str,
+    mi_empresa: str,
+    user: dict,
+    nombre_servicio: str,
+    *,
+    monto: float = 0,
+) -> bool:
+    """Crea automáticamente un item de facturación por un servicio prestado.
+
+    Args:
+        nombre_servicio: Descripción del servicio ("Hiocina 20mg EV",
+                         "Curación de herida", etc.).
+        monto: Importe sugerido (0 si el usuario lo fija después).
+
+    Returns:
+        True si se creó el item, False si ya existía uno similar en el mismo día.
+    """
+    import streamlit as st
+
+    from core.database import _trim_db_list
+    from core.utils import ahora
+
+    hoy = ahora().strftime("%d/%m/%Y")
+
+    # Evitar duplicados: mismo paciente + mismo servicio + misma fecha
+    for item in st.session_state.get("facturacion_db", []):
+        if (
+            item.get("paciente") == paciente_sel
+            and item.get("serv", "").strip().lower() == nombre_servicio.strip().lower()
+            and item.get("fecha", "").startswith(hoy)
+        ):
+            return False
+
+    st.session_state.setdefault("facturacion_db", [])
+    st.session_state["facturacion_db"].append({
+        "paciente": paciente_sel,
+        "serv": nombre_servicio.strip(),
+        "monto": monto,
+        "metodo": "Pendiente",
+        "estado": "Pendiente / A Facturar",
+        "fecha": ahora().strftime("%d/%m/%Y %H:%M"),
+        "empresa": mi_empresa,
+        "operador": user.get("nombre", "Sistema"),
+        "operador_dni": user.get("dni", "S/D"),
+    })
+    _trim_db_list("facturacion_db", 500)
+    return True
+
+
+def sugerencias_reposicion(mi_empresa: str) -> List[Dict[str, int | str]]:
+    """Retorna lista de items de inventario cuyo stock está por debajo del mínimo.
+
+    Cada item incluye ``item``, ``stock``, ``stock_minimo`` y ``sugerido``
+    (cantidad recomendada a reponer).
+
+    Si un item no tiene ``stock_minimo`` definido, se usa 10 como valor por
+    defecto para el umbral de alerta.
+
+    Útil para mostrar en Dashboard o generar órdenes de compra.
+    """
+    import streamlit as st
+
+    UMBRAL_DEFECTO = 10
+    sugerencias: List[Dict[str, int | str]] = []
+    for item in st.session_state.get("inventario_db", []):
+        if item.get("empresa") != mi_empresa:
+            continue
+        stock = int(item.get("stock") or 0)
+        sm = int(item.get("stock_minimo") or 0)
+        umbral = sm if sm > 0 else UMBRAL_DEFECTO
+        if stock <= umbral:
+            sugerencias.append({
+                "item": item.get("item", ""),
+                "stock": stock,
+                "stock_minimo": sm,
+                "sugerido": max(1, (umbral * 2) - stock),
+            })
+    return sugerencias

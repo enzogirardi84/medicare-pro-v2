@@ -131,17 +131,22 @@ def render_dashboard(mi_empresa, rol):
     checkins = filtrar_registros_empresa(st.session_state.get("checkin_db", []), mi_empresa, rol)
 
     # ── Alerta de stock crítico ─────────────────────────────────
-    _inv_empresa = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
-    _stock_crit = [
-        i for i in _inv_empresa
-        if int(i.get("stock", 0)) <= (int(i.get("stock_minimo", 0) or 0) or 10)
-    ]
-    if _stock_crit:
-        with st.expander(f"🔴 Stock crítico — {len(_stock_crit)} insumo(s) por debajo del mínimo", expanded=True):
-            for item in _stock_crit[:10]:
-                _sm = int(item.get("stock_minimo", 0) or 0)
-                _reponer = max(1, (_sm * 2 if _sm > 0 else 20) - int(item.get("stock", 0)))
-                st.markdown(f"- **{item.get('item')}**: {item.get('stock')} uds. (mínimo {_sm or 10}) → reponer **{_reponer}**")
+    try:
+        from core._insumos_map import sugerencias_reposicion
+
+        _stock_crit = sugerencias_reposicion(mi_empresa)
+        if _stock_crit:
+            with st.expander(
+                f"🔴 Stock crítico — {len(_stock_crit)} insumo(s) por debajo del mínimo",
+                expanded=True,
+            ):
+                for item in _stock_crit[:10]:
+                    st.markdown(
+                        f"- **{item['item']}**: {item['stock']} uds. "
+                        f"(mínimo {item['stock_minimo']}) → reponer **{item['sugerido']}**"
+                    )
+    except Exception:
+        pass
 
     # 1. Intentar leer emergencias desde PostgreSQL (Hybrid Read)
     emergencias = []

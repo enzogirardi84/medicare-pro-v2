@@ -130,7 +130,11 @@ def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1
 
     # Asociar insumos secundarios (jeringas, agujas, etc.)
     try:
-        from core._insumos_map import deducir_insumos, insumos_para_medicamento
+        from core._insumos_map import (
+            auto_facturar_servicio,
+            deducir_insumos,
+            insumos_para_medicamento,
+        )
 
         asociados = insumos_para_medicamento(nombre_med)
         if asociados:
@@ -138,6 +142,10 @@ def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1
                 asociados, paciente_sel, mi_empresa, user,
                 motivo=f"MAR: {nombre_med}",
             )
+        # Auto-facturar la administración
+        auto_facturar_servicio(
+            paciente_sel, mi_empresa, user, nombre_med,
+        )
     except Exception as e:
         log_event("recetas_mar", f"error_insumos_asociados:{type(e).__name__}:{str(e)[:80]}")
 

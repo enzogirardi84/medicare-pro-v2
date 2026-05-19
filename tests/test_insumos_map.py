@@ -141,3 +141,85 @@ def test_todos_los_insumos_tienen_campos_requeridos():
 def test_sin_claves_duplicadas():
     assert len(MEDICAMENTO_A_INSUMOS) == len(dict(MEDICAMENTO_A_INSUMOS)), "Claves duplicadas en MEDICAMENTO_A_INSUMOS"
     assert len(PROCEDIMIENTO_A_INSUMOS) == len(dict(PROCEDIMIENTO_A_INSUMOS)), "Claves duplicadas en PROCEDIMIENTO_A_INSUMOS"
+
+
+# ---------------------------------------------------------------------------
+# auto_facturar_servicio
+# ---------------------------------------------------------------------------
+
+def test_auto_facturar_servicio_crea_item(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(st, "session_state", {"facturacion_db": []}, raising=False)
+    from core._insumos_map import auto_facturar_servicio
+
+    result = auto_facturar_servicio(
+        "Paciente Test - 12345678", "Mi Empresa", {"nombre": "Dr. Test", "dni": "99"},
+        "Curación de herida",
+    )
+    assert result is True
+    assert len(st.session_state["facturacion_db"]) == 1
+    item = st.session_state["facturacion_db"][0]
+    assert item["paciente"] == "Paciente Test - 12345678"
+    assert item["serv"] == "Curación de herida"
+    assert item["estado"] == "Pendiente / A Facturar"
+    assert item["metodo"] == "Pendiente"
+
+
+def test_auto_facturar_servicio_evita_duplicado(monkeypatch):
+    import streamlit as st
+    from core._insumos_map import auto_facturar_servicio
+    from core.utils import ahora
+
+    hoy = ahora().strftime("%d/%m/%Y")
+    monkeypatch.setattr(st, "session_state", {
+        "facturacion_db": [{
+            "paciente": "Paciente Test - 12345678",
+            "serv": "Curación",
+            "fecha": hoy,
+        }],
+    }, raising=False)
+
+    result = auto_facturar_servicio(
+        "Paciente Test - 12345678", "Mi Empresa", {"nombre": "Dr. Test"},
+        "Curación",
+    )
+    assert result is False
+    assert len(st.session_state["facturacion_db"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# sugerencias_reposicion
+# ---------------------------------------------------------------------------
+
+def test_sugerencias_reposicion_filtra_por_empresa(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(st, "session_state", {
+        "inventario_db": [
+            {"item": "Gasas", "stock": 2, "stock_minimo": 10, "empresa": "Mi Empresa"},
+            {"item": "Jeringas", "stock": 50, "stock_minimo": 10, "empresa": "Mi Empresa"},
+            {"item": "Otra Emp", "stock": 1, "stock_minimo": 5, "empresa": "Otra"},
+        ],
+    }, raising=False)
+    from core._insumos_map import sugerencias_reposicion
+
+    result = sugerencias_reposicion("Mi Empresa")
+    assert len(result) == 1
+    assert result[0]["item"] == "Gasas"
+    assert result[0]["sugerido"] >= 1
+
+
+def test_sugerencias_reposicion_stock_cero_sin_minimo(monkeypatch):
+    import streamlit as st
+    monkeypatch.setattr(st, "session_state", {
+        "inventario_db": [
+            {"item": "Algodón", "stock": 0, "empresa": "Mi Empresa"},
+            {"item": "Vendas", "stock": 5, "empresa": "Mi Empresa"},
+        ],
+    }, raising=False)
+    from core._insumos_map import sugerencias_reposicion
+
+    result = sugerencias_reposicion("Mi Empresa")
+    # Algodón: stock 0 <= 10 (umbral default) → incluido
+    # Vendas: stock 5 <= 10 (umbral default) → incluido
+    assert len(result) == 2
+    assert all(r["sugerido"] >= 1 for r in result)
