@@ -98,7 +98,7 @@ def generar_reporte_ejecutivo(mi_empresa: str) -> bytes:
         pdf.set_font("Helvetica", "I", 8)
         pdf.cell(0, 5, "Reporte generado automaticamente por Medicare Pro", align="C")
 
-        return pdf.output(dest="S").encode("latin-1", errors="replace")
+        return pdf_output_bytes(pdf)
     except Exception as exc:
         log_event("reportes", f"error_generar_reporte:{type(exc).__name__}:{exc}")
         return b""
