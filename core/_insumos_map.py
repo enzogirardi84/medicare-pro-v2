@@ -305,9 +305,6 @@ PROCEDIMIENTO_A_INSUMOS: MapType = {
     "apósito": [
         {"item": "Apósito estéril", "cantidad": 1},
     ],
-    "apósito": [
-        {"item": "Apósito estéril", "cantidad": 1},
-    ],
     "extraccion de sangre": [
         {"item": "Jeringa 5ml", "cantidad": 1},
         {"item": "Aguja EV", "cantidad": 1},

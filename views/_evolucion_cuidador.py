@@ -594,14 +594,12 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
                         )
                         guardar_datos(spinner=False)
                 except Exception as e_proc:
-                    from core.app_logging import log_event
                     log_event("evolucion_cuidador", f"error_insumos:{type(e_proc).__name__}:{str(e_proc)[:80]}")
 
                 try:
                     from core.nextgen_sync import sync_visita_evolucion_to_nextgen
                     sync_visita_evolucion_to_nextgen(paciente_sel, texto_generado[:500])
                 except Exception:
-                    from core.app_logging import log_event
                     log_event("evolucion_cuidador", "nextgen_sync_skip")
 
                 queue_toast("Evolucion guardada correctamente.")
