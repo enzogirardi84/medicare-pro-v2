@@ -577,7 +577,8 @@ class ConsentManager:
                 if consent.physician_signature:
                     pdf.cell(0, 10, f"Médico: {consent.physician_signature.signer_name}", ln=True)
             
-            return pdf.output(dest="S").encode("latin-1")
+            out = pdf.output(dest="S")
+            return out.encode("latin-1") if isinstance(out, str) else bytes(out)
             
         except ImportError:
             # Fallback a HTML
