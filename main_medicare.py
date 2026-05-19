@@ -34,6 +34,7 @@ from core.seo_streamlit import (
     inyectar_head_seo,
     inyectar_redirect_apex_si_configurado,
 )
+from core import utils as core_utils
 
 APP_BUILD_TAG = "Build 2026-05-19 - Optimizado: velocidad, cache, UI"
 
@@ -182,7 +183,6 @@ if not isinstance(user, dict) or not user:
 # ============================================================
 from core.database import completar_claves_db_session, should_cleanup_cache, limpiar_cache_app
 
-from core import utils as core_utils
 from core.app_navigation import (
     procesar_query_params_navegacion,
     render_current_view,
