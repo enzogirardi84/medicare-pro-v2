@@ -32,7 +32,7 @@ class SecureSettings(BaseSettings):
     database_url: SecretStr
     supabase_url: str
     supabase_key: SecretStr
-    supabase_service_key: SecretStr
+    supabase_service_key: Optional[SecretStr] = None
     
     # Redis para caché distribuida
     redis_url: Optional[SecretStr] = None
