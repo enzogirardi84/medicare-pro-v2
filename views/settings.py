@@ -21,6 +21,7 @@ from core.audit_trail import audit_log, AuditEventType
 from core.config import settings
 from core.database import guardar_datos
 from core.i18n import render_language_selector
+from views.admin_usuarios import render_admin_usuarios
 
 
 def render_settings_page():
@@ -33,14 +34,17 @@ def render_settings_page():
     st.caption(f"Usuario: {user.get('nombre', 'N/A')}")
     
     # Tabs de configuración
-    tabs = st.tabs([
+    _tabs_list = [
         "🎨 Apariencia",
         "🔔 Notificaciones",
         "🔗 Integraciones",
         "📦 Reglas de Insumos",
         "🔒 Seguridad",
-        "⚡ Avanzado"
-    ])
+        "⚡ Avanzado",
+    ]
+    if is_admin:
+        _tabs_list.append("👥 Usuarios")
+    tabs = st.tabs(_tabs_list)
     
     with tabs[0]:
         render_appearance_settings()
@@ -59,6 +63,10 @@ def render_settings_page():
     
     with tabs[5]:
         render_advanced_settings(is_admin)
+    
+    if is_admin:
+        with tabs[6]:
+            render_admin_usuarios()
 
 
 def render_appearance_settings():

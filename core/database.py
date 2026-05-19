@@ -178,6 +178,7 @@ def _estructura_vacia_por_clave() -> dict[str, dict | list]:
         "turnos_online_db": [],
         "recetas_db": [],
         "settings_db": {},
+        "tareas_db": [],
     }
 
 
@@ -300,6 +301,7 @@ def _db_keys():
         "turnos_online_db",
         "recetas_db",
         "settings_db",
+        "tareas_db",
     ]
 
 

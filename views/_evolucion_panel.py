@@ -27,6 +27,7 @@ from core.utils import (
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
+from views._tareas_panel import render_tareas_panel
 
 # Lazy import canvas
 _canvas = None
@@ -87,6 +88,33 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         "Percentilo": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentacion / hidratacion:\nEvaluacion general:\nPlan y recomendaciones:",
         "Cuidados paliativos": "Sintomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las proximas horas:",
     }
+    # ============================================================
+    # PLANTILLAS DE EVOLUCIÓN RÁPIDA
+    # ============================================================
+    _EVOL_TEMPLATES = [
+        {
+            "nombre": "Control diario",
+            "texto": "Paciente en control de rutina.\nSignos vitales: estables.\nMedicación: según indicación.\nEvolución: sin novedades.",
+        },
+        {
+            "nombre": "Curaciones",
+            "texto": "Procedimiento: curación de herida.\nHallazgos: [describir]\nMaterial utilizado: [insumos]\nIndicaciones: continuar curación cada 24hs.",
+        },
+        {
+            "nombre": "Dolor",
+            "texto": "Motivo: dolor.\nLocalización: [describir]\nIntensidad EVA: [0-10]\nMedicación administrada: [describir]\nEvolución posterior: [mejoría/sin cambios]",
+        },
+        {
+            "nombre": "Alta / Derivación",
+            "texto": "Paciente egresa con indicaciones.\nDiagnóstico de egreso: [describir]\nMedicación indicada: [describir]\nPróximo control: [fecha]",
+        },
+        {
+            "nombre": "Novedad / Incidencia",
+            "texto": "Novedad: [describir]\nMedidas tomadas: [describir]\nNotificado a: [nombre/familiar]\nPendiente: [seguimiento]",
+        },
+    ]
+
+    _templates_db = st.session_state.setdefault("settings_db", {}).setdefault("evol_templates", _EVOL_TEMPLATES)
 
     if puede_registrar:
         evs_all = [e for e in st.session_state.get("evoluciones_db", []) if e.get("paciente") == paciente_sel]
@@ -109,10 +137,27 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         if plantilla != "Libre":
             st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
 
+        st.caption("📋 Plantillas rápidas (click para precargar)")
+        _cols_t = st.columns(len(_templates_db))
+        for _ti, _tpl in enumerate(_templates_db):
+            with _cols_t[_ti]:
+                if st.button(_tpl["nombre"], key=f"evol_tpl_{_ti}", use_container_width=True):
+                    st.session_state["_evol_template_cargado"] = _tpl["texto"]
+                    st.rerun()
+
+        _evol_default = st.session_state.pop("_evol_template_cargado", "")
+        if _evol_default:
+            _saved_draft_check = st.session_state.get(_draft_key, "").strip()
+            if not _saved_draft_check:
+                st.session_state.pop("evol_nota_textarea", None)
+
+        _saved_draft = st.session_state.get(_draft_key, "")
+        _value_for_textarea = _saved_draft if _saved_draft else (_evol_default or "")
+
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
                 "Nota medica / Evolucion clinica",
-                value=st.session_state.get(_draft_key, ""),
+                value=_value_for_textarea,
                 height=220,
                 placeholder="Escribir aqui la evolucion...",
                 key="evol_nota_textarea"
@@ -135,17 +180,34 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 usar_camara = st.checkbox("Usar cámara ahora", key="evol_usar_cam")
                 foto_cam = st.camera_input("Capturar imagen", key="cam_evol") if usar_camara else None
 
+            _imagen_subida = st.file_uploader(
+                "Adjuntar imagen (opcional)",
+                type=["png", "jpg", "jpeg", "gif", "webp"],
+                key=f"evol_img_{paciente_sel}",
+                label_visibility="collapsed",
+            )
+
             if st.form_submit_button("Firmar y Guardar Evolucion", width='stretch', type="primary"):
                 if nota.strip():
                     fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
                     if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
                         st.session_state["evoluciones_db"] = []
+                    _imagen_b64 = ""
+                    _imagen_nombre = ""
+                    _imagen_tipo = ""
+                    if _imagen_subida is not None:
+                        _imagen_b64 = base64.b64encode(_imagen_subida.read()).decode()
+                        _imagen_nombre = _imagen_subida.name
+                        _imagen_tipo = _imagen_subida.type
                     st.session_state["evoluciones_db"].append({
                         "paciente": paciente_sel,
                         "nota": nota.strip(),
                         "fecha": fecha_n,
                         "firma": user.get("nombre", "Sistema"),
                         "plantilla": plantilla,
+                        "adjunto_img_b64": _imagen_b64,
+                        "adjunto_img_nombre": _imagen_nombre,
+                        "adjunto_img_tipo": _imagen_tipo,
                     })
                     from core.database import _trim_db_list
                     _trim_db_list("evoluciones_db", 500)
@@ -275,6 +337,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
 
+    render_tareas_panel(paciente_sel)
+
     from core.db_sql import get_evoluciones_by_paciente
     from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
 
@@ -372,6 +436,14 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 if nota:
                     st.markdown("**Nota:**", unsafe_allow_html=True)
                     st.markdown(html.escape(nota), unsafe_allow_html=True)
+                _evo_img = ev.get("adjunto_img_b64", "")
+                if _evo_img:
+                    _img_tipo = ev.get("adjunto_img_tipo", "image/png")
+                    st.markdown(
+                        f"<img src='data:{_img_tipo};base64,{_evo_img}' "
+                        f"style='max-width:300px;max-height:200px;border-radius:8px;margin:4px 0;'/>",
+                        unsafe_allow_html=True,
+                    )
                 cuidador_data = ev.get("cuidador_data")
                 if cuidador_data:
                     with st.expander("Ver detalle del registro", expanded=False):

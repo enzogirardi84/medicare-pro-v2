@@ -184,6 +184,33 @@ def render_dashboard(mi_empresa, rol):
                         st.rerun()
             st.divider()
 
+    # ============================================================
+    # BÚSQUEDA GLOBAL EN EVOLUCIONES
+    # ============================================================
+    st.markdown("### 🔍 Búsqueda global en evoluciones")
+    _global_q = st.text_input("Buscar texto en todas las evoluciones", placeholder="Ej: fiebre, caida, dolor...", key="global_search_v2")
+    if _global_q.strip():
+        _q = _global_q.strip().lower()
+        _resultados = {}
+        _evos_todas = st.session_state.get("evoluciones_db", [])
+        for _evo in _evos_todas:
+            _texto = (_evo.get("texto", "") + " " + _evo.get("detalle", "") + " " + _evo.get("nota", "")).lower()
+            if _q in _texto:
+                _pac = _evo.get("paciente", "Desconocido")
+                _resultados.setdefault(_pac, []).append(_evo)
+        if _resultados:
+            st.success(f"📄 {sum(len(v) for v in _resultados.values())} resultados en {len(_resultados)} pacientes")
+            for _pac, _evos in sorted(_resultados.items()):
+                with st.expander(f"**{_pac}** ({len(_evos)} resultados)"):
+                    for _evo in _evos[-10:]:  # último 10 por paciente
+                        _fecha = _evo.get("fecha", "")[:16]
+                        _texto_corto = (_evo.get("texto", "") or _evo.get("nota", "") or "")[:200]
+                        st.caption(f"📅 {_fecha}")
+                        st.markdown(f"_{_texto_corto}_")
+                        st.divider()
+        else:
+            st.info(f"Sin resultados para '{_global_q}'")
+
     if _widgets.get("resumen_turno"):
         # ── Resumen de turno ─────────────────────────────────────────
         try:
@@ -215,6 +242,14 @@ def render_dashboard(mi_empresa, rol):
                 cd.metric("⏳ Pendientes facturar", len(_pend_fact))
         except Exception:
             pass
+
+    # Tareas pendientes globales
+    _tareas = st.session_state.get("tareas_db", [])
+    _pendientes = [t for t in _tareas if not t.get("completada")]
+    if _pendientes:
+        with st.expander(f"📋 Tareas pendientes ({len(_pendientes)})", expanded=False):
+            for t in _pendientes[:10]:
+                st.caption(f"**{t.get('paciente', '?')}**: {t.get('tarea', '')[:80]}")
 
     # ── Estado del último backup ─────────────────────────────────
     _ultimo_backup_ts = st.session_state.get("_ultimo_backup_ts", 0)
