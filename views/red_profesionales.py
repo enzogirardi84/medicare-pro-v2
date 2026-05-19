@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import html
 from core.alert_toasts import queue_toast
 import pandas as pd

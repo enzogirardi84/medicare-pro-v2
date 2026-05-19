@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from features.historial.fechas import (
     fecha_registro_o_none,
     parse_registro_fecha_hora,

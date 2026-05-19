@@ -1,4 +1,7 @@
 """Gráficos reutilizables para Medicare Pro - Altair y Plotly."""
+
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
 import altair as alt

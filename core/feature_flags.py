@@ -1,5 +1,8 @@
 """Interruptores de producto en un solo lugar (sin secrets).
 
+
+from __future__ import annotations
+
 Secrets (.streamlit/secrets.toml) siguen mandando en conexion Supabase, SMTP, etc.
 """
 

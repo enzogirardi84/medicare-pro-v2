@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 DIAGNÓSTICO URGENTE - Por qué no se guardan los datos
 """
 

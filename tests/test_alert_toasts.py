@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.alert_toasts import firma_alertas_por_ids, firma_avisos_sistema, firma_inventario_alerta
 
 

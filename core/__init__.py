@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Core module - Sistema optimizado para millones de usuarios.
 
 Nuevos componentes de escalabilidad:

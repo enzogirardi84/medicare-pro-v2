@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tests para los nuevos módulos de escalabilidad.
 
 EJECUTAR:

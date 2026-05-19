@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 VERIFICAR QUÉ DATOS SE GUARDAN Y QUÉ NO
 Compara local_data.json vs Supabase
 """

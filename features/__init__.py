@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Lógica de dominio por capacidad (reglas, cálculos) sin Streamlit.
 
 Subpaquetes:

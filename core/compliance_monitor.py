@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Compliance y Auditoría Automatizada.
 
 Cumplimiento normativo:
@@ -586,6 +589,7 @@ class ComplianceMonitor:
             elif report.overall_status == ComplianceStatus.WARNING.value:
                 st.warning("⚠️ Se detectaron advertencias")
             else:
+                log_event("compliance", "error: VIOLACIONES detectadas")
                 st.error("❌ VIOLACIONES detectadas")
             
             # Resumen
@@ -614,6 +618,7 @@ class ComplianceMonitor:
                         st.write(f"**Detectado:** {v.detected_at[:16]}")
                         
                         if v.remediation_required:
+                            log_event("compliance", f"error: Resolución requerida antes de: {v.remediation_deadline[:16]}")
                             st.error(f"⏰ Resolución requerida antes de: {v.remediation_deadline[:16]}")
                             
                             if st.button("Marcar como Resuelto", key=f"resolve_{v.id}"):

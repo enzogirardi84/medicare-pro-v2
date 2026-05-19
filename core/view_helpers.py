@@ -1,5 +1,8 @@
 """Utilidades de UI compartidas entre vistas Streamlit (mensajes, bloques de ayuda)."""
 
+
+from __future__ import annotations
+
 from contextlib import contextmanager
 from html import escape
 import re

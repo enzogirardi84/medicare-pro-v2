@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Configuración segura con validación estricta usando Pydantic.
 Evita el hardcodeo de credenciales y valida variables de entorno.
 """

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from views._recetas_utils import (
     detalle_horario_infusion,
     normalizar_plan_hidratacion,

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 DIAGNOSTICO TOTAL DE LA APLICACION
 Identifica todos los errores criticos
 """

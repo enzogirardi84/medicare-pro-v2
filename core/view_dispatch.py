@@ -1,5 +1,8 @@
 """Compatibilidad: despacho de vistas y navegación.
 
+
+from __future__ import annotations
+
 Las implementaciones vivas se mudaron a core/app_navigation.py.
 Este módulo re-exporta para no romper imports existentes.
 """

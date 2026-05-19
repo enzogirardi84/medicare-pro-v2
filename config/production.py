@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Configuración para ambiente de producción.
 
 WARNING: Este archivo contiene configuraciones sensibles.

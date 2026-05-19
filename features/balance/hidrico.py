@@ -1,6 +1,9 @@
 """Cálculos de balance hídrico sin dependencias de Streamlit."""
 
 
+
+from __future__ import annotations
+
 def totales_balance_hidrico_ml(
     *,
     i_oral: int | float = 0,

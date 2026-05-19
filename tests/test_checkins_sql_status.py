@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from views._visitas_secciones import estado_checkins_sql, registrar_estado_checkins_sql
 
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from views._visitas_agenda import estado_visitas_sql, registrar_estado_visitas_sql
 
 

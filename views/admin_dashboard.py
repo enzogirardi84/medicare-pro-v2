@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Dashboard Administrativo para Medicare Pro.
 
 Características:

@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Helper functions para usar los componentes UI médicos en Streamlit.
 Facilita la aplicación de clases CSS mc-* sin escribir HTML manualmente.
 """

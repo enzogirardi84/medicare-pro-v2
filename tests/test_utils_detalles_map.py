@@ -1,5 +1,8 @@
 """Acceso seguro al mapa de detalles de pacientes (session_state)."""
 
+
+from __future__ import annotations
+
 from core import auth
 from core import utils
 

@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Health Checks Mejorado para MediCare Pro.
 
 Monitoreo crítico para sistema de salud:

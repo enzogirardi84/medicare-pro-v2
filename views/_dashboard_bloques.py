@@ -1,4 +1,7 @@
 """Bloques de UI del dashboard. Extraído de views/dashboard.py."""
+
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
 import altair as alt

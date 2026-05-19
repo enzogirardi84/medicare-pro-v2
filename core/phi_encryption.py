@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Encriptación de Datos Sensibles (PHI - Protected Health Information).
 
 Cumplimiento: HIPAA, GDPR, LGPD

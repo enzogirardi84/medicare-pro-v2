@@ -1,4 +1,7 @@
 """Operaciones SQL clínicas: evoluciones, indicaciones, estudios, vitales,
+
+from __future__ import annotations
+
 cuidados, consentimientos, pediatría, escalas. Extraído de core/db_sql.py."""
 import secrets
 import time

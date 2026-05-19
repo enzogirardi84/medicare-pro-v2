@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 
-from core import clinical_exports
+from core import _exports_helpers, clinical_exports
 
 
 def _ctx_base(**overrides):
@@ -93,7 +95,7 @@ def test_export_json_historial_incluye_datos_sql(monkeypatch):
         ]
         return sections
 
-    monkeypatch.setattr(clinical_exports, "_collect_sql_sections", fake_sql_sections)
+    monkeypatch.setattr(_exports_helpers, "collect_sql_sections", fake_sql_sections)
 
     session_state = {
         "detalles_pacientes_db": {

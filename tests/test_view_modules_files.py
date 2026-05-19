@@ -1,5 +1,8 @@
 """Comprueba que cada entrada de VIEW_CONFIG apunta a un archivo views/*.py existente."""
 
+
+from __future__ import annotations
+
 import ast
 import importlib.util
 from pathlib import Path

@@ -1,5 +1,8 @@
 """Bloque UI de administración del turno, cortina MAR y gestión de indicaciones.
 
+
+from __future__ import annotations
+
 Extraído de views/recetas.py — función render_recetas.
 """
 import base64

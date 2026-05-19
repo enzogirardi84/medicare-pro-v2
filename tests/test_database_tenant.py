@@ -1,5 +1,8 @@
 """Tests para claves de archivo local por tenant (seguridad de ruta)."""
 
+
+from __future__ import annotations
+
 from core.database import _tenant_local_fs_key
 
 

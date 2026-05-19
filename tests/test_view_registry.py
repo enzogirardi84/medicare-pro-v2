@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.module_catalog import ALERTAS_APP_PACIENTE_MODULO
 from core.view_registry import VIEW_CONFIG_BASE, VIEW_NAV_LABELS_BASE, build_view_maps
 from core.view_roles import MODULO_ROLES_PERMITIDOS

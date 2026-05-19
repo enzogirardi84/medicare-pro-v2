@@ -1,5 +1,8 @@
 """Conexión a Supabase, reintentos y operaciones de carga/guardado en nube.
 
+
+from __future__ import annotations
+
 Extraído de core/database.py.
 """
 import hashlib

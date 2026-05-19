@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 PANEL DE DIAGNOSTICO DEL SISTEMA
 Vista exclusiva para superadmin: verifica Supabase, tablas SQL, datos locales, errores,
 estado del sistema, logs, memoria y configuración.
@@ -12,6 +15,8 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from core.app_logging import log_event
+
 SCROLL = 'style="max-height:380px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;"'
 
 
@@ -23,6 +28,7 @@ def render_diagnosticos(user=None):
     from core.utils import es_control_total
     rol = user.get("rol", "") if user else ""
     if not es_control_total(rol):
+        log_event("diagnosticos", "error: Acceso restringido. Solo Super Administradores pueden acceder al diagnóstico completo.")
         st.error("🔒 Acceso restringido. Solo Super Administradores pueden acceder al diagnóstico completo.")
         return
 
@@ -72,6 +78,7 @@ def render_diagnosticos(user=None):
             if diag["conexion_ok"]:
                 st.success("✅ Conexión a Supabase: OK")
             else:
+                log_event("diagnosticos", f"error: Sin conexion a Supabase: {diag.get('error_conexion','Error desconocido')}")
                 st.error(f"❌ Sin conexión a Supabase: {diag.get('error_conexion','Error desconocido')}")
                 return
 
@@ -88,6 +95,7 @@ def render_diagnosticos(user=None):
                 nombres = ", ".join(e.get("nombre","?") for e in empresas)
                 st.success(f"✅ Empresas registradas ({len(empresas)}): **{nombres}**")
             else:
+                log_event("diagnosticos", "error: No hay empresas registradas en Supabase. Esto impide guardar pacientes en tablas SQL.")
                 st.error("❌ No hay empresas registradas en Supabase. Esto impide guardar pacientes en tablas SQL.")
                 if empresa_actual:
                     if st.button(f"🔧 Insertar empresa '{empresa_actual}' automáticamente", type="primary"):
@@ -98,6 +106,7 @@ def render_diagnosticos(user=None):
                             st.success(f"✅ Empresa insertada correctamente: **{res['nombre_empresa']}** (ID: {res['empresa_id']})")
                             st.info("Recarga la página para ver los cambios reflejados.")
                         else:
+                            log_event("diagnosticos", f"error: Error al insertar empresa: {res['error']}")
                             st.error(f"❌ Error al insertar empresa: {res['error']}")
 
             # Tabla de estado de cada tabla
@@ -160,6 +169,7 @@ def render_diagnosticos(user=None):
                     st.code(f"empresa_id = {res['empresa_id']}")
                     st.success("✅ Los pacientes SÍ pueden guardarse en las tablas SQL")
                 else:
+                    log_event("diagnosticos", f"error: {res['error']}")
                     st.error(f"❌ {res['error']}")
                     st.markdown(
                         "**¿Qué significa esto?**\n"
@@ -179,6 +189,7 @@ def render_diagnosticos(user=None):
             from core.diagnosticos import obtener_schema_tabla
             schema = obtener_schema_tabla(tabla_inspect)
             if schema["error"]:
+                log_event("diagnosticos", f"error: {schema['error']}")
                 st.error(f"Error: {schema['error']}")
             else:
                 st.success(f"Columnas reales de `{tabla_inspect}`:")
@@ -250,6 +261,7 @@ def render_diagnosticos(user=None):
                 ram_total = mem.total / (1024**3)
                 ram_percent = mem.percent
                 if ram_percent > 90:
+                    log_event("diagnosticos", f"error: RAM critica: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB)")
                     st.error(f"⚠️ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) — CRÍTICO")
                 elif ram_percent > 75:
                     st.warning(f"⚡ RAM: {ram_percent}% ({ram_used:.1f}/{ram_total:.1f} GB) — Alto")
@@ -261,6 +273,7 @@ def render_diagnosticos(user=None):
                 disk_used = disk.used / (1024**3)
                 disk_total = disk.total / (1024**3)
                 if disk_percent > 90:
+                    log_event("diagnosticos", f"error: Disco critico: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB)")
                     st.error(f"⚠️ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) — CRÍTICO")
                 elif disk_percent > 75:
                     st.warning(f"⚡ Disco: {disk_percent}% ({disk_used:.1f}/{disk_total:.1f} GB) — Alto")
@@ -292,9 +305,11 @@ def render_diagnosticos(user=None):
                         masked = val[:10] + "..." + val[-4:] if len(val) > 20 else "***"
                         st.success(f"✅ {var}: {masked}")
                     else:
+                        log_event("diagnosticos", f"error: {var}: NO CONFIGURADO")
                         st.error(f"❌ {var}: NO CONFIGURADO")
                         secrets_ok = False
                 except Exception as e:
+                    log_event("diagnosticos", f"error: {var}: {str(e)[:50]}")
                     st.error(f"❌ {var}: Error - {str(e)[:50]}")
                     secrets_ok = False
             
@@ -311,6 +326,7 @@ def render_diagnosticos(user=None):
             errores = get_recent_errors(limit=20)
             
             if errores:
+                log_event("diagnosticos", f"error: {len(errores)} errores recientes detectados")
                 st.error(f"⚠️ {len(errores)} errores recientes detectados")
                 st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
                 for err in errores:
@@ -345,6 +361,7 @@ def render_diagnosticos(user=None):
                     st.success(f"✅ {desc}")
                     st.caption(f"{size/1024:.1f} KB")
                 else:
+                    log_event("diagnosticos", f"error: Archivo no encontrado: {archivo}")
                     st.error(f"❌ {desc}")
                     st.caption(f"Archivo no encontrado: {archivo}")
         
@@ -386,6 +403,7 @@ def render_diagnosticos(user=None):
                 
                 with col1:
                     if dependencias_faltantes:
+                        log_event("diagnosticos", f"error: {len(dependencias_faltantes)} dependencias faltantes: {', '.join(dependencias_faltantes)}")
                         st.error(f"❌ {len(dependencias_faltantes)} dependencias faltantes")
                         st.code(", ".join(dependencias_faltantes))
                     else:
@@ -393,6 +411,7 @@ def render_diagnosticos(user=None):
                 
                 with col2:
                     if errores_conexion:
+                        log_event("diagnosticos", f"error: {len(errores_conexion)} problemas de conexion: {'; '.join(errores_conexion)}")
                         st.error(f"❌ {len(errores_conexion)} problemas de conexión")
                         for e in errores_conexion:
                             st.caption(e)
@@ -413,6 +432,7 @@ def render_diagnosticos(user=None):
                 if total_problemas == 0:
                     st.success("🎉 Sistema completamente saludable. No se detectaron problemas.")
                 else:
+                    log_event("diagnosticos", f"error: {total_problemas} problemas detectados que requieren atencion")
                     st.error(f"⚠️ Se detectaron {total_problemas} problemas que requieren atención")
 
     # === TAB 5: VIGÍA DE ERRORES ===
@@ -429,6 +449,7 @@ def render_diagnosticos(user=None):
                 export_json,
             )
         except Exception as exc:
+            log_event("diagnosticos", f"error: No se pudo cargar el modulo de Vigia: {exc}")
             st.error(f"No se pudo cargar el módulo de Vigía: {exc}")
             st.stop()
 

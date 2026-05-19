@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 SISTEMA DE GUARDADO SIMPLE Y ROBUSTO
 - Funciona 100% del tiempo
 - Guarda en local_data.json (archivo plano)

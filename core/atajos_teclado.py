@@ -1,4 +1,7 @@
 """Atajos de teclado globales para Medicare Pro."""
+
+from __future__ import annotations
+
 import streamlit as st
 
 from core.app_logging import log_event

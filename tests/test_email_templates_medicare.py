@@ -1,5 +1,8 @@
 """Plantillas HTML de correo MediCare (2FA, recuperación, etc.)."""
 
+
+from __future__ import annotations
+
 from core.email_templates_medicare import (
     build_email_2fa_html,
     html_password_reset_body,

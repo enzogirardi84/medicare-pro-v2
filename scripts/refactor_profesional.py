@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 Refactoring Profesional - Script de mejora masiva del sistema.
 
 Este script:

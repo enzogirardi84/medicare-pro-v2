@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 MIGRACIÓN DE DATOS LOCALES A SUPABASE
 Pasa todos los datos de local_data.json a la nube
 """

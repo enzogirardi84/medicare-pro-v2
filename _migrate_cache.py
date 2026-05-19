@@ -1,4 +1,7 @@
 """Migrar @st.cache_data a cache manual en funciones SQL getter."""
+
+from __future__ import annotations
+
 import re, time, sys
 from pathlib import Path
 

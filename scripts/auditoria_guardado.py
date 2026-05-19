@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 AUDITORÍA COMPLETA DEL SISTEMA DE GUARDADO
 Revisa todas las vistas para verificar que:
 1. Llaman a guardar_datos() después de modificar datos

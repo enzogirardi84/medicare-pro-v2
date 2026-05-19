@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Integraciones externas (HTTP, APIs de terceros, webhooks).
 
 Hoy la mayor parte vive en ``core/database.py`` (Supabase) y módulos puntuales.

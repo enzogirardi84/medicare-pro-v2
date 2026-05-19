@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Entry point canónico para Streamlit Cloud — MediCare Enterprise PRO.
 
 Autodetected by Streamlit Cloud (convention over configuration).

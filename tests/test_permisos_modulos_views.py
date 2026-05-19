@@ -1,5 +1,8 @@
 """Los alias de menú en PERMISOS_MODULOS deben resolver a módulos en view_registry."""
 
+
+from __future__ import annotations
+
 from core.utils import PERMISOS_MODULOS, _modulo_canonico
 from core.view_registry import VIEW_CONFIG_BASE
 

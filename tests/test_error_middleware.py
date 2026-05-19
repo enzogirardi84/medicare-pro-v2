@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tests para el middleware de manejo de errores
 
 EJECUTAR:

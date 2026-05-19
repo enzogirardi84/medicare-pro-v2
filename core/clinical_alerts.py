@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Alertas Clínicas Basado en Reglas (Clinical Decision Support).
 
 Detección automática de condiciones de riesgo:

@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Progressive Web App (PWA) Manifest y Service Worker para Medicare Pro.
 
 Características:

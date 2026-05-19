@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de notificaciones Toast moderno para MediCare.
 Notificaciones visuales temporales con animaciones suaves.
 """

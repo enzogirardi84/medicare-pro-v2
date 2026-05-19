@@ -1,4 +1,7 @@
 """Control de stock: registra administracion clinica + consumo + descuento de inventario."""
+
+from __future__ import annotations
+
 import streamlit as st
 
 from core.alert_toasts import queue_toast

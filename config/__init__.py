@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Configuración por ambiente para Medicare Pro.
 
 Uso:

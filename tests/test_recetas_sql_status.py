@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from views.recetas import estado_recetas_sql, registrar_estado_recetas_sql
 
 

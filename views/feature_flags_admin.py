@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Administración de Feature Flags para Medicare Pro.
 
 Permite activar/desactivar funcionalidades en tiempo real.

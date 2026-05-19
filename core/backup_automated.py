@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Backup Automatizado para MediCare Pro.
 
 Características:
@@ -613,8 +616,10 @@ def render_backup_dashboard() -> None:
         elif hours_ago < 24:
             st.warning(f"⚠️ Último backup: hace {hours_ago:.1f} horas")
         else:
+            log_event("backup", f"error: Último backup hace {hours_ago:.1f} horas")
             st.error(f"🔴 Último backup: hace {hours_ago:.1f} horas (!)")
     else:
+        log_event("backup", "error: No hay backups registrados")
         st.error("🔴 No hay backups registrados")
     
     # Botón de backup manual
@@ -629,6 +634,7 @@ def render_backup_dashboard() -> None:
                     size_mb = backup.size_bytes / (1024 * 1024)
                     st.success(f"✅ Backup creado: {size_mb:.1f}MB")
                 else:
+                    log_event("backup", f"error: {backup.error_message}")
                     st.error(f"❌ Error: {backup.error_message}")
     
     with col2:
@@ -656,6 +662,8 @@ def render_backup_dashboard() -> None:
                             if restore_from_backup(backup.id):
                                 st.success("✅ Backup restaurado")
                             else:
+                                log_event("backup", "error: Error al restaurar")
                                 st.error("❌ Error al restaurar")
                         except Exception as e:
+                            log_event("backup", f"error: {str(e)}")
                             st.error(f"❌ {str(e)}")

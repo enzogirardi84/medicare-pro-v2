@@ -1,5 +1,8 @@
 """Evaluación y renderizado de Signos Vitales con alertas de color.
 
+
+from __future__ import annotations
+
 Extraído de views/historial.py.
 """
 from typing import Any, Dict, List

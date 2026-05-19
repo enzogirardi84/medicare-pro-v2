@@ -1,4 +1,7 @@
 """TEST - App minima para verificar que Streamlit Cloud funciona"""
+
+from __future__ import annotations
+
 import streamlit as st
 
 st.set_page_config(page_title="TEST Medicare", layout="centered")

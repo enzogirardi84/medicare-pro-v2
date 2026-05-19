@@ -1,5 +1,8 @@
 """Helpers internos de clinical_exports: contexto de paciente, SQL sections, merge, fingerprint.
 
+
+from __future__ import annotations
+
 Extraído de core/clinical_exports.py para mantenerlo manejable.
 """
 import json

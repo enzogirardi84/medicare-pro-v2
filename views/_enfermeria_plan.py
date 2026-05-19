@@ -1,4 +1,7 @@
 """Plan de cuidados de enfermería. Extraído de views/enfermeria.py."""
+
+from __future__ import annotations
+
 from html import escape
 
 import streamlit as st

@@ -1,5 +1,8 @@
 """Fragmentos JavaScript para core/ui_liviano.py.
 
+
+from __future__ import annotations
+
 Extraído de core/ui_liviano.py para reducir el tamaño del módulo principal.
 Los strings contienen placeholders {modo_js} y {server_js} que se rellenan en render_mc_liviano_cliente.
 """

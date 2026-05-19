@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Initial Schema
 
 Revision inicial con tablas core del sistema.

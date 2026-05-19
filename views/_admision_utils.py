@@ -1,4 +1,7 @@
 """Helpers de admisión de pacientes. Extraído de views/admision.py."""
+
+from __future__ import annotations
+
 from datetime import date, datetime
 
 import streamlit as st

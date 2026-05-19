@@ -1,4 +1,7 @@
 """Helpers privados de autenticación. Extraído de core/auth.py."""
+
+from __future__ import annotations
+
 import secrets
 import time
 from html import escape

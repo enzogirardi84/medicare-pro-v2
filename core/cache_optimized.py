@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Caché Optimizado para MediCare Pro.
 
 Uso intensivo de @st.cache_data y @st.cache_resource.

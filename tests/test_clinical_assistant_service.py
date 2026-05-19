@@ -1,5 +1,8 @@
 """Tests para clinical_assistant_service.
 
+
+from __future__ import annotations
+
 EJECUTAR:
     python -m pytest tests/test_clinical_assistant_service.py -v
 """

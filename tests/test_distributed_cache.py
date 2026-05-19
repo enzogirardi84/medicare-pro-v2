@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tests para caché distribuida con Redis.
 
 EJECUTAR:

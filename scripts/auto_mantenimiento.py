@@ -1,4 +1,7 @@
 """Script de mantenimiento automatico - ejecutar diariamente.
+
+from __future__ import annotations
+
 Corre: python scripts/auto_mantenimiento.py
 """
 import json

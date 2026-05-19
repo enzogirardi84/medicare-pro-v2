@@ -1,5 +1,8 @@
 """Heurísticas UA/Save-Data sin ejecutar Streamlit."""
 
+
+from __future__ import annotations
+
 from core.ui_liviano import user_agent_desde_contexto, user_agent_es_telefono_movil_probable, user_agent_sugiere_equipo_liviano
 
 

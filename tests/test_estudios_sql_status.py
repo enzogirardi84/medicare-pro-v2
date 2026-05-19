@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from views.estudios import estado_estudios_sql, registrar_estado_estudios_sql
 
 

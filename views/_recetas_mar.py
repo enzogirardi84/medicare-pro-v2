@@ -1,5 +1,8 @@
 """MAR hospitalaria (Medication Administration Record), cortina y sábana compacta.
 
+
+from __future__ import annotations
+
 Extraído de views/recetas.py para mantenerlo bajo las 300 líneas.
 Funciones públicas usadas desde recetas.py:
     registrar_administracion_dosis, guardar_administracion_medicacion,
@@ -13,6 +16,7 @@ import streamlit as st
 
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
+from core.app_logging import log_event
 from core.utils import ahora, registrar_auditoria_legal
 from views._recetas_utils import (
     hora_real_para_registro,
@@ -111,11 +115,13 @@ def registrar_administracion_dosis(
     *, hora_real_admin=None,
 ):
     if "No realizada" in estado_sel and not justificacion.strip():
+        log_event("recetas_mar", "error: Es obligatorio justificar por que no se administro la dosis.")
         st.error("Es obligatorio justificar por qué no se administró la dosis (documentación clínica exigible).")
         return False
 
     hora_str, err_h = hora_real_para_registro(hora_real_admin)
     if err_h:
+        log_event("recetas_mar", f"error: {err_h}")
         st.error(err_h)
         return False
 
@@ -523,6 +529,7 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
                                 just = str(st.session_state.get(k_just, "") or "").strip()
                                 hr_val = str(st.session_state.get(k_hr, def_h) or "").strip() or def_h
                                 if not just:
+                                    log_event("recetas_mar", "error: Documentar motivo clinico antes de registrar omision.")
                                     st.error("Documentá el motivo clínico antes de registrar una omisión (requisito de historia clínica).")
                                 elif registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, med_raw,
                                                                     str(fila.get("Hora programada", "") or "").strip(), "No realizada / Suspendida", just, hora_real_admin=hr_val):
@@ -605,8 +612,10 @@ def render_bloque_cortina_medicacion(plan_dia_df, columnas_tabla, paciente_sel, 
                         registros_guardados += 1
 
                 for e in errores[:6]:
+                    log_event("recetas_mar", f"error: {e}")
                     st.error(e)
                 if len(errores) > 6:
+                    log_event("recetas_mar", f"error: ... y {len(errores) - 6} error(es) mas.")
                     st.error(f"... y {len(errores) - 6} error(es) más.")
                 if registros_guardados:
                     queue_toast(f"Se guardaron {registros_guardados} registro(s) desde la cortina.")
@@ -667,8 +676,10 @@ def render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_ho
                             nombre_med_c = str(fila.get("Medicamento", "") or "").strip()
                             slot_c = str(fila.get("Hora programada", "") or "").strip() or "A demanda"
                             if not nombre_med_c:
+                                log_event("recetas_mar", "error: Falta el nombre de la medicacion en la ficha.")
                                 st.error("Falta el nombre de la medicación en la ficha.")
                             elif accion_c.startswith("No realizada") and not str(justif_c or "").strip():
+                                log_event("recetas_mar", "error: Es obligatoria la justificacion si se marca no realizada.")
                                 st.error("Es obligatoria la justificación si marcás no realizada.")
                             elif accion_c.startswith("No realizada"):
                                 if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, nombre_med_c, slot_c,

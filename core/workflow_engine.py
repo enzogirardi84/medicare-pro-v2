@@ -388,6 +388,7 @@ class WorkflowEngine:
         
         template = WorkflowTemplate.get_template(template_id)
         if not template:
+            log_event("workflow", f"error: Template no encontrado: {template_id}")
             st.error(f"❌ Template no encontrado: {template_id}")
             return None
         
@@ -482,6 +483,7 @@ class WorkflowEngine:
         
         # Verificar que puede completarse
         if not task.can_start(workflow.completed_tasks):
+            log_event("workflow", "error: No se puede completar esta tarea aún. Hay dependencias pendientes.")
             st.error("❌ No se puede completar esta tarea aún. Hay dependencias pendientes.")
             return False
         
@@ -610,6 +612,7 @@ class WorkflowEngine:
         """Renderiza detalle de un workflow."""
         workflow = self._workflows.get(workflow_id)
         if not workflow:
+            log_event("workflow", "error: Workflow no encontrado")
             st.error("Workflow no encontrado")
             return
         
@@ -678,6 +681,7 @@ class WorkflowEngine:
         templates = WorkflowTemplate.list_templates()
         
         if not templates:
+            log_event("workflow", "error: No hay templates disponibles")
             st.error("No hay templates disponibles")
             return
         

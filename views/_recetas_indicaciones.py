@@ -1,5 +1,8 @@
 """Lógica de construcción de texto de indicaciones y resumen de medicación activa.
 
+
+from __future__ import annotations
+
 Extraído de views/recetas.py para mantenerlo bajo las 300 líneas.
 """
 from datetime import datetime as _dt, timedelta as _td

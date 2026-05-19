@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 Limpia pacientes duplicados después de la recuperación.
 Convierte todos a formato consistente y elimina duplicados.
 """

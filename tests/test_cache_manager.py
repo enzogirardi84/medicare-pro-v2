@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tests específicos para cache_manager.py
 
 EJECUTAR:

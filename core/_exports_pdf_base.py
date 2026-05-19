@@ -1,5 +1,8 @@
 """Clases y helpers base para generación de PDFs clínicos.
 
+
+from __future__ import annotations
+
 Extraído de core/clinical_exports.py.
 Contiene: _insert_logo, _pdf_header_oscuro, RespaldoClinicoPDF, helpers de escritura,
 tablas de etiquetas y helpers del respaldo clínico.

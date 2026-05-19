@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 def recuperar_desde_local():

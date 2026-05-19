@@ -1,4 +1,7 @@
 """Tabs UI de emergencias. Extraído de views/emergencias.py."""
+
+from __future__ import annotations
+
 import base64
 import html
 from uuid import uuid4

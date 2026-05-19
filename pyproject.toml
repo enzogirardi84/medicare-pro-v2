@@ -8,8 +8,9 @@ version = "0.1.0"
 description = "MediCare Enterprise PRO Streamlit application"
 requires-python = ">=3.10"
 
-[tool.setuptools]
-py-modules = []
+[tool.setuptools.packages.find]
+include = ["core*", "views*", "features*", "services*", "components*", "api*", "config*", "scripts*"]
+exclude = ["tests*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

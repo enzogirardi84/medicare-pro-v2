@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Gestión Inteligente de Turnos.
 
 Optimizaciones:

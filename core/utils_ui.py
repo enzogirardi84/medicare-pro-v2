@@ -1,5 +1,8 @@
 """Helpers de UI: imagen, firma, archivos, dataframe, assets, geolocalización.
 
+
+from __future__ import annotations
+
 Extraído de core/utils.py.
 """
 import base64

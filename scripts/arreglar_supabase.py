@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 DIAGNOSTICO Y ARREGLO DE SUPABASE
 Paso a paso para hacer funcionar Supabase
 """

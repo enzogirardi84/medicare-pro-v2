@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.utils import obtener_modulos_permitidos
 from core.view_roles import MODULO_ROLES_PERMITIDOS, tiene_acceso_vista
 

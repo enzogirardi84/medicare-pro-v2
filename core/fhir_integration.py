@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Integración FHIR (Fast Healthcare Interoperability Resources) R4.
 
 Estándar internacional HL7 FHIR para interoperabilidad en salud.

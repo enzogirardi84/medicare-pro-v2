@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Optimización de consultas a base de datos (Fase 2).
 Paginación eficiente, lazy loading y optimización de queries SQL.
 """

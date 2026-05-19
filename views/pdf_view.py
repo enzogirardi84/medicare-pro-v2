@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import hashlib
 import io
@@ -274,6 +276,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
         if puede_guardar_consentimiento:
             if st.button("Guardar consentimiento legal", width='stretch', type="primary", key=f"save_consent_{paciente_sel}"):
                 if not acepta:
+                    log_event("pdf", "error: Debe confirmar la aceptacion del tratamiento domiciliario.")
                     st.error("Debe confirmar la aceptacion del tratamiento domiciliario.")
                 else:
                     firma_b64 = firma_a_base64(
@@ -281,6 +284,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                         uploaded_file=firma_subida,
                     )
                     if not firma_b64:
+                        log_event("pdf", "error: La firma del paciente o familiar no se detecto.")
                         st.error("La firma del paciente o familiar no se detecto. Dibujala antes de guardar.")
                     else:
                         fecha_str = ahora().strftime("%d/%m/%Y %H:%M")

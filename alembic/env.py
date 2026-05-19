@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Alembic Environment Configuration
 Configuración del entorno para migraciones de base de datos.
 """

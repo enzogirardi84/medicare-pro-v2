@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Seed Initial Data
 
 Datos iniciales para el sistema.

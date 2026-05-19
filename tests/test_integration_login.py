@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tests de integración para flujo de login
 
 EJECUTAR:

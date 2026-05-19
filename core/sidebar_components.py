@@ -1,5 +1,8 @@
 """Componentes del sidebar clínico de MediCare PRO.
 
+
+from __future__ import annotations
+
 Extraído de main.py para mantenerlo liviano.
 Contiene: tarjeta de marca, tarjeta de paciente, panel de signos vitales,
 contexto clínico rápido (semáforo, evolución, medicación) y selector de pacientes.

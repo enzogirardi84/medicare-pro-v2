@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 ANALISIS COMPLETO DE SUPABASE
 Genera un reporte detallado de tablas, columnas y configuración
 """

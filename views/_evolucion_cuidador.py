@@ -1,5 +1,8 @@
 """Panel de evolucion asistida basado en Patrones Funcionales de Marjory Gordon."""
 
+
+from __future__ import annotations
+
 import streamlit as st
 from core.utils import ahora, registrar_auditoria_legal
 from core.database import guardar_datos

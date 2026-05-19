@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Configuración para ambiente de testing (CI/CD, tests unitarios).
 """
 

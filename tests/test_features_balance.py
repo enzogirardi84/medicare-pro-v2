@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from features.balance import formato_shift_ml, totales_balance_hidrico_ml
 
 

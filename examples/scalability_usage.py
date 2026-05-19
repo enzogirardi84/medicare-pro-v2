@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Ejemplos de uso de los componentes de escalabilidad.
 
 Este archivo demuestra cómo utilizar los nuevos componentes

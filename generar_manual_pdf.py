@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Genera un PDF profesional a partir del manual de usuario en Markdown."""
+
+from __future__ import annotations
+
 import re
 import sys
 from pathlib import Path

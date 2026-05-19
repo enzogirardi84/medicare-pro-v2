@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Panel de Configuración/Settings para Medicare Pro.
 
 Permite a administradores configurar:

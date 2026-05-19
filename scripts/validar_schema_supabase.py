@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 VALIDACIÓN COMPLETA DEL ESQUEMA SUPABASE
 Verifica que todas las tablas y relaciones estén correctas
 """

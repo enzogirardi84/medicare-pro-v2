@@ -1,5 +1,8 @@
 """Detección móvil y componentes adaptativos para móviles/tablets."""
 
+
+from __future__ import annotations
+
 import streamlit as st
 
 from core.utils_pacientes import set_paciente_actual

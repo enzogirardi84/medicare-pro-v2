@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Clase base para configuración por ambiente.
 """
 

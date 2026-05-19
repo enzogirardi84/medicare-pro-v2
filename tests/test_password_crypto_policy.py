@@ -1,5 +1,8 @@
 """Textos de politica de contrasena (UI)."""
 
+
+from __future__ import annotations
+
 import unicodedata
 from unittest.mock import MagicMock, patch
 

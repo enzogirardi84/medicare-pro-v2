@@ -1,5 +1,8 @@
 """Paneles de resumen, panorama, timeline y busqueda global del historial."""
 
+
+from __future__ import annotations
+
 import html
 from collections import Counter
 from datetime import datetime, timedelta

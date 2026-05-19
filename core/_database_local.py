@@ -1,5 +1,8 @@
 """Persistencia local (JSON en disco) para core/database.py.
 
+
+from __future__ import annotations
+
 Extraído de core/database.py.
 """
 import json

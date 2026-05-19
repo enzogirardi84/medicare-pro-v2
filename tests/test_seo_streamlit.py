@@ -1,5 +1,8 @@
 """Constantes y JSON-LD de SEO (sin ejecutar Streamlit)."""
 
+
+from __future__ import annotations
+
 from core.seo_streamlit import (
     META_DESCRIPTION,
     PAGE_TITLE_PUBLIC,

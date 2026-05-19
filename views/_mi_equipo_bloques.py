@@ -1,4 +1,7 @@
 """Bloques UI reutilizables de Mi Equipo. Extraído de views/mi_equipo.py."""
+
+from __future__ import annotations
+
 import re
 from html import escape
 
@@ -23,6 +26,7 @@ from core.utils import (
     puede_suspender_reactivar_usuario_mi_equipo,
     registrar_auditoria_legal,
 )
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 
 
@@ -164,14 +168,18 @@ def _mi_equipo_bloque_principal(
                 pw_l = str(ch_pw).strip()
                 pw2_l = str(ch_pw2).strip()
                 if pin_l and (len(pin_l) != 4 or not pin_l.isdigit()):
+                    log_event("mi_equipo", "error: El PIN debe ser exactamente 4 digitos numericos.")
                     st.error("El PIN debe ser exactamente 4 dígitos numéricos.")
                 elif not pw_l and not pin_l:
+                    log_event("mi_equipo", "error: Completar nueva contrasena o PIN para guardar.")
                     st.error("Completá una nueva contraseña o un PIN para guardar.")
                 elif pw_l and pw_l != pw2_l:
+                    log_event("mi_equipo", "error: Las contrasenas no coinciden.")
                     st.error("Las contraseñas no coinciden.")
                 elif pw_l:
                     msg_pw = mensaje_password_no_cumple_politica(ch_pw)
                     if msg_pw:
+                        log_event("mi_equipo", f"error: {msg_pw}")
                         st.error(msg_pw)
                     else:
                         if pin_l:
@@ -209,15 +217,19 @@ def _mi_equipo_bloque_principal(
             if st.button("Guardar acceso", key=f"btn_access_{u}"):
                 ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
                 if not ok_m:
+                    log_event("mi_equipo", f"error: {msg_m}")
                     st.error(msg_m)
                 else:
                     ne_l = ne.strip().lower()
                     np_l = np.strip()
                     if ne_l and not email_formato_aceptable(ne_l):
+                        log_event("mi_equipo", "error: Formato de correo electronico no valido.")
                         st.error("El formato del correo electronico no es valido.")
                     elif np_l and (len(np_l) != 4 or not np_l.isdigit()):
+                        log_event("mi_equipo", "error: PIN debe tener exactamente 4 digitos numericos.")
                         st.error("Si cargas PIN, debe tener exactamente 4 digitos numericos.")
                     elif nueva_pass.strip() and (pw_err := mensaje_password_no_cumple_politica(nueva_pass.strip())):
+                        log_event("mi_equipo", f"error: {pw_err}")
                         st.error(pw_err)
                     else:
                         st.session_state["usuarios_db"][u]["email"] = ne_l
@@ -255,14 +267,17 @@ def _mi_equipo_bloque_suspender(
         if d.get("estado", "Activo") == "Activo":
             if st.button("Suspender", key=f"susp_{u}", width='stretch'):
                 if not puede_suspender_reactivar_usuario_mi_equipo(rol):
+                    log_event("mi_equipo", "error: Rol no puede suspender usuarios.")
                     st.error("Tu rol no puede suspender usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                 else:
                     blk, msg_blk = bloqueo_autoservicio_suspension_baja(user.get("usuario_login"), u, rol)
                     if blk:
+                        log_event("mi_equipo", f"error: {msg_blk}")
                         st.error(msg_blk)
                     else:
                         ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
                         if not ok_m:
+                            log_event("mi_equipo", f"error: {msg_m}")
                             st.error(msg_m)
                         else:
                             st.session_state["usuarios_db"][u]["estado"] = "Bloqueado"
@@ -276,14 +291,17 @@ def _mi_equipo_bloque_suspender(
         else:
             if st.button("Reactivar", key=f"reac_{u}", width='stretch'):
                 if not puede_suspender_reactivar_usuario_mi_equipo(rol):
+                    log_event("mi_equipo", "error: Rol no puede reactivar usuarios.")
                     st.error("Tu rol no puede reactivar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
                 else:
                     blk, msg_blk = bloqueo_autoservicio_suspension_baja(user.get("usuario_login"), u, rol)
                     if blk:
+                        log_event("mi_equipo", f"error: {msg_blk}")
                         st.error(msg_blk)
                     else:
                         ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
                         if not ok_m:
+                            log_event("mi_equipo", f"error: {msg_m}")
                             st.error(msg_m)
                         else:
                             st.session_state["usuarios_db"][u]["estado"] = "Activo"
@@ -318,14 +336,17 @@ def _mi_equipo_bloque_eliminar(
         st.caption("La eliminación es permanente y quita el usuario del sistema.")
         if st.button("Eliminar", key=f"del_{u}", width='stretch', disabled=not seguro):
             if not puede_eliminar_cuenta_equipo(rol):
+                log_event("mi_equipo", "error: Rol no puede eliminar usuarios.")
                 st.error("Tu rol no puede eliminar usuarios (solo SuperAdmin o Coordinador de la misma clinica).")
             else:
                 blk, msg_blk = bloqueo_autoservicio_suspension_baja(user.get("usuario_login"), u, rol)
                 if blk:
+                    log_event("mi_equipo", f"error: {msg_blk}")
                     st.error(msg_blk)
                 else:
                     ok_m, msg_m = actor_puede_modificar_usuario_equipo(rol, mi_empresa, d)
                     if not ok_m:
+                        log_event("mi_equipo", f"error: {msg_m}")
                         st.error(msg_m)
                     else:
                         registrar_auditoria_legal(

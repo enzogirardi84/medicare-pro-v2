@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.module_catalog import categorias_navegacion_sidebar
 from core.view_registry import VIEW_CONFIG_BASE
 

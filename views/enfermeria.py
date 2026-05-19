@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import streamlit as st
 
 from core.utils import mapa_detalles_pacientes

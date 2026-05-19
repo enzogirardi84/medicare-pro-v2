@@ -1,5 +1,8 @@
 """Navegación de módulos: query params, acordeón por categorías, resolución de vistas.
 
+
+from __future__ import annotations
+
 Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
 

@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Plugin de Reportes Personalizados para Medicare Pro.
 
 Ejemplo de plugin real que agrega:

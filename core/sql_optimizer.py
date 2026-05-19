@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Optimizador de Queries SQL para MediCare Pro.
 
 Proporciona:

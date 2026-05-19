@@ -1,4 +1,7 @@
 """Panel de evolución clínica. Extraído de views/evolucion.py."""
+
+from __future__ import annotations
+
 import base64
 import html
 
@@ -7,6 +10,7 @@ from core._exports_history import build_history_pdf_bytes
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.guardado_universal import guardar_registro
+from core.app_logging import log_event
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.ui_components import (
     badge,
@@ -58,6 +62,7 @@ def _generar_pdf_historia_clinica(paciente_sel):
             st.session_state, paciente_sel, mi_empresa, profesional=profesional
         )
     except Exception as exc:
+        log_event("evolucion_panel", f"error: {exc}")
         st.error(f"Error generando PDF: {exc}")
         return None
 
@@ -232,6 +237,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     st.session_state["evol_plantilla_prev"] = "Libre"
                     st.rerun()
                 else:
+                    log_event("evolucion_panel", "error: La nota medica no puede estar vacia.")
                     st.error("La nota medica no puede estar vacia.")
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
@@ -326,6 +332,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
             with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}"):
                 if es_urgente:
+                    log_event("evolucion_panel", "error: evolucion marcada como URGENTE")
                     st.error("Marcada como URGENTE")
                 if ev.get("tipo_evolucion") == "cuidador":
                     st.info("Registro de cuidador")
@@ -411,6 +418,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
         if col_btn.button("Borrar ultima evolucion", width='stretch', disabled=not confirmar_borrado):
             if not evs_paciente:
+                log_event("evolucion_panel", "error: No hay evoluciones para borrar.")
                 st.error("No hay evoluciones para borrar.")
             else:
                 ultima = evs_paciente[-1]
@@ -515,6 +523,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 queue_toast("Firma guardada correctamente.")
                 st.rerun()
             else:
+                log_event("evolucion_panel", "error: No se detecto una firma valida.")
                 st.error("No se detectó una firma válida. Podés subir una foto o usar el lienzo.")
     else:
         st.warning("Librería de firma no disponible. Podés subir una imagen de la firma.")

@@ -1,5 +1,8 @@
 """Panel global SuperAdmin: clinicas registradas, suspension logica y reactivacion."""
 
+
+from __future__ import annotations
+
 from core.alert_toasts import queue_toast
 import io
 

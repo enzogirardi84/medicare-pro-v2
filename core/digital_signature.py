@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Firmas Digitales para Documentos Médicos.
 
 Cumplimiento legal: Ley 25.506 (Argentina) - Firma Digital

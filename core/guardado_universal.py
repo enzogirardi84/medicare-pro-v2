@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 SISTEMA DE GUARDADO UNIVERSAL - FUNCIONA SIEMPRE
 Version ultra-simple, sin dependencias complejas.
 """

@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Plugins package for Medicare Pro.
 
 Este directorio contiene plugins que extienden la funcionalidad del sistema.

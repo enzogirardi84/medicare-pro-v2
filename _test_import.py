@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys, traceback
 sys.path.insert(0, '.')
 try:

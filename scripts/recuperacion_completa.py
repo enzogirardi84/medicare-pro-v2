@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 Script de recuperación forense completa para Medicare Pro.
 
 Busca usuarios y pacientes en:

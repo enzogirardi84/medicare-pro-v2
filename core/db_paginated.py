@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Consultas paginadas y optimizadas a Supabase.
 
 - Paginación obligatoria (máximo 100 registros por página)

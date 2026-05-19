@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Procesos asíncronos para tareas pesadas (Fase 4).
 Generación de PDFs y exportaciones en background para no congelar la UI.
 """

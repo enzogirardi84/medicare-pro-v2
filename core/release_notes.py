@@ -1,5 +1,8 @@
 """Notas de versión breves para administradores (sin datos sensibles)."""
 
+
+from __future__ import annotations
+
 MC_APP_CHANGELOG = """
 - **Correos transaccionales unificados (2026-04)**: `core/email_templates_medicare.py` con envoltorio oscuro común (preheader, kicker, alerta, pie). **2FA**, **recuperación de clave** y **confirmación de cambio de contraseña** comparten la misma base visual que la marca en app.
 - **Recuperación de contraseña (2026-04, backend)**: en el código hay plantilla HTML (MediCare), **token firmado** y enlace `?pwreset=` si configurás **APP_PUBLIC_URL**; la pantalla de login puede ocultar el autoservicio y la clave nueva asignarla **coordinación** desde Mi equipo. Secretos si usás ese flujo: mismos SMTP que 2FA; **PASSWORD_RESET_HMAC_SECRET** (o **EMAIL_2FA_HMAC_SECRET**); **PASSWORD_RESET_TTL_MINUTES** opcional (default 60).

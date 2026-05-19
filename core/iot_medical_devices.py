@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Integración IoT para Dispositivos Médicos.
 
 Dispositivos soportados:

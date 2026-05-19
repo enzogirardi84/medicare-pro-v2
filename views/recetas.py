@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime as _dt, timedelta as _td
 
 from core.alert_toasts import queue_toast

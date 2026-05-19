@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 API REST Documentada para MediCare Pro.
 
 Framework: FastAPI

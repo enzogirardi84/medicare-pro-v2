@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Sistema de Atajos de Teclado para MediCare.
 Permite navegación rápida sin usar el mouse.
 """

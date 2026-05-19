@@ -1,5 +1,8 @@
 """Generación del PDF de Respaldo Clínico del paciente (FPDF).
 
+
+from __future__ import annotations
+
 Extraído de core/clinical_exports.py.
 """
 from core.export_utils import pdf_output_bytes, safe_text

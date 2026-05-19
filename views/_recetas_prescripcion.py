@@ -1,5 +1,8 @@
 """Bloque UI de nueva prescripción médica e indicación en papel.
 
+
+from __future__ import annotations
+
 Extraído de views/recetas.py — función render_recetas.
 """
 import base64

@@ -1,5 +1,8 @@
 """Helpers de evaluación de signos vitales para el dashboard. Extraído de views/dashboard.py."""
 
+
+from __future__ import annotations
+
 _RANGOS_DASH = {
     "FC":   {"min": 60,   "max": 100,  "crit_min": 40,   "crit_max": 130},
     "FR":   {"min": 12,   "max": 20,   "crit_min": 8,    "crit_max": 30},

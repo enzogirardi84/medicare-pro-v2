@@ -1,5 +1,8 @@
 """Serialización JSON unificada (orjson si existe, si no stdlib)."""
 
+
+from __future__ import annotations
+
 import json
 
 import pytest

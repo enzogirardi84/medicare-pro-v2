@@ -1,4 +1,7 @@
 """Utilidades de sincronizacion: vencimiento automatico de recetas, sync pendiente."""
+
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 
 from core.app_logging import log_event

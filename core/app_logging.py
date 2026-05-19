@@ -1,5 +1,8 @@
 """Logging de aplicación sin datos clínicos ni identificadores de paciente.
 
+
+from __future__ import annotations
+
 Ahora con soporte para logging estructurado JSON y correlation IDs.
 """
 

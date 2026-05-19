@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import streamlit as st
 
 from core.app_logging import log_event
@@ -254,18 +256,22 @@ def render_login():
                         st.warning("Completá usuario, PIN y la nueva contraseña en ambos campos.")
                         st.stop()
                     if p1s != p2s:
+                        log_event("auth", "error: Las contraseñas nuevas no coinciden.")
                         st.error("Las contraseñas nuevas no coinciden.")
                         st.stop()
                     u_limpio_pre = u.strip().lower()
                     ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
                     if not ok_lock:
+                        log_event("auth", f"error: {lock_msg}")
                         st.error(lock_msg)
                         st.stop()
                     db_f, err_db = _cargar_db_login(empresa_login, u_limpio_pre)
                     if err_db:
+                        log_event("auth", f"error: {err_db}")
                         st.error(err_db)
                         st.stop()
                     if db_f is None:
+                        log_event("auth", "error: No se pudieron cargar los datos.")
                         st.error("No se pudieron cargar los datos.")
                         st.stop()
                     for k, v in db_f.items():
@@ -277,6 +283,7 @@ def render_login():
                     usuario_encontrado = _buscar_usuario_por_login(u_limpio)
                     if not usuario_encontrado:
                         registrar_fallo_login(u_limpio)
+                        log_event("auth", f"error: {MSG_PIN_RESET_FALLIDO}")
                         st.error(MSG_PIN_RESET_FALLIDO)
                         st.stop()
                     user_data = normalizar_usuario_sistema(
@@ -292,31 +299,37 @@ def render_login():
                         empresa_ok = empresa_coincide
                     if not empresa_ok:
                         registrar_fallo_login(u_limpio)
+                        log_event("auth", f"error: {MSG_PIN_RESET_FALLIDO}")
                         st.error(MSG_PIN_RESET_FALLIDO)
                         st.stop()
                     if user_data.get("estado", "Activo") == "Bloqueado":
                         registrar_fallo_login(u_limpio)
+                        log_event("auth", "error: Tu usuario está **bloqueado**. Contactá al coordinador para reactivar el acceso antes de cambiar la clave.")
                         st.error(
                             "Tu usuario está **bloqueado**. Contactá al coordinador para reactivar el acceso antes de cambiar la clave."
                         )
                         st.stop()
                     if login_bloqueado_por_clinica(user_data):
                         registrar_fallo_login(u_limpio)
+                        log_event("auth", "error: La clínica asignada a tu usuario está suspendida. No se puede cambiar la contraseña hasta la reactivación.")
                         st.error(
                             "La clínica asignada a tu usuario está suspendida. No se puede cambiar la contraseña hasta la reactivación."
                         )
                         st.stop()
                     if not str(obtener_pin_usuario(user_data) or "").strip():
+                        log_event("auth", "error: Tu cuenta **no tiene PIN de recuperación** en Mi equipo. Pedí una clave nueva a coordinación.")
                         st.error(
                             "Tu cuenta **no tiene PIN de recuperación** en Mi equipo. Pedí una clave nueva a coordinación."
                         )
                         st.stop()
                     if not _pin_coincide_tiempo_constante(user_data, pin_rec_s):
                         registrar_fallo_login(u_limpio)
+                        log_event("auth", f"error: {MSG_PIN_RESET_FALLIDO}")
                         st.error(MSG_PIN_RESET_FALLIDO)
                         st.stop()
                     msg_pw = mensaje_password_no_cumple_politica(p1s)
                     if msg_pw:
+                        log_event("auth", f"error: {msg_pw}")
                         st.error(msg_pw)
                         st.stop()
                     with st.spinner("Guardando tu nueva contraseña…"):
@@ -340,6 +353,7 @@ def render_login():
                         u_limpio_pre = u.strip().lower()
                         ok_lock, lock_msg = puede_intentar_login(u_limpio_pre)
                         if not ok_lock:
+                            log_event("auth", f"error: {lock_msg}")
                             st.error(lock_msg)
                         else:
                             _loader_ph = st.empty()
@@ -348,9 +362,11 @@ def render_login():
                             _loader_ph.markdown(_auth_loader_markup("Verificando acceso..."), unsafe_allow_html=True)
                             if err_db:
                                 _loader_ph.empty()
+                                log_event("auth", f"error: {err_db}")
                                 st.error(err_db)
                             elif db_f is None:
                                 _loader_ph.empty()
+                                log_event("auth", "error: No se pudieron cargar los datos.")
                                 st.error("No se pudieron cargar los datos.")
                             else:
                                 for k, v in db_f.items():
@@ -371,6 +387,7 @@ def render_login():
                                     if user_data.get("estado", "Activo") == "Bloqueado":
                                         _loader_ph.empty()
                                         registrar_fallo_login(u_limpio)
+                                        log_event("auth", "error: Tu usuario está **bloqueado**. Contactá al coordinador o administrador de tu clínica para reactivar el acceso.")
                                         st.error(
                                             "Tu usuario está **bloqueado**. "
                                             "Contactá al coordinador o administrador de tu clínica para reactivar el acceso."
@@ -398,6 +415,7 @@ def render_login():
                                             )
                                             _persistir_logs_tras_rechazo_clinica()
                                             _loader_ph.empty()
+                                            log_event("auth", "error: La clinica asignada a tu usuario esta suspendida (abono o decision administrativa). No podes ingresar hasta la reactivacion.")
                                             st.error(
                                                 "La clinica asignada a tu usuario esta suspendida (abono o decision administrativa). "
                                                 "No podes ingresar hasta la reactivacion. Si sos personal de la clinica, avisa a tu responsable; "
@@ -418,6 +436,7 @@ def render_login():
                                                     )
                                                     st.rerun()
                                                 _loader_ph.empty()
+                                                log_event("auth", f"error: {err_send}")
                                                 st.error(err_send)
                                             else:
                                                 # 2FA por correo solo si el usuario tiene email válido (requiere_2fa_correo).
@@ -457,6 +476,7 @@ def render_login():
                                         else:
                                             _loader_ph.empty()
                                             registrar_fallo_login(u_limpio)
+                                            log_event("auth", f"error: {MSG_LOGIN_CREDENCIALES_FALLIDAS}")
                                             st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
                                 else:
                                     # Verificar login de emergencia con contraseña desde secrets
@@ -477,6 +497,7 @@ def render_login():
                                     else:
                                         _loader_ph.empty()
                                         registrar_fallo_login(u_limpio)
+                                        log_event("auth", f"error: {MSG_LOGIN_CREDENCIALES_FALLIDAS}")
                                         st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
         st.stop()
 

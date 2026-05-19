@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.alert_toasts import queue_toast
 import base64
 from datetime import date

@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Generación y validación de tokens para reset de contraseña.
 """
 

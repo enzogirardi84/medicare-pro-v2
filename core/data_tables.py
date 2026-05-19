@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tablas de datos mejoradas para MediCare.
 Ordenamiento, filtros, exportación rápida y selección múltiple.
 """

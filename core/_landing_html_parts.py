@@ -1,5 +1,8 @@
 """Partes HTML de la landing pre-login. Extraído de core/landing_publicidad.py."""
 
+
+from __future__ import annotations
+
 _PART_1 = """
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

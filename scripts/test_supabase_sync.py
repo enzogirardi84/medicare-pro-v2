@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 TEST: Verificar sincronización con Supabase
 Ejecutar: python test_supabase_sync.py
 """

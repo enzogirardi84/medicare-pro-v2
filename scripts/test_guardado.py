@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 Test de diagnóstico para verificar el sistema de guardado.
 Ejecutar: python test_guardado.py
 """

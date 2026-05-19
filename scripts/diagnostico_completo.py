@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 DIAGNOSTICO COMPLETO - Medicare Pro
 Ejecutar: python scripts/diagnostico_completo.py
 Genera reporte JSON con todos los errores encontrados.

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+
+from __future__ import annotations
+
 ARREGLO CRÍTICO: Reemplaza 'except: pass' con logging apropiado
 """
 

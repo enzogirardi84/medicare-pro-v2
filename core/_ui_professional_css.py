@@ -1,5 +1,8 @@
 """CSS global del tema profesional de Medicare Pro."""
 
+
+from __future__ import annotations
+
 CUSTOM_CSS = """
 <style>
     /* Fuentes */

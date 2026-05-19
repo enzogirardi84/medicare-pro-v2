@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 SISTEMA DE DIAGNOSTICO DE BASE DE DATOS Y ERRORES
 Verifica el estado de Supabase, tablas SQL y datos locales.
 """

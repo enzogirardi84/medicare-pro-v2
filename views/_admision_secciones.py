@@ -1,4 +1,7 @@
 """Secciones UI de admisión. Extraído de views/admision.py."""
+
+from __future__ import annotations
+
 from datetime import date
 
 import streamlit as st

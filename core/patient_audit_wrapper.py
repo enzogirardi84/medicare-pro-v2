@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Wrapper de Auditoría para Operaciones de Pacientes.
 
 Todas las operaciones CRUD en pacientes deben pasar por aquí.

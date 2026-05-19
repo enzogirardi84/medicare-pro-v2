@@ -1,5 +1,8 @@
 """Utilidades y helpers de UI para el módulo de Recetas/Indicaciones.
 
+
+from __future__ import annotations
+
 Extraído de views/recetas.py para mantenerlo bajo las 300 líneas.
 """
 import base64

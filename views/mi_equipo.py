@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from core.alert_toasts import queue_toast
 import re
 from html import escape

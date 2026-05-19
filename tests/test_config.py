@@ -1,4 +1,7 @@
 """
+
+from __future__ import annotations
+
 Tests para configuración por ambiente.
 
 EJECUTAR:
