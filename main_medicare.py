@@ -27,8 +27,8 @@ from core.app_session import (
     eliminar_overlay_residual,
     inicializar_db_state_seguro,
 )
-from core.app_theme import aplicar_css_base, apply_professional_theme
-from core.guardado_emergencia import procesar_guardado_pendiente_seguro
+from core.app_theme import aplicar_css_base
+from core.app_performance import procesar_guardado_pendiente_seguro
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.seo_streamlit import (
     PAGE_TITLE_PUBLIC,
@@ -135,6 +135,7 @@ for _guard_key, _guard_default in (
 # ============================================================
 # TEMA PROFESIONAL POSLOGIN
 # ============================================================
+from core.ui_professional import apply_professional_theme
 if not st.session_state.get("_mc_professional_theme_applied_v4"):
     try:
         apply_professional_theme()
@@ -204,7 +205,6 @@ from core.perf_metrics import record_perf
 from core.sidebar_components import (
     render_sidebar_contexto_clinico as _render_sidebar_contexto_clinico,
 )
-from core.ui_professional import apply_professional_theme
 from core.view_registry import build_view_maps
 
 # ============================================================
