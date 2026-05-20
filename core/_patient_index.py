@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import streamlit as st
 
@@ -16,7 +15,6 @@ def get_patient_records(db_key: str, paciente_sel: str) -> list[dict]:
     ts_key = f"_idx_ts_{db_key}"
     src_hash = str(id(st.session_state.get(db_key, [])))
 
-    cached = st.session_state.get(idx_key, {})
     cached_ts = st.session_state.get(ts_key, 0.0)
     cached_src = st.session_state.get(ts_key + "_src", "")
 

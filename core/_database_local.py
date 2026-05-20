@@ -11,7 +11,7 @@ import random
 import time
 from pathlib import Path
 
-from core.db_serialize import dumps_db_sorted, loads_db_payload, loads_json_any
+from core.db_serialize import loads_db_payload, loads_json_any
 
 LOCAL_DB_PATH = Path(__file__).resolve().parent.parent / ".streamlit" / "local_data.json"
 LOCAL_DB_DIR = Path(__file__).resolve().parent.parent / ".streamlit" / "data_store"

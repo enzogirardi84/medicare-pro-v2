@@ -12,14 +12,11 @@ Soporta:
 
 from __future__ import annotations
 
-import json
-import locale
-import os
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import streamlit as st
+
+from core.app_logging import log_event
 
 
 # Locale por defecto

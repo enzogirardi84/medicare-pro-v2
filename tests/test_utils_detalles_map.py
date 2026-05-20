@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from core import auth
 from core import utils
+from core.email_2fa import SESSION_KEY as SESSION_KEY_2FA
 
 
 def test_mapa_detalles_pacientes_tolerante():
@@ -23,5 +23,5 @@ def test_asegurar_detalles_pacientes_en_sesion():
     assert ss["detalles_pacientes_db"]["x"]["dni"] == "9"
 
 
-def test_auth_importa_session_key_2fa():
-    assert getattr(auth, "SESSION_KEY", None) == "_mc_email_2fa"
+def test_session_key_2fa_valor_correcto():
+    assert SESSION_KEY_2FA == "_mc_email_2fa"

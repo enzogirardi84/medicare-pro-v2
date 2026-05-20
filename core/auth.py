@@ -29,13 +29,10 @@ from core.password_crypto import (
 )
 from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 from core.email_2fa import (
-    SESSION_KEY,
     iniciar_desafio_login,
     login_email_2fa_enabled,
-    mascarar_email_privado,
     requiere_2fa_correo,
     smtp_config_ok,
-    texto_ayuda_email_2fa_config,
     usuario_email_2fa_valido,
 )
 from core.utils import (
@@ -48,10 +45,7 @@ from core.utils import (
     obtener_pin_usuario,
 )
 from core._auth_helpers import (
-    _auth_set_flash,
-    _auth_pop_flash,
     _auth_loader_markup,
-    _auth_strip_pwreset_url_si_hay_param as _auth_strip_pwreset_url_si_hay_param_impl,
     _auth_strip_pwreset_query_param as _auth_strip_pwreset_query_param_impl,
     _auth_strip_modulo_query_param,
     _buscar_usuario_por_login,

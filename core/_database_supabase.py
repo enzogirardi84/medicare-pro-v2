@@ -89,7 +89,6 @@ def init_supabase():
 supabase = None
 # Inicializar Supabase en un thread con timeout
 import threading as _threading
-import time as _time
 
 _supabase_result = [None]
 _supabase_done = [False]

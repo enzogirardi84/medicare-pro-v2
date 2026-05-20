@@ -125,9 +125,9 @@ class DataValidator:
             extra_fields = set(data.keys()) - known_fields
             if extra_fields:
                 all_valid = False
-                for field in extra_fields:
-                    results[field] = ValidationResult(
-                        field=field,
+                for extra_field in extra_fields:
+                    results[extra_field] = ValidationResult(
+                        field=extra_field,
                         valid=False,
                         value=data[field],
                         sanitized_value=None,

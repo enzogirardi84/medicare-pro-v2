@@ -1,13 +1,11 @@
-"""Logging de aplicación sin datos clínicos ni identificadores de paciente.
-
-
 from __future__ import annotations
+
+"""Logging de aplicación sin datos clínicos ni identificadores de paciente.
 
 Ahora con soporte para logging estructurado JSON y correlation IDs.
 """
 
 import logging
-import sys
 from collections import deque
 from typing import Dict, List, Any
 
@@ -98,6 +96,5 @@ def log_event(kind: str, message: str) -> None:
 
 def get_recent_errors(limit: int = 20) -> List[Dict[str, Any]]:
     """Retorna los últimos errores del buffer de logs."""
-    global _log_buffer
     errors = [log for log in _log_buffer if log.get("level") in ["ERROR", "CRITICAL"]]
     return errors[-limit:] if errors else []
