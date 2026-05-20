@@ -12,6 +12,7 @@ from pathlib import Path
 
 import streamlit as st
 from PIL import Image, ImageOps
+from core.app_logging import log_event
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 MAX_RAW_IMAGE_UPLOAD_MB = 20

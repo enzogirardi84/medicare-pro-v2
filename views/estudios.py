@@ -175,7 +175,6 @@ def render_estudios(paciente_sel, user, rol=None):
                                 }
                                 insert_estudio(datos_sql)
                 except Exception as e:
-                    from core.app_logging import log_event
                     log_event("estudios_sql", f"error_dual_write:{type(e).__name__}")
                 # ----------------------------------
                 

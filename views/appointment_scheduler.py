@@ -14,10 +14,12 @@ Características:
 
 import streamlit as st
 from datetime import datetime, date, timedelta, time
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from dataclasses import dataclass, asdict
 from enum import Enum, auto
 from collections import defaultdict
+
+import pandas as pd
 
 from core.app_logging import log_event
 from core.clinical_reminders import get_reminder_manager, ReminderType, ReminderPriority

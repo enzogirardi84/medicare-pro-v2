@@ -14,7 +14,7 @@ import functools
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Generic
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Generic
 
 import streamlit as st
 

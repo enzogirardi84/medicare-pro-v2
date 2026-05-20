@@ -70,6 +70,7 @@ def _generar_pdf_historia_clinica(paciente_sel):
 
 
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
+    mi_empresa = user.get("empresa", "") if isinstance(user, dict) else ""
     _draft_key = f"_draft_evolucion_{paciente_sel}"
     st.markdown("##### Evolución clínica")
 

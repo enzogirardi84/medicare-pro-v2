@@ -678,7 +678,6 @@ class SmartAppointmentManager:
     
     def render_appointment_manager(self) -> None:
         """Renderiza UI de gestión de turnos en Streamlit."""
-        import streamlit as st
         
         st.header("📅 Gestión Inteligente de Turnos")
         

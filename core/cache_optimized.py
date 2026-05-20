@@ -212,7 +212,7 @@ def get_app_config(tenant_id: Optional[str] = None) -> Dict[str, Any]:
     return CacheManagerOptimized.get_app_config_cached(_tenant_id=tenant_id)
 
 
-class SessionStateManager:
+class PaginationStateHelper:
     """Helper para inicializar y gestionar estado de paginación en session_state."""
 
     @staticmethod
@@ -230,4 +230,4 @@ class SessionStateManager:
 
 def init_pagination(table_name: str = "pacientes") -> Dict[str, Any]:
     """Inicializa estado de paginación para una tabla."""
-    return SessionStateManager.init_pagination_state(prefix=table_name)
+    return PaginationStateHelper.init_pagination_state(prefix=table_name)

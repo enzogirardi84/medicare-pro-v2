@@ -27,7 +27,8 @@ from core.app_session import (
     eliminar_overlay_residual,
     inicializar_db_state_seguro,
 )
-from core.app_theme import aplicar_css_base
+from core.app_theme import aplicar_css_base, apply_professional_theme
+from core.guardado_emergencia import procesar_guardado_pendiente_seguro
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.seo_streamlit import (
     PAGE_TITLE_PUBLIC,
@@ -446,8 +447,7 @@ try:
     _ultimo_backup = st.session_state.get("_ultimo_backup_ts", 0)
     if time.time() - _ultimo_backup > 86400:  # 24h
         st.session_state["_ultimo_backup_ts"] = time.time()
-        from core.database import _db_keys, dumps_db_sorted
-        import json
+        from core.database import _db_keys
         claves = _db_keys()
         data = {k: st.session_state[k] for k in claves if k in st.session_state}
         backup_path = Path(f"backups/auto_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json")
@@ -502,10 +502,9 @@ render_ayuda_atajos()
 # ============================================================
 if st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapido"):
     try:
-        from core.database import _db_keys, dumps_db_sorted
+        from core.database import _db_keys
         claves = _db_keys()
         data = {k: st.session_state[k] for k in claves if k in st.session_state}
-        import json, io
         backup_str = json.dumps(data, indent=2, ensure_ascii=False, default=str)
         st.sidebar.download_button(
             label="Guardar archivo",

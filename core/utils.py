@@ -175,7 +175,6 @@ MAX_RAW_IMAGE_UPLOAD_MB = 20
 
 
 def decodificar_base64_seguro(valor: str) -> bytes:
-    import base64
     try:
         return base64.b64decode(valor) if valor else b""
     except Exception:

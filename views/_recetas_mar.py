@@ -227,7 +227,6 @@ def registrar_administracion_dosis(
     from core.database import _trim_db_list
     _trim_db_list("administracion_med_db", 2000)
     if not batch:
-        from core.database import guardar_datos
         guardar_datos(spinner=True)
 
     detalle_audit = (
@@ -501,7 +500,6 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
             if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, med, slot, "Realizada", "", hora_real_admin=hr or None, batch=True):
                 n += 1
         if n:
-            from core.database import guardar_datos
             guardar_datos(spinner=True)
             queue_toast(f"Listo: {n} administración(es) registrada(s).")
             st.rerun()

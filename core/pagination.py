@@ -382,8 +382,6 @@ def render_pagination_controls(
     Renderiza controles de paginación en Streamlit.
     Retorna la página seleccionada.
     """
-    import streamlit as st
-
     cols = st.columns([1, 2, 1])
 
     with cols[0]:
@@ -408,8 +406,6 @@ def render_lazy_loading_indicator(
     has_more: bool,
 ):
     """Renderiza indicador de lazy loading."""
-    import streamlit as st
-
     if total_count:
         progress = loaded_count / total_count
         st.progress(progress, text=f"Cargados {loaded_count} de {total_count}")

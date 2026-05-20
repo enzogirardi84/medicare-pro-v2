@@ -249,7 +249,6 @@ class PerformanceProfiler:
         except ImportError:
             # Fallback: tracemalloc si está activo, sino 0
             try:
-                import tracemalloc
                 if tracemalloc.is_tracing():
                     current, _ = tracemalloc.get_traced_memory()
                     return current

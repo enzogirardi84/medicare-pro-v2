@@ -15,7 +15,7 @@ import functools
 import logging
 import traceback
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from core.app_logging import log_event
 

@@ -416,7 +416,6 @@ def send_team_message(
 
 def render_notification_badge() -> None:
     """Renderiza badge de notificaciones en Streamlit."""
-    import streamlit as st
     
     try:
         user = st.session_state.get("u_actual", {})

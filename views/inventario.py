@@ -231,7 +231,6 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
-        import pandas as pd
         df_stock = pd.DataFrame(inv_mio).rename(columns={
             "item": "Insumo", "stock": "Stock Actual", "stock_minimo": "Stock Minimo",
             "categoria": "Categoria", "costo_unitario": "Costo Unit.",

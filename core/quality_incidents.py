@@ -13,7 +13,7 @@ Características:
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict, field
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any
 from enum import Enum, auto
 import uuid

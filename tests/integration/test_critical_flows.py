@@ -121,10 +121,10 @@ class TestLoginFlow:
     
     def test_session_initialization(self, mock_session):
         """Verifica inicialización correcta de session state."""
-        from core.cache_optimized import SessionStateManager
+        from core.cache_optimized import PaginationStateHelper
         
         # Inicializar paginación
-        state = SessionStateManager.init_pagination_state("pacientes", session_state=mock_session)
+        state = PaginationStateHelper.init_pagination_state("pacientes", session_state=mock_session)
         
         assert "pacientes_page" in state
         assert state["pacientes_page"] == 1

@@ -27,7 +27,7 @@ Funcionalidades:
 - Interfaz REST FHIR (para integraciones)
 """
 import json
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from enum import Enum
