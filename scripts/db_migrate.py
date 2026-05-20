@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Script de utilidad para manejar migraciones de base de datos.
 

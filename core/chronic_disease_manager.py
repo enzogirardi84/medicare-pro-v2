@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Sistema de Gestión de Enfermedades Crónicas para MediCare Pro.
 

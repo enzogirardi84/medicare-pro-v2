@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Indicador de Estado de Conexión y Sincronización para MediCare.
 Muestra estado Online/Offline, sincronización con Supabase y alertas de datos pendientes.

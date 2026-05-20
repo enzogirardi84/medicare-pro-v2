@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Middleware de Seguridad para MediCare Pro.
 

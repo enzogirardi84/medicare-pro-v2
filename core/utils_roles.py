@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Funciones de permisos, roles y acceso por módulo.
 
 
-from __future__ import annotations
 
 Extraído de core/utils.py.
 """

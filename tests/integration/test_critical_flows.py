@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Tests de Integración para Flujos Críticos de MediCare Pro.
 

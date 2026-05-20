@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Componentes visuales reutilizables para el Asistente Clínico 360°.
 
 
-from __future__ import annotations
 
 Diseño minimalista, estilo médico moderno, con badges, alertas y timeline.
 """

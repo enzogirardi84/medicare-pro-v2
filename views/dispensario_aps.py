@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Módulo APS / Dispensario para MediCare Enterprise PRO.
 
 
-from __future__ import annotations
 
 Ventana general de Atención Primaria de la Salud:
 - Panel diario con métricas y sala de espera

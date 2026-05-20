@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Exportación estructurada de datos clínicos para integración con IA/LLM.
 Fase 4: Preparación para integración de IA avanzada.

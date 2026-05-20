@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Optimizador de Queries SQL para MediCare Pro.
 

@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Floating Action Button (FAB) para MediCare.
 Botón flotante con acciones rápidas y menú expandible.

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Gestión de session_state: login, logout, limpieza segura.
 
 
-from __future__ import annotations
 
 Nunca borra datos clínicos a menos que sea logout explícito.
 """

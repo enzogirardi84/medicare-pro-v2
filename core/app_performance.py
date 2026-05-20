@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Métricas de rendimiento y guardado pendiente consolidado.
 
 
-from __future__ import annotations
 
 Evita que main.py cargue lógica de procesar_guardado_pendiente directamente.
 """

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Fachada de db_sql: re-exporta todas las funciones desde submódulos temáticos.
 
 
-from __future__ import annotations
 
 Submódulos:
   _db_sql_pacientes  — pacientes y empresas

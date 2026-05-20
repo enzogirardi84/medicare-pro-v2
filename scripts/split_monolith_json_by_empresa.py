@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Parte un export monolítico (mismo esquema que medicare_db.datos) en archivos por clínica.
 

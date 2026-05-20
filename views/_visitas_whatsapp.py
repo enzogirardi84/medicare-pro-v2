@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Helpers de WhatsApp para el módulo Visitas y Agenda.
 
 
-from __future__ import annotations
 
 Extraído de views/visitas.py.
 """

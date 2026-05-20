@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """AUTO-FIX - Corrige automaticamente problemas comunes detectados por auto_healing.py
 
-from __future__ import annotations
 
 Ejecutar: python scripts/auto_fix.py
 """

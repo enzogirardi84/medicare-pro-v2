@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Sistema de Caché Optimizado para MediCare Pro.
 

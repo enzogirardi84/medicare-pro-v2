@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """SISTEMA AUTO-HEALING - Detecta y corrige errores automaticamente.
 
-from __future__ import annotations
 
 Ejecutar: python scripts/auto_healing.py
 Recomendado: Programar en GitHub Actions (cada 6h) o Task Scheduler de Windows

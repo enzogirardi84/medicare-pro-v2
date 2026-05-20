@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Sistema de Backup Automatizado para MediCare Pro.
 

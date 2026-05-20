@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Wrapper de Auditoría para Operaciones de Pacientes.
 

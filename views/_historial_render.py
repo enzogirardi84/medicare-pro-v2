@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Helpers de renderizado de secciones del Historial clínico.
 
 
-from __future__ import annotations
 
 Extraído de views/historial.py.
 """

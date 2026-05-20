@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """Operaciones SQL operativas: emergencias, auditoría, turnos, administraciones MAR,
 
-from __future__ import annotations
 
 inventario, facturación, balance, checkins. Extraído de core/db_sql.py."""
 import time

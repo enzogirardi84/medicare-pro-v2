@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Sistema de Permisos RBAC (Role-Based Access Control) Avanzado.
 

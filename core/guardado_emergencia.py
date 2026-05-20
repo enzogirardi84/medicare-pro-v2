@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 SISTEMA DE GUARDADO DE EMERGENCIA
 Guarda datos localmente de forma segura mientras se arregla Supabase

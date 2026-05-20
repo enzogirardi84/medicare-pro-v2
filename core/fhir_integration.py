@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Integración FHIR (Fast Healthcare Interoperability Resources) R4.
 

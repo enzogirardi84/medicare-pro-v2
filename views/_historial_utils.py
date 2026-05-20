@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Helpers de datos, búsqueda y utilidades para el módulo Historial.
 
 
-from __future__ import annotations
 
 Extraído de views/historial.py.
 """

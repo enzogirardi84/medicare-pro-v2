@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Helpers de agenda y datos para el módulo Visitas.
 
 
-from __future__ import annotations
 
 Extraído de views/visitas.py.
 """

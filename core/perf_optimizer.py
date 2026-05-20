@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Utilidades de optimización de rendimiento para MediCare Enterprise PRO.
 Fase 1: Caché agresivo y gestión de session_state.

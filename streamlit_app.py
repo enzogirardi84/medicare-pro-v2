@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Entry point canónico para Streamlit Cloud — MediCare Enterprise PRO.
 

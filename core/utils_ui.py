@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Helpers de UI: imagen, firma, archivos, dataframe, assets, geolocalización.
 
 
-from __future__ import annotations
 
 Extraído de core/utils.py.
 """

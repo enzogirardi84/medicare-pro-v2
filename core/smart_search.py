@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Sistema de Búsqueda Global Inteligente para MediCare.
 Búsqueda con autocompletado, filtros rápidos y resultados destacados.

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Generación del PDF de Respaldo Clínico del paciente (FPDF).
 
 
-from __future__ import annotations
 
 Extraído de core/clinical_exports.py.
 """

@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Encriptación de Datos Sensibles (PHI - Protected Health Information).
 

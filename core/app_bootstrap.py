@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Bootstrap de rutas y configuración base de MediCare PRO.
 
 
-from __future__ import annotations
 
 Aislado de main.py para que el orquestador solo importe y arranque.
 """

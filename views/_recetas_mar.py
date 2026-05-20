@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """MAR hospitalaria (Medication Administration Record), cortina y sábana compacta.
 
 
-from __future__ import annotations
 
 Extraído de views/recetas.py para mantenerlo bajo las 300 líneas.
 Funciones públicas usadas desde recetas.py:

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Funciones de fecha, hora, agenda, horarios de receta e infusión.
 
 
-from __future__ import annotations
 
 Extraído de core/utils.py.
 """

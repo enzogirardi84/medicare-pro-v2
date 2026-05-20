@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 """Exportación a Excel y JSON del historial del paciente.
 
 
-from __future__ import annotations
 
 Extraído de core/clinical_exports.py.
 """

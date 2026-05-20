@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 """
 
-from __future__ import annotations
 
 Sistema de Onboarding Interactivo para MediCare.
 Tour paso a paso, checklist de primeros pasos y tooltips contextuales.
