@@ -12,7 +12,7 @@ import time
 import streamlit as st
 
 from core.app_logging import log_event
-from core.perf_metrics import record_perf, summarize_perf
+from core.perf_metrics import summarize_perf
 
 
 def procesar_guardado_pendiente_seguro() -> bool:

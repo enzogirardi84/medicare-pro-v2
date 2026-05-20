@@ -39,7 +39,6 @@ _SESION_UI_KEYS = [
 
 def limpiar_sesion_app() -> None:
     """Logout seguro: limpia autenticación y UI, NO toca datos clínicos."""
-    from core.database import vaciar_datos_app_en_sesion
     from core.session_auth_cleanup import limpiar_estado_sesion_login_efimero
 
     for clave in _SESION_LOGIN_KEYS:

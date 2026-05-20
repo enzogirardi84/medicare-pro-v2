@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 from enum import Enum
 
 
@@ -433,7 +433,7 @@ class DataValidator:
                     results.append(ValidationResult(
                         is_valid=False,
                         field="talla",
-                        message=f"Altura fuera de rango",
+                        message="Altura fuera de rango",
                         severity=ValidationSeverity.WARNING
                     ))
                 else:
@@ -504,7 +504,7 @@ class DataValidator:
                     results.append(ValidationResult(
                         is_valid=False,
                         field="saturacion_o2",
-                        message=f"Saturación inválida",
+                        message="Saturación inválida",
                         severity=ValidationSeverity.ERROR
                     ))
                 elif sat < 95:

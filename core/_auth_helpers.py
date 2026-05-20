@@ -24,9 +24,6 @@ from core.email_2fa import (
     reenviar_codigo_login,
     verificar_codigo_ingresado,
 )
-from core.password_crypto import (
-    aplicar_hash_tras_login_ok,
-)
 from core.utils import (
     ahora,
     normalizar_usuario_sistema,

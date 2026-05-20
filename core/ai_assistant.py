@@ -13,9 +13,7 @@ NOTA: Este módulo requiere configuración de API keys para LLM providers.
 
 from __future__ import annotations
 
-import json
 import os
-import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 from enum import Enum, auto

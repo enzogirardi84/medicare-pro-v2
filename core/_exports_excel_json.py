@@ -23,7 +23,6 @@ def build_patient_excel_bytes(session_state, paciente_sel):
 
     output = io.BytesIO()
     try:
-        import openpyxl
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
         engine = "openpyxl"
     except Exception as e_openpyxl:

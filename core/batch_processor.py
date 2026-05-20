@@ -12,10 +12,9 @@ from __future__ import annotations
 import concurrent.futures
 import threading
 import time
-import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, TypeVar, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, TypeVar, Tuple
 
 import streamlit as st
 
@@ -446,8 +445,6 @@ class BatchProcessor:
                 if result.status in (BatchStatus.PENDING, BatchStatus.RUNNING)
             ]
 
-
-from core._batch_importer import BulkDataImporter
 
 # Singleton global
 _processor_instance: Optional[BatchProcessor] = None

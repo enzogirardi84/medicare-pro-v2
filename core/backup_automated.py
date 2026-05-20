@@ -23,7 +23,7 @@ import gzip
 import hashlib
 import time
 import threading
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone, timedelta
 from enum import Enum
@@ -34,7 +34,6 @@ import streamlit as st
 
 from core.app_logging import log_event
 from core.config_secure import get_settings
-from core.security_middleware import InputSanitizer
 
 
 class BackupStatus(Enum):

@@ -23,13 +23,10 @@ Características:
 - Integración con signos vitales
 - Reportes para auditoría de calidad
 """
-import json
 from typing import Dict, Any, List, Optional, Tuple
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone, timedelta
-from enum import Enum, auto
-from collections import defaultdict
-import statistics
+from enum import Enum
 
 import streamlit as st
 

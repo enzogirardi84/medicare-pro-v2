@@ -4,19 +4,14 @@ Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
 from __future__ import annotations
 
-import html
-from html import escape as html_escape
 from importlib import import_module
-from urllib.parse import quote_plus
 
 import streamlit as st
 
 from core.app_logging import log_event
-from core.app_mobile import cliente_es_movil_probable
 from core.nav_helpers import (
     categorias_con_modulos_en_menu,
     get_categorias_modulos,
-    modulos_en_categoria,
     obtener_subgrupos_categoria,
 )
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui

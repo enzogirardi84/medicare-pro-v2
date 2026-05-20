@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.export_utils import safe_text
 from core.utils import decodificar_base64_seguro, mapa_detalles_pacientes
 from core.app_logging import log_event
 

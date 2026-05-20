@@ -178,7 +178,7 @@ def render_user_flags(flags: FeatureFlags):
                 
                 if current != user_flags.get(flag_name):
                     # Actualizar en storage
-                    st.success(f"✅ Actualizado")
+                    st.success("✅ Actualizado")
 
 
 def render_flags_analytics():

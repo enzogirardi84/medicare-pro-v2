@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-
 import altair as alt
-import pandas as pd
 import streamlit as st
-
-from core.view_helpers import bloque_estado_vacio
 
 
 # Paleta semántica unificada

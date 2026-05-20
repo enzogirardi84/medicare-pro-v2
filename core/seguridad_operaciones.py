@@ -38,7 +38,7 @@ def confirmar_antes_de_eliminar(clave_db: str, item_idx: int, paciente_sel: str,
                                  on_confirm: Optional[Callable] = None) -> bool:
     """Widget de confirmacion para eliminar items."""
     key = f"_del_confirm_{clave_db}_{item_idx}"
-    if st.button(f"Eliminar", key=f"_del_btn_{clave_db}_{item_idx}", width="content"):
+    if st.button("Eliminar", key=f"_del_btn_{clave_db}_{item_idx}", width="content"):
         st.session_state[key] = True
 
     if st.session_state.get(key):

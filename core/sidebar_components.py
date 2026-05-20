@@ -23,7 +23,7 @@ from core.utils_pacientes import estado_pacientes_sql, set_paciente_actual
 
 def sidebar_patient_card(paciente_sel, detalles):
     with st.container(border=True):
-        st.write(f"**Paciente activo**")
+        st.write("**Paciente activo**")
         st.write(f"{escape(paciente_sel)}")
         st.caption(
             f"DNI: {escape(detalles.get('dni', 'S/D'))}  |  "

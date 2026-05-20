@@ -12,18 +12,16 @@ Características:
 
 from __future__ import annotations
 
-import gzip
 import hashlib
 import json
 import os
 import shutil
-import sqlite3
 import subprocess
 import tarfile
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional
 from enum import Enum, auto
 
 from core.app_logging import log_event

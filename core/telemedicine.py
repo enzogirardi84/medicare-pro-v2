@@ -598,7 +598,7 @@ class TelemedicineManager:
             )
             
             if consultation:
-                st.success(f"✅ Consulta virtual agendada")
+                st.success("✅ Consulta virtual agendada")
                 st.info(f"🔗 Link de acceso: {consultation.video_room_url}")
     
     def _render_patient_virtual_appointments(self, patient_id: str):
