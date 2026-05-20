@@ -1,7 +1,6 @@
 """Chatbot IA - Asistente virtual con datos del paciente, exportacion y navegacion inteligente."""
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime
 from html import escape

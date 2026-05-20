@@ -1,13 +1,12 @@
-"""
-
 from __future__ import annotations
+
+"""
 
 PANEL DE DIAGNOSTICO DEL SISTEMA
 Vista exclusiva para superadmin: verifica Supabase, tablas SQL, datos locales, errores,
 estado del sistema, logs, memoria y configuración.
 """
 import importlib.util
-import json
 import time
 from datetime import datetime
 from pathlib import Path

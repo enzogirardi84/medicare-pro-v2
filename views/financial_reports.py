@@ -1,6 +1,6 @@
-"""
-
 from __future__ import annotations
+
+"""
 
 Sistema de Reportes Financieros y Analíticos para Medicare Pro.
 

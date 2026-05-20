@@ -305,15 +305,19 @@ class DrugInteractionMonitor:
                 data = st.session_state["interaction_alerts"]
                 if isinstance(data, dict):
                     self._alerts = data
-            except Exception:
-                pass
+            except Exception as _e_ia:
+                log_event("drug_interactions", f"load_alerts_fail:{type(_e_ia).__name__}")
+                st.session_state["interaction_alerts"] = {}
+                data = {}
         
         if "dismissed_interactions" in st.session_state:
             try:
                 dismissed = st.session_state["dismissed_interactions"]
                 self._dismissed_combinations = set(tuple(x) for x in dismissed)
-            except Exception:
-                pass
+            except Exception as _e_di:
+                log_event("drug_interactions", f"load_dismissed_fail:{type(_e_di).__name__}")
+                st.session_state["dismissed_interactions"] = {}
+                dismissed_data = {}
     
     def _save_data(self):
         """Guarda datos."""

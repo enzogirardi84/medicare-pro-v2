@@ -1,6 +1,6 @@
-"""
-
 from __future__ import annotations
+
+"""
 
 VISTA CLINICA DE EMERGENCIA
 Funciona 100% local, no depende de Supabase

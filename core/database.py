@@ -640,8 +640,8 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
             if ok and st.session_state.get("u_actual"):
                 from core.sync_utils import sync_todo
                 sync_todo(st.session_state)
-        except Exception:
-            pass
+        except Exception as _e_sync:
+            log_event("db", f"sync_todo_fallo:{type(_e_sync).__name__}:{_e_sync}")
         try:
             from core.perf_metrics import record_perf
 
@@ -688,9 +688,11 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
                 from core._patient_index import invalidate_index
                 for _ik in list(st.session_state.keys()):
                     if _ik.startswith("_idx_ts_"):
-                        st.session_state[_ik] = 0.0
-            except Exception:
-                pass
+                        _db_key = _ik.replace("_idx_ts_", "")
+                        if _db_key:
+                            invalidate_index(_db_key)
+            except Exception as _e_idx:
+                log_event("db", f"index_invalidation_fail:{type(_e_idx).__name__}")
     ctx = st.spinner("Guardando cambios...") if mostrar else nullcontext()
     try:
         with ctx:

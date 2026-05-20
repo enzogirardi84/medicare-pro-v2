@@ -1,6 +1,6 @@
-"""
-
 from __future__ import annotations
+
+"""
 
 Sistema de Agendamiento de Turnos/Citas para Medicare Pro.
 
