@@ -55,9 +55,13 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             "Responde de forma clara, concisa y profesional en el mismo idioma de la pregunta."
         )
         prompt = f"Contexto completo del sistema:\n{contexto}\n\nPregunta del usuario:\n{consulta}"
-        if provider == "openai":
+        if provider == "openai" or provider == "deepseek":
             from openai import OpenAI
-            resp = OpenAI(api_key=api_key, timeout=20).chat.completions.create(
+            kwargs = {"api_key": api_key, "timeout": 20}
+            if provider == "deepseek":
+                kwargs["base_url"] = "https://api.deepseek.com/v1"
+                model = model if model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-chat"
+            resp = OpenAI(**kwargs).chat.completions.create(
                 model=model, messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
                 max_tokens=800, temperature=0.2
             )

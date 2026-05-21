@@ -23,7 +23,7 @@ from core.app_logging import log_event
 
 # Configuración de providers de LLM
 # Fuentes (en orden de prioridad): session_state > st.secrets > env vars > defaults
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "none")  # openai, anthropic, local, none
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "none")  # openai, anthropic, deepseek, local, none
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4")
 LLM_ENABLED = LLM_PROVIDER != "none" and LLM_API_KEY != ""
@@ -65,7 +65,7 @@ def _get_llm_config():
                 if isinstance(_settings, dict):
                     ui_provider = _settings.get("integ_ai_provider", "")
                     if ui_provider and ui_provider != "Ninguno":
-                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "Local (Ollama)": "local"}.get(ui_provider, provider)
+                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "DeepSeek": "deepseek", "Local (Ollama)": "local"}.get(ui_provider, provider)
                     ui_key = _settings.get("integ_ai_key", "")
                     if isinstance(ui_key, str) and ui_key:
                         api_key = ui_key
@@ -327,6 +327,8 @@ NOTA MEJORADA:"""
             return self._call_openai(prompt, max_tokens, temperature)
         elif self.provider == "anthropic":
             return self._call_anthropic(prompt, max_tokens, temperature)
+        elif self.provider == "deepseek":
+            return self._call_deepseek(prompt, max_tokens, temperature)
         elif self.provider == "local":
             return self._call_local(prompt, max_tokens, temperature)
         else:
@@ -383,6 +385,31 @@ NOTA MEJORADA:"""
             log_event("ai_error", f"Anthropic API error: {e}")
             raise
     
+    def _call_deepseek(self, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Llama API de DeepSeek (compatible con OpenAI)."""
+        self._ensure_config()
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://api.deepseek.com/v1",
+                timeout=30.0,
+            )
+            model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-chat"
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "Eres un asistente médico profesional."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            log_event("ai_error", f"DeepSeek API error: {e}")
+            raise
+
     def _call_local(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama modelo local (ej: Ollama, LM Studio)."""
         self._ensure_config()

@@ -339,7 +339,7 @@ def render_integration_settings(is_admin: bool):
     )
     
     with st.expander("Configuración de AI Provider"):
-        _ai_providers = ["OpenAI", "Anthropic", "Local (Ollama)", "Ninguno"]
+        _ai_providers = ["OpenAI", "Anthropic", "DeepSeek", "Local (Ollama)", "Ninguno"]
         _s_ai_provider = _s.get("integ_ai_provider", "Ninguno")
         ai_provider = st.selectbox(
             "Provider",
