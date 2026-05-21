@@ -119,13 +119,13 @@ def render_pediatria(paciente_sel, user):
         penultimo_ped = ped_ord[-2] if len(ped_ord) >= 2 else None
 
         st.markdown("##### Resumen Actual")
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2 = st.columns(2)
         _delta_peso = round(float(ultimo_ped.get('peso', 0) or 0) - float(penultimo_ped.get('peso', 0) or 0), 2) if penultimo_ped else None
         _delta_talla = round(float(ultimo_ped.get('talla', 0) or 0) - float(penultimo_ped.get('talla', 0) or 0), 1) if penultimo_ped else None
         c1.metric("Peso", f"{ultimo_ped.get('peso', '-')} kg", delta=f"{_delta_peso:+.2f} kg" if _delta_peso is not None else None)
-        c2.metric("Talla", f"{ultimo_ped.get('talla', '-')} cm", delta=f"{_delta_talla:+.1f} cm" if _delta_talla is not None else None)
-        c3.metric("IMC", f"{ultimo_ped.get('imc', '-')}")
-        c4.metric("Percentil", ultimo_ped.get("percentil_sug", "-"))
+        c1.metric("Talla", f"{ultimo_ped.get('talla', '-')} cm", delta=f"{_delta_talla:+.1f} cm" if _delta_talla is not None else None)
+        c2.metric("IMC", f"{ultimo_ped.get('imc', '-')}")
+        c2.metric("Percentil", ultimo_ped.get("percentil_sug", "-"))
 
         # ── Alertas de percentil ─────────────────────────────────────────
         _PERC_CRITICO = {"P3 - Bajo peso"}

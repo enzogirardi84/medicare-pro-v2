@@ -112,11 +112,11 @@ def render_balance(paciente_sel, user):
         egr_hoy = sum((x.get("egresos") or 0) for x in blp_hoy)
         bal_hoy = sum((x.get("balance") or 0) for x in blp_hoy)
         st.markdown(f"##### Resumen del día — {hoy_str}")
-        _d1, _d2, _d3, _d4 = st.columns(4)
+        _d1, _d2 = st.columns(2)
         _d1.metric("Turnos hoy", len(blp_hoy))
-        _d2.metric("Ingresos hoy", f"{ing_hoy} ml")
-        _d3.metric("Egresos hoy", f"{egr_hoy} ml")
-        _d4.metric(
+        _d1.metric("Ingresos hoy", f"{ing_hoy} ml")
+        _d2.metric("Egresos hoy", f"{egr_hoy} ml")
+        _d2.metric(
             "Balance hoy",
             f"{bal_hoy:+} ml",
             delta="Retención" if bal_hoy > 500 else ("Pérdida" if bal_hoy < -500 else "Neutro"),
@@ -154,7 +154,7 @@ def render_balance(paciente_sel, user):
     penultimo = df_temp["balance"].iloc[-2] if len(df_temp) >= 2 else None
     _delta_shift = int(ultimo) - int(penultimo) if penultimo is not None else None
 
-    col_met1, col_met2, col_met3, col_met4 = st.columns(4)
+    col_met1, col_met2 = st.columns(2)
     col_met1.metric(
         "Ultimo shift",
         f"{ultimo:+} ml",
@@ -163,9 +163,9 @@ def render_balance(paciente_sel, user):
     )
     _ult_ing = int(df_temp["ingresos"].iloc[-1]) if not df_temp.empty else 0
     _ult_egr = int(df_temp["egresos"].iloc[-1]) if not df_temp.empty else 0
-    col_met2.metric("Ingresos último turno", f"{_ult_ing} ml")
-    col_met3.metric("Egresos último turno", f"{_ult_egr} ml")
-    col_met4.metric("Balance neto (ult. 3 turnos)", f"{neto_3:+} ml")
+    col_met1.metric("Ingresos último turno", f"{_ult_ing} ml")
+    col_met2.metric("Egresos último turno", f"{_ult_egr} ml")
+    col_met2.metric("Balance neto (ult. 3 turnos)", f"{neto_3:+} ml")
 
     if len(df_temp) >= 2:
         st.markdown("#### Gráficos")

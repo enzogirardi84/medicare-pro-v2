@@ -94,11 +94,13 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         if x.get("profesional") == nombre_usuario and x["estado_calc"] in {"Pendiente", "En curso", "Vencida"}
     )
 
-    col_r1, col_r2, col_r3, col_r4 = st.columns(4)
-    col_r1.metric("Pendientes", resumen["pendientes"])
-    col_r2.metric("Vencidas", resumen["vencidas"])
-    col_r3.metric("Proximas 48h", resumen["proximas"])
-    col_r4.metric("Carga de tu agenda", carga_profesional)
+    col_r1, col_r2 = st.columns(2)
+    with col_r1:
+        st.metric("Pendientes", resumen["pendientes"])
+        st.metric("Vencidas", resumen["vencidas"])
+    with col_r2:
+        st.metric("Proximas 48h", resumen["proximas"])
+        st.metric("Carga de tu agenda", carga_profesional)
 
     st.caption(
         "Pendientes / vencidas: turnos activos segun fecha y estado. Proximas 48h: ventana corta para coordinar. "

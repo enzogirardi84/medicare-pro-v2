@@ -293,11 +293,11 @@ def render_rrhh(mi_empresa, rol, user):
     df_egresos = df_fichajes[df_fichajes["Accion"] == "EGRESO"]
     total_horas = sum(_parsear_duracion(t) for t in df_egresos["Tiempo Trabajado"])
 
-    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    col_m1, col_m2 = st.columns(2)
     col_m1.metric("Total Fichajes", len(df_fichajes))
-    col_m2.metric("Horas Trabajadas", f"{total_horas:.1f} hs")
-    col_m3.metric("Profesionales", df_fichajes["Profesional"].nunique())
-    col_m4.metric("Visitas Completadas", len(df_egresos))
+    col_m1.metric("Horas Trabajadas", f"{total_horas:.1f} hs")
+    col_m2.metric("Profesionales", df_fichajes["Profesional"].nunique())
+    col_m2.metric("Visitas Completadas", len(df_egresos))
 
     seccion = st.radio("Vista", ["Historico", "Resumen", "Gestion"], horizontal=False, label_visibility="collapsed")
 

@@ -255,7 +255,7 @@ def render_audit_tab():
         
         # Verificar integridad
         st.divider()
-        if st.button("🔐 Verificar Integridad de Cadena"):
+        if st.button("🔐 Verificar Integridad de Cadena", use_container_width=True):
             is_valid = trail.verify_chain()
             if is_valid:
                 st.success("✅ Cadena de auditoría válida. No se detectaron modificaciones.")

@@ -98,12 +98,12 @@ def render_inventario(mi_empresa):
 
     # ── Métricas globales ──────────────────────────────────────
     if inv_mio:
-        cols = st.columns(5)
+        cols = st.columns(3)
         cols[0].metric("Items en inventario", len(inv_mio))
-        cols[1].metric("🔴 Stock crítico", len(stock_critico), help="Segun stock_minimo de cada item o ≤10 por defecto")
-        cols[2].metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock_minimo o ≤25 por defecto")
-        cols[3].metric("Unidades totales", total_unidades)
-        cols[4].metric("Valor total", f"${_valor_total:,.0f}".replace(",", ".") if _valor_total > 0 else "—", help="Suma stock × costo_unitario")
+        cols[0].metric("🔴 Stock crítico", len(stock_critico), help="Segun stock_minimo de cada item o ≤10 por defecto")
+        cols[1].metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock_minimo o ≤25 por defecto")
+        cols[1].metric("Unidades totales", total_unidades)
+        cols[2].metric("Valor total", f"${_valor_total:,.0f}".replace(",", ".") if _valor_total > 0 else "—", help="Suma stock × costo_unitario")
 
     # ── Consumo últimos 7 días ─────────────────────────────────
     if _cons_7d:
@@ -320,7 +320,7 @@ def render_inventario(mi_empresa):
         if _selected:
             _ajuste = st.number_input("Cantidad a sumar/restar", value=0, step=1, key="batch_inv_qty")
             _razon = st.text_input("Motivo del ajuste", placeholder="Ej: inventario físico", key="batch_inv_reason")
-            if st.button("✅ Aplicar ajuste masivo", type="primary", key="batch_inv_apply"):
+            if st.button("✅ Aplicar ajuste masivo", type="primary", key="batch_inv_apply", use_container_width=True):
                 if _razon.strip():
                     _count = 0
                     for _inv in inv_mio:
@@ -343,7 +343,7 @@ def render_inventario(mi_empresa):
             _s_act = _item_data.get("stock", 0)
             _s_min = int(_item_data.get("stock_minimo", 0) or 0)
             _costo = float(_item_data.get("costo_unitario", 0) or 0)
-            c_aj1, c_aj2, c_aj3, c_aj4, c_aj5 = st.columns([1, 1, 1, 1, 1])
+            c_aj1, c_aj2, c_aj3 = st.columns([1, 1, 1])
             nuevo_stock = c_aj1.number_input("Stock real", min_value=0, value=_s_act, key="new_stock")
             nuevo_min = c_aj2.number_input("Stock mínimo", min_value=0, value=_s_min, key="new_min")
             nuevo_costo = c_aj3.number_input("Costo unitario $", min_value=0.0, value=_costo, step=0.5, format="%.2f", key="new_costo")
@@ -352,10 +352,11 @@ def render_inventario(mi_empresa):
                 from core._insumos_map import stock_minimo_sugerido
                 _sug_min = stock_minimo_sugerido(item_a_editar, mi_empresa)
                 if _sug_min > 0:
-                    c_aj4.caption(f"💡 ≈**{_sug_min}** uds. según consumos")
+                    st.caption(f"💡 ≈**{_sug_min}** uds. según consumos")
             except Exception:
                 pass
-            if c_aj5.button("Guardar cambios", width='stretch', type="primary"):
+            c_save_col, _ = st.columns([1, 1])
+            if c_save_col.button("Guardar cambios", width='stretch', type="primary"):
                 cambios = {"stock_actual": nuevo_stock, "stock_minimo": nuevo_min, "costo_unitario": nuevo_costo}
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)

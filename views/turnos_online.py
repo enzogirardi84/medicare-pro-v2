@@ -49,11 +49,11 @@ def render_turnos_online(mi_empresa, rol):
     # FILTROS
     # ================================================================
     with st.expander("Filtros", expanded=True):
-        cols = st.columns(4)
+        cols = st.columns(2)
         filtro_prof = cols[0].selectbox("Profesional", ["Todos"] + profesionales)
-        filtro_estado = cols[1].selectbox("Estado", ["Todos", "Disponible", "Reservado", "Cancelado"])
-        filtro_desde = cols[2].date_input("Desde", _today())
-        filtro_hasta = cols[3].date_input("Hasta", _today() + timedelta(days=30))
+        filtro_estado = cols[0].selectbox("Estado", ["Todos", "Disponible", "Reservado", "Cancelado"])
+        filtro_desde = cols[1].date_input("Desde", _today())
+        filtro_hasta = cols[1].date_input("Hasta", _today() + timedelta(days=30))
 
     # Aplicar filtros
     turnos_filtrados = []
@@ -181,7 +181,7 @@ def render_turnos_online(mi_empresa, rol):
                     if st.session_state.get(f"_edit_slot_{i}"):
                         nuevo_prof = st.text_input("Profesional", t['profesional'], key=f"ep_{i}")
                         nuevo_horario = st.selectbox("Horario", HORARIOS, index=HORARIOS.index(t['horario']) if t['horario'] in HORARIOS else 0, key=f"eh_{i}")
-                        if st.button("Guardar cambios", key=f"sv_{i}"):
+                        if st.button("Guardar cambios", use_container_width=True, key=f"sv_{i}"):
                             t['profesional'] = nuevo_prof
                             t['horario'] = nuevo_horario
                             guardar_datos(spinner=True)
@@ -198,12 +198,12 @@ def render_turnos_online(mi_empresa, rol):
 
                     # Reprogramar (reservados)
                     if est == "Reservado":
-                        if st.button("Reprogramar", key=f"rep_{i}"):
+                        if st.button("Reprogramar", use_container_width=True, key=f"rep_{i}"):
                             st.session_state[f"_rep_{i}"] = True
                         if st.session_state.get(f"_rep_{i}"):
                             nueva_fecha = st.date_input("Nueva fecha", _today(), key=f"rf_{i}")
                             nuevo_horario = st.selectbox("Nuevo horario", HORARIOS, key=f"rh_{i}")
-                            if st.button("Confirmar reprogramacion", key=f"cf_{i}"):
+                            if st.button("Confirmar reprogramacion", use_container_width=True, key=f"cf_{i}"):
                                 t['fecha'] = nueva_fecha.strftime('%d/%m/%Y')
                                 t['horario'] = nuevo_horario
                                 guardar_datos(spinner=True)
@@ -213,10 +213,10 @@ def render_turnos_online(mi_empresa, rol):
 
                     # Cancelar con confirmacion
                     if est == "Reservado":
-                        if st.button("Cancelar turno", key=f"cn_{i}"):
+                        if st.button("Cancelar turno", use_container_width=True, key=f"cn_{i}"):
                             st.session_state[f"_cnf_{i}"] = True
                         if st.session_state.get(f"_cnf_{i}"):
-                            if st.button(f"Confirmar cancelacion de {t['paciente']}", key=f"cnf_{i}"):
+                            if st.button(f"Confirmar cancelacion de {t['paciente']}", use_container_width=True, key=f"cnf_{i}"):
                                 t['estado'] = 'Cancelado'
                                 t['paciente'] = ''
                                 guardar_datos(spinner=True)
@@ -234,11 +234,11 @@ def render_turnos_online(mi_empresa, rol):
             reservados = sum(1 for t in db if t.get('estado') == 'Reservado')
             cancelados = sum(1 for t in db if t.get('estado') == 'Cancelado')
 
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2 = st.columns(2)
             c1.metric("Total slots", total)
-            c2.metric("Disponibles", disponibles)
-            c3.metric("Reservados", reservados)
-            c4.metric("Cancelados", cancelados)
+            c1.metric("Disponibles", disponibles)
+            c2.metric("Reservados", reservados)
+            c2.metric("Cancelados", cancelados)
 
             st.markdown("##### Todos los turnos")
             df = pd.DataFrame(db)

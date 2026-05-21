@@ -434,7 +434,7 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
     
     notas = st.text_area("Notas internas (opcional)")
     
-    if st.button("📅 Agendar Turno", width='stretch', type="primary"):
+    if st.button("📅 Agendar Turno", use_container_width=True, type="primary"):
         if not hora:
             log_event("appointments", "error: Seleccione un horario disponible")
             st.error("❌ Seleccione un horario disponible")
@@ -524,14 +524,14 @@ def render_daily_agenda(scheduler: AppointmentScheduler):
                     
                     with col_c:
                         if turno.status == AppointmentStatus.SCHEDULED:
-                            if st.button("✅ Confirmar", key=f"conf_{turno.id}"):
+                            if st.button("✅ Confirmar", use_container_width=True, key=f"conf_{turno.id}"):
                                 scheduler.update_status(turno.id, AppointmentStatus.CONFIRMED)
                                 st.rerun()
                         
                         if turno.status in [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]:
-                            if st.button("❌ Cancelar", key=f"canc_{turno.id}"):
+                            if st.button("❌ Cancelar", use_container_width=True, key=f"canc_{turno.id}"):
                                 motivo_cancel = st.text_input("Motivo", key=f"mot_{turno.id}")
-                                if st.button("Confirmar Cancelación", key=f"cf_{turno.id}"):
+                                if st.button("Confirmar Cancelación", use_container_width=True, key=f"cf_{turno.id}"):
                                     scheduler.cancel_appointment(turno.id, motivo_cancel)
                                     st.rerun()
                     

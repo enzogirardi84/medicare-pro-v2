@@ -111,11 +111,11 @@ def render_dashboard(mi_empresa, rol):
                 n_susp += 1
         n_act = n_clin - n_susp
         st.markdown("##### Red de clinicas (panel global)")
-        dc1, dc2, dc3, dc4 = st.columns(4)
+        dc1, dc2 = st.columns(2)
         dc1.metric("Clinicas registradas", n_clin)
-        dc2.metric("Activas", n_act)
-        dc3.metric("Suspendidas", n_susp)
-        with dc4:
+        dc1.metric("Activas", n_act)
+        dc2.metric("Suspendidas", n_susp)
+        with dc2:
             st.caption("Gestion detallada, suspension logica y CSV en el modulo **Clinicas (panel global)**.")
         st.divider()
 
@@ -166,7 +166,7 @@ def render_dashboard(mi_empresa, rol):
         _pac = st.session_state.get("paciente_actual")
         if _pac:
             st.markdown("### ⚡ Acciones rápidas")
-            _cols = st.columns(5)
+            _cols = st.columns(3)
             _acciones = [
                 ("📝", "Evolución", "Evolucion"),
                 ("❤️", "Signos vitales", "Clinica"),
@@ -176,8 +176,8 @@ def render_dashboard(mi_empresa, rol):
             _rol = str(st.session_state.get("u_actual", {}).get("rol", "")).lower()
             if _rol in ("superadmin", "admin", "administrativo"):
                 _acciones.append(("💰", "Caja / Facturar", "Caja"))
-            for _col, (_ico, _txt, _mod) in zip(_cols, _acciones):
-                with _col:
+            for i, (_ico, _txt, _mod) in enumerate(_acciones):
+                with _cols[i % 3]:
                     if st.button(f"{_ico} {_txt}", key=f"da_{_mod}", use_container_width=True):
                         st.session_state["modulo_actual"] = _mod
                         st.session_state["modulo_anterior"] = "Dashboard"
@@ -235,11 +235,11 @@ def render_dashboard(mi_empresa, rol):
                 if f.get("estado", "").startswith("Pendiente") and f.get("empresa") == _emp
             ]
             with st.expander("📋 Resumen de turno (hoy)", expanded=False):
-                ca, cb, cc, cd = st.columns(4)
+                ca, cb = st.columns(2)
                 ca.metric("💊 Dosis administradas", len(_ads_hoy))
-                cb.metric("📝 Evoluciones registradas", len(_evos_hoy))
-                cc.metric("📦 Insumos consumidos", sum(int(c.get("cantidad", 0)) for c in _consumos_hoy))
-                cd.metric("⏳ Pendientes facturar", len(_pend_fact))
+                ca.metric("📝 Evoluciones registradas", len(_evos_hoy))
+                cb.metric("📦 Insumos consumidos", sum(int(c.get("cantidad", 0)) for c in _consumos_hoy))
+                cb.metric("⏳ Pendientes facturar", len(_pend_fact))
         except Exception:
             pass
 

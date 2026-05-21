@@ -460,7 +460,7 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
         ]
         for i, (label, acc) in enumerate(acciones):
             with cols[i % 4]:
-                if st.button(label, key=f"act_{i}", width="stretch"):
+                if st.button(label, use_container_width=True, key=f"act_{i}"):
                     st.session_state["chat_act"] = acc
                     st.rerun()
 

@@ -113,10 +113,11 @@ def render_historial(paciente_sel: str, user=None) -> None:
     ultimo_base = _ultimo_evento_global(secciones_base)
 
     # ── Filtros globales compactos ───────────────────────────────────────
-    col_filt1, col_filt2, col_filt3, col_filt4 = st.columns([1.2, 1.2, 1, 1])
+    col_filt1, col_filt2 = st.columns(2)
     opcion_limite = col_filt1.selectbox("Limite por seccion", list(LIMITES_REGISTROS.keys()), label_visibility="collapsed")
     limite = LIMITES_REGISTROS.get(opcion_limite, 200)
     solo_con_datos = col_filt2.checkbox("Solo secciones con datos", value=True, key=f"hist_solo_datos_{paciente_sel}")
+    col_filt3, col_filt4 = st.columns(2)
     limite_timeline = col_filt3.selectbox(
         "Eventos timeline",
         [15, 25, 40, 60],
@@ -151,7 +152,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
     with tab_r:
         render_resumen_clinico(paciente_sel, detalles, secciones_base, total_registros_base, ultimo_base)
         st.markdown("##### Exportar historia clinica")
-        r1, r2, r3, r4 = st.columns([1.35, 1.0, 1.0, 0.95])
+        r1, r2 = st.columns(2)
         _render_lazy_download(
             r1,
             key_base=f"historial_pdf_{paciente_sel}",
@@ -172,6 +173,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             unavailable_message="Excel no disponible en este equipo.",
         )
+        r3, r4 = st.columns(2)
         _render_lazy_download(
             r3,
             key_base=f"historial_respaldo_{paciente_sel}",

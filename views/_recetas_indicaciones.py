@@ -89,16 +89,12 @@ def resumen_medicacion_activa(activas: list):
                 label = "hoy" if dias == 0 else f"en {dias}d"
                 st.warning(f"🟡 Vence {label}: **{nom}**")
 
-        cols = st.columns([3, 2, 2, 1])
+        cols = st.columns([3, 2])
         cols[0].caption("**Medicación**")
-        cols[1].caption("**Frecuencia**")
-        cols[2].caption("**Médico**")
-        cols[3].caption("**Días**")
+        cols[1].caption("**Frecuencia / Médico / Días**")
         for r in activas[:12]:
-            cols = st.columns([3, 2, 2, 1])
+            cols = st.columns([3, 2])
             cols[0].write(texto_indicacion_visible(r))
-            cols[1].write(r.get("frecuencia") or r.get("via") or "—")
-            cols[2].write((r.get("medico_nombre") or r.get("profesional_estado") or "—")[:24])
-            cols[3].write(str(r.get("dias_duracion") or "—"))
+            cols[1].write(f"{r.get('frecuencia') or r.get('via') or '—'} | {(r.get('medico_nombre') or r.get('profesional_estado') or '—')[:24]} | {str(r.get('dias_duracion') or '—')}")
         if len(activas) > 12:
             st.caption(f"... y {len(activas) - 12} más.")

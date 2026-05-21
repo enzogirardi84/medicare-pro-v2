@@ -280,12 +280,12 @@ def render_estudios(paciente_sel, user, rol=None):
     elif pendientes:
         st.warning(f"🟡 {len(pendientes)} estudio(s) sin resultado cargado.")
 
-    _c1, _c2, _c3, _c4 = st.columns(4)
+    _c1, _c2 = st.columns(2)
     _c1.metric("Total estudios", len(estudios_pac))
-    _c2.metric("Sin resultado", len(pendientes))
-    _c3.metric("Críticos >7d", len(criticos_sin_respuesta))
+    _c1.metric("Sin resultado", len(pendientes))
+    _c2.metric("Críticos >7d", len(criticos_sin_respuesta))
     _tipos_uniq = len({e.get("tipo", "") for e in estudios_pac if e.get("tipo")})
-    _c4.metric("Tipos distintos", _tipos_uniq)
+    _c2.metric("Tipos distintos", _tipos_uniq)
 
     st.divider()
     st.markdown("#### Archivo de Estudios del Paciente")
@@ -405,6 +405,7 @@ def render_estudios(paciente_sel, user, rol=None):
                             key=f"del_est_{est['fecha']}_{idx}",
                             disabled=not cf,
                             type="secondary",
+                            use_container_width=True,
                         ):
                             st.session_state["estudios_db"] = [
                                 e for e in st.session_state["estudios_db"]

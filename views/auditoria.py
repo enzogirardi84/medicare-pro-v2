@@ -233,7 +233,7 @@ def render_auditoria(mi_empresa, user):
             )
 
         pdf_key = f"audit_logs_pdf_{mi_empresa}_{user.get('nombre','')}_{usuario_filtro}_{str(buscar_log or '').strip().lower()}"
-        if st.button("Preparar auditoría PDF", width='stretch'):
+        if st.button("Preparar auditoría PDF", use_container_width=True):
             pdf_bytes = generar_pdf_auditoria_logs(df_filtrado, mi_empresa)
             st.session_state[pdf_key] = pdf_bytes
         if st.session_state.get(pdf_key):
@@ -329,14 +329,14 @@ def render_auditoria(mi_empresa, user):
     df_chk_raw["hora"] = df_chk_raw["fecha_dt"].dt.hour
     df_valida = df_chk_raw.dropna(subset=["fecha_dt"]).reset_index(drop=True)
 
-    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    col_m1, col_m2 = st.columns(2)
     _dias_unicos = df_valida["dia"].nunique() if not df_valida.empty else 0
     col_m1.metric("Total fichadas", len(df_valida))
-    col_m2.metric("Dias con actividad", _dias_unicos)
+    col_m1.metric("Dias con actividad", _dias_unicos)
     _top_pac = df_valida["paciente"].value_counts().idxmax() if not df_valida.empty and "paciente" in df_valida.columns else "-"
-    col_m3.metric("Paciente mas visitado", _top_pac)
+    col_m2.metric("Paciente mas visitado", _top_pac)
     _hora_pico = df_valida["hora"].value_counts().idxmax() if not df_valida.empty else "-"
-    col_m4.metric("Hora pico", f"{_hora_pico}:00" if _hora_pico != "-" else "-")
+    col_m2.metric("Hora pico", f"{_hora_pico}:00" if _hora_pico != "-" else "-")
 
     with st.expander("Distribucion horaria", expanded=False):
         if not df_valida.empty:

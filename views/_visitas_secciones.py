@@ -432,7 +432,7 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             )
             tv = st.text_area("Plantilla con visita concreta (fecha y hora)", value=emp_tpl.get("visita", ""), height=140, key=f"wpp_tpl_visita_edit_{mi_empresa}")
             tg = st.text_area("Plantilla sin fecha puntual (coordinacion general)", value=emp_tpl.get("general", ""), height=120, key=f"wpp_tpl_general_edit_{mi_empresa}")
-            if st.button("Guardar plantillas en la clinica", key=f"wpp_tpl_save_{mi_empresa}", type="primary"):
+            if st.button("Guardar plantillas en la clinica", use_container_width=True, key=f"wpp_tpl_save_{mi_empresa}", type="primary"):
                 _plantillas_whatsapp_store()[str(mi_empresa or "").strip() or "_default"] = {
                     "visita": str(tv).strip(),
                     "general": str(tg).strip(),
@@ -590,8 +590,8 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
             fin_semana = inicio_semana + timedelta(days=6)
             agenda_semana = [item for item in agenda_paciente if item["_fecha_dt"] != datetime.min and inicio_semana <= item["_fecha_dt"].date() <= fin_semana]
-            cols_semana = st.columns(7)
-            for idx_dia in range(7):
+            cols_semana = st.columns(4)
+            for idx_dia in range(4):
                 dia = inicio_semana + timedelta(days=idx_dia)
                 items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
                 pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})

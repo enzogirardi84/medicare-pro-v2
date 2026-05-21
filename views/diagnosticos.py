@@ -47,9 +47,9 @@ def render_diagnosticos(user=None):
     with tab1:
         col_refresh, col_clear = st.columns([3, 1])
         with col_refresh:
-            ejecutar = st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", width='stretch')
+            ejecutar = st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", use_container_width=True)
         with col_clear:
-            forzar = st.button("Forzar refresh", help="Ignora cache y fuerza nueva lectura")
+            forzar = st.button("Forzar refresh", help="Ignora cache y fuerza nueva lectura", use_container_width=True)
         if forzar:
             for k in ("_ultimo_diagnostico", "_ultimo_diagnostico_ts", "_mc_diag_df_tablas"):
                 st.session_state.pop(k, None)
@@ -97,7 +97,7 @@ def render_diagnosticos(user=None):
                 log_event("diagnosticos", "error: No hay empresas registradas en Supabase. Esto impide guardar pacientes en tablas SQL.")
                 st.error("❌ No hay empresas registradas en Supabase. Esto impide guardar pacientes en tablas SQL.")
                 if empresa_actual:
-                    if st.button(f"🔧 Insertar empresa '{empresa_actual}' automáticamente", type="primary"):
+                    if st.button(f"🔧 Insertar empresa '{empresa_actual}' automáticamente", use_container_width=True, type="primary"):
                         with st.spinner(f"Insertando '{empresa_actual}' en Supabase..."):
                             from core.diagnosticos import insertar_empresa_en_supabase
                             res = insertar_empresa_en_supabase(empresa_actual.strip())
@@ -157,7 +157,7 @@ def render_diagnosticos(user=None):
             placeholder="Ej: Clinica General"
         )
 
-        if st.button("🔍 Verificar Empresa", type="primary"):
+        if st.button("🔍 Verificar Empresa", use_container_width=True, type="primary"):
             if empresa_check.strip():
                 with st.spinner(f"Verificando '{empresa_check}'..."):
                     from core.diagnosticos import diagnosticar_empresa_en_supabase
@@ -184,7 +184,7 @@ def render_diagnosticos(user=None):
         st.markdown("---")
         st.markdown("### Inspeccionar Schema de una Tabla")
         tabla_inspect = st.selectbox("Seleccionar tabla", ["pacientes", "evoluciones", "empresas", "signos_vitales", "indicaciones", "turnos", "medicare_db"])
-        if st.button("🔎 Ver Columnas Reales", key="btn_schema"):
+        if st.button("🔎 Ver Columnas Reales", use_container_width=True, key="btn_schema"):
             from core.diagnosticos import obtener_schema_tabla
             schema = obtener_schema_tabla(tabla_inspect)
             if schema["error"]:
@@ -460,11 +460,11 @@ def render_diagnosticos(user=None):
             return
 
         # Métricas
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2 = st.columns(2)
         c1.metric("Total errores", stats.get("total", 0))
-        c2.metric("Críticos", stats.get("critical", 0))
-        c3.metric("Sin resolver", stats.get("unresolved", 0))
-        c4.metric("Hoy", stats.get("today", 0))
+        c1.metric("Críticos", stats.get("critical", 0))
+        c2.metric("Sin resolver", stats.get("unresolved", 0))
+        c2.metric("Hoy", stats.get("today", 0))
 
         st.divider()
 
@@ -517,7 +517,7 @@ def render_diagnosticos(user=None):
                         st.caption(f"{msg}")
                     with c_b:
                         if not resuelto:
-                            if st.button("Marcar resuelto", key=f"vigia_resolve_{eid}"):
+                            if st.button("Marcar resuelto", use_container_width=True, key=f"vigia_resolve_{eid}"):
                                 mark_resolved(eid)
                                 st.toast("Marcado como resuelto")
                                 st.rerun()
@@ -531,7 +531,7 @@ def render_diagnosticos(user=None):
         # Acciones globales
         col_a1, col_a2 = st.columns([1, 1])
         with col_a1:
-            if st.button("📥 Exportar JSON", key="vigia_export"):
+            if st.button("📥 Exportar JSON", use_container_width=True, key="vigia_export"):
                 st.download_button(
                     label="Descargar",
                     data=export_json(),
@@ -540,7 +540,7 @@ def render_diagnosticos(user=None):
                     key="vigia_download",
                 )
         with col_a2:
-            if st.button("🗑️ Limpiar todo", type="secondary", key="vigia_clear"):
+            if st.button("🗑️ Limpiar todo", type="secondary", use_container_width=True, key="vigia_clear"):
                 clear_all()
                 st.toast("Historial de errores limpiado")
                 st.rerun()

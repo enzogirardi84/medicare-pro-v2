@@ -53,7 +53,7 @@ def render_admin_usuarios():
                     st.warning(f"Confirma la eliminacion de '{login}' haciendo click otra vez en 🗑️")
             # Save button if changes detected
             if nombre_nuevo != nombre_actual or rol_nuevo != rol_actual or empresa_nueva != empresa_actual:
-                if st.button("💾 Guardar cambios", key=f"au_save_{login}"):
+                if st.button("💾 Guardar cambios", use_container_width=True, key=f"au_save_{login}"):
                     datos["nombre"] = nombre_nuevo
                     datos["rol"] = rol_nuevo
                     datos["empresa"] = empresa_nueva
@@ -110,7 +110,7 @@ def render_admin_usuarios():
     st.markdown("### Resetear contrasena de usuario existente")
     _reset_login = st.selectbox("Seleccionar usuario", options=[""] + sorted(usuarios.keys()), key="reset_pwd_user")
     _reset_pwd = st.text_input("Nueva contrasena", type="password", key="reset_pwd_value")
-    if st.button("🔑 Cambiar contrasena", key="reset_pwd_btn"):
+    if st.button("🔑 Cambiar contrasena", use_container_width=True, key="reset_pwd_btn"):
         if _reset_login and _reset_pwd and len(_reset_pwd) >= 6:
             establecer_password_nuevo(usuarios[_reset_login], _reset_pwd)
             for _login in usuarios:

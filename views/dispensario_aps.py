@@ -71,11 +71,13 @@ def _header_paciente(paciente_sel, user):
     estado = detalles.get("estado", "Activo")
 
     with st.container(border=True):
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Paciente", paciente_sel or "-")
-        col2.metric("DNI", dni)
-        col3.metric("Empresa / Barrio", empresa)
-        col4.metric("Estado", estado)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Paciente", paciente_sel or "-")
+            st.metric("DNI", dni)
+        with col2:
+            st.metric("Empresa / Barrio", empresa)
+            st.metric("Estado", estado)
 
 
 def _guardar_con_feedback(clave_db, payload, max_items=500):
@@ -210,11 +212,13 @@ def _metricas_aps_del_dia():
         if ep.get("requiere_visita") and ep.get("estado") == "Pendiente":
             visitas_pend += 1
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Pacientes atendidos hoy", len(pacientes_hoy))
-    col2.metric("Medicación entregada hoy", medicacion_hoy)
-    col3.metric("Alertas epidemiológicas", alertas_epi)
-    col4.metric("Visitas domic. pendientes", visitas_pend)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Pacientes atendidos hoy", len(pacientes_hoy))
+        st.metric("Medicación entregada hoy", medicacion_hoy)
+    with col2:
+        st.metric("Alertas epidemiológicas", alertas_epi)
+        st.metric("Visitas domic. pendientes", visitas_pend)
 
 
 def _tab_panel_diario(paciente_sel, user):
@@ -253,11 +257,13 @@ def _tab_panel_diario(paciente_sel, user):
         if ep.get("estado") in ("Pendiente", "En seguimiento"):
             alertas_epi += 1
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Pacientes hoy", len(pacientes_hoy))
-    col2.metric("Medicación hoy", medicacion_hoy)
-    col3.metric("Alertas epi.", alertas_epi)
-    col4.metric("En sala de espera", len(en_espera), delta="pendientes")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Pacientes hoy", len(pacientes_hoy))
+        st.metric("Medicación hoy", medicacion_hoy)
+    with col2:
+        st.metric("Alertas epi.", alertas_epi)
+        st.metric("En sala de espera", len(en_espera), delta="pendientes")
 
     st.divider()
 
@@ -278,7 +284,7 @@ def _tab_panel_diario(paciente_sel, user):
                         st.caption(f"Llegada: {str(t.get('hora_llegada', ''))[:16]}")
                         st.caption(f"Tipo: {t.get('tipo_turno', '-')}")
                     with col_c:
-                        if st.button("Atender", key=f"btn_atender_{t.get('id_turno', t.get('hora_llegada', 'x'))}"):
+                        if st.button("Atender", use_container_width=True, key=f"btn_atender_{t.get('id_turno', t.get('hora_llegada', 'x'))}"):
                             t["estado"] = "atendido"
                             _guardar_directo()
                             st.rerun()
@@ -336,7 +342,7 @@ def _tab_pacientes_familia(paciente_sel, user, centro_salud_id):
                             st.markdown(f"**{p.get('nombre', '-')}**")
                             st.caption(f"DNI: {p.get('dni', '-')} · Barrio: {p.get('barrio', p.get('empresa', '-'))}")
                         with col_b:
-                            if st.button("Seleccionar", key=f"sel_pac_{p.get('dni', 'x')}"):
+                            if st.button("Seleccionar", use_container_width=True, key=f"sel_pac_{p.get('dni', 'x')}"):
                                 st.session_state["paciente_actual"] = p.get("nombre", p.get("dni", "-"))
                                 st.toast(f"Paciente {p.get('nombre', '-')} seleccionado", icon="👤")
                                 st.rerun()
@@ -520,7 +526,7 @@ def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
     with col_d:
         prof_mat = st.text_input("Matrícula", key="aps_prof_matricula")
 
-    if st.button("Agregar profesional", width='stretch', key="aps_btn_add_prof"):
+    if st.button("Agregar profesional", use_container_width=True, key="aps_btn_add_prof"):
         if prof_nombre.strip() and prof_apellido.strip():
             st.session_state[prof_key].append({
                 "especialidad": prof_espec,
@@ -540,14 +546,14 @@ def _tab_ficha_aps(paciente_sel, user, centro_salud_id):
             with col_txt:
                 st.write(f"• **{prof['especialidad']}**: {prof['nombre']} {prof['apellido']} (Mat: {prof['matricula'] or 'S/D'})")
             with col_rem:
-                if st.button("Quitar", key=f"aps_rem_prof_{i}_{paciente_id}"):
+                if st.button("Quitar", use_container_width=True, key=f"aps_rem_prof_{i}_{paciente_id}"):
                     st.session_state[prof_key].pop(i)
                     st.rerun()
     else:
         st.caption("Sin profesionales adicionales asignados.")
 
     st.divider()
-    if st.button("💾 Guardar ficha APS completa", width='stretch', key="aps_btn_guardar_ficha"):
+    if st.button("💾 Guardar ficha APS completa", use_container_width=True, key="aps_btn_guardar_ficha"):
         payload = {
             "paciente_id": paciente_id,
             "centro_salud_id": centro_salud_id,
@@ -683,11 +689,11 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
                         st.caption(f"Turno: {str(t['fecha_turno'])[:16]}")
                     st.caption(f"Tipo: {tipo_label}")
                 with col_c:
-                    if estado == "en_espera" and st.button("Atender", key=f"turno_atender_{t.get('id_turno', 'x')}"):
+                    if estado == "en_espera" and st.button("Atender", use_container_width=True, key=f"turno_atender_{t.get('id_turno', 'x')}"):
                         t["estado"] = "atendido"
                         _guardar_directo()
                         st.rerun()
-                    if estado == "programado" and st.button("Llegó", key=f"turno_llego_{t.get('id_turno', 'x')}"):
+                    if estado == "programado" and st.button("Llegó", use_container_width=True, key=f"turno_llego_{t.get('id_turno', 'x')}"):
                         t["estado"] = "en_espera"
                         t["hora_llegada"] = datetime.now().isoformat()
                         _guardar_directo()

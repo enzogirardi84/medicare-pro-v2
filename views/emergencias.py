@@ -73,12 +73,16 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     if es_movil:
         m1, m2 = st.columns(2)
         m3, m4 = st.columns(2)
+        m1.metric("Eventos", len(eventos))
+        m2.metric("Criticos activos", len(activos))
+        m3.metric("Traslados", len(traslados))
+        m4.metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
     else:
-        m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Eventos", len(eventos))
-    m2.metric("Criticos activos", len(activos))
-    m3.metric("Traslados", len(traslados))
-    m4.metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
+        m1, m2 = st.columns(2)
+        m1.metric("Eventos", len(eventos))
+        m1.metric("Criticos activos", len(activos))
+        m2.metric("Traslados", len(traslados))
+        m2.metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
 
     tab_reg, tab_panel, tab_hist = st.tabs(["⚡ Registrar evento", "📋 Panel operativo", "📄 Historial y PDF"])
 
