@@ -840,25 +840,28 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
     if not api_key.strip():
         st.warning("Primero ingresá una API Key.")
         return
-    provider_map = {"OpenAI": "openai", "DeepSeek": "deepseek"}
-    internal = provider_map.get(provider_display)
-    if not internal:
+    provider_map = {"OpenAI": ("openai", None, "gpt-4o"), "DeepSeek": ("deepseek", "https://api.deepseek.com/v1", "deepseek-v4-flash")}
+    entry = provider_map.get(provider_display)
+    if not entry:
         st.warning(f"Test automático no soportado para {provider_display}.")
         return
+    internal, base_url, default_model = entry
     try:
-        from openai import OpenAI, APIError
-        base_url = "https://api.deepseek.com/v1" if internal == "deepseek" else None
-        client = OpenAI(api_key=api_key, base_url=base_url, timeout=15)
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key, base_url=base_url, timeout=30)
+        test_model = (model or default_model).strip()
         resp = client.chat.completions.create(
-            model=model or "deepseek-v4-flash",
+            model=test_model,
             messages=[{"role": "user", "content": "Respondé SOLO con: OK"}],
             max_tokens=5,
             temperature=0,
         )
         texto = resp.choices[0].message.content.strip()
         if "OK" in texto:
-            st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {model})")
+            st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {test_model})")
         else:
             st.warning(f"⚠️ Conectado pero respuesta inesperada: {texto[:80]}")
     except Exception as e:
+        import traceback
         st.error(f"❌ Error de conexión: {e}")
+        st.caption(f"Detalle: {traceback.format_exc(limit=1)}")
