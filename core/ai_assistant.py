@@ -162,14 +162,12 @@ NOTA DE EVOLUCIÓN:"""
         self.model = LLM_MODEL
 
     def _ensure_config(self):
-        """Carga configuración fresca (st.secrets > env vars > defaults)."""
-        if not self._config_loaded:
-            provider, api_key, model = _get_llm_config()
-            self.provider = provider
-            self.api_key = api_key
-            self.model = model
-            self.enabled = provider != "none" and bool(api_key)
-            self._config_loaded = True
+        """Carga configuración fresca desde session_state > secrets > env vars."""
+        provider, api_key, model = _get_llm_config()
+        self.provider = provider
+        self.api_key = api_key
+        self.model = model
+        self.enabled = provider != "none" and bool(api_key)
     
     def generate_evolution_suggestion(
         self,
@@ -323,6 +321,7 @@ NOTA MEJORADA:"""
     
     def _call_llm(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> str:
         """Llama al API de LLM según el provider configurado."""
+        self._ensure_config()
         if self.provider == "openai":
             return self._call_openai(prompt, max_tokens, temperature)
         elif self.provider == "anthropic":
