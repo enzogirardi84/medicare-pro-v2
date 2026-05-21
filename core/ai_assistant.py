@@ -65,7 +65,7 @@ def _get_llm_config():
                 if isinstance(_settings, dict):
                     ui_provider = _settings.get("integ_ai_provider", "")
                     if ui_provider and ui_provider != "Ninguno":
-                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "DeepSeek": "deepseek", "Local (Ollama)": "local"}.get(ui_provider, provider)
+                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "DeepSeek": "deepseek", "OpenRouter": "openrouter", "Local (Ollama)": "local"}.get(ui_provider, provider)
                     ui_key = _settings.get("integ_ai_key", "")
                     if isinstance(ui_key, str) and ui_key:
                         api_key = ui_key
@@ -328,6 +328,8 @@ NOTA MEJORADA:"""
             return self._call_anthropic(prompt, max_tokens, temperature)
         elif self.provider == "deepseek":
             return self._call_deepseek(prompt, max_tokens, temperature)
+        elif self.provider == "openrouter":
+            return self._call_openrouter(prompt, max_tokens, temperature)
         elif self.provider == "local":
             return self._call_local(prompt, max_tokens, temperature)
         else:
@@ -407,6 +409,32 @@ NOTA MEJORADA:"""
             return response.choices[0].message.content.strip()
         except Exception as e:
             log_event("ai_error", f"DeepSeek API error: {e}")
+            raise
+
+    def _call_openrouter(self, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Llama API de OpenRouter (compatible con OpenAI)."""
+        self._ensure_config()
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://openrouter.ai/api/v1",
+                timeout=30.0,
+            )
+            model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek/deepseek-chat"
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "Eres un asistente médico profesional."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+                extra_headers={"HTTP-Referer": "https://medicare-pro.app", "X-Title": "Medicare Pro"},
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            log_event("ai_error", f"OpenRouter API error: {e}")
             raise
 
     def _call_local(self, prompt: str, max_tokens: int, temperature: float) -> str:

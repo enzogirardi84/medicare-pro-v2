@@ -340,7 +340,7 @@ def render_integration_settings(is_admin: bool):
     )
 
     if ai_enabled:
-        _ai_providers = ["OpenAI", "Anthropic", "DeepSeek", "Local (Ollama)", "Ninguno"]
+        _ai_providers = ["OpenAI", "Anthropic", "DeepSeek", "OpenRouter", "Local (Ollama)", "Ninguno"]
         _s_ai_provider = _s.get("integ_ai_provider", "Ninguno")
         ai_provider = st.selectbox(
             "Proveedor de IA",
@@ -359,6 +359,8 @@ def render_integration_settings(is_admin: bool):
                 st.info("API Key de https://platform.openai.com. Modelos: gpt-4, gpt-4o, gpt-3.5-turbo.")
             elif ai_provider == "Anthropic":
                 st.info("API Key de https://console.anthropic.com. Modelos: claude-3-opus, claude-3-sonnet.")
+            elif ai_provider == "OpenRouter":
+                st.info("API Key de https://openrouter.ai/keys. Accedé a múltiples modelos con crédito gratuito.")
             raw_key = st.text_input("API Key", type="password", value=ai_key,
                 help="Tu API key del proveedor seleccionado")
             _stripped = raw_key.strip() if raw_key else ""
@@ -371,6 +373,7 @@ def render_integration_settings(is_admin: bool):
                 "OpenAI": ["gpt-4o", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "Otro"],
                 "Anthropic": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307", "Otro"],
                 "DeepSeek": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner", "Otro"],
+                "OpenRouter": ["deepseek/deepseek-chat", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash", "Otro"],
                 "Local (Ollama)": ["llama3.1", "llama3", "mistral", "Otro"],
             }
             _avail = _model_opts.get(ai_provider, ["Otro"])
@@ -857,7 +860,11 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
     if not api_key.strip():
         st.warning("Primero ingresá una API Key.")
         return
-    provider_map = {"OpenAI": ("openai", None, "gpt-4o"), "DeepSeek": ("deepseek", "https://api.deepseek.com/v1", "deepseek-v4-flash")}
+    provider_map = {
+        "OpenAI": ("openai", None, "gpt-4o"),
+        "DeepSeek": ("deepseek", "https://api.deepseek.com/v1", "deepseek-v4-flash"),
+        "OpenRouter": ("openrouter", "https://openrouter.ai/api/v1", "deepseek/deepseek-chat"),
+    }
     entry = provider_map.get(provider_display)
     if not entry:
         st.warning(f"Test automático no soportado para {provider_display}.")
