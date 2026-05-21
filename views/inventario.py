@@ -25,18 +25,17 @@ def render_inventario(mi_empresa):
         """
         <div class="mc-hero">
             <h2 class="mc-hero-title">Inventario y stock de farmacia</h2>
-            <p class="mc-hero-text">Gestiona medicamentos e insumos con un catalogo guiado para evitar errores de carga. La vista prioriza alertas, correcciones rapidas y control visual de stock critico.</p>
+            <p class="mc-hero-text">Gestioná medicamentos e insumos con un catálogo guiado para evitar errores de carga. La vista prioriza alertas, correcciones rápidas y control visual de stock crítico.</p>
             <div class="mc-chip-row">
-                <span class="mc-chip">Catalogo sugerido</span>
+                <span class="mc-chip">Catálogo sugerido</span>
                 <span class="mc-chip">Alerta de faltantes</span>
-                <span class="mc-chip">Correccion de stock</span>
+                <span class="mc-chip">Corrección de stock</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     inv_mio = []
     try:
         empresa_uuid = _obtener_uuid_empresa(mi_empresa)
@@ -53,15 +52,13 @@ def render_inventario(mi_empresa):
                         "costo_unitario": i.get("costo_unitario", 0) or 0,
                         "id_sql": i.get("id")
                     })
-                # Sincronizar session_state para que fallback JSON sea consistente
                 st.session_state["inventario_db"] = list(inv_mio)
     except Exception as e:
         log_event("error_leer_inventario_sql", str(e))
 
-    # 2. Fallback a JSON si SQL falla o esta vacio
     if not inv_mio:
         inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
-        
+
     def _umbral_critico(item):
         sm = int(item.get("stock_minimo", 0) or 0)
         return sm if sm > 0 else 10
@@ -74,14 +71,12 @@ def render_inventario(mi_empresa):
     stock_bajo = [i for i in inv_mio if _umbral_critico(i) < i.get("stock", 0) <= _umbral_bajo(i)]
     total_unidades = sum(int(i.get("stock", 0) or 0) for i in inv_mio)
 
-    # ── Valor total del inventario ──────────────────────────────
     _valor_total = sum(
         float(i.get("stock", 0)) * float(i.get("costo_unitario", 0) or 0)
         for i in inv_mio
         if float(i.get("costo_unitario", 0) or 0) > 0
     )
 
-    # ── Consumo últimos 7 días ────────────────────────────────────
     _hace_7d_dt = ahora() - timedelta(days=7)
     _cons_7d = []
     for c in st.session_state.get("consumos_db", []):
@@ -96,20 +91,17 @@ def render_inventario(mi_empresa):
             pass
     _unid_7d = sum(int(c.get("cantidad", 0) or 0) for c in _cons_7d)
 
-    # ── Métricas globales ──────────────────────────────────────
     if inv_mio:
         cols = st.columns(3)
-        cols[0].metric("Items en inventario", len(inv_mio))
-        cols[0].metric("🔴 Stock crítico", len(stock_critico), help="Segun stock_minimo de cada item o ≤10 por defecto")
-        cols[1].metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock_minimo o ≤25 por defecto")
+        cols[0].metric("Ítems en inventario", len(inv_mio))
+        cols[0].metric("🔴 Stock crítico", len(stock_critico), help="Según stock mínimo de cada ítem o ≤10 por defecto")
+        cols[1].metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock mínimo o ≤25 por defecto")
         cols[1].metric("Unidades totales", total_unidades)
-        cols[2].metric("Valor total", f"${_valor_total:,.0f}".replace(",", ".") if _valor_total > 0 else "—", help="Suma stock × costo_unitario")
+        cols[2].metric("Valor total", f"${_valor_total:,.0f}".replace(",", ".") if _valor_total > 0 else "—", help="Suma stock × costo unitario")
 
-    # ── Consumo últimos 7 días ─────────────────────────────────
     if _cons_7d:
         st.caption(f"📊 Consumos últimos 7 días: **{len(_cons_7d)} registros** ({_unid_7d} unidades)")
 
-    # ── Ranking insumos más consumidos ─────────────────────────
     consumos_empresa = [
         c for c in st.session_state.get("consumos_db", [])
         if c.get("empresa") == mi_empresa
@@ -128,11 +120,11 @@ def render_inventario(mi_empresa):
                     st.caption(f"**{ins}** — {qty} u. consumidas{_sem}" + (f" | stock actual: {stock_ins}" if stock_ins is not None else ""))
 
     if stock_critico:
-        with lista_plegable("Stock crítico (según stock_minimo)", count=len(stock_critico), expanded=True, height=260):
+        with lista_plegable("Stock crítico (según stock mínimo)", count=len(stock_critico), expanded=True, height=260):
             for item in stock_critico[:80]:
                 _sm = int(item.get("stock_minimo", 0) or 0)
                 _reponer = max(1, _sm * 2 - int(item.get("stock", 0)))
-                lbl = f"**{_reponer}** para repo. sugerida" if _sm > 0 else ""
+                lbl = f"**{_reponer}** para reposición sugerida" if _sm > 0 else ""
                 log_event("inventario", f"error: stock critico {item.get('item')} = {item.get('stock', 0)}")
                 st.error(f"{item.get('item')} → **{item.get('stock', 0)}** ({lbl})")
     if stock_bajo:
@@ -151,9 +143,9 @@ def render_inventario(mi_empresa):
     st.markdown(
         """
         <div class="mc-grid-3">
-            <div class="mc-card"><h4>Carga guiada</h4><p>Usa el catalogo frecuente para minimizar errores de tipeo del personal.</p></div>
-            <div class="mc-card"><h4>Nuevos items</h4><p>Tambien podes cargar un insumo nuevo cuando todavia no existe en el catalogo.</p></div>
-            <div class="mc-card"><h4>Control visual</h4><p>Los faltantes se resaltan para detectar rapido que necesita reposicion.</p></div>
+            <div class="mc-card"><h4>Carga guiada</h4><p>Usá el catálogo frecuente para minimizar errores de tipeo del personal.</p></div>
+            <div class="mc-card"><h4>Nuevos ítems</h4><p>También podés cargar un insumo nuevo cuando todavía no existe en el catálogo.</p></div>
+            <div class="mc-card"><h4>Control visual</h4><p>Los faltantes se resaltan para detectar rápido qué necesita reposición.</p></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -163,20 +155,20 @@ def render_inventario(mi_empresa):
     )
 
     with st.form("form_inv", clear_on_submit=True):
-        st.markdown("##### Ingreso de mercaderia")
+        st.markdown("##### Ingreso de mercadería")
         c1, c2, c3 = st.columns([2, 2, 1])
-        lista_base_inv = ["-- Seleccionar del catalogo --"] + vademecum_base
+        lista_base_inv = ["-- Seleccionar del catálogo --"] + vademecum_base
 
-        item_sel = c1.selectbox("1. Catalogo frecuente", lista_base_inv)
+        item_sel = c1.selectbox("1. Catálogo frecuente", lista_base_inv)
         nuevo_item = c2.text_input("2. Escribir insumo nuevo")
         cantidad = c3.number_input("Cantidad", min_value=1, value=10, step=1)
         c4, c5 = st.columns([1, 1])
-        _cat_input = c4.text_input("Categoria (opcional)", placeholder="Ej: Medicamentos, Descartables")
+        _cat_input = c4.text_input("Categoría (opcional)", placeholder="Ej: Medicamentos, Descartables")
         _costo_input = c5.number_input("Costo unitario $ (opcional)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
 
         if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
             item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
-            if item_final and item_final != "-- Seleccionar del catalogo --":
+            if item_final and item_final != "-- Seleccionar del catálogo --":
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     if empresa_uuid:
@@ -232,11 +224,10 @@ def render_inventario(mi_empresa):
 
     if inv_mio:
         df_stock = pd.DataFrame(inv_mio).rename(columns={
-            "item": "Insumo", "stock": "Stock Actual", "stock_minimo": "Stock Minimo",
-            "categoria": "Categoria", "costo_unitario": "Costo Unit.",
+            "item": "Insumo", "stock": "Stock actual", "stock_minimo": "Stock mínimo",
+            "categoria": "Categoría", "costo_unitario": "Costo unit.",
         })
 
-        # ── Búsqueda, categoría y filtro de criticidad ──────────────
         _categorias = sorted(set(i.get("categoria", "") for i in inv_mio if i.get("categoria")))
         _filtros = st.columns([2, 1.2, 1])
         _busq_inv = _filtros[0].text_input(
@@ -251,18 +242,18 @@ def render_inventario(mi_empresa):
             key="inventario_filtro",
         )
         df_filtrado = df_stock.copy()
-        df_filtrado["Stock Actual"] = pd.to_numeric(df_filtrado["Stock Actual"], errors="coerce").fillna(0).astype(int)
+        df_filtrado["Stock actual"] = pd.to_numeric(df_filtrado["Stock actual"], errors="coerce").fillna(0).astype(int)
         if _busq_inv:
             df_filtrado = df_filtrado[df_filtrado["Insumo"].str.lower().str.contains(_busq_inv, na=False)]
         if _cat_sel != "Todas":
-            df_filtrado = df_filtrado[df_filtrado.get("Categoria", "") == _cat_sel]
+            df_filtrado = df_filtrado[df_filtrado.get("Categoría", "") == _cat_sel]
         if _filtro_crit == "Crítico":
-            df_filtrado = df_filtrado[df_filtrado["Stock Actual"] <= df_filtrado.get("Stock Minimo", 10)]
+            df_filtrado = df_filtrado[df_filtrado["Stock actual"] <= df_filtrado.get("Stock mínimo", 10)]
         elif _filtro_crit == "Bajo":
-            _b = df_filtrado["Stock Minimo"].fillna(10) * 2
-            df_filtrado = df_filtrado[(df_filtrado["Stock Actual"] > df_filtrado["Stock Minimo"].fillna(10)) & (df_filtrado["Stock Actual"] <= _b)]
+            _b = df_filtrado["Stock mínimo"].fillna(10) * 2
+            df_filtrado = df_filtrado[(df_filtrado["Stock actual"] > df_filtrado["Stock mínimo"].fillna(10)) & (df_filtrado["Stock actual"] <= _b)]
         elif _filtro_crit == "Normal (>25)":
-            df_filtrado = df_filtrado[df_filtrado["Stock Actual"] > 25]
+            df_filtrado = df_filtrado[df_filtrado["Stock actual"] > 25]
         if _busq_inv or _filtro_crit != "Todos":
             st.caption(f"{len(df_filtrado)} insumo(s) encontrado(s)")
 
@@ -275,11 +266,11 @@ def render_inventario(mi_empresa):
         )
 
         def _row_umbral(row):
-            sm = row.get("Stock Minimo", 10)
+            sm = row.get("Stock mínimo", 10)
             return sm if sm > 0 else 10
 
         def colorear_stock(row):
-            stock = row["Stock Actual"]
+            stock = row["Stock actual"]
             umbral = _row_umbral(row)
             if stock <= umbral:
                 return ["background-color: #3c1f1f; color: #ffb4b4; font-weight: bold"] * len(row)
@@ -287,14 +278,14 @@ def render_inventario(mi_empresa):
                 return ["background-color: #3c3217; color: #ffe08a; font-weight: 600"] * len(row)
             return ["background-color: #122033; color: #ffffff"] * len(row)
 
-        _cols_tabla = ["Insumo", "Stock Actual", "Stock Minimo"]
-        if "Categoria" in df_filtrado.columns and df_filtrado["Categoria"].notna().any():
-            _cols_tabla.append("Categoria")
-        if "Costo Unit." in df_filtrado.columns and (pd.to_numeric(df_filtrado["Costo Unit."], errors="coerce").fillna(0) > 0).any():
-            _cols_tabla.append("Costo Unit.")
+        _cols_tabla = ["Insumo", "Stock actual", "Stock mínimo"]
+        if "Categoría" in df_filtrado.columns and df_filtrado["Categoría"].notna().any():
+            _cols_tabla.append("Categoría")
+        if "Costo unit." in df_filtrado.columns and (pd.to_numeric(df_filtrado["Costo unit."], errors="coerce").fillna(0) > 0).any():
+            _cols_tabla.append("Costo unit.")
 
         styled = (
-            df_filtrado.sort_values(by="Stock Actual", ascending=True)[_cols_tabla]
+            df_filtrado.sort_values(by="Stock actual", ascending=True)[_cols_tabla]
             .head(limite_stock)
             .style.apply(colorear_stock, axis=1)
         )
@@ -310,13 +301,10 @@ def render_inventario(mi_empresa):
     st.divider()
 
     if inv_mio:
-        # ============================================================
-        # AJUSTE DE STOCK MASIVO
-        # ============================================================
         st.markdown("### 📦 Ajuste de stock masivo")
-        st.caption("Seleccioná varios items y aplicá un mismo ajuste a todos")
+        st.caption("Seleccioná varios ítems y aplicá un mismo ajuste a todos.")
         _items_all = [i.get("item", "") for i in inv_mio]
-        _selected = st.multiselect("Items a ajustar", options=_items_all, key="batch_inv_items")
+        _selected = st.multiselect("Ítems a ajustar", options=_items_all, key="batch_inv_items")
         if _selected:
             _ajuste = st.number_input("Cantidad a sumar/restar", value=0, step=1, key="batch_inv_qty")
             _razon = st.text_input("Motivo del ajuste", placeholder="Ej: inventario físico", key="batch_inv_reason")
@@ -329,15 +317,15 @@ def render_inventario(mi_empresa):
                             _count += 1
                     st.session_state["inventario_db"] = inv_mio
                     guardar_datos(spinner=False)
-                    st.success(f"✅ {_count} items ajustados ({_ajuste:+d} unidades)")
+                    st.success(f"✅ {_count} ítems ajustados ({_ajuste:+d} unidades)")
                     log_event("inventario", f"batch_ajuste:{_count}items:{_ajuste:+d}:{_razon}")
                     st.rerun()
                 else:
-                    st.warning("Indicá un motivo para el ajuste")
+                    st.warning("Indicá un motivo para el ajuste.")
         st.divider()
 
         with lista_plegable("Ajuste manual, corrección y baja de insumos", expanded=False, height=None):
-            st.markdown("#### Ajuste manual y correccion")
+            st.markdown("#### Ajuste manual y corrección")
             item_a_editar = st.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
             _item_data = next((i for i in inv_mio if i["item"] == item_a_editar), {})
             _s_act = _item_data.get("stock", 0)
@@ -347,7 +335,6 @@ def render_inventario(mi_empresa):
             nuevo_stock = c_aj1.number_input("Stock real", min_value=0, value=_s_act, key="new_stock")
             nuevo_min = c_aj2.number_input("Stock mínimo", min_value=0, value=_s_min, key="new_min")
             nuevo_costo = c_aj3.number_input("Costo unitario $", min_value=0.0, value=_costo, step=0.5, format="%.2f", key="new_costo")
-            # Sugerencia automática de stock mínimo
             try:
                 from core._insumos_map import stock_minimo_sugerido
                 _sug_min = stock_minimo_sugerido(item_a_editar, mi_empresa)
@@ -381,9 +368,8 @@ def render_inventario(mi_empresa):
 
             col_del1, col_del2 = st.columns([3, 1])
             del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
-            confirmar = col_del1.checkbox("Confirmar eliminacion definitiva", key="conf_del_item")
+            confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
             if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
-                # 1. Eliminar en SQL (Dual-Write)
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     if empresa_uuid:
@@ -398,11 +384,10 @@ def render_inventario(mi_empresa):
                 except Exception as e:
                     log_event("error_inventario_sql_delete", str(e))
 
-                # 2. Eliminar en JSON (Legacy)
                 if "inventario_db" in st.session_state:
                     st.session_state["inventario_db"] = [
                         i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
                     ]
                 guardar_datos(spinner=True)
-                queue_toast(f"Se elimino {del_item} del inventario.")
+                queue_toast(f"Se eliminó {del_item} del inventario.")
                 st.rerun()
