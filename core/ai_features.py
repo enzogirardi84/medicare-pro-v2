@@ -17,6 +17,7 @@ from core.ai_assistant import (
     get_priority_classifier,
     is_llm_enabled,
 )
+from core.app_logging import log_event
 
 _LLM_SYSTEM_PROMPTS = {
     "evolution": (
@@ -66,19 +67,28 @@ _LLM_SYSTEM_PROMPTS = {
 
 def _call_llm(prompt: str, system_key: str = "evolution", temperature: float = 0.3) -> Optional[str]:
     if not is_llm_enabled():
+        st.session_state["_ai_last_error"] = "IA no configurada"
         return None
     system_prompt = _LLM_SYSTEM_PROMPTS.get(system_key, _LLM_SYSTEM_PROMPTS["evolution"])
     try:
         assistant = get_evolution_assistant()
         full_prompt = f"{system_prompt}\n\n{prompt}"
         return assistant._call_llm(prompt=full_prompt, temperature=temperature)
-    except Exception:
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        log_event("ai_call_error", f"{system_key}:{err}")
+        st.session_state["_ai_last_error"] = err
         return None
 
 
 def ai_not_available_warning():
     """Muestra aviso con botón directo a Configuración de IA."""
-    st.warning("⚠️ IA no disponible. Activá un proveedor en Ajustes > Integraciones.", icon="🤖")
+    last_err = st.session_state.pop("_ai_last_error", "")
+    if is_llm_enabled():
+        msg = f"❌ Error al conectar con la IA: {last_err}" if last_err else "❌ La API no respondió. Revisá la configuración."
+        st.error(msg, icon="🤖")
+    else:
+        st.warning("⚠️ IA no disponible. Activá un proveedor en Ajustes > Integraciones.", icon="🤖")
     if st.button("⚙️ Ir a Configuración de IA", use_container_width=True, key="_ai_goto_settings"):
         st.session_state["_show_settings"] = True
         st.rerun()
