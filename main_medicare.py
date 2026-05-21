@@ -220,6 +220,7 @@ from core.feature_flags import ALERTAS_APP_PACIENTE_VISIBLE
 from core.nav_helpers import MC_FILTRO_TODAS  # noqa: F401
 from core.perf_metrics import record_perf
 from core.sidebar_components import (
+    render_mobile_contexto_clinico as _render_mobile_contexto_clinico,
     render_sidebar_contexto_clinico as _render_sidebar_contexto_clinico,
 )
 from core.view_registry import build_view_maps
@@ -401,6 +402,7 @@ if not paciente_sel:
     """, unsafe_allow_html=True)
 else:
     st.caption(f"Paciente: **{paciente_sel}** — {mi_empresa}")
+    _render_mobile_contexto_clinico(paciente_sel)
 
 # ============================================================
 # CONTEXTO CLÍNICO / NOTIFICACIONES
@@ -426,13 +428,13 @@ if mostrar_atajo or paciente_sel:
         st.session_state["modulo_anterior"] = cur
 
     if mostrar_atajo and paciente_sel:
-        col_nav, col_call = st.columns([1, 4])
+        col_nav, col_call = st.columns([1, 3])
         with col_nav:
             etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
             st.button(
-                "← Anterior",
+                "←",
                 help=f"Volver a: {etiqueta_ant}",
-                width='stretch',
+                use_container_width=True,
                 key="mc_atajo_modulo_anterior",
                 on_click=_swap_modulo_callback,
                 args=(vista_actual, modulo_anterior),
@@ -573,6 +575,18 @@ if _modulo_previo_scroll != vista_actual:
         </script>""",
         unsafe_allow_html=True,
     )
+
+# ============================================================
+# MÓDULO ACTIVO (indicador visible en mobile)
+# ============================================================
+_label_modulo = VIEW_NAV_LABELS.get(vista_actual, vista_actual)
+st.markdown(
+    f'<div class="mc-mobile-only" style="text-align:center;margin-bottom:4px;">'
+    f'<span style="background:rgba(20,184,166,0.15);color:#5eead4;padding:4px 14px;'
+    f'border-radius:20px;font-size:0.82rem;font-weight:600;display:inline-block;">'
+    f'{_label_modulo}</span></div>',
+    unsafe_allow_html=True,
+)
 
 # ============================================================
 # RENDER DE VISTA ACTUAL - con indicador visible

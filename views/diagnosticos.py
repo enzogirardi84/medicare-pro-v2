@@ -469,15 +469,13 @@ def render_diagnosticos(user=None):
         st.divider()
 
         # Filtros
-        col_f1, col_f2, col_f3, col_f4 = st.columns([2, 2, 2, 2])
+        col_f1, col_f2 = st.columns(2)
         with col_f1:
             filtro_sev = st.selectbox("Severidad", ["Todas", "critical", "error", "warning"], key="vigia_sev")
-        with col_f2:
             mods = ["Todos"] + [m[0] for m in stats.get("top_modules", [])]
             filtro_mod = st.selectbox("Módulo", mods, key="vigia_mod")
-        with col_f3:
+        with col_f2:
             solo_sin_resolver = st.checkbox("Sólo sin resolver", value=True, key="vigia_unresolved")
-        with col_f4:
             limite = st.number_input("Cantidad", min_value=5, max_value=500, value=50, key="vigia_limit")
 
         sev_arg = None if filtro_sev == "Todas" else filtro_sev

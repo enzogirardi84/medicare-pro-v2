@@ -193,6 +193,75 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
 
 
 # ---------------------------------------------------------------------------
+# Contexto clínico para móvil (sidebar no visible en mobile)
+# ---------------------------------------------------------------------------
+
+def render_mobile_contexto_clinico(paciente_sel):
+    """Renderiza el panel de contexto clínico en el área principal,
+    visible solo en móviles (donde el sidebar está oculto)."""
+    st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
+
+    detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    alergias = str(detalles.get("alergias", "") or "").strip()
+    patologias = str(detalles.get("patologias", "") or "").strip()
+
+    vitales = st.session_state.get("vitales_db", [])
+    if not isinstance(vitales, list):
+        vitales = []
+    vitales_orden = []
+    for v in reversed(vitales):
+        if v.get("paciente") != paciente_sel:
+            continue
+        vitales_orden.append(v)
+        if len(vitales_orden) >= 3:
+            break
+
+    with st.expander("📋 Contexto clínico", expanded=True):
+        if alergias:
+            st.warning(f"⚠️ Alergias: {alergias}")
+        if vitales_orden:
+            v = vitales_orden[0]
+            mc1, mc2 = st.columns(2)
+            mc1.metric("TA", _vitales_valor_corto(v, "TA"))
+            mc1.metric("FC", _vitales_valor_corto(v, "FC"))
+            mc1.metric("SatO₂", _vitales_valor_corto(v, "Sat"))
+            mc2.metric("FR", _vitales_valor_corto(v, "FR"))
+            mc2.metric("Temp", _vitales_valor_corto(v, "Temp"))
+            mc2.metric("HGT", _vitales_valor_corto(v, "HGT"))
+            _fecha_v = vitales_orden[0].get("fecha", "S/D")[:16]
+            st.caption(f"Últimos signos — {_fecha_v}")
+        if patologias:
+            st.caption(f"**Diagnósticos:** {patologias}")
+        if alergias:
+            st.caption(f"**Alergias:** {alergias}")
+
+        evoluciones = st.session_state.get("evoluciones_db", [])
+        evs_pac = [e for e in evoluciones if e.get("paciente") == paciente_sel]
+        if evs_pac:
+            ultima_ev = max(evs_pac, key=lambda x: x.get("fecha", ""))
+            _nota_ev = str(ultima_ev.get("nota", ""))[:120].replace("\n", " ")
+            st.caption(f"**Última evolución:** {_nota_ev}{'...' if len(str(ultima_ev.get('nota', ''))) > 120 else ''}")
+
+        indicaciones = st.session_state.get("indicaciones_db", [])
+        activas = [
+            r for r in indicaciones
+            if r.get("paciente") == paciente_sel
+            and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
+            and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
+        ]
+        if activas:
+            st.caption(f"**Medicación activa ({len(activas)}):**")
+            for med in activas[:3]:
+                _nom = (med.get("med") or "")[:50]
+                _frec = (med.get("frecuencia") or med.get("via") or "")[:25]
+                st.caption(f"  • {_nom}" + (f" — {_frec}" if _frec else ""))
+            if len(activas) > 3:
+                st.caption(f"  ... y {len(activas) - 3} más")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
 # Selector de pacientes + alertas en sidebar
 # ---------------------------------------------------------------------------
 

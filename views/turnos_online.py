@@ -163,20 +163,18 @@ def render_turnos_online(mi_empresa, rol):
                 bg = {"Disponible": "rgba(5,150,105,0.1)", "Reservado": "rgba(37,99,235,0.1)", "Cancelado": "rgba(220,38,38,0.1)"}
                 est = t.get('estado', '')
                 with st.container(border=True):
-                    cols = st.columns([2, 1, 1, 1.5, 0.5, 0.5])
-                    cols[0].markdown(f"**{t.get('profesional','?')}**")
-                    cols[1].markdown(f"{t.get('fecha','?')}")
-                    cols[2].markdown(f"{t.get('horario','?')} hs")
+                    c_prof, c_info, c_acc = st.columns([2, 1.2, 1])
+                    c_prof.markdown(f"**{t.get('profesional','?')}**")
+                    c_info.markdown(f"{t.get('fecha','?')} {t.get('horario','?')}hs")
                     col = color.get(est, "#fff")
-                    cols[3].markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
+                    c_acc.markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
                     if t.get('paciente'):
-                        cols[3].markdown(f"Paciente: {t['paciente']}")
-                    else:
-                        cols[3].markdown("")
+                        c_acc.markdown(f"Paciente: {t['paciente']}")
 
+                    c_act1, c_act2 = st.columns(2)
                     # Editar slot (solo disponibles)
                     if est == "Disponible":
-                        if cols[4].button("✏️", key=f"ed_{i}"):
+                        if c_act1.button("✏️ Editar", use_container_width=True, key=f"ed_{i}"):
                             st.session_state[f"_edit_slot_{i}"] = True
                     if st.session_state.get(f"_edit_slot_{i}"):
                         nuevo_prof = st.text_input("Profesional", t['profesional'], key=f"ep_{i}")
@@ -190,7 +188,7 @@ def render_turnos_online(mi_empresa, rol):
                             st.rerun()
 
                     # Eliminar slot
-                    if cols[5].button("🗑️", key=f"del_{i}"):
+                    if c_act2.button("🗑️ Eliminar", use_container_width=True, key=f"del_{i}"):
                         db.remove(t)
                         guardar_datos(spinner=True)
                         queue_toast("Slot eliminado.")

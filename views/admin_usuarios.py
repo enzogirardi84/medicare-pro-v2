@@ -27,20 +27,22 @@ def render_admin_usuarios():
     opciones_rol = ["superadmin", "admin", "Medico", "Enfermero/a", "Operativo", "Administrativo"]
     for login, datos in sorted(usuarios.items()):
         with st.container(border=True):
-            cols = st.columns([2, 2, 2, 2, 1])
-            cols[0].text_input("Login", value=login, key=f"au_login_{login}", disabled=True)
+            c1, c2 = st.columns(2)
+            c1.text_input("Login", value=login, key=f"au_login_{login}", disabled=True)
             nombre_actual = datos.get("nombre", "")
-            nombre_nuevo = cols[1].text_input("Nombre", value=nombre_actual, key=f"au_nombre_{login}")
+            nombre_nuevo = c2.text_input("Nombre", value=nombre_actual, key=f"au_nombre_{login}")
             rol_actual = str(datos.get("rol", ""))
-            rol_nuevo = cols[2].selectbox(
+            rol_nuevo = c1.selectbox(
                 "Rol",
                 options=opciones_rol,
                 index=opciones_rol.index(rol_actual) if rol_actual in opciones_rol else 0,
                 key=f"au_rol_{login}",
             )
             empresa_actual = datos.get("empresa", "")
-            empresa_nueva = cols[3].text_input("Empresa", value=empresa_actual, key=f"au_empresa_{login}")
-            if cols[4].button("🗑️", key=f"au_del_{login}"):
+            empresa_nueva = c2.text_input("Empresa", value=empresa_actual, key=f"au_empresa_{login}")
+
+            c_act1, c_act2 = st.columns(2)
+            if c_act1.button("🗑️ Eliminar", use_container_width=True, key=f"au_del_{login}"):
                 if st.session_state.get(f"_confirm_del_{login}"):
                     del usuarios[login]
                     st.session_state["usuarios_db"] = usuarios
@@ -53,7 +55,7 @@ def render_admin_usuarios():
                     st.warning(f"Confirma la eliminacion de '{login}' haciendo click otra vez en 🗑️")
             # Save button if changes detected
             if nombre_nuevo != nombre_actual or rol_nuevo != rol_actual or empresa_nueva != empresa_actual:
-                if st.button("💾 Guardar cambios", use_container_width=True, key=f"au_save_{login}"):
+                if c_act2.button("💾 Guardar cambios", use_container_width=True, key=f"au_save_{login}"):
                     datos["nombre"] = nombre_nuevo
                     datos["rol"] = rol_nuevo
                     datos["empresa"] = empresa_nueva
