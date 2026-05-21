@@ -55,16 +55,24 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             "Responde de forma clara, concisa y profesional en el mismo idioma de la pregunta."
         )
         prompt = f"Contexto completo del sistema:\n{contexto}\n\nPregunta del usuario:\n{consulta}"
-        if provider == "openai" or provider == "deepseek":
+        if provider in ("openai", "deepseek", "openrouter"):
             from openai import OpenAI
             kwargs = {"api_key": api_key, "timeout": 20}
             if provider == "deepseek":
                 kwargs["base_url"] = "https://api.deepseek.com/v1"
                 model = model if model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-v4-flash"
-            resp = OpenAI(**kwargs).chat.completions.create(
-                model=model, messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
-                max_tokens=800, temperature=0.2
-            )
+            elif provider == "openrouter":
+                kwargs["base_url"] = "https://openrouter.ai/api/v1"
+                model = model if model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek/deepseek-chat"
+            create_kwargs = {
+                "model": model,
+                "messages": [{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
+                "max_tokens": 800,
+                "temperature": 0.2,
+            }
+            if provider == "openrouter":
+                create_kwargs["extra_headers"] = {"HTTP-Referer": "https://medicare-pro.app", "X-Title": "Medicare Pro"}
+            resp = OpenAI(**kwargs).chat.completions.create(**create_kwargs)
             return resp.choices[0].message.content.strip()
         elif provider == "anthropic":
             import anthropic
