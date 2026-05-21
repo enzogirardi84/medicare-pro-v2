@@ -421,7 +421,7 @@ NOTA MEJORADA:"""
                 base_url="https://openrouter.ai/api/v1",
                 timeout=30.0,
             )
-            model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek/deepseek-chat"
+            model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek/deepseek-v3.2"
             response = client.chat.completions.create(
                 model=model,
                 messages=[
