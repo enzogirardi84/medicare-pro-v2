@@ -393,12 +393,23 @@ def render_integration_settings(is_admin: bool):
             else:
                 ai_model = _sel
 
-            # Test de conexión
+            # Test de conexión + guardado automático si es exitoso
             if st.button("🔄 Probar conexión con IA", key="ai_test_btn", use_container_width=True):
                 if not ai_key.strip():
                     st.warning("Primero ingresá una API Key.")
                 else:
-                    _probar_conexion_ia(ai_provider, ai_key, ai_model)
+                    ok = _probar_conexion_ia(ai_provider, ai_key, ai_model)
+                    if ok:
+                        _s["integ_ai_enabled"] = True
+                        _s["integ_ai_provider"] = ai_provider
+                        _s["integ_ai_key"] = ai_key
+                        _s["integ_ai_model"] = ai_model
+                        try:
+                            guardar_datos(spinner=False)
+                        except Exception as e:
+                            log_event("settings", f"error:guardar_ai_test:{e}")
+                        st.success("✅ Configuración de IA guardada automáticamente.")
+                        log_event("settings", f"AI config saved via test: provider={ai_provider}, model={ai_model}")
     else:
         ai_provider = "Ninguno"
         ai_key = _s.get("integ_ai_key", "")
@@ -862,11 +873,11 @@ def get_os_info() -> str:
     return f"{platform.system()} {platform.release()}"
 
 
-def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
-    """Prueba conexión contra el proveedor de IA sin modificar config global."""
+def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool:
+    """Prueba conexión contra el proveedor de IA. Retorna True si fue exitosa."""
     if not api_key.strip():
         st.warning("Primero ingresá una API Key.")
-        return
+        return False
     provider_map = {
         "OpenAI": ("openai", None, "gpt-4o"),
         "DeepSeek": ("deepseek", "https://api.deepseek.com/v1", "deepseek-v4-flash"),
@@ -875,7 +886,7 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
     entry = provider_map.get(provider_display)
     if not entry:
         st.warning(f"Test automático no soportado para {provider_display}.")
-        return
+        return False
     internal, base_url, default_model = entry
     clean_key = api_key.strip().split(maxsplit=1)[0]
     try:
@@ -891,9 +902,11 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
         texto = resp.choices[0].message.content.strip()
         if "OK" in texto:
             st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {test_model})")
-        else:
-            st.warning(f"⚠️ Conectado pero respuesta inesperada: {texto[:80]}")
+            return True
+        st.warning(f"⚠️ Conectado pero respuesta inesperada: {texto[:80]}")
+        return True
     except Exception as e:
         import traceback
         st.error(f"❌ Error de conexión: {e}")
         st.caption(f"Detalle: {traceback.format_exc(limit=1)}")
+        return False
