@@ -377,12 +377,13 @@ def render_integration_settings(is_admin: bool):
                 "Local (Ollama)": ["llama3.1", "llama3", "mistral", "Otro"],
             }
             _avail = _model_opts.get(ai_provider, ["Otro"])
-            _current = ai_model if ai_model in _avail else "Otro"
-            _idx = _avail.index(_current) if _current in _avail else len(_avail) - 1
+            _is_custom = ai_model and ai_model not in _avail
+            _current = "Otro" if _is_custom else (ai_model if ai_model in _avail else _avail[0])
+            _idx = _avail.index(_current) if _current in _avail else 0
             _sel = st.selectbox("Modelo", options=_avail, index=_idx, key="ai_model_sel")
             if _sel == "Otro":
-                ai_model = st.text_input("Modelo (personalizado)", value=ai_model if ai_model not in _avail else "",
-                    placeholder="Ej: gpt-4o-mini, deepseek-v4-flash")
+                ai_model = st.text_input("Modelo (personalizado)", value=ai_model if _is_custom else "",
+                    placeholder="Ej: deepseek/deepseek-chat, gpt-4o-mini")
             else:
                 ai_model = _sel
 
