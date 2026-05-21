@@ -38,7 +38,7 @@ from core.seo_streamlit import (
 from views.pwa_manifest import inject_pwa_headers
 from core import utils as core_utils
 
-APP_BUILD_TAG = "Build 2026-05-21 - Fix sidebar mobile responsive"
+APP_BUILD_TAG = "Build 2026-05-21 - Hide AI evolution controls"
 
 st.set_page_config(
     page_title=PAGE_TITLE_PUBLIC,
@@ -47,37 +47,22 @@ st.set_page_config(
     page_icon="🩺",
 )
 
-# ============================================================
-# OPTIMIZACIÓN DE RENDIMIENTO - Reducir re-renders
-# ============================================================
-# Solo aplicar theme una vez
 if "theme_applied_v5" not in st.session_state:
     st.session_state["theme_applied_v5"] = False
 
 configurar_logging_basico()
 
-# Vigía de Errores: captura global de excepciones (sys.excepthook + threading)
 try:
     setup_global_hooks()
 except Exception as exc:
     log_event("error_tracker", f"setup_hooks_falla:{type(exc).__name__}:{exc}")
 
-# ============================================================
-# CSS GLOBAL
-# ============================================================
 aplicar_css_base()
 
-# ============================================================
-# ATAJOS DE TECLADO
-# ============================================================
 from core.atajos_teclado import inject_atajos_teclado, render_ayuda_atajos
 inject_atajos_teclado()
 
-# ============================================================
-# HANDLER GLOBAL: Error conocido de imagen (Anthropic/IA)
-# ============================================================
 try:
-    # Verificar si LLM esta mal configurado
     from core.ai_assistant import _get_llm_config, is_llm_enabled
     if is_llm_enabled():
         provider, api_key, model = _get_llm_config()
@@ -85,9 +70,6 @@ try:
 except Exception:
     pass
 
-# ============================================================
-# SEO / LANDING
-# ============================================================
 inyectar_redirect_apex_si_configurado()
 
 if not st.session_state.get("_mc_seo_head_inyectado"):
@@ -99,16 +81,9 @@ ensure_entered_app_default()
 if not st.session_state.get("entered_app"):
     render_publicidad_y_detener()
 
-# ============================================================
-# SESIÓN / BOOTSTRAP DB
-# ============================================================
 eliminar_overlay_residual()
-
 inicializar_db_state_seguro()
 
-# ============================================================
-# LOGIN
-# ============================================================
 render_login()
 verificar_clinica_sesion_activa()
 check_inactividad()
@@ -118,15 +93,11 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
-# ============================================================
-# SEGURIDAD: HTTPS, CSRF, Logs de acceso
-# ============================================================
 from core.seguridad_extendida import verificar_https, generar_csrf_token, registrar_acceso
 
 verificar_https()
-generar_csrf_token()  # Inicializar token CSRF para esta sesion
+generar_csrf_token()
 
-# Inicialización segura de variables críticas (evita KeyError en reruns parciales)
 for _guard_key, _guard_default in (
     ("modulo_actual", None),
     ("paciente_actual", None),
@@ -134,9 +105,6 @@ for _guard_key, _guard_default in (
     if _guard_key not in st.session_state:
         st.session_state[_guard_key] = _guard_default
 
-# ============================================================
-# PWA HEADERS + MOBILE CSS
-# ============================================================
 try:
     inject_pwa_headers()
 except Exception as exc:
@@ -150,9 +118,55 @@ try:
 except Exception as exc:
     log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
 
-# ============================================================
-# TEMA PROFESIONAL POSLOGIN
-# ============================================================
+# Parche visual definitivo: elimina botones/avisos de IA de Evoluciones aunque
+# aparezcan por caché, por un deploy viejo o por otro componente.
+st.markdown("""
+<script>
+(function() {
+  function hideAiEvolutionElements() {
+    try {
+      const doc = window.parent && window.parent.document ? window.parent.document : document;
+      const phrases = [
+        "Sugerir evolución con IA",
+        "Sugerir evolucion con IA",
+        "IA no disponible",
+        "Configuración de IA",
+        "Configuracion de IA",
+        "Ajustes > Integraciones"
+      ];
+      const nodes = Array.from(doc.querySelectorAll("button, [data-testid='stButton'], [data-testid='stAlert'], div"));
+      for (const node of nodes) {
+        const txt = (node.innerText || node.textContent || "").trim();
+        if (!txt) continue;
+        if (phrases.some(p => txt.includes(p))) {
+          let target = node.closest("[data-testid='stButton']") || node.closest("[data-testid='stAlert']") || node;
+          target.style.setProperty("display", "none", "important");
+          target.style.setProperty("visibility", "hidden", "important");
+          target.style.setProperty("height", "0", "important");
+          target.style.setProperty("min-height", "0", "important");
+          target.style.setProperty("margin", "0", "important");
+          target.style.setProperty("padding", "0", "important");
+          target.style.setProperty("overflow", "hidden", "important");
+        }
+      }
+    } catch (e) {}
+  }
+  hideAiEvolutionElements();
+  setTimeout(hideAiEvolutionElements, 200);
+  setTimeout(hideAiEvolutionElements, 700);
+  setTimeout(hideAiEvolutionElements, 1400);
+  setInterval(hideAiEvolutionElements, 1200);
+  try {
+    const doc = window.parent && window.parent.document ? window.parent.document : document;
+    if (!window.__mcHideAiEvolutionObserver) {
+      window.__mcHideAiEvolutionObserver = true;
+      new MutationObserver(hideAiEvolutionElements).observe(doc.body, { childList: true, subtree: true });
+    }
+  } catch (e) {}
+})();
+</script>
+""", unsafe_allow_html=True)
+
 from core.ui_professional import apply_professional_theme
 if not st.session_state.get("_mc_professional_theme_applied_v4"):
     try:
@@ -165,9 +179,6 @@ if not st.session_state.get("_mc_professional_theme_applied_v4"):
         except Exception:
             pass
 
-# ============================================================
-# GUARDADOS PENDIENTES
-# ============================================================
 try:
     procesar_guardado_pendiente_seguro()
 except Exception as exc:
@@ -177,9 +188,6 @@ except Exception as exc:
     except Exception:
         pass
 
-# ============================================================
-# NORMALIZAR USUARIO (solo si cambió)
-# ============================================================
 _user_base = dict(user)
 _canon = core_utils.normalizar_usuario_sistema(dict(_user_base))
 _merged = dict(_user_base)
@@ -198,9 +206,6 @@ user = st.session_state.get("u_actual")
 if not isinstance(user, dict) or not user:
     st.stop()
 
-# ============================================================
-# IMPORTS PESADOS SOLO CON SESIÓN VÁLIDA
-# ============================================================
 from core.database import completar_claves_db_session, should_cleanup_cache, limpiar_cache_app
 
 from core.app_navigation import (
@@ -226,9 +231,6 @@ from core.sidebar_components import (
 )
 from core.view_registry import build_view_maps
 
-# ============================================================
-# IMPORTS DINÁMICOS / FALLBACKS
-# ============================================================
 cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(core_utils, "es_control_total", lambda rol, usuario_actual=None: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"})
 inicializar_db_state = core_utils.inicializar_db_state
@@ -249,7 +251,6 @@ descripcion_acceso_rol = getattr(
 
 completar_claves_db_session()
 
-# Limpieza automatica de caches si crecieron demasiado
 if should_cleanup_cache():
     try:
         n = limpiar_cache_app()
@@ -262,22 +263,13 @@ if should_cleanup_cache():
         except Exception:
             pass
 
-# ============================================================
-# CONTEXTO USUARIO
-# ============================================================
 mi_empresa = str(user.get("empresa", "Clinica General") or "Clinica General")
 rol = str(user.get("rol", "Operativo") or "Operativo")
 
-# ============================================================
-# VIEW MAPS
-# ============================================================
 VIEW_CONFIG, VIEW_NAV_LABELS = build_view_maps(
     alertas_app_visible=ALERTAS_APP_PACIENTE_VISIBLE
 )
 
-# ============================================================
-# LOGO SIDEBAR CACHEADO
-# ============================================================
 _logo_ck = "_mc_sidebar_logo_b64"
 
 if _logo_ck not in st.session_state:
@@ -303,9 +295,6 @@ if st.session_state.get("_modo_offline"):
         "hasta configurar Supabase correctamente."
     )
 
-# ============================================================
-# SIDEBAR
-# ============================================================
 def _logout_callback():
     st.session_state["logeado"] = False
     for k in list(st.session_state.keys()):
@@ -315,7 +304,6 @@ def _logout_callback():
         st.session_state.pop(_key, None)
     st.session_state["_mc_logout_requested"] = True
 
-# Mobile-visible logout button (sidebar is hidden on mobile)
 st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
 if st.button("Cerrar sesión", key="mobile_logout", on_click=_logout_callback,
              use_container_width=True):
@@ -330,27 +318,17 @@ with st.sidebar:
         on_click=_logout_callback,
     )
 
-# Rerun limpio tras logout (fuera del contexto del botón para evitar desconexión websocket)
 if st.session_state.pop("_mc_logout_requested", False):
     st.rerun()
 
-# ============================================================
-# OPTIMIZACIONES DE VELOCIDAD
-# ============================================================
-# Evitar reruns innecesarios en sidebar
 if "sidebar_rendered" not in st.session_state:
     st.session_state["sidebar_rendered"] = True
 else:
-    # Skip reload if nothing changed
     pass
 
-# ============================================================
-# MENÚ Y NAVEGACIÓN
-# ============================================================
 menu = resolve_menu_for_role(rol, user, VIEW_CONFIG, obtener_modulos_permitidos)
 menu_set = frozenset(menu)
 
-# Query params nav (solo si cambió módulo realmente)
 procesar_query_params_navegacion(menu_set)
 
 vista_actual = resolve_current_view(menu, menu_set)
@@ -362,19 +340,14 @@ if not vista_actual:
     )
     st.stop()
 
-# ============================================================
-# BIENVENIDA / ESTADO INICIAL (visible siempre)
-# ============================================================
 nombre_usuario = user.get("nombre", "Usuario")
 
 paciente_sel = render_patient_selector(
     mi_empresa, rol, obtener_pacientes_visibles, mapa_detalles_pacientes
 ) or st.session_state.get("paciente_actual")
 
-# Grilla de módulos responsive (chunking nativo st.columns + CSS simple)
 vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
 
-# Log de cambio de modulo
 _modulo_prev = st.session_state.get("_modulo_anterior_log")
 if _modulo_prev and _modulo_prev != vista_actual:
     registrar_acceso("cambio_modulo", f"{_modulo_prev} -> {vista_actual}")
@@ -384,14 +357,10 @@ if not vista_actual:
     st.warning("No se pudo resolver un módulo visible para este usuario.")
     st.stop()
 
-# Registrar acceso inicial solo una vez por sesion
 if not st.session_state.get("_acceso_registrado"):
     registrar_acceso("login_ok", f"Modulo inicial: {vista_actual}")
     st.session_state["_acceso_registrado"] = True
 
-# ============================================================
-# BIENVENIDA / ESTADO SIN PACIENTE
-# ============================================================
 nombre_usuario = user.get("nombre", "Usuario")
 if not paciente_sel:
     st.markdown(f"""
@@ -405,17 +374,11 @@ else:
     st.caption(f"Paciente: **{paciente_sel}** — {mi_empresa}")
     _render_mobile_contexto_clinico(paciente_sel)
 
-# ============================================================
-# CONTEXTO CLÍNICO / NOTIFICACIONES
-# ============================================================
 _render_sidebar_contexto_clinico(paciente_sel, vista_actual)
 
 render_banner_alertas_criticas_si_aplica(mi_empresa)
 render_franja_avisos_operativos(mi_empresa)
 
-# ============================================================
-# TARJETA DE PACIENTE / ATAJO ANTERIOR
-# ============================================================
 modulo_anterior = st.session_state.get("modulo_anterior")
 mostrar_atajo = (
     modulo_anterior
@@ -468,10 +431,9 @@ if mostrar_atajo or paciente_sel:
                 f"{escape(str(det_actual.get('estado', 'Activo')))}"
             )
 
-# Backup automatico: verificar si pasaron 24h desde el ultimo
 try:
     _ultimo_backup = st.session_state.get("_ultimo_backup_ts", 0)
-    if time.time() - _ultimo_backup > 86400:  # 24h
+    if time.time() - _ultimo_backup > 86400:
         st.session_state["_ultimo_backup_ts"] = time.time()
         from core.database import _db_keys
         claves = _db_keys()
@@ -483,9 +445,6 @@ try:
 except Exception as exc:
     log_event("backup", f"auto_backup_fallo:{type(exc).__name__}:{exc}")
 
-# ============================================================
-# NOTIFICACIONES DE ESCRITORIO (browser push)
-# ============================================================
 st.markdown("""
 <script>
 if ("Notification" in window && Notification.permission === "default") {
@@ -494,9 +453,6 @@ if ("Notification" in window && Notification.permission === "default") {
 </script>
 """, unsafe_allow_html=True)
 
-# ============================================================
-# CONFIRMACIÓN AL CERRAR SIN GUARDAR
-# ============================================================
 _unsaved = st.session_state.get("_guardar_datos_pendiente", False) or st.session_state.get("_draft_pending", False)
 if _unsaved:
     st.markdown("""
@@ -508,24 +464,15 @@ if _unsaved:
     </script>
     """, unsafe_allow_html=True)
 
-# ============================================================
-# TOASTS
-# ============================================================
 from core.alert_toasts import render_queued_toasts
 
 render_queued_toasts()
 
-# ============================================================
-# PANEL DE SEGURIDAD / AUTO-BACKUP
-# ============================================================
 from core.seguridad_operaciones import render_panel_seguridad
 
 render_panel_seguridad()
 render_ayuda_atajos()
 
-# ============================================================
-# BACKUP RAPIDO (sidebar + mobile)
-# ============================================================
 _do_backup = st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapido")
 st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
 _do_backup_mobile = st.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido_mobile")
@@ -549,23 +496,17 @@ if _do_backup or _do_backup_mobile:
         log_event("backup", f"error_backup:{type(exc).__name__}:{exc}")
         st.sidebar.error("Error al generar backup")
 
-# Contador de notificaciones
 _notif_count = len(st.session_state.get("_toast_queue", []))
 if _notif_count > 0:
     st.sidebar.caption(f"🔔 {_notif_count} notificaciones pendientes")
 
-# Enlace a Configuración en sidebar
 if st.sidebar.button("⚙️ Configuración", use_container_width=True, key="sidebar_settings"):
     st.session_state["_show_settings"] = True
     st.rerun()
 
-# ============================================================
-# AUTO-SCROLL AL CONTENIDO SI CAMBIÓ EL MÓDULO
-# ============================================================
 _modulo_previo_scroll = st.session_state.get("_mc_modulo_previo_scroll")
 if _modulo_previo_scroll != vista_actual:
     st.session_state["_mc_modulo_previo_scroll"] = vista_actual
-    # Scroll suave hacia el área de contenido (saltando la navegación superior)
     st.markdown(
         """<script>
             setTimeout(function() {
@@ -573,7 +514,6 @@ if _modulo_previo_scroll != vista_actual:
                     const main = window.parent.document.querySelector('.main');
                     if (!main) return;
                     const vb = main.querySelectorAll('[data-testid="stVerticalBlock"]');
-                    // Buscar primer bloque que esté más allá de ~280px (zona navegación)
                     for (let i = 0; i < vb.length; i++) {
                         if (vb[i].offsetTop > 280) {
                             vb[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -586,18 +526,12 @@ if _modulo_previo_scroll != vista_actual:
         unsafe_allow_html=True,
     )
 
-# ============================================================
-# SELF-HEALING IA (auto-diagnóstico periódico)
-# ============================================================
 try:
     from core.self_healing import maybe_run_self_healing
     maybe_run_self_healing()
 except Exception:
     pass
 
-# ============================================================
-# MÓDULO ACTIVO (indicador visible en mobile)
-# ============================================================
 _label_modulo = VIEW_NAV_LABELS.get(vista_actual, vista_actual)
 st.markdown(
     f'<div class="mc-mobile-only" style="text-align:center;margin-bottom:4px;">'
@@ -607,9 +541,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ============================================================
-# RENDER DE VISTA ACTUAL - con indicador visible
-# ============================================================
 t0_view = time.monotonic()
 ok_view = True
 
@@ -647,18 +578,12 @@ finally:
         ok=ok_view,
     )
 
-# ============================================================
-# ASISTENTE IA FLOTANTE (visible en todos los módulos)
-# ============================================================
 try:
     from views.ai_floating_assistant import render_ai_floating_assistant
     render_ai_floating_assistant(vista_actual, paciente_sel)
 except Exception:
     pass
 
-# ============================================================
-# PÁGINA DE CONFIGURACIÓN (toggle desde sidebar)
-# ============================================================
 if st.session_state.get("_show_settings", False):
     from views.settings import render_settings_page
     render_settings_page()
@@ -667,7 +592,4 @@ if st.session_state.get("_show_settings", False):
         st.rerun()
     st.stop()
 
-# ============================================================
-# MÉTRICAS ADMIN
-# ============================================================
 render_metricas_admin_sidebar(rol)
