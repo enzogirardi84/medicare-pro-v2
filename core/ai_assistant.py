@@ -352,7 +352,8 @@ NOTA MEJORADA:"""
                 temperature=temperature
             )
             
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else ""
             
         except Exception as e:
             error_msg = str(e)
@@ -406,7 +407,8 @@ NOTA MEJORADA:"""
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else ""
         except Exception as e:
             log_event("ai_error", f"DeepSeek API error: {e}")
             raise
@@ -432,7 +434,8 @@ NOTA MEJORADA:"""
                 temperature=temperature,
                 extra_headers={"HTTP-Referer": "https://medicare-pro.app", "X-Title": "Medicare Pro"},
             )
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else ""
         except Exception as e:
             log_event("ai_error", f"OpenRouter API error: {e}")
             raise

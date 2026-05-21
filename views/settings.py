@@ -899,11 +899,15 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
             max_tokens=5,
             temperature=0,
         )
-        texto = resp.choices[0].message.content.strip()
-        if "OK" in texto:
-            st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {test_model})")
+        content = resp.choices[0].message.content
+        if content is not None:
+            texto = content.strip()
+            if "OK" in texto:
+                st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {test_model})")
+                return True
+            st.warning(f"⚠️ Conectado pero respuesta inesperada: {texto[:80]}")
             return True
-        st.warning(f"⚠️ Conectado pero respuesta inesperada: {texto[:80]}")
+        st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {test_model})")
         return True
     except Exception as e:
         import traceback

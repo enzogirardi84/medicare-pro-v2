@@ -254,6 +254,7 @@ def procesar_guardado_pendiente() -> bool:
 
 def _db_keys():
     return [
+        "settings_db",
         "usuarios_db",
         "pacientes_db",
         "detalles_pacientes_db",
