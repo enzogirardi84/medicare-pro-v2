@@ -42,9 +42,10 @@ def buscar_en_web(consulta: str, max_res: int = 3) -> List[Dict]:
 # ============================================================
 def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
     try:
-        from core.ai_assistant import LLM_ENABLED, LLM_PROVIDER, LLM_API_KEY, LLM_MODEL
-        if not LLM_ENABLED:
+        from core.ai_assistant import _get_llm_config, is_llm_enabled
+        if not is_llm_enabled():
             return None
+        provider, api_key, model = _get_llm_config()
         system_msg = (
             "Eres un asistente medico profesional que analiza datos clinicos en tiempo real. "
             "Recibes un contexto completo del paciente (datos personales, medicacion, signos vitales, "
@@ -54,17 +55,17 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             "Responde de forma clara, concisa y profesional en el mismo idioma de la pregunta."
         )
         prompt = f"Contexto completo del sistema:\n{contexto}\n\nPregunta del usuario:\n{consulta}"
-        if LLM_PROVIDER == "openai":
+        if provider == "openai":
             from openai import OpenAI
-            resp = OpenAI(api_key=LLM_API_KEY, timeout=20).chat.completions.create(
-                model=LLM_MODEL, messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
+            resp = OpenAI(api_key=api_key, timeout=20).chat.completions.create(
+                model=model, messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
                 max_tokens=800, temperature=0.2
             )
             return resp.choices[0].message.content.strip()
-        elif LLM_PROVIDER == "anthropic":
+        elif provider == "anthropic":
             import anthropic
-            resp = anthropic.Anthropic(api_key=LLM_API_KEY, timeout=20).completions.create(
-                model=LLM_MODEL, prompt=f"Human: {system_msg}\n\n{prompt}\n\nAssistant:", max_tokens_to_sample=800, temperature=0.2
+            resp = anthropic.Anthropic(api_key=api_key, timeout=20).completions.create(
+                model=model, prompt=f"Human: {system_msg}\n\n{prompt}\n\nAssistant:", max_tokens_to_sample=800, temperature=0.2
             )
             return resp.completion.strip()
     except Exception as e:

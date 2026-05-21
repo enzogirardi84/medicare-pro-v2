@@ -22,10 +22,68 @@ from core.app_logging import log_event
 
 
 # Configuración de providers de LLM
+# Fuentes (en orden de prioridad): session_state > st.secrets > env vars > defaults
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "none")  # openai, anthropic, local, none
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4")
 LLM_ENABLED = LLM_PROVIDER != "none" and LLM_API_KEY != ""
+
+
+def _get_llm_config():
+    """Obtiene config LLM con overriding de session_state > st.secrets > env vars."""
+    provider = os.getenv("LLM_PROVIDER", "none")
+    api_key = os.getenv("LLM_API_KEY", "")
+    model = os.getenv("LLM_MODEL", "gpt-4")
+
+    try:
+        import streamlit as st
+        _p = getattr(st, "secrets", None)
+        if _p is not None:
+            try:
+                v = _p.get("LLM_PROVIDER", provider)
+                if isinstance(v, str):
+                    provider = v
+            except Exception:
+                pass
+            try:
+                v = _p.get("LLM_API_KEY", api_key)
+                if isinstance(v, str):
+                    api_key = v
+            except Exception:
+                pass
+            try:
+                v = _p.get("LLM_MODEL", model)
+                if isinstance(v, str):
+                    model = v
+            except Exception:
+                pass
+        # session_state overrides (desde settings UI)
+        _ss = getattr(st, "session_state", None)
+        if _ss is not None:
+            try:
+                _settings = _ss.get("settings_db", {})
+                if isinstance(_settings, dict):
+                    ui_provider = _settings.get("integ_ai_provider", "")
+                    if ui_provider and ui_provider != "Ninguno":
+                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "Local (Ollama)": "local"}.get(ui_provider, provider)
+                    ui_key = _settings.get("integ_ai_key", "")
+                    if isinstance(ui_key, str) and ui_key:
+                        api_key = ui_key
+                    ui_model = _settings.get("integ_ai_model", "")
+                    if isinstance(ui_model, str) and ui_model:
+                        model = ui_model
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return provider, api_key, model
+
+
+def is_llm_enabled() -> bool:
+    """Verifica si LLM está habilitado (considerando todas las fuentes)."""
+    provider, api_key, _ = _get_llm_config()
+    return provider != "none" and bool(api_key)
 
 
 class AIModelType(Enum):
@@ -97,8 +155,21 @@ INSTRUCCIONES:
 NOTA DE EVOLUCIÓN:"""
 
     def __init__(self):
+        self._config_loaded = False
         self.enabled = LLM_ENABLED
         self.provider = LLM_PROVIDER
+        self.api_key = LLM_API_KEY
+        self.model = LLM_MODEL
+
+    def _ensure_config(self):
+        """Carga configuración fresca (st.secrets > env vars > defaults)."""
+        if not self._config_loaded:
+            provider, api_key, model = _get_llm_config()
+            self.provider = provider
+            self.api_key = api_key
+            self.model = model
+            self.enabled = provider != "none" and bool(api_key)
+            self._config_loaded = True
     
     def generate_evolution_suggestion(
         self,
@@ -113,6 +184,7 @@ NOTA DE EVOLUCIÓN:"""
         Returns:
             Dict con sugerencia y metadatos
         """
+        self._ensure_config()
         if not self.enabled:
             return {
                 "suggestion": "",
@@ -140,7 +212,7 @@ NOTA DE EVOLUCIÓN:"""
                 "suggestion": suggestion,
                 "enabled": True,
                 "provider": self.provider,
-                "model": LLM_MODEL
+                "model": self.model
             }
             
         except Exception as e:
@@ -262,12 +334,13 @@ NOTA MEJORADA:"""
     
     def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama API de OpenAI (v1.0+)."""
+        self._ensure_config()
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=LLM_API_KEY, timeout=30.0)
+            client = OpenAI(api_key=self.api_key, timeout=30.0)
             
             response = client.chat.completions.create(
-                model=LLM_MODEL,
+                model=self.model,
                 messages=[
                     {"role": "system", "content": "Eres un asistente médico profesional."},
                     {"role": "user", "content": prompt}
@@ -288,12 +361,13 @@ NOTA MEJORADA:"""
     
     def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama API de Anthropic (Claude)."""
+        self._ensure_config()
         try:
             import anthropic
-            client = anthropic.Anthropic(api_key=LLM_API_KEY)
+            client = anthropic.Anthropic(api_key=self.api_key)
             
             response = client.completions.create(
-                model=LLM_MODEL,
+                model=self.model,
                 prompt=f"Human: {prompt}\n\nAssistant:",
                 max_tokens_to_sample=max_tokens,
                 temperature=temperature
@@ -311,12 +385,13 @@ NOTA MEJORADA:"""
     
     def _call_local(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama modelo local (ej: Ollama, LM Studio)."""
+        self._ensure_config()
         try:
             import requests
             
             local_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
             local_model = os.getenv("LOCAL_LLM_MODEL", "llama3.1")
-            model = local_model if LLM_MODEL in ("gpt-4", "gpt-3.5-turbo", "claude-3") else LLM_MODEL
+            model = local_model if self.model in ("gpt-4", "gpt-3.5-turbo", "claude-3") else self.model
             
             response = requests.post(
                 f"{local_url}/api/generate",

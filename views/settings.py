@@ -347,12 +347,13 @@ def render_integration_settings(is_admin: bool):
             index=_ai_providers.index(_s_ai_provider) if _s_ai_provider in _ai_providers else 3
         )
         
-        ai_key = ""
+        ai_key = _s.get("integ_ai_key", "")
+        ai_model = _s.get("integ_ai_model", "gpt-4")
         if ai_provider != "Ninguno":
-            ai_key = st.text_input(
-                "API Key",
-                type="password",
-                value=_s.get("integ_ai_key", "")
+            ai_key = st.text_input("API Key", type="password", value=ai_key)
+            ai_model = st.text_input(
+                "Modelo", value=ai_model,
+                help="Ej: gpt-4, gpt-4o, claude-3-opus-20240229, claude-3-sonnet-20240229"
             )
     
     st.divider()
@@ -371,6 +372,7 @@ def render_integration_settings(is_admin: bool):
         _s["integ_ai_enabled"] = ai_enabled
         _s["integ_ai_provider"] = ai_provider
         _s["integ_ai_key"] = ai_key
+        _s["integ_ai_model"] = ai_model
         try:
             guardar_datos(spinner=False)
         except Exception as e:

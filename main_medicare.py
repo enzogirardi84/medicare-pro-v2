@@ -78,9 +78,10 @@ inject_atajos_teclado()
 # ============================================================
 try:
     # Verificar si LLM esta mal configurado
-    from core.ai_assistant import LLM_ENABLED, LLM_PROVIDER, LLM_MODEL
-    if LLM_ENABLED and LLM_PROVIDER:
-        log_event("config", f"LLM configurado: {LLM_PROVIDER}/{LLM_MODEL}")
+    from core.ai_assistant import _get_llm_config, is_llm_enabled
+    if is_llm_enabled():
+        provider, api_key, model = _get_llm_config()
+        log_event("config", f"LLM configurado: {provider}/{model}")
 except Exception:
     pass
 
