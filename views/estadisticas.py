@@ -32,7 +32,7 @@ import csv
 
 
 def _estado_vacio_stats(titulo: str, mensaje: str, sugerencia: str | None = None) -> None:
-    """Estado vacío nativo, sin HTML crudo. Evita que aparezcan etiquetas como </div> en mobile."""
+    """Estado vacío nativo, sin HTML crudo."""
     st.info(f"{titulo}: {mensaje}")
     if sugerencia:
         st.caption(sugerencia)
@@ -116,11 +116,11 @@ def render_estadisticas(mi_empresa, rol):
     st.markdown(
         """
         <div class="mc-hero">
-            <h2 class="mc-hero-title">Estadisticas y graficos</h2>
-            <p class="mc-hero-text">Panel visual con metricas clave de la clinica: pacientes, facturacion, evoluciones y stock.</p>
+            <h2 class="mc-hero-title">Estadísticas y gráficos</h2>
+            <p class="mc-hero-text">Panel visual con métricas clave de la clínica: pacientes, facturación, evoluciones y stock.</p>
             <div class="mc-chip-row">
                 <span class="mc-chip">Pacientes por mes</span>
-                <span class="mc-chip">Facturacion</span>
+                <span class="mc-chip">Facturación</span>
                 <span class="mc-chip">Stock</span>
             </div>
         </div>
@@ -129,12 +129,12 @@ def render_estadisticas(mi_empresa, rol):
     )
     bloque_mc_grid_tarjetas([
         ('Pacientes', 'Altas mensuales y total de activos.'),
-        ('Facturacion', 'Evolucion de montos facturados en el tiempo.'),
-        ('Operaciones', 'Evoluciones registradas y stock critico.'),
+        ('Facturación', 'Evolución de montos facturados en el tiempo.'),
+        ('Operaciones', 'Evoluciones registradas y stock crítico.'),
     ])
-    st.caption('Los graficos usan datos cargados en el sistema. Filtran automaticamente por la empresa seleccionada.')
+    st.caption('Los gráficos usan datos cargados en el sistema. Filtran automáticamente por la empresa seleccionada.')
 
-    with st.spinner('Cargando datos estadisticos...'):
+    with st.spinner('Cargando datos estadísticos...'):
         pacientes = filtrar_registros_empresa(
             st.session_state.get('pacientes_db', []), mi_empresa, rol
         )
@@ -176,12 +176,12 @@ def render_estadisticas(mi_empresa, rol):
 
     c_ano, _ = st.columns([1, 3])
     filtro_ano = c_ano.selectbox(
-        'Filtrar por ano', ['Todos'] + anos_disponibles,
+        'Filtrar por año', ['Todos'] + anos_disponibles,
         index=0, key='est_filtro_ano',
     )
     ano_sel = None if filtro_ano == 'Todos' else filtro_ano
 
-    tabs = st.tabs(['Resumen', 'Pacientes', 'Facturacion', 'Evoluciones', 'Stock'])
+    tabs = st.tabs(['Resumen', 'Pacientes', 'Facturación', 'Evoluciones', 'Stock'])
 
     with tabs[0]:
         activos = sum(1 for p in pacientes if p.get('estado', 'Activo') == 'Activo')
@@ -206,11 +206,11 @@ def render_estadisticas(mi_empresa, rol):
 
         kpi_data = [
             (activos, 'Pacientes activos', None, '👤', COLOR_PRIMARY),
-            (altas, 'Altas' + (f' {ano_sel}' if ano_sel else ' del ano'), None, '✅', COLOR_SUCCESS),
-            (f'${total_fact:,.0f}', 'Facturacion total', None, '💰', COLOR_INFO),
+            (altas, 'Altas' + (f' {ano_sel}' if ano_sel else ' del año'), None, '✅', COLOR_SUCCESS),
+            (f'${total_fact:,.0f}', 'Facturación total', None, '💰', COLOR_INFO),
             (total_evol, 'Evoluciones registradas', None, '📝', COLOR_WARNING),
-            (visitas, 'Visitas (checkins)', None, '🏥', COLOR_PRIMARY),
-            (stock_crit, 'Stock critico', None, '🔴', COLOR_DANGER),
+            (visitas, 'Visitas (check-ins)', None, '🏥', COLOR_PRIMARY),
+            (stock_crit, 'Stock crítico', None, '🔴', COLOR_DANGER),
         ]
         cols_kpi = st.columns(3)
         for i, (val, lab, delta, icono, color) in enumerate(kpi_data):
@@ -218,7 +218,7 @@ def render_estadisticas(mi_empresa, rol):
                 render_metric_card(val, lab, delta=delta, icono=icono, color=color)
 
         st.divider()
-        st.markdown('#### Distribucion de pacientes')
+        st.markdown('#### Distribución de pacientes')
         total_pac = len(pacientes)
         if total_pac > 0:
             estados = Counter(p.get('estado', 'Activo') for p in pacientes)
@@ -264,14 +264,14 @@ def render_estadisticas(mi_empresa, rol):
             )
 
     with tabs[2]:
-        st.markdown('#### Facturacion por mes')
+        st.markdown('#### Facturación por mes')
         fact_meses = _sumar_por_mes(facturacion, campo_fecha='fecha', campo_valor='monto', filtro_ano=ano_sel)
         if fact_meses:
             df_fact = pd.DataFrame([
                 {'Mes': k, 'Monto': v} for k, v in sorted(fact_meses.items())
             ])
             render_chart_card(
-                'Evolucion de facturacion mensual',
+                'Evolución de facturación mensual',
                 chart_linea(df_fact, 'Mes', 'Monto', titulo_x='Mes', titulo_y='Monto ($)'),
             )
             _descargar_csv([{'Mes': k, 'Monto': v} for k, v in sorted(fact_meses.items())], 'facturacion_mensual.csv')
@@ -279,23 +279,23 @@ def render_estadisticas(mi_empresa, rol):
         else:
             _estado_vacio_stats(
                 'Sin datos',
-                'No hay facturacion registrada'
+                'No hay facturación registrada'
                 + (f' en {ano_sel}.' if ano_sel else '.'),
             )
 
         st.divider()
-        st.markdown('#### Metodo de pago')
+        st.markdown('#### Método de pago')
         metodos = Counter(f.get('metodo', 'S/D') for f in facturacion)
         if metodos:
             df_met = pd.DataFrame([
-                {'Metodo': k, 'Monto': v} for k, v in metodos.most_common(8)
+                {'Método': k, 'Monto': v} for k, v in metodos.most_common(8)
             ])
             render_chart_card(
-                'Distribucion por metodo de pago',
-                _chart_barras_mes(df_met, 'Metodo', 'Monto', titulo_x='Metodo', titulo_y='Operaciones', color=COLOR_INFO),
+                'Distribución por método de pago',
+                _chart_barras_mes(df_met, 'Método', 'Monto', titulo_x='Método', titulo_y='Operaciones', color=COLOR_INFO),
             )
         else:
-            st.caption('Sin datos de metodo de pago.')
+            st.caption('Sin datos de método de pago.')
 
     with tabs[3]:
         st.markdown('#### Evoluciones registradas por mes')
@@ -305,7 +305,7 @@ def render_estadisticas(mi_empresa, rol):
                 {'Mes': k, 'Evoluciones': v} for k, v in sorted(conteo_evol.items())
             ])
             render_chart_card(
-                'Evoluciones clinicas mensuales',
+                'Evoluciones clínicas mensuales',
                 _chart_barras_mes(df_evol, 'Mes', 'Evoluciones', titulo_y='Cantidad', color=COLOR_WARNING),
             )
             _descargar_csv([{'Mes': k, 'Evoluciones': v} for k, v in sorted(conteo_evol.items())], 'evoluciones_mensual.csv')
@@ -326,7 +326,7 @@ def render_estadisticas(mi_empresa, rol):
                     for k, v in prof_evol.most_common(15)
                 ])
                 render_chart_card(
-                    'Top profesionales que mas registran evoluciones',
+                    'Profesionales que más registran evoluciones',
                     _chart_barras_mes(df_prof, 'Profesional', 'Evoluciones', titulo_y='Cantidad', color=COLOR_SUCCESS),
                 )
             else:
@@ -351,55 +351,55 @@ def render_estadisticas(mi_empresa, rol):
                         items_criticos.append(item)
 
             mc1, mc2 = st.columns(2)
-            mc1.metric('Items en inventario', total_items)
+            mc1.metric('Ítems en inventario', total_items)
             mc1.metric('Unidades totales', total_units)
-            mc2.metric('Stock critico', len(items_criticos))
-            mc2.metric('Items con minimo configurado', items_con_minimo)
+            mc2.metric('Stock crítico', len(items_criticos))
+            mc2.metric('Ítems con mínimo configurado', items_con_minimo)
 
             if items_criticos and len(items_criticos) <= 500:
                 st.divider()
-                st.markdown('#### Items con stock critico')
+                st.markdown('#### Ítems con stock crítico')
                 df_stock = pd.DataFrame([
                     {
-                        'Item': item.get('item', ''),
+                        'Ítem': item.get('item', ''),
                         'Stock': _parse_stock(item.get('stock')),
-                        'Minimo': _parse_stock(item.get('stock_minimo')),
+                        'Mínimo': _parse_stock(item.get('stock_minimo')),
                     }
                     for item in items_criticos[:500]
                 ])
                 render_chart_card(
-                    'Items por debajo del stock minimo',
+                    'Ítems por debajo del stock mínimo',
                     alt.Chart(df_stock).mark_bar(cornerRadiusEnd=4).encode(
-                        x=alt.X('Item:N', title='Item', sort='-y'),
+                        x=alt.X('Ítem:N', title='Ítem', sort='-y'),
                         y=alt.Y('Stock:Q', title='Stock actual'),
                         color=alt.condition(
-                            alt.datum.Stock <= alt.datum.Minimo,
+                            alt.datum.Stock <= alt.datum.Mínimo,
                             alt.value(COLOR_DANGER),
                             alt.value(COLOR_SUCCESS),
                         ),
                         tooltip=[
-                            alt.Tooltip('Item:N'),
+                            alt.Tooltip('Ítem:N'),
                             alt.Tooltip('Stock:Q'),
-                            alt.Tooltip('Minimo:Q'),
+                            alt.Tooltip('Mínimo:Q'),
                         ],
                     ).configure_axis(labelFontSize=11, titleFontSize=12).configure_view(strokeWidth=0),
                 )
             elif items_criticos:
-                st.warning(f'{len(items_criticos)} items con stock critico. Agrupe por categoria para verlos.')
+                st.warning(f'{len(items_criticos)} ítems con stock crítico. Agrupe por categoría para verlos.')
             else:
                 if items_con_minimo > 0:
-                    st.success('No hay items con stock critico.')
+                    st.success('No hay ítems con stock crítico.')
                 else:
                     st.info(
-                        'Ningun item tiene configurado un stock minimo. '
-                        'Para activar las alertas de stock critico, edite cada item en Inventario '
-                        'y establezca un valor en "Stock minimo".'
+                        'Ningún ítem tiene configurado un stock mínimo. '
+                        'Para activar las alertas de stock crítico, edite cada ítem en Inventario '
+                        'y establezca un valor en "Stock mínimo".'
                     )
         else:
             _estado_vacio_stats(
                 'Sin datos',
                 'No hay inventario cargado en el sistema.',
-                sugerencia='Cargue insumos en el modulo Inventario para ver estadisticas de stock.',
+                sugerencia='Cargue insumos en el módulo Inventario para ver estadísticas de stock.',
             )
 
     log_event('estadisticas_vista', f'{mi_empresa}')
