@@ -38,12 +38,12 @@ from core.seo_streamlit import (
 from views.pwa_manifest import inject_pwa_headers
 from core import utils as core_utils
 
-APP_BUILD_TAG = "Build 2026-05-19 - Optimizado: velocidad, cache, UI"
+APP_BUILD_TAG = "Build 2026-05-21 - Fix sidebar mobile responsive"
 
 st.set_page_config(
     page_title=PAGE_TITLE_PUBLIC,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
     page_icon="🩺",
 )
 
