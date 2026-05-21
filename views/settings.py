@@ -28,7 +28,7 @@ def render_settings_page():
     """Renderiza página completa de configuración."""
     # Verificar permisos
     user = st.session_state.get("u_actual", {})
-    is_admin = user.get("rol") in ["admin", "superadmin"]
+    is_admin = str(user.get("rol", "")).strip().lower() in {"admin", "superadmin"}
     
     st.title("⚙️ Configuración")
     st.caption(f"Usuario: {user.get('nombre', 'N/A')}")
@@ -127,7 +127,7 @@ def render_appearance_settings():
     
     # Personalización de colores (solo admin)
     user = st.session_state.get("u_actual", {})
-    if user.get("rol") in ["admin", "superadmin"]:
+    if str(user.get("rol", "")).strip().lower() in {"admin", "superadmin"}:
         st.subheader("Personalización de Colores (Admin)")
         
         col1, col2 = st.columns(2)
@@ -365,11 +365,26 @@ def render_integration_settings(is_admin: bool):
                 "Modelo", value=ai_model,
                 help="Ej: deepseek-chat, gpt-4, gpt-4o, claude-3-sonnet-20240229"
             )
+
+            # Test de conexión
+            if st.button("🔄 Probar conexión con IA", key="ai_test_btn", use_container_width=True):
+                if not ai_key.strip():
+                    st.warning("Primero ingresá una API Key.")
+                else:
+                    _probar_conexion_ia(ai_provider, ai_key, ai_model)
     else:
         ai_provider = "Ninguno"
         ai_key = _s.get("integ_ai_key", "")
         ai_model = _s.get("integ_ai_model", "deepseek-chat")
     
+    # Indicador de estado actual
+    if is_admin:
+        from core.ai_assistant import is_llm_enabled
+        if is_llm_enabled():
+            st.success("✅ IA conectada y disponible en todo el sistema.")
+        else:
+            st.warning("⚠️ IA no configurada. Completá los campos y guardá.")
+
     st.divider()
     
     if st.button("💾 Guardar Configuración de Integraciones"):
@@ -818,3 +833,32 @@ def get_os_info() -> str:
     """Obtiene información del sistema operativo."""
     import platform
     return f"{platform.system()} {platform.release()}"
+
+
+def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
+    """Prueba conexión contra el proveedor de IA sin modificar config global."""
+    if not api_key.strip():
+        st.warning("Primero ingresá una API Key.")
+        return
+    provider_map = {"OpenAI": "openai", "DeepSeek": "deepseek"}
+    internal = provider_map.get(provider_display)
+    if not internal:
+        st.warning(f"Test automático no soportado para {provider_display}.")
+        return
+    try:
+        from openai import OpenAI, APIError
+        base_url = "https://api.deepseek.com/v1" if internal == "deepseek" else None
+        client = OpenAI(api_key=api_key, base_url=base_url, timeout=15)
+        resp = client.chat.completions.create(
+            model=model or "deepseek-chat",
+            messages=[{"role": "user", "content": "Respondé SOLO con: OK"}],
+            max_tokens=5,
+            temperature=0,
+        )
+        texto = resp.choices[0].message.content.strip()
+        if "OK" in texto:
+            st.success(f"✅ Conexión exitosa con {provider_display} (modelo: {model})")
+        else:
+            st.warning(f"⚠️ Conectado pero respuesta inesperada: {texto[:80]}")
+    except Exception as e:
+        st.error(f"❌ Error de conexión: {e}")

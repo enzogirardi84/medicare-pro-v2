@@ -26,7 +26,7 @@ from core.audit_trail import audit_log, AuditEventType
 def render_financial_reports(mi_empresa=None, rol=None):
     """Renderiza panel de reportes financieros."""
     user = st.session_state.get("u_actual", {})
-    if user.get("rol") not in ["admin", "superadmin", "recepcionista"]:
+    if str(user.get("rol", "")).strip().lower() not in {"admin", "superadmin", "recepcionista"}:
         log_event("financial", "error: acceso denegado - solo administradores y recepcion")
         st.error("Acceso denegado. Solo administradores y recepción.")
         return

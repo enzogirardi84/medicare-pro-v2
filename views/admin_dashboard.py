@@ -32,7 +32,7 @@ def render_admin_dashboard():
     """
     # Verificar permisos
     user = st.session_state.get("u_actual", {})
-    if user.get("rol") not in ["admin", "superadmin"]:
+    if str(user.get("rol", "")).strip().lower() not in {"admin", "superadmin"}:
         log_event("admin_dashboard", "error: Acceso denegado. Solo administradores.")
         st.error("🔒 Acceso denegado. Solo administradores.")
         return
