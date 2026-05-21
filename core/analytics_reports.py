@@ -504,13 +504,13 @@ class AnalyticsEngine:
         
         # Métricas clave
         st.subheader("KPIs Principales")
-        cols = st.columns(4)
+        cols = st.columns(2)
         
         clinical = dashboard["clinical"]
         cols[0].metric("Consultas", clinical["total_consultations"])
-        cols[1].metric("No-Show Rate", f"{clinical['no_show_rate']:.1f}%")
-        cols[2].metric("Duración Promedio", f"{clinical['avg_consultation_duration']:.0f} min")
-        cols[3].metric("Nuevos Pacientes", clinical["new_patients"])
+        cols[0].metric("No-Show Rate", f"{clinical['no_show_rate']:.1f}%")
+        cols[1].metric("Duración Promedio", f"{clinical['avg_consultation_duration']:.0f} min")
+        cols[1].metric("Nuevos Pacientes", clinical["new_patients"])
         
         # Diagnósticos principales
         with st.expander("📈 Diagnósticos Principales"):

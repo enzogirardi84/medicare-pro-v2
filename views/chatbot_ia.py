@@ -449,7 +449,7 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
 
     # Acciones
     with st.expander("Acciones rapidas", expanded=False):
-        cols = st.columns(4)
+        cols = st.columns(2)
         acciones = [
             ("Datos paciente", "datos"), ("Medicacion", "med"), ("Signos vitales", "vitales"),
             ("Estudios", "ests"), ("Ultima evolucion", "evol"), ("Turnos", "turns"),
@@ -459,7 +459,7 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
             ("Exportar chat", "export"), ("Limpiar chat", "clear"), ("Ayuda", "help"),
         ]
         for i, (label, acc) in enumerate(acciones):
-            with cols[i % 4]:
+            with cols[i % 2]:
                 if st.button(label, use_container_width=True, key=f"act_{i}"):
                     st.session_state["chat_act"] = acc
                     st.rerun()

@@ -186,18 +186,14 @@ def render_flags_analytics():
     st.header("📊 Analíticas")
     
     # Métricas simuladas
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
     
     with col1:
         st.metric("Flags Activos", "12/24")
-    
-    with col2:
         st.metric("Rollouts en Progreso", "2")
     
-    with col3:
+    with col2:
         st.metric("Usuarios Beta", "5")
-    
-    with col4:
         st.metric("Cambios Hoy", "3")
     
     # Gráfico de uso

@@ -660,14 +660,12 @@ class ClinicalAlertEngine:
         stats = self.get_alert_stats()
         
         # Métricas
-        cols = st.columns(4)
+        cols = st.columns(2)
         with cols[0]:
             st.metric("🔴 Críticas", stats["by_severity"]["critical"])
+            st.metric("🟡 Medias", stats["by_severity"]["medium"])
         with cols[1]:
             st.metric("🟠 Altas", stats["by_severity"]["high"])
-        with cols[2]:
-            st.metric("🟡 Medias", stats["by_severity"]["medium"])
-        with cols[3]:
             st.metric("🔵 Bajas", stats["by_severity"]["low"])
         
         # Alertas críticas sin reconocer

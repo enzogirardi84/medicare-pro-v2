@@ -426,10 +426,10 @@ class DocumentManager:
             return
         
         # Grid de documentos
-        cols = st.columns(4)
+        cols = st.columns(2)
         
         for i, doc in enumerate(documents):
-            with cols[i % 4]:
+            with cols[i % 2]:
                 # Thumbnail o icono
                 if doc.thumbnail_base64:
                     st.image(f"data:image/png;base64,{doc.thumbnail_base64}", use_column_width=True)

@@ -68,11 +68,11 @@ def _render_contexto_clinico_enfermeria(paciente_sel, detalles):
             vitales_ord = sorted(vitales, key=lambda x: parse_fecha_hora(x.get("fecha", "")), reverse=True)
             ultimo = vitales_ord[0]
             st.caption(f"**Últimos signos vitales** — {ultimo.get('fecha', 'S/D')}")
-            cv = st.columns(6)
+            cv = st.columns(3)
             campos = [("TA", "T.A."), ("FC", "F.C."), ("FR", "F.R."), ("Sat", "SpO2"), ("Temp", "Temp"), ("HGT", "HGT")]
             for idx, (k, label) in enumerate(campos):
                 val = ultimo.get(k, "—")
-                cv[idx].metric(label, val if val not in (None, "", "-") else "—")
+                cv[idx % 3].metric(label, val if val not in (None, "", "-") else "—")
 
         if tiene_indicaciones:
             st.caption(f"**Medicación activa** ({len(indicaciones)} indicación/es)")
@@ -142,11 +142,11 @@ def _render_plan_cuidados_enfermeria_legacy(
     except Exception:
         dias_sin_reg = None
 
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2 = st.columns(2)
     m1.metric("Registros", len(registros))
-    m2.metric("Curaciones", curaciones_count)
-    m3.metric("Incidentes", incidentes_count)
-    m4.metric(
+    m1.metric("Curaciones", curaciones_count)
+    m2.metric("Incidentes", incidentes_count)
+    m2.metric(
         "Días sin registro" if dias_sin_reg is not None else "Último registro",
         f"{dias_sin_reg}d" if dias_sin_reg is not None else ultimo_registro,
         delta_color="inverse" if (dias_sin_reg or 0) > 3 else "normal",

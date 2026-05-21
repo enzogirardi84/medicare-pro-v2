@@ -594,11 +594,11 @@ class ComplianceMonitor:
                 st.error("❌ VIOLACIONES detectadas")
             
             # Resumen
-            cols = st.columns(4)
+            cols = st.columns(2)
             cols[0].metric("Total Violaciones", report.summary["total_violations"])
-            cols[1].metric("Críticas", report.summary["critical"], delta_color="inverse")
-            cols[2].metric("Altas", report.summary["high"], delta_color="inverse")
-            cols[3].metric("Medias", report.summary["medium"])
+            cols[0].metric("Críticas", report.summary["critical"], delta_color="inverse")
+            cols[1].metric("Altas", report.summary["high"], delta_color="inverse")
+            cols[1].metric("Medias", report.summary["medium"])
             
             # Por estándar
             st.subheader("Estado por Estándar")

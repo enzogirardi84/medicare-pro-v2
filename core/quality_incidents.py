@@ -437,15 +437,13 @@ class QualityManagementSystem:
         stats = self.get_incident_statistics(fecha_desde, fecha_hasta)
         
         # KPIs
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
         
         with col1:
             st.metric("Total Incidentes", stats["total"])
+            st.metric("🟠 Graves", stats.get("serious_count", 0))
         with col2:
             st.metric("🔴 Críticos", stats.get("critical_count", 0))
-        with col3:
-            st.metric("🟠 Graves", stats.get("serious_count", 0))
-        with col4:
             st.metric("📂 Abiertos", stats.get("open_count", 0))
         
         st.divider()

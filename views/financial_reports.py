@@ -92,7 +92,7 @@ def render_financial_dashboard():
     facturas_filtradas = filter_by_date_range(facturacion, fecha_desde, fecha_hasta)
     
     # KPIs (vectorized via DataFrame)
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
     
     if facturas_filtradas:
         _df_kpi = pd.DataFrame(facturas_filtradas)
@@ -110,23 +110,19 @@ def render_financial_dashboard():
             f"${total_facturado:,.2f}",
             help="Suma de todos los montos facturados en el período"
         )
-    
-    with col2:
         st.metric(
             "Total Cobrado",
             f"${total_cobrado:,.2f}",
             delta=f"{((total_cobrado/total_facturado)*100 if total_facturado > 0 else 0):.1f}%" if total_facturado > 0 else None
         )
     
-    with col3:
+    with col2:
         st.metric(
             "Por Cobrar",
             f"${total_deuda:,.2f}",
             delta=f"{((total_deuda/total_facturado)*100 if total_facturado > 0 else 0):.1f}%" if total_facturado > 0 else None,
             delta_color="inverse"
         )
-    
-    with col4:
         st.metric(
             "Facturas Emitidas",
             cantidad_facturas,
@@ -322,18 +318,14 @@ def render_patients_analytics():
         else:
             pacientes_recurrentes += 1
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
     
     with col1:
         st.metric("Total Pacientes", total_pacientes)
-    
-    with col2:
         st.metric("Nuevos (30d)", pacientes_nuevos)
     
-    with col3:
+    with col2:
         st.metric("Recurrentes (30d)", pacientes_recurrentes)
-    
-    with col4:
         tasa_retencion = (pacientes_recurrentes / (pacientes_nuevos + pacientes_recurrentes) * 100) if (pacientes_nuevos + pacientes_recurrentes) > 0 else 0
         st.metric("Tasa Retención", f"{tasa_retencion:.1f}%")
     

@@ -493,27 +493,23 @@ def demo_connection_status():
     st.markdown("## 🌐 Demo de Estado de Conexión")
     
     # Simular estados
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.button("🟢 Online", key="demo_online")
+        st.button("🟢 Online", key="demo_online", use_container_width=True)
         st.caption("Estado: Conectado")
-    
-    with col2:
-        st.button("🔴 Offline", key="demo_offline")
-        st.caption("Estado: Sin conexión")
-    
-    with col3:
-        st.button("🔄 Syncing", key="demo_syncing")
-        st.caption("Estado: Sincronizando")
-    
-    with col4:
-        st.button("⚠️ Error", key="demo_error")
+        st.button("⚠️ Error", key="demo_error", use_container_width=True)
         st.caption("Estado: Error de conexión")
     
-    with col5:
-        st.button("⏳ Pending", key="demo_pending")
+    with col2:
+        st.button("🔴 Offline", key="demo_offline", use_container_width=True)
+        st.caption("Estado: Sin conexión")
+        st.button("⏳ Pending", key="demo_pending", use_container_width=True)
         st.caption("Estado: Datos pendientes")
+    
+    with col3:
+        st.button("🔄 Syncing", key="demo_syncing", use_container_width=True)
+        st.caption("Estado: Sincronizando")
     
     st.markdown("---")
     st.markdown("### Badge de Conexión")

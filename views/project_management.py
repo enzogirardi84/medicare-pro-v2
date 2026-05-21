@@ -199,11 +199,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2 = st.columns(2)
     c1.metric("Empresa", mi_empresa or "MediCare")
-    c2.metric("Estado", "Migracion silenciosa")
-    c3.metric("Frontend destino", "Angular")
-    c4.metric("Backend destino", "NestJS + Python")
+    c1.metric("Estado", "Migracion silenciosa")
+    c2.metric("Frontend destino", "Angular")
+    c2.metric("Backend destino", "NestJS + Python")
 
     st.caption(
         f"{DOC_REVISION}. Fuente: [Google Docs]({DOC_URL}). Rol en sesion: `{rol or 'Sin rol'}`."

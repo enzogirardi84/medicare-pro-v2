@@ -178,16 +178,14 @@ def _render_consent_tab(mi_empresa, user):
     ahora_dt = ahora()
     hoy_str = ahora_dt.strftime("%d/%m/%Y")
 
-    col_estado, col_vigentes, col_revocados, col_exp = st.columns(4)
+    col_estado, col_vigentes = st.columns(2)
     with col_estado:
         st.metric("Total", len(consents))
+        revocados = sum(1 for c in consents if c.get("revocado"))
+        st.metric("Revocados", revocados)
     with col_vigentes:
         vigentes = sum(1 for c in consents if c.get("fecha", "")[:10] >= hoy_str and not c.get("revocado"))
         st.metric("Vigentes", vigentes)
-    with col_revocados:
-        revocados = sum(1 for c in consents if c.get("revocado"))
-        st.metric("Revocados", revocados)
-    with col_exp:
         vencidos = sum(1 for c in consents if c.get("fecha", "")[:10] < hoy_str and not c.get("revocado"))
         st.metric("Vencidos", vencidos)
 
@@ -310,11 +308,11 @@ def _render_compliance_tab(mi_empresa, user):
             monitor = get_compliance_monitor()
             with st.spinner("Ejecutando controles automaticos..."):
                 report = monitor.run_compliance_audit(period_days=30)
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2 = st.columns(2)
             c1.metric("Estado general", report.overall_status.upper())
-            c2.metric("Violaciones totales", report.summary["total_violations"])
-            c3.metric("Criticas", report.summary["critical"])
-            c4.metric("Altas", report.summary["high"])
+            c1.metric("Violaciones totales", report.summary["total_violations"])
+            c2.metric("Criticas", report.summary["critical"])
+            c2.metric("Altas", report.summary["high"])
             if report.violations:
                 with st.expander("Detalle de violaciones", expanded=True):
                     for v in report.violations:

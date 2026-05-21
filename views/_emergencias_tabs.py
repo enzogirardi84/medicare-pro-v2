@@ -75,11 +75,11 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
             saturacion = v3.text_input("SaO2", placeholder="98%", key="em_sat")
             temperatura = v4.text_input("Temp", placeholder="36.5", key="em_temp")
         else:
-            v1, v2, v3, v4 = st.columns(4)
+            v1, v2 = st.columns(2)
             presion = v1.text_input("TA", placeholder="120/80", key="em_ta")
-            fc = v2.text_input("FC", placeholder="78", key="em_fc")
-            saturacion = v3.text_input("SaO2", placeholder="98%", key="em_sat")
-            temperatura = v4.text_input("Temp", placeholder="36.5", key="em_temp")
+            fc = v1.text_input("FC", placeholder="78", key="em_fc")
+            saturacion = v2.text_input("SaO2", placeholder="98%", key="em_sat")
+            temperatura = v2.text_input("Temp", placeholder="36.5", key="em_temp")
 
         ambulancia_solicitada = st.checkbox(
             "Ambulancia",

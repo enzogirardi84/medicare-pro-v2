@@ -91,16 +91,14 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
 
     # Metricas principales con delta de última actualización
     delta_str = f"({act_str})" if ult_act is not None else None
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3 = st.columns(3)
     with c1:
         metrica_clinica("TA (mmHg)", dashboard["ultima_ta"], delta=delta_str)
-    with c2:
         metrica_clinica("FC (lat/min)", dashboard["ultima_fc"], delta=delta_str)
-    with c3:
+    with c2:
         metrica_clinica("Temp (°C)", dashboard["ultima_temp"], delta=delta_str)
-    with c4:
         metrica_clinica("Glu (mg/dL)", dashboard["ultima_glu"], delta=delta_str)
-    with c5:
+    with c3:
         metrica_clinica("SatO2 (%)", dashboard["ultima_spo2"], delta=delta_str)
 
     st.divider()

@@ -77,21 +77,17 @@ def render_metrics_tab():
     stats = metrics.get_stats()
     
     # KPIs principales
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
     
     with col1:
         total_users = len(st.session_state.get("usuarios_db", {}))
         st.metric("Usuarios Activos", total_users)
-    
-    with col2:
         total_pacientes = len(st.session_state.get("pacientes_db", {}))
         st.metric("Pacientes", total_pacientes)
     
-    with col3:
+    with col2:
         total_evoluciones = len(st.session_state.get("evoluciones_db", []))
         st.metric("Evoluciones", total_evoluciones)
-    
-    with col4:
         today = ahora().strftime("%d/%m/%Y")
         today_visits = sum(
             1 for e in st.session_state.get("evoluciones_db", [])

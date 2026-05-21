@@ -358,11 +358,11 @@ def render_estadisticas(mi_empresa, rol):
                     except (ValueError, TypeError):
                         pass
 
-            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1, mc2 = st.columns(2)
             mc1.metric('Items en inventario', total_items)
-            mc2.metric('Unidades totales', total_units)
-            mc3.metric('Stock critico', len(items_criticos))
-            mc4.metric('Items con minimo configurado', items_con_minimo)
+            mc1.metric('Unidades totales', total_units)
+            mc2.metric('Stock critico', len(items_criticos))
+            mc2.metric('Items con minimo configurado', items_con_minimo)
 
             if items_criticos and len(items_criticos) <= 500:
                 st.divider()

@@ -256,7 +256,7 @@ def render_search_filters(
         st.markdown("<div style='margin-bottom:0.5rem;color:#64748b;font-size:0.8rem;'>Estado:</div>",
                      unsafe_allow_html=True)
 
-        estado_cols = st.columns(4)
+        estado_cols = st.columns(2)
         estados = [
             ("Todos", None, "neutral"),
             ("Activos", "Activo", "success"),
@@ -267,7 +267,7 @@ def render_search_filters(
         estado_seleccionado = st.session_state.get(f"{key}_estado", "Todos")
 
         for i, (label, valor, tipo) in enumerate(estados):
-            with estado_cols[i]:
+            with estado_cols[i % 2]:
                 is_active = estado_seleccionado == label
 
                 st.button(

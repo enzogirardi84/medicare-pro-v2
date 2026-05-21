@@ -172,12 +172,12 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
     n_ver = sum(1 for r in rows if str(r.get("nivel_urgencia")) == "Verde")
     n_pend = sum(1 for r in rows if str(r.get("estado")) == "Pendiente")
 
-    m1, m2, m3, m4, m5 = st.columns(5)
+    m1, m2, m3 = st.columns(3)
     m1.metric("En pantalla", len(rows))
-    m2.metric("Rojo", n_rojo)
-    m3.metric("Amarillo", n_ama)
-    m4.metric("Verde", n_ver)
-    m5.metric("Pendientes", n_pend)
+    m1.metric("Rojo", n_rojo)
+    m2.metric("Amarillo", n_ama)
+    m2.metric("Verde", n_ver)
+    m3.metric("Pendientes", n_pend)
 
     if not rows:
         st.info("No hay alertas con estos filtros.")

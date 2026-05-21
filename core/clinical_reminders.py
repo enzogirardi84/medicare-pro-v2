@@ -501,7 +501,7 @@ class ClinicalReminderManager:
         st.title("⏰ Recordatorios Clínicos")
         
         # Stats
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
         
         all_reminders = list(self._reminders.values())
         pending = [r for r in all_reminders if not r.completed]
@@ -509,11 +509,9 @@ class ClinicalReminderManager:
         
         with col1:
             st.metric("Total", len(all_reminders))
+            st.metric("Vencidos", len(overdue))
         with col2:
             st.metric("Pendientes", len(pending))
-        with col3:
-            st.metric("Vencidos", len(overdue))
-        with col4:
             critical = len([r for r in pending if r.priority == ReminderPriority.CRITICAL])
             st.metric("🚨 Críticos", critical)
         

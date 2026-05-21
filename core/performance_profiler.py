@@ -387,20 +387,16 @@ class PerformanceProfiler:
         st.subheader("📊 Performance Dashboard")
         
         # Stats generales
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
         
         with col1:
             total_calls = sum(s.call_count for s in self._function_stats.values())
             st.metric("Total Calls", total_calls)
+            st.metric("DB Queries", self._query_count)
         
         with col2:
             slow_count = len(self.get_slow_functions())
             st.metric("Slow Functions", slow_count, delta="⚠️" if slow_count > 0 else None)
-        
-        with col3:
-            st.metric("DB Queries", self._query_count)
-        
-        with col4:
             mem_mb = self._get_memory_usage() / 1024 / 1024
             st.metric("Memory", f"{mem_mb:.1f} MB")
         

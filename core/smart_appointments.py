@@ -750,11 +750,11 @@ class SmartAppointmentManager:
             st.subheader("Métricas de Eficiencia")
             report = self.get_efficiency_report()
             
-            cols = st.columns(4)
+            cols = st.columns(2)
             cols[0].metric("Total", report["total_appointments"])
-            cols[1].metric("Completados", report["completed"])
-            cols[2].metric("Cancelados", report["cancelled"])
-            cols[3].metric("No-shows", report["no_shows"])
+            cols[0].metric("Completados", report["completed"])
+            cols[1].metric("Cancelados", report["cancelled"])
+            cols[1].metric("No-shows", report["no_shows"])
             
             st.caption(f"Duración promedio: {report['avg_actual_duration']:.1f} minutos")
 
