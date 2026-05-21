@@ -33,3 +33,32 @@ def test_get_python_version_returns_valid():
 def test_get_os_info_returns_string():
     os_info = get_os_info()
     assert isinstance(os_info, str) and len(os_info) > 0
+
+
+def test_guardar_configuracion_forces_first_save(monkeypatch):
+    import views.settings as settings_view
+
+    called = {}
+
+    def fake_guardar_datos(*, spinner=None, force=False):
+        called["spinner"] = spinner
+        called["force"] = force
+
+    monkeypatch.setattr(settings_view, "guardar_datos", fake_guardar_datos)
+
+    settings_view._guardar_configuracion()
+
+    assert called == {"spinner": False, "force": True}
+
+
+def test_guardar_datos_force_marks_initial_load_done(monkeypatch):
+    import streamlit as st
+    import core.database as database
+
+    st.session_state.clear()
+    st.session_state["_db_initial_load_done"] = False
+    monkeypatch.setattr(database, "_guardar_datos_ejecutar", lambda: None)
+
+    database.guardar_datos(spinner=False, force=True)
+
+    assert st.session_state["_db_initial_load_done"] is True

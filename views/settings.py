@@ -24,6 +24,11 @@ from core.i18n import render_language_selector
 from views.admin_usuarios import render_admin_usuarios
 
 
+def _guardar_configuracion() -> None:
+    """Persiste ajustes inmediatamente, incluso si es el primer guardado tras login."""
+    guardar_datos(spinner=False, force=True)
+
+
 def render_settings_page():
     """Renderiza página completa de configuración."""
     # Verificar permisos
@@ -96,7 +101,7 @@ def render_appearance_settings():
         _s["app_theme"] = theme
         st.session_state["theme"] = theme.lower()
         try:
-            guardar_datos(spinner=False)
+            _guardar_configuracion()
         except Exception as e:
             log_event("settings", f"error:guardar_tema:{e}")
         st.success(f"✅ Tema cambiado a {theme}")
@@ -118,7 +123,7 @@ def render_appearance_settings():
         _s["app_density"] = density.lower()
         st.session_state["ui_density"] = density.lower()
         try:
-            guardar_datos(spinner=False)
+            _guardar_configuracion()
         except Exception as e:
             log_event("settings", f"error:guardar_densidad:{e}")
         st.success(f"✅ Densidad cambiada a {density}")
@@ -150,7 +155,7 @@ def render_appearance_settings():
             st.session_state["primary_color"] = primary_color
             st.session_state["secondary_color"] = secondary_color
             try:
-                guardar_datos(spinner=False)
+                _guardar_configuracion()
             except Exception as e:
                 log_event("settings", f"error:guardar_colores:{e}")
             st.success("✅ Colores actualizados")
@@ -234,7 +239,7 @@ def render_notification_settings():
         _s["notif_badges"] = _badges
         _s["notif_sound"] = _sound
         try:
-            guardar_datos(spinner=False)
+            _guardar_configuracion()
         except Exception as e:
             log_event("settings", f"error:guardar_notificaciones:{e}")
         st.success("✅ Configuración guardada")
@@ -405,7 +410,7 @@ def render_integration_settings(is_admin: bool):
                         _s["integ_ai_key"] = ai_key
                         _s["integ_ai_model"] = ai_model
                         try:
-                            guardar_datos(spinner=False)
+                            _guardar_configuracion()
                         except Exception as e:
                             log_event("settings", f"error:guardar_ai_test:{e}")
                         st.success("✅ Configuración de IA guardada automáticamente.")
@@ -441,7 +446,7 @@ def render_integration_settings(is_admin: bool):
         _s["integ_ai_key"] = ai_key
         _s["integ_ai_model"] = ai_model
         try:
-            guardar_datos(spinner=False)
+            _guardar_configuracion()
         except Exception as e:
             log_event("settings", f"error:guardar_integraciones:{e}")
         st.success("✅ Integraciones guardadas (requiere reinicio)")
@@ -570,7 +575,7 @@ def render_security_settings(is_admin: bool):
         _s["sec_encrypt_backups"] = _sec_encrypt_backups
         _s["sec_backup_freq"] = _backup_freq
         try:
-            guardar_datos(spinner=False)
+            _guardar_configuracion()
         except Exception as e:
             log_event("settings", f"error:guardar_seguridad:{e}")
         st.success("✅ Configuración de seguridad guardada")
@@ -663,7 +668,7 @@ def render_advanced_settings(is_admin: bool):
         _s["adv_log_file"] = _adv_log_file
         _s["adv_log_json"] = _adv_log_json
         try:
-            guardar_datos(spinner=False)
+            _guardar_configuracion()
         except Exception as e:
             log_event("settings", f"error:guardar_avanzado:{e}")
         st.success("✅ Configuración avanzada guardada")
@@ -697,7 +702,7 @@ def render_advanced_settings(is_admin: bool):
     with col2:
         if st.button("🔄 Forzar Guardado", width='stretch'):
             try:
-                guardar_datos(spinner=False)
+                _guardar_configuracion()
                 st.success("✅ Datos guardados")
             except Exception as e:
                 log_event("settings", "error: guardar_datos_fallo")

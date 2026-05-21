@@ -664,6 +664,8 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False):
     mostrar = spinner_original
     if mostrar and GUARDAR_DATOS_FORZAR_SIN_SPINNER:
         mostrar = False
+    if force:
+        st.session_state["_db_initial_load_done"] = True
     # Guardados no forzados: evita ráfagas de upserts cuando hay muchos eventos seguidos.
     # Si el caller pidió spinner=True (guardado crítico), se ejecuta siempre sin throttle.
     if not force and not spinner_original:
