@@ -429,7 +429,7 @@ class SystemHealthMonitor:
             HealthStatus.UNKNOWN: "⚪"
         }
         
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
         
         with col1:
             emoji = status_colors.get(report.overall_status, "⚪")
@@ -437,14 +437,10 @@ class SystemHealthMonitor:
                 "Overall Status",
                 f"{emoji} {report.overall_status.value.upper()}"
             )
-        
-        with col2:
             st.metric("Healthy", report.healthy_count)
         
-        with col3:
+        with col2:
             st.metric("Degraded", report.degraded_count)
-        
-        with col4:
             st.metric("Unhealthy", report.unhealthy_count)
         
         # Uptime

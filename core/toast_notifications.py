@@ -516,19 +516,17 @@ def demo_toasts():
     st.markdown("## 🔔 Demo de Toast Notifications")
     st.caption("Sistema de notificaciones moderno con animaciones suaves")
     
-    cols = st.columns(4)
+    cols = st.columns(2)
     
     with cols[0]:
-        if st.button("✅ Éxito", width='stretch'):
+        if st.button("✅ Éxito", use_container_width=True):
             toast_success("Operación completada exitosamente", "Guardado")
+        if st.button("⚠️ Advertencia", use_container_width=True):
+            toast_warning("Algunos campos están incompletos", "Atención")
     
     with cols[1]:
-        if st.button("❌ Error", width='stretch'):
+        if st.button("❌ Error", use_container_width=True):
             toast_error("No se pudo conectar con el servidor", "Error de Conexión")
-    
-    with cols[2]:
-        if st.button("⚠️ Advertencia", width='stretch'):
-            toast_warning("Algunos campos están incompletos", "Atención")
     
     with cols[3]:
         if st.button("ℹ️ Info", width='stretch'):

@@ -553,19 +553,15 @@ def render_appointment_stats(scheduler: AppointmentScheduler):
     stats = scheduler.get_statistics(fecha_desde, fecha_hasta)
     
     # KPIs
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns(2)
     
     with col1:
         st.metric("Total Turnos", stats["total"])
-    
-    with col2:
         completados = stats["by_status"].get("completed", 0)
         st.metric("Completados", completados)
     
-    with col3:
+    with col2:
         st.metric("Tasa Cancelación", f"{stats['cancelled_rate']:.1f}%")
-    
-    with col4:
         st.metric("No Asistió", f"{stats['no_show_rate']:.1f}%")
     
     # Desglose

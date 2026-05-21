@@ -356,14 +356,12 @@ def demo_all_components():
     
     # Badges
     st.markdown("### Badges Clínicos")
-    cols = st.columns(4)
+    cols = st.columns(2)
     with cols[0]:
         render_badge("CRÍTICO", "critical")
+        render_badge("ESTABLE", "success")
     with cols[1]:
         render_badge("ADVERTENCIA", "warning")
-    with cols[2]:
-        render_badge("ESTABLE", "success")
-    with cols[3]:
         render_badge("ALERGIA", "alergia")
     
     # Status dots

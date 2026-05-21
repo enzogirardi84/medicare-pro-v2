@@ -590,8 +590,8 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
             fin_semana = inicio_semana + timedelta(days=6)
             agenda_semana = [item for item in agenda_paciente if item["_fecha_dt"] != datetime.min and inicio_semana <= item["_fecha_dt"].date() <= fin_semana]
-            cols_semana = st.columns(4)
-            for idx_dia in range(4):
+            cols_semana = st.columns(2)
+            for idx_dia in range(2):
                 dia = inicio_semana + timedelta(days=idx_dia)
                 items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
                 pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})

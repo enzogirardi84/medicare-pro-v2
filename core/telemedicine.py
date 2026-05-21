@@ -484,15 +484,13 @@ class TelemedicineManager:
             )
 
             # Controles
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2 = st.columns(2)
             with col1:
-                st.button("🎤 Mic", width='stretch')
+                st.button("🎤 Mic", use_container_width=True)
+                st.button("📹 Video", use_container_width=True)
             with col2:
-                st.button("📹 Video", width='stretch')
-            with col3:
-                st.button("💻 Compartir", width='stretch')
-            with col4:
-                if st.button("🔴 Finalizar", width='stretch', type="primary"):
+                st.button("💻 Compartir", use_container_width=True)
+                if st.button("🔴 Finalizar", use_container_width=True, type="primary"):
                     self._render_end_consultation_form(consultation)
 
         with col_chat:
