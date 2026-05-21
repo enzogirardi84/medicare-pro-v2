@@ -359,8 +359,12 @@ def render_integration_settings(is_admin: bool):
                 st.info("API Key de https://platform.openai.com. Modelos: gpt-4, gpt-4o, gpt-3.5-turbo.")
             elif ai_provider == "Anthropic":
                 st.info("API Key de https://console.anthropic.com. Modelos: claude-3-opus, claude-3-sonnet.")
-            ai_key = st.text_input("API Key", type="password", value=ai_key,
+            raw_key = st.text_input("API Key", type="password", value=ai_key,
                 help="Tu API key del proveedor seleccionado")
+            _stripped = raw_key.strip() if raw_key else ""
+            if _stripped and " " in _stripped.strip():
+                st.caption("⚠️ Se usó solo el primer bloque (ignoré texto extra después del espacio).")
+            ai_key = _stripped.split(maxsplit=1)[0] if _stripped else ""
             ai_model = st.text_input(
                 "Modelo", value=ai_model,
                 help="Ej: deepseek-v4-flash, deepseek-v4-pro, gpt-4, gpt-4o, claude-3-sonnet-20240229"
@@ -846,9 +850,10 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
         st.warning(f"Test automático no soportado para {provider_display}.")
         return
     internal, base_url, default_model = entry
+    clean_key = api_key.strip().split(maxsplit=1)[0]
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key, base_url=base_url, timeout=30)
+        client = OpenAI(api_key=clean_key, base_url=base_url, timeout=30)
         test_model = (model or default_model).strip()
         resp = client.chat.completions.create(
             model=test_model,
