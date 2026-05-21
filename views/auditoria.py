@@ -100,7 +100,7 @@ def generar_pdf_auditoria_logs(df, nombre_empresa=""):
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 10, f"Generado por MediCare Pro  |  {len(df)} registros", align="C")
 
-    return bytes(pdf.output(dest="S"))
+    return pdf_output_bytes(pdf)
 
 
 def render_auditoria(mi_empresa, user):
@@ -207,7 +207,7 @@ def render_auditoria(mi_empresa, user):
             b = str(buscar_log).strip().lower()
             registros_filtrados = [r for r in registros_filtrados if b in _texto_busqueda_log(r)]
 
-        df_filtrado = pd.DataFrame(registros_filtrados)
+        df_filtrado = pd.DataFrame(registros_filtrados).convert_dtypes()
 
         col_m1, col_m2, col_m3 = st.columns(3)
         col_m1.metric("Total registros", len(df_filtrado))
@@ -320,6 +320,8 @@ def render_auditoria(mi_empresa, user):
     st.success(f"{len(chks_prof)} registros de asistencia para {prof_sel} en el periodo seleccionado")
 
     # 4. Dashboard de métricas
+    for c in chks_prof:
+        c.setdefault("gps", "-")
     df_chk_raw = pd.DataFrame(chks_prof).copy()
     df_chk_raw["fecha_dt"] = pd.to_datetime(df_chk_raw["fecha_hora"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
     df_chk_raw["fecha_dt"] = df_chk_raw["fecha_dt"].fillna(

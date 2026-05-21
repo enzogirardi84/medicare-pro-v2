@@ -26,6 +26,7 @@ import streamlit as st
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 from core.input_validation import sanitizar_html
+from core.export_utils import pdf_output_bytes
 
 
 class ConsentType(Enum):
@@ -577,8 +578,7 @@ class ConsentManager:
                 if consent.physician_signature:
                     pdf.cell(0, 10, f"Médico: {consent.physician_signature.signer_name}", ln=True)
             
-            out = pdf.output(dest="S")
-            return out.encode("latin-1") if isinstance(out, str) else bytes(out)
+            return pdf_output_bytes(pdf)
             
         except ImportError:
             # Fallback a HTML

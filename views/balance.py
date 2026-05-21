@@ -223,14 +223,18 @@ def render_balance(paciente_sel, user):
         ]
         st.caption(f"{len(blp_filtrado)} resultado(s) para '{_busq_bal}'")
 
-    df_bal = pd.DataFrame(blp_filtrado)
+    df_bal = pd.DataFrame(blp_filtrado).convert_dtypes()
+    for bcol in ["ingresos", "egresos", "balance"]:
+        if bcol in df_bal.columns:
+            df_bal[bcol] = pd.to_numeric(df_bal[bcol], errors="coerce").fillna(0)
     df_bal["fecha_dt"] = pd.to_datetime(df_bal["fecha"], format="%d/%m/%Y %H:%M", errors="coerce")
     df_bal = df_bal.sort_values(by="fecha_dt", ascending=False).drop(columns=["fecha_dt"], errors="ignore")
-    df_bal["Ingresos"] = df_bal["ingresos"].astype(str) + " ml"
-    df_bal["Egresos"] = df_bal["egresos"].astype(str) + " ml"
+    df_bal["ingresos_str"] = df_bal["ingresos"].apply(lambda x: f"{x:.0f}" if pd.notna(x) else "0") + " ml"
+    df_bal["egresos_str"] = df_bal["egresos"].apply(lambda x: f"{x:.0f}" if pd.notna(x) else "0") + " ml"
 
     df_bal["Shift (Resultado)"] = df_bal["balance"].apply(formato_shift_ml)
-    df_mostrar = df_bal.rename(columns={"fecha": "Fecha y hora", "turno": "Turno", "firma": "Profesional"})
+    df_mostrar = df_bal.rename(columns={"fecha": "Fecha y hora", "turno": "Turno", "firma": "Profesional", "ingresos_str": "Ingresos", "egresos_str": "Egresos"})
+    df_mostrar = df_mostrar.drop(columns=["ingresos", "egresos", "balance"], errors="ignore")
     limite = seleccionar_limite_registros(
         "Balances a mostrar",
         len(df_mostrar),

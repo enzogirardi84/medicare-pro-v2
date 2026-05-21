@@ -114,6 +114,7 @@ def render_estudios(paciente_sel, user, rol=None):
             if st.form_submit_button("Guardar Estudio Clinico", width='stretch', type="primary"):
                 img_b64 = ""
                 ext = ""
+                raw_bytes = None
                 if archivo_subido is not None:
                     raw_bytes = archivo_subido.getvalue()
                     ext = archivo_subido.name.split('.')[-1].lower()

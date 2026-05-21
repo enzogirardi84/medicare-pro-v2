@@ -35,10 +35,8 @@ def pick_logo() -> Path | None:
 
 
 def safe_pdf_bytes(pdf: FPDF) -> bytes:
-    payload = pdf.output(dest="S")
-    if isinstance(payload, (bytes, bytearray)):
-        return bytes(payload)
-    return str(payload).encode("latin-1", errors="replace")
+    from core.export_utils import pdf_output_bytes
+    return pdf_output_bytes(pdf)
 
 
 def gradient_band(pdf: FPDF, y: float, height: float, start: tuple[int, int, int], end: tuple[int, int, int]) -> None:

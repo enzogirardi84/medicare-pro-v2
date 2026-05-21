@@ -6,7 +6,7 @@ from datetime import datetime
 
 from fpdf import FPDF
 
-from core.export_utils import dataframe_csv_bytes, sanitize_filename_component
+from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, sanitize_filename_component
 from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
@@ -129,7 +129,7 @@ def generar_pdf_auditoria_legal(df, nombre_empresa=""):
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 10, f"Generado por MediCare Pro  |  {len(df)} registros", align="C")
 
-    return bytes(pdf.output(dest="S"))
+    return pdf_output_bytes(pdf)
 
 
 def render_auditoria_legal(mi_empresa, user):

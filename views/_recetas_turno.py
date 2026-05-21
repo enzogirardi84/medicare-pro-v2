@@ -124,8 +124,8 @@ def render_administracion_turno(
                 "Observacion": admin_reg.get("motivo", "") if admin_reg else "",
                 "Registrado por": _firma_trazabilidad_admin(admin_reg) if admin_reg else "",
                 "Solucion": r.get("solucion", "") if es_inf else "",
-                "Volumen_ml": r.get("volumen_ml", "") if es_inf else "",
-                "Velocidad_ml_h": r.get("velocidad_ml_h", "") if es_inf else "",
+                "Volumen_ml": r.get("volumen_ml") if es_inf else None,
+                "Velocidad_ml_h": r.get("velocidad_ml_h") if es_inf else None,
             })
 
     plan_dia_df = pd.DataFrame(plan_dia)

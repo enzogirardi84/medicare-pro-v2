@@ -6,6 +6,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
+from core.export_utils import pdf_output_bytes
 
 # CONSTANTES DE CONFIGURACION
 FORMATOS_FECHA = (
@@ -930,7 +931,7 @@ def generar_pdf_informe_profesional(paciente_id: str, datos: dict, dashboard: di
     pdf.set_text_color(127, 140, 141)
     pdf.cell(page_w, 5, "Documento generado por MediCare Enterprise PRO - No sustituye la historia clinica original.", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
-    return bytes(pdf.output())
+    return pdf_output_bytes(pdf)
 
 
 def generar_texto_pase_guardia(paciente_id: str, datos: dict, dashboard: dict) -> str:

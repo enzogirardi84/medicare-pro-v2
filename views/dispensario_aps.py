@@ -1519,7 +1519,8 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
     reporte_periodo = st.session_state.get("aps_reporte_periodo", "")
     if reporte_registros:
         st.write(f"**{len(reporte_registros)}** registros encontrados.")
-        st.dataframe(reporte_registros, width='stretch', hide_index=True)
+        df_reporte = pd.DataFrame(reporte_registros).convert_dtypes()
+        st.dataframe(df_reporte, width='stretch', hide_index=True)
         if FPDF_DISPONIBLE:
             pdf_bytes = _generar_pdf_reporte_aps(
                 f"Reporte APS — {reporte_tipo}",

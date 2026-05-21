@@ -40,7 +40,7 @@ def _preparar_dataframe_seccion(registros: List[Dict[str, Any]], seccion_actual:
     if seccion_actual == "Balance Hidrico":
         for col in ["ingresos", "egresos", "balance"]:
             if col in df.columns:
-                df[col] = df[col].astype(str) + " ml"
+                df[col] = df[col].apply(lambda x: f"{x:.0f} ml" if pd.notna(x) and x != "" else "-")
     elif seccion_actual == "Signos Vitales":
         for col in ["TA", "FC", "FR", "Sat", "Temp", "HGT"]:
             if col in df.columns:

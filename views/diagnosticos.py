@@ -230,7 +230,7 @@ def render_diagnosticos(user=None):
         ss_data = []
         for clave in claves_ss:
             val = st.session_state.get(clave, [])
-            ss_data.append({"Clave": clave, "Items": len(val) if isinstance(val, list) else "dict"})
+            ss_data.append({"Clave": clave, "Items": len(val) if isinstance(val, list) else 0})
         df_ss = pd.DataFrame(ss_data)
         st.dataframe(df_ss, width='stretch', hide_index=True)
 

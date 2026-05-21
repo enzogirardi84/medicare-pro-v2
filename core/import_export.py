@@ -31,6 +31,7 @@ import base64
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 from core.data_validation import get_validator
+from core.export_utils import pdf_output_bytes
 
 
 class ImportFormat(Enum):
@@ -560,8 +561,7 @@ class DataExporter:
                     pdf.set_font("Arial", "", 12)
                     pdf.multi_cell(0, 5, evo["diagnostico"])
             
-            out = pdf.output(dest="S")
-            return out.encode("utf-8") if isinstance(out, str) else bytes(out)
+            return pdf_output_bytes(pdf)
             
         except ImportError:
             # Fallback a texto

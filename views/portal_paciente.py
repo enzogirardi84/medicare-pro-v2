@@ -8,6 +8,7 @@ import streamlit as st
 from core.app_logging import log_event
 from core.utils import mapa_detalles_pacientes
 from core.view_helpers import aviso_sin_paciente
+from core.export_utils import pdf_output_bytes
 
 
 def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
@@ -141,8 +142,7 @@ Documentos firmados: {len(cons_pac)} registros
                 pdf.set_text_color(0, 0, 0)
                 pdf.ln(6)
             pdf.cell(0, 6, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-            raw = pdf.output(dest="S")
-            pdf_bytes = raw.encode("latin-1", errors="replace") if isinstance(raw, str) else bytes(raw)
+            pdf_bytes = pdf_output_bytes(pdf)
             st.download_button("Descargar PDF", pdf_bytes, f"resumen_{dni}_{datetime.now().strftime('%Y%m%d')}.pdf", "application/pdf")
 
     st.caption(f"Documento generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} | Medicare Pro")

@@ -313,7 +313,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     with tabs_caja[3]:
         if es_control_total(rol_normalizado):
             st.caption("Vista global de la empresa: busca por texto, acota filas y exporta CSV.")
-            df_caja = pd.DataFrame(fact_empresa)
+            df_caja = pd.DataFrame(fact_empresa).convert_dtypes()
             if not df_caja.empty:
                 filtro_caja = st.text_input("Buscar por paciente, practica, fecha o estado", "")
                 if filtro_caja:
