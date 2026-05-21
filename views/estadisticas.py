@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import altair as alt
 import pandas as pd
@@ -9,17 +9,33 @@ import streamlit as st
 
 from core.app_logging import log_event
 from core.utils import (
-    ahora, es_control_total, filtrar_registros_empresa,
-    mapa_detalles_pacientes, parse_fecha_hora,
+    ahora,
+    es_control_total,
+    filtrar_registros_empresa,
+    mapa_detalles_pacientes,
+    parse_fecha_hora,
 )
-from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas
+from core.view_helpers import bloque_mc_grid_tarjetas
 from core.charts import (
-    render_metric_card, render_chart_card, chart_barras, chart_linea,
-    COLOR_PRIMARY, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER, COLOR_INFO,
+    render_metric_card,
+    render_chart_card,
+    chart_linea,
+    COLOR_PRIMARY,
+    COLOR_SUCCESS,
+    COLOR_WARNING,
+    COLOR_DANGER,
+    COLOR_INFO,
 )
 
 import io
 import csv
+
+
+def _estado_vacio_stats(titulo: str, mensaje: str, sugerencia: str | None = None) -> None:
+    """Estado vacío nativo, sin HTML crudo. Evita que aparezcan etiquetas como </div> en mobile."""
+    st.info(f"{titulo}: {mensaje}")
+    if sugerencia:
+        st.caption(sugerencia)
 
 
 def _contar_por_mes(registros, campo_fecha='fecha', filtro_ano=None):
@@ -62,7 +78,8 @@ def _parse_stock(v):
 
 def _parse_monto(v):
     try:
-        if v is None: return 0.0
+        if v is None:
+            return 0.0
         s = str(v).replace(',', '').replace('$', '').strip()
         return float(s) if s else 0.0
     except (ValueError, TypeError):
@@ -121,14 +138,14 @@ def render_estadisticas(mi_empresa, rol):
         pacientes = filtrar_registros_empresa(
             st.session_state.get('pacientes_db', []), mi_empresa, rol
         )
-        _detalles = mapa_detalles_pacientes(st.session_state)
+        detalles = mapa_detalles_pacientes(st.session_state)
         pacientes_dicts = []
         for p in pacientes:
             if isinstance(p, dict):
                 pacientes_dicts.append(p)
             elif isinstance(p, str):
-                if p in _detalles:
-                    d = dict(_detalles[p])
+                if p in detalles:
+                    d = dict(detalles[p])
                     d['id'] = p
                     pacientes_dicts.append(d)
                 else:
@@ -149,13 +166,13 @@ def render_estadisticas(mi_empresa, rol):
         )
 
     hoy = ahora().date()
-    _anos = set()
+    anos = set()
     for r in list(pacientes) + list(facturacion) + list(evoluciones):
         for campo in ('fecha', 'fecha_alta'):
-            _d = parse_fecha_hora(r.get(campo, ''))
-            if _d and _d.year > 2000:
-                _anos.add(_d.year)
-    anos_disponibles = sorted(_anos, reverse=True) or [hoy.year]
+            d = parse_fecha_hora(r.get(campo, ''))
+            if d and d.year > 2000:
+                anos.add(d.year)
+    anos_disponibles = sorted(anos, reverse=True) or [hoy.year]
 
     c_ano, _ = st.columns([1, 3])
     filtro_ano = c_ano.selectbox(
@@ -164,13 +181,8 @@ def render_estadisticas(mi_empresa, rol):
     )
     ano_sel = None if filtro_ano == 'Todos' else filtro_ano
 
-    inicio_ano = datetime(ano_sel or hoy.year, 1, 1) if ano_sel else datetime(hoy.year, 1, 1)
-
     tabs = st.tabs(['Resumen', 'Pacientes', 'Facturacion', 'Evoluciones', 'Stock'])
 
-    # ================================================================
-    # TAB 0: RESUMEN
-    # ================================================================
     with tabs[0]:
         activos = sum(1 for p in pacientes if p.get('estado', 'Activo') == 'Activo')
         altas = 0
@@ -179,22 +191,17 @@ def render_estadisticas(mi_empresa, rol):
             if isinstance(fa, str) and fa.strip():
                 dt = parse_fecha_hora(fa)
                 if dt and dt != datetime.min:
-                    try:
-                        if not ano_sel or dt.year == ano_sel:
-                            altas += 1
-                    except TypeError:
-                        pass
+                    if not ano_sel or dt.year == ano_sel:
+                        altas += 1
+
         total_fact = sum(_parse_monto(f.get('monto')) for f in facturacion)
         total_evol = len(evoluciones)
         stock_crit = 0
         for item in inventario:
             sm = item.get('stock_minimo')
             if sm is not None and str(sm).strip():
-                try:
-                    if _parse_stock(item.get('stock')) <= _parse_stock(sm):
-                        stock_crit += 1
-                except (ValueError, TypeError):
-                    pass
+                if _parse_stock(item.get('stock')) <= _parse_stock(sm):
+                    stock_crit += 1
         visitas = len(checkins)
 
         kpi_data = [
@@ -235,11 +242,8 @@ def render_estadisticas(mi_empresa, rol):
                     pct = cnt / total_pac * 100
                     st.markdown(f'- {est}: **{cnt}** ({pct:.1f}%)')
         else:
-            bloque_estado_vacio('Sin pacientes', 'No hay pacientes registrados para esta empresa.')
+            _estado_vacio_stats('Sin pacientes', 'No hay pacientes registrados para esta empresa.')
 
-    # ================================================================
-    # TAB 1: PACIENTES
-    # ================================================================
     with tabs[1]:
         st.markdown('#### Altas de pacientes por mes')
         conteo_pac = _contar_por_mes(pacientes, 'fecha_alta', filtro_ano=ano_sel)
@@ -253,15 +257,12 @@ def render_estadisticas(mi_empresa, rol):
             )
             _descargar_csv([{'Mes': k, 'Altas': v} for k, v in sorted(conteo_pac.items())], 'altas_pacientes.csv')
         else:
-            bloque_estado_vacio(
+            _estado_vacio_stats(
                 'Sin datos',
                 'No hay pacientes registrados con fecha de alta'
                 + (f' en {ano_sel}.' if ano_sel else '.'),
             )
 
-    # ================================================================
-    # TAB 2: FACTURACION
-    # ================================================================
     with tabs[2]:
         st.markdown('#### Facturacion por mes')
         fact_meses = _sumar_por_mes(facturacion, campo_fecha='fecha', campo_valor='monto', filtro_ano=ano_sel)
@@ -276,7 +277,7 @@ def render_estadisticas(mi_empresa, rol):
             _descargar_csv([{'Mes': k, 'Monto': v} for k, v in sorted(fact_meses.items())], 'facturacion_mensual.csv')
             st.success(f'Total facturado: **${sum(fact_meses.values()):,.2f}**')
         else:
-            bloque_estado_vacio(
+            _estado_vacio_stats(
                 'Sin datos',
                 'No hay facturacion registrada'
                 + (f' en {ano_sel}.' if ano_sel else '.'),
@@ -296,9 +297,6 @@ def render_estadisticas(mi_empresa, rol):
         else:
             st.caption('Sin datos de metodo de pago.')
 
-    # ================================================================
-    # TAB 3: EVOLUCIONES
-    # ================================================================
     with tabs[3]:
         st.markdown('#### Evoluciones registradas por mes')
         conteo_evol = _contar_por_mes(evoluciones, filtro_ano=ano_sel)
@@ -312,7 +310,7 @@ def render_estadisticas(mi_empresa, rol):
             )
             _descargar_csv([{'Mes': k, 'Evoluciones': v} for k, v in sorted(conteo_evol.items())], 'evoluciones_mensual.csv')
         else:
-            bloque_estado_vacio(
+            _estado_vacio_stats(
                 'Sin datos',
                 'No hay evoluciones registradas'
                 + (f' en {ano_sel}.' if ano_sel else '.'),
@@ -336,9 +334,6 @@ def render_estadisticas(mi_empresa, rol):
         else:
             st.caption(f'Demasiados registros ({len(evoluciones)}) para agrupar por profesional.')
 
-    # ================================================================
-    # TAB 4: STOCK
-    # ================================================================
     with tabs[4]:
         st.markdown('#### Estado de inventario')
         if inventario:
@@ -352,11 +347,8 @@ def render_estadisticas(mi_empresa, rol):
                 sm = item.get('stock_minimo')
                 if sm is not None and str(sm).strip():
                     items_con_minimo += 1
-                    try:
-                        if stock <= _parse_stock(sm):
-                            items_criticos.append(item)
-                    except (ValueError, TypeError):
-                        pass
+                    if stock <= _parse_stock(sm):
+                        items_criticos.append(item)
 
             mc1, mc2 = st.columns(2)
             mc1.metric('Items en inventario', total_items)
@@ -404,7 +396,7 @@ def render_estadisticas(mi_empresa, rol):
                         'y establezca un valor en "Stock minimo".'
                     )
         else:
-            bloque_estado_vacio(
+            _estado_vacio_stats(
                 'Sin datos',
                 'No hay inventario cargado en el sistema.',
                 sugerencia='Cargue insumos en el modulo Inventario para ver estadisticas de stock.',
