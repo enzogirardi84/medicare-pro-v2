@@ -536,11 +536,11 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
 
         # Detectar navegacion inteligente
         modulo_destino = _navegar_a(texto)
+        respuesta = ""
+        fuentes = []
         if modulo_destino:
             respuesta = f"Te recomiendo ir al modulo **{modulo_destino}** para gestionar eso."
         else:
-            respuesta = ""
-            fuentes = []
 
             # 1. IA con contexto completo del sistema + farmacopea si menciona medicamento
             ctx = _contexto_completo(paciente_sel, mi_empresa)
