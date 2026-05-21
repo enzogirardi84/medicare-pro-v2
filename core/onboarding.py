@@ -343,7 +343,7 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             content="""
             Documenta el seguimiento diario del paciente:
             
-            • Notas de evolución con plantillas
+            • Notas de evolución clínica
             • Adjunto de fotos clínicas
             • Firma del paciente o familiar
             • Historial cronológico
@@ -483,12 +483,7 @@ def create_first_steps_checklist(rol: str, user_id: str) -> FirstStepsChecklist:
             icon="📝",
         )
         
-        checklist.add_item(
-            id="configurar_plantillas",
-            title="Configurar plantillas",
-            description="Crea plantillas personalizadas para evoluciones",
-            icon="📄",
-        )
+
     
     elif r in {"admin", "superadmin"}:
         checklist.add_item(

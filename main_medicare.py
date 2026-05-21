@@ -659,9 +659,12 @@ except Exception:
 # ============================================================
 # PÁGINA DE CONFIGURACIÓN (toggle desde sidebar)
 # ============================================================
-if st.session_state.pop("_show_settings", False):
+if st.session_state.get("_show_settings", False):
     from views.settings import render_settings_page
     render_settings_page()
+    if st.sidebar.button("⬅️ Volver al menú principal", use_container_width=True, key="settings_back"):
+        st.session_state["_show_settings"] = False
+        st.rerun()
     st.stop()
 
 # ============================================================

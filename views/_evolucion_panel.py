@@ -90,34 +90,6 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         "Percentilo": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentacion / hidratacion:\nEvaluacion general:\nPlan y recomendaciones:",
         "Cuidados paliativos": "Sintomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las proximas horas:",
     }
-    # ============================================================
-    # PLANTILLAS DE EVOLUCIÓN RÁPIDA
-    # ============================================================
-    _EVOL_TEMPLATES = [
-        {
-            "nombre": "Control diario",
-            "texto": "Paciente en control de rutina.\nSignos vitales: estables.\nMedicación: según indicación.\nEvolución: sin novedades.",
-        },
-        {
-            "nombre": "Curaciones",
-            "texto": "Procedimiento: curación de herida.\nHallazgos: [describir]\nMaterial utilizado: [insumos]\nIndicaciones: continuar curación cada 24hs.",
-        },
-        {
-            "nombre": "Dolor",
-            "texto": "Motivo: dolor.\nLocalización: [describir]\nIntensidad EVA: [0-10]\nMedicación administrada: [describir]\nEvolución posterior: [mejoría/sin cambios]",
-        },
-        {
-            "nombre": "Alta / Derivación",
-            "texto": "Paciente egresa con indicaciones.\nDiagnóstico de egreso: [describir]\nMedicación indicada: [describir]\nPróximo control: [fecha]",
-        },
-        {
-            "nombre": "Novedad / Incidencia",
-            "texto": "Novedad: [describir]\nMedidas tomadas: [describir]\nNotificado a: [nombre/familiar]\nPendiente: [seguimiento]",
-        },
-    ]
-
-    _templates_db = st.session_state.setdefault("settings_db", {}).setdefault("evol_templates", _EVOL_TEMPLATES)
-
     if puede_registrar:
         evs_all = get_patient_records("evoluciones_db", paciente_sel)
         if evs_all:
@@ -139,22 +111,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         if plantilla != "Libre":
             st.caption("Se carga una guia sugerida. Podés editarla antes de guardar.")
 
-        st.caption("📋 Plantillas rápidas (click para precargar)")
-        _cols_t = st.columns(len(_templates_db))
-        for _ti, _tpl in enumerate(_templates_db):
-            with _cols_t[_ti]:
-                if st.button(_tpl["nombre"], key=f"evol_tpl_{_ti}", use_container_width=True):
-                    st.session_state["_evol_template_cargado"] = _tpl["texto"]
-                    st.rerun()
-
-        _evol_default = st.session_state.pop("_evol_template_cargado", "")
-        if _evol_default:
-            _saved_draft_check = st.session_state.get(_draft_key, "").strip()
-            if not _saved_draft_check:
-                st.session_state.pop("evol_nota_textarea", None)
-
         _saved_draft = st.session_state.get(_draft_key, "")
-        _value_for_textarea = _saved_draft if _saved_draft else (_evol_default or "")
+        _value_for_textarea = _saved_draft
 
         col_ai, _ = st.columns([1, 3])
         with col_ai:

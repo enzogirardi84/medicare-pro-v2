@@ -184,11 +184,9 @@ def get_view_tips(view_name: str) -> List[str]:
         ],
         "Clinica": [
             "Registrá los signos vitales al inicio de cada consulta.",
-            "Usá las plantillas rápidas para acelerar el registro.",
         ],
         "Evolucion": [
             "Probá el botón 🤖 Sugerir evolución con IA para ahorrar tiempo.",
-            "Las plantillas rápidas te ayudan a estandarizar notas.",
         ],
         "Recetas": [
             "Usá 🤖 Asistente IA para verificar interacciones medicamentosas.",
