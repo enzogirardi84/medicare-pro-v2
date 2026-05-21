@@ -35,6 +35,7 @@ from core.seo_streamlit import (
     inyectar_head_seo,
     inyectar_redirect_apex_si_configurado,
 )
+from views.pwa_manifest import inject_pwa_headers
 from core import utils as core_utils
 
 APP_BUILD_TAG = "Build 2026-05-19 - Optimizado: velocidad, cache, UI"
@@ -131,6 +132,22 @@ for _guard_key, _guard_default in (
 ):
     if _guard_key not in st.session_state:
         st.session_state[_guard_key] = _guard_default
+
+# ============================================================
+# PWA HEADERS + MOBILE CSS
+# ============================================================
+try:
+    inject_pwa_headers()
+except Exception as exc:
+    log_event("pwa", f"inject_pwa_headers_falla:{type(exc).__name__}:{exc}")
+
+try:
+    mobile_css_path = Path(__file__).resolve().parent / "assets" / "mobile.css"
+    if mobile_css_path.exists():
+        mobile_css_content = mobile_css_path.read_text(encoding="utf-8")
+        st.markdown(f"<style>{mobile_css_content}</style>", unsafe_allow_html=True)
+except Exception as exc:
+    log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
 
 # ============================================================
 # TEMA PROFESIONAL POSLOGIN
@@ -296,6 +313,12 @@ def _logout_callback():
         st.session_state.pop(_key, None)
     st.session_state["_mc_logout_requested"] = True
 
+# Mobile-visible logout button (sidebar is hidden on mobile)
+st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
+if st.button("Cerrar sesión", key="mobile_logout", on_click=_logout_callback,
+             use_container_width=True):
+    pass
+st.markdown('</div>', unsafe_allow_html=True)
 
 with st.sidebar:
     st.button(
