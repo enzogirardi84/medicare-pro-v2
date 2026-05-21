@@ -1,6 +1,6 @@
 """Control de stock optimizado.
 
-Registra administracion clinica + consumo + descuento de inventario.
+Registra administración clínica + consumo + descuento de inventario.
 Optimización: evita consultas SQL repetidas en cada render y reemplaza guardados
 bloqueantes dobles por un guardado silencioso agrupado.
 """
@@ -81,14 +81,14 @@ def _registrar_consumo_en_sql(paciente_sel, mi_empresa, user, med_name, cantidad
         "cantidad": int(cantidad),
         "stock_anterior": stock_actual,
         "stock_nuevo": stock_nuevo,
-        "motivo": f"Administracion clinica: {med_name} - {paciente_sel}",
+        "motivo": f"Administración clínica: {med_name} - {paciente_sel}",
         "referencia_documento": "RECETA_AUTOMATICA",
     }
     result = insert_inventario_movimiento(mov)
     if not result:
         update_inventario_stock_sql(item["id"], stock_nuevo, empresa_uuid)
 
-    # invalida cache para que el próximo render muestre stock fresco
+    # Invalida caché para que el próximo render muestre stock fresco.
     st.session_state.pop(item_key, None)
     return True
 
@@ -160,15 +160,15 @@ def _obtener_item_inventario_cached(empresa_uuid: str | None, med_sel: str):
 
 
 def render_control_medicacion_stock(paciente_sel, mi_empresa, user, recs_activas):
-    """Seccion: seleccionar medicacion activa, indicar cantidad, y registrar rápido."""
+    """Sección: seleccionar medicación activa, indicar cantidad y registrar rápido."""
     if not recs_activas:
         return
 
     st.divider()
-    st.markdown("### Control de stock por medicacion administrada")
+    st.markdown("### Control de stock por medicación administrada")
     st.caption(
-        "Selecciona la medicacion, ingresá la cantidad utilizada y ejecutá el registro. "
-        "El sistema guarda la administracion clinica, registra el consumo en insumos y descuenta del inventario."
+        "Seleccioná la medicación, ingresá la cantidad utilizada y ejecutá el registro. "
+        "El sistema guarda la administración clínica, registra el consumo en insumos y descuenta del inventario."
     )
 
     nombres_med = sorted(set(
@@ -186,18 +186,18 @@ def render_control_medicacion_stock(paciente_sel, mi_empresa, user, recs_activas
     saving_key = f"_stock_saving_{paciente_sel}"
 
     c1, c2 = st.columns([3, 1])
-    med_sel = c1.selectbox("Medicacion a registrar", nombres_med, key=sel_key)
+    med_sel = c1.selectbox("Medicación a registrar", nombres_med, key=sel_key)
     cantidad = int(c2.number_input("Cantidad utilizada", min_value=1, value=1, step=1, key=qty_key))
 
-    # Cache: evita pegarle a SQL en cada rerun. En celular esto baja mucho la espera.
+    # Caché: evita pegarle a SQL en cada rerun. En celular esto baja mucho la espera.
     empresa_uuid, paciente_uuid, user_uuid = _resolver_uuids(paciente_sel, mi_empresa)
     item_inv = _obtener_item_inventario_cached(empresa_uuid, med_sel) if empresa_uuid else None
     if empresa_uuid and item_inv:
         st.caption(f"Stock actual en inventario: **{item_inv.get('stock_actual', '?')}**")
     elif empresa_uuid:
-        st.caption("Este medicamento no esta cargado en el inventario. Se registrara solo la administracion clinica y el consumo local.")
+        st.caption("Este medicamento no está cargado en el inventario. Se registrará solo la administración clínica y el consumo local.")
     else:
-        st.caption("Sin conexion SQL. Solo se registrara en modo local (sesion).")
+        st.caption("Sin conexión SQL. Solo se registrará en modo local (sesión).")
 
     if st.session_state.get(saving_key):
         st.info("Guardando registro...")
@@ -220,13 +220,13 @@ def render_control_medicacion_stock(paciente_sel, mi_empresa, user, recs_activas
 
         exito_sql = True
         try:
-            # 1) Registro clinico: solo session_state, sin guardar todavía.
+            # 1) Registro clínico: solo session_state, sin guardar todavía.
             _append_local_list("administracion_med_db", {
                 "paciente": paciente_sel,
                 "med": med_sel,
                 "fecha": fecha_hoy,
                 "hora": hora_str,
-                "horario_programado": "Stock automatico",
+                "horario_programado": "Stock automático",
                 "estado": "Realizada",
                 "motivo": "",
                 "firma": prof_name,
@@ -265,7 +265,7 @@ def render_control_medicacion_stock(paciente_sel, mi_empresa, user, recs_activas
             # 5) Auditoría en memoria antes del único guardado.
             try:
                 registrar_auditoria_legal(
-                    "Medicacion", paciente_sel, "Registro clinico + consumo + descuento stock",
+                    "Medicación", paciente_sel, "Registro clínico + consumo + descuento stock",
                     prof_name, mat_prof,
                     f"{med_sel} | Cantidad: {cantidad} | Inventario: {'OK' if exito_sql else 'falla SQL, solo local'}",
                     referencia=f"STOCK|{fecha_hoy}|{med_sel[:48]}",
