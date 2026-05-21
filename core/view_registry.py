@@ -55,6 +55,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Reportes Financieros": ("views.financial_reports", "render_financial_reports"),
     "Admin Feature Flags": ("views.feature_flags_admin", "render_feature_flags_admin"),
     "Self-Healing IA": ("views.self_healing_admin", "render_self_healing_admin"),
+    "Asistente IA": ("views.ai_features_panel", "render_ai_features_panel"),
 }
 
 VIEW_NAV_LABELS_BASE: Dict[str, str] = {
@@ -99,6 +100,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Reportes Financieros": "\U0001F4B0 Financiero",
     "Admin Feature Flags": "⚙️ Feature Flags",
     "Self-Healing IA": "🛠 Self-Healing",
+    "Asistente IA": "🤖 Asistente IA",
 }
 
 

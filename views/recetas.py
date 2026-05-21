@@ -92,6 +92,40 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if puede_prescribir:
         _render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuario, es_movil, vademecum_base)
 
+    with st.expander("🤖 Asistente IA de Prescripciones", expanded=False):
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            ai_med = st.text_input("Medicamento", placeholder="Ej: Amoxicilina 500mg", key="ai_pres_med")
+            ai_ind = st.text_input("Indicación", placeholder="Ej: Infección respiratoria", key="ai_pres_ind")
+            if st.button("✍️ Generar receta con IA", use_container_width=True, key="ai_gen_pres"):
+                with st.spinner("Generando receta..."):
+                    from core.ai_features import generate_prescription_ai
+                    resultado = generate_prescription_ai(paciente_sel, ai_med, ai_ind)
+                if resultado:
+                    st.session_state["_ai_prescription_result"] = resultado
+                else:
+                    st.warning("IA no disponible. Configurala en Ajustes.", icon="⚠️")
+            if st.session_state.get("_ai_prescription_result"):
+                st.info(st.session_state["_ai_prescription_result"])
+                if st.button("Limpiar", key="ai_pres_clear", use_container_width=True):
+                    st.session_state.pop("_ai_prescription_result", None)
+                    st.rerun()
+        with col_r2:
+            st.caption("Verificar interacciones")
+            if st.button("🔍 Analizar interacciones de medicación actual", use_container_width=True, key="ai_interact_btn"):
+                with st.spinner("Analizando..."):
+                    from core.ai_features import check_drug_interactions
+                    resultado = check_drug_interactions(paciente_sel)
+                if resultado:
+                    st.session_state["_ai_interaction_result"] = resultado
+                else:
+                    st.warning("No hay medicación activa o IA no disponible.", icon="⚠️")
+            if st.session_state.get("_ai_interaction_result"):
+                st.info(st.session_state["_ai_interaction_result"])
+                if st.button("Cerrar", key="ai_interact_clear", use_container_width=True):
+                    st.session_state.pop("_ai_interaction_result", None)
+                    st.rerun()
+
     st.divider()
 
     # --- LECTURA DESDE POSTGRESQL (con fallback a session_state) ---

@@ -156,6 +156,19 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         _saved_draft = st.session_state.get(_draft_key, "")
         _value_for_textarea = _saved_draft if _saved_draft else (_evol_default or "")
 
+        col_ai, _ = st.columns([1, 3])
+        with col_ai:
+            if st.button("🤖 Sugerir evolución con IA", use_container_width=True, key="evol_ai_btn"):
+                with st.spinner("Generando borrador con IA..."):
+                    from core.ai_features import suggest_evolution_ai
+                    sugerencia = suggest_evolution_ai(paciente_sel)
+                if sugerencia:
+                    st.session_state["evol_nota_textarea"] = sugerencia
+                    st.session_state[_draft_key] = sugerencia
+                    st.rerun()
+                else:
+                    st.warning("IA no disponible. Configurala en Ajustes.", icon="⚠️")
+
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
                 "Nota medica / Evolucion clinica",

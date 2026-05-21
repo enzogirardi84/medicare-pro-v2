@@ -98,6 +98,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Reportes Financieros": list(_ROL_COORD_OPER),
     "Admin Feature Flags": [],
     "Self-Healing IA": [],
+    "Asistente IA": [],
 }
 
 

@@ -416,13 +416,11 @@ def render_estudios(paciente_sel, user, rol=None):
 
                 if cargar_multimedia:
                     if est.get("archivo_url") and est["archivo_url"].startswith("http"):
-                        # Es una URL de Supabase Storage
                         if est.get("extension") == "pdf" or ".pdf" in est["archivo_url"].lower():
                             st.link_button("Abrir PDF en el navegador", est["archivo_url"], width='stretch')
                         else:
                             st.image(est["archivo_url"], caption="Documento Adjunto", width='stretch')
                     elif est.get("imagen"):
-                        # Es el base64 legacy
                         try:
                             img_bytes = base64.b64decode(est["imagen"])
                             if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
@@ -432,4 +430,18 @@ def render_estudios(paciente_sel, user, rol=None):
                                 st.image(img_bytes, caption="Documento Adjunto", width='stretch')
                         except Exception:
                             log_event("estudios", "error: no se pudo leer el archivo adjunto")
-                            st.error("Error al leer el archivo")
+
+                ai_key = f"ai_interp_{idx}"
+                if st.session_state.get(ai_key) is None:
+                    if st.button("🤖 Interpretar con IA", key=f"ai_est_btn_{idx}", use_container_width=True):
+                        with st.spinner("Analizando estudio..."):
+                            from core.ai_features import interpret_study_ai
+                            texto = est.get("detalle", "") or ""
+                            resultado = interpret_study_ai(paciente_sel, texto)
+                            st.session_state[ai_key] = resultado or "IA no disponible. Configurala en Ajustes."
+                            st.rerun()
+                else:
+                    st.info(st.session_state[ai_key])
+                    if st.button("Cerrar", key=f"ai_est_cerrar_{idx}", use_container_width=True):
+                        st.session_state.pop(ai_key, None)
+                        st.rerun()
