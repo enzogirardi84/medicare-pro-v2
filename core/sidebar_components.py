@@ -191,6 +191,22 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     else:
         st.sidebar.caption("Sin diagnósticos cargados.")
 
+    # Botón de ayuda IA contextual en sidebar
+    _help_key = "_ai_sidebar_show_help"
+    if st.sidebar.button("💡 Ayuda IA para este módulo", key="_ai_sidebar_help", use_container_width=True):
+        st.session_state[_help_key] = not st.session_state.get(_help_key, False)
+        st.rerun()
+    if st.session_state.get(_help_key, False):
+        from core.ai_context import get_view_help, get_view_tips
+        ayuda = get_view_help(vista_actual)
+        st.sidebar.info(ayuda)
+        tips = get_view_tips(vista_actual)
+        for tip in tips:
+            st.sidebar.caption(f"💡 {tip}")
+        if st.sidebar.button("Cerrar ayuda", key="_ai_sidebar_help_close", use_container_width=True):
+            st.session_state[_help_key] = False
+            st.rerun()
+
 
 # ---------------------------------------------------------------------------
 # Contexto clínico para móvil (sidebar no visible en mobile)

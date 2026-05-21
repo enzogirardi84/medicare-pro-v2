@@ -643,6 +643,15 @@ finally:
     )
 
 # ============================================================
+# ASISTENTE IA FLOTANTE (visible en todos los módulos)
+# ============================================================
+try:
+    from views.ai_floating_assistant import render_ai_floating_assistant
+    render_ai_floating_assistant(vista_actual, paciente_sel)
+except Exception:
+    pass
+
+# ============================================================
 # MÉTRICAS ADMIN
 # ============================================================
 render_metricas_admin_sidebar(rol)
