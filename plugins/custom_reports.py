@@ -170,20 +170,16 @@ class CustomReportsPlugin(MedicarePlugin):
             return
         
         # KPIs
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
         
         with col1:
             st.metric("Total Pacientes", len(pacientes_db))
-        
-        with col2:
             obras_sociales = set(p.get("obra_social", "Sin OS") for p in pacientes_db.values())
             st.metric("Obras Sociales", len(obras_sociales))
         
-        with col3:
+        with col2:
             con_alergias = sum(1 for p in pacientes_db.values() if p.get("alergias"))
             st.metric("Con Alergias", con_alergias)
-        
-        with col4:
             con_email = sum(1 for p in pacientes_db.values() if p.get("email"))
             st.metric("Con Email", con_email)
         
