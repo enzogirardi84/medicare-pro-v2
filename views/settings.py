@@ -368,21 +368,27 @@ def render_integration_settings(is_admin: bool):
                 st.caption("⚠️ Se usó solo el primer bloque (ignoré texto extra después del espacio).")
             ai_key = _stripped.split(maxsplit=1)[0] if _stripped else ""
 
-            # Selector de modelo con opción personalizada
+            # Selector de modelo (solo presets, sin opción 'Otro' editable libremente)
             _model_opts = {
-                "OpenAI": ["gpt-4o", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "Otro"],
-                "Anthropic": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307", "Otro"],
-                "DeepSeek": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner", "Otro"],
-                "OpenRouter": ["deepseek/deepseek-chat", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash", "Otro"],
-                "Local (Ollama)": ["llama3.1", "llama3", "mistral", "Otro"],
+                "OpenAI": ["gpt-4o", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+                "Anthropic": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+                "DeepSeek": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"],
+                "OpenRouter": ["deepseek/deepseek-chat", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash"],
+                "Local (Ollama)": ["llama3.1", "llama3", "mistral"],
             }
-            _avail = _model_opts.get(ai_provider, ["Otro"])
-            _is_custom = ai_model and ai_model not in _avail
-            _current = "Otro" if _is_custom else (ai_model if ai_model in _avail else _avail[0])
-            _idx = _avail.index(_current) if _current in _avail else 0
-            _sel = st.selectbox("Modelo", options=_avail, index=_idx, key="ai_model_sel")
-            if _sel == "Otro":
-                ai_model = st.text_input("Modelo (personalizado)", value=ai_model if _is_custom else "",
+            _avail = _model_opts.get(ai_provider, ["gpt-4o"])
+            _default_model = _avail[0]
+            _saved_model = ai_model
+            # Si el modelo guardado está en la lista, preseleccionarlo; si no, usar el default
+            _sel = st.selectbox("Modelo", options=_avail,
+                index=_avail.index(_saved_model) if _saved_model in _avail else 0,
+                key="ai_model_sel")
+            # Checkbox para modelo personalizado (oculto por defecto)
+            _custom = st.checkbox("Usar modelo personalizado", key="ai_custom_model_cb",
+                value=bool(_saved_model and _saved_model not in _avail))
+            if _custom:
+                ai_model = st.text_input("Modelo personalizado",
+                    value=_saved_model if _saved_model not in _avail else "",
                     placeholder="Ej: deepseek/deepseek-chat, gpt-4o-mini")
             else:
                 ai_model = _sel
