@@ -84,17 +84,17 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
     plantillas_evolucion = {
         "Libre": "",
-        "Clinica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
+        "Clínica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
         "SOAP": "S - Subjetivo (motivo / síntomas referidos):\nO - Objetivo (signos, examen físico):\nA - Evaluación / Diagnóstico:\nP - Plan y conducta:",
-        "Enfermeria": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curación:\nTolerancia al procedimiento:\nIndicaciones para el próximo control:",
+        "Enfermería": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curación:\nTolerancia al procedimiento:\nIndicaciones para el próximo control:",
         "Heridas": "Ubicación de la lesión:\nAspecto del lecho:\nExudado / olor:\nCuración aplicada:\nEvolución respecto al control previo:\n(Opcional: adjuntar foto con la cámara o un archivo debajo)",
-        "Respiratorio": "Saturacion actual:\nDispositivo / flujo de oxigeno:\nTrabajo respiratorio:\nAuscultacion:\nConducta y seguimiento:",
+        "Respiratorio": "Saturación actual:\nDispositivo / flujo de oxígeno:\nTrabajo respiratorio:\nAuscultación:\nConducta y seguimiento:",
         "EPOC / Asma": "Disnea (escala 0-10):\nUso de musculatura accesoria:\nSaturación / FEV1 estimado:\nBroncoespasmo / sibilancias:\nMedicación broncodilatadora aplicada:\nRespuesta y plan:",
         "Neurológico / ACV": "Nivel de conciencia (GCS):\nFuerza y sensibilidad por miembro:\nLenguaje / afasia:\nNIHSS estimado:\nImagen solicitada:\nConducta y derivación:",
         "Post-procedimiento": "Procedimiento realizado:\nAcceso / zona intervenida:\nComplicaciones inmediatas:\nEstado hemodinámico post:\nIndicaciones y cuidados:\nPróximo control:",
         "Seguimiento crónico": "Diagnóstico de base:\nCumplimiento del tratamiento:\nSignos / síntomas actuales:\nLaboratorio / estudios recientes:\nAjuste de medicación:\nFecha próximo control:",
-        "Percentilo": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentacion / hidratacion:\nEvaluacion general:\nPlan y recomendaciones:",
-        "Cuidados paliativos": "Sintomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las proximas horas:",
+        "Percentilo": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentación / hidratación:\nEvaluación general:\nPlan y recomendaciones:",
+        "Cuidados paliativos": "Síntomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las próximas horas:",
     }
 
     if puede_registrar:
@@ -107,7 +107,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             c3.metric("Total evoluciones", len(evs_all))
 
         plantilla = st.selectbox(
-            "Plantilla de evolucion",
+            "Plantilla de evolución",
             list(plantillas_evolucion.keys()),
             key="evol_plantilla_sel",
         )
@@ -120,16 +120,14 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         if plantilla != "Libre":
             st.caption("Se carga una guía sugerida. Podés editarla antes de guardar.")
 
-        # IMPORTANTE: se eliminó el bloque de IA.
-        # La pantalla ahora pasa directo desde la plantilla al formulario clínico.
         _value_for_textarea = st.session_state.get(_draft_key, "")
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
-                "Nota medica / Evolucion clinica",
+                "Nota médica / Evolución clínica",
                 value=_value_for_textarea,
                 height=220,
-                placeholder="Escribir aqui la evolucion...",
+                placeholder="Escribir aquí la evolución...",
                 key="evol_nota_textarea",
             )
             st.session_state[_draft_key] = nota
@@ -158,12 +156,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 label_visibility="collapsed",
             )
 
-            guardar = st.form_submit_button("Firmar y Guardar Evolucion", width="stretch", type="primary")
+            guardar = st.form_submit_button("Firmar y guardar evolución", width="stretch", type="primary")
 
         if guardar:
             if not nota.strip():
                 log_event("evolucion_panel", "error: nota_vacia")
-                st.error("La nota medica no puede estar vacia.")
+                st.error("La nota médica no puede estar vacía.")
             else:
                 fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
                 if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
@@ -228,12 +226,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
                 try:
                     registrar_auditoria_legal(
-                        "Evolucion Clinica",
+                        "Evolución clínica",
                         paciente_sel,
-                        "Nueva evolucion",
+                        "Nueva evolución",
                         profesional,
                         user.get("matricula", "") if isinstance(user, dict) else "",
-                        f"Se registro evolucion con plantilla {plantilla}.",
+                        f"Se registró evolución con plantilla {plantilla}.",
                     )
                 except Exception as exc:
                     log_event("evolucion_panel", f"auditoria_error:{type(exc).__name__}:{exc}")
@@ -268,7 +266,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 st.session_state["_draft_pending"] = False
                 st.session_state.pop(_draft_key, None)
                 st.session_state[f"evol_plantilla_prev_{paciente_sel}"] = "Libre"
-                queue_toast("Evolucion guardada correctamente.")
+                queue_toast("Evolución guardada correctamente.")
                 st.rerun()
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
@@ -279,7 +277,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
     if evs_paciente:
         st.divider()
-        st.markdown("#### Historial de Evoluciones Clinicas", unsafe_allow_html=True)
+        st.markdown("#### Historial de evoluciones clínicas", unsafe_allow_html=True)
 
         evol_search = st.text_input("🔍 Buscar en evoluciones", placeholder="Palabra clave...", key="evol_fulltext_search")
         if evol_search.strip():
@@ -315,7 +313,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         key=f"download_pdf_historial_{paciente_sel}",
                     )
 
-        st.markdown("#### Historial de Evoluciones", unsafe_allow_html=True)
+        st.markdown("#### Historial de evoluciones", unsafe_allow_html=True)
         total_evs = len(evs_paciente)
         for idx, ev in enumerate(reversed(evs_paciente[-limite_evol:])):
             ev_num = total_evs - idx
@@ -372,7 +370,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         if puede_borrar:
             col_chk, col_btn = st.columns([1.2, 2.8])
             confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
-            if col_btn.button("Borrar ultima evolucion", width="stretch", disabled=not confirmar_borrado):
+            if col_btn.button("Borrar última evolución", width="stretch", disabled=not confirmar_borrado):
                 if not evs_paciente:
                     st.error("No hay evoluciones para borrar.")
                 else:
@@ -385,7 +383,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         guardar_datos(spinner=True)
                     except Exception:
                         pass
-                    queue_toast("Evolucion borrada.")
+                    queue_toast("Evolución borrada.")
                     st.rerun()
     else:
         bloque_estado_vacio(
@@ -417,7 +415,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         st.warning("No se pudo mostrar una foto registrada.")
 
     st.divider()
-    st.markdown("##### Firma Digital del Paciente / Familiar")
+    st.markdown("##### Firma digital del paciente / familiar")
     st.caption("Solicitar firma al finalizar la consulta, después de completar la evolución clínica.")
     if CANVAS_DISPONIBLE:
         firma_cfg = obtener_config_firma("evolucion")
@@ -449,7 +447,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 key="canvas_firma_evolucion",
             )
 
-        if st.button("Guardar Firma Digital", width="stretch", type="primary"):
+        if st.button("Guardar firma digital", width="stretch", type="primary"):
             b64_firma = firma_a_base64(
                 canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
                 uploaded_file=firma_subida,
