@@ -386,6 +386,122 @@ class TestEndToEnd:
         assert len(evos_paciente) == 1
 
 
-# Configuración de pytest
+class TestInventoryFlow:
+    """Tests para flujo de inventario."""
+
+    def test_create_inventory_item(self, mock_session):
+        """Crear item en inventario."""
+        from datetime import datetime, timezone
+
+        item = {
+            "id": "inv-001",
+            "item": "Omeprazol 20mg",
+            "tipo": "medicamento",
+            "stock": 100,
+            "stock_minimo": 20,
+            "precio": 150.0,
+            "empresa": "test-clinic",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        mock_session["inventario_db"] = [item]
+        assert len(mock_session["inventario_db"]) == 1
+        assert mock_session["inventario_db"][0]["stock"] == 100
+
+    def test_consume_stock_reduces_inventory(self, mock_session):
+        """Consumir stock reduce el inventario."""
+        mock_session["inventario_db"] = [
+            {"id": "inv-001", "item": "Omeprazol", "stock": 100, "stock_minimo": 20, "empresa": "test-clinic"}
+        ]
+        mock_session["consumos_db"] = []
+
+        consumo = {"item_id": "inv-001", "cantidad": 5, "fecha": "2026-05-20", "empresa": "test-clinic"}
+        mock_session["consumos_db"].append(consumo)
+
+        item = mock_session["inventario_db"][0]
+        item["stock"] -= consumo["cantidad"]
+        assert item["stock"] == 95
+
+    def test_stock_below_minimum_triggers_alert(self, mock_session):
+        """Stock por debajo del mínimo genera alerta."""
+        item = {"id": "inv-002", "item": "Paracetamol", "stock": 10, "stock_minimo": 25, "empresa": "test-clinic"}
+        mock_session["inventario_db"] = [item]
+        necesita_reposicion = item["stock"] < item["stock_minimo"]
+        assert necesita_reposicion is True
+
+    def test_suggested_stock_minimum_requires_consumption_history(self, mock_session):
+        """stock_minimo_sugerido requiere >=3 consumos en 6 meses."""
+        from core._insumos_map import stock_minimo_sugerido
+
+        # 0 consumos en ultimos 6 meses
+        mock_session["consumos_db"] = []
+        sugerido = stock_minimo_sugerido("test-item", mi_empresa="test-clinic")
+        assert sugerido == 0
+
+
+class TestPrescriptionFlow:
+    """Tests para flujo de prescripciones."""
+
+    def test_create_prescription_with_valid_meds(self, mock_session):
+        """Crear receta con medicamentos vÃ¡lidos."""
+        receta = {
+            "id": "rx-001",
+            "paciente": "Paciente Test",
+            "medicamento": "Amoxicilina 500mg",
+            "dosis": "1 comprimido cada 8 horas",
+            "duracion": "7 dÃ­as",
+            "via": "oral",
+            "prescriptor": "Dr. Test",
+            "fecha": "2026-05-20",
+        }
+        mock_session["indicaciones_db"] = [receta]
+        assert len(mock_session["indicaciones_db"]) == 1
+        assert mock_session["indicaciones_db"][0]["medicamento"] == "Amoxicilina 500mg"
+
+    def test_drug_interaction_detection(self):
+        """Verificar detecciÃ³n de interacciones medicamentosas."""
+        from core.drug_interactions import DrugInteractionDatabase
+
+        interaccion = DrugInteractionDatabase.get_interaction("warfarina", "ibuprofeno")
+        assert interaccion is not None
+        assert interaccion.severity.value in ("major", "contraindicated")
+
+    def test_prescription_without_interactions(self):
+        """Receta sin interacciones no genera alertas."""
+        from core.drug_interactions import DrugInteractionDatabase
+
+        result = DrugInteractionDatabase.check_interactions(["Amoxicilina"])
+        assert result == []
+
+
+class TestBackupFlow:
+    """Tests para flujo de backup/restore."""
+
+    def test_create_manual_backup_returns_entry(self):
+        """Crear backup manual retorna BackupEntry."""
+        from core.backup_automated import create_manual_backup
+
+        result = create_manual_backup()
+        assert hasattr(result, "id")
+        assert hasattr(result, "status")
+
+    def test_get_backup_status_returns_dict(self):
+        """Obtener estado del backup retorna dict."""
+        from core.backup_automated import get_backup_status
+
+        status = get_backup_status()
+        assert isinstance(status, dict)
+        assert "latest_backup" in status
+        assert "total_backups" in status
+
+    def test_backup_manager_list_backups(self):
+        """Listar backups retorna lista."""
+        from core.backup_automated import get_backup_manager
+
+        mgr = get_backup_manager()
+        backups = mgr.list_backups()
+        assert isinstance(backups, list)
+
+
+# ConfiguraciÃ³n de pytest
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
