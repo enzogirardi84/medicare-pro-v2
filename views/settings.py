@@ -330,31 +330,45 @@ def render_integration_settings(is_admin: bool):
     st.divider()
     
     # AI/ML
-    st.subheader("Inteligencia Artificial")
-    
+    st.subheader("🤖 Inteligencia Artificial")
+    st.caption("Configurá la IA para tener asistencia en todos los módulos del programa.")
+
     ai_enabled = st.toggle(
-        "Habilitar asistente de IA",
+        "Habilitar asistente de IA en todo el programa",
         value=_s.get("integ_ai_enabled", settings.ENABLE_AI_ASSISTANT if hasattr(settings, 'ENABLE_AI_ASSISTANT') else False),
-        help="Permite usar asistente de IA para evoluciones"
+        help="Activa IA contextual, sugerencias de evolución, interpretación de estudios, recetas y más."
     )
-    
-    with st.expander("Configuración de AI Provider"):
+
+    if ai_enabled:
         _ai_providers = ["OpenAI", "Anthropic", "DeepSeek", "Local (Ollama)", "Ninguno"]
         _s_ai_provider = _s.get("integ_ai_provider", "Ninguno")
         ai_provider = st.selectbox(
-            "Provider",
+            "Proveedor de IA",
             options=_ai_providers,
-            index=_ai_providers.index(_s_ai_provider) if _s_ai_provider in _ai_providers else 3
+            index=_ai_providers.index(_s_ai_provider) if _s_ai_provider in _ai_providers else 3,
+            help="DeepSeek es gratuito y compatible con OpenAI."
         )
-        
+
         ai_key = _s.get("integ_ai_key", "")
-        ai_model = _s.get("integ_ai_model", "gpt-4")
+        ai_model = _s.get("integ_ai_model", "deepseek-chat")
         if ai_provider != "Ninguno":
-            ai_key = st.text_input("API Key", type="password", value=ai_key)
+            st.caption(f"💡 Consejo para {ai_provider}:")
+            if ai_provider == "DeepSeek":
+                st.info("Registrate en https://platform.deepseek.com y generá una API Key. Usá 'deepseek-chat' como modelo.")
+            elif ai_provider == "OpenAI":
+                st.info("API Key de https://platform.openai.com. Modelos: gpt-4, gpt-4o, gpt-3.5-turbo.")
+            elif ai_provider == "Anthropic":
+                st.info("API Key de https://console.anthropic.com. Modelos: claude-3-opus, claude-3-sonnet.")
+            ai_key = st.text_input("API Key", type="password", value=ai_key,
+                help="Tu API key del proveedor seleccionado")
             ai_model = st.text_input(
                 "Modelo", value=ai_model,
-                help="Ej: gpt-4, gpt-4o, claude-3-opus-20240229, claude-3-sonnet-20240229"
+                help="Ej: deepseek-chat, gpt-4, gpt-4o, claude-3-sonnet-20240229"
             )
+    else:
+        ai_provider = "Ninguno"
+        ai_key = _s.get("integ_ai_key", "")
+        ai_model = _s.get("integ_ai_model", "deepseek-chat")
     
     st.divider()
     

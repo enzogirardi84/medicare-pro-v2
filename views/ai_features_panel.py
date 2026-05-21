@@ -28,7 +28,8 @@ def render_ai_features_panel(paciente_sel, mi_empresa, user, rol):
     """, unsafe_allow_html=True)
 
     if not llm_ok:
-        st.warning("IA no configurada. Activá un proveedor en Ajustes → Configuración de IA para usar estas funciones.")
+        from core.ai_features import ai_not_available_warning
+        ai_not_available_warning()
 
     tab_res, tab_cod, tab_bus, tab_pob, tab_clin = st.tabs([
         "📋 Resumen Clínico", "🏷️ Codificación CIE-10",
@@ -57,7 +58,7 @@ def render_resumen(paciente_sel, llm_ok):
 
     if st.button("📄 Generar resumen con IA", use_container_width=True, type="primary", key="ai_summary_btn"):
         if not llm_ok:
-            st.warning("IA no configurada.")
+            from core.ai_features import ai_not_available_warning; ai_not_available_warning()
             return
         with st.spinner("Generando resumen clínico..."):
             from core.ai_features import generate_patient_summary
@@ -81,7 +82,7 @@ def render_resumen(paciente_sel, llm_ok):
 
     if st.button("📋 Reporte de evolución (30 días)", use_container_width=True, key="ai_report_btn"):
         if not llm_ok:
-            st.warning("IA no configurada.")
+            from core.ai_features import ai_not_available_warning; ai_not_available_warning()
             return
         with st.spinner("Generando reporte..."):
             from core.ai_features import generate_report_ai
@@ -105,7 +106,8 @@ def render_codificacion(llm_ok):
                         height=100, key="ai_icd_input")
     if st.button("🏷️ Sugerir códigos CIE-10", use_container_width=True, type="primary", key="ai_icd_btn"):
         if not llm_ok:
-            st.warning("IA no configurada.")
+            from core.ai_features import ai_not_available_warning
+            ai_not_available_warning()
         elif not desc.strip():
             st.warning("Ingresá una descripción clínica.")
         else:
@@ -128,7 +130,7 @@ def render_codificacion(llm_ok):
     st.caption("Basado en síntomas y evolución del paciente actual.")
     if st.button("🩺 Sugerir diagnósticos diferenciales", use_container_width=True, key="ai_diff_btn"):
         if not llm_ok:
-            st.warning("IA no configurada.")
+            from core.ai_features import ai_not_available_warning; ai_not_available_warning()
         else:
             with st.spinner("Analizando paciente..."):
                 from core.ai_features import suggest_differential_ai
@@ -152,7 +154,7 @@ def render_busqueda(paciente_sel, llm_ok):
                           key="ai_search_input")
     if st.button("🔍 Buscar con IA", use_container_width=True, type="primary", key="ai_search_btn"):
         if not llm_ok:
-            st.warning("IA no configurada.")
+            from core.ai_features import ai_not_available_warning; ai_not_available_warning()
         elif not query.strip():
             st.warning("Ingresá una consulta.")
         else:
@@ -178,7 +180,7 @@ def render_poblacion(mi_empresa, llm_ok):
                           key="ai_pop_input")
     if st.button("📊 Analizar población", use_container_width=True, type="primary", key="ai_pop_btn"):
         if not llm_ok:
-            st.warning("IA no configurada.")
+            from core.ai_features import ai_not_available_warning; ai_not_available_warning()
         elif not query.strip():
             st.warning("Ingresá una consulta.")
         else:

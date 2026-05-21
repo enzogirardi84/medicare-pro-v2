@@ -438,7 +438,11 @@ def render_estudios(paciente_sel, user, rol=None):
                             from core.ai_features import interpret_study_ai
                             texto = est.get("detalle", "") or ""
                             resultado = interpret_study_ai(paciente_sel, texto)
-                            st.session_state[ai_key] = resultado or "IA no disponible. Configurala en Ajustes."
+                            if resultado:
+                                st.session_state[ai_key] = resultado
+                            else:
+                                from core.ai_features import ai_not_available_warning
+                                ai_not_available_warning()
                             st.rerun()
                 else:
                     st.info(st.session_state[ai_key])

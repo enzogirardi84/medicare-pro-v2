@@ -133,7 +133,9 @@ def render_ai_floating_assistant(vista_actual: str, paciente_sel: str):
                 if respuesta:
                     st.session_state["_ai_fab_answer"] = respuesta
                 else:
-                    st.session_state["_ai_fab_answer"] = "IA no disponible. Configurala en Ajustes."
+                    from core.ai_features import ai_not_available_warning
+                    ai_not_available_warning()
+                    st.session_state["_ai_fab_answer"] = ""
 
         if st.session_state.get("_ai_fab_answer"):
             st.markdown(f"""<div class="tip">{st.session_state['_ai_fab_answer']}</div>""", unsafe_allow_html=True)

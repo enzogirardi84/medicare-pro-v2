@@ -76,6 +76,14 @@ def _call_llm(prompt: str, system_key: str = "evolution", temperature: float = 0
         return None
 
 
+def ai_not_available_warning():
+    """Muestra aviso con botón directo a Configuración de IA."""
+    st.warning("⚠️ IA no disponible. Activá un proveedor en Ajustes > Integraciones.", icon="🤖")
+    if st.button("⚙️ Ir a Configuración de IA", use_container_width=True, key="_ai_goto_settings"):
+        st.session_state["_show_settings"] = True
+        st.rerun()
+
+
 def _paciente_data(paciente_sel: str) -> Dict[str, Any]:
     detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     vitales = [v for v in (st.session_state.get("vitales_db") or []) if v.get("paciente") == paciente_sel]

@@ -554,6 +554,11 @@ _notif_count = len(st.session_state.get("_toast_queue", []))
 if _notif_count > 0:
     st.sidebar.caption(f"🔔 {_notif_count} notificaciones pendientes")
 
+# Enlace a Configuración en sidebar
+if st.sidebar.button("⚙️ Configuración", use_container_width=True, key="sidebar_settings"):
+    st.session_state["_show_settings"] = True
+    st.rerun()
+
 # ============================================================
 # AUTO-SCROLL AL CONTENIDO SI CAMBIÓ EL MÓDULO
 # ============================================================
@@ -650,6 +655,14 @@ try:
     render_ai_floating_assistant(vista_actual, paciente_sel)
 except Exception:
     pass
+
+# ============================================================
+# PÁGINA DE CONFIGURACIÓN (toggle desde sidebar)
+# ============================================================
+if st.session_state.pop("_show_settings", False):
+    from views.settings import render_settings_page
+    render_settings_page()
+    st.stop()
 
 # ============================================================
 # MÉTRICAS ADMIN

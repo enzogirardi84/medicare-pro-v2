@@ -104,7 +104,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 if resultado:
                     st.session_state["_ai_prescription_result"] = resultado
                 else:
-                    st.warning("IA no disponible. Configurala en Ajustes.", icon="⚠️")
+                    from core.ai_features import ai_not_available_warning
+                    ai_not_available_warning()
             if st.session_state.get("_ai_prescription_result"):
                 st.info(st.session_state["_ai_prescription_result"])
                 if st.button("Limpiar", key="ai_pres_clear", use_container_width=True):
@@ -119,7 +120,8 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                 if resultado:
                     st.session_state["_ai_interaction_result"] = resultado
                 else:
-                    st.warning("No hay medicación activa o IA no disponible.", icon="⚠️")
+                    from core.ai_features import ai_not_available_warning
+                    ai_not_available_warning()
             if st.session_state.get("_ai_interaction_result"):
                 st.info(st.session_state["_ai_interaction_result"])
                 if st.button("Cerrar", key="ai_interact_clear", use_container_width=True):

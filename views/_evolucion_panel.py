@@ -167,7 +167,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     st.session_state[_draft_key] = sugerencia
                     st.rerun()
                 else:
-                    st.warning("IA no disponible. Configurala en Ajustes.", icon="⚠️")
+                    from core.ai_features import ai_not_available_warning
+                    ai_not_available_warning()
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
