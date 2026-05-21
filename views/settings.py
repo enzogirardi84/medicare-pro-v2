@@ -889,13 +889,18 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
         return False
     internal, base_url, default_model = entry
     clean_key = api_key.strip().split(maxsplit=1)[0]
+    if any(ord(c) > 127 for c in clean_key):
+        st.warning("La API Key contiene caracteres no validos. Revisa que no haya texto extra.")
+        return False
     try:
         from openai import OpenAI
         client = OpenAI(api_key=clean_key, base_url=base_url, timeout=30)
         test_model = (model or default_model).strip()
+        if any(ord(c) > 127 for c in test_model):
+            test_model = default_model
         resp = client.chat.completions.create(
             model=test_model,
-            messages=[{"role": "user", "content": "Respondé SOLO con: OK"}],
+            messages=[{"role": "user", "content": "Responde solo: OK"}],
             max_tokens=5,
             temperature=0,
         )
