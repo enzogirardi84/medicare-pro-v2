@@ -340,7 +340,7 @@ def render_busqueda_global(secciones, paciente_sel):
                 etiquetas,
                 key=f"hist_global_pick_{paciente_sel}",
             )
-            if st.button("Abrir seccion y filtrar con esta busqueda", key=f"hist_global_go_{paciente_sel}", type="primary"):
+            if st.button("Abrir seccion y filtrar con esta busqueda", key=f"hist_global_go_{paciente_sel}", type="primary", use_container_width=True):
                 idx_hit = etiquetas.index(sel_hit)
                 destino = hits[idx_hit]["seccion"]
                 st.session_state[f"hist_seccion_radio_{paciente_sel}"] = destino

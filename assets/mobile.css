@@ -603,11 +603,31 @@
         box-shadow: none !important;
     }
 
+    /* Feedback táctil en botones */
+    .stButton > button:active,
+    [data-testid="stButton"] > button:active,
+    [data-testid="stFormSubmitButton"] button:active {
+        transform: scale(0.97) !important;
+        transition: transform 0.1s ease !important;
+    }
+
+    /* Eliminar delay de 300ms en tap */
+    button, a, input, select, textarea, [role="button"], [role="tab"], [role="option"] {
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: rgba(20, 184, 166, 0.25) !important;
+    }
+
     /* Scroll suave nativo en contenedores con scroll */
     [data-testid="stDataFrame"],
     [data-testid="stTable"],
     [role="tablist"] {
         -webkit-overflow-scrolling: touch !important;
         scroll-behavior: smooth !important;
+    }
+
+    /* Prevenir selección accidental en elementos interactivos */
+    button, select, [role="button"], [role="tab"] {
+        -webkit-user-select: none !important;
+        user-select: none !important;
     }
 }

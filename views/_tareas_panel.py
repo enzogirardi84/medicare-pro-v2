@@ -50,7 +50,7 @@ def render_tareas_panel(paciente_sel):
         with st.form("nueva_tarea", clear_on_submit=True):
             _tarea = st.text_input("Tarea *", placeholder="Ej: Gestionar turno con cardiología")
             _prio = st.selectbox("Prioridad", ["normal", "alta", "baja"], index=0)
-            if st.form_submit_button("Agregar tarea"):
+            if st.form_submit_button("Agregar tarea", use_container_width=True):
                 if _tarea.strip():
                     tareas.append({
                         "paciente": paciente_sel,

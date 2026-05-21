@@ -125,7 +125,7 @@ Ultimos turnos: {len(turnos_pac[:5])} registrados
 Vacunas aplicadas: {len(vacs_pac)} dosis
 Documentos firmados: {len(cons_pac)} registros
         """)
-        if st.button("Generar resumen PDF", key="pdf_resumen"):
+        if st.button("Generar resumen PDF", key="pdf_resumen", use_container_width=True):
             from fpdf import FPDF
             pdf = FPDF()
             pdf.add_page()

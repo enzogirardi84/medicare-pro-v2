@@ -11,6 +11,7 @@ Características:
 - Caché de recursos estáticos
 """
 
+import base64
 import json
 import streamlit as st
 from pathlib import Path
@@ -371,13 +372,25 @@ self.addEventListener('message', (event) => {
 
 def inject_pwa_headers():
     """
-    Inyecta headers y metatags necesarios para PWA en Streamlit.
+    Inyecta headers y metatags necesarios para PWA en Streamlit Cloud.
     
-    Esto debe llamarse al inicio de la aplicación.
+    Usa blob URL para el manifest (Streamlit Cloud no sirve /manifest.json).
+    Las apple-touch-icon usan data URIs inline para funcionar sin archivos estáticos.
     """
+    import json as _json
     manifest = generate_pwa_manifest()
+    manifest_json = _json.dumps(manifest, ensure_ascii=False)
     
-    # Metatags para PWA
+    # Icons inline como data URIs (SVG pequeño para compatibilidad)
+    _svg_icon = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">'
+        '<rect width="192" height="192" rx="32" fill="#14b8a6"/>'
+        '<text x="96" y="128" font-size="100" text-anchor="middle" fill="#fff">🩺</text>'
+        '</svg>'
+    )
+    _svg_b64 = base64.b64encode(_svg_icon.encode()).decode()
+    _icon_data_uri = f"data:image/svg+xml;base64,{_svg_b64}"
+    
     pwa_meta = f"""
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="{manifest['theme_color']}">
@@ -387,36 +400,23 @@ def inject_pwa_headers():
     <meta name="apple-mobile-web-app-title" content="{manifest['short_name']}">
     <meta name="application-name" content="{manifest['short_name']}">
     <meta name="msapplication-TileColor" content="{manifest['theme_color']}">
-    <meta name="msapplication-TileImage" content="/assets/icons/icon-144x144.png">
-    <meta name="msapplication-config" content="/assets/browserconfig.xml">
     
-    <!-- Manifest -->
-    <link rel="manifest" href="/manifest.json">
-    
-    <!-- Icons -->
-    <link rel="apple-touch-icon" sizes="72x72" href="/assets/icons/icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="96x96" href="/assets/icons/icon-96x96.png">
-    <link rel="apple-touch-icon" sizes="128x128" href="/assets/icons/icon-128x128.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="/assets/icons/icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/assets/icons/icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="/assets/icons/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/assets/icons/icon-512x512.png">
-    
-    <!-- Service Worker Registration -->
+    <!-- Manifest via Blob URL (funciona en Streamlit Cloud) -->
     <script>
-    if ('serviceWorker' in navigator) {{
-        window.addEventListener('load', () => {{
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(registration => {{
-                    console.log('[PWA] SW registered:', registration);
-                }})
-                .catch(error => {{
-                    console.log('[PWA] SW registration failed:', error);
-                }});
-        }});
-    }}
+    (function() {{
+        var manifestData = {manifest_json};
+        var blob = new Blob([JSON.stringify(manifestData)], {{type: 'application/json'}});
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = URL.createObjectURL(blob);
+        document.head.appendChild(link);
+    }})();
     </script>
+    
+    <!-- Icons inline (data URIs) -->
+    <link rel="apple-touch-icon" sizes="192x192" href="{_icon_data_uri}">
+    <link rel="icon" type="image/svg+xml" sizes="192x192" href="{_icon_data_uri}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{_icon_data_uri}">
     """
     
     st.markdown(pwa_meta, unsafe_allow_html=True)

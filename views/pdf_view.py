@@ -401,7 +401,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
             else:
                 _seleccion = st.multiselect("Seleccionar pacientes", _pacientes, default=[paciente_sel], key="batch_pac_sel")
                 st.caption(f"{len(_seleccion)} paciente(s) seleccionado(s).")
-                if _seleccion and st.button("Generar ZIP con HC de seleccionados", key="batch_pdf_btn"):
+                if _seleccion and st.button("Generar ZIP con HC de seleccionados", key="batch_pdf_btn", use_container_width=True):
                     _barra = st.progress(0, text="Generando PDFs...")
                     _status = st.empty()
                     _status.info(f"Procesando 0/{len(_seleccion)}...")

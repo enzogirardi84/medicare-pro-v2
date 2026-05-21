@@ -414,7 +414,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         with c1:
             st.markdown(f"**{len(evs_paciente)} evolución(es)**")
         with c2:
-            if st.button("Descargar PDF", key=f"btn_pdf_historial_{paciente_sel}", type="primary"):
+            if st.button("Descargar PDF", key=f"btn_pdf_historial_{paciente_sel}", type="primary", use_container_width=True):
                 pdf_bytes = _generar_pdf_historia_clinica(paciente_sel)
                 if pdf_bytes:
                     st.download_button(
@@ -505,7 +505,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
                 # Botón borrar esta evolución específica
                 btn_key = f"borrar_ev_especifica_{ev_num}_{idx}_{paciente_sel}"
-                if st.button("Borrar esta evolución", key=btn_key, type="secondary"):
+                if st.button("Borrar esta evolución", key=btn_key, type="secondary", use_container_width=True):
                     real_idx = (total_evs - 1) - idx
                     if 0 <= real_idx < len(evs_paciente):
                         ev_borrada = evs_paciente.pop(real_idx)

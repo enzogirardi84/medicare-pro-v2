@@ -74,7 +74,7 @@ def render_admin_usuarios():
         nuevo_password = st.text_input("Contrasena *", type="password", placeholder="Minimo 6 caracteres")
         nuevo_rol = st.selectbox("Rol", options=opciones_rol, index=0)
         nueva_empresa = st.text_input("Empresa / Clinica", placeholder="Ej: Clinica General")
-        if st.form_submit_button("➕ Crear usuario", type="primary"):
+        if st.form_submit_button("➕ Crear usuario", type="primary", use_container_width=True):
             errores = []
             if not nuevo_login.strip():
                 errores.append("Login requerido")

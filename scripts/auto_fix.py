@@ -31,8 +31,9 @@ def fix_use_container_width() -> list:
         texto = py.read_text(encoding="utf-8", errors="replace")
         if "use_container_width" not in texto:
             continue
-        nuevo = texto.replace("use_container_width=True", "width='stretch'")
-        nuevo = nuevo.replace("use_container_width=False", "width='content'")
+        nuevo = texto.replace("width='stretch'", "use_container_width=True")
+        nuevo = nuevo.replace('width="stretch"', "use_container_width=True")
+        nuevo = nuevo.replace("width='content'", "use_container_width=False")
         if nuevo != texto:
             py.write_text(nuevo, encoding="utf-8")
             fixes.append(str(rel))

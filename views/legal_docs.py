@@ -190,7 +190,7 @@ def _render_consent_tab(mi_empresa, user):
         st.metric("Vencidos", vencidos)
 
     with st.expander("Verificar integridad de consentimientos", expanded=False):
-        if consents and st.button("Verificar cadena de integridad", key="check_consent_chain"):
+        if consents and st.button("Verificar cadena de integridad", key="check_consent_chain", use_container_width=True):
             total = len(consents)
             ok = 0
             for c in consents:
@@ -228,7 +228,7 @@ def _render_consent_tab(mi_empresa, user):
                 rev_opts = {f"{c.get('fecha', '')[:10]} - {c.get('firmante', '')}": c for c in cons_pac_rev}
                 rev_sel = st.selectbox("Seleccionar consentimiento", list(rev_opts.keys()), key="rev_cons_sel")
                 rev_motivo = st.text_area("Motivo de revocacion", placeholder="Describir el motivo...", key="rev_motivo")
-                if st.button("Revocar consentimiento", type="primary", key="btn_revoke"):
+                if st.button("Revocar consentimiento", type="primary", key="btn_revoke", use_container_width=True):
                     target = rev_opts[rev_sel]
                     target["revocado"] = True
                     target["fecha_revocacion"] = ahora().strftime("%d/%m/%Y %H:%M")
@@ -275,7 +275,7 @@ def _render_audit_trail_tab(mi_empresa, user):
         ]
         st.dataframe(df, width='stretch')
 
-        if st.button("Verificar integridad de la cadena"):
+        if st.button("Verificar integridad de la cadena", use_container_width=True):
             from core.audit_trail import get_audit_trail
             try:
                 trail = get_audit_trail()
@@ -302,7 +302,7 @@ def _render_compliance_tab(mi_empresa, user):
     st.markdown("### Dashboard de Cumplimiento")
     st.caption("Verificacion automatica contra estandares normativos (HIPAA, GDPR, Ley 25.506, Ley 26.529).")
 
-    if st.button("Ejecutar auditoria de compliance ahora", type="primary"):
+    if st.button("Ejecutar auditoria de compliance ahora", type="primary", use_container_width=True):
         from core.compliance_monitor import get_compliance_monitor
         try:
             monitor = get_compliance_monitor()

@@ -291,7 +291,7 @@ def render_flags_history():
         st.divider()
     
     # Exportar historial
-    if st.button("📥 Exportar Historial"):
+    if st.button("📥 Exportar Historial", use_container_width=True):
         st.info("Función de exportación disponible en versión Enterprise")
 
 

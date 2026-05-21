@@ -720,7 +720,7 @@ def render_insumos_rules_settings(is_admin: bool):
     with st.form("nueva_regla_med"):
         nm = st.text_input("Palabra clave del medicamento", placeholder="Ej: mi-medicamento")
         nv = st.text_input("Insumos (separados por coma)", placeholder="Ej: Jeringa 5ml x1, Aguja EV x1")
-        if st.form_submit_button("➕ Agregar regla de medicamento", type="primary"):
+        if st.form_submit_button("➕ Agregar regla de medicamento", type="primary", use_container_width=True):
             if nm.strip() and nv.strip():
                 _med_rules[nm.strip()] = [
                     {"item": p.rsplit("x", 1)[0].strip(), "cantidad": int(p.rsplit("x", 1)[1].strip())}
@@ -759,7 +759,7 @@ def render_insumos_rules_settings(is_admin: bool):
     with st.form("nueva_regla_proc"):
         nm = st.text_input("Palabra clave del procedimiento", placeholder="Ej: curacion + infectada")
         nv = st.text_input("Insumos (separados por coma)", placeholder="Ej: Gasas estériles x10, Guantes estériles x2")
-        if st.form_submit_button("➕ Agregar regla de procedimiento", type="primary"):
+        if st.form_submit_button("➕ Agregar regla de procedimiento", type="primary", use_container_width=True):
             if nm.strip() and nv.strip():
                 _proc_rules[nm.strip()] = [
                     {"item": p.rsplit("x", 1)[0].strip(), "cantidad": int(p.rsplit("x", 1)[1].strip())}
