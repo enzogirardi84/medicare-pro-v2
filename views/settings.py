@@ -365,10 +365,23 @@ def render_integration_settings(is_admin: bool):
             if _stripped and " " in _stripped.strip():
                 st.caption("⚠️ Se usó solo el primer bloque (ignoré texto extra después del espacio).")
             ai_key = _stripped.split(maxsplit=1)[0] if _stripped else ""
-            ai_model = st.text_input(
-                "Modelo", value=ai_model,
-                help="Ej: deepseek-v4-flash, deepseek-v4-pro, gpt-4, gpt-4o, claude-3-sonnet-20240229"
-            )
+
+            # Selector de modelo con opción personalizada
+            _model_opts = {
+                "OpenAI": ["gpt-4o", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "Otro"],
+                "Anthropic": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307", "Otro"],
+                "DeepSeek": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner", "Otro"],
+                "Local (Ollama)": ["llama3.1", "llama3", "mistral", "Otro"],
+            }
+            _avail = _model_opts.get(ai_provider, ["Otro"])
+            _current = ai_model if ai_model in _avail else "Otro"
+            _idx = _avail.index(_current) if _current in _avail else len(_avail) - 1
+            _sel = st.selectbox("Modelo", options=_avail, index=_idx, key="ai_model_sel")
+            if _sel == "Otro":
+                ai_model = st.text_input("Modelo (personalizado)", value=ai_model if ai_model not in _avail else "",
+                    placeholder="Ej: gpt-4o-mini, deepseek-v4-flash")
+            else:
+                ai_model = _sel
 
             # Test de conexión
             if st.button("🔄 Probar conexión con IA", key="ai_test_btn", use_container_width=True):
