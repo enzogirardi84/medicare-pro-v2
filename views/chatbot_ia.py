@@ -60,7 +60,7 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             kwargs = {"api_key": api_key, "timeout": 20}
             if provider == "deepseek":
                 kwargs["base_url"] = "https://api.deepseek.com/v1"
-                model = model if model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-chat"
+                model = model if model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-v4-flash"
             resp = OpenAI(**kwargs).chat.completions.create(
                 model=model, messages=[{"role": "system", "content": system_msg}, {"role": "user", "content": prompt}],
                 max_tokens=800, temperature=0.2

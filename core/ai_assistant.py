@@ -25,7 +25,7 @@ from core.app_logging import log_event
 # Fuentes (en orden de prioridad): session_state > st.secrets > env vars > defaults
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "none")  # openai, anthropic, deepseek, local, none
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4")
+LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-v4-flash")
 LLM_ENABLED = LLM_PROVIDER != "none" and LLM_API_KEY != ""
 
 
@@ -33,7 +33,7 @@ def _get_llm_config():
     """Obtiene config LLM con overriding de session_state > st.secrets > env vars."""
     provider = os.getenv("LLM_PROVIDER", "none")
     api_key = os.getenv("LLM_API_KEY", "")
-    model = os.getenv("LLM_MODEL", "gpt-4")
+    model = os.getenv("LLM_MODEL", "deepseek-v4-flash")
 
     try:
         import streamlit as st
@@ -394,7 +394,7 @@ NOTA MEJORADA:"""
                 base_url="https://api.deepseek.com/v1",
                 timeout=30.0,
             )
-            model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-chat"
+            model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-v4-flash"
             response = client.chat.completions.create(
                 model=model,
                 messages=[

@@ -350,11 +350,11 @@ def render_integration_settings(is_admin: bool):
         )
 
         ai_key = _s.get("integ_ai_key", "")
-        ai_model = _s.get("integ_ai_model", "deepseek-chat")
+        ai_model = _s.get("integ_ai_model", "deepseek-v4-flash")
         if ai_provider != "Ninguno":
             st.caption(f"💡 Consejo para {ai_provider}:")
             if ai_provider == "DeepSeek":
-                st.info("Registrate en https://platform.deepseek.com y generá una API Key. Usá 'deepseek-chat' como modelo.")
+                st.info("Registrate en https://platform.deepseek.com y generá una API Key. Usá 'deepseek-v4-flash' o 'deepseek-v4-pro'.")
             elif ai_provider == "OpenAI":
                 st.info("API Key de https://platform.openai.com. Modelos: gpt-4, gpt-4o, gpt-3.5-turbo.")
             elif ai_provider == "Anthropic":
@@ -363,7 +363,7 @@ def render_integration_settings(is_admin: bool):
                 help="Tu API key del proveedor seleccionado")
             ai_model = st.text_input(
                 "Modelo", value=ai_model,
-                help="Ej: deepseek-chat, gpt-4, gpt-4o, claude-3-sonnet-20240229"
+                help="Ej: deepseek-v4-flash, deepseek-v4-pro, gpt-4, gpt-4o, claude-3-sonnet-20240229"
             )
 
             # Test de conexión
@@ -375,7 +375,7 @@ def render_integration_settings(is_admin: bool):
     else:
         ai_provider = "Ninguno"
         ai_key = _s.get("integ_ai_key", "")
-        ai_model = _s.get("integ_ai_model", "deepseek-chat")
+        ai_model = _s.get("integ_ai_model", "deepseek-v4-flash")
     
     # Indicador de estado actual
     if is_admin:
@@ -850,7 +850,7 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str):
         base_url = "https://api.deepseek.com/v1" if internal == "deepseek" else None
         client = OpenAI(api_key=api_key, base_url=base_url, timeout=15)
         resp = client.chat.completions.create(
-            model=model or "deepseek-chat",
+            model=model or "deepseek-v4-flash",
             messages=[{"role": "user", "content": "Respondé SOLO con: OK"}],
             max_tokens=5,
             temperature=0,
