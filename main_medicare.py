@@ -523,9 +523,13 @@ render_panel_seguridad()
 render_ayuda_atajos()
 
 # ============================================================
-# BACKUP RAPIDO (visible siempre)
+# BACKUP RAPIDO (sidebar + mobile)
 # ============================================================
-if st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapido"):
+_do_backup = st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapido")
+st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
+_do_backup_mobile = st.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido_mobile")
+st.markdown('</div>', unsafe_allow_html=True)
+if _do_backup or _do_backup_mobile:
     try:
         from core.database import _db_keys
         claves = _db_keys()
