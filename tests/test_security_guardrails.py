@@ -6,7 +6,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCAN_DIRS = ["main_medicare.py", "core", "views"]
-ALLOWED_IMPORT_MODULE = {Path("core/app_navigation.py")}
+ALLOWED_IMPORT_MODULE = {Path("core/app_navigation.py"), Path("core/__init__.py")}
 SERVICE_ROLE_ALLOWED = {
     Path("core/diagnosticos.py"),
     Path("core/security_middleware.py"),

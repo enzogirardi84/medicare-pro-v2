@@ -53,3 +53,9 @@ ERROR_TRACKER_ENABLED = True
 # Tope global de items por cada lista _db en session_state (excepto logs_db que usa MAX_LOGS_DB_ENTRIES).
 # Solo se truncan listas que superan 2x este valor, respetando max_items por módulo.
 MAX_LIST_ITEMS_GLOBAL = 200
+
+# Self-Healing IA: diagnóstico y reparación autónoma del código.
+# passive: solo detecta y registra (seguro)
+# dry_run: genera fixes pero no los aplica automáticamente
+# active: aplica fixes que pasan validación
+SELF_HEALING_MODE = "passive"

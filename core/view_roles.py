@@ -97,6 +97,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Calc. Dosis Pediatricas": list(_ROL_TODOS),
     "Reportes Financieros": list(_ROL_COORD_OPER),
     "Admin Feature Flags": [],
+    "Self-Healing IA": [],
 }
 
 

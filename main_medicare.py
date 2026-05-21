@@ -582,6 +582,15 @@ if _modulo_previo_scroll != vista_actual:
     )
 
 # ============================================================
+# SELF-HEALING IA (auto-diagnóstico periódico)
+# ============================================================
+try:
+    from core.self_healing import maybe_run_self_healing
+    maybe_run_self_healing()
+except Exception:
+    pass
+
+# ============================================================
 # MÓDULO ACTIVO (indicador visible en mobile)
 # ============================================================
 _label_modulo = VIEW_NAV_LABELS.get(vista_actual, vista_actual)
