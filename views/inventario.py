@@ -56,7 +56,8 @@ def render_inventario(mi_empresa):
     except Exception as e:
         log_event("error_leer_inventario_sql", str(e))
 
-    if not inv_mio:
+    if not inv_mio and st.session_state.get("inventario_db"):
+        inv_mio = st.session_state["inventario_db"]
         inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
 
     def _umbral_critico(item):

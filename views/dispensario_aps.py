@@ -1201,7 +1201,10 @@ def _tab_farmacia(paciente_sel, user, centro_salud_id):
         observacion_med = st.text_area("Observación de farmacia", key="aps_med_obs")
 
         if st.button("Registrar entrega medicación", width='stretch', key="aps_btn_med"):
-            if not medicamento:
+            if mes_corriente:
+                log_event("dispensario", "error: intento de doble entrega mensual de farmacia")
+                st.error("Este paciente ya retiró medicación este mes.")
+            elif not medicamento:
                 log_event("dispensario", "error: sin medicamento seleccionado")
                 st.error("Seleccioná un medicamento del vademecum o escribí uno manualmente.")
             else:

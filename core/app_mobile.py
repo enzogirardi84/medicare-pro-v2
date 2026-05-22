@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import time
 
+from html import escape
+
 import streamlit as st
 
 from core.utils_pacientes import set_paciente_actual
@@ -151,12 +153,12 @@ def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles
         cols_pac = st.columns([1, 3])
         cols_pac[0].markdown(
             f"<span style='font-size:.75rem;color:#94a3b8;'>"
-            f"{det.get('dni', 'S/D')}</span>",
+            f"{escape(det.get('dni', 'S/D'))}</span>",
             unsafe_allow_html=True,
         )
         cols_pac[1].markdown(
             f"<span style='font-size:.75rem;color:#94a3b8;'>"
-            f"{det.get('obra_social', 'S/D')}</span>",
+            f"{escape(det.get('obra_social', 'S/D'))}</span>",
             unsafe_allow_html=True,
         )
 

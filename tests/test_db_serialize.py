@@ -29,7 +29,5 @@ def test_dumps_db_sorted_stable_keys():
     assert a == b
 
 
-def test_loads_json_any_invalid_raises():
-    # orjson suele lanzar JSONDecodeError propio; stdlib json.JSONDecodeError.
-    with pytest.raises((json.JSONDecodeError, ValueError)):
-        loads_json_any(b"not json {{{")
+def test_loads_json_any_invalid_returns_empty():
+    assert loads_json_any(b"not json {{{") == {}

@@ -107,7 +107,7 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
     # Guardia por paciente (no global)
     _gk = f"_guardia_{paciente_sel}"
     if tipo == "LLEGADA":
-        st.session_state[_gk] = {"activa": True, "inicio": ahora().isoformat()}
+        st.session_state.setdefault(_gk, {"activa": True, "inicio": ahora().isoformat()})
     elif tipo == "SALIDA":
         _guardia = st.session_state.get(_gk, {})
         if _guardia.get("activa"):

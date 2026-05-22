@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html import escape
 import streamlit as st
 
 from core.ai_assistant import is_llm_enabled
@@ -103,15 +104,15 @@ def render_ai_floating_assistant(vista_actual: str, paciente_sel: str):
     with st.container():
         st.markdown(f"""<div class="ai-fab-panel">""", unsafe_allow_html=True)
 
-        st.markdown(f"<h4>🤖 Asistente IA — {vista_actual}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4>🤖 Asistente IA — {escape(vista_actual)}</h4>", unsafe_allow_html=True)
 
-        st.markdown(f"<p>{get_view_help(vista_actual)}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p>{escape(get_view_help(vista_actual))}</p>", unsafe_allow_html=True)
 
         tips = get_view_tips(vista_actual)
         if tips:
             st.markdown("<h4>💡 Sugerencias</h4>", unsafe_allow_html=True)
             for tip in tips:
-                st.markdown(f"""<div class="tip">{tip}</div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="tip">{escape(tip)}</div>""", unsafe_allow_html=True)
 
         actions = get_quick_actions(vista_actual)
         if actions:
@@ -138,12 +139,12 @@ def render_ai_floating_assistant(vista_actual: str, paciente_sel: str):
                     st.session_state["_ai_fab_answer"] = ""
 
         if st.session_state.get("_ai_fab_answer"):
-            st.markdown(f"""<div class="tip">{st.session_state['_ai_fab_answer']}</div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="tip">{escape(st.session_state['_ai_fab_answer'])}</div>""", unsafe_allow_html=True)
             if st.button("Cerrar respuesta", key="_ai_fab_clear", use_container_width=True):
                 st.session_state.pop("_ai_fab_answer", None)
                 st.rerun()
 
-        st.markdown(f"""<small>Modo: {SELF_HEALING_MODE} · {'IA conectada' if llm_ok else 'IA sin configurar'}</small>""", unsafe_allow_html=True)
+        st.markdown(f"""<small>Modo: {escape(SELF_HEALING_MODE)} · {'IA conectada' if llm_ok else 'IA sin configurar'}</small>""", unsafe_allow_html=True)
         st.markdown(f"""</div>""", unsafe_allow_html=True)
 
 

@@ -31,13 +31,16 @@ def _orjson_default(obj: Any) -> str:
 
 def loads_json_any(raw: bytes | str) -> Any:
     """Parsea JSON (dict, list, etc.). Usa orjson si está instalado."""
-    if isinstance(raw, str):
-        b = raw.encode("utf-8")
-    else:
-        b = raw
-    if ORJSON_AVAILABLE and _orjson is not None:
-        return _orjson.loads(b)
-    return json.loads(b.decode("utf-8"))
+    try:
+        if isinstance(raw, str):
+            b = raw.encode("utf-8")
+        else:
+            b = raw
+        if ORJSON_AVAILABLE and _orjson is not None:
+            return _orjson.loads(b)
+        return json.loads(b.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+        return {}
 
 
 def dumps_db_sorted(data: Dict[str, Any]) -> Tuple[bytes, str]:

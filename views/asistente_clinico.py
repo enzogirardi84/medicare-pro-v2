@@ -233,7 +233,7 @@ def _html_tarjeta_indicacion(ind: dict) -> str:
     estado = ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))
     badge_type = "ok" if "activa" in str(estado).lower() else "warning"
     med = str(ind.get("med", "Medicacion"))
-    fecha = str(ind.get("fecha", "-"))
+    fecha = escape(str(ind.get("fecha", "-")))
     via = escape(str(ind.get("via", "-")))
     frecuencia = escape(str(ind.get("frecuencia", "-")))
     contenido_html = f"<b>Fecha:</b> {fecha}<br><b>Via:</b> {via}<br><b>Frecuencia:</b> {frecuencia}"

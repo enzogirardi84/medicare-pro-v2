@@ -51,10 +51,7 @@ def safe_text(value):
 
 
 def pdf_output_bytes(pdf):
-    out = pdf.output(dest="S")
-    if isinstance(out, str):
-        return out.encode("latin-1", "replace")
-    return bytes(out)
+    return bytes(pdf.output())
 
 
 def sanitize_filename_component(value, fallback="archivo"):
