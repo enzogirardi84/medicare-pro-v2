@@ -14,6 +14,7 @@ from core.utils import cargar_json_asset, seleccionar_limite_registros, ahora
 from core.db_sql import (
     delete_inventario_item_sql,
     get_inventario_by_empresa,
+    get_inventario_item_by_name,
     insert_inventario,
     update_inventario_item_sql,
 )
@@ -186,27 +187,30 @@ def render_inventario(mi_empresa):
             if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
                 item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
                 if item_final and item_final != "-- Seleccionar del catálogo --":
+                    sql_ok = False
+                    item_sql_id = None
                     try:
                         empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                         if empresa_uuid:
-                            from core.database import supabase
-                            res = supabase.table("inventario").select("id, stock_actual, stock_minimo, costo_unitario").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
-                            if res.data:
-                                existente = res.data[0]
-                                _upd = {"stock_actual": existente["stock_actual"] + cantidad}
+                            existente = get_inventario_item_by_name(empresa_uuid, item_final)
+                            if existente:
+                                item_sql_id = existente.get("id")
+                                _upd = {"stock_actual": int(existente.get("stock_actual") or 0) + cantidad}
                                 if _cat_input.strip():
                                     _upd["categoria"] = _cat_input.strip()
                                 if _costo_input > 0:
                                     _upd["costo_unitario"] = _costo_input
-                                update_inventario_item_sql(existente["id"], _upd, empresa_uuid)
+                                sql_ok = update_inventario_item_sql(item_sql_id, _upd, empresa_uuid)
                             else:
                                 datos_sql = {"empresa_id": empresa_uuid, "nombre": item_final, "stock_actual": cantidad}
                                 if _cat_input.strip():
                                     datos_sql["categoria"] = _cat_input.strip()
                                 if _costo_input > 0:
                                     datos_sql["costo_unitario"] = _costo_input
-                                insert_inventario(datos_sql)
-                            log_event("inventario_sql_insert_update", f"Item: {item_final}")
+                                creado = insert_inventario(datos_sql)
+                                sql_ok = bool(creado)
+                                item_sql_id = creado.get("id") if creado else None
+                            log_event("inventario_sql_insert_update", f"Item: {item_final}; sql_ok={sql_ok}")
                     except Exception as e:
                         log_event("error_inventario_sql", str(e))
 
@@ -216,6 +220,8 @@ def render_inventario(mi_empresa):
                     for i in st.session_state["inventario_db"]:
                         if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
                             i["stock"] = int(i.get("stock") or 0) + cantidad
+                            if item_sql_id:
+                                i["id_sql"] = item_sql_id
                             if _cat_input.strip():
                                 i["categoria"] = _cat_input.strip()
                             if _costo_input > 0:
@@ -224,6 +230,8 @@ def render_inventario(mi_empresa):
                             break
                     if not encontrado:
                         _entry = {"item": item_final, "stock": cantidad, "empresa": mi_empresa}
+                        if item_sql_id:
+                            _entry["id_sql"] = item_sql_id
                         if _cat_input.strip():
                             _entry["categoria"] = _cat_input.strip()
                         if _costo_input > 0:
@@ -232,8 +240,9 @@ def render_inventario(mi_empresa):
 
                     from core.database import _trim_db_list
                     _trim_db_list("inventario_db", 1000)
-                    with st.spinner("Guardando..."):
-                        guardar_datos(spinner=False)
+                    if not sql_ok:
+                        with st.spinner("Guardando respaldo local..."):
+                            guardar_datos(spinner=False)
                     queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
                     st.rerun()
     else:
