@@ -21,13 +21,12 @@ def _get_ui_liviano_module():
     try:
         import core.ui_liviano as ui_liv
         return ui_liv
-    except Exception:
-        pass
-    try:
-        from core import ui_liviano as ui_liv
-        return ui_liv
-    except Exception:
-        return None
+    except ImportError:
+        try:
+            from core import ui_liviano as ui_liv
+            return ui_liv
+        except ImportError:
+            return None
 
 
 def _user_agent_contexto() -> str:
