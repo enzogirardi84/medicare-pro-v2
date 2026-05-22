@@ -115,10 +115,10 @@ def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles
             st.session_state[_cache_key] = p_f
             st.session_state[_cache_ts_key] = time.time()
 
-    limite = 25 if es_tablet else 15
+    limite = 25 if es_tablet else 8
 
     if not buscar and len(p_f) > limite:
-        st.caption(f"Mostrando {limite} pacientes. Escribí para filtrar.")
+        st.caption(f"Mostrando {limite} pacientes. Escribí arriba para filtrar.")
         p_f = p_f[:limite]
 
     if not p_f:
@@ -132,12 +132,17 @@ def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles
     idx_actual = opciones.index(valor_actual) if valor_actual in opciones else 0
 
     st.caption("Paciente activo")
-    paciente_sel_mobile = st.selectbox(
+
+    # En teléfonos evitamos st.selectbox porque abre un campo editable interno,
+    # dispara el teclado y ocupa media pantalla. El buscador ya está arriba;
+    # acá solo se elige tocando el paciente visible.
+    paciente_sel_mobile = st.radio(
         "Seleccionar paciente",
         opciones,
         index=idx_actual,
         format_func=lambda x: display_map.get(x, x),
         label_visibility="collapsed",
+        key="mc_paciente_radio_mobile",
     )
 
     _cambio_paciente = (
