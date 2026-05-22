@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-"""Bloque UI de administración del turno, cortina MAR y gestión de indicaciones."""
+"""Bloque UI de administración del turno, cortina MAR y gestión de indicaciones.
+
+
+
+Extraído de views/recetas.py — función render_recetas.
+"""
 import base64
 
 import pandas as pd
@@ -36,6 +41,7 @@ from views._recetas_mar import (
     tabla_guardia_operativa as _tabla_guardia_operativa,
     tabla_guardia_detallada as _tabla_guardia_detallada,
     render_sabana_compacta as _render_sabana_compacta,
+    render_cortina_mar_hospitalaria as _render_cortina_mar_hospitalaria,
 )
 
 
@@ -51,73 +57,6 @@ def _frecuencia_visible_con_ritmo(frecuencia, ritmo):
     if frecuencia_txt.lower().startswith("infusion continua"):
         return f"{frecuencia_txt} a {ritmo_txt}"
     return f"{frecuencia_txt} | {ritmo_txt}"
-
-
-def _render_registro_mobile_tarjetas(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy):
-    """Registro mobile seguro: evita st.data_editor, que falla en iPhone/Android."""
-    if plan_dia_df.empty:
-        return
-    st.markdown("### Registro rápido de medicación")
-    st.caption("Vista móvil optimizada: tocá una tarjeta y registrá el estado sin deslizar tablas.")
-
-    for idx, fila in plan_dia_df.reset_index(drop=True).iterrows():
-        medicamento = str(fila.get("Medicamento", "") or "").strip()
-        horario = str(fila.get("Hora programada", "") or "").strip()
-        estado_actual = str(fila.get("Estado", "Pendiente") or "Pendiente").strip()
-        detalle = str(fila.get("Detalle / velocidad", "") or "").strip()
-        via = str(fila.get("Via", "") or "").strip()
-        frecuencia = str(fila.get("Frecuencia", "") or "").strip()
-        hora_real = str(fila.get("Hora realizada", "") or "").strip()
-        observacion = str(fila.get("Observacion", "") or "").strip()
-
-        with st.container(border=True):
-            st.markdown(f"**💊 {medicamento or 'Medicación'}**")
-            st.caption(f"Horario: {horario or 'A demanda'}")
-            if detalle:
-                st.caption(f"Detalle: {detalle}")
-            if via or frecuencia:
-                st.caption(f"Vía/Frecuencia: {' | '.join([x for x in [via, frecuencia] if x])}")
-            if hora_real:
-                st.caption(f"Hora real: {hora_real}")
-            if observacion:
-                st.caption(f"Observación: {observacion}")
-
-            if estado_actual == "Realizada":
-                st.success("Estado actual: Realizada")
-            elif "No realizada" in estado_actual:
-                st.error("Estado actual: No realizada")
-            else:
-                st.warning("Estado actual: Pendiente")
-
-            c1, c2 = st.columns(2)
-            if c1.button("🟩 Realizada", key=f"mob_realizada_{paciente_sel}_{fecha_hoy}_{idx}", width="stretch"):
-                if medicamento:
-                    _guardar_administracion_medicacion(
-                        paciente_sel, mi_empresa, user, medicamento, fecha_hoy, horario, "Realizada"
-                    )
-                    st.session_state["_rx_sql_invalidar"] = True
-                    guardar_datos(spinner=True)
-                    queue_toast(f"Medicación registrada como realizada: {medicamento}")
-                    st.rerun()
-
-            motivo_key = f"mob_motivo_no_realizada_{paciente_sel}_{fecha_hoy}_{idx}"
-            motivo = st.text_input(
-                "Motivo si no fue realizada",
-                placeholder="Ej. paciente ausente, rechazo, ayuno, orden médica...",
-                key=motivo_key,
-            )
-            if c2.button("🟥 No realizada", key=f"mob_no_realizada_{paciente_sel}_{fecha_hoy}_{idx}", width="stretch"):
-                if not motivo.strip():
-                    st.error("Para marcar como no realizada, completá el motivo clínico.")
-                elif medicamento:
-                    _registrar_administracion_dosis(
-                        paciente_sel, mi_empresa, user, fecha_hoy, medicamento, horario,
-                        "No realizada / Suspendida", motivo.strip(), hora_real_admin=None,
-                    )
-                    st.session_state["_rx_sql_invalidar"] = True
-                    guardar_datos(spinner=True)
-                    queue_toast(f"Medicación registrada como no realizada: {medicamento}")
-                    st.rerun()
 
 
 def render_administracion_turno(
@@ -151,7 +90,11 @@ def render_administracion_turno(
         })
         if horarios:
             for horario in horarios:
-                admin_reg = next((a for a in admin_hoy if a.get("med") == nombre and (a.get("horario_programado") == horario or a.get("hora") == horario)), None)
+                admin_reg = next(
+                    (a for a in admin_hoy if a.get("med") == nombre
+                     and (a.get("horario_programado") == horario or a.get("hora") == horario)),
+                    None,
+                )
                 estado_actual = admin_reg.get("estado", "Pendiente") if admin_reg else "Pendiente"
                 es_inf = r.get("tipo_indicacion") == "Infusion / hidratacion"
                 frecuencia_visible = _frecuencia_visible_con_ritmo(frecuencia_texto or "S/D", _ritmo_infusion_ml_h(r, horario))
@@ -206,10 +149,16 @@ def render_administracion_turno(
                 _fila["Medicacion"] = _mn
                 plan_hidratacion_rows.append(_fila)
 
-    st.markdown('<p style="margin:0 0 0.35rem 0;font-size:0.78rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.95);">Resumen del día</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<p style="margin:0 0 0.35rem 0;font-size:0.78rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.95);">Resumen del día</p>',
+        unsafe_allow_html=True,
+    )
     _tiene_estado = not plan_dia_df.empty and "Estado" in plan_dia_df.columns
     realizadas_count = int((plan_dia_df["Estado"] == "Realizada").sum()) if _tiene_estado else 0
-    no_realizadas_count = int(plan_dia_df["Estado"].astype(str).str.contains("No realizada", case=False, na=False).sum()) if _tiene_estado else 0
+    no_realizadas_count = (
+        int(plan_dia_df["Estado"].astype(str).str.contains("No realizada", case=False, na=False).sum())
+        if _tiene_estado else 0
+    )
     pendientes_count = int((plan_dia_df["Estado"] == "Pendiente").sum()) if _tiene_estado else 0
     if es_movil:
         c_res1, c_res2 = st.columns(2)
@@ -222,27 +171,23 @@ def render_administracion_turno(
         c_res2.metric("No realizadas", no_realizadas_count)
         c_res3.metric("Pendientes", pendientes_count)
 
-    if es_movil:
-        vista_guardia = "Tarjetas (alternativa)"
-        st.info("Vista móvil optimizada: la cortina tipo tabla se reemplazó por tarjetas táctiles para evitar cortes y problemas de deslizamiento.")
-    else:
-        vista_guardia = st.radio(
-            "Vista de administración",
-            ["Cortina empresarial", "Tarjetas (alternativa)"],
-            horizontal=True, index=0, key=f"recetas_vista_guardia_{paciente_sel}",
-        )
-
+    vista_guardia = st.radio(
+        "Vista de administración",
+        ["Tarjetas (alternativa)", "Cortina empresarial"] if es_movil else ["Cortina empresarial", "Tarjetas (alternativa)"],
+        horizontal=True, index=0, key=f"recetas_vista_guardia_{paciente_sel}",
+    )
     if vista_guardia == "Tarjetas (alternativa)":
         _render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy, puede_registrar_dosis)
-        if es_movil and puede_registrar_dosis:
-            _render_registro_mobile_tarjetas(plan_dia_df, paciente_sel, mi_empresa, user, fecha_hoy)
 
-    if puede_registrar_dosis and matriz_registro_rows and not es_movil:
+    if puede_registrar_dosis and matriz_registro_rows:
         columnas_mar = ["Medicacion", "Via", "Frecuencia"] + horas_mar + ["A demanda"]
         matriz_registro_df = pd.DataFrame(matriz_registro_rows)[columnas_mar]
         estado_celda_opciones = ["⬜", "🟨 Pendiente", "🟩 Realizada", "🟥 No realizada"]
         for hora_col in horas_mar + ["A demanda"]:
-            matriz_registro_df[hora_col] = matriz_registro_df[hora_col].astype(str).replace({"": "⬜", "Pendiente": "🟨 Pendiente", "Realizada": "🟩 Realizada", "No realizada": "🟥 No realizada"})
+            matriz_registro_df[hora_col] = (
+                matriz_registro_df[hora_col].astype(str)
+                .replace({"": "⬜", "Pendiente": "🟨 Pendiente", "Realizada": "🟩 Realizada", "No realizada": "🟥 No realizada"})
+            )
         column_config = {
             "Medicacion": st.column_config.TextColumn("Medicacion", width="large"),
             "Via": st.column_config.TextColumn("Via", width="small"),
@@ -250,9 +195,19 @@ def render_administracion_turno(
         }
         st.markdown("⬜ **Sin horario/celda vacía** · 🟩 **Realizada** · 🟥 **No realizada** (requiere motivo) · 🟨 **Pendiente**")
         for hora_col in horas_mar + ["A demanda"]:
-            column_config[hora_col] = st.column_config.SelectboxColumn(hora_col, options=estado_celda_opciones, required=False, width="small")
-        editor_mar_df = st.data_editor(matriz_registro_df, hide_index=True, width='stretch', disabled=["Medicacion", "Via", "Frecuencia"], column_config=column_config, key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}")
-        motivo_no_realizada = st.text_input("Motivo clínico para celdas en rojo (No realizada)", placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica...", key=f"motivo_no_realizada_mar_{paciente_sel}_{fecha_hoy}")
+            column_config[hora_col] = st.column_config.SelectboxColumn(
+                hora_col, options=estado_celda_opciones, required=False, width="small",
+            )
+        editor_mar_df = st.data_editor(
+            matriz_registro_df, hide_index=True, width='stretch',
+            disabled=["Medicacion", "Via", "Frecuencia"], column_config=column_config,
+            key=f"matriz_mar_editor_{paciente_sel}_{fecha_hoy}",
+        )
+        motivo_no_realizada = st.text_input(
+            "Motivo clínico para celdas en rojo (No realizada)",
+            placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica...",
+            key=f"motivo_no_realizada_mar_{paciente_sel}_{fecha_hoy}",
+        )
         if st.button("Guardar estados de cortina", width='stretch', key=f"guardar_mar_{paciente_sel}_{fecha_hoy}"):
             registros_guardados = 0
             requiere_motivo = False
@@ -273,12 +228,17 @@ def render_administracion_turno(
                         if not nombre_med:
                             continue
                         if nuevo_valor == "🟩 Realizada":
-                            _guardar_administracion_medicacion(paciente_sel, mi_empresa, user, nombre_med, fecha_hoy, horario_sel, "Realizada")
+                            _guardar_administracion_medicacion(
+                                paciente_sel, mi_empresa, user, nombre_med, fecha_hoy, horario_sel, "Realizada",
+                            )
                         elif nuevo_valor == "🟥 No realizada":
                             if not str(motivo_no_realizada or "").strip():
                                 requiere_motivo = True
                                 continue
-                            _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, horario_sel, "No realizada / Suspendida", str(motivo_no_realizada or "").strip(), hora_real_admin=None)
+                            _registrar_administracion_dosis(
+                                paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, horario_sel,
+                                "No realizada / Suspendida", str(motivo_no_realizada or "").strip(), hora_real_admin=None,
+                            )
                         elif nuevo_valor == "🟨 Pendiente":
                             continue
                         registros_guardados += 1
@@ -299,22 +259,27 @@ def render_administracion_turno(
             df_plan_visible = pd.DataFrame({
                 "Hora": plan_dia_df["Hora programada"],
                 "Medicacion": plan_dia_df["Medicamento"],
-                "Indicacion": plan_dia_df.apply(lambda fila: " | ".join([
-                    str(fila.get("Solucion", "") or "").strip(),
-                    f"{str(fila.get('Volumen_ml', '') or '').strip()} ml" if str(fila.get('Volumen_ml', '') or '').strip() else "",
-                    f"{str(fila.get('Velocidad_ml_h', '') or '').strip()} ml/h" if str(fila.get('Velocidad_ml_h', '') or '').strip() else "",
-                    str(fila.get("Detalle / velocidad", "") or "").strip(),
-                ]).strip(" |"), axis=1),
-                "Via / Frecuencia": plan_dia_df.apply(lambda fila: " | ".join([
-                    str(fila.get("Via", "") or "").strip(),
-                    str(fila.get("Frecuencia", "") or "").strip(),
-                ]).strip(" |"), axis=1),
+                "Indicacion": plan_dia_df.apply(
+                    lambda fila: " | ".join([
+                        str(fila.get("Solucion", "") or "").strip(),
+                        f"{str(fila.get('Volumen_ml', '') or '').strip()} ml" if str(fila.get('Volumen_ml', '') or '').strip() else "",
+                        f"{str(fila.get('Velocidad_ml_h', '') or '').strip()} ml/h" if str(fila.get('Velocidad_ml_h', '') or '').strip() else "",
+                        str(fila.get("Detalle / velocidad", "") or "").strip(),
+                    ]).strip(" |"), axis=1,
+                ),
+                "Via / Frecuencia": plan_dia_df.apply(
+                    lambda fila: " | ".join([
+                        str(fila.get("Via", "") or "").strip(),
+                        str(fila.get("Frecuencia", "") or "").strip(),
+                    ]).strip(" |"), axis=1,
+                ),
                 "Estado": plan_dia_df["Estado"], "Hora real": plan_dia_df["Hora realizada"],
                 "Observacion": plan_dia_df["Observacion"], "Registrado por": plan_dia_df["Registrado por"],
             })
             mostrar_tabla_planilla = st.checkbox("Usar tabla ancha", value=False, key=f"mostrar_tabla_plan_{paciente_sel}_{fecha_hoy}")
-            if mostrar_tabla_planilla and not es_movil:
-                _render_tabla_clinica(df_plan_visible, key=f"plan_{paciente_sel}", max_height=420 if not anticolapso_activo() else 320, sticky_first_col=False)
+            if mostrar_tabla_planilla:
+                _render_tabla_clinica(df_plan_visible, key=f"plan_{paciente_sel}",
+                    max_height=300 if es_movil else (420 if not anticolapso_activo() else 320), sticky_first_col=False)
             else:
                 _h = None if (es_movil and len(df_plan_visible) <= 4) else (280 if es_movil else (320 if anticolapso_activo() else 480))
                 with st.container(height=_h):
@@ -322,23 +287,30 @@ def render_administracion_turno(
 
     if plan_hidratacion_rows:
         st.markdown('<h4 class="mc-rx-table-zone-title">Plan de hidratación parenteral</h4>', unsafe_allow_html=True)
-        _render_tabla_clinica(pd.DataFrame(plan_hidratacion_rows), key=f"hidra_{paciente_sel}", max_height=240 if es_movil else 320, sticky_first_col=False)
+        _render_tabla_clinica(pd.DataFrame(plan_hidratacion_rows), key=f"hidra_{paciente_sel}",
+            max_height=240 if es_movil else 320, sticky_first_col=False)
 
     if sabana_resumen:
         with st.expander("Ver resumen por indicación (opcional)", expanded=False):
-            _render_tabla_clinica(pd.DataFrame(sabana_resumen), key=f"resumen_{paciente_sel}", max_height=220 if es_movil else 260, sticky_first_col=False)
+            _render_tabla_clinica(pd.DataFrame(sabana_resumen), key=f"resumen_{paciente_sel}",
+                max_height=220 if es_movil else 260, sticky_first_col=False)
 
     if puede_registrar_dosis:
-        registro_container = st.expander("Registro manual / no realizada / otro horario", expanded=False) if (es_movil or vista_guardia == "Tarjetas (alternativa)") else st.container()
+        if es_movil or vista_guardia == "Tarjetas (alternativa)":
+            registro_container = st.expander("Registro manual / no realizada / otro horario", expanded=False)
+        else:
+            registro_container = st.container()
         with registro_container:
             st.markdown("#### Registro manual")
             with st.form("form_registro_dosis", clear_on_submit=True):
                 opciones_recetas = list(range(len(recs_activas)))
                 if es_movil:
-                    receta_idx = st.selectbox("Medicacion a registrar", opciones_recetas, format_func=lambda idx: _etiqueta_receta(recs_activas[idx]))
+                    receta_idx = st.selectbox("Medicacion a registrar", opciones_recetas,
+                        format_func=lambda idx: _etiqueta_receta(recs_activas[idx]))
                 else:
                     c_med, c_hora = st.columns([2, 1])
-                    receta_idx = c_med.selectbox("Medicacion a registrar", opciones_recetas, format_func=lambda idx: _etiqueta_receta(recs_activas[idx]))
+                    receta_idx = c_med.selectbox("Medicacion a registrar", opciones_recetas,
+                        format_func=lambda idx: _etiqueta_receta(recs_activas[idx]))
                 receta_actual = recs_activas[receta_idx]
                 if es_movil:
                     st.caption(f"Horarios: {format_horarios_receta(receta_actual)}")
@@ -353,12 +325,18 @@ def render_administracion_turno(
                 else:
                     hora_sel = c_hora.selectbox("Horario programado", opciones_hora or ["A demanda"], index=idx_hora if opciones_hora else 0)
                 estado_sel = st.radio("Estado", ["Realizada", "No realizada / Suspendida"], horizontal=True)
-                hora_real_manual = st.text_input("Hora real de administración o constancia (HH:MM, opcional)", placeholder="Vacío = hora actual del servidor")
+                hora_real_manual = st.text_input(
+                    "Hora real de administración o constancia (HH:MM, opcional)",
+                    placeholder="Vacío = hora actual del servidor",
+                )
                 justificacion = st.text_input("Justificación clínica (obligatoria si no realizada)")
                 if st.form_submit_button("Guardar registro", width='stretch'):
                     with st.spinner("Guardando..."):
                         nombre_med = _extraer_nombre_medicacion(receta_actual.get("med", ""))
-                        if _registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, hora_sel, estado_sel, justificacion, hora_real_admin=hora_real_manual.strip() or None):
+                        if _registrar_administracion_dosis(
+                            paciente_sel, mi_empresa, user, fecha_hoy, nombre_med, hora_sel,
+                            estado_sel, justificacion, hora_real_admin=hora_real_manual.strip() or None,
+                        ):
                             queue_toast(f"Registro guardado para el horario {hora_sel}.")
                             st.rerun()
     else:
@@ -366,20 +344,30 @@ def render_administracion_turno(
 
     st.divider()
     if puede_cambiar_estado:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="mc-rx-section-head mc-rx-section-head--tight">
                 <h3 class="mc-rx-section-title">Gestión de indicaciones</h3>
                 <p class="mc-rx-section-sub">Suspender o modificar con motivo explícito; cada cambio queda auditado.</p>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
         opciones_recetas = list(range(len(recs_activas)))
         if es_movil:
-            receta_idx = st.selectbox("Seleccionar indicacion", opciones_recetas, format_func=lambda idx: _etiqueta_receta(recs_activas[idx]), key=f"recetas_editar_sel_{paciente_sel}")
+            receta_idx = st.selectbox("Seleccionar indicacion", opciones_recetas,
+                format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
+                key=f"recetas_editar_sel_{paciente_sel}")
         else:
             c_ed1, c_ed2 = st.columns([3, 2])
-            receta_idx = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas, format_func=lambda idx: _etiqueta_receta(recs_activas[idx]), key=f"recetas_editar_sel_{paciente_sel}")
+            receta_idx = c_ed1.selectbox("Seleccionar indicacion", opciones_recetas,
+                format_func=lambda idx: _etiqueta_receta(recs_activas[idx]),
+                key=f"recetas_editar_sel_{paciente_sel}")
         receta_objetivo = recs_activas[receta_idx]
-        accion_receta = st.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"]) if es_movil else c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
+        if es_movil:
+            accion_receta = st.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
+        else:
+            accion_receta = c_ed2.selectbox("Accion", ["Suspender / Anular", "Editar indicacion"])
         nuevo_texto_receta = ""
         motivo_cambio = st.text_input("Motivo medico / legal del cambio", key="motivo_cambio_receta")
         if accion_receta == "Editar indicacion":
@@ -399,7 +387,9 @@ def render_administracion_turno(
                     r["profesional_estado"] = nombre_usuario
                     r["matricula_estado"] = user.get("matricula", "")
                     r["motivo_estado"] = motivo_cambio.strip()
-                    registrar_auditoria_legal("Medicacion", paciente_sel, "Indicacion suspendida", user.get("nombre", ""), user.get("matricula", ""), f"{r.get('med', '')} | Motivo: {motivo_cambio.strip()}")
+                    registrar_auditoria_legal("Medicacion", paciente_sel, "Indicacion suspendida",
+                        user.get("nombre", ""), user.get("matricula", ""),
+                        f"{r.get('med', '')} | Motivo: {motivo_cambio.strip()}")
                     cambio_aplicado = True
                 elif accion_receta == "Editar indicacion":
                     r["estado_receta"] = "Modificada"
@@ -411,16 +401,25 @@ def render_administracion_turno(
                     r["motivo_estado"] = motivo_cambio.strip()
                     st.session_state.setdefault("indicaciones_db", [])
                     st.session_state["indicaciones_db"].append({
-                        "paciente": paciente_sel, "med": nuevo_texto_receta.strip(), "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
-                        "dias_duracion": r.get("dias_duracion", 7), "medico_nombre": r.get("medico_nombre", ""), "medico_matricula": r.get("medico_matricula", ""),
-                        "firma_b64": r.get("firma_b64", ""), "firmado_por": nombre_usuario, "estado_clinico": "Activa", "estado_receta": "Activa",
-                        "frecuencia": r.get("frecuencia", ""), "hora_inicio": r.get("hora_inicio", ""), "horarios_programados": r.get("horarios_programados", []),
-                        "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"), "profesional_estado": nombre_usuario, "matricula_estado": user.get("matricula", ""),
-                        "motivo_estado": f"Reemplaza indicacion previa. Motivo: {motivo_cambio.strip()}".strip(), "origen_registro": "Prescripcion digital", "empresa": r.get("empresa", mi_empresa),
+                        "paciente": paciente_sel, "med": nuevo_texto_receta.strip(),
+                        "fecha": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                        "dias_duracion": r.get("dias_duracion", 7),
+                        "medico_nombre": r.get("medico_nombre", ""),
+                        "medico_matricula": r.get("medico_matricula", ""),
+                        "firma_b64": r.get("firma_b64", ""), "firmado_por": nombre_usuario,
+                        "estado_clinico": "Activa", "estado_receta": "Activa",
+                        "frecuencia": r.get("frecuencia", ""), "hora_inicio": r.get("hora_inicio", ""),
+                        "horarios_programados": r.get("horarios_programados", []),
+                        "fecha_estado": ahora().strftime("%d/%m/%Y %H:%M:%S"),
+                        "profesional_estado": nombre_usuario, "matricula_estado": user.get("matricula", ""),
+                        "motivo_estado": f"Reemplaza indicacion previa. Motivo: {motivo_cambio.strip()}".strip(),
+                        "origen_registro": "Prescripcion digital", "empresa": r.get("empresa", mi_empresa),
                     })
                     from core.database import _trim_db_list
                     _trim_db_list("indicaciones_db", 500)
-                    registrar_auditoria_legal("Medicacion", paciente_sel, "Indicacion modificada", user.get("nombre", ""), user.get("matricula", ""), f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta.strip()} | Motivo: {motivo_cambio.strip()}")
+                    registrar_auditoria_legal("Medicacion", paciente_sel, "Indicacion modificada",
+                        user.get("nombre", ""), user.get("matricula", ""),
+                        f"Anterior: {r.get('med', '')} | Nueva: {nuevo_texto_receta.strip()} | Motivo: {motivo_cambio.strip()}")
                     cambio_aplicado = True
             if cambio_aplicado:
                 st.session_state["_rx_sql_invalidar"] = True
@@ -434,28 +433,49 @@ def render_historial_prescripciones(paciente_sel, mi_empresa, user, es_movil, re
     st.divider()
     if not recs_todas:
         return
-    st.markdown("""
+    st.markdown(
+        """
         <div class="mc-rx-section-head mc-rx-section-head--tight">
             <h3 class="mc-rx-section-title">Historial de prescripciones</h3>
             <p class="mc-rx-section-sub">Consulta de evolución terapéutica; activá la carga explícita para no afectar rendimiento.</p>
         </div>
-        """, unsafe_allow_html=True)
-    mostrar_historial = st.checkbox("Cargar historial completo de prescripciones", value=False, key=f"mostrar_historial_recetas_{paciente_sel}")
+        """,
+        unsafe_allow_html=True,
+    )
+    mostrar_historial = st.checkbox(
+        "Cargar historial completo de prescripciones", value=False,
+        key=f"mostrar_historial_recetas_{paciente_sel}",
+    )
     if not mostrar_historial:
-        st.caption("Historial diferido para mejorar velocidad en teléfonos viejos. Activalo solo si necesitás revisar indicaciones anteriores.")
+        st.caption("Historial diferido para mejorar velocidad en telefonos viejos. Activalo solo si necesitas revisar indicaciones anteriores.")
         return
 
-    limite_hist = seleccionar_limite_registros("Prescripciones a mostrar", len(recs_todas), key=f"limite_recetas_hist_{paciente_sel}", default=15, opciones=(10, 15, 20, 30, 50, 80))
+    from core.clinical_exports import build_prescription_pdf_bytes
+    from views._recetas_utils import FPDF_DISPONIBLE
+
+    limite_hist = seleccionar_limite_registros(
+        "Prescripciones a mostrar", len(recs_todas),
+        key=f"limite_recetas_hist_{paciente_sel}", default=15, opciones=(10, 15, 20, 30, 50, 80),
+    )
     altura_historial = None if es_movil and limite_hist <= 4 else (320 if es_movil else 450)
     with st.container(height=altura_historial):
         for idx, r in enumerate(reversed(recs_todas[-limite_hist:])):
             with st.container(border=True):
-                st.markdown(f"**{r.get('fecha', '-')}**")
-                st.markdown(f"**Indicado por:** {r.get('medico_nombre', '-')} | **Matrícula:** {r.get('medico_matricula', '-')}")
+                estado_actual = r.get("estado_receta", "Activa")
+                if es_movil:
+                    info_container = st.container()
+                    action_container = st.container()
+                else:
+                    info_container, action_container = st.columns([3, 1])
+                info_container.markdown(f"**{r.get('fecha', '-')}**")
+                info_container.markdown(
+                    f"**Indicado por:** {r.get('medico_nombre', '-')} | **Matricula:** {r.get('medico_matricula', '-')}"
+                )
                 if r.get("origen_registro"):
-                    st.caption(f"Origen: {r.get('origen_registro')}")
-                st.markdown(f"*{r.get('med', '')}*")
-                st.caption(f"Horarios: {format_horarios_receta(r)}")
+                    info_container.caption(f"Origen: {r.get('origen_registro')}")
+                info_container.markdown(f"*{r.get('med', '')}*")
+                from core.utils import format_horarios_receta
+                info_container.caption(f"Horarios: {format_horarios_receta(r)}")
                 if r.get("tipo_indicacion") == "Infusion / hidratacion":
                     detalle_inf = []
                     if r.get("solucion"):
@@ -468,14 +488,46 @@ def render_historial_prescripciones(paciente_sel, mi_empresa, user, es_movil, re
                     if r.get("alternar_con"):
                         detalle_inf.append(f"Alternar con: {r.get('alternar_con')}")
                     if detalle_inf:
-                        st.caption(" | ".join(detalle_inf))
+                        info_container.caption(" | ".join(detalle_inf))
+                    from views._recetas_utils import resumen_plan_hidratacion as _resumen_plan_hidratacion
+                    if r.get("plan_hidratacion"):
+                        info_container.caption(f"Plan de hidratacion: {_resumen_plan_hidratacion(r.get('plan_hidratacion', []))}")
+                    if r.get("detalle_infusion"):
+                        info_container.caption(f"Indicacion complementaria: {r.get('detalle_infusion')}")
                 if r.get("firma_b64"):
                     try:
-                        st.image(base64.b64decode(r["firma_b64"]), caption="Firma médica registrada", width=200)
+                        info_container.image(base64.b64decode(r["firma_b64"]), caption="Firma medica registrada", width=200)
                     except Exception as e:
+                        from core.app_logging import log_event
                         log_event("recetas_error", f"Error: {e}")
-                estado_actual = r.get("estado_receta", "Activa")
+                if r.get("adjunto_papel_b64"):
+                    try:
+                        action_container.download_button(
+                            "Descargar orden adjunta", data=base64.b64decode(r["adjunto_papel_b64"]),
+                            file_name=r.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
+                            mime=r.get("adjunto_papel_tipo", "application/octet-stream"),
+                            key=f"adj_papel_btn_{idx}", width='stretch',
+                        )
+                    except Exception:
+                        info_container.caption("No se pudo preparar el adjunto cargado.")
                 if estado_actual != "Activa":
-                    st.error(f"Estado: {estado_actual.upper()} | Fecha: {r.get('fecha_suspension', 'S/D')} | Profesional: {r.get('profesional_estado', 'S/D')}")
+                    info_container.error(
+                        f"Estado: {estado_actual.upper()} | Fecha: {r.get('fecha_suspension', 'S/D')} | "
+                        f"Profesional: {r.get('profesional_estado', 'S/D')}"
+                    )
                     if r.get("motivo_estado"):
-                        st.caption(f"Motivo: {r.get('motivo_estado')}")
+                        info_container.caption(f"Motivo: {r.get('motivo_estado')}")
+                if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_rec_{idx}", value=False):
+                    pdf_bytes = build_prescription_pdf_bytes(
+                        st.session_state, paciente_sel, mi_empresa, r,
+                        {"nombre": r.get("medico_nombre", user.get("nombre", "")), "matricula": r.get("medico_matricula", "")},
+                    )
+                    estado_arch = (r.get("estado_receta") or "Activa").replace(" ", "_")
+                    nombre_arch = (
+                        f"Receta_Legal_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
+                        f"{r.get('fecha', '')[:10].replace('/','')}_{ estado_arch}.pdf"
+                    )
+                    action_container.download_button(
+                        "Descargar PDF legal", data=pdf_bytes, file_name=nombre_arch,
+                        mime="application/pdf", key=f"pdf_rec_btn_{idx}", width='stretch',
+                    )
