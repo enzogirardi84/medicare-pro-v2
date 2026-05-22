@@ -57,16 +57,20 @@ from core._auth_helpers import (
 )
 
 def _session_timeout_minutes() -> int:
-    """Timeout de sesion configurable y acotado para reducir riesgo de sesiones largas."""
+    """Timeout de sesión configurable para jornada clínica.
+
+    Por defecto queda en 8 horas para evitar cierres prematuros durante guardias.
+    Si se define SESSION_TIMEOUT_MINUTES en secrets, se respeta entre 15 min y 12 h.
+    """
     try:
-        raw = st.secrets.get("SESSION_TIMEOUT_MINUTES", 30)
+        raw = st.secrets.get("SESSION_TIMEOUT_MINUTES", 480)
     except Exception:
-        raw = 30
+        raw = 480
     try:
         value = int(raw)
     except (TypeError, ValueError):
-        value = 30
-    return max(5, min(60, value))
+        value = 480
+    return max(15, min(720, value))
 
 
 SESSION_TIMEOUT_MINUTES = _session_timeout_minutes()
@@ -550,8 +554,8 @@ def check_inactividad():
             elapsed = time.time() - last_activity
             remaining = SESSION_TIMEOUT_MINUTES * 60 - elapsed
 
-            if remaining < 60 and remaining > 0 and not st.session_state.get("_timeout_warning_shown"):
-                st.warning(f"⏳ Tu sesión expirará en {int(remaining)} segundos por inactividad. ")
+            if remaining < 300 and remaining > 0 and not st.session_state.get("_timeout_warning_shown"):
+                st.warning(f"⏳ Tu sesión expirará en {int(remaining // 60)} min por inactividad.")
                 if st.button("Sigo aquí", key="keep_alive"):
                     st.session_state["_last_activity"] = time.time()
                     st.session_state["ultima_actividad"] = ahora()
@@ -569,7 +573,7 @@ def check_inactividad():
                 limpiar_estado_sesion_login_efimero()
                 vaciar_datos_app_en_sesion()
                 st.session_state["_aviso_sesion_expirada"] = (
-                    f"Tu sesion se cerro automaticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos)."
+                    f"Tu sesión se cerró automáticamente por inactividad ({SESSION_TIMEOUT_MINUTES} minutos)."
                 )
                 # Guard: evitar tormenta de reruns en móviles con red lenta
                 _ult_rerun_exp = st.session_state.get("_ult_rerun_expiracion_ts", 0)
@@ -640,5 +644,4 @@ def verificar_timeout_sesion(session_state, timeout_minutes: int = 30) -> bool:
     if last is None:
         return False
     return (time.time() - last) / 60.0 > timeout_minutes
-
 
