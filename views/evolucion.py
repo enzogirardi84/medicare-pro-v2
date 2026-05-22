@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from core.permissions import EVOLUCION_BORRAR, EVOLUCION_CREAR, puede
 from core.utils import puede_accion
 from core.view_helpers import aviso_sin_paciente
 from views._evolucion_panel import (
@@ -20,8 +21,12 @@ def render_evolucion(paciente_sel, user, rol=None):
         return
 
     rol = rol or user.get("rol", "")
-    puede_registrar = puede_accion(rol, "evolucion_registrar")
-    puede_borrar = puede_accion(rol, "evolucion_borrar")
+
+    # Compatibilidad: mantenemos la regla vieja por rol y sumamos la capa nueva
+    # de permisos centralizados. Esto permite migrar módulos sin romper perfiles
+    # existentes que todavía dependan de core.utils.puede_accion.
+    puede_registrar = puede(user, EVOLUCION_CREAR) or puede_accion(rol, "evolucion_registrar")
+    puede_borrar = puede(user, EVOLUCION_BORRAR) or puede_accion(rol, "evolucion_borrar")
 
     st.markdown("## Evolucion y cuidados clinicos")
 
