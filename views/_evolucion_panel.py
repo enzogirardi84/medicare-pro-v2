@@ -177,7 +177,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         st.warning("⚠️ La imagen supera 2MB. Se redimensionará automáticamente.")
                         try:
                             imagen_bytes = _optimizar_foto_segura(imagen_bytes)
-                        except Exception:
+                        except Exception as exc:
+                            log_event("evolucion", f"optimizar_foto fallo: {type(exc).__name__}")
                             imagen_bytes = imagen_bytes[:max_img_bytes]
                     imagen_b64 = base64.b64encode(imagen_bytes).decode()
                     imagen_nombre = imagen_subida.name
@@ -197,8 +198,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 try:
                     from core.database import _trim_db_list
                     _trim_db_list("evoluciones_db", 500)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    log_event("evolucion", f"trim_db_list fallo: {type(exc).__name__}")
 
                 raw_foto = None
                 if archivo_foto is not None:
@@ -350,8 +351,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         st.session_state["evoluciones_db"] = evs_paciente
                         try:
                             guardar_datos()
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            log_event("evolucion", f"guardar_datos tras borrado fallo: {type(exc).__name__}")
                         try:
                             registrar_auditoria_legal(
                                 "EVOLUCION_BORRADA",
@@ -362,8 +363,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                                     "responsable": profesional,
                                 },
                             )
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            log_event("evolucion", f"auditoria_legal tras borrado fallo: {type(exc).__name__}")
                         st.toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
                         st.rerun()
 
@@ -381,8 +382,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         pass
                     try:
                         guardar_datos(spinner=True)
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        log_event("evolucion", f"guardar_datos borrado fallo: {type(exc).__name__}")
                     queue_toast("Evolución borrada.")
                     st.rerun()
     else:
@@ -464,8 +465,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     from core.database import _trim_db_list
                     _trim_db_list("firmas_tactiles_db", 200)
                     guardar_datos(spinner=True)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    log_event("firma", f"guardar firma fallo: {type(exc).__name__}")
                 queue_toast("Firma guardada correctamente.")
                 st.rerun()
             else:

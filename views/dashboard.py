@@ -158,8 +158,8 @@ def render_dashboard(mi_empresa, rol):
                             f"- **{item['item']}**: {item['stock']} uds. "
                             f"(mínimo {item['stock_minimo']}) → reponer **{item['sugerido']}**"
                         )
-        except Exception:
-            pass
+        except Exception as exc:
+            log_event("dashboard", f"stock_crit fallo: {type(exc).__name__}")
 
     if _widgets.get("acciones_rapidas"):
         # ── ACCIONES RÁPIDAS ───────────────────────────────────────────
@@ -240,8 +240,8 @@ def render_dashboard(mi_empresa, rol):
                 ca.metric("📝 Evoluciones registradas", len(_evos_hoy))
                 cb.metric("📦 Insumos consumidos", sum(int(c.get("cantidad", 0)) for c in _consumos_hoy))
                 cb.metric("⏳ Pendientes facturar", len(_pend_fact))
-        except Exception:
-            pass
+        except Exception as exc:
+            log_event("dashboard", f"resumen_turno fallo: {type(exc).__name__}")
 
     # Tareas pendientes globales
     _tareas = st.session_state.get("tareas_db", [])

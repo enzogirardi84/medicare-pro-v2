@@ -67,8 +67,8 @@ try:
     if is_llm_enabled():
         provider, api_key, model = _get_llm_config()
         log_event("config", f"LLM configurado: {provider}/{model}")
-except Exception:
-    pass
+except Exception as exc:
+    log_event("config", f"LLM init fallo: {type(exc).__name__}")
 
 inyectar_redirect_apex_si_configurado()
 
@@ -529,8 +529,8 @@ if _modulo_previo_scroll != vista_actual:
 try:
     from core.self_healing import maybe_run_self_healing
     maybe_run_self_healing()
-except Exception:
-    pass
+except Exception as exc:
+    log_event("main", f"self_healing fallo: {type(exc).__name__}")
 
 _label_modulo = VIEW_NAV_LABELS.get(vista_actual, vista_actual)
 st.markdown(
@@ -581,8 +581,8 @@ finally:
 try:
     from views.ai_floating_assistant import render_ai_floating_assistant
     render_ai_floating_assistant(vista_actual, paciente_sel)
-except Exception:
-    pass
+except Exception as exc:
+    log_event("main", f"ai_floating_assistant fallo: {type(exc).__name__}")
 
 if st.session_state.get("_show_settings", False):
     from views.settings import render_settings_page
