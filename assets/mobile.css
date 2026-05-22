@@ -185,8 +185,29 @@
         font-size: 16px !important;
     }
 
+    /* Selectbox cerrado: evita que el nombre del paciente se corte verticalmente */
+    [data-baseweb="select"] {
+        min-height: 52px !important;
+        height: auto !important;
+    }
+
     [data-baseweb="select"] > div {
-        padding: 8px 12px !important;
+        min-height: 52px !important;
+        height: 52px !important;
+        padding: 0 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    [data-baseweb="select"] [role="combobox"],
+    [data-baseweb="select"] div[role="combobox"] {
+        min-height: 52px !important;
+        height: 52px !important;
+        display: flex !important;
+        align-items: center !important;
+        overflow: hidden !important;
         min-width: 0 !important;
     }
 
@@ -196,6 +217,13 @@
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
+        line-height: 1.25 !important;
+        max-height: 52px !important;
+    }
+
+    [data-baseweb="select"] svg {
+        flex: 0 0 auto !important;
+        min-width: 20px !important;
     }
 
     /* FIX selectbox abierto: lista limitada y con scroll interno */
