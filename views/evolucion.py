@@ -25,13 +25,10 @@ def render_evolucion(paciente_sel, user, rol=None):
 
     st.markdown("## Evolucion y cuidados clinicos")
 
-    if "evolucion_tab" not in st.session_state:
-        st.session_state["evolucion_tab"] = _TABS[0]
-
     sel = st.segmented_control(
         "Seccion",
         _TABS,
-        default=st.session_state["evolucion_tab"],
+        default=_TABS[0],
         key="evolucion_tab",
         label_visibility="collapsed",
         selection_mode="single",

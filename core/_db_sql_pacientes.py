@@ -13,7 +13,7 @@ from core.empresa_config import empresa_record_configurado
 
 PACIENTES_LIST_COLUMNS = (
     "id,empresa_id,nombre_completo,dni,fecha_nacimiento,sexo,estado,"
-    "obra_social,telefono,direccion,alergias,patologias,fecha_alta,updated_at,created_at"
+    "obra_social,telefono,direccion,alergias,patologias,updated_at,created_at"
 )
 EMPRESAS_MIN_COLUMNS = "id,nombre"
 

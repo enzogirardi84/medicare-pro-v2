@@ -386,12 +386,11 @@ def insert_balance(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 @st.cache_data(ttl=60, show_spinner=False)
 def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str, Any]]:
-    """Obtiene checkins de empresa resolviendo nombre profesional y paciente. Cache @st.cache_data (60s)."""
+    """Obtiene checkins de empresa. Cache @st.cache_data (60s)."""
     if not _ok():
         return []
     try:
-        # Usar resource embedding para resolver FK -> nombre legible
-        select_expr = "*, usuarios:usuario_id(nombre), pacientes:paciente_id(nombre_completo)"
+        select_expr = "*, pacientes:paciente_id(nombre_completo)"
         response = _supabase_execute_with_retry(
             "get_checkins",
             lambda: supabase.table("checkin_asistencia").select(select_expr).eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute(),
@@ -399,8 +398,17 @@ def get_checkins_by_empresa(empresa_id: str, limit: int = 500) -> List[Dict[str,
         return getattr(response, "data", None) or []
     except Exception as e:
         log_event("db_sql", f"error_get_checkins:{type(e).__name__}")
-        log_event("db_sql", f"error:detallado Supabase get_checkins: {str(e)}")
-        return []
+        try:
+            select_expr = "*"
+            response2 = _supabase_execute_with_retry(
+                "get_checkins_fallback",
+                lambda: supabase.table("checkin_asistencia").select(select_expr).eq("empresa_id", empresa_id).order("fecha_hora", desc=True).limit(limit).execute(),
+                attempts=1,
+            )
+            return getattr(response2, "data", None) or []
+        except Exception as e2:
+            log_event("db_sql", f"error_get_checkins_fallback:{type(e2).__name__}")
+            return []
 
 
 def get_inventario_item_by_name(empresa_id: str, nombre_item: str) -> Optional[Dict[str, Any]]:
