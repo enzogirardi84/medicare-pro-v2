@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 import streamlit as st
 
+from core.permissions import PACIENTE_CREAR, PACIENTE_EDITAR, puede
 from core.utils import es_control_total
 from views._admision_utils import (
     NON_PATIENT_DB_KEYS,
@@ -82,6 +83,9 @@ def _buscar_coincidencias_legajo(busqueda, mi_empresa, rol):
 
 def render_admision(mi_empresa, rol):
     admin_total = es_control_total(rol)
+    usuario_actual = st.session_state.get("u_actual", {})
+    puede_editar_paciente = admin_total or puede(usuario_actual, PACIENTE_EDITAR)
+    puede_crear_paciente = admin_total or puede(usuario_actual, PACIENTE_CREAR)
 
     if admin_total:
         hero_html = """
@@ -108,6 +112,10 @@ def render_admision(mi_empresa, rol):
         """
     st.markdown(hero_html, unsafe_allow_html=True)
 
-    _render_admision_gestion(mi_empresa, rol, admin_total)
-    if admin_total:
+    if puede_editar_paciente:
+        _render_admision_gestion(mi_empresa, rol, admin_total)
+    else:
+        st.info("No tenés permisos suficientes para editar legajos de pacientes.")
+
+    if puede_crear_paciente:
         _render_admision_alta(mi_empresa, rol, admin_total)
