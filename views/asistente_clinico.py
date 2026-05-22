@@ -21,7 +21,6 @@ from components.clinical_cards import (
     card_clinica,
     inyectar_css,
     metrica_clinica,
-    timeline_event,
 )
 from core.clinical_assistant_service import (
     compilar_dashboard_ejecutivo,
@@ -31,11 +30,68 @@ from core.clinical_assistant_service import (
 )
 
 
+def _inyectar_css_asistente_mobile() -> None:
+    """Ajustes propios del Asistente Clínico para teléfono.
+
+    Streamlit tabs se cortan en iPhone cuando hay 4 pestañas largas. Por eso
+    esta vista usa un selector vertical/segmentado en lugar de tabs nativos.
+    """
+    st.markdown(
+        """
+        <style>
+        @media (max-width: 768px) {
+            div[data-testid="stHorizontalBlock"] { gap: .55rem !important; }
+            .mc-assistant-nav-title {
+                font-size: .82rem !important;
+                color: #94a3b8 !important;
+                margin: .2rem 0 .35rem 0 !important;
+            }
+            div[data-testid="stRadio"] label,
+            div[data-testid="stRadio"] p {
+                font-size: .92rem !important;
+                line-height: 1.25 !important;
+            }
+            div[data-testid="stRadio"] [role="radiogroup"] {
+                gap: .45rem !important;
+            }
+            div[data-testid="stRadio"] [role="radio"] {
+                border: 1px solid rgba(148,163,184,.25) !important;
+                border-radius: 12px !important;
+                padding: .55rem .7rem !important;
+                background: rgba(15,23,42,.35) !important;
+            }
+            .card-text { overflow-wrap: anywhere !important; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_selector_secciones(dashboard: dict) -> str:
+    opciones = [
+        f"Alertas ({len(dashboard['alertas'])})",
+        "Resumen clínico",
+        "Farmacología y pendientes",
+        "Auditoría y pase de guardia",
+    ]
+    st.markdown("<div class='mc-assistant-nav-title'>Secciones del asistente</div>", unsafe_allow_html=True)
+    return st.radio(
+        "Secciones del asistente",
+        opciones,
+        index=0,
+        horizontal=False,
+        label_visibility="collapsed",
+        key="mc_asistente_clinico_seccion",
+    )
+
+
 def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user: dict, rol: Optional[str] = None):
     inyectar_css()
+    _inyectar_css_asistente_mobile()
 
     if not paciente_sel:
-        st.info("Selecciona un paciente en el menu lateral.")
+        st.info("Seleccioná un paciente en el menú lateral.")
         return
 
     nombre_usuario = escape(str(user.get("nombre", "Profesional")))
@@ -50,23 +106,21 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
         datos = recopilar_datos_paciente(paciente_sel)
         dashboard = compilar_dashboard_ejecutivo(datos)
 
-    # Encabezado de semaforo
     if dashboard["semaforo"] == "rojo":
         alerta_caja(
-            "Estado: CRITICO",
-            f"Se detectaron {dashboard['alertas_criticas']} alertas criticas y {dashboard['alertas_warning']} advertencias. Requiere intervencion inmediata.",
+            "Estado: CRÍTICO",
+            f"Se detectaron {dashboard['alertas_criticas']} alertas críticas y {dashboard['alertas_warning']} advertencias. Requiere intervención inmediata.",
             nivel="danger",
         )
     elif dashboard["semaforo"] == "amarillo":
         alerta_caja(
-            "Estado: ATENCION",
-            f"Se detectaron {dashboard['alertas_warning']} alertas de atencion. Revisar detalle.",
+            "Estado: ATENCIÓN",
+            f"Se detectaron {dashboard['alertas_warning']} alertas de atención. Revisar detalle.",
             nivel="warning",
         )
     else:
-        alerta_caja("Estado: ESTABLE", "Sin alertas criticas detectadas. Continuar seguimiento.", nivel="ok")
+        alerta_caja("Estado: ESTABLE", "Sin alertas críticas detectadas. Continuar seguimiento.", nivel="ok")
 
-    # Datos demográficos del paciente
     edad = dashboard.get("edad_paciente")
     edad_str = escape(f"{edad} años") if edad else "S/D"
     diag_str = escape("; ".join(dashboard.get("diagnosticos_list", [])) or "Sin diagnóstico registrado")
@@ -80,18 +134,14 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
             act_str = f"{int(ult_act/24)}d"
     else:
         act_str = "Sin datos"
-
     act_str = escape(act_str)
 
-    c_info1, c_info2, c_info3 = st.columns(3)
+    c_info1, c_info2 = st.columns(2)
     with c_info1:
         st.markdown(f"<div class='card-text'><strong>Edad:</strong> {edad_str} &nbsp;|&nbsp; <strong>Actualización:</strong> {act_str}</div>", unsafe_allow_html=True)
     with c_info2:
         st.markdown(f"<div class='card-text'><strong>Diagnóstico:</strong> {diag_str}</div>", unsafe_allow_html=True)
-    with c_info3:
-        st.markdown("", unsafe_allow_html=True)
 
-    # Metricas principales con delta de última actualización
     delta_str = f"({act_str})" if ult_act is not None else None
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -105,24 +155,15 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
 
     st.divider()
 
-    # Tabs
-    tab_alertas, tab_clinico, tab_farma, tab_auditoria = st.tabs([
-        f"Alertas ({len(dashboard['alertas'])})",
-        "Resumen Clínico",
-        "Farmacología y Pendientes",
-        "Auditoría y Pase de Guardia",
-    ])
+    seccion = _render_selector_secciones(dashboard)
 
-    with tab_alertas:
+    if seccion.startswith("Alertas"):
         _tab_alertas(dashboard)
-
-    with tab_clinico:
+    elif seccion.startswith("Resumen"):
         _tab_resumen_clinico(dashboard, datos)
-
-    with tab_farma:
+    elif seccion.startswith("Farmacología"):
         _tab_farmacologia(dashboard, datos)
-
-    with tab_auditoria:
+    else:
         _tab_auditoria(paciente_sel, dashboard, datos)
 
 
@@ -139,7 +180,7 @@ def _tab_alertas(dashboard: dict):
     info = [a for a in dashboard["alertas"] if a["nivel"] == "info"]
 
     if crit:
-        st.markdown("### Criticas")
+        st.markdown("### Críticas")
         st.markdown(f'<div {SCROLL}>{"".join(_html_alerta_caja(a["titulo"], a["detalle"], nivel="danger") for a in crit)}</div>', unsafe_allow_html=True)
     if warn:
         st.markdown("### Advertencias")
@@ -153,32 +194,31 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
     col1, col2 = st.columns(2)
     with col1:
         card_clinica(
-            "Evoluciones Recientes",
-            f"Ultimas 24h: <b>{dashboard['evoluciones_24h']}</b> registros<br>Total historico: {dashboard['total_evoluciones']}",
+            "Evoluciones recientes",
+            f"Últimas 24h: <b>{dashboard['evoluciones_24h']}</b> registros<br>Total histórico: {dashboard['total_evoluciones']}",
             badge_text="OK" if dashboard["evoluciones_24h"] > 0 else "PENDIENTE",
             badge_type="ok" if dashboard["evoluciones_24h"] > 0 else "warning",
         )
         card_clinica(
-            "Cuidados de Enfermería",
-            f"Ultimas 24h: <b>{dashboard['cuidados_24h']}</b> registros<br>Total historico: {dashboard['total_cuidados']}",
+            "Cuidados de enfermería",
+            f"Últimas 24h: <b>{dashboard['cuidados_24h']}</b> registros<br>Total histórico: {dashboard['total_cuidados']}",
             badge_text="OK" if dashboard["cuidados_24h"] > 0 else "PENDIENTE",
             badge_type="ok" if dashboard["cuidados_24h"] > 0 else "warning",
         )
     with col2:
         card_clinica(
-            "Estudios Complementarios",
+            "Estudios complementarios",
             f"Total cargados: <b>{dashboard['total_estudios']}</b><br>Pendientes de resultado: {dashboard['estudios_pendientes']}",
-            badge_text=f"{dashboard['estudios_pendientes']} pendientes" if dashboard["estudios_pendientes"] else "Al dia",
+            badge_text=f"{dashboard['estudios_pendientes']} pendientes" if dashboard["estudios_pendientes"] else "Al día",
             badge_type="warning" if dashboard["estudios_pendientes"] else "ok",
         )
         card_clinica(
-            "Escalas y Diagnósticos",
+            "Escalas y diagnósticos",
             f"Escalas: <b>{dashboard['total_escalas']}</b> | Diagnósticos: <b>{dashboard['total_diagnosticos']}</b>",
             badge_text="OK",
             badge_type="ok",
         )
 
-    # Diagnósticos activos
     diag_list = dashboard.get("diagnosticos_list", [])
     if diag_list:
         st.markdown("### Diagnósticos")
@@ -199,7 +239,7 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
         else:
             st.caption("No hay datos de presión arterial para graficar.")
     with col_chart2:
-        st.markdown("### Tendencia Glucemia")
+        st.markdown("### Tendencia glucemia")
         glu_data = dashboard.get("glu_tendencia", [])
         if glu_data:
             st.line_chart({"Glucemia": {d["fecha"]: d["glucemia"] for d in glu_data}})
@@ -208,7 +248,7 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
 
     col_b1, col_b2 = st.columns(2)
     with col_b1:
-        st.markdown("### Balance Hídrico")
+        st.markdown("### Balance hídrico")
         bal_data = dashboard.get("balance_tendencia", [])
         if bal_data:
             st.line_chart({
@@ -218,7 +258,7 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
         else:
             st.caption("No hay datos de balance hídrico para graficar.")
     with col_b2:
-        st.markdown("### Consumos / Insumos")
+        st.markdown("### Consumos / insumos")
         consumos = datos.get("consumos", [])
         if consumos:
             conteo = Counter(str(c.get("insumo", c.get("material", "Otro"))) for c in consumos)
@@ -234,11 +274,11 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
 def _html_tarjeta_indicacion(ind: dict) -> str:
     estado = ind.get("estado_receta", ind.get("estado_clinico", "Desconocido"))
     badge_type = "ok" if "activa" in str(estado).lower() else "warning"
-    med = str(ind.get("med", "Medicacion"))
+    med = str(ind.get("med", "Medicación"))
     fecha = escape(str(ind.get("fecha", "-")))
     via = escape(str(ind.get("via", "-")))
     frecuencia = escape(str(ind.get("frecuencia", "-")))
-    contenido_html = f"<b>Fecha:</b> {fecha}<br><b>Via:</b> {via}<br><b>Frecuencia:</b> {frecuencia}"
+    contenido_html = f"<b>Fecha:</b> {fecha}<br><b>Vía:</b> {via}<br><b>Frecuencia:</b> {frecuencia}"
     return _html_card_clinica(titulo=med, contenido=contenido_html, badge_text=estado, badge_type=badge_type)
 
 
@@ -253,21 +293,20 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
     col1, col2 = st.columns(2)
     with col1:
         card_clinica(
-            "Indicaciones Activas",
+            "Indicaciones activas",
             f"Total activas: <b>{dashboard['indicaciones_activas']}</b>",
             badge_text="Activas",
             badge_type="info",
         )
     with col2:
         card_clinica(
-            "Administraciones Pendientes",
+            "Administraciones pendientes",
             f"Sin registrar: <b>{dashboard['administraciones_pendientes']}</b>",
-            badge_text="Pendientes" if dashboard["administraciones_pendientes"] else "Al dia",
+            badge_text="Pendientes" if dashboard["administraciones_pendientes"] else "Al día",
             badge_type="warning" if dashboard["administraciones_pendientes"] else "ok",
         )
 
     if indicaciones:
-        # Separar activas y suspendidas/historicas
         indicaciones_activas = []
         indicaciones_suspendidas = []
         for ind in indicaciones:
@@ -277,16 +316,14 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
             else:
                 indicaciones_suspendidas.append(ind)
 
-        # 1. Renderizar PRIMERO las Activas
         if indicaciones_activas:
-            st.markdown("### Indicaciones Activas")
+            st.markdown("### Indicaciones activas")
             st.markdown(f'<div {SCROLL}>{"".join(_html_tarjeta_indicacion(ind) for ind in indicaciones_activas)}</div>', unsafe_allow_html=True)
         else:
-            st.info("No hay indicaciones farmacologicas activas en este momento.")
+            st.info("No hay indicaciones farmacológicas activas en este momento.")
 
-        # 2. Renderizar DESPUES las Suspendidas / Historicas
         if indicaciones_suspendidas:
-            st.markdown("### Historial: Indicaciones Suspendidas")
+            st.markdown("### Historial: indicaciones suspendidas")
             st.markdown(f'<div {SCROLL}>{"".join(_html_tarjeta_indicacion(ind) for ind in indicaciones_suspendidas[-30:])}</div>', unsafe_allow_html=True)
     else:
         st.info("No hay indicaciones registradas para este paciente.")
@@ -296,29 +333,29 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
         adm_html = "".join(
             _html_timeline_event(
                 adm.get("fecha", "-"),
-                adm.get("med", "Administracion"),
-                f"Profesional: {adm.get('profesional', '-')} | Dosis: {adm.get('dosis', '-')} | Via: {adm.get('via', '-')}",
+                adm.get("med", "Administración"),
+                f"Profesional: {adm.get('profesional', '-')} | Dosis: {adm.get('dosis', '-')} | Vía: {adm.get('via', '-')}",
                 color_dot="#10B981",
             )
             for adm in administracion[-50:]
         )
         st.markdown(f'<div {SCROLL}>{adm_html}</div>', unsafe_allow_html=True)
     else:
-        st.caption("No hay registros de administracion medica.")
+        st.caption("No hay registros de administración médica.")
 
 
 def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     col1, col2 = st.columns(2)
     with col1:
         card_clinica(
-            "Balance Hídrico",
+            "Balance hídrico",
             f"Registros totales: <b>{dashboard['total_balance']}</b>",
             badge_text="OK" if dashboard["total_balance"] > 0 else "Pendiente",
             badge_type="ok" if dashboard["total_balance"] > 0 else "warning",
         )
     with col2:
         card_clinica(
-            "Consumos / Insumos",
+            "Consumos / insumos",
             f"Registros totales: <b>{dashboard['total_consumos']}</b>",
             badge_text="OK" if dashboard["total_consumos"] > 0 else "Pendiente",
             badge_type="ok" if dashboard["total_consumos"] > 0 else "warning",
@@ -327,7 +364,7 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     st.markdown("### Timeline de eventos clínicos")
     eventos = []
     for ev in datos.get("evoluciones", []):
-        eventos.append(("Evolución", ev.get("fecha", "-"), "Evolucion", ev.get("texto", ev.get("evolucion", "-")), "#3B82F6"))
+        eventos.append(("Evolución", ev.get("fecha", "-"), "Evolución", ev.get("texto", ev.get("evolucion", "-")), "#3B82F6"))
     for cu in datos.get("cuidados", []):
         eventos.append(("Cuidado", cu.get("fecha", "-"), "Cuidado", cu.get("detalle", cu.get("cuidado_tipo", "-")), "#8B5CF6"))
     for es in datos.get("estudios", []):
@@ -337,9 +374,9 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
 
     tipos_disponibles = sorted(set(e[0] for e in eventos))
     filtros = {}
-    cols_filtro = st.columns(len(tipos_disponibles)) if tipos_disponibles else []
-    for i, t in enumerate(tipos_disponibles):
-        with cols_filtro[i]:
+    if tipos_disponibles:
+        st.caption("Filtrar timeline")
+        for t in tipos_disponibles:
             filtros[t] = st.checkbox(t, value=True, key=f"tl_filtro_{t}")
 
     from core.clinical_assistant_service import _parse_fecha
@@ -353,16 +390,16 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
         st.caption("No hay eventos que coincidan con los filtros seleccionados.")
 
     st.divider()
-    st.markdown("### Pase de Guardia / Auditoria")
+    st.markdown("### Pase de guardia / Auditoría")
 
     semaforo = dashboard.get("semaforo", "desconocido")
     badge_pase = {"rojo": "danger", "amarillo": "warning", "verde": "ok"}.get(semaforo, "info")
-    texto_estado = {"rojo": "CRITICO - Requiere intervencion", "amarillo": "ATENCION - Monitoreo necesario", "verde": "ESTABLE"}.get(semaforo, "Desconocido")
+    texto_estado = {"rojo": "CRÍTICO - Requiere intervención", "amarillo": "ATENCIÓN - Monitoreo necesario", "verde": "ESTABLE"}.get(semaforo, "Desconocido")
 
     card_clinica(
         "Resumen del informe",
         f"<b>Estado:</b> {texto_estado}<br>"
-        f"<b>Alertas:</b> {dashboard['alertas_criticas']} criticas, {dashboard['alertas_warning']} advertencias, {dashboard['alertas_info']} informativas<br>"
+        f"<b>Alertas:</b> {dashboard['alertas_criticas']} críticas, {dashboard['alertas_warning']} advertencias, {dashboard['alertas_info']} informativas<br>"
         f"<b>Indicaciones activas:</b> {dashboard['indicaciones_activas']} | <b>Estudios pendientes:</b> {dashboard['estudios_pendientes']}",
         badge_text=semaforo.upper(),
         badge_type=badge_pase,
@@ -370,8 +407,9 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
 
     html_informe = generar_html_informe_profesional(paciente_sel, datos, dashboard)
 
-    st.caption("Vista previa del informe (desplazable)")
-    st.html(html_informe)
+    st.caption("Vista previa del informe")
+    with st.expander("Ver informe completo", expanded=False):
+        st.html(html_informe)
 
     col_d1, col_d2 = st.columns(2)
     with col_d1:
