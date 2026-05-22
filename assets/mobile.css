@@ -157,6 +157,50 @@
         font-size: 16px !important;
     }
 
+    /* --- Select boxes: easier to tap on mobile --- */
+    [data-baseweb="select"] {
+        min-height: 44px !important;
+    }
+    [data-baseweb="select"] > div {
+        padding: 8px 12px !important;
+    }
+
+    /* --- Date/time inputs: full-width touch-friendly --- */
+    [data-testid="stDateInput"],
+    [data-testid="stTimeInput"] {
+        min-height: 44px !important;
+        width: 100% !important;
+    }
+
+    /* --- Radio/checkbox groups: vertical stacking, larger touch targets --- */
+    [data-testid="stRadio"] div[role="radiogroup"] {
+        flex-direction: column !important;
+        gap: 6px !important;
+    }
+    [data-testid="stRadio"] label {
+        min-height: 44px !important;
+        padding: 6px 10px !important;
+        align-items: center !important;
+    }
+    [data-testid="stCheckbox"] label {
+        min-height: 44px !important;
+        padding: 6px 0 !important;
+    }
+    [data-testid="stCheckbox"] {
+        min-height: 44px !important;
+    }
+
+    /* --- Metric cards: compact on mobile --- */
+    [data-testid="stMetric"] {
+        padding: 6px 8px !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 11px !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 18px !important;
+    }
+
     /* --- DataFrames: scroll horizontal --- */
     [data-testid="stDataFrame"],
     [data-testid="stTable"] {

@@ -359,7 +359,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
             with cols_vitales[0]:
                 st.markdown("TA (mmHg)")
                 ta_sistolica = st.number_input("Sist", min_value=0, max_value=300, value=120, step=1, key="evc_ta_sis", label_visibility="collapsed")
-                ta_diastolica = st.number_input("Dias", min_value=0, max_value=200, value=80, step=1, key="evc_ta_dias", label_visibility="collapsed")
+                ta_diastolica = st.number_input("Diast", min_value=0, max_value=200, value=80, step=1, key="evc_ta_dias", label_visibility="collapsed")
                 fc = st.number_input("FC (lpm)", min_value=0, max_value=300, value=80, step=1, key="evc_fc")
             fr = cols_vitales[1].number_input("FR (rpm)", min_value=0, max_value=100, value=16, step=1, key="evc_fr")
             temperatura = cols_vitales[1].number_input("Temp (C)", min_value=34.0, max_value=42.0, value=36.5, step=0.1, key="evc_temp")

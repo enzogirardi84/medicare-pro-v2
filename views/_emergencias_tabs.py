@@ -14,6 +14,7 @@ from core.clinical_exports import build_emergency_pdf_bytes
 from core.database import guardar_datos
 from core.db_sql import insert_emergencia
 from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+from datetime import timedelta
 from core.utils import (
     ahora,
     mapa_detalles_pacientes,
@@ -129,7 +130,7 @@ def _render_tab_registrar(paciente_sel, mi_empresa, user, detalles, es_movil):
                 hora_salida = f1.text_input("Hora salida", placeholder="HH:MM", key="em_hsal")
                 receptor = f2.text_input("Receptor / institucion", key="em_rec")
             familiar_notificado = st.text_input("Familiar notificado", key="em_fam")
-            fecha_evento = st.date_input("Fecha (si distinta a hoy)", value=fecha_actual.date(), key="em_fecha")
+            fecha_evento = st.date_input("Fecha (si distinta a hoy)", value=fecha_actual.date(), min_value=fecha_actual.date() - timedelta(days=365), max_value=fecha_actual.date(), key="em_fecha")
             hora_evento = st.time_input("Hora inicio (si distinta)", value=fecha_actual.time().replace(microsecond=0), key="em_hora")
             procedimientos = st.text_area("Procedimientos realizados", height=70, key="em_proc")
             medicacion_administrada = st.text_area("Medicacion administrada", height=70, key="em_meds")
