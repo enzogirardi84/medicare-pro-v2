@@ -106,7 +106,6 @@ def fetch_with_cursor(
         
     except Exception as e:
         log_event("db_query", f"error: Error en fetch_with_cursor: {e}")
-        st.error(f"Error en fetch_with_cursor: {e}")
         return [], None
 
 
@@ -120,29 +119,28 @@ class QueryOptimizer:
     # Mapeo de tablas a columnas comúnmente usadas (evitar SELECT *)
     TABLE_COLUMNS = {
         "pacientes": [
-            "id", "nombre_completo", "dni", "obra_social", 
-            "telefono", "email", "fecha_nacimiento", "sexo",
+            "id", "nombre_completo", "dni", "obra_social",
+            "telefono", "fecha_nacimiento", "sexo",
             "estado", "empresa_id", "created_at"
         ],
         "evoluciones": [
-            "id", "paciente_id", "fecha_hora", "tipo", "resumen",
-            "profesional", "especialidad", "empresa_id", "created_at"
+            "id", "paciente_id", "fecha", "created_at"
         ],
         "signos_vitales": [
-            "id", "paciente_id", "tipo", "valor", "unidad",
-            "fecha_hora", "profesional", "empresa_id"
+            "id", "paciente_id", "frecuencia_cardiaca", "temperatura",
+            "saturacion_oxigeno", "tension_arterial", "glucemia",
+            "created_at"
         ],
         "estudios": [
-            "id", "paciente_id", "tipo", "subtipo", "fecha",
-            "resultados", "profesional_solicitante", "empresa_id"
+            "id", "paciente_id", "tipo", "detalle", "fecha",
+            "created_at"
         ],
         "usuarios": [
-            "id", "username", "nombre", "email", "rol",
-            "empresa_id", "estado", "last_login"
+            "id", "nombre", "rol", "username",
+            "empresa", "estado", "created_at"
         ],
         "auditoria_legal": [
-            "id", "usuario_id", "accion", "tabla_afectada",
-            "registro_id", "fecha_evento", "empresa_id"
+            "id", "accion", "detalle", "created_at"
         ],
     }
     
@@ -231,7 +229,6 @@ def fetch_pacientes_optimizado(
         
     except Exception as e:
         log_event("db_query", f"error: Error al cargar pacientes: {e}")
-        st.error(f"Error al cargar pacientes: {e}")
         return []
 
 
@@ -270,7 +267,6 @@ def fetch_evoluciones_paciente(
         
     except Exception as e:
         log_event("db_query", f"error: Error al cargar evoluciones: {e}")
-        st.error(f"Error al cargar evoluciones: {e}")
         return []
 
 
