@@ -46,11 +46,6 @@
         overscroll-behavior-x: none !important;
     }
 
-    /* ========================================================
-       2) OCULTAR SIDEBAR NATIVO EN TELEFONO
-       Streamlit mobile sidebar suele quedar a medias y corta UI.
-       En mobile se debe navegar desde el contenido principal.
-       ======================================================== */
     section[data-testid="stSidebar"],
     aside[data-testid="stSidebar"],
     [data-testid="stSidebar"] {
@@ -75,7 +70,6 @@
         padding: 0 !important;
     }
 
-    /* Ocultar controles nativos del sidebar/hamburguesa */
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"],
@@ -92,7 +86,6 @@
         overflow: hidden !important;
     }
 
-    /* Header/toolbar ocultos en mobile */
     [data-testid="stHeader"],
     header[data-testid="stHeader"],
     [data-testid="stToolbar"] {
@@ -101,21 +94,17 @@
         min-height: 0 !important;
     }
 
-    /* ========================================================
-       3) CONTENEDOR PRINCIPAL REALMENTE FULL WIDTH
-       ======================================================== */
     .block-container {
         padding-left: 0.65rem !important;
         padding-right: 0.65rem !important;
         padding-top: 0.6rem !important;
-        padding-bottom: max(5rem, env(safe-area-inset-bottom)) !important;
+        padding-bottom: max(7.5rem, calc(env(safe-area-inset-bottom) + 6rem)) !important;
     }
 
     .stApp {
-        padding-bottom: max(4.5rem, env(safe-area-inset-bottom)) !important;
+        padding-bottom: max(7rem, calc(env(safe-area-inset-bottom) + 5.5rem)) !important;
     }
 
-    /* Todo componente debe poder achicarse sin empujar la pantalla */
     .block-container *,
     [data-testid="stAppViewContainer"] *,
     [data-testid="stVerticalBlock"] *,
@@ -125,9 +114,6 @@
         box-sizing: border-box !important;
     }
 
-    /* ========================================================
-       4) COLUMNAS SIEMPRE VERTICALES EN CELULAR
-       ======================================================== */
     [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: column !important;
@@ -153,9 +139,6 @@
         margin-right: 0 !important;
     }
 
-    /* ========================================================
-       5) INPUTS / SELECTS / BOTONES 100%
-       ======================================================== */
     input,
     textarea,
     select,
@@ -185,7 +168,6 @@
         font-size: 16px !important;
     }
 
-    /* Selectbox cerrado: evita que el nombre del paciente se corte verticalmente */
     [data-baseweb="select"] {
         min-height: 52px !important;
         height: auto !important;
@@ -226,7 +208,6 @@
         min-width: 20px !important;
     }
 
-    /* FIX selectbox abierto: lista limitada y con scroll interno */
     [data-baseweb="popover"],
     [data-baseweb="popover"] > div,
     div[role="listbox"],
@@ -267,9 +248,6 @@
         touch-action: manipulation !important;
     }
 
-    /* ========================================================
-       6) CARDS / EXPANDERS / FORMS / TABLAS
-       ======================================================== */
     [data-testid="stExpander"],
     [data-testid="stExpander"] details,
     [data-testid="stDataFrame"],
@@ -283,21 +261,10 @@
         overflow-x: auto !important;
     }
 
-    [data-testid="stMetric"] {
-        padding: 6px 8px !important;
-    }
+    [data-testid="stMetric"] { padding: 6px 8px !important; }
+    [data-testid="stMetricLabel"] { font-size: 11px !important; }
+    [data-testid="stMetricValue"] { font-size: 18px !important; }
 
-    [data-testid="stMetricLabel"] {
-        font-size: 11px !important;
-    }
-
-    [data-testid="stMetricValue"] {
-        font-size: 18px !important;
-    }
-
-    /* ========================================================
-       7) TABS CON SCROLL HORIZONTAL
-       ======================================================== */
     [data-testid="stTabs"] {
         width: 100% !important;
         max-width: 100% !important;
@@ -318,9 +285,6 @@
         min-height: 44px !important;
     }
 
-    /* ========================================================
-       8) RADIO / CHECKBOX TOUCH FRIENDLY
-       ======================================================== */
     [data-testid="stRadio"] div[role="radiogroup"] {
         flex-direction: column !important;
         gap: 6px !important;
@@ -334,9 +298,6 @@
         align-items: center !important;
     }
 
-    /* ========================================================
-       9) MEDIOS RESPONSIVOS
-       ======================================================== */
     img,
     .stImage img,
     iframe,
@@ -348,7 +309,6 @@
     }
 }
 
-/* --- Tablet (769-1024px) --- */
 @media (min-width: 769px) and (max-width: 1024px) {
     html body .block-container {
         padding: 0.8rem 1rem !important;
@@ -356,7 +316,6 @@
     }
 }
 
-/* --- Touch devices: tap highlight, prevent double-tap zoom --- */
 @media (pointer: coarse) {
     button, a, input, select, textarea,
     [role="button"], [role="tab"], [role="option"],
@@ -367,14 +326,7 @@
     }
 }
 
-/* ============================================================
-   HOTFIX MOBILE 2026-05-22
-   - Paciente activo/selectbox sin corte en iPhone
-   - Menús internos del Asistente Clínico visibles
-   - Popover del selectbox por encima de teclado/overlays
-   ============================================================ */
 @media screen and (max-width: 768px) {
-    /* Marcador técnico mínimo para confirmar que Streamlit Cloud tomó este deploy */
     .block-container::before {
         content: "Mobile fix activo 2026-05-22";
         display: block !important;
@@ -391,7 +343,6 @@
         letter-spacing: .01em !important;
     }
 
-    /* Selectbox cerrado: el texto del paciente debe verse centrado y no cortado */
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
     div[data-baseweb="select"] div[role="combobox"] {
@@ -427,7 +378,6 @@
         font-size: clamp(15px, 4vw, 18px) !important;
     }
 
-    /* Lista abierta: más usable, scroll interno y sin ocupar toda la pantalla */
     div[data-baseweb="popover"] {
         position: fixed !important;
         left: .65rem !important;
@@ -453,7 +403,6 @@
         line-height: 1.25 !important;
     }
 
-    /* Asistente clínico: que las opciones internas no queden como una barra cortada */
     .mc-assistant-nav-title {
         display: block !important;
         font-weight: 700 !important;
@@ -495,7 +444,6 @@
         overflow-wrap: anywhere !important;
     }
 
-    /* Evita barras/tabs internas fantasma cortadas */
     [data-testid="stTabs"] [role="tablist"] {
         min-height: 48px !important;
         padding-bottom: 2px !important;
@@ -504,5 +452,65 @@
     [data-testid="stTabs"] [role="tab"] p {
         font-size: 15px !important;
         line-height: 1.2 !important;
+    }
+
+    /* ========================================================
+       HOTFIX CORTINA MAR / MEDICACION EN TELEFONO
+       El data_editor de Streamlit necesita scroll horizontal real.
+       Si el contenedor padre oculta overflow-x, no permite deslizar
+       ni tocar bien las celdas/selectores.
+       ======================================================== */
+    [data-testid="stDataEditor"],
+    [data-testid="stDataEditor"] > div,
+    [data-testid="stDataEditor"] iframe,
+    [data-testid="stDataFrame"],
+    [data-testid="stDataFrame"] > div,
+    .stDataFrame,
+    .stDataEditor {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+        overscroll-behavior: contain !important;
+    }
+
+    [data-testid="stDataEditor"] canvas,
+    [data-testid="stDataFrame"] canvas,
+    [data-testid="stDataEditor"] [role="grid"],
+    [data-testid="stDataFrame"] [role="grid"],
+    [data-testid="stDataEditor"] [role="gridcell"],
+    [data-testid="stDataFrame"] [role="gridcell"] {
+        touch-action: pan-x pan-y !important;
+        pointer-events: auto !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }
+
+    [data-testid="stDataEditor"] [role="gridcell"],
+    [data-testid="stDataFrame"] [role="gridcell"] {
+        min-height: 44px !important;
+        font-size: 15px !important;
+    }
+
+    /* Popovers/selects dentro de la grilla siempre arriba */
+    [data-testid="stDataEditor"] [data-baseweb="popover"],
+    [data-testid="stDataFrame"] [data-baseweb="popover"],
+    div[data-baseweb="popover"] {
+        z-index: 2147483647 !important;
+    }
+
+    /* Oculta el overlay flotante Manage app en telefono: tapa botones y tabla */
+    [data-testid="stStatusWidget"],
+    [data-testid="stDecoration"],
+    .stDeployButton,
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 }
