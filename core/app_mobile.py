@@ -14,6 +14,7 @@ from core.utils_pacientes import set_paciente_actual
 
 # Cache simple UA en session_state para evitar reparseo
 _UA_CACHE_KEY = "_mc_cache_ua_contexto"
+_CSS_OPERATIVO_KEY = "_mc_mobile_css_operativo_v1"
 
 
 def _get_ui_liviano_module():
@@ -27,6 +28,95 @@ def _get_ui_liviano_module():
             return ui_liv
         except ImportError:
             return None
+
+
+def _inyectar_css_mobile_operativo() -> None:
+    """Parches mobile globales para uso clínico real desde teléfono."""
+    if st.session_state.get(_CSS_OPERATIVO_KEY):
+        return
+    st.session_state[_CSS_OPERATIVO_KEY] = True
+    st.markdown(
+        """
+        <style>
+        @media screen and (max-width: 768px) {
+            /* Quita la etiqueta técnica de debug para que no ocupe pantalla clínica. */
+            .block-container::before { display: none !important; content: none !important; }
+
+            /* Selectbox de paciente: compacto, legible y sin teclado invasivo. */
+            div[data-baseweb="select"] div[role="combobox"] input {
+                width: 1px !important;
+                min-width: 1px !important;
+                max-width: 1px !important;
+                opacity: 0 !important;
+                caret-color: transparent !important;
+                pointer-events: none !important;
+            }
+            div[data-baseweb="select"] div[role="combobox"] > div,
+            div[data-baseweb="select"] div[role="combobox"] span {
+                max-width: calc(100vw - 5.5rem) !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+            }
+            div[data-baseweb="popover"],
+            div[data-baseweb="popover"] > div,
+            div[data-baseweb="popover"] ul[role="listbox"],
+            div[data-baseweb="popover"] div[role="listbox"] {
+                width: calc(100vw - 1.3rem) !important;
+                max-width: calc(100vw - 1.3rem) !important;
+                max-height: min(52vh, 420px) !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
+                z-index: 2147483647 !important;
+            }
+
+            /* Cortina empresarial / data_editor: permite scroll real y toque de celdas. */
+            [data-testid="stDataEditor"],
+            [data-testid="stDataEditor"] > div,
+            [data-testid="stDataFrame"],
+            [data-testid="stDataFrame"] > div,
+            .stDataEditor,
+            .stDataFrame {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-x pan-y !important;
+                overscroll-behavior: contain !important;
+            }
+            [data-testid="stDataEditor"] canvas,
+            [data-testid="stDataFrame"] canvas,
+            [data-testid="stDataEditor"] [role="grid"],
+            [data-testid="stDataFrame"] [role="grid"] {
+                min-width: 760px !important;
+                touch-action: pan-x pan-y !important;
+                pointer-events: auto !important;
+            }
+            [data-testid="stDataEditor"] [role="gridcell"],
+            [data-testid="stDataFrame"] [role="gridcell"] {
+                min-height: 46px !important;
+                touch-action: manipulation !important;
+                pointer-events: auto !important;
+            }
+
+            /* Oculta overlays de Streamlit Cloud que tapan botones en teléfono. */
+            [data-testid="stStatusWidget"],
+            [data-testid="stDecoration"],
+            .stDeployButton,
+            .viewerBadge_container__1QSob,
+            .viewerBadge_link__1S137,
+            .viewerBadge_text__1JaDK {
+                display: none !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _user_agent_contexto() -> str:
@@ -85,6 +175,7 @@ def cliente_es_tablet_probable() -> bool:
 
 def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles_fn):
     """Selector de pacientes central compacto para mobile/tablet."""
+    _inyectar_css_mobile_operativo()
     es_tablet = cliente_es_tablet_probable()
 
     # Cache de pacientes para evitar re-fetch en cada rerun.
