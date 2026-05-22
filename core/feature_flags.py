@@ -2,8 +2,6 @@ from __future__ import annotations
 
 """Interruptores de producto en un solo lugar (sin secrets).
 
-
-
 Secrets (.streamlit/secrets.toml) siguen mandando en conexion Supabase, SMTP, etc.
 """
 
@@ -15,35 +13,32 @@ ALERTAS_APP_PACIENTE_VISIBLE = False
 GUARDAR_DATOS_SPINNER_DEFAULT = False
 
 # True: ignora spinner=True en guardar_datos y usa el toast silencioso en su lugar.
-# Elimina el bloqueo de pantalla en los 27 puntos de guardado critico.
+# Elimina el bloqueo de pantalla en los puntos de guardado critico.
 # Cambiar a False para volver al comportamiento original con spinner visible.
 GUARDAR_DATOS_FORZAR_SIN_SPINNER = True
 
 # 0 = desactivado. Si el upsert/local supera estos segundos, se emite un log tecnico (sin UI extra).
-# Ajustado a 3.5s porque con compresion gzip el guardado puede tardar ~300ms.
-GUARDAR_DATOS_LOG_LENTO_SEGUNDOS = 3.5
+# En telefonos/red lenta conviene registrar a partir de 2.5s para detectar cuellos de botella reales.
+GUARDAR_DATOS_LOG_LENTO_SEGUNDOS = 2.5
 
-# Evita tormentas de guardado. Con compresion, cada save cuesta menos pero igual throttleamos.
-# 3s = balance entre frescura de datos y cantidad de upserts a Supabase.
-GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 3.0
+# Evita tormentas de guardado. 5s agrupa toques rápidos en medicación/stock y baja la carga a Supabase.
+# El guardado pendiente se procesa automáticamente en reruns posteriores.
+GUARDAR_DATOS_MIN_INTERVALO_SEGUNDOS = 5.0
 
 # Reintentos de Supabase. Con 2 intentos + 0.15s delay = maximo 150ms extra en caso de error transiente.
-# Antes: 3 intentos x 0.35s = hasta 1.05s de delay acumulado.
 SUPABASE_RETRY_ATTEMPTS = 2
 SUPABASE_RETRY_BASE_DELAY_SEGUNDOS = 0.15
 
 # Tope de eventos operativos en memoria que viajan en cada guardado.
-# 500 entradas = ~50KB de logs vs 3000 = ~300KB. El payload comprimido ya es mas pequeno.
-MAX_LOGS_DB_ENTRIES = 500
+# 350 entradas reduce payload y mantiene historial operativo reciente.
+MAX_LOGS_DB_ENTRIES = 350
 
 # TTL del cache de session_state para cargar_datos.
-# Si se cargo hace menos de 300s (5 min), se devuelve el cache sin ir a Supabase.
-# Esto evita re-fetches en cada rerun sin perder frescura.
-# Aumentado de 90s para mejorar rendimiento en navegación entre módulos.
-DB_CACHE_TTL_SEGUNDOS = 300
+# 10 min mejora la navegacion entre modulos en telefonos/tablets sin ir a Supabase en cada rerun.
+DB_CACHE_TTL_SEGUNDOS = 600
 
 # DESACTIVADO: La API NextGen (localhost:8000) no existe en produccion.
-# Con True, el sistema borraba evoluciones/vitales de sesion y luego guardaba listas vacias en Supabase.
+# Con True, el sistema podia borrar evoluciones/vitales de sesion y luego guardar listas vacias en Supabase.
 # Dejar en False para usar el guardado clasico via JSON blob en Supabase + guardado_universal local.
 ENABLE_NEXTGEN_API_DUAL_WRITE = False
 
@@ -51,8 +46,8 @@ ENABLE_NEXTGEN_API_DUAL_WRITE = False
 ERROR_TRACKER_ENABLED = True
 
 # Tope global de items por cada lista _db en session_state (excepto logs_db que usa MAX_LOGS_DB_ENTRIES).
-# Solo se truncan listas que superan 2x este valor, respetando max_items por módulo.
-MAX_LIST_ITEMS_GLOBAL = 200
+# Se deja amplio para no recortar datos clinicos utiles; la optimizacion fuerte debe venir por shards/SQL.
+MAX_LIST_ITEMS_GLOBAL = 1000
 
 # Self-Healing IA: diagnóstico y reparación autónoma del código.
 # passive: solo detecta y registra (seguro)
