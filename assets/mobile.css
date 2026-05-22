@@ -366,3 +366,143 @@
         -webkit-tap-highlight-color: rgba(20, 184, 166, 0.25) !important;
     }
 }
+
+/* ============================================================
+   HOTFIX MOBILE 2026-05-22
+   - Paciente activo/selectbox sin corte en iPhone
+   - Menús internos del Asistente Clínico visibles
+   - Popover del selectbox por encima de teclado/overlays
+   ============================================================ */
+@media screen and (max-width: 768px) {
+    /* Marcador técnico mínimo para confirmar que Streamlit Cloud tomó este deploy */
+    .block-container::before {
+        content: "Mobile fix activo 2026-05-22";
+        display: block !important;
+        width: fit-content !important;
+        max-width: calc(100vw - 1.3rem) !important;
+        margin: 0 0 .35rem 0 !important;
+        padding: 2px 8px !important;
+        border-radius: 999px !important;
+        background: rgba(14, 165, 233, .14) !important;
+        border: 1px solid rgba(14, 165, 233, .35) !important;
+        color: #7dd3fc !important;
+        font-size: 11px !important;
+        line-height: 1.25 !important;
+        letter-spacing: .01em !important;
+    }
+
+    /* Selectbox cerrado: el texto del paciente debe verse centrado y no cortado */
+    div[data-baseweb="select"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] div[role="combobox"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 58px !important;
+        height: auto !important;
+        overflow: hidden !important;
+        align-items: center !important;
+    }
+
+    div[data-baseweb="select"] div[role="combobox"] input {
+        width: 1px !important;
+        min-width: 1px !important;
+        max-width: 1px !important;
+        opacity: 0 !important;
+        caret-color: transparent !important;
+        pointer-events: none !important;
+    }
+
+    div[data-baseweb="select"] div[role="combobox"] > div,
+    div[data-baseweb="select"] div[role="combobox"] span {
+        display: block !important;
+        width: 100% !important;
+        max-width: calc(100vw - 5.5rem) !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        line-height: 1.35 !important;
+        max-height: none !important;
+        font-size: clamp(15px, 4vw, 18px) !important;
+    }
+
+    /* Lista abierta: más usable, scroll interno y sin ocupar toda la pantalla */
+    div[data-baseweb="popover"] {
+        position: fixed !important;
+        left: .65rem !important;
+        right: .65rem !important;
+        width: calc(100vw - 1.3rem) !important;
+        max-width: calc(100vw - 1.3rem) !important;
+        z-index: 2147483647 !important;
+    }
+
+    div[data-baseweb="popover"] ul[role="listbox"],
+    div[data-baseweb="popover"] div[role="listbox"] {
+        max-height: min(48vh, 390px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: 14px !important;
+    }
+
+    div[data-baseweb="popover"] li[role="option"],
+    div[data-baseweb="popover"] div[role="option"] {
+        min-height: 50px !important;
+        padding: 10px 14px !important;
+        font-size: 16px !important;
+        line-height: 1.25 !important;
+    }
+
+    /* Asistente clínico: que las opciones internas no queden como una barra cortada */
+    .mc-assistant-nav-title {
+        display: block !important;
+        font-weight: 700 !important;
+        color: #e2e8f0 !important;
+        margin: .5rem 0 .4rem !important;
+    }
+
+    div[data-testid="stRadio"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+    }
+
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: .55rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+    }
+
+    div[data-testid="stRadio"] label {
+        width: 100% !important;
+        min-height: 50px !important;
+        border: 1px solid rgba(148, 163, 184, .32) !important;
+        border-radius: 14px !important;
+        background: rgba(15, 23, 42, .62) !important;
+        padding: .65rem .8rem !important;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    div[data-testid="stRadio"] label p {
+        font-size: 16px !important;
+        line-height: 1.25 !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    /* Evita barras/tabs internas fantasma cortadas */
+    [data-testid="stTabs"] [role="tablist"] {
+        min-height: 48px !important;
+        padding-bottom: 2px !important;
+    }
+
+    [data-testid="stTabs"] [role="tab"] p {
+        font-size: 15px !important;
+        line-height: 1.2 !important;
+    }
+}
