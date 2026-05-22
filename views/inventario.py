@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from core.database import guardar_datos
+from core.permissions import STOCK_AJUSTAR, STOCK_ELIMINAR, STOCK_VER, puede
 from core.view_helpers import bloque_estado_vacio, lista_plegable
 from core.utils import cargar_json_asset, seleccionar_limite_registros, ahora
 from core.db_sql import get_inventario_by_empresa, insert_inventario
@@ -21,6 +22,15 @@ _COLORES_CATEGORIA = [
 
 
 def render_inventario(mi_empresa):
+    usuario_actual = st.session_state.get("u_actual", {})
+    puede_ver_stock = puede(usuario_actual, STOCK_VER)
+    puede_ajustar_stock = puede(usuario_actual, STOCK_AJUSTAR)
+    puede_eliminar_stock = puede(usuario_actual, STOCK_ELIMINAR)
+
+    if not puede_ver_stock:
+        st.warning("No tenés permisos suficientes para ver el inventario.")
+        return
+
     st.markdown(
         """
         <div class="mc-hero">
@@ -155,71 +165,74 @@ def render_inventario(mi_empresa):
         "Stock crítico (≤10) está en un panel plegable. El formulario suma mercadería; la tabla completa y la corrección de ítems también se pueden plegar."
     )
 
-    with st.form("form_inv", clear_on_submit=True):
-        st.markdown("##### Ingreso de mercadería")
-        c1, c2, c3 = st.columns([2, 2, 1])
-        lista_base_inv = ["-- Seleccionar del catálogo --"] + vademecum_base
+    if puede_ajustar_stock:
+        with st.form("form_inv", clear_on_submit=True):
+            st.markdown("##### Ingreso de mercadería")
+            c1, c2, c3 = st.columns([2, 2, 1])
+            lista_base_inv = ["-- Seleccionar del catálogo --"] + vademecum_base
 
-        item_sel = c1.selectbox("1. Catálogo frecuente", lista_base_inv)
-        nuevo_item = c2.text_input("2. Escribir insumo nuevo")
-        cantidad = c3.number_input("Cantidad", min_value=1, value=10, step=1)
-        c4, c5 = st.columns([1, 1])
-        _cat_input = c4.text_input("Categoría (opcional)", placeholder="Ej: Medicamentos, Descartables")
-        _costo_input = c5.number_input("Costo unitario $ (opcional)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+            item_sel = c1.selectbox("1. Catálogo frecuente", lista_base_inv)
+            nuevo_item = c2.text_input("2. Escribir insumo nuevo")
+            cantidad = c3.number_input("Cantidad", min_value=1, value=10, step=1)
+            c4, c5 = st.columns([1, 1])
+            _cat_input = c4.text_input("Categoría (opcional)", placeholder="Ej: Medicamentos, Descartables")
+            _costo_input = c5.number_input("Costo unitario $ (opcional)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
 
-        if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
-            item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
-            if item_final and item_final != "-- Seleccionar del catálogo --":
-                try:
-                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-                    if empresa_uuid:
-                        from core.database import supabase
-                        res = supabase.table("inventario").select("id, stock_actual, stock_minimo, costo_unitario").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
-                        if res.data:
-                            existente = res.data[0]
-                            _upd = {"stock_actual": existente["stock_actual"] + cantidad}
+            if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
+                item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
+                if item_final and item_final != "-- Seleccionar del catálogo --":
+                    try:
+                        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                        if empresa_uuid:
+                            from core.database import supabase
+                            res = supabase.table("inventario").select("id, stock_actual, stock_minimo, costo_unitario").eq("empresa_id", empresa_uuid).eq("nombre", item_final).execute()
+                            if res.data:
+                                existente = res.data[0]
+                                _upd = {"stock_actual": existente["stock_actual"] + cantidad}
+                                if _cat_input.strip():
+                                    _upd["categoria"] = _cat_input.strip()
+                                if _costo_input > 0:
+                                    _upd["costo_unitario"] = _costo_input
+                                supabase.table("inventario").update(_upd).eq("id", existente["id"]).execute()
+                            else:
+                                datos_sql = {"empresa_id": empresa_uuid, "nombre": item_final, "stock_actual": cantidad}
+                                if _cat_input.strip():
+                                    datos_sql["categoria"] = _cat_input.strip()
+                                if _costo_input > 0:
+                                    datos_sql["costo_unitario"] = _costo_input
+                                insert_inventario(datos_sql)
+                            log_event("inventario_sql_insert_update", f"Item: {item_final}")
+                    except Exception as e:
+                        log_event("error_inventario_sql", str(e))
+
+                    encontrado = False
+                    if "inventario_db" not in st.session_state:
+                        st.session_state["inventario_db"] = []
+                    for i in st.session_state["inventario_db"]:
+                        if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
+                            i["stock"] = int(i.get("stock") or 0) + cantidad
                             if _cat_input.strip():
-                                _upd["categoria"] = _cat_input.strip()
+                                i["categoria"] = _cat_input.strip()
                             if _costo_input > 0:
-                                _upd["costo_unitario"] = _costo_input
-                            supabase.table("inventario").update(_upd).eq("id", existente["id"]).execute()
-                        else:
-                            datos_sql = {"empresa_id": empresa_uuid, "nombre": item_final, "stock_actual": cantidad}
-                            if _cat_input.strip():
-                                datos_sql["categoria"] = _cat_input.strip()
-                            if _costo_input > 0:
-                                datos_sql["costo_unitario"] = _costo_input
-                            insert_inventario(datos_sql)
-                        log_event("inventario_sql_insert_update", f"Item: {item_final}")
-                except Exception as e:
-                    log_event("error_inventario_sql", str(e))
-
-                encontrado = False
-                if "inventario_db" not in st.session_state:
-                    st.session_state["inventario_db"] = []
-                for i in st.session_state["inventario_db"]:
-                    if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
-                        i["stock"] = int(i.get("stock") or 0) + cantidad
+                                i["costo_unitario"] = _costo_input
+                            encontrado = True
+                            break
+                    if not encontrado:
+                        _entry = {"item": item_final, "stock": cantidad, "empresa": mi_empresa}
                         if _cat_input.strip():
-                            i["categoria"] = _cat_input.strip()
+                            _entry["categoria"] = _cat_input.strip()
                         if _costo_input > 0:
-                            i["costo_unitario"] = _costo_input
-                        encontrado = True
-                        break
-                if not encontrado:
-                    _entry = {"item": item_final, "stock": cantidad, "empresa": mi_empresa}
-                    if _cat_input.strip():
-                        _entry["categoria"] = _cat_input.strip()
-                    if _costo_input > 0:
-                        _entry["costo_unitario"] = _costo_input
-                    st.session_state.setdefault("inventario_db", []).append(_entry)
+                            _entry["costo_unitario"] = _costo_input
+                        st.session_state.setdefault("inventario_db", []).append(_entry)
 
-                from core.database import _trim_db_list
-                _trim_db_list("inventario_db", 1000)
-                with st.spinner("Guardando..."):
-                    guardar_datos(spinner=False)
-                queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
-                st.rerun()
+                    from core.database import _trim_db_list
+                    _trim_db_list("inventario_db", 1000)
+                    with st.spinner("Guardando..."):
+                        guardar_datos(spinner=False)
+                    queue_toast(f"Se agregaron {cantidad} unidades de {item_final}.")
+                    st.rerun()
+    else:
+        st.info("Tenés acceso de solo lectura al inventario. Los ingresos y ajustes de stock están deshabilitados para este usuario.")
 
     st.divider()
 
@@ -301,7 +314,7 @@ def render_inventario(mi_empresa):
 
     st.divider()
 
-    if inv_mio:
+    if inv_mio and puede_ajustar_stock:
         st.markdown("### 📦 Ajuste de stock masivo")
         st.caption("Seleccioná varios ítems y aplicá un mismo ajuste a todos.")
         _items_all = [i.get("item", "") for i in inv_mio]
@@ -367,28 +380,31 @@ def render_inventario(mi_empresa):
                 queue_toast(f"{item_a_editar}: stock={nuevo_stock}, mínimo={nuevo_min}, costo=${nuevo_costo:.2f}")
                 st.rerun()
 
-            col_del1, col_del2 = st.columns([3, 1])
-            del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
-            confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
-            if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
-                try:
-                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-                    if empresa_uuid:
-                        from core.database import supabase
-                        if supabase is not None:
-                            res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", del_item).execute()
-                            if res.data:
-                                supabase.table("inventario").delete().eq("id", res.data[0]["id"]).execute()
-                            log_event("inventario_sql_delete", f"Item: {del_item}")
-                        else:
-                            log_event("inventario_sql_delete", "Supabase offline; se elimina solo en JSON local")
-                except Exception as e:
-                    log_event("error_inventario_sql_delete", str(e))
+            if puede_eliminar_stock:
+                col_del1, col_del2 = st.columns([3, 1])
+                del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
+                confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
+                if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
+                    try:
+                        empresa_uuid = _obtener_uuid_empresa(mi_empresa)
+                        if empresa_uuid:
+                            from core.database import supabase
+                            if supabase is not None:
+                                res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", del_item).execute()
+                                if res.data:
+                                    supabase.table("inventario").delete().eq("id", res.data[0]["id"]).execute()
+                                log_event("inventario_sql_delete", f"Item: {del_item}")
+                            else:
+                                log_event("inventario_sql_delete", "Supabase offline; se elimina solo en JSON local")
+                    except Exception as e:
+                        log_event("error_inventario_sql_delete", str(e))
 
-                if "inventario_db" in st.session_state:
-                    st.session_state["inventario_db"] = [
-                        i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
-                    ]
-                guardar_datos(spinner=True)
-                queue_toast(f"Se eliminó {del_item} del inventario.")
-                st.rerun()
+                    if "inventario_db" in st.session_state:
+                        st.session_state["inventario_db"] = [
+                            i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
+                        ]
+                    guardar_datos(spinner=True)
+                    queue_toast(f"Se eliminó {del_item} del inventario.")
+                    st.rerun()
+            else:
+                st.caption("La eliminación definitiva de insumos está deshabilitada para este usuario.")
