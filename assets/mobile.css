@@ -12,12 +12,23 @@
     .mc-desktop-only,
     .mc-only-desktop { display: none !important; }
 
-    /* --- Root: evitar overflow horizontal --- */
+    /* --- Root: evitar overflow horizontal real en iOS/Android --- */
     html, body, .stApp,
-    [data-testid="stAppViewContainer"] {
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stAppViewContainer"] main,
+    main {
         width: 100% !important;
         max-width: 100vw !important;
+        min-width: 0 !important;
         overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        overscroll-behavior-x: none !important;
     }
 
     /* --- Header/toolbar ocultos en mobile --- */
@@ -26,6 +37,7 @@
     [data-testid="stToolbar"] {
         display: none !important;
         height: 0 !important;
+        min-height: 0 !important;
     }
 
     /* --- Contenedor principal: sin margen por sidebar --- */
@@ -34,26 +46,40 @@
     [data-testid="stAppViewContainer"] main,
     main, main .block-container, .block-container {
         margin-left: 0 !important;
+        margin-right: 0 !important;
         left: 0 !important;
+        right: 0 !important;
         width: 100% !important;
         max-width: 100vw !important;
-        padding: 0.35rem 0.65rem !important;
+        min-width: 0 !important;
+        padding: 0.35rem 0.65rem max(4.25rem, env(safe-area-inset-bottom)) 0.65rem !important;
         transform: none !important;
         box-sizing: border-box !important;
     }
 
-    /* --- Sidebar como drawer fixed --- */
-    html body section[data-testid="stSidebar"] {
+    /* Todo el contenido debe poder achicarse sin empujar la pantalla */
+    .block-container *,
+    [data-testid="stAppViewContainer"] * {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* --- Sidebar como drawer fixed de ancho completo útil --- */
+    html body section[data-testid="stSidebar"],
+    html body [data-testid="stSidebar"] {
         position: fixed !important;
-        top: 0 !important; bottom: 0 !important;
-        left: 0 !important; right: auto !important;
-        width: min(88vw, 360px) !important;
-        min-width: min(88vw, 360px) !important;
-        max-width: min(88vw, 360px) !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: auto !important;
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100vh !important;
         height: 100dvh !important;
         max-height: 100dvh !important;
-        margin-left: 0 !important;
-        transform: translate3d(-110%, 0, 0) !important;
+        margin: 0 !important;
+        transform: translate3d(-105vw, 0, 0) !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
         z-index: 999998 !important;
@@ -62,37 +88,49 @@
         border-right: 0 !important;
         pointer-events: none !important;
         box-sizing: border-box !important;
+        background: #0f172a !important;
     }
 
-    /* Sidebar abierto */
-    html body section[data-testid="stSidebar"][aria-expanded="true"] {
+    /* Sidebar abierto: cubrir todo el ancho para que no quede a medias */
+    html body section[data-testid="stSidebar"][aria-expanded="true"],
+    html body [data-testid="stSidebar"][aria-expanded="true"] {
         transform: translate3d(0, 0, 0) !important;
         pointer-events: auto !important;
         box-shadow: 14px 0 34px rgba(0, 0, 0, 0.45) !important;
         border-right: 1px solid rgba(100, 180, 255, 0.14) !important;
     }
 
+    /* Compatibilidad: algunas versiones de Streamlit no actualizan aria-expanded de forma estable */
+    html body section[data-testid="stSidebar"]:not([aria-expanded="false"]),
+    html body [data-testid="stSidebar"]:not([aria-expanded="false"]) {
+        max-width: 100vw !important;
+    }
+
     /* Sidebar cerrado: sin pointer-events para evitar overlays residuales */
-    html body section[data-testid="stSidebar"]:not([aria-expanded="true"]) {
+    html body section[data-testid="stSidebar"]:not([aria-expanded="true"]),
+    html body [data-testid="stSidebar"]:not([aria-expanded="true"]) {
         pointer-events: none !important;
     }
 
-    /* Contenido del sidebar */
+    /* Contenido del sidebar: padding seguro y ancho real */
     html body section[data-testid="stSidebar"] > div,
-    html body section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    html body section[data-testid="stSidebar"] [data-testid="stSidebarContent"],
+    html body [data-testid="stSidebar"] > div,
+    html body [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
         width: 100% !important;
         min-width: 0 !important;
-        max-width: 100% !important;
-        padding-left: max(0.8rem, env(safe-area-inset-left)) !important;
-        padding-right: 0.8rem !important;
+        max-width: 100vw !important;
+        padding-left: max(0.85rem, env(safe-area-inset-left)) !important;
+        padding-right: max(0.85rem, env(safe-area-inset-right)) !important;
         padding-top: max(0.8rem, env(safe-area-inset-top)) !important;
-        padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+        padding-bottom: max(5rem, env(safe-area-inset-bottom)) !important;
         overflow-x: hidden !important;
         box-sizing: border-box !important;
     }
 
     /* Todo dentro del sidebar: sin overflow, word-break */
-    html body section[data-testid="stSidebar"] * {
+    html body section[data-testid="stSidebar"] *,
+    html body [data-testid="stSidebar"] * {
         max-width: 100% !important;
         box-sizing: border-box !important;
         white-space: normal !important;
@@ -100,14 +138,36 @@
         word-break: break-word !important;
     }
 
+    /* Select/Input dentro del sidebar: evitar texto cortado y cajas que empujan */
+    html body [data-testid="stSidebar"] [data-baseweb="select"],
+    html body [data-testid="stSidebar"] [data-baseweb="select"] > div,
+    html body [data-testid="stSidebar"] [data-baseweb="input"],
+    html body [data-testid="stSidebar"] [data-baseweb="input"] > div,
+    html body [data-testid="stSidebar"] input,
+    html body [data-testid="stSidebar"] textarea {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    html body [data-testid="stSidebar"] [data-baseweb="select"] span,
+    html body [data-testid="stSidebar"] [data-baseweb="select"] div {
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
     /* Boton hamburguesa siempre visible */
     html body button[kind="header"],
     html body [data-testid="collapsedControl"],
+    html body [data-testid="stSidebarCollapsedControl"],
     html body [data-testid="stSidebarCollapseButton"] {
         position: fixed !important;
         top: max(0.45rem, env(safe-area-inset-top)) !important;
         left: max(0.45rem, env(safe-area-inset-left)) !important;
         z-index: 1000001 !important;
+        pointer-events: auto !important;
     }
 
     /* --- Columnas apiladas --- */
@@ -115,12 +175,16 @@
         gap: 0.4rem !important;
         align-items: flex-start !important;
         flex-wrap: wrap !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
     }
     [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
     [data-testid="stHorizontalBlock"] > [data-testid="column"] {
         flex: 1 1 100% !important;
         width: 100% !important;
         min-width: 0 !important;
+        max-width: 100% !important;
         height: auto !important;
         padding: 0 !important;
         margin: 0 0 0.25rem 0 !important;
@@ -129,21 +193,25 @@
     /* --- Tabs: scroll horizontal --- */
     [data-testid="stTabs"] [role="tablist"] {
         overflow-x: auto !important;
+        overflow-y: hidden !important;
         -webkit-overflow-scrolling: touch !important;
         flex-wrap: nowrap !important;
+        max-width: 100% !important;
     }
     [data-testid="stTabs"] [role="tab"] {
         min-height: 44px !important;
         white-space: nowrap !important;
+        flex: 0 0 auto !important;
     }
 
-    /* --- Botones: tap target 44px min --- */
+    /* --- Botones: tap target 44px min y sin ancho que rompa mobile --- */
     button,
     [data-testid="stButton"] button,
     [data-testid="stFormSubmitButton"] button,
     [data-testid="stDownloadButton"] button {
         min-height: 44px !important;
         touch-action: manipulation !important;
+        max-width: 100% !important;
     }
 
     /* --- Inputs: iOS zoom prevention (font-size >= 16px) --- */
@@ -160,9 +228,13 @@
     /* --- Select boxes: easier to tap on mobile --- */
     [data-baseweb="select"] {
         min-height: 44px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
     }
     [data-baseweb="select"] > div {
         padding: 8px 12px !important;
+        min-width: 0 !important;
     }
 
     /* --- Date/time inputs: full-width touch-friendly --- */
@@ -212,6 +284,11 @@
     /* --- Imagenes responsivas --- */
     img, .stImage img, iframe {
         max-width: 100% !important;
+    }
+
+    /* Streamlit Cloud: dejar espacio al overlay inferior "Manage app" en mobile */
+    .stApp {
+        padding-bottom: max(4.5rem, env(safe-area-inset-bottom)) !important;
     }
 }
 
