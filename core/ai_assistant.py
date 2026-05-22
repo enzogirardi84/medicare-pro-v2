@@ -25,7 +25,7 @@ from core.app_logging import log_event
 # Fuentes (en orden de prioridad): session_state > st.secrets > env vars > defaults
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "none")  # openai, anthropic, deepseek, local, none
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-v4-flash")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 LLM_ENABLED = LLM_PROVIDER != "none" and LLM_API_KEY != ""
 
 
@@ -33,7 +33,7 @@ def _get_llm_config():
     """Obtiene config LLM con overriding de session_state > st.secrets > env vars."""
     provider = os.getenv("LLM_PROVIDER", "none")
     api_key = os.getenv("LLM_API_KEY", "")
-    model = os.getenv("LLM_MODEL", "deepseek-v4-flash")
+    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
     try:
         import streamlit as st
@@ -364,20 +364,21 @@ NOTA MEJORADA:"""
             raise
     
     def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
-        """Llama API de Anthropic (Claude)."""
+        """Llama API de Anthropic (Claude) usando Messages API."""
         self._ensure_config()
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=self.api_key)
             
-            response = client.completions.create(
+            response = client.messages.create(
                 model=self.model,
-                prompt=f"Human: {prompt}\n\nAssistant:",
-                max_tokens_to_sample=max_tokens,
-                temperature=temperature
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system="Eres un asistente médico profesional.",
+                messages=[{"role": "user", "content": prompt}]
             )
             
-            return response.completion.strip()
+            return response.content[0].text.strip()
             
         except Exception as e:
             error_msg = str(e)
@@ -612,6 +613,32 @@ class VitalSignAnomalyDetector:
         "saturacion_o2": (95, 100),
     }
     
+    def _get_vital_value(self, vitals: Dict[str, Any], param: str) -> Optional[float]:
+        """Extrae valor numérico de un signo vital, manejando alias de campo."""
+        value = vitals.get(param)
+        if value is not None:
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return None
+        # Alias de campos comunes en la app
+        alias_map = {
+            "presion_arterial_systolic": ["TA", "tension_arterial", "pa"],
+            "presion_arterial_diastolic": ["TA", "tension_arterial", "pa"],
+            "frecuencia_cardiaca": ["FC", "hr"],
+            "frecuencia_respiratoria": ["FR", "rr"],
+            "temperatura": ["Temp", "T"],
+            "saturacion_o2": ["Sat", "SpO2", "saturacion_oxigeno"],
+        }
+        for alias in alias_map.get(param, []):
+            raw = vitals.get(alias)
+            if raw is not None:
+                try:
+                    return float(raw)
+                except (ValueError, TypeError):
+                    pass
+        return None
+
     def detect_anomalies(
         self,
         current_vitals: Dict[str, Any],
@@ -620,10 +647,6 @@ class VitalSignAnomalyDetector:
         """
         Detecta anomalías en signos vitales actuales.
         
-        Args:
-            current_vitals: Signos vitales actuales
-            history: Historial de signos vitales previos (opcional)
-        
         Returns:
             Lista de anomalías detectadas
         """
@@ -631,20 +654,26 @@ class VitalSignAnomalyDetector:
         
         # 1. Detección de valores fuera de rango
         for param, (min_val, max_val) in self.NORMAL_RANGES.items():
-            value = current_vitals.get(param)
-            
-            if value is None and param in ("presion_arterial_systolic", "presion_arterial_diastolic"):
-                # Extraer de formato "120/80"
-                pa = current_vitals.get("presion_arterial", "")
+            if param == "presion_arterial_systolic":
+                pa = current_vitals.get("TA") or current_vitals.get("tension_arterial") or current_vitals.get("presion_arterial", "")
                 if isinstance(pa, str) and "/" in pa:
                     try:
-                        parts = pa.split("/")
-                        if param == "presion_arterial_systolic":
-                            value = float(parts[0])
-                        else:
-                            value = float(parts[1])
+                        value = float(pa.split("/")[0])
                     except (ValueError, IndexError):
                         continue
+                else:
+                    value = self._get_vital_value(current_vitals, param)
+            elif param == "presion_arterial_diastolic":
+                pa = current_vitals.get("TA") or current_vitals.get("tension_arterial") or current_vitals.get("presion_arterial", "")
+                if isinstance(pa, str) and "/" in pa:
+                    try:
+                        value = float(pa.split("/")[1])
+                    except (ValueError, IndexError):
+                        continue
+                else:
+                    value = self._get_vital_value(current_vitals, param)
+            else:
+                value = self._get_vital_value(current_vitals, param)
             
             if value is None:
                 continue
