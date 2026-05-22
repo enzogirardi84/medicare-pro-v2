@@ -458,6 +458,42 @@ def update_inventario_stock_sql(inventario_id: str, nuevo_stock: int, empresa_id
         return False
 
 
+def update_inventario_item_sql(inventario_id: str, cambios: Dict[str, Any], empresa_id: str) -> bool:
+    """Actualiza campos permitidos de un ítem de inventario e invalida cache."""
+    if not _ok() or not inventario_id or not cambios:
+        return False
+    campos_permitidos = {"stock_actual", "stock_minimo", "costo_unitario", "categoria", "nombre"}
+    payload = {k: v for k, v in cambios.items() if k in campos_permitidos}
+    if not payload:
+        return False
+    try:
+        response = _supabase_execute_with_retry(
+            "update_inventario_item",
+            lambda: supabase.table("inventario").update(payload).eq("id", inventario_id).execute(),
+        )
+        _invalidate_cache_prefix(f"_sql_op_inv_{empresa_id}")
+        return bool(response and response.data)
+    except Exception as e:
+        log_event("db_sql", f"error_update_inventario_item:{type(e).__name__}")
+        return False
+
+
+def delete_inventario_item_sql(inventario_id: str, empresa_id: str) -> bool:
+    """Elimina un ítem de inventario e invalida cache."""
+    if not _ok() or not inventario_id:
+        return False
+    try:
+        response = _supabase_execute_with_retry(
+            "delete_inventario_item",
+            lambda: supabase.table("inventario").delete().eq("id", inventario_id).execute(),
+        )
+        _invalidate_cache_prefix(f"_sql_op_inv_{empresa_id}")
+        return bool(response and response.data)
+    except Exception as e:
+        log_event("db_sql", f"error_delete_inventario_item:{type(e).__name__}")
+        return False
+
+
 def insert_checkin(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not _ok():
         return None
