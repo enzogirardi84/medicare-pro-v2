@@ -11,7 +11,12 @@ from core.database import guardar_datos
 from core.permissions import STOCK_AJUSTAR, STOCK_ELIMINAR, STOCK_VER, puede
 from core.view_helpers import bloque_estado_vacio, lista_plegable
 from core.utils import cargar_json_asset, seleccionar_limite_registros, ahora
-from core.db_sql import get_inventario_by_empresa, insert_inventario
+from core.db_sql import (
+    delete_inventario_item_sql,
+    get_inventario_by_empresa,
+    insert_inventario,
+    update_inventario_item_sql,
+)
 from core.nextgen_sync import _obtener_uuid_empresa
 from core.app_logging import log_event
 
@@ -193,7 +198,7 @@ def render_inventario(mi_empresa):
                                     _upd["categoria"] = _cat_input.strip()
                                 if _costo_input > 0:
                                     _upd["costo_unitario"] = _costo_input
-                                supabase.table("inventario").update(_upd).eq("id", existente["id"]).execute()
+                                update_inventario_item_sql(existente["id"], _upd, empresa_uuid)
                             else:
                                 datos_sql = {"empresa_id": empresa_uuid, "nombre": item_final, "stock_actual": cantidad}
                                 if _cat_input.strip():
@@ -359,14 +364,13 @@ def render_inventario(mi_empresa):
             c_save_col, _ = st.columns([1, 1])
             if c_save_col.button("Guardar cambios", width='stretch', type="primary"):
                 cambios = {"stock_actual": nuevo_stock, "stock_minimo": nuevo_min, "costo_unitario": nuevo_costo}
+                sql_ok = False
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-                    if empresa_uuid:
-                        from core.database import supabase
-                        res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", item_a_editar).execute()
-                        if res.data:
-                            supabase.table("inventario").update(cambios).eq("id", res.data[0]["id"]).execute()
-                        log_event("inventario_sql_update", f"Item: {item_a_editar}")
+                    item_sql_id = _item_data.get("id_sql")
+                    if empresa_uuid and item_sql_id:
+                        sql_ok = update_inventario_item_sql(item_sql_id, cambios, empresa_uuid)
+                    log_event("inventario_sql_update", f"Item: {item_a_editar}; sql_ok={sql_ok}")
                 except Exception as e:
                     log_event("error_inventario_sql_update", str(e))
                 if "inventario_db" in st.session_state:
@@ -376,7 +380,8 @@ def render_inventario(mi_empresa):
                             i["stock_minimo"] = nuevo_min
                             i["costo_unitario"] = nuevo_costo
                             break
-                guardar_datos(spinner=True)
+                if not sql_ok:
+                    guardar_datos(spinner=True)
                 queue_toast(f"{item_a_editar}: stock={nuevo_stock}, mínimo={nuevo_min}, costo=${nuevo_costo:.2f}")
                 st.rerun()
 
@@ -385,17 +390,14 @@ def render_inventario(mi_empresa):
                 del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
                 confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
                 if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
+                    sql_ok = False
                     try:
                         empresa_uuid = _obtener_uuid_empresa(mi_empresa)
-                        if empresa_uuid:
-                            from core.database import supabase
-                            if supabase is not None:
-                                res = supabase.table("inventario").select("id").eq("empresa_id", empresa_uuid).eq("nombre", del_item).execute()
-                                if res.data:
-                                    supabase.table("inventario").delete().eq("id", res.data[0]["id"]).execute()
-                                log_event("inventario_sql_delete", f"Item: {del_item}")
-                            else:
-                                log_event("inventario_sql_delete", "Supabase offline; se elimina solo en JSON local")
+                        _item_del_data = next((i for i in inv_mio if i.get("item") == del_item), {})
+                        item_sql_id = _item_del_data.get("id_sql")
+                        if empresa_uuid and item_sql_id:
+                            sql_ok = delete_inventario_item_sql(item_sql_id, empresa_uuid)
+                        log_event("inventario_sql_delete", f"Item: {del_item}; sql_ok={sql_ok}")
                     except Exception as e:
                         log_event("error_inventario_sql_delete", str(e))
 
@@ -403,7 +405,8 @@ def render_inventario(mi_empresa):
                         st.session_state["inventario_db"] = [
                             i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
                         ]
-                    guardar_datos(spinner=True)
+                    if not sql_ok:
+                        guardar_datos(spinner=True)
                     queue_toast(f"Se eliminó {del_item} del inventario.")
                     st.rerun()
             else:
