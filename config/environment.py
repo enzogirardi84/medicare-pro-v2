@@ -80,8 +80,8 @@ class Environment:
     CONNECTION_POOL_SIZE: int = 10
     
     # Seguridad adicional
-    ALLOWED_HOSTS: List[str] = field(default_factory=lambda: ["*"])
-    CORS_ORIGINS: List[str] = field(default_factory=lambda: ["*"])
+    ALLOWED_HOSTS: List[str] = field(default_factory=lambda: ["localhost", "127.0.0.1"])
+    CORS_ORIGINS: List[str] = field(default_factory=lambda: ["http://localhost:8501", "http://localhost:3000"])
     
     # Backup
     BACKUP_ENABLED: bool = True

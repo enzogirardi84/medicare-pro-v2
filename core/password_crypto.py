@@ -56,10 +56,10 @@ def bcrypt_rounds_config() -> int:
     try:
         import streamlit as st
 
-        r = int(st.secrets.get("PASSWORD_BCRYPT_ROUNDS", 10))
-        return max(10, min(15, r))
+        r = int(st.secrets.get("PASSWORD_BCRYPT_ROUNDS", 12))
+        return max(12, min(15, r))
     except Exception:
-        return 10
+        return 12
 
 
 def parece_hash_bcrypt(valor: str) -> bool:

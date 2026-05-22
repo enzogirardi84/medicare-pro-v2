@@ -68,7 +68,7 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
 
     # Datos demográficos del paciente
     edad = dashboard.get("edad_paciente")
-    edad_str = f"{edad} años" if edad else "S/D"
+    edad_str = escape(f"{edad} años") if edad else "S/D"
     diag_str = escape("; ".join(dashboard.get("diagnosticos_list", [])) or "Sin diagnóstico registrado")
     ult_act = dashboard.get("ultima_actualizacion_hs")
     if ult_act is not None:
@@ -80,6 +80,8 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
             act_str = f"{int(ult_act/24)}d"
     else:
         act_str = "Sin datos"
+
+    act_str = escape(act_str)
 
     c_info1, c_info2, c_info3 = st.columns(3)
     with c_info1:

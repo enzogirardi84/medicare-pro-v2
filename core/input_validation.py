@@ -60,13 +60,12 @@ def validar_longitud_maxima(texto: str, max_len: int = 10000) -> bool:
 
 
 def sanitizar_sql(texto: str) -> str:
-    """Previene inyección SQL básicos."""
+    """Previene inyección SQL (defensa en profundidad — usar siempre queries parametrizados)."""
     if not texto:
         return ""
-    dangerous = ["'", '"', ";", "--", "/*", "*/", "xp_", "sp_", "EXEC", "DROP", "CREATE"]
     result = str(texto)
-    for word in dangerous:
-        result = result.replace(word, "")
+    for ch in ("'", '"', ";", "--", "/*", "*/"):
+        result = result.replace(ch, "")
     return result.strip()
 
 

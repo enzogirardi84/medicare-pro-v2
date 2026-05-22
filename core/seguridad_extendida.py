@@ -45,11 +45,12 @@ def generar_csrf_token() -> str:
 
 
 def verificar_csrf_token(token_enviado: str) -> bool:
-    """Verifica que el token CSRF coincida."""
+    """Verifica que el token CSRF coincida (timing-safe)."""
+    import secrets as _sec
     token_esperado = st.session_state.get("_csrf_token", "")
     if not token_esperado or not token_enviado:
         return False
-    return token_enviado == token_esperado
+    return _sec.compare_digest(token_enviado, token_esperado)
 
 
 def inject_csrf_form():

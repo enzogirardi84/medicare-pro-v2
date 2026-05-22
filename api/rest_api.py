@@ -67,10 +67,12 @@ Todos los datos sensibles se encriptan automáticamente con AES-256-GCM.
 """
 
 # Inicializar FastAPI
+from config import settings as _mc_settings
+_ENV = getattr(_mc_settings, "ENVIRONMENT", "production")
 app = FastAPI(
     title="Medicare Pro API",
     version="2.0.0",
-    docs_url=None if ENV == "production" else "/docs",
+    docs_url=None if _ENV == "production" else "/docs",
     redoc_url=None,
 )
 

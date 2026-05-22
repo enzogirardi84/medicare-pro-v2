@@ -71,7 +71,8 @@ def _hmac_key() -> bytes:
         raw = ""
     raw = str(raw).strip()
     if len(raw) < 8:
-        return b"mc-email-2fa-dev-key-change-in-secrets"
+        log_event("2fa", "FATAL: EMAIL_2FA_HMAC_SECRET no configurado")
+        return b""
     return raw.encode("utf-8")[:128]
 
 

@@ -383,7 +383,7 @@ def _get_default_identifier() -> str:
     try:
         # Intentar obtener user_id de sesión
         user = st.session_state.get("u_actual", {})
-        user_id = user.get("username")
+        user_id = user.get("usuario_login") or user.get("username")
         if user_id:
             return f"user:{user_id}"
     except Exception:

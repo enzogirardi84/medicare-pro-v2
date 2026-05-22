@@ -46,7 +46,7 @@ class DevelopmentConfig(Environment):
     SMTP_PORT: int = 1025
     
     # CORS abierto para desarrollo
-    CORS_ORIGINS: list = field(default_factory=lambda: ["http://localhost:8501", "http://localhost:3000", "*"])
+    CORS_ORIGINS: list = field(default_factory=lambda: ["http://localhost:8501", "http://localhost:3000"])
     
     # Backup menos frecuente en desarrollo
     BACKUP_INTERVAL_HOURS: int = 168  # 1 semana

@@ -17,7 +17,10 @@ def _generate_nextgen_token(empresa: str) -> str:
     """
     Genera un JWT válido para la API NextGen basado en el usuario actual de Streamlit.
     """
-    secret = st.secrets.get("NEXTGEN_JWT_SECRET", "change_me_local")
+    secret = st.secrets.get("NEXTGEN_JWT_SECRET", "")
+    if not secret:
+        log_event("nextgen", "FATAL: NEXTGEN_JWT_SECRET no configurado")
+        return ""
     
     # Generar UUIDs deterministas para el tenant y el usuario basados en sus nombres legacy
     tenant_hash = hashlib.md5(empresa.encode("utf-8")).hexdigest()
@@ -27,10 +30,11 @@ def _generate_nextgen_token(empresa: str) -> str:
     user_hash = hashlib.md5(user_login.encode("utf-8")).hexdigest()
     user_uuid = str(uuid.UUID(user_hash))
     
+    _user_role = st.session_state.get("u_actual", {}).get("rol", "operativo")
     payload = {
         "sub": user_uuid,
         "tenant_id": tenant_uuid,
-        "role": "admin", # Permiso máximo para sincronización dual-write
+        "role": _user_role,
         "type": "access"
     }
     return jwt.encode(payload, secret, algorithm="HS256")
