@@ -207,22 +207,16 @@ def render_historial(paciente_sel: str, user=None) -> None:
     with tab_s:
         lista_secciones = list(secciones.keys())
         key_sec = f"hist_seccion_radio_{paciente_sel}"
-        if key_sec not in st.session_state:
-            st.session_state[key_sec] = lista_secciones[0]
-        else:
-            _prev = st.session_state[key_sec]
-            if _prev not in lista_secciones:
-                st.session_state[key_sec] = lista_secciones[0]
-
         seccion_actual = st.pills(
             "Elegir seccion",
             lista_secciones,
+            default=lista_secciones[0],
             selection_mode="single",
             key=key_sec,
             label_visibility="collapsed",
         )
-        if not seccion_actual:
-            seccion_actual = st.session_state.get(key_sec) or lista_secciones[0]
+        if not seccion_actual or seccion_actual not in lista_secciones:
+            seccion_actual = lista_secciones[0]
         registros = secciones.get(seccion_actual, [])
 
         if not registros:

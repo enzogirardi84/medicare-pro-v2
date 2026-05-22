@@ -445,27 +445,27 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
     etiquetas_wa = [_etiqueta_visita_whatsapp(v) for v in visitas_wa] + ["Coordinacion general (sin visita puntual)"]
     sel_key = f"wpp_visita_pick_{paciente_sel}"
     prev_key = f"_wpp_visita_prev_{paciente_sel}"
+    msg_template_key = f"_wpp_msg_template_{paciente_sel}"
     msg_key = f"wpp_visita_text_{paciente_sel}"
     if prev_key not in st.session_state:
         st.session_state[prev_key] = None
-    if msg_key not in st.session_state:
-        st.session_state[msg_key] = ""
     pick_wa = st.selectbox("Visita a comunicar al paciente", range(len(etiquetas_wa)), format_func=lambda i: etiquetas_wa[i], key=sel_key)
     visita_elegida = visitas_wa[pick_wa] if pick_wa < len(visitas_wa) else None
     pls_msg = _plantillas_whatsapp_para_empresa(mi_empresa)
     if st.session_state[prev_key] != pick_wa:
-        st.session_state.pop(msg_key, None)
-        st.session_state[msg_key] = _armar_mensaje_whatsapp_visita(
+        st.session_state[msg_template_key] = _armar_mensaje_whatsapp_visita(
             paciente_sel, mi_empresa, user, visita_elegida, nombre_corto_pac, dire_paciente, plantillas_empresa=pls_msg
         )
+        st.session_state.pop(msg_key, None)
         st.session_state[prev_key] = pick_wa
+    if msg_key not in st.session_state:
+        st.session_state[msg_key] = st.session_state.get(msg_template_key, "")
     st.text_area("Texto del mensaje", key=msg_key, height=200)
     texto_final_wa = st.session_state.get(msg_key, "").strip()
 
     _wpp_num_key = f"_wpp_num_manual_{paciente_sel}"
-    if _wpp_num_key not in st.session_state:
-        st.session_state[_wpp_num_key] = ""
-    tel_manual = st.text_input("Telefono del paciente (WhatsApp)", value=st.session_state[_wpp_num_key] if not tel_paciente else tel_paciente, key=_wpp_num_key, placeholder="Ej: 5493584302024")
+    _wpp_default = tel_paciente if tel_paciente else st.session_state.get(_wpp_num_key, "")
+    tel_manual = st.text_input("Telefono del paciente (WhatsApp)", value=_wpp_default, key=_wpp_num_key, placeholder="Ej: 5493584302024")
     tel_destino = _normalizar_telefono_whatsapp(tel_manual) or tel_manual.replace(" ", "").replace("-", "")
     c_w1, c_w2 = st.columns([1, 1])
     with c_w1:
