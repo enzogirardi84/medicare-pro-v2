@@ -118,6 +118,14 @@ try:
 except Exception as exc:
     log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
 
+try:
+    from core.ui_liviano import render_mc_liviano_cliente, render_mobile_sidebar_toggle
+    server_hint = st.session_state.get("mc_liviano_modo") == "on"
+    render_mc_liviano_cliente("auto", server_hint)
+    render_mobile_sidebar_toggle()
+except Exception as exc:
+    log_event("mobile_js", f"carga_falla:{type(exc).__name__}")
+
 # Parche visual definitivo: elimina botones/avisos de IA de Evoluciones aunque
 # aparezcan por caché, por un deploy viejo o por otro componente.
 st.markdown("""

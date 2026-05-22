@@ -159,12 +159,14 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
 
 
 def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
-    """Versión interna con 3 columnas para el acordeón (colapsa al hacer clic)."""
+    """Versión interna con 3 columnas (2 en mobile) para el acordeón."""
     if not modulos:
         return
-    for i in range(0, len(modulos), _NAV_COLS):
-        fila = modulos[i:i + _NAV_COLS]
-        cols = st.columns(_NAV_COLS)
+    _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
+    _cols = 2 if _mobile else _NAV_COLS
+    for i in range(0, len(modulos), _cols):
+        fila = modulos[i:i + _cols]
+        cols = st.columns(_cols)
         for j, modulo in enumerate(fila):
             nombre_raw = str(modulo)
             if not nombre_raw:
@@ -211,6 +213,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
     nav_version = st.session_state.get("_nav_version", 0)
     primera_vez = (nav_version == 0)
+    _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
 
     for cat in cats_ok:
         mods_in_cat = [m for m in categorias_modulos.get(cat, []) if m in menu_set]
@@ -219,7 +222,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         label = f"{emoji}  {cat}"
-        expandido = primera_vez and (cat == cat_activa)
+        expandido = not _mobile and primera_vez and (cat == cat_activa)
 
         with st.expander(
             label, expanded=expandido, key=f"_nav_e_{cat}_{nav_version}"

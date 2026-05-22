@@ -168,6 +168,8 @@ def seleccionar_limite_registros(label, total, key, default=30, opciones=(10, 20
     if total <= min(opciones):
         st.caption(f"Mostrando {total} registro(s).")
         return total
+    if st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo"):
+        default = min(default, 15)
     opciones_validas = sorted({valor for valor in opciones if valor < total})
     if total not in opciones_validas:
         opciones_validas.append(total)
