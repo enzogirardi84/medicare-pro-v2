@@ -338,15 +338,38 @@ def render_inventario(mi_empresa):
             _razon = st.text_input("Motivo del ajuste", placeholder="Ej: inventario físico", key="batch_inv_reason")
             if st.button("✅ Aplicar ajuste masivo", type="primary", key="batch_inv_apply", use_container_width=True):
                 if _razon.strip():
+                    empresa_uuid = _obtener_uuid_empresa(mi_empresa)
                     _count = 0
+                    _sql_fallos = 0
+
                     for _inv in inv_mio:
                         if _inv.get("item", "") in _selected:
-                            _inv["stock"] = max(0, int(_inv.get("stock", 0)) + _ajuste)
+                            nuevo_stock = max(0, int(_inv.get("stock", 0)) + _ajuste)
+                            _inv["stock"] = nuevo_stock
                             _count += 1
+
+                            item_sql_id = _inv.get("id_sql")
+                            if empresa_uuid and item_sql_id:
+                                ok = update_inventario_item_sql(
+                                    item_sql_id,
+                                    {"stock_actual": nuevo_stock},
+                                    empresa_uuid,
+                                )
+                                if not ok:
+                                    _sql_fallos += 1
+                            else:
+                                _sql_fallos += 1
+
                     st.session_state["inventario_db"] = inv_mio
-                    guardar_datos(spinner=False)
+
+                    if _sql_fallos:
+                        guardar_datos(spinner=False)
+
                     st.success(f"✅ {_count} ítems ajustados ({_ajuste:+d} unidades)")
-                    log_event("inventario", f"batch_ajuste:{_count}items:{_ajuste:+d}:{_razon}")
+                    log_event(
+                        "inventario",
+                        f"batch_ajuste:{_count}items:{_ajuste:+d}:fallos_sql={_sql_fallos}:{_razon}",
+                    )
                     st.rerun()
                 else:
                     st.warning("Indicá un motivo para el ajuste.")
