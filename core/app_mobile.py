@@ -84,66 +84,82 @@ def cliente_es_tablet_probable() -> bool:
 
 
 def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles_fn):
-    """Selector de pacientes central (visible siempre, sin expander)."""
+    """Selector de pacientes central compacto para mobile/tablet."""
     es_tablet = cliente_es_tablet_probable()
 
-    buscar = st.text_input(
-        "Buscar paciente",
-        placeholder="Nombre, DNI o palabra clave",
-        key="mc_buscar_paciente_mobile",
-    )
-
-    # Cache de pacientes para evitar re-fetch en cada tecla
+    # Cache de pacientes para evitar re-fetch en cada rerun.
     _cache_key = "_mc_pacientes_cache"
     _cache_ts_key = "_mc_pacientes_cache_ts"
     _cache_ttl = 5.0
     p_f = None
-    if not buscar:
-        _cached = st.session_state.get(_cache_key)
-        _cached_ts = st.session_state.get(_cache_ts_key, 0.0)
-        if _cached is not None and (time.time() - _cached_ts) < _cache_ttl:
-            p_f = _cached
+    _cached = st.session_state.get(_cache_key)
+    _cached_ts = st.session_state.get(_cache_ts_key, 0.0)
+    if _cached is not None and (time.time() - _cached_ts) < _cache_ttl:
+        p_f = _cached
     if p_f is None:
         p_f = obtener_pacientes_fn(
             st.session_state,
             mi_empresa,
             rol,
             incluir_altas=False,
-            busqueda=buscar,
+            busqueda="",
         )
-        if not buscar:
-            st.session_state[_cache_key] = p_f
-            st.session_state[_cache_ts_key] = time.time()
-
-    limite = 25 if es_tablet else 8
-
-    if not buscar and len(p_f) > limite:
-        st.caption(f"Mostrando {limite} pacientes. Escribí arriba para filtrar.")
-        p_f = p_f[:limite]
+        st.session_state[_cache_key] = p_f
+        st.session_state[_cache_ts_key] = time.time()
 
     if not p_f:
         st.warning("No hay pacientes visibles.")
         return None
 
-    opciones = [item[0] for item in p_f]
-    display_map = {item[0]: item[1] for item in p_f}
-
+    opciones_todas = [item[0] for item in p_f]
+    display_map_todos = {item[0]: item[1] for item in p_f}
     valor_actual = st.session_state.get("paciente_actual")
-    idx_actual = opciones.index(valor_actual) if valor_actual in opciones else 0
+    idx_actual = opciones_todas.index(valor_actual) if valor_actual in opciones_todas else 0
 
     st.caption("Paciente activo")
-
-    # En teléfonos evitamos st.selectbox porque abre un campo editable interno,
-    # dispara el teclado y ocupa media pantalla. El buscador ya está arriba;
-    # acá solo se elige tocando el paciente visible.
-    paciente_sel_mobile = st.radio(
+    paciente_sel_mobile = st.selectbox(
         "Seleccionar paciente",
-        opciones,
+        opciones_todas,
         index=idx_actual,
-        format_func=lambda x: display_map.get(x, x),
-        label_visibility="collapsed",
-        key="mc_paciente_radio_mobile",
+        format_func=lambda x: display_map_todos.get(x, x),
+        key="mc_paciente_select_mobile",
+        help="Abrí la cortina y elegí el paciente. No se muestran todos como lista para no ocupar la pantalla.",
     )
+
+    # Buscador opcional dentro de una cortina secundaria: solo se abre cuando hace falta filtrar.
+    with st.expander("Buscar paciente por nombre o DNI", expanded=False):
+        buscar = st.text_input(
+            "Filtro de paciente",
+            placeholder="Nombre, DNI o palabra clave",
+            key="mc_buscar_paciente_mobile",
+        )
+        if buscar:
+            p_filtrados = obtener_pacientes_fn(
+                st.session_state,
+                mi_empresa,
+                rol,
+                incluir_altas=False,
+                busqueda=buscar,
+            )
+            limite = 25 if es_tablet else 8
+            if len(p_filtrados) > limite:
+                st.caption(f"Mostrando {limite} coincidencias. Escribí más para afinar.")
+                p_filtrados = p_filtrados[:limite]
+            if p_filtrados:
+                opciones_filtradas = [item[0] for item in p_filtrados]
+                display_map_filtrado = {item[0]: item[1] for item in p_filtrados}
+                paciente_busqueda = st.selectbox(
+                    "Resultado de búsqueda",
+                    opciones_filtradas,
+                    format_func=lambda x: display_map_filtrado.get(x, x),
+                    key="mc_paciente_select_busqueda_mobile",
+                )
+                if st.button("Usar paciente encontrado", width="stretch", key="mc_usar_paciente_busqueda_mobile"):
+                    paciente_sel_mobile = paciente_busqueda
+                    set_paciente_actual(st.session_state, paciente_sel_mobile)
+                    st.rerun()
+            else:
+                st.warning("No hay pacientes para ese filtro.")
 
     _cambio_paciente = (
         paciente_sel_mobile is not None
