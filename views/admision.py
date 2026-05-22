@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import streamlit as st
 
-from core.permissions import PACIENTE_CREAR, PACIENTE_EDITAR, puede
+from core.permissions import PACIENTE_CREAR, PACIENTE_EDITAR, PACIENTE_ELIMINAR, puede
 from core.utils import es_control_total
 from views._admision_utils import (
     NON_PATIENT_DB_KEYS,
@@ -86,8 +86,9 @@ def render_admision(mi_empresa, rol):
     usuario_actual = st.session_state.get("u_actual", {})
     puede_editar_paciente = admin_total or puede(usuario_actual, PACIENTE_EDITAR)
     puede_crear_paciente = admin_total or puede(usuario_actual, PACIENTE_CREAR)
+    puede_eliminar_paciente = puede(usuario_actual, PACIENTE_ELIMINAR)
 
-    if admin_total:
+    if puede_eliminar_paciente:
         hero_html = """
         <div class="mc-hero">
             <h2 class="mc-hero-title">Admision de pacientes</h2>
@@ -113,9 +114,9 @@ def render_admision(mi_empresa, rol):
     st.markdown(hero_html, unsafe_allow_html=True)
 
     if puede_editar_paciente:
-        _render_admision_gestion(mi_empresa, rol, admin_total)
+        _render_admision_gestion(mi_empresa, rol, puede_eliminar_paciente)
     else:
         st.info("No tenés permisos suficientes para editar legajos de pacientes.")
 
     if puede_crear_paciente:
-        _render_admision_alta(mi_empresa, rol, admin_total)
+        _render_admision_alta(mi_empresa, rol, puede_eliminar_paciente)
