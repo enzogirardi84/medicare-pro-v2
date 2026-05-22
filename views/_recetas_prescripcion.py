@@ -326,8 +326,8 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                         description=f"Receta creada: {med_final} por {medico_nombre.strip()}",
                         metadata={"medico": medico_nombre.strip(), "medicamento": med_final},
                     )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log_event("receta", f"audit_legal fallo: {type(exc).__name__}")
                 try:
                     from core.digital_signature import sign_receta as _sign_receta
                     _sign_receta(

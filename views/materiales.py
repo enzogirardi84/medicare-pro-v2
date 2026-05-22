@@ -119,8 +119,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
                                 "firma": user.get("nombre", "Sistema"),
                                 "empresa": mi_empresa,
                             })
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        log_event("materiales", f"append_consumo fallo: {type(exc).__name__}")
                     from core.database import _trim_db_list
                     _trim_db_list("consumos_db", 1000)
                     with st.spinner("Guardando..."):
