@@ -198,6 +198,33 @@
         white-space: nowrap !important;
     }
 
+    /* FIX selectbox abierto: lista limitada y con scroll interno */
+    [data-baseweb="popover"],
+    [data-baseweb="popover"] > div,
+    div[role="listbox"],
+    ul[role="listbox"] {
+        width: calc(100vw - 1.3rem) !important;
+        max-width: calc(100vw - 1.3rem) !important;
+        min-width: 0 !important;
+        max-height: min(42vh, 360px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        box-sizing: border-box !important;
+        z-index: 1000002 !important;
+    }
+
+    div[role="option"],
+    li[role="option"] {
+        min-height: 42px !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        padding: 8px 12px !important;
+        box-sizing: border-box !important;
+    }
+
     [data-testid="stButton"],
     [data-testid="stButton"] button,
     [data-testid="stFormSubmitButton"],
