@@ -19,6 +19,7 @@ Action = str
 
 
 # Acciones críticas normalizadas.
+PACIENTE_CREAR = "paciente.crear"
 PACIENTE_ELIMINAR = "paciente.eliminar"
 PACIENTE_EDITAR = "paciente.editar"
 PACIENTE_VER_TODOS = "paciente.ver_todos"
@@ -39,6 +40,7 @@ AUDITORIA_VER = "auditoria.ver"
 # Matriz base. Se puede ampliar sin tocar las vistas.
 _ROLE_PERMISSIONS: dict[str, set[str]] = {
     "superadmin": {
+        PACIENTE_CREAR,
         PACIENTE_ELIMINAR,
         PACIENTE_EDITAR,
         PACIENTE_VER_TODOS,
@@ -56,6 +58,7 @@ _ROLE_PERMISSIONS: dict[str, set[str]] = {
         AUDITORIA_VER,
     },
     "admin": {
+        PACIENTE_CREAR,
         PACIENTE_ELIMINAR,
         PACIENTE_EDITAR,
         PACIENTE_VER_TODOS,
@@ -72,6 +75,7 @@ _ROLE_PERMISSIONS: dict[str, set[str]] = {
         AUDITORIA_VER,
     },
     "coordinacion": {
+        PACIENTE_CREAR,
         PACIENTE_EDITAR,
         PACIENTE_VER_TODOS,
         EVOLUCION_CREAR,
@@ -95,6 +99,7 @@ _ROLE_PERMISSIONS: dict[str, set[str]] = {
         STOCK_AJUSTAR,
     },
     "administracion": {
+        PACIENTE_CREAR,
         PACIENTE_EDITAR,
         HISTORIA_EXPORTAR,
         FACTURACION_VER,
@@ -122,6 +127,10 @@ _ROLE_ALIASES = {
     "enfermería": "enfermeria",
     "adm": "administracion",
     "administración": "administracion",
+    "recepcion": "administracion",
+    "recepción": "administracion",
+    "secretaria": "administracion",
+    "secretaría": "administracion",
     "lectura": "solo_lectura",
 }
 
