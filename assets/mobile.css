@@ -1,6 +1,6 @@
 /* ============================================================
    MediCare PRO - Mobile CSS consolidado
-   Fix critico: sidebar/drawer en telefonos, iOS zoom, touch
+   Fix critico: telefono sin sidebar nativo para evitar cortes
    ============================================================ */
 
 /* Helpers de visibilidad */
@@ -12,26 +12,87 @@
     .mc-desktop-only,
     .mc-only-desktop { display: none !important; }
 
-    /* --- Root: evitar overflow horizontal real en iOS/Android --- */
-    html, body, .stApp,
+    /* ========================================================
+       1) RESET TOTAL DE VIEWPORT
+       ======================================================== */
+    html,
+    body,
+    #root,
+    .stApp,
+    [data-testid="stApp"],
     [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > div,
     [data-testid="stAppViewContainer"] > .main,
     [data-testid="stAppViewContainer"] main,
-    main {
+    section.main,
+    main,
+    .block-container {
         width: 100% !important;
         max-width: 100vw !important;
         min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
         overflow-x: hidden !important;
         box-sizing: border-box !important;
     }
 
-    html, body {
+    html,
+    body {
         margin: 0 !important;
         padding: 0 !important;
         overscroll-behavior-x: none !important;
     }
 
-    /* --- Header/toolbar ocultos en mobile --- */
+    /* ========================================================
+       2) OCULTAR SIDEBAR NATIVO EN TELEFONO
+       Streamlit mobile sidebar suele quedar a medias y corta UI.
+       En mobile se debe navegar desde el contenido principal.
+       ======================================================== */
+    section[data-testid="stSidebar"],
+    aside[data-testid="stSidebar"],
+    [data-testid="stSidebar"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        left: -99999px !important;
+        right: auto !important;
+        top: 0 !important;
+        transform: none !important;
+        z-index: -1 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Ocultar controles nativos del sidebar/hamburguesa */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"],
+    button[kind="header"],
+    button[kind="headerNoPadding"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Header/toolbar ocultos en mobile */
     [data-testid="stHeader"],
     header[data-testid="stHeader"],
     [data-testid="stToolbar"] {
@@ -40,182 +101,81 @@
         min-height: 0 !important;
     }
 
-    /* --- Contenedor principal: sin margen por sidebar --- */
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewContainer"] > .main,
-    [data-testid="stAppViewContainer"] main,
-    main, main .block-container, .block-container {
+    /* ========================================================
+       3) CONTENEDOR PRINCIPAL REALMENTE FULL WIDTH
+       ======================================================== */
+    .block-container {
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+        padding-top: 0.6rem !important;
+        padding-bottom: max(5rem, env(safe-area-inset-bottom)) !important;
+    }
+
+    .stApp {
+        padding-bottom: max(4.5rem, env(safe-area-inset-bottom)) !important;
+    }
+
+    /* Todo componente debe poder achicarse sin empujar la pantalla */
+    .block-container *,
+    [data-testid="stAppViewContainer"] *,
+    [data-testid="stVerticalBlock"] *,
+    [data-testid="stHorizontalBlock"] *,
+    [data-testid="stElementContainer"] * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* ========================================================
+       4) COLUMNAS SIEMPRE VERTICALES EN CELULAR
+       ======================================================== */
+    [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        gap: 0.5rem !important;
+    }
+
+    [data-testid="stHorizontalBlock"] > div,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+    [data-testid="stHorizontalBlock"] > [data-testid="column"],
+    [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        flex: 1 1 auto !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        max-width: 100vw !important;
-        min-width: 0 !important;
-        padding: 0.35rem 0.65rem max(4.25rem, env(safe-area-inset-bottom)) 0.65rem !important;
-        transform: none !important;
-        box-sizing: border-box !important;
     }
 
-    /* Todo el contenido debe poder achicarse sin empujar la pantalla */
-    .block-container *,
-    [data-testid="stAppViewContainer"] * {
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    /* --- Sidebar como drawer fixed de ancho completo útil --- */
-    html body section[data-testid="stSidebar"],
-    html body [data-testid="stSidebar"] {
-        position: fixed !important;
-        top: 0 !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: auto !important;
-        width: 100vw !important;
-        min-width: 100vw !important;
-        max-width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-        margin: 0 !important;
-        transform: translate3d(-105vw, 0, 0) !important;
-        overflow-x: hidden !important;
-        overflow-y: auto !important;
-        z-index: 999998 !important;
-        transition: transform 0.22s ease-in-out !important;
-        box-shadow: none !important;
-        border-right: 0 !important;
-        pointer-events: none !important;
-        box-sizing: border-box !important;
-        background: #0f172a !important;
-    }
-
-    /* Sidebar abierto: cubrir todo el ancho para que no quede a medias */
-    html body section[data-testid="stSidebar"][aria-expanded="true"],
-    html body [data-testid="stSidebar"][aria-expanded="true"] {
-        transform: translate3d(0, 0, 0) !important;
-        pointer-events: auto !important;
-        box-shadow: 14px 0 34px rgba(0, 0, 0, 0.45) !important;
-        border-right: 1px solid rgba(100, 180, 255, 0.14) !important;
-    }
-
-    /* Compatibilidad: algunas versiones de Streamlit no actualizan aria-expanded de forma estable */
-    html body section[data-testid="stSidebar"]:not([aria-expanded="false"]),
-    html body [data-testid="stSidebar"]:not([aria-expanded="false"]) {
-        max-width: 100vw !important;
-    }
-
-    /* Sidebar cerrado: sin pointer-events para evitar overlays residuales */
-    html body section[data-testid="stSidebar"]:not([aria-expanded="true"]),
-    html body [data-testid="stSidebar"]:not([aria-expanded="true"]) {
-        pointer-events: none !important;
-    }
-
-    /* Contenido del sidebar: padding seguro y ancho real */
-    html body section[data-testid="stSidebar"] > div,
-    html body section[data-testid="stSidebar"] [data-testid="stSidebarContent"],
-    html body [data-testid="stSidebar"] > div,
-    html body [data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100vw !important;
-        padding-left: max(0.85rem, env(safe-area-inset-left)) !important;
-        padding-right: max(0.85rem, env(safe-area-inset-right)) !important;
-        padding-top: max(0.8rem, env(safe-area-inset-top)) !important;
-        padding-bottom: max(5rem, env(safe-area-inset-bottom)) !important;
-        overflow-x: hidden !important;
-        box-sizing: border-box !important;
-    }
-
-    /* Todo dentro del sidebar: sin overflow, word-break */
-    html body section[data-testid="stSidebar"] *,
-    html body [data-testid="stSidebar"] * {
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-        white-space: normal !important;
-        overflow-wrap: anywhere !important;
-        word-break: break-word !important;
-    }
-
-    /* Select/Input dentro del sidebar: evitar texto cortado y cajas que empujan */
-    html body [data-testid="stSidebar"] [data-baseweb="select"],
-    html body [data-testid="stSidebar"] [data-baseweb="select"] > div,
-    html body [data-testid="stSidebar"] [data-baseweb="input"],
-    html body [data-testid="stSidebar"] [data-baseweb="input"] > div,
-    html body [data-testid="stSidebar"] input,
-    html body [data-testid="stSidebar"] textarea {
+    /* ========================================================
+       5) INPUTS / SELECTS / BOTONES 100%
+       ======================================================== */
+    input,
+    textarea,
+    select,
+    [data-baseweb="input"],
+    [data-baseweb="input"] > div,
+    [data-baseweb="select"],
+    [data-baseweb="select"] > div,
+    [data-baseweb="textarea"],
+    [data-testid="stNumberInput"],
+    [data-testid="stDateInput"],
+    [data-testid="stTimeInput"] {
         width: 100% !important;
         min-width: 0 !important;
         max-width: 100% !important;
+        font-size: 16px !important;
     }
 
-    html body [data-testid="stSidebar"] [data-baseweb="select"] span,
-    html body [data-testid="stSidebar"] [data-baseweb="select"] div {
-        min-width: 0 !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-    }
-
-    /* Boton hamburguesa siempre visible */
-    html body button[kind="header"],
-    html body [data-testid="collapsedControl"],
-    html body [data-testid="stSidebarCollapsedControl"],
-    html body [data-testid="stSidebarCollapseButton"] {
-        position: fixed !important;
-        top: max(0.45rem, env(safe-area-inset-top)) !important;
-        left: max(0.45rem, env(safe-area-inset-left)) !important;
-        z-index: 1000001 !important;
-        pointer-events: auto !important;
-    }
-
-    /* --- Columnas apiladas --- */
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.4rem !important;
-        align-items: flex-start !important;
-        flex-wrap: wrap !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-    }
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
-    [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-        flex: 1 1 100% !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        height: auto !important;
-        padding: 0 !important;
-        margin: 0 0 0.25rem 0 !important;
-    }
-
-    /* --- Tabs: scroll horizontal --- */
-    [data-testid="stTabs"] [role="tablist"] {
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        flex-wrap: nowrap !important;
-        max-width: 100% !important;
-    }
-    [data-testid="stTabs"] [role="tab"] {
-        min-height: 44px !important;
-        white-space: nowrap !important;
-        flex: 0 0 auto !important;
-    }
-
-    /* --- Botones: tap target 44px min y sin ancho que rompa mobile --- */
-    button,
-    [data-testid="stButton"] button,
-    [data-testid="stFormSubmitButton"] button,
-    [data-testid="stDownloadButton"] button {
-        min-height: 44px !important;
-        touch-action: manipulation !important;
-        max-width: 100% !important;
-    }
-
-    /* --- Inputs: iOS zoom prevention (font-size >= 16px) --- */
-    input, textarea, select,
+    input,
+    textarea,
+    select,
     [data-baseweb="input"] input,
     [data-baseweb="select"] > div,
     [data-testid="stNumberInput"] input,
@@ -225,70 +185,111 @@
         font-size: 16px !important;
     }
 
-    /* --- Select boxes: easier to tap on mobile --- */
-    [data-baseweb="select"] {
-        min-height: 44px !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-    }
     [data-baseweb="select"] > div {
         padding: 8px 12px !important;
         min-width: 0 !important;
     }
 
-    /* --- Date/time inputs: full-width touch-friendly --- */
-    [data-testid="stDateInput"],
-    [data-testid="stTimeInput"] {
-        min-height: 44px !important;
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] div {
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    [data-testid="stButton"],
+    [data-testid="stButton"] button,
+    [data-testid="stFormSubmitButton"],
+    [data-testid="stFormSubmitButton"] button,
+    [data-testid="stDownloadButton"],
+    [data-testid="stDownloadButton"] button,
+    button {
         width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-height: 44px !important;
+        touch-action: manipulation !important;
     }
 
-    /* --- Radio/checkbox groups: vertical stacking, larger touch targets --- */
-    [data-testid="stRadio"] div[role="radiogroup"] {
-        flex-direction: column !important;
-        gap: 6px !important;
-    }
-    [data-testid="stRadio"] label {
-        min-height: 44px !important;
-        padding: 6px 10px !important;
-        align-items: center !important;
-    }
-    [data-testid="stCheckbox"] label {
-        min-height: 44px !important;
-        padding: 6px 0 !important;
-    }
-    [data-testid="stCheckbox"] {
-        min-height: 44px !important;
+    /* ========================================================
+       6) CARDS / EXPANDERS / FORMS / TABLAS
+       ======================================================== */
+    [data-testid="stExpander"],
+    [data-testid="stExpander"] details,
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"],
+    div[data-testid="stForm"],
+    div[data-testid="stForm"] > div,
+    [data-testid="stMetric"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow-x: auto !important;
     }
 
-    /* --- Metric cards: compact on mobile --- */
     [data-testid="stMetric"] {
         padding: 6px 8px !important;
     }
+
     [data-testid="stMetricLabel"] {
         font-size: 11px !important;
     }
+
     [data-testid="stMetricValue"] {
         font-size: 18px !important;
     }
 
-    /* --- DataFrames: scroll horizontal --- */
-    [data-testid="stDataFrame"],
-    [data-testid="stTable"] {
+    /* ========================================================
+       7) TABS CON SCROLL HORIZONTAL
+       ======================================================== */
+    [data-testid="stTabs"] {
+        width: 100% !important;
         max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    [data-testid="stTabs"] [role="tablist"] {
         overflow-x: auto !important;
+        overflow-y: hidden !important;
+        flex-wrap: nowrap !important;
         -webkit-overflow-scrolling: touch !important;
-    }
-
-    /* --- Imagenes responsivas --- */
-    img, .stImage img, iframe {
         max-width: 100% !important;
     }
 
-    /* Streamlit Cloud: dejar espacio al overlay inferior "Manage app" en mobile */
-    .stApp {
-        padding-bottom: max(4.5rem, env(safe-area-inset-bottom)) !important;
+    [data-testid="stTabs"] [role="tab"] {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        min-height: 44px !important;
+    }
+
+    /* ========================================================
+       8) RADIO / CHECKBOX TOUCH FRIENDLY
+       ======================================================== */
+    [data-testid="stRadio"] div[role="radiogroup"] {
+        flex-direction: column !important;
+        gap: 6px !important;
+    }
+
+    [data-testid="stRadio"] label,
+    [data-testid="stCheckbox"] label,
+    [data-testid="stCheckbox"] {
+        min-height: 44px !important;
+        padding: 6px 0 !important;
+        align-items: center !important;
+    }
+
+    /* ========================================================
+       9) MEDIOS RESPONSIVOS
+       ======================================================== */
+    img,
+    .stImage img,
+    iframe,
+    video,
+    canvas,
+    svg {
+        max-width: 100% !important;
+        height: auto !important;
     }
 }
 
