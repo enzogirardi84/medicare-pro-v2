@@ -107,6 +107,18 @@ else:
     log_event("db", "supabase_init_timeout - usando modo local")
 
 
+def _supabase_set_tenant(empresa_id: str = "") -> None:
+    """Inyecta el contexto de tenant (empresa_id) via RPC de Supabase para RLS.
+    Debe llamarse ANTES de cualquier operacion CRUD sobre tablas normalizadas."""
+    import streamlit as st
+    eid = empresa_id or st.session_state.get("u_actual", {}).get("empresa", "")
+    if eid and supabase is not None:
+        try:
+            supabase.rpc("set_tenant_context", {"empresa_id": eid}).execute()
+        except Exception:
+            pass
+
+
 def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay: float = 0.35):
     try:
         from core.feature_flags import SUPABASE_RETRY_ATTEMPTS, SUPABASE_RETRY_BASE_DELAY_SEGUNDOS
