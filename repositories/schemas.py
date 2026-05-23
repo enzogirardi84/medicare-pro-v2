@@ -6,10 +6,40 @@ garantizando que ningun dato corrupto toque Supabase.
 
 from __future__ import annotations
 
+import html
+import re
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+
+
+class SanitizedString(str):
+    """Tipo de dato que sanitiza automaticamente strings: escapa HTML, remover caracteres de control.
+    
+    Previene XSS y datos corruptos antes de que toquen la base de datos.
+    """
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> CoreSchema:
+        return core_schema.no_info_after_validator_function(cls.validate, core_schema.str_schema())
+    
+    @classmethod
+    def validate(cls, v: str) -> str:
+        if not v:
+            return v
+        v_clean = html.escape(str(v))
+        v_clean = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', v_clean)
+        return v_clean.strip()
+
+
+class EvolucionClinicaSchema(BaseModel):
+    """Evolucion clinica con sanitizacion automatica de texto."""
+    paciente_id: str
+    nota_subjetiva: SanitizedString
+    nota_objetiva: SanitizedString
+    diagnostico: Optional[SanitizedString] = None
+    firma: SanitizedString = "Sistema"
 
 
 class SignosVitalesSchema(BaseModel):
