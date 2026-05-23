@@ -4,6 +4,8 @@ Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
 from __future__ import annotations
 
+from importlib import import_module
+
 import streamlit as st
 
 from core.app_logging import log_event
