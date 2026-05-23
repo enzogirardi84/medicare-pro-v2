@@ -60,14 +60,9 @@ def insert_auditoria(datos: Dict[str, Any]) -> None:
         log_event("db_sql", f"error_insert_auditoria:{type(e).__name__}")
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[str, Any]]:
-    """Obtiene auditoría de empresa. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_op_aud_{empresa_id}_{limit}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene auditoría de empresa. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -75,13 +70,9 @@ def get_auditoria_by_empresa(empresa_id: str, limit: int = 1000) -> List[Dict[st
             "get_auditoria",
             lambda: supabase.table("auditoria_legal").select("*").eq("empresa_id", empresa_id).order("created_at", desc=True).limit(limit).execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_auditoria:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_auditoria_by_empresa: {str(e)}")
         return []
 
 
@@ -138,14 +129,9 @@ def update_estado_turno(turno_id: str, nuevo_estado: str) -> bool:
         return False
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
-    """Obtiene registros MAR. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_op_adm_{paciente_id}_{fecha_inicio}_{fecha_fin}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene registros MAR. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -153,13 +139,9 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
             "get_administraciones",
             lambda: supabase.table("administracion_med").select("*").eq("paciente_id", paciente_id).gte("created_at", fecha_inicio).lte("created_at", fecha_fin).execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_administraciones:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_administraciones_dia: {str(e)}")
         return []
 
 
@@ -179,14 +161,9 @@ def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any
         return None
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict[str, Any]]:
-    """Obtiene emergencias de un paciente. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_op_emerg_p_{paciente_id}_{limit}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene emergencias de un paciente. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -194,24 +171,15 @@ def get_emergencias_by_paciente(paciente_id: str, limit: int = 100) -> List[Dict
             "get_emergencias_paciente",
             lambda: supabase.table("emergencias").select("*").eq("paciente_id", paciente_id).order("created_at", desc=True).limit(limit).execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias_paciente:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_emergencias_by_paciente: {str(e)}")
         return []
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[str, Any]]:
-    """Obtiene emergencias de empresa. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_op_emerg_e_{empresa_id}_{limit}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene emergencias de empresa. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -219,13 +187,9 @@ def get_emergencias_by_empresa(empresa_id: str, limit: int = 100) -> List[Dict[s
             "get_emergencias",
             lambda: supabase.table("emergencias").select("*").eq("empresa_id", empresa_id).order("created_at", desc=True).limit(limit).execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_emergencias:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_emergencias_by_empresa: {str(e)}")
         return []
 
 
@@ -264,14 +228,9 @@ def update_estado_emergencia(emergencia_id: str, nuevo_estado: str, resolucion: 
         return False
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
-    """Obtiene inventario de empresa. Cache manual a prueba de fallos (TTL 300s)."""
-    cache_key = f"_sql_op_inv_{empresa_id}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene inventario de empresa. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -279,13 +238,9 @@ def get_inventario_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
             "get_inventario",
             lambda: supabase.table("inventario").select("*").eq("empresa_id", empresa_id).order("nombre").execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_inventario:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_inventario_by_empresa: {str(e)}")
         return []
 
 
@@ -304,14 +259,9 @@ def insert_inventario(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
-    """Obtiene facturación de empresa. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_op_fact_{empresa_id}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene facturación de empresa. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -319,13 +269,9 @@ def get_facturacion_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
             "get_facturacion",
             lambda: supabase.table("facturacion").select("*").eq("empresa_id", empresa_id).order("fecha_emision", desc=True).execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_facturacion:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_facturacion_by_empresa: {str(e)}")
         return []
 
 
@@ -344,14 +290,9 @@ def insert_facturacion(datos: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return None
 
 
+@st.cache_data(ttl=120, show_spinner=False)
 def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
-    """Obtiene balance de empresa. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_op_bal_{empresa_id}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached.get("ts", 0) < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
+    """Obtiene balance de empresa. Cache @st.cache_data (120s)."""
     if not _ok():
         return []
     try:
@@ -359,13 +300,9 @@ def get_balance_by_empresa(empresa_id: str) -> List[Dict[str, Any]]:
             "get_balance",
             lambda: supabase.table("balance").select("*").eq("empresa_id", empresa_id).order("created_at", desc=True).execute(),
         )
-        data = response.data if response and response.data else []
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        _evict_sql_cache()
-        return data
+        return response.data if response and response.data else []
     except Exception as e:
         log_event("db_sql", f"error_get_balance:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_balance_by_empresa: {str(e)}")
         return []
 
 
