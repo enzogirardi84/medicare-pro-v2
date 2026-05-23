@@ -91,12 +91,12 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Diagnosticos": "\u2705 Diagnosticos",
     "APS / Dispensario": "\U0001F3E5 APS / Dispensario",
     # Nuevos modulos 2026-05-14
-    "Vacunacion": "Vacunacion",
-    "Estadisticas": "Estadisticas",
+    "Vacunacion": "💉 Vacunacion",
+    "Estadisticas": "📊 Estadisticas",
     # "Factura Electronica": "Factura Electronica",  # ocultado
-    "Turnos Online": "Turnos Online",
+    "Turnos Online": "📅 Turnos Online",
     "Chatbot IA": "🤖 Chatbot",
-    "Calc. Dosis Pediatricas": "Calc. Dosis",
+    "Calc. Dosis Pediatricas": "💊 Calc. Dosis",
     "Reportes Financieros": "\U0001F4B0 Financiero",
     "Admin Feature Flags": "⚙️ Feature Flags",
     "Self-Healing IA": "🛠 Self-Healing",
