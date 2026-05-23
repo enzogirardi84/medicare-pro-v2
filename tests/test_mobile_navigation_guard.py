@@ -10,10 +10,9 @@ def test_mobile_nav_usa_selector_estable_para_evitar_vista_en_blanco():
     end = source.index("def _get_render_fn", start)
     body = source[start:end]
 
-    assert "mc-module-linkbar" in body
-    assert 'href="?login=1&modulo=' in body
-    assert "st.selectbox(" not in body
-    assert "_render_modulos_sub(" not in body
+    assert "mc-module-linkbar" not in body
+    assert 'href="?login=1&modulo=' not in body
+    assert "_render_modulos_sub(" in body
     query_nav = source[source.index("def procesar_query_params_navegacion"):source.index("def resolve_menu_for_role")]
     assert "\n        st.rerun()" not in query_nav
 

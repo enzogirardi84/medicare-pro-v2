@@ -4,10 +4,6 @@ Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
 from __future__ import annotations
 
-from html import escape as html_escape
-from importlib import import_module
-from urllib.parse import quote
-
 import streamlit as st
 
 from core.app_logging import log_event
@@ -202,25 +198,6 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     opciones_menu = [m for m in menu if m in menu_set]
     if not opciones_menu:
         return vista_actual
-    enlaces = []
-    for modulo in opciones_menu:
-        label = (view_nav_labels or {}).get(modulo, modulo)
-        active_cls = " is-active" if modulo == vista_actual else ""
-        enlaces.append(
-            '<a class="mc-module-link'
-            + active_cls
-            + '" href="?login=1&modulo='
-            + quote(str(modulo))
-            + '" target="_self">'
-            + html_escape(str(label))
-            + "</a>"
-        )
-    st.markdown(
-        '<nav class="mc-module-linkbar" aria-label="Modulos">'
-        + "".join(enlaces)
-        + "</nav>",
-        unsafe_allow_html=True,
-    )
 
     cats_ok = categorias_con_modulos_en_menu(menu_set)
     if not cats_ok:
@@ -256,7 +233,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
                 if m in menu_set
             ] or mods_in_cat
             if todos:
-                st.caption("Usa el selector superior para cambiar de modulo.")
+                _render_modulos_sub(todos, vista_actual, view_nav_labels)
 
     return st.session_state.get("modulo_actual", vista_actual)
 
