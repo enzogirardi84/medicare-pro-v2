@@ -474,15 +474,18 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
     rapida["Dada"] = False
     rapida["Hora_real"] = rapida["Hora programada"].map(_default_hora_real_cortina)
 
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     ed_rap = st.data_editor(
         rapida, hide_index=True, width='stretch',
         disabled=["Hora programada", "Medicamento", "Via", "Frecuencia"],
         column_config={
             "Hora programada": st.column_config.TextColumn("Prog.", width="small"),
-            "Medicamento": st.column_config.TextColumn("Medicación", width="medium"),
+            "Medicamento": st.column_config.TextColumn("Medicación", width="medium" if not es_movil else "large"),
             "Via": st.column_config.TextColumn("Vía", width="small"),
             "Frecuencia": st.column_config.TextColumn("Frec.", width="small"),
-            "Dada": st.column_config.CheckboxColumn("Dada", help="Solo si administraste esta dosis en esta franja.", default=False),
+            "Dada": st.column_config.CheckboxColumn("✓", help="Solo si administraste esta dosis en esta franja.", default=False, width="small"),
             "Hora_real": st.column_config.TextColumn("Hora real", max_chars=8, width="small"),
         },
         key=f"cortina_rapida_{paciente_sel}_{fecha_hoy}",

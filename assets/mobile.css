@@ -298,12 +298,55 @@
         align-items: center !important;
     }
 
+<<<<<<< HEAD
     img,
     .stImage img,
     iframe,
     video,
     canvas,
     svg {
+=======
+    /* --- Data editor: touch-friendly cells & checkboxes --- */
+    [data-testid="stDataEditor"] td,
+    [data-testid="stDataEditor"] th {
+        min-height: 44px !important;
+        padding: 4px 6px !important;
+        font-size: 14px !important;
+    }
+    [data-testid="stDataEditor"] input[type="checkbox"] {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        min-height: 22px !important;
+        transform: scale(1.3) !important;
+        cursor: pointer !important;
+    }
+    [data-testid="stDataEditor"] {
+        max-width: 100vw !important;
+        overflow-x: auto !important;
+    }
+
+    /* --- Metric cards: compact on mobile --- */
+    [data-testid="stMetric"] {
+        padding: 6px 8px !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 11px !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 18px !important;
+    }
+
+    /* --- DataFrames: scroll horizontal --- */
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"] {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* --- Imagenes responsivas --- */
+    img, .stImage img, iframe {
         max-width: 100% !important;
         height: auto !important;
     }
