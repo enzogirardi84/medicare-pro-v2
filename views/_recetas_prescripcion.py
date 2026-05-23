@@ -203,8 +203,11 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     except (ValueError, TypeError):
                         pass
             if _peso_paciente and med_final_preview and med_final_preview != "-- Seleccionar del vademecum --" and tipo_indicacion == "Medicacion":
-                from views.calculadora_dosis import _normalizar_medicamento
-                _med_base, _conc = _normalizar_medicamento(med_final_preview)
+                try:
+                    from views.calculadora_dosis import _normalizar_medicamento
+                    _med_base, _conc = _normalizar_medicamento(med_final_preview)
+                except ImportError:
+                    _med_base, _conc = med_final_preview, ""
                 _vademecum_dict = _completar_con_vademecum()
                 _info = _vademecum_dict.get(_med_base, {})
                 if isinstance(_info, str):
