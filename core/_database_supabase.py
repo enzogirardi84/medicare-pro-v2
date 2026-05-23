@@ -199,6 +199,17 @@ def _cargar_supabase_tenant(tenant_key: str):
     return None
 
 
+def _inject_rls_context(empresa_id: str = "") -> None:
+    """Inyecta contexto multi-tenant via variable de sesion PostgreSQL para RLS."""
+    import streamlit as st
+    eid = empresa_id or st.session_state.get("u_actual", {}).get("empresa", "")
+    if eid and supabase is not None:
+        try:
+            supabase.rpc("set_tenant_context", {"empresa_id": eid}).execute()
+        except Exception:
+            pass
+
+
 def _upsert_supabase_monolito(data: dict):
     tbl = supabase.table("medicare_db")
     payload = compress_payload(data)
@@ -212,6 +223,7 @@ def _upsert_supabase_monolito(data: dict):
 
 
 def _upsert_supabase_tenant(tenant_key: str, data: dict):
+    _inject_rls_context(tenant_key)
     tbl = supabase.table("medicare_db")
     payload = compress_payload(data)
     try:
