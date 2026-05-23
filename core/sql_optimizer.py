@@ -307,8 +307,12 @@ class SQLOptimizer:
         Returns:
             (sql_query, params_tuple)
         """
-        if not isinstance(table, str) or not table.replace("_", "").isalnum():
-            raise ValueError(f"Nombre de tabla invalido: {table}")
+        _ALLOWED_TABLES = {"pacientes", "evoluciones", "indicaciones", "estudios", "signos_vitales",
+                           "cuidados_enfermeria", "consentimientos", "pediatria", "escalas_clinicas",
+                           "auditoria_legal", "turnos", "emergencias", "inventario", "facturacion",
+                           "balance", "checkin_asistencia", "usuarios", "empresas", "administracion_med"}
+        if table not in _ALLOWED_TABLES:
+            raise ValueError(f"Tabla no permitida: {table}")
         for col in (columns or []):
             if not isinstance(col, str) or not col.replace("_", "").isalnum():
                 raise ValueError(f"Nombre de columna invalido: {col}")
@@ -359,8 +363,12 @@ class SQLOptimizer:
         """
         if not values:
             raise ValueError("No values provided for batch insert")
-        if not isinstance(table, str) or not table.replace("_", "").isalnum():
-            raise ValueError(f"Nombre de tabla invalido: {table}")
+        _ALLOWED_TABLES = {"pacientes", "evoluciones", "indicaciones", "estudios", "signos_vitales",
+                           "cuidados_enfermeria", "consentimientos", "pediatria", "escalas_clinicas",
+                           "auditoria_legal", "turnos", "emergencias", "inventario", "facturacion",
+                           "balance", "checkin_asistencia", "usuarios", "empresas", "administracion_med"}
+        if table not in _ALLOWED_TABLES:
+            raise ValueError(f"Tabla no permitida: {table}")
         for col in (columns or []):
             if not isinstance(col, str) or not col.replace("_", "").isalnum():
                 raise ValueError(f"Nombre de columna invalido: {col}")

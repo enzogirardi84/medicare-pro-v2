@@ -114,7 +114,7 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
                     vac_db.append(registro)
                     guardar_datos(spinner=True)
                     queue_toast(f"{vacuna} - {dosis} registrada.")
-                    log_event("vac_guardar", f"{vacuna} {dosis} - {paciente_sel}")
+                    log_event("vac_guardar", f"{vacuna} {dosis}")
                     st.rerun()
 
     # ============ TAB: ESQUEMA ============

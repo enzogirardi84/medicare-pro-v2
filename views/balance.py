@@ -90,8 +90,10 @@ def render_balance(paciente_sel, user):
             )
             from core.database import _trim_db_list
             _trim_db_list("balance_db", 500)
-            guardar_datos(spinner=True)
-            queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
+            if guardar_datos(spinner=True):
+                queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
+            else:
+                st.error("Error al guardar el balance. Revisá la conexión.")
             st.rerun()
 
     blp = get_patient_records("balance_db", paciente_sel)

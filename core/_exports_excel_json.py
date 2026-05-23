@@ -40,7 +40,7 @@ def build_patient_excel_bytes(session_state, paciente_sel):
     _total_records = sum(len(v) for v in _all_sections.values())
     _non_empty = sum(1 for v in _all_sections.values() if v)
     from core.app_logging import log_event
-    log_event("excel_export", f"Paciente={paciente_sel[:40]} secciones={len(_all_sections)} no_vacias={_non_empty} total_registros={_total_records}")
+    log_event("excel_export", f"secciones={len(_all_sections)} no_vacias={_non_empty} total_registros={_total_records}")
 
     # Fallback: si patient matching retorno vacio, leer directo de session state
     _DIRECT_KEYS = [

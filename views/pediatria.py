@@ -241,8 +241,10 @@ def render_pediatria(paciente_sel, user):
             })
             from core.database import _trim_db_list
             _trim_db_list("pediatria_db", 500)
-            guardar_datos(spinner=True)
-            queue_toast("Guardado correctamente.")
+            if guardar_datos(spinner=True):
+                queue_toast("Guardado correctamente.")
+            else:
+                st.error("Error al guardar. Revisá la conexión.")
             st.rerun()
 
     if ped:

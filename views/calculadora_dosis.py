@@ -964,7 +964,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 st.markdown("### Observaciones")
                 obs = res["observaciones"] or "Sin observaciones."
                 st.info(obs)
-                log_event("calculadora_dosis", f"MANUAL:{res['medicamento']} - {peso}kg - {paciente_sel}")
+                log_event("calculadora_dosis", f"MANUAL:{res['medicamento']} - {peso}kg")
         else:
             intervalo_sel = st.session_state.get("int_selector_val", None)
             resultado = calcular_dosis(medicamento, peso, _TODOS_MEDICAMENTOS,
@@ -1001,7 +1001,7 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                 log_event("calculadora_dosis", f"error: ALERTA - {resultado['alerta']}")
                 st.error(f"ALERTA: {resultado['alerta']}", icon="🚨")
 
-            log_event("calculadora_dosis", f"{medicamento} - {peso}kg - {paciente_sel}")
+            log_event("calculadora_dosis", f"{medicamento} - {peso}kg")
 
     # Informacion de seguridad
     with st.expander("Informacion de seguridad", expanded=False):

@@ -179,8 +179,10 @@ def render_estudios(paciente_sel, user, rol=None):
                     log_event("estudios_sql", f"error_dual_write:{type(e).__name__}")
                 # ----------------------------------
                 
-                guardar_datos(spinner=True)
-                queue_toast("Estudio guardado correctamente.")
+                if guardar_datos(spinner=True):
+                    queue_toast("Estudio guardado correctamente.")
+                else:
+                    st.error("Error al guardar el estudio. Revisá la conexión.")
                 st.rerun()
     else:
         st.caption("La carga de estudios queda deshabilitada para este rol.")

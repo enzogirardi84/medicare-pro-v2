@@ -593,7 +593,7 @@ async def create_patient(
         actualizado_en=None
     )
     
-    log_event("api", f"create_patient:user:{current_user['username']}:dni:{patient.dni}")
+    log_event("api", f"create_patient:user:{current_user['username']}")
     
     return new_patient
 

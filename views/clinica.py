@@ -157,7 +157,7 @@ def render_clinica(paciente_sel, user=None):
 
     alergias = str(det.get("alergias", "")).strip()
     if alergias:
-        log_event("clinica", f"alergias_mostradas: {alergias[:80]}")
+        log_event("clinica", "alergias_mostradas")
         st.error(f"Alergias registradas: {alergias}")
 
     vits = get_patient_records("vitales_db", paciente_sel)

@@ -89,7 +89,7 @@ def render_factura_electronica(paciente_sel, mi_empresa, user, rol):
                     fe_db.append(registro)
                     guardar_datos(spinner=True)
                     queue_toast(f'{tipo} emitido por ${monto:,.2f}.')
-                    log_event('factura_electronica_emitir', f'{tipo} ${monto} - {paciente_sel}')
+                    log_event('factura_electronica_emitir', f'{tipo} ${monto}')
                     st.rerun()
 
     with tab_historial:
