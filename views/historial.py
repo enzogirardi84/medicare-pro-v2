@@ -93,7 +93,7 @@ def render_historial(paciente_sel: str, user=None) -> None:
 
     alergias = str(detalles.get("alergias", "")).strip()
     if alergias:
-        log_event("historial", f"alergias_mostradas: {alergias[:80]}")
+        log_event("historial", "alergias_mostradas")
         st.error(f" Alergias: {alergias}")
     patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "")).strip()
     if patologias:

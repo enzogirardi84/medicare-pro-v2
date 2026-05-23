@@ -178,7 +178,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             "observaciones": metodo # Guardamos el método en observaciones
                         }
                         insert_facturacion(datos_sql)
-                        log_event("facturacion_sql_insert", f"Paciente: {paciente_uuid}")
+                        log_event("facturacion_sql_insert", "factura_insertada")
                 except Exception as e:
                     log_event("error_facturacion_sql", str(e))
 

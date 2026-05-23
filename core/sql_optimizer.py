@@ -307,7 +307,11 @@ class SQLOptimizer:
         Returns:
             (sql_query, params_tuple)
         """
-        # Seleccionar columnas específicas
+        if not isinstance(table, str) or not table.replace("_", "").isalnum():
+            raise ValueError(f"Nombre de tabla invalido: {table}")
+        for col in (columns or []):
+            if not isinstance(col, str) or not col.replace("_", "").isalnum():
+                raise ValueError(f"Nombre de columna invalido: {col}")
         cols_str = ", ".join(columns) if columns else "*"
         
         sql = f"SELECT {cols_str} FROM {table}"
@@ -355,6 +359,11 @@ class SQLOptimizer:
         """
         if not values:
             raise ValueError("No values provided for batch insert")
+        if not isinstance(table, str) or not table.replace("_", "").isalnum():
+            raise ValueError(f"Nombre de tabla invalido: {table}")
+        for col in (columns or []):
+            if not isinstance(col, str) or not col.replace("_", "").isalnum():
+                raise ValueError(f"Nombre de columna invalido: {col}")
         
         cols_str = ", ".join(columns)
         

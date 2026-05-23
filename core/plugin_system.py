@@ -448,9 +448,13 @@ class ExamplePlugin(MedicarePlugin):
         
         log_event("plugin", f"Example plugin: Patient {patient_name} created")
         
-        # Aquí podrías enviar webhook, notificación, etc.
         if self.webhook_url:
             try:
+                from urllib.parse import urlparse
+                _parsed = urlparse(self.webhook_url)
+                if _parsed.scheme not in ("https",):
+                    log_event("plugin_error", f"Webhook URL debe ser HTTPS: {self.webhook_url[:40]}")
+                    return None
                 import requests
                 requests.post(
                     self.webhook_url,
