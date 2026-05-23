@@ -1,7 +1,41 @@
 from __future__ import annotations
 
+import base64
 import copy
 import hashlib
+import random
+import time as time_module
+from typing import Any, Callable
+
+
+def with_auto_healing(max_retries: int = 4, base_delay: float = 0.1):
+    """Decorador de resiliencia de red con Backoff Exponencial y Jitter.
+    
+    Intercepta micro-cortes de red de Supabase y reintenta automaticamente
+    con backoff exponencial + jitter para no saturar el pool de conexiones.
+    
+    Uso:
+        @with_auto_healing()
+        def operacion_critica():
+            ...
+    """
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError, OSError) as e:
+                    retries += 1
+                    if retries == max_retries:
+                        log_event("auto_healing", f"critico: capacidad agotada en {func.__name__}:{type(e).__name__}")
+                        raise
+                    delay = (base_delay * (2 ** retries)) + random.uniform(0, 0.1)
+                    log_event("auto_healing", f"reintentar:{func.__name__}:intento={retries}:delay={delay:.2f}s")
+                    time_module.sleep(delay)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 import time
 from contextlib import nullcontext
 from typing import Any, Optional

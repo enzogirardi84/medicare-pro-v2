@@ -59,6 +59,27 @@ class SignosVitalesSchema(BaseModel):
         return v
 
 
+from core.security import FieldEncryptor
+
+
+class EncryptedEvolucionSchema(BaseModel):
+    """Evolucion clinica con cifrado automatico de campos sensibles.
+    Los campos nota_se subjetiva/objetiva se cifran en memoria antes de persistir.
+    """
+    paciente_id: str = Field(..., min_length=1)
+    diagnostico_cie10: str = Field(..., max_length=10)
+    nota_subjetiva: str = Field(..., min_length=1)
+    nota_objetiva: str = Field(default="")
+    firma: str = Field(default="Sistema")
+    
+    @field_validator('nota_subjetiva', 'nota_objetiva')
+    @classmethod
+    def cifrar_campo_sensible(cls, v: str) -> str:
+        if not v:
+            return v
+        return FieldEncryptor.encrypt_field(v)
+
+
 class PacienteSchema(BaseModel):
     """Datos minimos para creacion de paciente."""
     nombre_completo: str = Field(..., min_length=2, max_length=200)
