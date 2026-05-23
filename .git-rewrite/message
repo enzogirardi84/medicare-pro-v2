@@ -1,0 +1,5 @@
+perf(core): reducir saturación en guardado y carga concurrente
+
+Introduce throttle para guardados no forzados, parametriza reintentos de Supabase y ajusta límites del sidebar para mejorar fluidez con múltiples usuarios simultáneos.
+
+Made-with: Cursor
