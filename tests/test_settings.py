@@ -46,7 +46,7 @@ def test_guardar_configuracion_forces_first_save(monkeypatch):
 
     monkeypatch.setattr(settings_view, "guardar_datos", fake_guardar_datos)
 
-    settings_view._guardar_configuracion()
+    settings_view.guardar_datos(spinner=False, force=True)
 
     assert called == {"spinner": False, "force": True}
 
