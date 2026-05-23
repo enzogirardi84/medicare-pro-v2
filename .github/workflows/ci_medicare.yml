@@ -1,0 +1,46 @@
+name: CI Medicare PRO
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest bandit black
+
+      - name: Security lint (Bandit)
+        run: bandit -r core/ services/ repositories/ -f txt -x "*/tests/*,*/_db_sql_*.py" --skip B101,B311,B403,B404,B603 --quiet || true
+
+      - name: Format check (Black)
+        run: black --check --diff core/ services/ repositories/ views/ || true
+
+      - name: Syntax check (py_compile)
+        run: |
+          find . -name "*.py" -not -path "./.git/*" -not -path "./tests/*" -exec python -m py_compile {} \;
+
+      - name: Run tests
+        run: python -m pytest tests/ -q --tb=short -x
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "::warning::Tests failed. Check the logs above."
