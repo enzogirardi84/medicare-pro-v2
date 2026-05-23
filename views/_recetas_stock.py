@@ -11,6 +11,7 @@ import time
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.utils import ahora, registrar_auditoria_legal
