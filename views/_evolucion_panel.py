@@ -237,10 +237,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 except Exception as exc:
                     log_event("evolucion_panel", f"auditoria_error:{type(exc).__name__}:{exc}")
 
-                try:
-                    guardar_datos(spinner=True)
-                except Exception as exc:
-                    log_event("evolucion_panel", f"guardar_datos_error:{type(exc).__name__}:{exc}")
+                if not guardar_datos(spinner=True):
+                    st.error("Error al guardar la evolución. Revisá la conexión e intentá de nuevo.")
+                    st.stop()
 
                 try:
                     paciente_nombre = paciente_sel

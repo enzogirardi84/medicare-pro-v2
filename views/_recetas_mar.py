@@ -228,7 +228,9 @@ def registrar_administracion_dosis(
     from core.database import _trim_db_list
     _trim_db_list("administracion_med_db", 2000)
     if not batch:
-        guardar_datos(spinner=True)
+        if not guardar_datos(spinner=True):
+            log_event("recetas_mar", "error: guardar administracion fallo")
+            st.error("Error al registrar la administración. Revisá la conexión.")
 
     detalle_audit = (
         f"{nombre_med} | Programada: {slot} | Hora administración/registro: {hora_str} | Estado: {estado_sel}"

@@ -573,6 +573,8 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                 pb = _fijar_cache_y_hash(data_local)
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_local:{len(pb)}")
+                st.session_state.setdefault("_db_version", time.time_ns())
+                st.session_state["_db_version_last_seen"] = st.session_state["_db_version"]
                 return copy.deepcopy(data_local)
             from core.utils import DEFAULT_ADMIN_USER
             _boot = _estructura_vacia_por_clave()
@@ -590,6 +592,8 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
             if data is not None:
                 pb = _fijar_cache_y_hash(data)
                 st.session_state["_modo_offline"] = False
+                st.session_state.setdefault("_db_version", time.time_ns())
+                st.session_state["_db_version_last_seen"] = st.session_state["_db_version"]
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_nube:{len(pb)}")
                 return copy.deepcopy(data)
@@ -795,6 +799,12 @@ def _guardar_datos_ejecutar_core():
     error_nube = ""
     if supabase is not None:
         try:
+            current_version = st.session_state.get("_db_version", 0)
+            expected_version = st.session_state.get("_db_version_last_seen", current_version)
+            if current_version != expected_version:
+                log_event("db", f"conflicto_version: actual={current_version}, esperada={expected_version}")
+                st.warning("Otro usuario guardó datos mientras trabajabas. Recargá la página para ver los cambios actualizados.")
+                return
             if shard and not sesion_usa_monolito_legacy():
                 u = st.session_state.get("u_actual") or {}
                 tk = tenant_key_normalizado(str(u.get("empresa", "") or ""))
@@ -805,6 +815,8 @@ def _guardar_datos_ejecutar_core():
                 _upsert_supabase_tenant(tk, data)
             else:
                 _upsert_supabase_monolito(data)
+            st.session_state["_db_version"] = current_version + 1
+            st.session_state["_db_version_last_seen"] = current_version + 1
             guardado_nube = True
             st.session_state["_modo_offline"] = False
         except Exception as e:

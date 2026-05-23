@@ -356,15 +356,17 @@ def render_clinica(paciente_sel, user=None):
                 except Exception as _e_ca:
                     log_event("clinica", f"clinical_alerts_error:{type(_e_ca).__name__}:{_e_ca}")
 
-                guardar_datos(spinner=True)
+                if not guardar_datos(spinner=True):
+                    st.error("Error al guardar signos vitales. Revisá la conexión e intentá de nuevo.")
+                else:
+                    if hay_critico:
+                        queue_toast("⚠️ Signos vitales guardados — revisar valores CRÍTICOS.")
+                    elif hay_alerta:
+                        queue_toast("Signos vitales guardados — algunos valores fuera de rango.")
+                    else:
+                        queue_toast("Signos vitales guardados correctamente.")
                 st.session_state.pop(f"_ce_secs_{paciente_sel}", None)
                 st.session_state.pop(f"_ce_ctx_{paciente_sel}", None)
-                if hay_critico:
-                    queue_toast("⚠️ Signos vitales guardados — revisar valores CRÍTICOS.")
-                elif hay_alerta:
-                    queue_toast("Signos vitales guardados — algunos valores fuera de rango.")
-                else:
-                    queue_toast("Signos vitales guardados correctamente.")
                 st.rerun()
 
     if vits:
@@ -377,8 +379,10 @@ def render_clinica(paciente_sel, user=None):
                 st.session_state["vitales_db"].remove(vits[-1])
             except ValueError:
                 pass  # Intencional: item ya fue removido por otra operación concurrente
-            guardar_datos(spinner=True)
-            queue_toast("Registro eliminado.")
+            if not guardar_datos(spinner=True):
+                st.error("Error al eliminar el registro.")
+            else:
+                queue_toast("Registro eliminado.")
             st.rerun()
         limite = seleccionar_limite_registros(
             "Controles a mostrar",
