@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import streamlit as st
 
 from core.app_logging import log_event
+from services.telemetria_service import track_time
 from core._db_sql_pacientes import (
     get_pacientes_by_empresa as _get_pacientes_by_empresa,
     get_pacientes_globales as _get_pacientes_globales,
