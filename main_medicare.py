@@ -362,7 +362,17 @@ paciente_sel = render_patient_selector(
     mi_empresa, rol, obtener_pacientes_visibles, mapa_detalles_pacientes
 ) or st.session_state.get("paciente_actual")
 
-vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
+# Navegacion en cortina (overlay full-page)
+if st.session_state.get("_show_nav_cortina", False):
+    with st.container(border=True):
+        st.markdown("## 📋 Navegación de módulos")
+        vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
+        if st.button("⬅️ Cerrar navegación", key="nav_cortina_close", use_container_width=True):
+            st.session_state["_show_nav_cortina"] = False
+            st.rerun()
+    st.stop()
+else:
+    vista_actual = render_module_nav(menu, vista_actual, VIEW_NAV_LABELS, menu_set)
 
 _modulo_prev = st.session_state.get("_modulo_anterior_log")
 if _modulo_prev and _modulo_prev != vista_actual:
