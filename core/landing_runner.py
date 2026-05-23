@@ -309,6 +309,28 @@ def render_publicidad_y_detener() -> None:
         unsafe_allow_html=True,
     )
 
+    st.markdown(
+        """
+        <style>
+        @media (max-width: 768px) {
+            [data-testid="stSidebarCollapsedControl"],
+            [data-testid="collapsedControl"],
+            [data-testid="stExpandSidebarButton"],
+            [data-testid="stSidebarCollapseButton"],
+            button[kind="headerNoPadding"],
+            [aria-label="Open sidebar"],
+            [aria-label="Close sidebar"] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Sidebar nativo para mobile: renderizar algo para que el sidebar DOM exista
     # y Streamlit muestre la hamburguesa nativa en mobile
     with st.sidebar:

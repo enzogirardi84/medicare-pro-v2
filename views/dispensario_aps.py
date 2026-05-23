@@ -25,14 +25,12 @@ from core.app_logging import log_event
 from core.database import guardar_json_db
 from core.view_helpers import aviso_sin_paciente
 from core.utils import puede_accion, cargar_json_asset
-from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_component
-
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass
+from core.export_utils import pdf_output_bytes, sanitize_filename_component
+from views._aps_pdf import (
+    FPDF_DISPONIBLE,
+    generar_pdf_historial_paciente,
+    generar_pdf_reporte_aps,
+)
 
 
 def _get_paciente_id_visual(paciente_sel):
@@ -702,112 +700,6 @@ def _tab_turnos(paciente_sel, user, centro_salud_id):
         st.caption("Sin turnos ni llegadas registradas hoy.")
 
 
-def _generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_id):
-    """Genera un PDF portrait con diseño profesional del historial APS del paciente."""
-    if not FPDF_DISPONIBLE:
-        return None
-
-    def _clean(val):
-        """Normaliza texto para FPDF (latin-1) reemplazando caracteres problemáticos."""
-        if val is None:
-            return ""
-        val = str(val)
-        replacements = {
-            "\u2014": "-", "\u2013": "-", "\u2012": "-",
-            "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
-            "\u2022": "*", "\u2026": "...", "\u00b7": "-",
-            "\u200b": "", "\ufeff": "",
-        }
-        for k, v in replacements.items():
-            val = val.replace(k, v)
-        return safe_text(val)
-
-    class HistorialPDF(FPDF):
-        def header(self):
-            self.set_fill_color(25, 55, 95)
-            self.rect(0, 0, 210, 18, "F")
-            self.set_font("Arial", "B", 16)
-            self.set_text_color(255, 255, 255)
-            self.cell(0, 10, _clean("HISTORIAL APS  |  MEDICARE PRO"), ln=True, align="C")
-            self.set_font("Arial", "", 9)
-            self.cell(0, 5, _clean(f"Centro: {centro_salud_id}  |  Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"), ln=True, align="C")
-            self.ln(2)
-
-        def footer(self):
-            self.set_y(-15)
-            self.set_font("Arial", "I", 8)
-            self.set_text_color(128, 128, 128)
-            self.cell(0, 10, _clean(f"Pagina {self.page_no()} / {{nb}}"), align="C")
-
-    pdf = HistorialPDF(orientation="P")
-    pdf.alias_nb_pages()
-    pdf.add_page()
-
-    # Info box del paciente
-    pdf.set_fill_color(240, 245, 250)
-    pdf.set_draw_color(200, 210, 220)
-    pdf.rect(10, 28, 190, 22, "DF")
-    pdf.set_xy(14, 30)
-    pdf.set_font("Arial", "B", 12)
-    pdf.set_text_color(25, 55, 95)
-    pdf.cell(0, 6, _clean(f"Paciente: {paciente_id}"), ln=True)
-    pdf.set_xy(14, 37)
-    pdf.set_font("Arial", "", 10)
-    pdf.set_text_color(60, 60, 60)
-    pdf.cell(0, 5, _clean(f"Periodo del reporte: {fd}  al  {fh}"), ln=True)
-    pdf.ln(10)
-
-    if not registros:
-        pdf.set_font("Arial", "", 11)
-        pdf.set_text_color(180, 60, 60)
-        pdf.cell(0, 10, _clean("No hay registros para el filtro y periodo seleccionados."), ln=True, align="C")
-        return pdf_output_bytes(pdf)
-
-    # Summary badge
-    pdf.set_font("Arial", "B", 10)
-    pdf.set_text_color(25, 55, 95)
-    pdf.cell(0, 6, _clean(f"Total de registros: {len(registros)}"), ln=True)
-    pdf.ln(3)
-
-    # Records
-    for i, item in enumerate(registros[:300], 1):
-        y_start = pdf.get_y()
-        if y_start > 260:
-            pdf.add_page()
-            y_start = pdf.get_y()
-
-        # Alternating background
-        if i % 2 == 0:
-            pdf.set_fill_color(248, 250, 252)
-            pdf.rect(10, y_start, 190, 22, "F")
-
-        pdf.set_xy(14, y_start + 1)
-        pdf.set_font("Arial", "B", 9)
-        pdf.set_text_color(25, 55, 95)
-        pdf.cell(0, 5, _clean(f"#{i}  [{item['tipo']}]  {item['titulo']}"), ln=True)
-
-        pdf.set_xy(14, y_start + 6)
-        pdf.set_font("Arial", "", 8)
-        pdf.set_text_color(80, 80, 80)
-        fecha_str = item.get("fecha", "-")
-        registrado = item.get("registrado_por", "-")
-        pdf.cell(0, 4, _clean(f"Fecha: {fecha_str}    |    Registrado por: {registrado}"), ln=True)
-
-        detalle = item.get("detalle", "")
-        if detalle and detalle.strip():
-            pdf.set_xy(14, y_start + 10)
-            pdf.set_font("Arial", "", 8)
-            pdf.set_text_color(60, 60, 60)
-            pdf.multi_cell(182, 4, _clean(f"Detalle: {detalle}"))
-
-        # Separator line
-        pdf.set_draw_color(200, 210, 220)
-        pdf.line(10, y_start + 22, 200, y_start + 22)
-        pdf.set_xy(10, y_start + 22)
-
-    return pdf_output_bytes(pdf)
-
-
 def _tab_historial_aps(paciente_sel, user, centro_salud_id):
     st.subheader("Historial APS del Dispensario")
     st.caption("Todos los movimientos del paciente dentro del centro de salud.")
@@ -965,7 +857,7 @@ def _tab_historial_aps(paciente_sel, user, centro_salud_id):
         return
 
     if FPDF_DISPONIBLE:
-        pdf_bytes = _generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_id)
+        pdf_bytes = generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_id)
         if pdf_bytes:
             st.download_button(
                 "📄 Descargar historial PDF",
@@ -1428,28 +1320,6 @@ def _tab_visitas(paciente_sel, user, centro_salud_id):
         _guardar_con_feedback("visitas_domiciliarias_aps_db", payload, max_items=500)
 
 
-def _generar_pdf_reporte_aps(titulo, registros, periodo, centro_salud_id):
-    """Genera un PDF landscape genérico con los registros del reporte APS."""
-    if not FPDF_DISPONIBLE:
-        return None
-    pdf = FPDF(orientation="L")
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, safe_text(titulo), ln=True, align="C")
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 8, safe_text(f"Periodo: {periodo}  |  Centro: {centro_salud_id}"), ln=True, align="C")
-    pdf.ln(4)
-    for i, r in enumerate(registros[:250], 1):
-        pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 6, safe_text(f"Registro #{i}"), ln=True)
-        pdf.set_font("Arial", "", 8)
-        for k, v in sorted(r.items()):
-            line = f"  {k}: {v}"
-            pdf.multi_cell(0, 5, safe_text(line))
-        pdf.ln(1)
-    return pdf_output_bytes(pdf)
-
-
 def _tab_reportes(paciente_sel, user, centro_salud_id):
     st.subheader("Reportes APS")
     st.caption("Indicadores útiles para coordinación, municipio o centro de salud.")
@@ -1525,7 +1395,7 @@ def _tab_reportes(paciente_sel, user, centro_salud_id):
         df_reporte = pd.DataFrame(reporte_registros).convert_dtypes()
         st.dataframe(df_reporte, width='stretch', hide_index=True)
         if FPDF_DISPONIBLE:
-            pdf_bytes = _generar_pdf_reporte_aps(
+            pdf_bytes = generar_pdf_reporte_aps(
                 f"Reporte APS — {reporte_tipo}",
                 reporte_registros,
                 reporte_periodo,

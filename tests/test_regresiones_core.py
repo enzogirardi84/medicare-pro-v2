@@ -16,6 +16,7 @@ from core.utils import (
     normalizar_usuario_sistema,
     obtener_modulos_permitidos,
     obtener_pacientes_visibles,
+    logins_clave_default_superadmin,
     preparar_imagen_clinica_bytes,
     rol_ve_datos_todas_las_clinicas,
     estado_pacientes_sql,
@@ -37,6 +38,22 @@ def test_password_hash_y_compatibilidad_legacy():
     assert validar_password_guardado(hashed, password) is True
     assert validar_password_guardado(password, password) is True
     assert validar_password_guardado(hashed, "OtraClave999") is False
+
+
+def test_login_emergencia_incluye_enzogirardi():
+    logins = logins_clave_default_superadmin()
+
+    assert "admin" in logins
+    assert "enzogirardi" in logins
+
+
+def test_emergency_password_lee_variable_entorno(monkeypatch):
+    import core.utils as utils
+
+    monkeypatch.setenv("SUPERADMIN_EMERGENCY_PASSWORD", "clave-local")
+    monkeypatch.setattr(utils.st, "secrets", {}, raising=False)
+
+    assert utils.obtener_emergency_password() == "clave-local"
 
 
 def test_normalizar_usuario_recupera_rol_clinico_legacy():

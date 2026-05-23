@@ -144,7 +144,8 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
     from core.ui_liviano import headers_sugieren_equipo_liviano
 
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
-    habilitar = es_movil and nombre_vista in _VISTAS_COMPACTAS_MOVIL
+    vista_compactable = nombre_vista in _VISTAS_COMPACTAS_MOVIL
+    habilitar = es_movil and vista_compactable
     vista_slug = _slug_vista(nombre_vista)
 
     st.markdown(
@@ -284,7 +285,13 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
               if (cls.indexOf("mc-view-") === 0) root.classList.remove(cls);
             }});
             root.classList.remove("mc-view-compact");
-            if ({str(habilitar).lower()}) {{
+            var compactable = {str(vista_compactable).lower()};
+            var serverWantsCompact = {str(habilitar).lower()};
+            var viewportWantsCompact = false;
+            try {{
+              viewportWantsCompact = !!(parentWin.matchMedia && parentWin.matchMedia("(max-width: 767px)").matches);
+            }} catch (e) {{}}
+            if (compactable && (serverWantsCompact || viewportWantsCompact)) {{
               root.classList.add("mc-view-compact");
               root.classList.add("mc-view-{vista_slug}");
             }}

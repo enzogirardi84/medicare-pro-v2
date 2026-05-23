@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""
+_STREAMLIT_ENTRYPOINT_NOTE = """
 
 
 Entry point canónico para Streamlit Cloud — MediCare Enterprise PRO.

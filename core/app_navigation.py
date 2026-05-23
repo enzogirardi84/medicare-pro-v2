@@ -4,7 +4,9 @@ Consolida lo que antes estaba duplicado entre main.py y core/view_dispatch.py.
 """
 from __future__ import annotations
 
+from html import escape as html_escape
 from importlib import import_module
+from urllib.parse import quote
 
 import streamlit as st
 
@@ -88,7 +90,6 @@ def procesar_query_params_navegacion(menu_set):
             del st.query_params["modulo"]
         except Exception:
             pass
-        st.rerun()
     except Exception as exc:
         log_event("main_nav", f"query_params_nav_error:{type(exc).__name__}:{exc}")
 
@@ -148,14 +149,13 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
             icono, texto = _split_icon_label(label)
             tipo = "primary" if nombre_raw == modulo_actual else "secondary"
             with cols[j]:
-                st.button(
+                if st.button(
                     f"{icono} {texto}",
                     key=f"nav_g_{nombre_raw}",
                     width='stretch',
                     type=tipo,
-                    on_click=set_modulo_actual,
-                    args=(nombre_raw,),
-                )
+                ):
+                    set_modulo_actual(nombre_raw)
 
 
 def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
@@ -175,14 +175,13 @@ def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
             icono, texto = _split_icon_label(label)
             tipo = "primary" if nombre_raw == modulo_actual else "secondary"
             with cols[j]:
-                st.button(
+                if st.button(
                     f"{icono} {texto}",
                     key=f"nav_a_{nombre_raw}",
                     width='stretch',
                     type=tipo,
-                    on_click=_nav_select_y_colapsar,
-                    args=(nombre_raw,),
-                )
+                ):
+                    _nav_select_y_colapsar(nombre_raw)
 
 
 # ── Render principal (acordeón igual en desktop y móvil) ─────────────────
@@ -200,9 +199,32 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         return None
     menu_set = frozenset(menu) if menu_set is None else menu_set
 
+    opciones_menu = [m for m in menu if m in menu_set]
+    if not opciones_menu:
+        return vista_actual
+    enlaces = []
+    for modulo in opciones_menu:
+        label = (view_nav_labels or {}).get(modulo, modulo)
+        active_cls = " is-active" if modulo == vista_actual else ""
+        enlaces.append(
+            '<a class="mc-module-link'
+            + active_cls
+            + '" href="?login=1&modulo='
+            + quote(str(modulo))
+            + '" target="_self">'
+            + html_escape(str(label))
+            + "</a>"
+        )
+    st.markdown(
+        '<nav class="mc-module-linkbar" aria-label="Modulos">'
+        + "".join(enlaces)
+        + "</nav>",
+        unsafe_allow_html=True,
+    )
+
     cats_ok = categorias_con_modulos_en_menu(menu_set)
     if not cats_ok:
-        return vista_actual
+        return st.session_state.get("modulo_actual", vista_actual)
 
     categorias_modulos = get_categorias_modulos()
 
@@ -233,7 +255,8 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
                 for m in sg
                 if m in menu_set
             ] or mods_in_cat
-            _render_modulos_sub(todos, vista_actual, view_nav_labels)
+            if todos:
+                st.caption("Usa el selector superior para cambiar de modulo.")
 
     return st.session_state.get("modulo_actual", vista_actual)
 

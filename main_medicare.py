@@ -59,6 +59,20 @@ except Exception as exc:
 
 aplicar_css_base()
 
+
+def _inject_mobile_css_asset() -> None:
+    """Carga los parches responsive tambien en la landing publica."""
+    try:
+        mobile_css_path = Path(__file__).resolve().parent / "assets" / "mobile.css"
+        if mobile_css_path.exists():
+            mobile_css_content = mobile_css_path.read_text(encoding="utf-8")
+            st.markdown(f"<style>{mobile_css_content}</style>", unsafe_allow_html=True)
+    except Exception as exc:
+        log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
+
+
+_inject_mobile_css_asset()
+
 from core.atajos_teclado import inject_atajos_teclado, render_ayuda_atajos
 inject_atajos_teclado()
 
@@ -110,13 +124,7 @@ try:
 except Exception as exc:
     log_event("pwa", f"inject_pwa_headers_falla:{type(exc).__name__}:{exc}")
 
-try:
-    mobile_css_path = Path(__file__).resolve().parent / "assets" / "mobile.css"
-    if mobile_css_path.exists():
-        mobile_css_content = mobile_css_path.read_text(encoding="utf-8")
-        st.markdown(f"<style>{mobile_css_content}</style>", unsafe_allow_html=True)
-except Exception as exc:
-    log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
+_inject_mobile_css_asset()
 
 try:
     from core.ui_liviano import render_mc_liviano_cliente, render_mobile_sidebar_toggle
@@ -370,6 +378,62 @@ if not st.session_state.get("_acceso_registrado"):
     st.session_state["_acceso_registrado"] = True
 
 nombre_usuario = user.get("nombre", "Usuario")
+
+MODULOS_REQUIEREN_PACIENTE = frozenset(
+    {
+        "Visitas y Agenda",
+        "Clinica",
+        "Pediatria",
+        "Historial",
+        "Escalas Clinicas",
+        "Balance",
+        "Evolucion",
+        "Estudios",
+        "PDF",
+        "Materiales",
+        "Emergencias y Ambulancia",
+        "Recetas",
+        "Caja",
+        "Telemedicina",
+        "Percentilo",
+    }
+)
+
+
+def _ir_a_modulo_desde_estado_vacio(modulo):
+    st.session_state["modulo_actual"] = modulo
+
+
+def _render_estado_vacio_sin_paciente(menu_set):
+    st.markdown(
+        """
+        <div class="mc-empty-mobile">
+            <h3>Elegí o cargá un paciente</h3>
+            <p>Los módulos clínicos se activan cuando hay un legajo seleccionado. En móvil dejamos esta vista limpia para que puedas ir directo al siguiente paso.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    acciones = []
+    if "Admision" in menu_set:
+        acciones.append(("Cargar paciente", "Admision"))
+    if "Dashboard" in menu_set:
+        acciones.append(("Ver dashboard", "Dashboard"))
+    if "Mi Equipo" in menu_set:
+        acciones.append(("Mi equipo", "Mi Equipo"))
+    if not acciones:
+        return
+    cols = st.columns(len(acciones))
+    for col, (label, modulo) in zip(cols, acciones):
+        with col:
+            st.button(
+                label,
+                use_container_width=True,
+                key=f"mc_empty_go_{modulo}",
+                on_click=_ir_a_modulo_desde_estado_vacio,
+                args=(modulo,),
+            )
+
 if not paciente_sel:
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(37,99,235,0.05));border:1px solid rgba(14,165,233,0.2);border-radius:20px;padding:28px 24px;margin:10px 0 20px;text-align:center;">
@@ -551,17 +615,21 @@ st.markdown(
 
 t0_view = time.monotonic()
 ok_view = True
+_vista_requiere_paciente = vista_actual in MODULOS_REQUIEREN_PACIENTE and not paciente_sel
 
 try:
-    render_current_view(
-        vista_actual,
-        paciente_sel,
-        mi_empresa,
-        user,
-        rol,
-        VIEW_CONFIG,
-        menu_set,
-    )
+    if _vista_requiere_paciente:
+        _render_estado_vacio_sin_paciente(menu_set)
+    else:
+        render_current_view(
+            vista_actual,
+            paciente_sel,
+            mi_empresa,
+            user,
+            rol,
+            VIEW_CONFIG,
+            menu_set,
+        )
 except Exception as exc:
     ok_view = False
     log_event(

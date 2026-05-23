@@ -61,4 +61,4 @@ def test_procesar_query_params_navegacion_actualiza_historial_y_limpia_param():
     assert app_navigation.st.session_state["modulo_actual"] == "Admision"
     assert app_navigation.st.session_state["modulo_anterior"] == "Dashboard"
     assert "modulo" not in app_navigation.st.query_params
-    app_navigation.st.rerun.assert_called_once()
+    app_navigation.st.rerun.assert_not_called()

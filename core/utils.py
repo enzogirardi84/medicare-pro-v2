@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import os
 import re
 import secrets
 import unicodedata
@@ -263,10 +264,13 @@ def obtener_emergency_password() -> str | None:
     except Exception as _exc:
         from core.app_logging import log_event
         log_event("utils", f"fallo_secrets_emergency_password:{type(_exc).__name__}")
+    pwd_env = os.getenv("SUPERADMIN_EMERGENCY_PASSWORD")
+    if pwd_env and str(pwd_env).strip():
+        return str(pwd_env).strip()
     return None
 
 # Logins que pueden usar la SUPERADMIN_EMERGENCY_PASSWORD desde secrets si el hash en base no coincide (recuperación).
-EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin"})
+EMERGENCY_SUPERADMIN_LOGINS = frozenset({"admin", "enzogirardi"})
 
 
 def logins_clave_default_superadmin() -> frozenset[str]:
