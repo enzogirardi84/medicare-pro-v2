@@ -448,6 +448,10 @@ NOTA MEJORADA:"""
         self._ensure_config()
         try:
             import google.generativeai as genai
+        except ImportError:
+            log_event("ai_error", "Gemini: google-generativeai no instalado")
+            return "El modulo Gemini requiere: pip install google-generativeai"
+        try:
             genai.configure(api_key=self.api_key)
             model = genai.GenerativeModel(self.model or "gemini-2.0-flash")
             response = model.generate_content(
@@ -455,9 +459,6 @@ NOTA MEJORADA:"""
                 generation_config={"max_output_tokens": max_tokens, "temperature": temperature},
             )
             return response.text.strip() if response.text else ""
-        except ImportError:
-            log_event("ai_error", "Gemini: google-generativeai no instalado. pip install google-generativeai")
-            raise
         except Exception as e:
             log_event("ai_error", f"Gemini API error: {e}")
             raise

@@ -33,7 +33,11 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
         test_model = default_model
     try:
         if provider_display == "Gemini":
-            import google.generativeai as genai
+            try:
+                import google.generativeai as genai
+            except ImportError:
+                st.error("Gemini requiere: pip install google-generativeai")
+                return False
             genai.configure(api_key=clean_key)
             test_model_gemini = genai.GenerativeModel(test_model)
             resp = test_model_gemini.generate_content("Responde solo: OK", generation_config={"max_output_tokens": 5, "temperature": 0})

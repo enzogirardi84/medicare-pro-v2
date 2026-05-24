@@ -26,3 +26,4 @@ uvicorn[standard]>=0.24.0
 streamlit-geolocation>=0.0.10
 plotly>=5.18.0
 qrcode[pil]>=8.0
+google-generativeai>=0.8.0
