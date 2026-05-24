@@ -25,7 +25,7 @@ from core.app_logging import log_event
 # Fuentes (en orden de prioridad): session_state > st.secrets > env vars > defaults
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "none")  # openai, anthropic, deepseek, local, none
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.0-flash")
 LLM_ENABLED = LLM_PROVIDER != "none" and LLM_API_KEY != ""
 
 
@@ -33,7 +33,7 @@ def _get_llm_config():
     """Obtiene config LLM con overriding de session_state > st.secrets > env vars."""
     provider = os.getenv("LLM_PROVIDER", "none")
     api_key = os.getenv("LLM_API_KEY", "")
-    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    model = os.getenv("LLM_MODEL", "gemini-2.0-flash")
 
     try:
         import streamlit as st
@@ -65,7 +65,7 @@ def _get_llm_config():
                 if isinstance(_settings, dict):
                     ui_provider = _settings.get("integ_ai_provider", "")
                     if ui_provider and ui_provider != "Ninguno":
-                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "DeepSeek": "deepseek", "OpenRouter": "openrouter", "Local (Ollama)": "local"}.get(ui_provider, provider)
+                        provider = {"OpenAI": "openai", "Anthropic": "anthropic", "DeepSeek": "deepseek", "OpenRouter": "openrouter", "Gemini": "gemini", "Local (Ollama)": "local"}.get(ui_provider, provider)
                     ui_key = _settings.get("integ_ai_key", "")
                     if isinstance(ui_key, str) and ui_key:
                         api_key = ui_key
@@ -330,6 +330,8 @@ NOTA MEJORADA:"""
             return self._call_deepseek(prompt, max_tokens, temperature)
         elif self.provider == "openrouter":
             return self._call_openrouter(prompt, max_tokens, temperature)
+        elif self.provider == "gemini":
+            return self._call_gemini(prompt, max_tokens, temperature)
         elif self.provider == "local":
             return self._call_local(prompt, max_tokens, temperature)
         else:
@@ -439,6 +441,25 @@ NOTA MEJORADA:"""
             return content.strip() if content else ""
         except Exception as e:
             log_event("ai_error", f"OpenRouter API error: {e}")
+            raise
+
+    def _call_gemini(self, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Llama API de Google Gemini."""
+        self._ensure_config()
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self.api_key)
+            model = genai.GenerativeModel(self.model or "gemini-2.0-flash")
+            response = model.generate_content(
+                f"Eres un asistente medico profesional.\n\n{prompt}",
+                generation_config={"max_output_tokens": max_tokens, "temperature": temperature},
+            )
+            return response.text.strip() if response.text else ""
+        except ImportError:
+            log_event("ai_error", "Gemini: google-generativeai no instalado. pip install google-generativeai")
+            raise
+        except Exception as e:
+            log_event("ai_error", f"Gemini API error: {e}")
             raise
 
     def _call_local(self, prompt: str, max_tokens: int, temperature: float) -> str:

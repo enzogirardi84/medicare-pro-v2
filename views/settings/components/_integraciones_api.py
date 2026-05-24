@@ -17,6 +17,7 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
         "OpenAI": ("openai", None, "gpt-4o"),
         "DeepSeek": ("deepseek", "https://api.deepseek.com/v1", "deepseek-chat"),
         "OpenRouter": ("openrouter", "https://openrouter.ai/api/v1", "deepseek/deepseek-v3.2"),
+        "Gemini": ("gemini", "https://generativelanguage.googleapis.com/v1beta", "gemini-2.0-flash"),
     }
     entry = provider_map.get(provider_display)
     if not entry:
@@ -59,7 +60,7 @@ def render_integration_settings(is_admin: bool):
                                value=_s.get("integ_ai_enabled", False),
                                help="Activa IA contextual, sugerencias de evolucion, etc.")
         if ai_enabled:
-            prov_opts = ["Ninguno", "OpenAI", "Anthropic", "DeepSeek", "OpenRouter"]
+            prov_opts = ["Ninguno", "OpenAI", "Anthropic", "DeepSeek", "OpenRouter", "Gemini"]
             ai_provider = st.selectbox("Proveedor de IA", prov_opts,
                                        index=prov_opts.index(_s.get("integ_ai_provider", "Ninguno")) if _s.get("integ_ai_provider", "Ninguno") in prov_opts else 0)
             ai_key = st.text_input("API Key", type="password", value=_s.get("integ_ai_key", ""), help="Token de API del proveedor seleccionado")
@@ -68,6 +69,7 @@ def render_integration_settings(is_admin: bool):
                 "Anthropic": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"],
                 "DeepSeek": ["deepseek-chat", "deepseek-reasoner"],
                 "OpenRouter": ["deepseek/deepseek-v3.2", "deepseek/deepseek-v4-flash", "deepseek/deepseek-v4-flash:free", "google/gemini-2.0-flash-exp:free", "anthropic/claude-3.5-haiku"],
+                "Gemini": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro"],
             }
             preset = model_presets.get(ai_provider, [])
             otros = "Otro"
