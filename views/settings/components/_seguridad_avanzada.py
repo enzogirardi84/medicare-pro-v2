@@ -61,6 +61,9 @@ def render_advanced_settings(is_admin: bool):
     from services.telemetria_service import render_telemetria_dashboard
     render_telemetria_dashboard()
     st.divider()
+    from services.monitoreo_proactivo import render_monitoreo_dashboard
+    render_monitoreo_dashboard()
+    st.divider()
     st.subheader("Herramientas de Administracion")
     if st.button("🔄 Limpiar cache del sistema", use_container_width=True):
         from core.database import limpiar_cache_app

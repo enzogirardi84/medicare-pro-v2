@@ -134,6 +134,13 @@ try:
 except Exception as exc:
     log_event("mobile_js", f"carga_falla:{type(exc).__name__}")
 
+# Service Worker para modo offline
+try:
+    from core.service_worker import inject_service_worker
+    inject_service_worker()
+except Exception as exc:
+    log_event("sw", f"carga_falla:{type(exc).__name__}")
+
 # Parche visual definitivo: elimina botones/avisos de IA de Evoluciones aunque
 # aparezcan por caché, por un deploy viejo o por otro componente.
 st.markdown("""
