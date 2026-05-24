@@ -47,7 +47,11 @@ def render_advanced_settings(is_admin: bool):
     st.caption("Configuraciones tecnicas y de desarrollo.")
 
     st.subheader("Diagnostico del Sistema")
-    def _ver(): return importlib.metadata.version("medicare-pro") if importlib.metadata.distribution("medicare-pro") is not None else "2.0.0-dev"
+    def _ver():
+        try:
+            return importlib.metadata.version("medicare-pro")
+        except (importlib.metadata.PackageNotFoundError, Exception):
+            return "2.0.0-dev"
     def _env(): return os.getenv("MEDICARE_ENV", "development")
     def _py(): return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     def _os(): return f"{platform.system()} {platform.release()}"
