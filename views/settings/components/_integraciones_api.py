@@ -17,7 +17,7 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
         "OpenAI": ("openai", None, "gpt-4o"),
         "DeepSeek": ("deepseek", "https://api.deepseek.com/v1", "deepseek-chat"),
         "OpenRouter": ("openrouter", "https://openrouter.ai/api/v1", "deepseek/deepseek-v3.2"),
-        "Gemini": ("gemini", "https://generativelanguage.googleapis.com/v1beta", "gemini-2.0-flash"),
+        "Gemini": ("gemini", None, "gemini-2.0-flash"),
     }
     entry = provider_map.get(provider_display)
     if not entry:
@@ -28,21 +28,22 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
     if any(ord(c) > 127 for c in clean_key):
         st.warning("La API Key contiene caracteres no validos.")
         return False
+    test_model = (model or default_model).strip()
+    if any(ord(c) > 127 for c in test_model):
+        test_model = default_model
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=clean_key, base_url=base_url, timeout=30)
-        test_model = (model or default_model).strip()
-        if any(ord(c) > 127 for c in test_model):
-            test_model = default_model
-        resp = client.chat.completions.create(
-            model=test_model,
-            messages=[{"role": "user", "content": "Responde solo: OK"}],
-            max_tokens=5, temperature=0,
-        )
-        content = resp.choices[0].message.content
-        if content is not None:
-            return "OK" in content.strip()
-        return True
+        if provider_display == "Gemini":
+            import google.generativeai as genai
+            genai.configure(api_key=clean_key)
+            test_model_gemini = genai.GenerativeModel(test_model)
+            resp = test_model_gemini.generate_content("Responde solo: OK", generation_config={"max_output_tokens": 5, "temperature": 0})
+            return resp.text is not None and "OK" in resp.text.strip()
+        else:
+            from openai import OpenAI
+            client = OpenAI(api_key=clean_key, base_url=base_url, timeout=30)
+            resp = client.chat.completions.create(model=test_model, messages=[{"role": "user", "content": "Responde solo: OK"}], max_tokens=5, temperature=0)
+            content = resp.choices[0].message.content
+            return content is not None and "OK" in content.strip()
     except Exception as e:
         import traceback
         st.error(f"Error de conexion: {e}")
