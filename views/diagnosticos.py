@@ -15,6 +15,7 @@ import pandas as pd
 import streamlit as st
 
 from core.app_logging import log_event
+from core.alert_toasts import queue_toast
 
 SCROLL = 'style="max-height:380px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;"'
 
@@ -287,7 +288,6 @@ def render_diagnosticos(user=None):
                 import streamlit as st_mod
                 st.caption(f"Streamlit: {st_mod.__version__}")
             except Exception as _exc:
-                from core.app_logging import log_event
                 log_event("diagnosticos_sistema", f"fallo_version_streamlit:{type(_exc).__name__}")
         
         with col2:
@@ -515,7 +515,7 @@ def render_diagnosticos(user=None):
                         if not resuelto:
                             if st.button("Marcar resuelto", use_container_width=True, key=f"vigia_resolve_{eid}"):
                                 mark_resolved(eid)
-                                st.toast("Marcado como resuelto")
+                                queue_toast("Marcado como resuelto")
                                 st.rerun()
 
                     with st.expander("Stack trace", expanded=False):
@@ -538,5 +538,5 @@ def render_diagnosticos(user=None):
         with col_a2:
             if st.button("🗑️ Limpiar todo", type="secondary", use_container_width=True, key="vigia_clear"):
                 clear_all()
-                st.toast("Historial de errores limpiado")
+                queue_toast("Historial de errores limpiado")
                 st.rerun()

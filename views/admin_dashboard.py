@@ -21,6 +21,7 @@ from core.performance_profiler import get_profiler
 from core.distributed_cache import get_cache
 from core.observability import get_metrics
 from core.app_logging import log_event
+from core.alert_toasts import queue_toast
 from core.utils import ahora
 
 
@@ -426,7 +427,7 @@ def render_alerts_tab():
     st.divider()
     if st.button("🧹 Limpiar Alertas", width='stretch'):
         st.session_state["_system_alerts"] = []
-        st.success("Alertas limpiadas")
+        queue_toast("Alertas limpiadas")
         st.rerun()
 
 

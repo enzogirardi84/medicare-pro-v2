@@ -8,6 +8,7 @@ from html import escape
 import streamlit as st
 
 from core.app_logging import log_event
+from core.alert_toasts import queue_toast
 from core.error_tracker import get_recent_errors, get_summary_stats
 from core.self_healing import (
     ScanReport,
@@ -86,7 +87,7 @@ def render_escaneo(_paciente_sel):
                                                       use_container_width=True):
                         ok = auto_fix_finding(f)
                         if ok:
-                            st.success(f"Fix aplicado: {f.title}")
+                            queue_toast(f"Fix aplicado: {f.title}")
                             st.rerun()
                         else:
                             st.error(f"No se pudo aplicar el fix: {f.title}")

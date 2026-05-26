@@ -4,6 +4,7 @@ from __future__ import annotations
 import streamlit as st
 
 from core.app_logging import log_event
+from core.alert_toasts import queue_toast
 from core.database import guardar_datos
 from core.password_crypto import establecer_password_nuevo
 
@@ -47,7 +48,7 @@ def render_admin_usuarios():
                     del usuarios[login]
                     st.session_state["usuarios_db"] = usuarios
                     guardar_datos(spinner=False)
-                    st.success(f"Usuario '{login}' eliminado")
+                    queue_toast(f"Usuario '{login}' eliminado")
                     log_event("admin_usuarios", f"eliminado:{login}")
                     st.rerun()
                 else:
@@ -61,7 +62,7 @@ def render_admin_usuarios():
                     datos["empresa"] = empresa_nueva
                     st.session_state["usuarios_db"] = usuarios
                     guardar_datos(spinner=False)
-                    st.success(f"Cambios guardados para '{login}'")
+                    queue_toast(f"Cambios guardados para '{login}'")
                     log_event("admin_usuarios", f"editado:{login}:{rol_nuevo}")
                     st.rerun()
 
@@ -103,7 +104,7 @@ def render_admin_usuarios():
                 st.session_state["usuarios_db"] = usuarios
                 with st.spinner("Guardando..."):
                     guardar_datos()
-                st.success(f"Usuario '{uid}' creado")
+                queue_toast(f"Usuario '{uid}' creado")
                 log_event("admin_usuarios", f"creado:{uid}:{nuevo_rol}")
                 st.rerun()
 

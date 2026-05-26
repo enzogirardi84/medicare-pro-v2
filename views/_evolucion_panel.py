@@ -388,7 +388,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             )
                         except Exception as exc:
                             log_event("evolucion", f"auditoria_legal tras borrado fallo: {type(exc).__name__}")
-                        st.toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
+                        queue_toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
                         st.rerun()
 
         if puede_borrar:
