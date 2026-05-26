@@ -443,3 +443,98 @@ def render_inventario(mi_empresa):
                     st.rerun()
             else:
                 st.caption("La eliminación definitiva de insumos está deshabilitada para este usuario.")
+
+    # --- EXPORTAR REPORTE ---
+    st.divider()
+    st.markdown("### 📦 Reporte de inventario")
+    with st.expander("Exportar reporte completo", expanded=False):
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
+            if st.button("📄 Exportar PDF", use_container_width=True, key="inv_export_pdf"):
+                with st.spinner("Generando PDF..."):
+                    _exportar_inventario_pdf(inv_mio, mi_empresa)
+        with col_exp2:
+            if st.button("📊 Exportar Excel", use_container_width=True, key="inv_export_xlsx"):
+                with st.spinner("Generando Excel..."):
+                    _exportar_inventario_excel(inv_mio, mi_empresa)
+
+
+def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
+    """Genera PDF con reporte completo de inventario."""
+    try:
+        from fpdf import FPDF
+        from core.export_utils import pdf_output_bytes, safe_text
+
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=20)
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.cell(0, 10, f"Inventario - {empresa}", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(0, 6, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.ln(5)
+
+        # Cabecera de tabla
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(25, 55, 95)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(10, 7, "#", border=1, fill=True, align="C")
+        pdf.cell(70, 7, "Insumo", border=1, fill=True)
+        pdf.cell(20, 7, "Stock", border=1, fill=True, align="C")
+        pdf.cell(20, 7, "Minimo", border=1, fill=True, align="C")
+        pdf.cell(30, 7, "Categoria", border=1, fill=True, align="C")
+        pdf.cell(40, 7, "Costo unit.", border=1, fill=True, align="C")
+        pdf.ln()
+
+        # Datos
+        pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(40, 40, 40)
+        total_valor = 0
+        for idx, item in enumerate(inventario, 1):
+            stock = item.get("stock", 0)
+            costo = item.get("costo_unitario", 0) or 0
+            total_valor += int(stock) * float(costo)
+            pdf.cell(10, 6, str(idx), border=1, align="C")
+            pdf.cell(70, 6, safe_text(item.get("item", "-")[:60]), border=1)
+            pdf.cell(20, 6, str(stock), border=1, align="C")
+            pdf.cell(20, 6, str(item.get("stock_minimo", 0)), border=1, align="C")
+            pdf.cell(30, 6, safe_text(item.get("categoria", "-")[:25]), border=1, align="C")
+            pdf.cell(40, 6, f"${float(costo):.2f}", border=1, align="C")
+            pdf.ln()
+
+        # Totales
+        pdf.ln(5)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 7, f"Total items: {len(inventario)} | Valor total inventario: ${total_valor:.2f}",
+                 new_x="LMARGIN", new_y="NEXT")
+
+        st.download_button("Descargar PDF", pdf_output_bytes(pdf),
+                           file_name=f"inventario_{empresa}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                           mime="application/pdf", key="inv_dl_pdf")
+    except ImportError:
+        st.error("FPDF no disponible. Instalar con: pip install fpdf2")
+
+
+def _exportar_inventario_excel(inventario: list, empresa: str) -> None:
+    """Genera Excel con reporte completo de inventario."""
+    import io
+    df = pd.DataFrame(inventario)
+    columnas = {"item": "Insumo", "stock": "Stock actual", "stock_minimo": "Stock minimo",
+                "categoria": "Categoria", "costo_unitario": "Costo unitario", "empresa": "Empresa"}
+    df = df.rename(columns=columnas)
+    df = df[list(columnas.values())]
+    df["Valor total"] = df["Stock actual"] * df["Costo unitario"].fillna(0)
+    df = df.sort_values("Insumo")
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="Inventario", index=False)
+        ws = writer.sheets["Inventario"]
+        for col in ws.columns:
+            max_len = max(len(str(c.value or "")) for c in col) + 2
+            ws.column_dimensions[col[0].column_letter].width = min(max_len, 40)
+
+    st.download_button("Descargar Excel", buffer.getvalue(),
+                       file_name=f"inventario_{empresa}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       key="inv_dl_xlsx")
