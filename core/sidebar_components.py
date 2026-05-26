@@ -337,7 +337,7 @@ def render_sidebar_pacientes_y_alertas(mi_empresa, rol, obtener_pacientes_fn, ob
     if paciente_sel and paciente_sel != _SEL_PLACEHOLDER_SB:
         alertas = obtener_alertas_fn(st.session_state, paciente_sel)
         if alertas:
-            with st.expander(f"🚨 Alertas clínicas ({len(alertas)})", expanded=True):
+            with st.expander(f"🚨 Alertas clínicas ({len(alertas)})", expanded=False):
                 for alerta in alertas:
                     nivel = str(alerta.get("nivel", "media")).lower()
                     msg = f"**{escape(alerta['titulo'])}**  \n{escape(alerta['detalle'])}"

@@ -590,23 +590,27 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             inicio_semana = semana_ref - timedelta(days=semana_ref.weekday())
             fin_semana = inicio_semana + timedelta(days=6)
             agenda_semana = [item for item in agenda_paciente if item["_fecha_dt"] != datetime.min and inicio_semana <= item["_fecha_dt"].date() <= fin_semana]
-            cols_semana = st.columns(7)
-            for idx_dia in range(7):
-                dia = inicio_semana + timedelta(days=idx_dia)
-                items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
-                pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})
-                realizadas_dia = sum(1 for x in items_dia if x["estado_calc"] == "Realizada")
-                cols_semana[idx_dia].markdown(
-                    f"""
-                    <div class="mc-card" style="padding:14px 12px; min-height:118px;">
-                        <div style="font-size:0.78rem; color:#93c5fd; text-transform:uppercase; letter-spacing:1px;">{dia.strftime('%a')}</div>
-                        <div style="font-size:1rem; font-weight:800; color:#f8fafc; margin-top:4px;">{dia.strftime('%d/%m')}</div>
-                        <div style="font-size:1.4rem; font-weight:900; color:#ffffff; margin-top:10px;">{len(items_dia)}</div>
-                        <div style="font-size:0.86rem; color:#cbd5e1; margin-top:4px;">{pendientes_dia} pendientes<br>{realizadas_dia} realizadas</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+            st.markdown("""<style>.mc-agenda-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}@media(max-width:640px){.mc-agenda-grid{grid-template-columns:repeat(3,1fr);}}</style>""", unsafe_allow_html=True)
+            cols_semana = st.columns(1)
+            with cols_semana[0]:
+                st.markdown('<div class="mc-agenda-grid">', unsafe_allow_html=True)
+                for idx_dia in range(7):
+                    dia = inicio_semana + timedelta(days=idx_dia)
+                    items_dia = [x for x in agenda_semana if x["_fecha_dt"].date() == dia]
+                    pendientes_dia = sum(1 for x in items_dia if x["estado_calc"] in {"Pendiente", "En curso", "Vencida"})
+                    realizadas_dia = sum(1 for x in items_dia if x["estado_calc"] == "Realizada")
+                    st.markdown(
+                        f"""
+                        <div style="background:rgba(30,41,59,0.6);border-radius:10px;padding:10px 8px;text-align:center;min-height:100px;">
+                            <div style="font-size:0.72rem;color:#93c5fd;text-transform:uppercase;letter-spacing:1px;">{dia.strftime('%a')}</div>
+                            <div style="font-size:0.85rem;font-weight:700;color:#f8fafc;margin-top:3px;">{dia.strftime('%d/%m')}</div>
+                            <div style="font-size:1.3rem;font-weight:900;color:#fff;margin-top:6px;">{len(items_dia)}</div>
+                            <div style="font-size:0.75rem;color:#cbd5e1;margin-top:3px;">{pendientes_dia} pend<br>{realizadas_dia} real</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                st.markdown('</div>', unsafe_allow_html=True)
             if agenda_semana:
                 df_semana = pd.DataFrame(agenda_semana)
                 def _fmt_dia(x):

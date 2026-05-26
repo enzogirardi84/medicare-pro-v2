@@ -97,8 +97,8 @@ def render_insumos_rules_settings(is_admin: bool):
         st.info("Solo administradores pueden modificar las reglas de insumos.")
         return
 
-    with st.expander("💊 Reglas de Medicamentos", expanded=True):
-        st.info("Sin reglas personalizadas todavia. Usa el vademecum por defecto.")
+        with st.expander("💊 Reglas de Medicamentos", expanded=False):
+            st.info("Sin reglas personalizadas todavia. Usa el vademecum por defecto.")
         col1, col2 = st.columns(2)
         with col1:
             st.text_input("Medicamento", placeholder="Ej: Amoxicilina", key="ins_med_name")

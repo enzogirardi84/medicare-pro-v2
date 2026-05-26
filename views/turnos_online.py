@@ -48,7 +48,7 @@ def render_turnos_online(mi_empresa, rol):
     # ================================================================
     # FILTROS
     # ================================================================
-    with st.expander("Filtros", expanded=True):
+    with st.expander("Filtros", expanded=False):
         cols = st.columns(2)
         filtro_prof = cols[0].selectbox("Profesional", ["Todos"] + profesionales)
         filtro_estado = cols[0].selectbox("Estado", ["Todos", "Disponible", "Reservado", "Cancelado"])

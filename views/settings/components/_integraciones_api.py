@@ -60,7 +60,7 @@ def render_integration_settings(is_admin: bool):
     _s = st.session_state.setdefault("settings_db", {})
     st.caption("Conecta Medicare Pro con servicios externos de IA, facturacion y mas.")
 
-    with st.expander("🤖 Asistente de IA", expanded=True):
+    with st.expander("🤖 Asistente de IA", expanded=False):
         ai_enabled = st.toggle("Habilitar asistente de IA en todo el programa",
                                value=_s.get("integ_ai_enabled", False),
                                help="Activa IA contextual, sugerencias de evolucion, etc.")
