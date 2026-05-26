@@ -451,12 +451,20 @@ def render_inventario(mi_empresa):
         col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
             if st.button("📄 Exportar PDF", use_container_width=True, key="inv_export_pdf"):
-                with st.spinner("Generando PDF..."):
-                    _exportar_inventario_pdf(inv_mio, mi_empresa)
+                try:
+                    with st.spinner("Generando PDF..."):
+                        _exportar_inventario_pdf(inv_mio, mi_empresa)
+                except Exception as e:
+                    log_event("inventario", f"error_export_pdf:{type(e).__name__}:{e}")
+                    st.error(f"Error al generar PDF: {e}")
         with col_exp2:
             if st.button("📊 Exportar Excel", use_container_width=True, key="inv_export_xlsx"):
-                with st.spinner("Generando Excel..."):
-                    _exportar_inventario_excel(inv_mio, mi_empresa)
+                try:
+                    with st.spinner("Generando Excel..."):
+                        _exportar_inventario_excel(inv_mio, mi_empresa)
+                except Exception as e:
+                    log_event("inventario", f"error_export_xlsx:{type(e).__name__}:{e}")
+                    st.error(f"Error al generar Excel: {e}")
 
 
 def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
@@ -469,9 +477,9 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
         pdf.set_auto_page_break(auto=True, margin=20)
         pdf.add_page()
         pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(0, 10, f"Inventario - {empresa}", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.cell(0, 10, f"Inventario - {empresa}", ln=True, align="C")
         pdf.set_font("Helvetica", "", 9)
-        pdf.cell(0, 6, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.cell(0, 6, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align="C")
         pdf.ln(5)
 
         # Cabecera de tabla
@@ -505,8 +513,7 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
         # Totales
         pdf.ln(5)
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 7, f"Total items: {len(inventario)} | Valor total inventario: ${total_valor:.2f}",
-                 new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 7, f"Total items: {len(inventario)} | Valor total inventario: ${total_valor:.2f}", ln=True)
 
         st.download_button("Descargar PDF", pdf_output_bytes(pdf),
                            file_name=f"inventario_{empresa}_{datetime.now().strftime('%Y%m%d')}.pdf",
