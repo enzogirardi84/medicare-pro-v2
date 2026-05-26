@@ -6,7 +6,6 @@ import base64
 import html
 import io
 
-from PIL import Image
 
 
 EVENTO_CATEGORIAS = {
@@ -112,6 +111,7 @@ EVENTO_CATEGORIAS = {
 def _firma_a_b64(canvas_result):
     if not canvas_result or canvas_result.image_data is None:
         return ""
+    from PIL import Image
     img = Image.fromarray(canvas_result.image_data.astype("uint8"), "RGBA")
     fondo = Image.new("RGB", img.size, (255, 255, 255))
     fondo.paste(img, mask=img.split()[-1])

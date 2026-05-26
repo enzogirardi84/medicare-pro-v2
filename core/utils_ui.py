@@ -12,7 +12,6 @@ from io import BytesIO
 from pathlib import Path
 
 import streamlit as st
-from PIL import Image, ImageOps
 from core.app_logging import log_event
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
@@ -67,6 +66,7 @@ def cargar_json_asset(nombre_archivo):
 
 def optimizar_imagen_bytes(image_bytes, max_size=(1280, 1280), quality=75):
     try:
+        from PIL import Image, ImageOps
         with Image.open(BytesIO(image_bytes)) as img:
             img = ImageOps.exif_transpose(img)
             if img.mode not in ("RGB", "L"):
@@ -150,6 +150,7 @@ def firma_a_base64(canvas_image_data=None, uploaded_file=None):
             firma_bytes, _ = optimizar_imagen_bytes(uploaded_file.getvalue(), max_size=(700, 220), quality=55)
             return base64.b64encode(firma_bytes).decode("utf-8")
         if canvas_image_data is not None:
+            from PIL import Image
             img = Image.fromarray(canvas_image_data.astype("uint8"), "RGBA")
             bg = Image.new("RGB", img.size, (255, 255, 255))
             bg.paste(img, mask=img.split()[-1])

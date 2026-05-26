@@ -25,7 +25,6 @@ import base64
 import mimetypes
 
 import streamlit as st
-from PIL import Image
 
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
@@ -291,6 +290,7 @@ class DocumentManager:
     
     def _generate_thumbnail(self, image_data: bytes, ext: str, size: int = 200) -> Optional[str]:
         """Genera thumbnail de imagen."""
+        from PIL import Image
         try:
             img = Image.open(io.BytesIO(image_data))
             img.thumbnail((size, size))
