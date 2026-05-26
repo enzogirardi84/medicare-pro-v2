@@ -17,7 +17,7 @@ from views.dispensario.components._helpers import (
 )
 
 
-def tab_panel_diario(paciente_sel, user):
+def tab_panel_diario(paciente_sel, user, centro_salud_id=None):
     """Panel diario con metricas y sala de espera."""
     st.subheader("Panel Diario APS")
     atenciones = st.session_state.get("atenciones_aps_db", [])

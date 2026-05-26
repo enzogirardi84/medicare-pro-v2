@@ -1,0 +1,5 @@
+-keep class com.medicarepro.app.** { *; }
+-keep class * extends io.flutter.app.FlutterApplication
+-keep class * extends io.flutter.plugin.common.MethodChannel
+-keep class * extends io.flutter.plugin.common.EventChannel
+-keep class * extends io.flutter.embedding.engine.FlutterEngine
