@@ -468,7 +468,7 @@ def render_inventario(mi_empresa):
 
 
 def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
-    """Genera PDF con reporte completo de inventario."""
+    """Genera PDF con reporte completo de inventario y consumos."""
     try:
         from fpdf import FPDF
         from core.export_utils import pdf_output_bytes, safe_text
@@ -482,7 +482,9 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
         pdf.cell(0, 6, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align="C")
         pdf.ln(5)
 
-        # Cabecera de tabla
+        # --- SECCION INVENTARIO ---
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 8, "Stock actual", ln=True)
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(25, 55, 95)
         pdf.set_text_color(255, 255, 255)
@@ -494,7 +496,6 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
         pdf.cell(40, 7, "Costo unit.", border=1, fill=True, align="C")
         pdf.ln()
 
-        # Datos
         pdf.set_font("Helvetica", "", 8)
         pdf.set_text_color(40, 40, 40)
         total_valor = 0
@@ -510,10 +511,48 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
             pdf.cell(40, 6, f"${float(costo):.2f}", border=1, align="C")
             pdf.ln()
 
-        # Totales
-        pdf.ln(5)
+        pdf.ln(3)
         pdf.set_font("Helvetica", "B", 10)
         pdf.cell(0, 7, f"Total items: {len(inventario)} | Valor total inventario: ${total_valor:.2f}", ln=True)
+        pdf.ln(8)
+
+        # --- SECCION CONSUMOS ---
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 8, "Insumos utilizados (historial)", ln=True)
+
+        consumos = st.session_state.get("consumos_db", [])
+        cons_emp = [c for c in consumos if isinstance(c, dict) and c.get("empresa") == empresa]
+
+        if cons_emp:
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_fill_color(25, 55, 95)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(10, 7, "#", border=1, fill=True, align="C")
+            pdf.cell(60, 7, "Insumo", border=1, fill=True)
+            pdf.cell(22, 7, "Cantidad", border=1, fill=True, align="C")
+            pdf.cell(50, 7, "Paciente", border=1, fill=True)
+            pdf.cell(48, 7, "Fecha", border=1, fill=True, align="C")
+            pdf.ln()
+
+            pdf.set_font("Helvetica", "", 8)
+            pdf.set_text_color(40, 40, 40)
+            total_consumido = 0
+            for idx, c in enumerate(cons_emp, 1):
+                cant = int(c.get("cantidad", 0) or 0)
+                total_consumido += cant
+                pdf.cell(10, 6, str(idx), border=1, align="C")
+                pdf.cell(60, 6, safe_text((c.get("item") or c.get("medicamento") or c.get("insumo") or "-")[:50]), border=1)
+                pdf.cell(22, 6, str(cant), border=1, align="C")
+                pdf.cell(50, 6, safe_text((c.get("paciente") or "-")[:40]), border=1)
+                pdf.cell(48, 6, safe_text(str(c.get("fecha", ""))[:16]), border=1, align="C")
+                pdf.ln()
+
+            pdf.ln(3)
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 7, f"Total registros: {len(cons_emp)} | Unidades consumidas: {total_consumido}", ln=True)
+        else:
+            pdf.set_font("Helvetica", "", 9)
+            pdf.cell(0, 6, "Sin registros de consumo.", ln=True)
 
         st.download_button("Descargar PDF", pdf_output_bytes(pdf),
                            file_name=f"inventario_{empresa}_{datetime.now().strftime('%Y%m%d')}.pdf",
@@ -523,23 +562,41 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
 
 
 def _exportar_inventario_excel(inventario: list, empresa: str) -> None:
-    """Genera Excel con reporte completo de inventario."""
+    """Genera Excel con reporte completo de inventario y consumos."""
     import io
-    df = pd.DataFrame(inventario)
+
+    df_inv = pd.DataFrame(inventario)
     columnas = {"item": "Insumo", "stock": "Stock actual", "stock_minimo": "Stock minimo",
                 "categoria": "Categoria", "costo_unitario": "Costo unitario", "empresa": "Empresa"}
-    df = df.rename(columns=columnas)
-    df = df[list(columnas.values())]
-    df["Valor total"] = df["Stock actual"] * df["Costo unitario"].fillna(0)
-    df = df.sort_values("Insumo")
+    df_inv = df_inv.rename(columns=columnas)
+    df_inv = df_inv[list(columnas.values())]
+    df_inv["Valor total"] = df_inv["Stock actual"] * df_inv["Costo unitario"].fillna(0)
+    df_inv = df_inv.sort_values("Insumo")
+
+    cons_emp = [c for c in st.session_state.get("consumos_db", [])
+                if isinstance(c, dict) and c.get("empresa") == empresa]
+    df_cons = pd.DataFrame(cons_emp) if cons_emp else pd.DataFrame()
+    if not df_cons.empty:
+        cols_cons = {"item": "Insumo", "cantidad": "Cantidad", "paciente": "Paciente",
+                     "fecha": "Fecha", "empresa": "Empresa"}
+        df_cons = df_cons.rename(columns=cols_cons)
+        df_cons = df_cons[[c for c in cols_cons.values() if c in df_cons.columns]]
+        df_cons = df_cons.sort_values("Fecha", ascending=False)
 
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="Inventario", index=False)
+        df_inv.to_excel(writer, sheet_name="Inventario", index=False)
         ws = writer.sheets["Inventario"]
         for col in ws.columns:
             max_len = max(len(str(c.value or "")) for c in col) + 2
             ws.column_dimensions[col[0].column_letter].width = min(max_len, 40)
+
+        if not df_cons.empty:
+            df_cons.to_excel(writer, sheet_name="Insumos utilizados", index=False)
+            ws2 = writer.sheets["Insumos utilizados"]
+            for col in ws2.columns:
+                max_len = max(len(str(c.value or "")) for c in col) + 2
+                ws2.column_dimensions[col[0].column_letter].width = min(max_len, 40)
 
     st.download_button("Descargar Excel", buffer.getvalue(),
                        file_name=f"inventario_{empresa}_{datetime.now().strftime('%Y%m%d')}.xlsx",
