@@ -574,27 +574,30 @@ t0_view = time.monotonic()
 ok_view = True
 _vista_requiere_paciente = vista_actual in MODULOS_REQUIEREN_PACIENTE and not paciente_sel
 
-try:
-    if _vista_requiere_paciente:
-        _render_estado_vacio_sin_paciente(menu_set)
-    else:
-        render_current_view(
-            vista_actual,
-            paciente_sel,
-            mi_empresa,
-            user,
-            rol,
-            VIEW_CONFIG,
-            menu_set,
+# Contenedor con key única por módulo: fuerza limpieza de widgets al cambiar
+_mod_version = st.session_state.setdefault("_mod_version", 0)
+with st.container(key=f"modulo_{vista_actual}_{_mod_version}"):
+    try:
+        if _vista_requiere_paciente:
+            _render_estado_vacio_sin_paciente(menu_set)
+        else:
+            render_current_view(
+                vista_actual,
+                paciente_sel,
+                mi_empresa,
+                user,
+                rol,
+                VIEW_CONFIG,
+                menu_set,
+            )
+    except Exception as exc:
+        ok_view = False
+        log_event(
+            "main",
+            f"render_current_view_fallo:{vista_actual}:{type(exc).__name__}:{exc}",
         )
-except Exception as exc:
-    ok_view = False
-    log_event(
-        "main",
-        f"render_current_view_fallo:{vista_actual}:{type(exc).__name__}:{exc}",
-    )
-    st.error(f"Error al cargar el módulo **{vista_actual}**. Consulta los logs del sistema.")
-    st.caption("Ocurrió un error inesperado. El equipo de soporte fue notificado.")
+        st.error(f"Error al cargar el módulo **{vista_actual}**. Consulta los logs del sistema.")
+        st.caption("Ocurrió un error inesperado. El equipo de soporte fue notificado.")
     try:
         report_exception(
             module=f"main.render_current_view.{vista_actual}",
@@ -604,12 +607,12 @@ except Exception as exc:
         )
     except Exception:
         pass
-finally:
-    record_perf(
-        f"ui.modulo.{vista_actual}",
-        (time.monotonic() - t0_view) * 1000.0,
-        ok=ok_view,
-    )
+    finally:
+        record_perf(
+            f"ui.modulo.{vista_actual}",
+            (time.monotonic() - t0_view) * 1000.0,
+            ok=ok_view,
+        )
 
 try:
     from views.ai_floating_assistant import render_ai_floating_assistant
