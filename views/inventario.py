@@ -503,10 +503,10 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
             costo = item.get("costo_unitario", 0) or 0
             total_valor += int(stock) * float(costo)
             pdf.cell(10, 6, str(idx), border=1, align="C")
-            pdf.cell(70, 6, safe_text(item.get("item", "-")[:60]), border=1)
+            pdf.cell(70, 6, safe_text((item.get("item") or "-")[:60]), border=1)
             pdf.cell(20, 6, str(stock), border=1, align="C")
             pdf.cell(20, 6, str(item.get("stock_minimo", 0)), border=1, align="C")
-            pdf.cell(30, 6, safe_text(item.get("categoria", "-")[:25]), border=1, align="C")
+            pdf.cell(30, 6, safe_text((item.get("categoria") or "-")[:25]), border=1, align="C")
             pdf.cell(40, 6, f"${float(costo):.2f}", border=1, align="C")
             pdf.ln()
 
