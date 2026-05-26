@@ -90,14 +90,16 @@ def verificar_password(plain_or_hash1: str, plain_or_hash2: str) -> bool:
             return False
         try:
             return bcrypt.checkpw(b.encode("utf-8"), a.encode("ascii"))
-        except Exception:
+        except Exception as e:
+            log_event("password_crypto", f"error_checkpw_a:{type(e).__name__}:{e}")
             return False
     if b_hash and not a_hash:
         if not bcrypt:
             return False
         try:
             return bcrypt.checkpw(a.encode("utf-8"), b.encode("ascii"))
-        except Exception:
+        except Exception as e:
+            log_event("password_crypto", f"error_checkpw_b:{type(e).__name__}:{e}")
             return False
     # Ninguno parece hash: comparación legacy en texto plano
     return secrets.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
