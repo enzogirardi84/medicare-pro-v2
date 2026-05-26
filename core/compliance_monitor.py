@@ -401,18 +401,20 @@ class ComplianceMonitor:
         violations = []
         
         # Verificar pacientes sin consentimiento vigente
-        pacientes = st.session_state.get("pacientes_db", [])
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes_list = st.session_state.get("pacientes_db", [])
         
-        for paciente in pacientes:
+        for pid in pacientes_list:
+            paciente = detalles.get(pid, {})
             if not paciente.get("consentimiento_vigente"):
                 violations.append(ComplianceViolation(
-                    id=f"viol-consent-{hash(paciente.get('id', '')) % 10000}",
+                    id=f"viol-consent-{hash(pid) % 10000}",
                     standard=ComplianceStandard.GDPR.value,
                     control="Informed Consent",
                     severity="high",
-                    description=f"Paciente {paciente.get('nombre', 'ID')} sin consentimiento informado vigente",
+                    description=f"Paciente {pid} sin consentimiento informado vigente",
                     detected_at=datetime.now(timezone.utc).isoformat(),
-                    affected_resource=f"patient:{paciente.get('id')}",
+                    affected_resource=f"patient:{pid}",
                     remediation_required=True,
                     remediation_deadline=(datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
                 ))
