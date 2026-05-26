@@ -182,7 +182,7 @@ def tab_trabajo_social(paciente_sel, user, centro_salud_id):
     if not pid:
         return
     intervencion = st.text_area("Intervencion realizada", key="aps_ts_intervencion")
-    if st.button("Guardar", type="primary", use_container_width=True):
+    if st.button("Guardar", type="primary", use_container_width=True, key="aps_ts_guardar"):
         st.session_state.setdefault("trabajo_social_aps_db", []).append({
             "paciente_id": pid, "intervencion": intervencion,
             "fecha_registro": datetime.now().isoformat(), "created_at": datetime.now().isoformat(),
@@ -198,7 +198,7 @@ def tab_epidemiologia(paciente_sel, user, centro_salud_id):
     if not pid:
         return
     enf = st.text_area("Enfermedades / seguimiento", key="aps_epi_enf")
-    if st.button("Guardar", type="primary", use_container_width=True):
+    if st.button("Guardar", type="primary", use_container_width=True, key="aps_epi_guardar"):
         st.session_state.setdefault("epidemiologia_aps_db", []).append({
             "paciente_id": pid, "enfermedades_seguimiento": [enf],
             "fecha_registro": datetime.now().isoformat(), "created_at": datetime.now().isoformat(),

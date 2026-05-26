@@ -150,8 +150,9 @@ if not st.session_state.get("_mc_professional_theme_applied_v4"):
         except Exception:
             pass
 
+from core.app_performance import procesar_guardado_pendiente_seguro
+
 try:
-    from core.app_performance import procesar_guardado_pendiente_seguro
     procesar_guardado_pendiente_seguro()
 except Exception as exc:
     log_event("main_rerun", f"procesar_guardado_pendiente_falla:{type(exc).__name__}:{exc}")
@@ -359,7 +360,8 @@ MODULOS_REQUIEREN_PACIENTE = frozenset(
 
 
 def _ir_a_modulo_desde_estado_vacio(modulo):
-    st.session_state["modulo_actual"] = modulo
+    from core.app_navigation import set_modulo_actual
+    set_modulo_actual(modulo, rerun=True)
 
 
 def _render_estado_vacio_sin_paciente(menu_set):
@@ -418,7 +420,8 @@ mostrar_atajo = (
 
 if mostrar_atajo or paciente_sel:
     def _swap_modulo_callback(cur, ant):
-        st.session_state["modulo_actual"] = ant
+        from core.app_navigation import set_modulo_actual
+        set_modulo_actual(ant, rerun=True)
         st.session_state["modulo_anterior"] = cur
 
     if mostrar_atajo and paciente_sel:
