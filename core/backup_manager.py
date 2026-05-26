@@ -412,14 +412,14 @@ class BackupManager:
             key = self._derive_fernet_key(password)
             f = Fernet(key)
 
-            with open(file_path, 'rb') as file:
-                data = file.read()
+            with open(file_path, 'rb') as fh:
+                data = fh.read()
 
             encrypted = f.encrypt(data)
 
             enc_path = file_path.with_suffix(file_path.suffix + ".enc")
-            with open(enc_path, 'wb') as file:
-                file.write(encrypted)
+            with open(enc_path, 'wb') as fh:
+                fh.write(encrypted)
 
             file_path.unlink()
 
@@ -438,14 +438,14 @@ class BackupManager:
             key = self._derive_fernet_key(password)
             f = Fernet(key)
 
-            with open(file_path, 'rb') as file:
-                encrypted = file.read()
+            with open(file_path, 'rb') as fh:
+                encrypted = fh.read()
 
             decrypted = f.decrypt(encrypted)
 
             dec_path = file_path.with_suffix('')  # remove .enc
-            with open(dec_path, 'wb') as file:
-                file.write(decrypted)
+            with open(dec_path, 'wb') as fh:
+                fh.write(decrypted)
 
             file_path.unlink()
 
