@@ -75,7 +75,7 @@ def generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_
         pdf.set_xy(14, y_start + 1)
         pdf.set_font("Arial", "B", 9)
         pdf.set_text_color(25, 55, 95)
-        pdf.cell(0, 5, safe_text(f"#{i}  [{item['tipo']}]  {item['titulo']}"), ln=True)
+        pdf.cell(0, 5, safe_text(f"#{i}  [{item.get('tipo', '-')}]  {item.get('titulo', '-')}"), ln=True)
         pdf.set_xy(14, y_start + 6)
         pdf.set_font("Arial", "", 8)
         pdf.set_text_color(80, 80, 80)

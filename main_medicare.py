@@ -151,6 +151,7 @@ if not st.session_state.get("_mc_professional_theme_applied_v4"):
             pass
 
 try:
+    from core.app_performance import procesar_guardado_pendiente_seguro
     procesar_guardado_pendiente_seguro()
 except Exception as exc:
     log_event("main_rerun", f"procesar_guardado_pendiente_falla:{type(exc).__name__}:{exc}")
