@@ -340,6 +340,20 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(user)
         elif tab_name == "Reportes Financieros":
             render_fn(mi_empresa, rol)
+        elif tab_name == "Admin Feature Flags":
+            render_fn()
+        elif tab_name == "Self-Healing IA":
+            render_fn(paciente_sel, mi_empresa, user, rol)
+        elif tab_name == "Asistente IA":
+            render_fn(paciente_sel, mi_empresa, user, rol)
+        elif tab_name == "APS / Dispensario":
+            render_fn(paciente_sel, mi_empresa, user, rol)
+        elif tab_name == "Vacunacion":
+            render_fn(paciente_sel, mi_empresa, user, rol)
+        elif tab_name == "Chatbot IA":
+            render_fn(paciente_sel, mi_empresa, user, rol)
+        elif tab_name == "Calc. Dosis Pediatricas":
+            render_fn(paciente_sel, mi_empresa, user, rol)
         else:
             render_fn(paciente_sel, mi_empresa, user, rol)
     except Exception as exc:

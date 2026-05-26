@@ -19,7 +19,7 @@ from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 
 
-def render_feature_flags_admin():
+def render_feature_flags_admin(paciente_sel=None, mi_empresa=None, user=None, rol=None):
     """
     Renderiza panel de administración de Feature Flags.
     
