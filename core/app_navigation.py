@@ -44,8 +44,6 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
     # Cerrar cortina de navegacion si estaba abierta
     if st.session_state.pop("_show_nav_cortina", None) is not None:
         pass
-    # Forzar limpieza de widgets del modulo anterior
-    st.session_state["_mod_version"] = st.session_state.get("_mod_version", 0) + 1
     # Colapsar todos los expanders del menu
     st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
 
