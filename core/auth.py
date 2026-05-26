@@ -555,7 +555,12 @@ def check_inactividad():
             remaining = SESSION_TIMEOUT_MINUTES * 60 - elapsed
 
             if remaining < 300 and remaining > 0 and not st.session_state.get("_timeout_warning_shown"):
-                st.warning(f"⏳ Tu sesión expirará en {int(remaining // 60)} min por inactividad.")
+                mins = int(remaining // 60)
+                secs = int(remaining % 60)
+                if mins >= 2:
+                    st.warning(f"⏳ Tu sesión expirará en **{mins} min** por inactividad. Hacé clic en «Sigo aquí» para mantenerla activa.")
+                else:
+                    st.warning(f"⏳⚠️ Tu sesión expirará en **{mins} min {secs}s** — hacé clic YA en «Sigo aquí».")
                 if st.button("Sigo aquí", key="keep_alive"):
                     st.session_state["_last_activity"] = time.time()
                     st.session_state["ultima_actividad"] = ahora()

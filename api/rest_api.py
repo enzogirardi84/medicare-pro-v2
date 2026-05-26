@@ -30,6 +30,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 from enum import Enum
 from functools import wraps
+import re
 import secrets
 import time
 
@@ -543,6 +544,9 @@ async def list_patients(
     - **search**: Filtrar por nombre o DNI
     """
     empresa_usuario = str(current_user.get("empresa", "")).strip()
+    # Sanitizar búsqueda: solo alfanumérico, espacios, guiones y puntos
+    if search:
+        search = re.sub(r'[^\w\s\-\.]', '', search).strip()[:100]
     # Mock data - en producción consultaría Supabase
     patients = [
         PatientResponse(
