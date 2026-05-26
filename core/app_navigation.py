@@ -44,6 +44,8 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
     # Cerrar cortina de navegacion si estaba abierta
     if st.session_state.pop("_show_nav_cortina", None) is not None:
         pass
+    # Colapsar todos los expanders del menu
+    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
 
     if rerun:
         st.rerun()
@@ -229,7 +231,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         expandido = not _mobile and primera_vez and (cat == cat_activa)
 
         with st.expander(
-            label, expanded=expandido, key=f"_nav_e_{cat}"
+            label, expanded=expandido, key=f"_nav_e_{cat}_{nav_version}"
         ):
             todos = [
                 m
