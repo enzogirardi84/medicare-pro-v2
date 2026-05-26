@@ -25,7 +25,6 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Escalas Clinicas",
         "Historial",
         "Percentilo",
-        "Asistente Clinico",
         "Telemedicina",
         "Diagnosticos",
         "APS / Dispensario",
@@ -79,7 +78,7 @@ _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
             "Vacunacion",
         ],
         "Apoyo": [
-            "Asistente Clinico", "Telemedicina",
+            "Telemedicina",
             "Calc. Dosis Pediatricas", "Chatbot IA",
         ],
     },
