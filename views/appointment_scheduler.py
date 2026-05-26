@@ -14,7 +14,7 @@ Características:
 
 import streamlit as st
 from datetime import datetime, date, timedelta, time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List
 from dataclasses import dataclass, asdict
 from enum import Enum, auto
 from collections import defaultdict
@@ -23,7 +23,6 @@ import pandas as pd
 
 from core.app_logging import log_event
 from core.clinical_reminders import get_reminder_manager, ReminderType, ReminderPriority
-from core.data_validation import get_validator
 
 
 class AppointmentStatus(Enum):
@@ -352,7 +351,14 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
     st.header("📋 Nuevo Turno")
     
     # Obtener datos
-    pacientes = st.session_state.get("pacientes_db", {})
+    pacientes_list = st.session_state.get("pacientes_db", [])
+    detalles = st.session_state.get("detalles_pacientes_db", {})
+    pacientes = {}
+    for pid in pacientes_list:
+        d = detalles.get(pid, {})
+        dni = d.get("dni", pid.split(" - ")[-1] if " - " in pid else pid)
+        nombre = pid.split(" - ")[0] if " - " in pid else pid
+        pacientes[dni] = {"nombre": nombre, "apellido": "", **d}
     usuarios = st.session_state.get("usuarios_db", {})
     
     # Filtrar médicos
@@ -530,10 +536,15 @@ def render_daily_agenda(scheduler: AppointmentScheduler):
                         
                         if turno.status in [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]:
                             if st.button("❌ Cancelar", use_container_width=True, key=f"canc_{turno.id}"):
-                                motivo_cancel = st.text_input("Motivo", key=f"mot_{turno.id}")
-                                if st.button("Confirmar Cancelación", use_container_width=True, key=f"cf_{turno.id}"):
-                                    scheduler.cancel_appointment(turno.id, motivo_cancel)
-                                    st.rerun()
+                                st.session_state["_apt_cancel_id"] = turno.id
+                                st.rerun()
+
+                        if st.session_state.get("_apt_cancel_id") == turno.id:
+                            motivo_cancel = st.text_input("Motivo de cancelación", key=f"mot_{turno.id}")
+                            if st.button("Confirmar Cancelación", use_container_width=True, key=f"cf_{turno.id}"):
+                                scheduler.cancel_appointment(turno.id, motivo_cancel)
+                                st.session_state.pop("_apt_cancel_id", None)
+                                st.rerun()
                     
                     st.divider()
 

@@ -547,7 +547,7 @@ def send_welcome_email(to_email: str, nombre: str, username: str, empresa: str) 
             "nombre": nombre,
             "username": username,
             "empresa": empresa,
-            "login_url": "https://medicare.local/login"
+            "login_url": os.environ.get("MEDICARE_APP_URL", st.secrets.get("APP_URL", "https://app.medicarepro.com/login"))
         }
     )
 

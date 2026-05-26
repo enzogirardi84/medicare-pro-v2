@@ -28,7 +28,6 @@ from core.app_session import (
     inicializar_db_state_seguro,
 )
 from core.app_theme import aplicar_css_base
-from core.app_performance import procesar_guardado_pendiente_seguro
 from core.landing_runner import ensure_entered_app_default, render_publicidad_y_detener
 from core.seo_streamlit import (
     PAGE_TITLE_PUBLIC,
@@ -38,7 +37,7 @@ from core.seo_streamlit import (
 from views.pwa_manifest import inject_pwa_headers
 from core import utils as core_utils
 
-APP_BUILD_TAG = "Build 2026-05-21 - Hide AI evolution controls"
+APP_BUILD_TAG = "Build 2026-05-25 - Cache refactor + role checks"
 
 st.set_page_config(
     page_title=PAGE_TITLE_PUBLIC,
@@ -116,15 +115,13 @@ for _guard_key, _guard_default in (
     ("modulo_actual", None),
     ("paciente_actual", None),
 ):
-    if _guard_key not in st.session_state:
+    if _guard_key not in st.session_state or st.session_state[_guard_key] is None:
         st.session_state[_guard_key] = _guard_default
 
 try:
     inject_pwa_headers()
 except Exception as exc:
     log_event("pwa", f"inject_pwa_headers_falla:{type(exc).__name__}:{exc}")
-
-_inject_mobile_css_asset()
 
 try:
     from core.ui_liviano import render_mc_liviano_cliente, render_mobile_sidebar_toggle
@@ -140,55 +137,6 @@ try:
     inject_service_worker()
 except Exception as exc:
     log_event("sw", f"carga_falla:{type(exc).__name__}")
-
-# Parche visual definitivo: elimina botones/avisos de IA de Evoluciones aunque
-# aparezcan por caché, por un deploy viejo o por otro componente.
-st.markdown("""
-<script>
-(function() {
-  function hideAiEvolutionElements() {
-    try {
-      const doc = window.parent && window.parent.document ? window.parent.document : document;
-      const phrases = [
-        "Sugerir evolución con IA",
-        "Sugerir evolucion con IA",
-        "IA no disponible",
-        "Configuración de IA",
-        "Configuracion de IA",
-        "Ajustes > Integraciones"
-      ];
-      const nodes = Array.from(doc.querySelectorAll("button, [data-testid='stButton'], [data-testid='stAlert'], div"));
-      for (const node of nodes) {
-        const txt = (node.innerText || node.textContent || "").trim();
-        if (!txt) continue;
-        if (phrases.some(p => txt.includes(p))) {
-          let target = node.closest("[data-testid='stButton']") || node.closest("[data-testid='stAlert']") || node;
-          target.style.setProperty("display", "none", "important");
-          target.style.setProperty("visibility", "hidden", "important");
-          target.style.setProperty("height", "0", "important");
-          target.style.setProperty("min-height", "0", "important");
-          target.style.setProperty("margin", "0", "important");
-          target.style.setProperty("padding", "0", "important");
-          target.style.setProperty("overflow", "hidden", "important");
-        }
-      }
-    } catch (e) {}
-  }
-  hideAiEvolutionElements();
-  setTimeout(hideAiEvolutionElements, 200);
-  setTimeout(hideAiEvolutionElements, 700);
-  setTimeout(hideAiEvolutionElements, 1400);
-  setInterval(hideAiEvolutionElements, 1200);
-  try {
-    const doc = window.parent && window.parent.document ? window.parent.document : document;
-    if (!window.__mcHideAiEvolutionObserver) {
-      window.__mcHideAiEvolutionObserver = true;
-      new MutationObserver(hideAiEvolutionElements).observe(doc.body, { childList: true, subtree: true });
-    }
-  } catch (e) {}
-})();
-</script>
-""", unsafe_allow_html=True)
 
 from core.ui_professional import apply_professional_theme
 if not st.session_state.get("_mc_professional_theme_applied_v4"):
@@ -254,9 +202,7 @@ from core.sidebar_components import (
 )
 from core.view_registry import build_view_maps
 
-cargar_texto_asset = core_utils.cargar_texto_asset
 es_control_total = getattr(core_utils, "es_control_total", lambda rol, usuario_actual=None: str(rol or "").strip().lower() in {"superadmin", "admin", "coordinador", "administrativo"})
-inicializar_db_state = core_utils.inicializar_db_state
 mapa_detalles_pacientes = getattr(core_utils, "mapa_detalles_pacientes", lambda ss: ss.get("detalles_pacientes_db") if isinstance(ss.get("detalles_pacientes_db"), dict) else {})
 obtener_alertas_clinicas = core_utils.obtener_alertas_clinicas
 obtener_modulos_permitidos = getattr(core_utils, "obtener_modulos_permitidos", None)
@@ -386,15 +332,9 @@ if _modulo_prev and _modulo_prev != vista_actual:
     registrar_acceso("cambio_modulo", f"{_modulo_prev} -> {vista_actual}")
 st.session_state["_modulo_anterior_log"] = vista_actual
 
-if not vista_actual:
-    st.warning("No se pudo resolver un módulo visible para este usuario.")
-    st.stop()
-
 if not st.session_state.get("_acceso_registrado"):
     registrar_acceso("login_ok", f"Modulo inicial: {vista_actual}")
     st.session_state["_acceso_registrado"] = True
-
-nombre_usuario = user.get("nombre", "Usuario")
 
 MODULOS_REQUIEREN_PACIENTE = frozenset(
     {
@@ -454,9 +394,9 @@ def _render_estado_vacio_sin_paciente(menu_set):
 if not paciente_sel:
     st.markdown(f"""
     <div style="background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(37,99,235,0.05));border:1px solid rgba(14,165,233,0.2);border-radius:20px;padding:28px 24px;margin:10px 0 20px;text-align:center;">
-        <h3 style="margin:0 0 8px;color:#e2e8f0;">Bienvenido, {nombre_usuario}</h3>
+        <h3 style="margin:0 0 8px;color:#e2e8f0;">Bienvenido, {escape(nombre_usuario)}</h3>
         <p style="margin:0 0 4px;color:#94a3b8;">Selecciona un paciente del selector superior para comenzar.</p>
-        <p style="margin:0;color:#64748b;font-size:0.85rem;">Clinica: {mi_empresa} · Rol: {rol}</p>
+        <p style="margin:0;color:#64748b;font-size:0.85rem;">Clinica: {escape(mi_empresa)} · Rol: {escape(rol)}</p>
     </div>
     """, unsafe_allow_html=True)
 else:

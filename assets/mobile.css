@@ -543,37 +543,20 @@
         max-width: 100% !important;
         height: auto !important;
     }
-}
 
-@media (min-width: 769px) and (max-width: 1024px) {
-    html body .block-container {
-        padding: 0.8rem 1rem !important;
-        max-width: 100% !important;
-    }
-}
+    /* ============================================================
+       UNIQUE RULES FROM SECOND BLOCK (merged upstream)
+       ============================================================ */
 
-@media (pointer: coarse) {
-    button, a, input, select, textarea,
-    [role="button"], [role="tab"], [role="option"],
-    [data-testid="stButton"] button,
-    [data-testid="stFormSubmitButton"] button {
-        touch-action: manipulation !important;
-        -webkit-tap-highlight-color: rgba(20, 184, 166, 0.25) !important;
-    }
-}
-
-@media screen and (max-width: 768px) {
     .block-container::before {
         content: none !important;
         display: none !important;
     }
 
+    /* Select inputs: mayor altura táctil */
     div[data-baseweb="select"],
     div[data-baseweb="select"] > div,
     div[data-baseweb="select"] div[role="combobox"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
         min-height: 58px !important;
         height: auto !important;
         overflow: hidden !important;
@@ -679,12 +662,7 @@
         line-height: 1.2 !important;
     }
 
-    /* ========================================================
-       HOTFIX CORTINA MAR / MEDICACION EN TELEFONO
-       El data_editor de Streamlit necesita scroll horizontal real.
-       Si el contenedor padre oculta overflow-x, no permite deslizar
-       ni tocar bien las celdas/selectores.
-       ======================================================== */
+    /* HOTFIX: data editor scroll táctil */
     [data-testid="stDataEditor"],
     [data-testid="stDataEditor"] > div,
     [data-testid="stDataEditor"] iframe,
@@ -720,14 +698,13 @@
         font-size: 15px !important;
     }
 
-    /* Popovers/selects dentro de la grilla siempre arriba */
     [data-testid="stDataEditor"] [data-baseweb="popover"],
     [data-testid="stDataFrame"] [data-baseweb="popover"],
     div[data-baseweb="popover"] {
         z-index: 2147483647 !important;
     }
 
-    /* Oculta el overlay flotante Manage app en telefono: tapa botones y tabla */
+    /* Oculta overlay flotante Streamlit Cloud en móvil */
     [data-testid="stStatusWidget"],
     [data-testid="stDecoration"],
     .stDeployButton,
@@ -759,5 +736,67 @@
         font-size: 0.92rem !important;
         line-height: 1.45 !important;
         color: #94a3b8 !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+    html body .block-container {
+        padding: 0.8rem 1rem !important;
+        max-width: 100% !important;
+    }
+}
+
+html {
+    scroll-behavior: smooth !important;
+}
+
+* {
+    -webkit-tap-highlight-color: rgba(20, 184, 166, 0.2) !important;
+    outline-color: #14b8a6 !important;
+}
+
+button:active, [role="button"]:active, a:active, label:active {
+    transform: scale(0.97) !important;
+    transition: transform 0.1s ease !important;
+}
+
+button, [role="button"], a, input, select, textarea, label {
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+input:focus, select:focus, textarea:focus,
+[data-baseweb="input"]:focus-within,
+[data-baseweb="select"]:focus-within,
+[data-baseweb="textarea"]:focus-within {
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3) !important;
+    border-color: #14b8a6 !important;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+    .block-container {
+        padding-bottom: max(7.5rem, calc(env(safe-area-inset-bottom) + 6rem)) !important;
+    }
+}
+
+@supports (padding: constant(safe-area-inset-bottom)) {
+    .block-container {
+        padding-bottom: max(7.5rem, calc(constant(safe-area-inset-bottom) + 6rem)) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (pointer: coarse) {
+    button, a, input, select, textarea,
+    [role="button"], [role="tab"], [role="option"],
+    [data-testid="stButton"] button,
+    [data-testid="stFormSubmitButton"] button {
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: rgba(20, 184, 166, 0.25) !important;
     }
 }

@@ -66,7 +66,7 @@ class ShortcutManager:
         shortcut = KeyboardShortcut(
             key=key,
             description=description,
-            action=key,  # Usamos key como identificador único
+            action=getattr(action, '__name__', str(action)),
             scope=scope,
             module=module,
             prevent_default=prevent_default,
@@ -454,7 +454,7 @@ def demo_keyboard_shortcuts():
     init_keyboard_shortcuts()
     
     # Mostrar ayuda
-    with st.expander("Ver todos los atajos (Ctrl+H)", expanded=True):
+    with st.expander("Ver todos los atajos (Ctrl+H)", expanded=False):
         render_shortcuts_help()
     
     # Simular triggers

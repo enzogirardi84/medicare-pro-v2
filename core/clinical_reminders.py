@@ -624,9 +624,16 @@ class ClinicalReminderManager:
         st.subheader("Crear Nuevo Recordatorio")
         
         # Seleccionar paciente
-        pacientes_db = st.session_state.get("pacientes_db", {})
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes_list = st.session_state.get("pacientes_db", [])
+        pacientes = {}
+        for pid in pacientes_list:
+            d = detalles.get(pid, {})
+            dni = d.get("dni", pid.split(" - ")[-1] if " - " in pid else pid)
+            nombre = pid.split(" - ")[0] if " - " in pid else pid
+            pacientes[dni] = {"nombre": nombre, "apellido": "", **d}
         paciente_options = {f"{p['apellido']}, {p['nombre']} (DNI: {dni})": dni 
-                           for dni, p in pacientes_db.items()}
+                           for dni, p in pacientes.items()}
         
         selected_paciente = st.selectbox(
             "Paciente",
@@ -636,7 +643,7 @@ class ClinicalReminderManager:
         
         if selected_paciente:
             dni = paciente_options[selected_paciente]
-            paciente = pacientes_db[dni]
+            paciente = pacientes.get(dni, {})
 
             with st.form("create_reminder_form"):
                 col1, col2 = st.columns(2)

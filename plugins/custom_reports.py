@@ -163,7 +163,7 @@ class CustomReportsPlugin(MedicarePlugin):
         """Reporte de pacientes."""
         st.header("Estadísticas de Pacientes")
         
-        pacientes_db = st.session_state.get("pacientes_db", {})
+        pacientes_db = st.session_state.get("detalles_pacientes_db", {})
         
         if not pacientes_db:
             st.info("No hay pacientes registrados.")
@@ -264,14 +264,11 @@ class CustomReportsPlugin(MedicarePlugin):
             st.bar_chart(df.head(10).set_index("Medicamento"))
     
     def _export_to_excel(self, df: pd.DataFrame, sheet_name: str) -> bytes:
-        """Exporta DataFrame a Excel."""
-        output = pd.ExcelWriter(f"{sheet_name}.xlsx", engine='openpyxl')
-        df.to_excel(output, sheet_name=sheet_name, index=False)
-        
-        # Obtener bytes
+        """Exporta DataFrame a Excel en memoria."""
         import io
         buffer = io.BytesIO()
-        output.book.save(buffer)
+        with pd.ExcelWriter(buffer, engine='openpyxl') as output:
+            df.to_excel(output, sheet_name=sheet_name, index=False)
         return buffer.getvalue()
 
 

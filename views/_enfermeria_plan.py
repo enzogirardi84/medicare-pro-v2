@@ -63,7 +63,7 @@ def _render_contexto_clinico_enfermeria(paciente_sel, detalles):
     if not tiene_vitales and not tiene_indicaciones:
         return
 
-    with st.expander("🩺 Contexto clínico del paciente", expanded=True):
+    with st.expander("🩺 Contexto clínico del paciente", expanded=False):
         if tiene_vitales:
             vitales_ord = sorted(vitales, key=lambda x: parse_fecha_hora(x.get("fecha", "")), reverse=True)
             ultimo = vitales_ord[0]

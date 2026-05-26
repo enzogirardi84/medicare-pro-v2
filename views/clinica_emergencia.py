@@ -8,7 +8,6 @@ Guarda datos inmediatamente en local_data.json
 """
 
 import streamlit as st
-from datetime import datetime
 
 from core.app_logging import log_event
 

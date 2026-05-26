@@ -93,8 +93,8 @@ def _rotate_disk_if_needed() -> None:
         if len(lines) > _MAX_DISK_LINES:
             trimmed = lines[-_MAX_DISK_LINES:]
             _DISK_FILE.write_text("\n".join(trimmed) + "\n", encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as e:
+        log_event("error_tracker", f"rotate_falla:{type(e).__name__}:{e}")
 
 
 def _current_user() -> Optional[str]:
@@ -103,8 +103,8 @@ def _current_user() -> Optional[str]:
         user = st.session_state.get("user")
         if user and isinstance(user, dict):
             return user.get("email") or user.get("username") or user.get("nombre")
-    except Exception:
-        pass
+    except Exception as e:
+        log_event("error_tracker", f"current_user_falla:{type(e).__name__}:{e}")
     return None
 
 
@@ -115,8 +115,8 @@ def _supabase_insert(record: Dict[str, Any]) -> None:
         if supabase is None:
             return
         supabase.table("app_error_logs").insert(record).execute()
-    except Exception:
-        pass
+    except Exception as e:
+        log_event("error_tracker", f"supabase_insert_falla:{type(e).__name__}:{e}")
 
 
 # ---------------------------------------------------------------------------
@@ -231,8 +231,8 @@ def get_recent_errors(
                         disk_records.append(json.loads(line))
                     except json.JSONDecodeError:
                         pass
-    except Exception:
-        pass
+    except Exception as e:
+        log_event("error_tracker", f"disk_read_falla:{type(e).__name__}:{e}")
 
     # 2. Leer de sesión
     buf = _get_session_buffer()
@@ -398,8 +398,8 @@ def setup_global_hooks() -> None:
             original_threading_excepthook(args)
 
         threading.excepthook = _thread_hook
-    except Exception:
-        pass
+    except Exception as e:
+        log_event("error_tracker", f"thread_hook_setup_falla:{type(e).__name__}:{e}")
 
 
 # ---------------------------------------------------------------------------
@@ -443,8 +443,8 @@ def resilient(
                 if on_error:
                     try:
                         on_error(exc)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log_event("error_tracker", f"on_error_callback_falla:{type(e).__name__}:{e}")
                 return fallback_return
 
         return wrapper

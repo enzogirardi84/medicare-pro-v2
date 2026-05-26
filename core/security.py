@@ -29,7 +29,12 @@ class FieldEncryptor:
             raw = os.getenv("MEDICARE_MASTER_CRYPTO_KEY", "")
             if not raw:
                 import streamlit as st
-                raw = st.secrets.get("MEDICARE_MASTER_CRYPTO_KEY", "ClaveMaestraDe32BytesParaPruebasLocal")
+                raw = st.secrets.get("MEDICARE_MASTER_CRYPTO_KEY", "")
+            if not raw:
+                raise RuntimeError(
+                    "MEDICARE_MASTER_CRYPTO_KEY no configurada. "
+                    "Debe agregarse en secrets.toml o variable de entorno."
+                )
             # Derive 32 bytes for AES-256
             key = raw.encode("utf-8").ljust(32, b'\0')[:32]
             cls._MASTER_KEY = base64.urlsafe_b64encode(key)

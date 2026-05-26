@@ -402,7 +402,7 @@ class PerformanceProfiler:
         
         # Funciones lentas
         if self.get_slow_functions():
-            with st.expander("🐌 Slow Functions", expanded=True):
+            with st.expander("🐌 Slow Functions", expanded=False):
                 slow_funcs = self.get_slow_functions()[:10]
                 for func in slow_funcs:
                     st.text(

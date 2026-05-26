@@ -7,7 +7,6 @@ from datetime import date
 import streamlit as st
 
 from views.dispensario.components._helpers import metricas_aps_del_dia, header_paciente, input_paciente_volatil
-from core.app_logging import log_event
 
 
 def render_tab_panel_diario(paciente_sel, user):
@@ -25,7 +24,7 @@ def render_tab_panel_diario(paciente_sel, user):
     c_total[2].metric("Total epi", metricas["total_epidemiologia"])
     c_total[3].metric("Total visitas", metricas["total_visitas"])
 
-    with st.expander("Acceso rapido a pacientes", expanded=True):
+    with st.expander("Acceso rapido a pacientes", expanded=False):
         if paciente_sel:
             header_paciente(paciente_sel, user)
         else:

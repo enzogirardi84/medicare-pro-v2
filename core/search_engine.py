@@ -350,19 +350,23 @@ class SearchManager:
         log_event("search", "Starting full reindex...")
         
         # Indexar pacientes
-        pacientes_db = st.session_state.get("pacientes_db", {})
-        for dni, paciente in pacientes_db.items():
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes_list = st.session_state.get("pacientes_db", [])
+        for pid in pacientes_list:
+            d = detalles.get(pid, {})
+            dni = d.get("dni", pid.split(" - ")[-1] if " - " in pid else pid)
+            nombre = pid.split(" - ")[0] if " - " in pid else pid
             self.index.add_document(
-                doc_id=paciente.get("id", dni),
+                doc_id=d.get("dni", pid),
                 doc_type="paciente",
                 fields={
-                    "nombre": paciente.get("nombre", ""),
-                    "apellido": paciente.get("apellido", ""),
+                    "nombre": nombre,
+                    "apellido": "",
                     "dni": dni,
-                    "email": paciente.get("email", ""),
-                    "obra_social": paciente.get("obra_social", ""),
-                    "alergias": str(paciente.get("alergias", [])),
-                    "medicamentos": str(paciente.get("medicamentos_actuales", []))
+                    "email": d.get("email", ""),
+                    "obra_social": d.get("obra_social", ""),
+                    "alergias": str(d.get("alergias", "")),
+                    "medicamentos": ""
                 }
             )
         

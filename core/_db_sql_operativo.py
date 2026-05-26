@@ -145,6 +145,22 @@ def get_administraciones_dia(paciente_id: str, fecha_inicio: str, fecha_fin: str
         return []
 
 
+@st.cache_data(ttl=120, show_spinner=False)
+def get_administraciones_by_fecha(paciente_id: str, fecha_inicio: str, fecha_fin: str) -> List[Dict[str, Any]]:
+    """Obtiene registros MAR por fecha_registro. Cache @st.cache_data (120s)."""
+    if not _ok():
+        return []
+    try:
+        response = _supabase_execute_with_retry(
+            "get_administraciones",
+            lambda: supabase.table("administracion_med").select("*").eq("paciente_id", paciente_id).gte("fecha_registro", fecha_inicio).lte("fecha_registro", fecha_fin).execute(),
+        )
+        return response.data if response and response.data else []
+    except Exception as e:
+        log_event("db_sql", f"error_get_administraciones:{type(e).__name__}")
+        return []
+
+
 def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Registra que una dosis fue dada o no dada (atómico)."""
     if not _ok():
@@ -155,6 +171,8 @@ def insert_administracion(datos_admin: Dict[str, Any]) -> Optional[Dict[str, Any
             lambda: supabase.table("administracion_med").upsert(datos_admin, on_conflict="id").execute(),
         )
         _invalidate_cache_prefix(f"_sql_op_adm_{datos_admin.get('paciente_id', '')}")
+        get_administraciones_by_fecha.clear()
+        get_administraciones_dia.clear()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_insert_administracion:{type(e).__name__}")

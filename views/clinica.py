@@ -12,9 +12,6 @@ from core.view_helpers import aviso_sin_paciente, bloque_estado_vacio, bloque_mc
 from core.utils import ahora, mapa_detalles_pacientes, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 from core.app_logging import log_event
 
-# NUEVO: Sistema de guardado en Supabase (no ocupa RAM)
-from core.supabase_storage import guardar_signos_vitales_seguro, obtener_signos_vitales_paciente
-
 
 _RANGOS_VIT = {
     "FC":   {"min": 60,   "max": 100,  "crit_min": 40,   "crit_max": 130,  "unidad": "lpm"},

@@ -354,7 +354,7 @@ def _render_panel_cuidador(paciente_sel, user, puede_registrar):
         return
 
     with st.form("evol_cuidador", clear_on_submit=False):
-        with st.expander("1. Actividad y Ejercicio", expanded=True):
+        with st.expander("1. Actividad y Ejercicio", expanded=False):
             cols_vitales = st.columns(3)
             with cols_vitales[0]:
                 st.markdown("TA (mmHg)")

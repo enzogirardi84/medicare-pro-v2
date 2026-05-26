@@ -8,11 +8,10 @@ Version ultra-simple, sin dependencias complejas.
 """
 
 import json
-import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 # Archivo de datos principal
 DATA_FILE = Path(".streamlit/local_data.json")

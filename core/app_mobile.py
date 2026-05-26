@@ -9,6 +9,7 @@ from html import escape
 
 import streamlit as st
 
+from core.app_logging import log_event
 from core.utils_pacientes import set_paciente_actual
 
 
@@ -18,16 +19,12 @@ _CSS_OPERATIVO_KEY = "_mc_mobile_css_operativo_v1"
 
 
 def _get_ui_liviano_module():
-    """Importa core.ui_liviano con fallback seguro."""
     try:
         import core.ui_liviano as ui_liv
         return ui_liv
     except ImportError:
-        try:
-            from core import ui_liviano as ui_liv
-            return ui_liv
-        except ImportError:
-            return None
+        log_event("mobile", "ui_liviano_no_disponible")
+        return None
 
 
 def _inyectar_css_mobile_operativo() -> None:
@@ -129,25 +126,15 @@ def _user_agent_contexto() -> str:
     if ui_liv is not None:
         try:
             ua = ui_liv.user_agent_desde_contexto() or ""
-        except Exception:
-            pass
+        except Exception as exc:
+            log_event("mobile", f"ua_contexto:{type(exc).__name__}")
     st.session_state[_UA_CACHE_KEY] = ua
     return ua
 
 
 def cliente_es_movil_probable() -> bool:
-    """True si el cliente parece ser un teléfono móvil o tablet."""
     if st.session_state.get("mc_liviano_modo") == "on":
         return True
-
-    # Fallback por headers (si existe en utils)
-    try:
-        from core.utils import headers_sugieren_equipo_liviano
-        if headers_sugieren_equipo_liviano():
-            return True
-    except Exception:
-        pass
-
     ui_liv = _get_ui_liviano_module()
     if ui_liv is not None:
         try:
@@ -156,20 +143,19 @@ def cliente_es_movil_probable() -> bool:
                 ui_liv.user_agent_es_telefono_movil_probable(ua)
                 or ui_liv.user_agent_es_tablet_probable(ua)
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            log_event("mobile", f"movil_probable:{type(exc).__name__}")
     return False
 
 
 def cliente_es_tablet_probable() -> bool:
-    """True si el cliente parece ser una tablet."""
     ui_liv = _get_ui_liviano_module()
     if ui_liv is not None:
         try:
             ua = _user_agent_contexto()
             return ui_liv.user_agent_es_tablet_probable(ua)
-        except Exception:
-            pass
+        except Exception as exc:
+            log_event("mobile", f"tablet_probable:{type(exc).__name__}")
     return False
 
 

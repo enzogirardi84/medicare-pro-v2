@@ -24,7 +24,6 @@ from core.security_middleware import (
     SecurityError,
     sanitize_search_term
 )
-from core.cache_optimized import cached_query, SessionStateManager
 from core.pagination import PageInfo
 from core.db_paginated import get_paginated_patients
 

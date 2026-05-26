@@ -182,10 +182,11 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
     st.session_state["u_actual"] = sesion
     st.session_state["logeado"] = True
     st.session_state.setdefault("logs_db", [])
+    _ahora = ahora()
     st.session_state["logs_db"].append(
         {
-            "F": ahora().strftime("%d/%m/%Y"),
-            "H": ahora().strftime("%H:%M"),
+            "F": _ahora.strftime("%d/%m/%Y"),
+            "H": _ahora.strftime("%H:%M"),
             "U": user_data["nombre"],
             "E": user_data["empresa"],
             "A": accion_log,
@@ -203,7 +204,10 @@ def _completar_login_exitoso(user_data: dict, u_limpio: str, accion_log: str, ev
         import time
         time.sleep(0.5)
     st.session_state["_mc_login_transition"] = True
-    st.rerun()
+    _ult_rerun = st.session_state.get("_ult_rerun_login_ts", 0)
+    if time.time() - _ult_rerun > 2:
+        st.session_state["_ult_rerun_login_ts"] = time.time()
+        st.rerun()
 
 
 def _render_bloque_verificacion_email_2fa() -> bool:

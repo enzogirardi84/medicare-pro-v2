@@ -112,7 +112,7 @@ def _render_ley(texto, idx):
     partes = texto.strip().split("\n", 1)
     titulo = partes[0].strip("**")
     cuerpo = partes[1] if len(partes) > 1 else ""
-    with st.expander(f"{titulo}", expanded=True):
+    with st.expander(f"{titulo}", expanded=False):
         st.markdown(cuerpo)
 
 
@@ -314,7 +314,7 @@ def _render_compliance_tab(mi_empresa, user):
             c2.metric("Criticas", report.summary["critical"])
             c2.metric("Altas", report.summary["high"])
             if report.violations:
-                with st.expander("Detalle de violaciones", expanded=True):
+                with st.expander("Detalle de violaciones", expanded=False):
                     for v in report.violations:
                         sev = v.severity
                         icon = {"critical": "CRIT", "high": "ALT", "medium": "MED", "low": "BAJ"}.get(sev, sev)

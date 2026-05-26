@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, datetime
-
 import streamlit as st
 
 from core.permissions import PACIENTE_CREAR, PACIENTE_EDITAR, PACIENTE_ELIMINAR, puede

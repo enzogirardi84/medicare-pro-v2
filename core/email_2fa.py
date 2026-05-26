@@ -71,8 +71,8 @@ def _hmac_key() -> bytes:
         raw = ""
     raw = str(raw).strip()
     if len(raw) < 8:
-        log_event("2fa", "FATAL: EMAIL_2FA_HMAC_SECRET no configurado")
-        return b""
+        log_event("2fa", "CRITICAL: EMAIL_2FA_HMAC_SECRET no configurado o muy corto (<8 chars)")
+        raise RuntimeError("EMAIL_2FA_HMAC_SECRET debe tener al menos 8 caracteres para seguridad 2FA")
     return raw.encode("utf-8")[:128]
 
 

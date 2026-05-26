@@ -377,9 +377,8 @@ def inject_pwa_headers():
     Usa blob URL para el manifest (Streamlit Cloud no sirve /manifest.json).
     Las apple-touch-icon usan data URIs inline para funcionar sin archivos estáticos.
     """
-    import json as _json
     manifest = generate_pwa_manifest()
-    manifest_json = _json.dumps(manifest, ensure_ascii=False)
+    manifest_json = json.dumps(manifest, ensure_ascii=False)
     
     # Icons inline como data URIs (SVG pequeño para compatibilidad)
     _svg_icon = (

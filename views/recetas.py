@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime as _dt, timedelta as _td
 
 from core.alert_toasts import queue_toast
-import time as _time
 
 import streamlit as st
 
-from core.anticolapso import anticolapso_activo
 from core.database import guardar_datos
+from core._db_sql_clinico import get_indicaciones_paciente
+from core._db_sql_operativo import get_administraciones_by_fecha
 from core.utils import (
     ahora,
     cargar_json_asset,
@@ -130,14 +130,13 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
 
     st.divider()
 
-    # --- LECTURA DESDE POSTGRESQL (con fallback a session_state) ---
+    # --- LECTURA DESDE POSTGRESQL (con caché @st.cache_data) ---
     from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
 
     recs_todas = []
     admin_hoy = []
     fecha_hoy = ahora().strftime("%d/%m/%Y")
     uso_sql_recetas = False
-    _RECETAS_SQL_TTL = 30
 
     try:
         partes = paciente_sel.split(" - ")
@@ -148,24 +147,12 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
             if empresa_id:
                 pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                 if pac_uuid:
-                    _ck = f"_rx_sql_{pac_uuid}"
                     if st.session_state.pop("_rx_sql_invalidar", False):
-                        st.session_state.pop(_ck, None)
-                    _cached = st.session_state.get(_ck, {})
-                    _cache_age = _time.monotonic() - _cached.get("ts", 0)
-                    if _cache_age < _RECETAS_SQL_TTL and _cached.get("fecha") == fecha_hoy:
-                        inds_sql = _cached["inds"]
-                        adms_sql = _cached["adms"]
-                    else:
-                        from core.database import supabase
-                        if supabase is None:
-                            raise RuntimeError("Supabase no inicializado")
-                        fecha_hoy_iso = ahora().strftime("%Y-%m-%d")
-                        res_ind = supabase.table("indicaciones").select("*").eq("paciente_id", pac_uuid).order("fecha_indicacion", desc=True).execute()
-                        inds_sql = res_ind.data if res_ind and res_ind.data else []
-                        res_adm = supabase.table("administracion_med").select("*").eq("paciente_id", pac_uuid).gte("fecha_registro", f"{fecha_hoy_iso}T00:00:00").lte("fecha_registro", f"{fecha_hoy_iso}T23:59:59").execute()
-                        adms_sql = res_adm.data if res_adm and res_adm.data else []
-                        st.session_state[_ck] = {"ts": _time.monotonic(), "fecha": fecha_hoy, "inds": inds_sql, "adms": adms_sql}
+                        get_indicaciones_paciente.clear()
+                        get_administraciones_by_fecha.clear()
+                    fecha_hoy_iso = ahora().strftime("%Y-%m-%d")
+                    inds_sql = get_indicaciones_paciente(pac_uuid)
+                    adms_sql = get_administraciones_by_fecha(pac_uuid, f"{fecha_hoy_iso}T00:00:00", f"{fecha_hoy_iso}T23:59:59")
                     uso_sql_recetas = True
                     registrar_estado_recetas_sql(
                         st.session_state,

@@ -177,7 +177,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                     estados_disponibles.append(estado_actual)
 
                 with st.form("adm_edit_form"):
-                    with st.expander("Datos personales", expanded=True):
+                    with st.expander("Datos personales", expanded=False):
                         col_e1, col_e2, col_e3 = st.columns(3)
                         nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
                         dni_edit = col_e2.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
@@ -605,7 +605,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                     guardar_datos(spinner=True)
 
                     _estado_guardado = obtener_estado_guardado()
-                    if _estado_guardado.get("estado") in ("error", "sin_cambios"):
+                    if _estado_guardado.get("estado") == "error":
                         st.session_state["pacientes_db"] = _backup_pacientes
                         st.session_state["detalles_pacientes_db"] = _backup_detalles
                         st.session_state.pop("paciente_actual", None)

@@ -11,7 +11,6 @@ import sys
 
 from core.app_logging import log_event
 from core.database import guardar_datos
-from core.config import settings
 
 
 def _guardar_config():

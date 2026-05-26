@@ -11,7 +11,7 @@ from core.database import guardar_datos
 from core.utils import puede_accion
 from views._aps_pdf import FPDF_DISPONIBLE, generar_pdf_historial_paciente, generar_pdf_reporte_aps
 from views.dispensario.components._helpers import (
-    guardar_con_feedback, guardar_directo, header_paciente,
+    guardar_directo, header_paciente,
     input_paciente_volatil, calcular_edad, ya_entrego_mes,
     calcular_edad_gestacional, get_paciente_id_visual,
 )

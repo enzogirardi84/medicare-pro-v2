@@ -310,7 +310,8 @@ class DataExporter:
         import streamlit as st
         
         # Obtener datos
-        pacientes_db = st.session_state.get("pacientes_db", {})
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes_db = {pid: {"id": pid, **pdata} for pid, pdata in detalles.items()}
         
         if patient_ids:
             patients = [p for p in pacientes_db.values() if p.get("id") in patient_ids]

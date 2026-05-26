@@ -37,8 +37,7 @@ except ImportError:
 # Helpers de tabla / UI
 # ---------------------------------------------------------------------------
 
-def render_tabla_clinica(df, key=None, max_height=420, sticky_first_col=False):
-    _ = key, sticky_first_col
+def render_tabla_clinica(df, key=None, max_height=420):
     mostrar_dataframe_con_scroll(df, height=max_height, border=True, hide_index=True)
 
 

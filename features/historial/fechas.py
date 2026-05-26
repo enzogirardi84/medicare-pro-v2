@@ -64,8 +64,8 @@ def fecha_registro_o_none(reg: Dict[str, Any]) -> Optional[date]:
 
 def registro_en_rango_fechas(
     reg: Dict[str, Any],
-    d_desde,
-    d_hasta,
+    d_desde: date,
+    d_hasta: date,
     *,
     incluir_sin_fecha: bool,
 ) -> bool:
@@ -76,8 +76,8 @@ def registro_en_rango_fechas(
 
 
 def sort_registros_por_fecha(registros: List[Dict[str, Any]], *, recientes_primero: bool) -> List[Dict[str, Any]]:
-    def clave(r: Dict[str, Any]):
+    def clave(r: Dict[str, Any]) -> datetime:
         dt = parse_registro_fecha_hora(r)
-        return dt or datetime.min
+        return dt if dt is not None else datetime.min
 
     return sorted(registros, key=clave, reverse=recientes_primero)

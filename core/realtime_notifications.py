@@ -439,7 +439,7 @@ def render_notification_badge() -> None:
         
         # Mostrar críticas primero
         for notif in critical[:3]:  # Máximo 3 críticas visibles
-            with st.sidebar.expander(f"🚨 {notif.title}", expanded=True):
+            with st.sidebar.expander(f"🚨 {notif.title}", expanded=False):
                 st.write(notif.message)
                 if st.button("✓ Reconocer", key=f"ack_{notif.id}"):
                     manager.acknowledge_critical(user_id, notif.id)

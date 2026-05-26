@@ -6,6 +6,7 @@ from __future__ import annotations
 Indicador de Estado de Conexión y Sincronización para MediCare.
 Muestra estado Online/Offline, sincronización con Supabase y alertas de datos pendientes.
 """
+import html
 import time
 import threading
 from typing import Optional, Callable
@@ -290,7 +291,7 @@ def render_connection_badge(
             <div style="margin-bottom: 0.5rem;"><strong>Latencia:</strong> {latency_text}</div>
             <div style="margin-bottom: 0.5rem;"><strong>Última sync:</strong> {last_sync}</div>
             {f'<div style="color: #f59e0b;"><strong>Pendientes:</strong> {status.pending_count}</div>' if status.pending_count > 0 else ''}
-            {f'<div style="color: #ef4444; margin-top: 0.5rem; font-size: 0.75rem;">{status.error_message}</div>' if status.error_message else ''}
+            {f'<div style="color: #ef4444; margin-top: 0.5rem; font-size: 0.75rem;">{html.escape(status.error_message)}</div>' if status.error_message else ''}
         </div>
         """
     

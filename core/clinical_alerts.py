@@ -27,12 +27,10 @@ Integración:
 - Loggea en auditoría
 - Requiere acknowledgment para alertas críticas
 """
-import json
 from typing import Dict, List, Any, Optional, Callable, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from enum import Enum, auto
-from functools import wraps
 import threading
 
 import streamlit as st

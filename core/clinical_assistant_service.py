@@ -3,7 +3,7 @@ Analiza datos de session_state y genera alertas sin IA externa.
 """
 from __future__ import annotations
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
 from core.export_utils import pdf_output_bytes
@@ -198,7 +198,7 @@ def evaluar_riesgo_clinico(datos: dict) -> List[dict]:
             alertas.append({"titulo":"Administracion Pendiente","detalle":f"Indicacion activa: {str(med_texto)} sin registro de administracion.","nivel":"warning","categoria":"farmacologia"})
     # Curacion sin insumos
     for c in cuidados:
-        if _contiene_keyword(c.get("cuidado_tipo",c.get("tipo_cuidado","")),("curacion","curacion")):
+        if _contiene_keyword(c.get("cuidado_tipo",c.get("tipo_cuidado","")),("curacion","cura")):
             tiene_insumo = any(_contiene_keyword(co.get("insumo",co.get("material","")),("gasa","antisep","aposito","venda")) for co in datos.get("consumos",[]))
             if not tiene_insumo:
                 alertas.append({"titulo":"Auditoria de Insumos - Curacion sin consumo","detalle":"Se registro una curacion pero no hay gasto de gasa/antiseptico en consumos.","nivel":"warning","categoria":"insumos"})
@@ -258,7 +258,10 @@ def analizar_consistencia_datos(datos: dict) -> List[dict]:
     diagnosticos = datos.get("diagnosticos", [])
     # Indicaciones sin vitales recientes
     if indicaciones:
-        vitales_rec = any((_horas_desde(_parse_fecha(v.get("fecha") or v.get("timestamp"))) or 999) < 12 for v in vitales)
+        vitales_rec = any(
+            (h := _horas_desde(_parse_fecha(v.get("fecha") or v.get("timestamp")))) is not None and h < 12
+            for v in vitales
+        )
         if not vitales_rec:
             alertas.append({"titulo":"Atencion: Indicaciones activas sin signos vitales recientes","detalle":"El paciente tiene medicacion/terapia indicada pero no se registran signos vitales desde hace mas de 12 horas.","nivel":"warning","categoria":"consistencia"})
     # Evolucion sin diagnostico
@@ -333,8 +336,8 @@ def compilar_dashboard_ejecutivo(datos: dict) -> dict:
     ind_activas = sum(1 for i in indicaciones if "activa" in str(i.get("estado_receta",i.get("estado_clinico",""))).lower())
     adm_pend = sum(1 for i in indicaciones if "activa" in str(i.get("estado_receta",i.get("estado_clinico",""))).lower() and not any(str(i.get("med","")).lower() in str(a.get("med","")).lower() for a in administracion))
     estudios_pend = sum(1 for e in estudios if str(e.get("estado","")).lower() in ("solicitado","pendiente"))
-    cuidados_hoy = sum(1 for c in cuidados if (_horas_desde(_parse_fecha(c.get("fecha") or c.get("timestamp"))) or 999) < 24)
-    evo_recientes = sum(1 for e in evoluciones if (_horas_desde(_parse_fecha(e.get("fecha") or e.get("timestamp"))) or 999) < 24)
+    cuidados_hoy = sum(1 for c in cuidados if (h := _horas_desde(_parse_fecha(c.get("fecha") or c.get("timestamp")))) is not None and h < 24)
+    evo_recientes = sum(1 for e in evoluciones if (h := _horas_desde(_parse_fecha(e.get("fecha") or e.get("timestamp")))) is not None and h < 24)
     # Tendencias TA / Glucemia
     ta_tendencia = []
     glu_tendencia = []

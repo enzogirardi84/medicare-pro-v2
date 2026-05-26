@@ -21,7 +21,6 @@ import uuid
 
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
-from core.appointment_scheduler import get_scheduler, AppointmentType, AppointmentStatus
 
 
 class TelemedicineStatus(Enum):
@@ -142,6 +141,8 @@ class TelemedicineManager:
     ) -> Optional[VirtualConsultation]:
         """Agenda una nueva consulta virtual."""
         
+        from views.appointment_scheduler import get_scheduler, AppointmentType
+        
         # Crear turno en el scheduler
         scheduler = get_scheduler()
         from core.appointment_scheduler import Appointment
@@ -226,6 +227,7 @@ class TelemedicineManager:
         self._save_consultations()
         
         # Actualizar turno en scheduler
+        from views.appointment_scheduler import get_scheduler, AppointmentStatus
         scheduler = get_scheduler()
         scheduler.update_status(consultation.appointment_id, AppointmentStatus.IN_PROGRESS)
         
@@ -252,6 +254,7 @@ class TelemedicineManager:
         self._save_consultations()
         
         # Actualizar turno
+        from views.appointment_scheduler import get_scheduler, AppointmentStatus
         scheduler = get_scheduler()
         scheduler.update_status(consultation.appointment_id, AppointmentStatus.COMPLETED)
         
@@ -551,7 +554,14 @@ class TelemedicineManager:
         st.header("➕ Nueva Consulta Virtual")
         
         # Obtener datos
-        pacientes = st.session_state.get("pacientes_db", {})
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes_list = st.session_state.get("pacientes_db", [])
+        pacientes = {}
+        for pid in pacientes_list:
+            d = detalles.get(pid, {})
+            dni = d.get("dni", pid.split(" - ")[-1] if " - " in pid else pid)
+            nombre = pid.split(" - ")[0] if " - " in pid else pid
+            pacientes[dni] = {"nombre": nombre, "apellido": "", **d}
         usuarios = st.session_state.get("usuarios_db", {})
         medicos = {k: v for k, v in usuarios.items() if v.get("rol") in ["medico", "admin"]}
         

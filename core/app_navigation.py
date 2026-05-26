@@ -365,9 +365,7 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             "</span></div>"
         )
         st.markdown(_html_aviso, unsafe_allow_html=True)
-        st.error("Error en modulo **" + tab_name + "**: " + type(exc).__name__ + ": " + str(exc))
-        with st.expander("Detalle tecnico (para soporte)"):
-            st.code("".join(_tb.format_exception(type(exc), exc, exc.__traceback__)), language="python")
+        st.error("Error en modulo **" + tab_name + "**: " + type(exc).__name__)
         try:
             render_modulo_fallo_ui(tab_name, exc)
         except Exception:

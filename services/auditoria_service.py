@@ -33,9 +33,9 @@ def audit_trail(action_name: str = "OPERATION"):
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             # Extraer parametros de contexto de la llamada
-            usuario_id = kwargs.get("usuario_id") or (args[1] if len(args) > 1 else "SYSTEM")
-            empresa_id = kwargs.get("empresa_id") or (args[2] if len(args) > 2 else "SYSTEM")
-            datos = kwargs.get("datos") or (args[3] if len(args) > 3 else {})
+            usuario_id = kwargs.get("usuario_id", args[1] if len(args) > 1 else "SYSTEM")
+            empresa_id = kwargs.get("empresa_id", args[2] if len(args) > 2 else "SYSTEM")
+            datos = kwargs.get("datos", args[3] if len(args) > 3 else {})
             
             # Ejecutar la operacion original
             resultado = func(*args, **kwargs)

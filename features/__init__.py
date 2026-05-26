@@ -1,7 +1,4 @@
 """
-
-from __future__ import annotations
-
 Lógica de dominio por capacidad (reglas, cálculos) sin Streamlit.
 
 Subpaquetes:
@@ -10,3 +7,5 @@ Subpaquetes:
 
 La UI sigue en ``views/``; el registro de pantallas en ``core/view_registry.py``.
 """
+
+from __future__ import annotations

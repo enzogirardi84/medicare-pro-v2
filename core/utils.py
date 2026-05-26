@@ -183,13 +183,13 @@ def decodificar_base64_seguro(valor: str) -> bytes:
 
 
 DEFAULT_ADMIN_USER = {
-    "pass": None,  # Removed hardcoded password - use SUPERADMIN_EMERGENCY_PASSWORD from secrets
+    "pass": None,
     "rol": "SuperAdmin",
-    "nombre": "Enzo Girardi",
-    "empresa": "SISTEMAS E.G.",
-    "matricula": "M.P 21947",
-    "dni": "37108100",
-    "titulo": "Director de Sistemas",
+    "nombre": "Super Admin",
+    "empresa": "Default",
+    "matricula": "00000",
+    "dni": "00000000",
+    "titulo": "Administrador",
     "perfil_profesional": "Direccion",
 }
 

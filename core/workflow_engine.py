@@ -695,7 +695,14 @@ class WorkflowEngine:
         template_id = template_options[selected]
         
         # Paciente (opcional)
-        pacientes = st.session_state.get("pacientes_db", {})
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes_list = st.session_state.get("pacientes_db", [])
+        pacientes = {}
+        for pid in pacientes_list:
+            d = detalles.get(pid, {})
+            dni = d.get("dni", pid.split(" - ")[-1] if " - " in pid else pid)
+            nombre = pid.split(" - ")[0] if " - " in pid else pid
+            pacientes[dni] = {"nombre": nombre, "apellido": ""}
         paciente_options = {"Sin paciente específico": None}
         paciente_options.update({f"{p['apellido']}, {p['nombre']}": dni for dni, p in pacientes.items()})
         

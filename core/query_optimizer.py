@@ -308,6 +308,7 @@ class QueryOptimizer:
             if self._compressor.should_compress(data):
                 compressed = self._compressor.compress(data)
                 st.session_state[f"_compressed_{key}"] = compressed
+                _purge_compressed_cache()
                 return True
             else:
                 st.session_state[key] = data
@@ -315,6 +316,14 @@ class QueryOptimizer:
         except Exception:
             st.session_state[key] = data
             return False
+
+
+def _purge_compressed_cache(max_entries: int = 100):
+    """Limpia entradas comprimidas viejas para evitar memory leak."""
+    _keys = [k for k in st.session_state.keys() if k.startswith("_compressed_")]
+    if len(_keys) > max_entries:
+        for k in sorted(_keys)[:-max_entries]:
+            del st.session_state[k]
 
     def retrieve_compressed(self, key: str) -> Any:
         """Recupera datos posiblemente comprimidos."""

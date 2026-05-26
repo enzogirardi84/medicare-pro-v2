@@ -109,7 +109,7 @@ def render_notificaciones_turno(pacientes, indicaciones, ahora_local, hoy, proxi
         _notifs.append(("🔴", "error", f"**{len(_bal_severos)} paciente(s)** con balance hídrico negativo severo (>-1500ml en últimos 3 turnos)."))
 
     if _notifs:
-        with st.expander(f"🔔 Notificaciones de turno ({len(_notifs)})", expanded=True):
+        with st.expander(f"🔔 Notificaciones de turno ({len(_notifs)})", expanded=False):
             for icono, nivel, msg in _notifs:
                 if nivel == "error":
                     _log_event_dash("dashboard_bloques", f"error: {icono} {msg}")

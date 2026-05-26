@@ -213,8 +213,9 @@ def fetch_pacientes_optimizado(
             query = query.eq("estado", "Activo")
         
         if busqueda:
-            # Búsqueda por nombre o DNI (ILIKE para case-insensitive)
-            query = query.or_(f"nombre_completo.ilike.%{busqueda}%,dni.ilike.%{busqueda}%")
+            # Búsqueda por nombre o DNI (ILIKE con sanitización)
+            safe = busqueda.replace("%", "\\%").replace("_", "\\_")
+            query = query.or_(f"nombre_completo.ilike.%{safe}%,dni.ilike.%{safe}%")
         
         # Paginación
         offset = page * page_size

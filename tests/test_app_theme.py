@@ -10,8 +10,8 @@ def test_aplicar_css_base_no_crash():
     from core.app_theme import aplicar_css_base
     try:
         aplicar_css_base()
-    except Exception:
-        pass
+    except RuntimeError:
+        pass  # Streamlit runtime no disponible en test aislado
 
 
 def test_module_importable():

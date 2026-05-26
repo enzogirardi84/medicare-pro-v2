@@ -41,7 +41,6 @@ from views._historial_paneles import (
     render_busqueda_global,
 )
 
-@st.cache_data(ttl=120)
 def _cached_collect_patient_sections(paciente_sel: str):
     """Cache de secciones del paciente para acelerar transiciones entre módulos."""
     return collect_patient_sections(st.session_state, paciente_sel)

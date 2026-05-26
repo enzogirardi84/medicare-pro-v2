@@ -61,12 +61,13 @@ def mapear_detalles_paciente(paciente: Dict[str, Any]) -> Dict[str, Any]:
     nombre = str(paciente.get("nombre_completo") or paciente.get("nombre", "") or "")
     apellido = str(paciente.get("apellido", ""))
     nombre_completo = f"{nombre} {apellido}".strip() or "S/D"
+    edad, edad_str = calcular_edad(paciente.get("fecha_nacimiento"))
     
     return {
         "nombre": nombre_completo,
         "dni": str(paciente.get("dni", "S/D")),
-        "edad": calcular_edad(paciente.get("fecha_nacimiento"))[0],
-        "edad_str": calcular_edad(paciente.get("fecha_nacimiento"))[1] or "S/D",
+        "edad": edad,
+        "edad_str": edad_str or "S/D",
         "sexo": str(paciente.get("sexo", "S/D")),
         "obra_social": str(paciente.get("obra_social", "S/D")),
         "telefono": str(paciente.get("telefono", "")),

@@ -298,8 +298,8 @@ class PHIEncryptionManager:
         decrypted_record = {}
         
         for field, value in encrypted_record.items():
-            # Skip flag fields
-            if field.endswith('_encrypted'):
+            # Skip flag fields that track encryption state of known PHI fields
+            if field.endswith('_encrypted') and field[:-len('_encrypted')] in sensitive_fields:
                 continue
             
             if field in sensitive_fields and value is not None:

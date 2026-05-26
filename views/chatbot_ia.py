@@ -43,6 +43,7 @@ def buscar_en_web(consulta: str, max_res: int = 3) -> List[Dict]:
 def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
     try:
         from core.ai_assistant import _get_llm_config, is_llm_enabled
+        from core.phi_scrubber import scrub_phi
         if not is_llm_enabled():
             return None
         provider, api_key, model = _get_llm_config()
@@ -54,6 +55,7 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             "Si te preguntan algo que no esta en el contexto, indica que no hay datos registrados. "
             "Responde de forma clara, concisa y profesional en el mismo idioma de la pregunta."
         )
+        contexto = scrub_phi(contexto)
         prompt = f"Contexto completo del sistema:\n{contexto}\n\nPregunta del usuario:\n{consulta}"
         if provider in ("openai", "deepseek", "openrouter"):
             from openai import OpenAI
@@ -76,10 +78,12 @@ def preguntar_a_ia(consulta: str, contexto: str = "") -> Optional[str]:
             return resp.choices[0].message.content.strip()
         elif provider == "anthropic":
             import anthropic
-            resp = anthropic.Anthropic(api_key=api_key, timeout=20).completions.create(
-                model=model, prompt=f"Human: {system_msg}\n\n{prompt}\n\nAssistant:", max_tokens_to_sample=800, temperature=0.2
+            resp = anthropic.Anthropic(api_key=api_key, timeout=20).messages.create(
+                model=model, system=system_msg,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=800, temperature=0.2
             )
-            return resp.completion.strip()
+            return resp.content[0].text.strip()
     except Exception as e:
         log_event("chatbot", f"error_ia:{e}")
         st.warning("No se pudo obtener respuesta de la IA.")
@@ -123,9 +127,9 @@ def _detectar_idioma(texto: str) -> str:
 def _respuesta_local(consulta: str) -> str:
     cl = consulta.lower()
     for clave, resp in CONOCIMIENTO.items():
-        if clave != "default" and clave in cl:
+        if clave in cl:
             return resp
-    return CONOCIMIENTO["default"] if "default" in CONOCIMIENTO else "No tengo informacion sobre eso."
+    return "No tengo informacion sobre eso."
 
 
 # ============================================================
@@ -163,10 +167,10 @@ def _edad(fnac_str: str) -> str:
         return fnac_str
 
 
-def _datos_paciente(paciente_sel) -> str:
-    if not isinstance(paciente_sel, str) or not paciente_sel:
-        return "Paciente no seleccionado."
-    detalles = st.session_state.get("detalles_pacientes_db", {})
+def _datos_paciente(paciente_sel, db=None) -> str:
+    if not isinstance(paciente_sel, str):
+        return "Error: paciente_sel invalido."
+    detalles = (db or st.session_state).get("detalles_pacientes_db", {})
     if not isinstance(detalles, dict):
         return "Error: detalles_pacientes_db no es un diccionario."
     detalles = detalles.get(paciente_sel, {})
@@ -192,41 +196,50 @@ def _datos_paciente(paciente_sel) -> str:
 
 def _contexto_completo(paciente_sel: str, mi_empresa: str) -> str:
     """Arma un contexto completo con TODOS los datos del sistema para la IA."""
+    db = {
+        k: st.session_state.get(k, [])
+        for k in (
+            "indicaciones_db", "vitales_db", "estudios_db", "evoluciones_db",
+            "vacunacion_db", "detalles_pacientes_db", "turnos_online_db",
+            "balance_db", "consentimientos_db", "inventario_db", "facturacion_db",
+            "pacientes_db",
+        )
+    }
     partes = []
     partes.append("=== DATOS DEL PACIENTE ===")
-    partes.append(_datos_paciente(paciente_sel))
+    partes.append(_datos_paciente(paciente_sel, db))
     partes.append("\n=== INDICACIONES / MEDICACION ===")
-    partes.append(_medicaciones(paciente_sel))
+    partes.append(_medicaciones(paciente_sel, db))
     partes.append("\n=== SIGNOS VITALES ===")
-    partes.append(_vitales(paciente_sel))
+    partes.append(_vitales(paciente_sel, db))
     partes.append("\n=== ESTUDIOS ===")
-    partes.append(_estudios(paciente_sel))
+    partes.append(_estudios(paciente_sel, db))
     partes.append("\n=== EVOLUCIONES ===")
-    partes.append(_evoluciones(paciente_sel))
+    partes.append(_evoluciones(paciente_sel, db))
     partes.append("\n=== VACUNAS ===")
-    partes.append(_listar_vacunas(paciente_sel))
+    partes.append(_listar_vacunas(paciente_sel, db))
     partes.append("\n=== ALERGIAS Y PATOLOGIAS ===")
-    partes.append(_alergias(paciente_sel))
+    partes.append(_alergias(paciente_sel, db))
     partes.append("\n=== TURNOS ===")
-    partes.append(_turnos(paciente_sel))
+    partes.append(_turnos(paciente_sel, db))
     partes.append("\n=== BALANCE HIDRICO ===")
-    partes.append(_balance(paciente_sel))
+    partes.append(_balance(paciente_sel, db))
     partes.append("\n=== CONSENTIMIENTOS ===")
-    partes.append(_consentimientos(paciente_sel))
+    partes.append(_consentimientos(paciente_sel, db))
     partes.append("\n=== INVENTARIO (STOCK CRITICO) ===")
-    partes.append(_stock_critico(mi_empresa))
+    partes.append(_stock_critico(mi_empresa, db))
     partes.append("\n=== FACTURACION ===")
-    partes.append(_facturacion(mi_empresa))
+    partes.append(_facturacion(mi_empresa, db))
     partes.append("\n=== PACIENTES DEL SISTEMA ===")
-    partes.append(_conteo_pacientes())
+    partes.append(_conteo_pacientes(db))
     partes.append("\n=== PROXIMOS CUMPLEANIOS ===")
-    partes.append(_proximos_cumple())
+    partes.append(_proximos_cumple(db))
     return "\n".join(partes)
 
 
-def _medicaciones(paciente_sel) -> str:
-    inds = [r for r in st.session_state.get("indicaciones_db", [])
-            if _coincide_paciente(paciente_sel, r.get("paciente", ""))
+def _medicaciones(paciente_sel, db=None) -> str:
+    inds_db = (db or st.session_state).get("indicaciones_db", [])
+    inds = [r for r in inds_db if _coincide_paciente(paciente_sel, r.get("paciente", ""))
             and str(r.get("estado_receta", "Activa")).lower() not in ("suspendida", "cancelada")]
     if not inds:
         return "Sin indicaciones activas."
@@ -240,8 +253,9 @@ def _medicaciones(paciente_sel) -> str:
     return texto
 
 
-def _vitales(paciente_sel) -> str:
-    vitales = [r for r in st.session_state.get("vitales_db", []) if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
+def _vitales(paciente_sel, db=None) -> str:
+    vitales_db = (db or st.session_state).get("vitales_db", [])
+    vitales = [r for r in vitales_db if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
     if not vitales:
         return "Sin signos vitales registrados."
     ult = vitales[-1]
@@ -262,8 +276,9 @@ def _vitales(paciente_sel) -> str:
     return texto
 
 
-def _estudios(paciente_sel) -> str:
-    ests = [r for r in st.session_state.get("estudios_db", []) if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
+def _estudios(paciente_sel, db=None) -> str:
+    ests_db = (db or st.session_state).get("estudios_db", [])
+    ests = [r for r in ests_db if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
     if not ests:
         return "Sin estudios registrados."
     texto = "Ultimos estudios:\n"
@@ -272,8 +287,9 @@ def _estudios(paciente_sel) -> str:
     return texto
 
 
-def _evoluciones(paciente_sel) -> str:
-    evols = [r for r in st.session_state.get("evoluciones_db", []) if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
+def _evoluciones(paciente_sel, db=None) -> str:
+    evols_db = (db or st.session_state).get("evoluciones_db", [])
+    evols = [r for r in evols_db if _coincide_paciente(paciente_sel, r.get("paciente", ""))]
     if not evols:
         return "Sin evoluciones registradas."
     ult = evols[-1]
@@ -282,8 +298,9 @@ def _evoluciones(paciente_sel) -> str:
     return f"Ultima evolucion ({fecha}):\n{nota}"
 
 
-def _turnos(paciente_sel) -> str:
-    turnos = [t for t in st.session_state.get("turnos_online_db", []) if _coincide_paciente(paciente_sel, t.get("paciente", "")) and t.get("estado") == "Reservado"]
+def _turnos(paciente_sel, db=None) -> str:
+    turnos_db = (db or st.session_state).get("turnos_online_db", [])
+    turnos = [t for t in turnos_db if _coincide_paciente(paciente_sel, t.get("paciente", "")) and t.get("estado") == "Reservado"]
     if not turnos:
         return "Sin turnos reservados."
     texto = "Turnos reservados:\n"
@@ -302,8 +319,9 @@ def _exportar_conversacion(conv: list) -> bytes:
     return "\n".join(lines).encode("utf-8")
 
 
-def _listar_vacunas(paciente_sel) -> str:
-    vacs = [v for v in st.session_state.get("vacunacion_db", []) if _coincide_paciente(paciente_sel, v.get("paciente", ""))]
+def _listar_vacunas(paciente_sel, db=None) -> str:
+    vacs_db = (db or st.session_state).get("vacunacion_db", [])
+    vacs = [v for v in vacs_db if _coincide_paciente(paciente_sel, v.get("paciente", ""))]
     if not vacs:
         return "Sin vacunas registradas."
     ultimas = {}
@@ -317,8 +335,8 @@ def _listar_vacunas(paciente_sel) -> str:
     return texto
 
 
-def _alergias(paciente_sel) -> str:
-    detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+def _alergias(paciente_sel, db=None) -> str:
+    detalles = (db or st.session_state).get("detalles_pacientes_db", {}).get(paciente_sel, {})
     al = detalles.get("alergias", "").strip()
     pat = detalles.get("patologias", "").strip()
     texto = ""
@@ -329,8 +347,8 @@ def _alergias(paciente_sel) -> str:
     return texto or "Sin alergias ni patologias registradas."
 
 
-def _stock_critico(mi_empresa) -> str:
-    inventario = st.session_state.get("inventario_db", [])
+def _stock_critico(mi_empresa, db=None) -> str:
+    inventario = (db or st.session_state).get("inventario_db", [])
     items = [i for i in inventario if i.get("empresa") == mi_empresa and int(i.get("stock", 0) or 0) <= 10]
     if not items:
         return "Stock normal. No hay items criticos."
@@ -340,8 +358,8 @@ def _stock_critico(mi_empresa) -> str:
     return texto
 
 
-def _facturacion(mi_empresa) -> str:
-    facturas = st.session_state.get("facturacion_db", [])
+def _facturacion(mi_empresa, db=None) -> str:
+    facturas = (db or st.session_state).get("facturacion_db", [])
     fact_emp = [f for f in facturas if f.get("empresa") == mi_empresa]
     if not fact_emp:
         return "Sin movimientos de facturacion."
@@ -351,11 +369,11 @@ def _facturacion(mi_empresa) -> str:
     return f"Facturacion: Total ${total:,.2f} | Cobrado ${cobrado:,.2f} | Pendiente ${pendiente:,.2f}"
 
 
-def _proximos_cumple() -> str:
+def _proximos_cumple(db=None) -> str:
     from datetime import timedelta
     hoy = datetime.now().date()
     prox = hoy + timedelta(days=30)
-    detalles = st.session_state.get("detalles_pacientes_db", {})
+    detalles = (db or st.session_state).get("detalles_pacientes_db", {})
     if not isinstance(detalles, dict):
         return "Error: datos de pacientes no disponibles."
     cumples = []
@@ -373,16 +391,17 @@ def _proximos_cumple() -> str:
     return "Proximos cumpleanios (30 dias):\n" + "\n".join(cumples[:10]) if cumples else "Sin cumpleanios proximos."
 
 
-def _conteo_pacientes() -> str:
-    pacientes = [p for p in st.session_state.get("pacientes_db", []) if isinstance(p, str)]
-    detalles = st.session_state.get("detalles_pacientes_db", {})
+def _conteo_pacientes(db=None) -> str:
+    pacientes = [p for p in (db or st.session_state).get("pacientes_db", []) if isinstance(p, str)]
+    detalles = (db or st.session_state).get("detalles_pacientes_db", {})
     activos = sum(1 for p in pacientes if isinstance(detalles.get(p, {}), dict) and detalles[p].get("estado", "Activo") == "Activo")
     altas = sum(1 for p in pacientes if isinstance(detalles.get(p, {}), dict) and detalles[p].get("estado") == "De Alta")
     return f"Pacientes: {len(pacientes)} totales | {activos} activos | {altas} de alta"
 
 
-def _balance(paciente_sel) -> str:
-    balances = [b for b in st.session_state.get("balance_db", []) if _coincide_paciente(paciente_sel, b.get("paciente", ""))]
+def _balance(paciente_sel, db=None) -> str:
+    balance_db = (db or st.session_state).get("balance_db", [])
+    balances = [b for b in balance_db if _coincide_paciente(paciente_sel, b.get("paciente", ""))]
     if not balances:
         return "Sin registro de balance."
     ingresos = sum(float(b.get("ingresos") or b.get("ingreso", 0) or 0) for b in balances[-10:])
@@ -390,8 +409,8 @@ def _balance(paciente_sel) -> str:
     return f"Balance ultimos 10: Ingresos {ingresos:.0f}ml | Egresos {egresos:.0f}ml | Balance {ingresos-egresos:.0f}ml"
 
 
-def _consentimientos(paciente_sel) -> str:
-    raw = st.session_state.get("consentimientos_db")
+def _consentimientos(paciente_sel, db=None) -> str:
+    raw = (db or st.session_state).get("consentimientos_db")
     if not isinstance(raw, list):
         return "Sin documentos firmados."
     cons = [c for c in raw if isinstance(c, dict) and _coincide_paciente(paciente_sel, c.get("paciente", "") or c.get("paciente_id", ""))]

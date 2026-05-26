@@ -6,8 +6,6 @@ import streamlit as st
 from core.utils import ahora
 from core.view_helpers import aviso_sin_paciente, bloque_mc_grid_tarjetas
 
-SCROLL = 'style="max-height:360px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;padding:8px 12px;"'
-
 
 def _coincide(item_paciente: str, paciente_sel: str) -> bool:
     """Match parcial entre paciente de un registro y el seleccionado."""

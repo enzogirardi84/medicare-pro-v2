@@ -13,6 +13,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
+from core.security import FieldEncryptor
 
 
 class SanitizedString(str):
@@ -57,9 +58,6 @@ class SignosVitalesSchema(BaseModel):
         if 'sistolica' in info.data and v >= info.data['sistolica']:
             raise ValueError('PA diastolica debe ser menor que sistolica')
         return v
-
-
-from core.security import FieldEncryptor
 
 
 class EncryptedEvolucionSchema(BaseModel):

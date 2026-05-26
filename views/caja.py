@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from core.alert_toasts import queue_toast
-import io
 
 import pandas as pd
 import streamlit as st
@@ -62,15 +61,15 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         if empresa_uuid:
             fact_sql = get_facturacion_by_empresa(empresa_uuid)
             if fact_sql:
+                pacientes_db = st.session_state.get("pacientes_db", [])
+                paciente_lookup = {}
+                for p in pacientes_db:
+                    p_name = p.split(" - ", 1)[0] if " - " in p else p
+                    paciente_lookup[p_name] = p
                 for f in fact_sql:
                     dt = pd.to_datetime(f.get("fecha_emision", ""), errors="coerce")
                     paciente_nombre = f.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(f.get("pacientes"), dict) else "N/A"
-                    # Buscar el ID visual del paciente (Nombre - DNI)
-                    paciente_visual = paciente_nombre
-                    for p in st.session_state.get("pacientes_db", []):
-                        if p.startswith(paciente_nombre):
-                            paciente_visual = p
-                            break
+                    paciente_visual = paciente_lookup.get(paciente_nombre, paciente_nombre)
                             
                     try:
                         _monto = float(f.get("monto_total") or 0)

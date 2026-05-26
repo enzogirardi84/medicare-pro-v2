@@ -101,15 +101,13 @@ class HealthCheckEnhanced:
         start = time.time()
         
         try:
-            from core._database_supabase import supabase, init_supabase
+            from core._database_supabase import supabase as _supabase_mod, init_supabase
             
-            if supabase is None:
-                # Intentar reinicializar
-                supabase = init_supabase()
+            client = _supabase_mod or init_supabase()
             
-            if supabase:
+            if client:
                 # Ping simple
-                response = supabase.table("pacientes").select("count", count="exact").limit(1).execute()
+                response = client.table("pacientes").select("count", count="exact").limit(1).execute()
                 latency = (time.time() - start) * 1000
                 
                 return ComponentHealth(

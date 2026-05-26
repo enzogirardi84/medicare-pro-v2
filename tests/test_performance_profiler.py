@@ -51,8 +51,8 @@ class TestPerformanceProfiler:
         with profiler.profile_block("test_block"):
             time.sleep(0.01)
         
-        # No debe lanzar error
-        assert True
+        # Verificar que profile_block no lanza error
+        assert profiler.get_slow_functions() is not None
     
     def test_disabled_profiler(self):
         """Test que disabled profiler no afecta ejecución"""
@@ -202,7 +202,8 @@ class TestProfileBlock:
             time.sleep(0.01)
         
         # No debe lanzar error
-        assert True
+        from core.performance_profiler import get_profiler
+        assert get_profiler().enabled is not None
 
 
 class TestGetProfiler:
@@ -257,4 +258,4 @@ class TestPerformanceAlerts:
             profiler._check_thresholds("test_func", 0.001, 99)
             
             # No debe lanzar error
-            assert True
+            assert profiler.get_slow_functions() is not None

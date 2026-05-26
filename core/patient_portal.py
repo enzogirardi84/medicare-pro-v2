@@ -21,7 +21,6 @@ from enum import Enum, auto
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 from core.document_manager import get_document_manager, DocumentType
-from core.appointment_scheduler import get_scheduler, AppointmentStatus
 
 
 class PortalAccessLevel(Enum):
@@ -65,7 +64,12 @@ class PatientPortal:
         - Enviar 2FA si es primer login
         - Registrar intentos fallidos
         """
-        pacientes = st.session_state.get("pacientes_db", {})
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes = {}
+        for pid, pdata in detalles.items():
+            dni = pdata.get("dni", "")
+            if dni:
+                pacientes[dni] = {"id": pid, **pdata}
         
         if patient_dni not in pacientes:
             return None
@@ -179,6 +183,7 @@ class PatientPortal:
         """Renderiza turnos del paciente."""
         st.header("📋 Mis Próximos Turnos")
         
+        from views.appointment_scheduler import get_scheduler, AppointmentStatus
         scheduler = get_scheduler()
         turnos = scheduler.get_appointments(patient_id=session.patient_id)
         
@@ -344,7 +349,10 @@ class PatientPortal:
         """Renderiza perfil del paciente."""
         st.header("👤 Mis Datos Personales")
         
-        pacientes = st.session_state.get("pacientes_db", {})
+        detalles = st.session_state.get("detalles_pacientes_db", {})
+        pacientes = {}
+        for pid, pdata in detalles.items():
+            pacientes[pid] = {"id": pid, **pdata}
         paciente = None
         
         # Buscar paciente por ID

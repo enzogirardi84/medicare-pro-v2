@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 import time
 
 import streamlit as st
@@ -89,13 +90,10 @@ MSG_PIN_RESET_FALLIDO = (
 
 
 def _intentar_login_emergencia(u_limpio: str, p_plain: str, loader_ph) -> bool:
-    """Intenta login de emergencia para superadmin cuando la BD no tiene la clave.
-    Retorna True si el login de emergencia fue exitoso (el caller debe hacer rerun).
-    """
     emergency_pwd = obtener_emergency_password()
     if u_limpio not in logins_clave_default_superadmin() or not emergency_pwd:
         return False
-    if p_plain != emergency_pwd:
+    if not secrets.compare_digest(p_plain, emergency_pwd):
         return False
     limpiar_fallos_login(u_limpio)
     user_data = DEFAULT_ADMIN_USER.copy()
@@ -478,7 +476,7 @@ def render_login():
                                     else:
                                         # Verificar login de emergencia con contraseña desde secrets
                                         emergency_pwd = obtener_emergency_password()
-                                        if u_limpio in logins_clave_default_superadmin() and emergency_pwd and p.strip() == emergency_pwd:
+                                        if u_limpio in logins_clave_default_superadmin() and emergency_pwd and secrets.compare_digest(p.strip(), emergency_pwd):
                                             limpiar_fallos_login(u_limpio)
                                             user_data = DEFAULT_ADMIN_USER.copy()
                                             user_data["usuario_login"] = "admin"
@@ -497,9 +495,8 @@ def render_login():
                                             log_event("auth", f"error: {MSG_LOGIN_CREDENCIALES_FALLIDAS}")
                                             st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS)
                                 else:
-                                    # Verificar login de emergencia con contraseña desde secrets
                                     emergency_pwd = obtener_emergency_password()
-                                    if u_limpio in logins_clave_default_superadmin() and emergency_pwd and p.strip() == emergency_pwd:
+                                    if u_limpio in logins_clave_default_superadmin() and emergency_pwd and secrets.compare_digest(p.strip(), emergency_pwd):
                                         limpiar_fallos_login(u_limpio)
                                         user_data = DEFAULT_ADMIN_USER.copy()
                                         user_data["usuario_login"] = "admin"
@@ -541,7 +538,10 @@ def verificar_clinica_sesion_activa():
             "Coordinadores y operativos (incluye personal de gestion) no pueden usar la app hasta la reactivacion. "
             "Volvete a intentar cuando te confirmen que el servicio fue rehabilitado."
         )
-        st.rerun()
+        _ult_rerun_susp = st.session_state.get("_ult_rerun_suspension_ts", 0)
+        if (ahora().timestamp() - _ult_rerun_susp) > 5:
+            st.session_state["_ult_rerun_suspension_ts"] = ahora().timestamp()
+            st.rerun()
 
 
 def check_inactividad():

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from core.app_logging import log_event
 from core.database import guardar_datos
+
 from views.settings.components._apariencia_notificaciones import (
     render_appearance_settings,
     render_notification_settings,

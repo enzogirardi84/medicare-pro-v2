@@ -432,9 +432,8 @@ class BackupManager:
 
     def _decrypt_file(self, file_path: Path, password: str) -> Path:
         """Desencripta archivo cifrado con _encrypt_file."""
-        from cryptography.fernet import InvalidToken
         try:
-            from cryptography.fernet import Fernet
+            from cryptography.fernet import Fernet, InvalidToken
 
             key = self._derive_fernet_key(password)
             f = Fernet(key)
@@ -725,8 +724,14 @@ class BackupManager:
     def _restore_files(self, original_paths: List[str], files_dir: Path):
         """Restaura archivos desde backup a sus ubicaciones originales."""
         restored_count = 0
+        # Sanitizar: solo restaurar dentro del proyecto o paths seguros conocidos
+        safe_bases = [Path.cwd().resolve(), Path.home().resolve()]
         for original_path_str in original_paths:
-            original = Path(original_path_str)
+            original = Path(original_path_str).resolve()
+            # Path traversal protection: rechazar paths fuera de directorios seguros
+            if not any(str(original).startswith(str(base)) for base in safe_bases):
+                log_event("backup_error", f"Path traversal bloqueado: {original}")
+                continue
             backup_item = files_dir / original.name
             if not backup_item.exists():
                 log_event("backup_error", f"Backup file/dir not found: {backup_item}")

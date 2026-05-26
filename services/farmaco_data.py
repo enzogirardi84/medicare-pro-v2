@@ -6,8 +6,7 @@ Sin dependencias de Streamlit. Testeable unitariamente.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 # ============================================================
@@ -380,7 +379,6 @@ MEDICAMENTOS: Dict[str, Dict[str, Any]] = {
 
 def parse_intervalo(text: str) -> Tuple[float, float]:
     """Parsea texto de intervalo a (min_hs, max_hs). Ej: 'cada 4-6 hs' -> (4, 6)."""
-    import re
     text = str(text or "").lower().strip()
     m = re.search(r"(\d+)\s*(?:-|a)\s*(\d+)\s*(?:h|hs)", text)
     if m:
@@ -394,7 +392,6 @@ def parse_intervalo(text: str) -> Tuple[float, float]:
 
 def normalizar_medicamento(nombre: str) -> Tuple[str, str]:
     """Parsea nombre de medicamento extrayendo concentracion."""
-    import re
     nombre = (nombre or "").strip()
     m = re.match(r"^([A-Za-z\u00C0-\u00FF][A-Za-z\u00C0-\u00FF\s]+?)\s+([\d,]+(?:\s*mg)?(?:\s*/\s*[\d,]+\s*ml)?)$", nombre)
     if m:

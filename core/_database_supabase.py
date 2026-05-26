@@ -28,6 +28,8 @@ except ImportError:
 
 PAYLOAD_ALERTA_BYTES = 9 * 1024 * 1024
 
+_supabase_client_cache = None
+
 
 def _proxy_env_loopback_blackhole_activo() -> bool:
     for key in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy", "http_proxy", "all_proxy"):
@@ -44,8 +46,10 @@ def _proxy_env_loopback_blackhole_activo() -> bool:
     return False
 
 
-@st.cache_resource
 def init_supabase():
+    global _supabase_client_cache
+    if _supabase_client_cache is not None:
+        return _supabase_client_cache
     if create_client is None:
         log_event("db", "supabase_client_not_installed")
         return None
@@ -54,7 +58,8 @@ def init_supabase():
         key = st.secrets.get("SUPABASE_KEY", "")
     except Exception as e:
         log_event("db", f"supabase_secrets_error:{type(e).__name__}")
-        return None
+        url = os.environ.get("SUPABASE_URL", "")
+        key = os.environ.get("SUPABASE_KEY", "")
     if not url or "tu-proyecto-aqui" in url or not key:
         log_event("db", "supabase_secrets_empty_or_placeholder")
         return None
@@ -76,6 +81,7 @@ def init_supabase():
             log_event("db", f"supabase_proxy_bypass_error:{type(e).__name__}")
     try:
         client = create_client(url, key, options=options)
+        _supabase_client_cache = client
         log_event("db", "supabase_init_ok")
         return client
     except _SupabaseAPIError as e:
@@ -115,8 +121,8 @@ def _supabase_set_tenant(empresa_id: str = "") -> None:
     if eid and supabase is not None:
         try:
             supabase.rpc("set_tenant_context", {"empresa_id": eid}).execute()
-        except Exception:
-            pass
+        except Exception as e:
+            log_event("db", f"rls_set_tenant_fallo:{type(e).__name__}:{e}")
 
 
 def _supabase_execute_with_retry(op_name: str, fn, attempts: int = 3, base_delay: float = 0.35):
@@ -218,8 +224,8 @@ def _inject_rls_context(empresa_id: str = "") -> None:
     if eid and supabase is not None:
         try:
             supabase.rpc("set_tenant_context", {"empresa_id": eid}).execute()
-        except Exception:
-            pass
+        except Exception as e:
+            log_event("db", f"rls_inject_fallo:{type(e).__name__}:{e}")
 
 
 def _upsert_supabase_monolito(data: dict):

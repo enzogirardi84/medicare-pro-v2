@@ -2,19 +2,52 @@ from __future__ import annotations
 
 """Componentes del sidebar clínico de MediCare PRO.
 
-
-
 Extraído de main.py para mantenerlo liviano.
 Contiene: tarjeta de marca, tarjeta de paciente, panel de signos vitales,
 contexto clínico rápido (semáforo, evolución, medicación) y selector de pacientes.
 """
-from datetime import datetime
+import time
 from html import escape
 
 import streamlit as st
 
 from core.app_logging import log_event
 from core.utils_pacientes import estado_pacientes_sql, set_paciente_actual
+
+
+def _cached_contexto(paciente_sel):
+    """Retorna contexto clínico cacheado 10s en session_state."""
+    _cache_key = f"_ctx_cache_{paciente_sel}"
+    _cache_ts = f"_ctx_cache_ts_{paciente_sel}"
+    now = time.time()
+    cached = st.session_state.get(_cache_key)
+    cached_ts = st.session_state.get(_cache_ts, 0.0)
+    if cached is not None and (now - cached_ts) < 10.0:
+        return cached
+    from core.utils import mapa_detalles_pacientes
+    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
+    vitales = st.session_state.get("vitales_db", [])
+    evoluciones = st.session_state.get("evoluciones_db", [])
+    indicaciones = st.session_state.get("indicaciones_db", [])
+    vitales_top3 = []
+    for v in reversed(vitales):
+        if v.get("paciente") != paciente_sel:
+            continue
+        vitales_top3.append(v)
+        if len(vitales_top3) >= 3:
+            break
+    evs_pac = [e for e in evoluciones if e.get("paciente") == paciente_sel]
+    ultima_ev = max(evs_pac, key=lambda x: x.get("fecha", "")) if evs_pac else None
+    activas = [
+        r for r in indicaciones
+        if r.get("paciente") == paciente_sel
+        and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
+        and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
+    ]
+    result = {"detalles": detalles, "vitales_top3": vitales_top3, "ultima_ev": ultima_ev, "activas": activas}
+    st.session_state[_cache_key] = result
+    st.session_state[_cache_ts] = now
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -93,32 +126,13 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     if not paciente_sel:
         return
 
-    from core.utils import mapa_detalles_pacientes
-    detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
+    ctx = _cached_contexto(paciente_sel)
+    detalles = ctx["detalles"]
+    vitales_orden = ctx["vitales_top3"]
+    ultima_ev = ctx["ultima_ev"]
+    activas = ctx["activas"]
     alergias = str(detalles.get("alergias", "") or "").strip()
     patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "") or "").strip()
-
-    vitales = st.session_state.get("vitales_db", [])
-    vit_cache_key = f"_mc_cache_vit_top3_{paciente_sel}"
-    vit_cached = st.session_state.get(vit_cache_key)
-    # Clave de cache basada en contenido (len + fecha último) en vez de id() que cambia en cada rerun
-    _vit_last_fecha = ""
-    for v in reversed(vitales):
-        if v.get("paciente") == paciente_sel:
-            _vit_last_fecha = str(v.get("fecha", ""))
-            break
-    _vit_cache_hash = f"{len(vitales)}:{_vit_last_fecha}"
-    if vit_cached and vit_cached.get("hash") == _vit_cache_hash:
-        vitales_orden = vit_cached["top3"]
-    else:
-        vitales_orden = []
-        for v in reversed(vitales):
-            if v.get("paciente") != paciente_sel:
-                continue
-            vitales_orden.append(v)
-            if len(vitales_orden) >= 3:
-                break
-        st.session_state[vit_cache_key] = {"hash": _vit_cache_hash, "top3": vitales_orden}
 
     st.sidebar.divider()
     st.sidebar.write("**Contexto clínico**")
@@ -144,10 +158,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     else:
         st.sidebar.caption("⚪ Sin registros vitales recientes.")
 
-    evoluciones = st.session_state.get("evoluciones_db", [])
-    evs_pac = [e for e in evoluciones if e.get("paciente") == paciente_sel]
-    if evs_pac:
-        ultima_ev = max(evs_pac, key=lambda x: x.get("fecha", ""))
+    if ultima_ev:
         _prof_ev = (ultima_ev.get("firma") or "S/D")[:22]
         _fecha_ev = ultima_ev.get("fecha", "S/D")[:16]
         _nota_ev = str(ultima_ev.get("nota", ""))[:80].replace("\n", " ")
@@ -157,13 +168,6 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     else:
         st.sidebar.caption("📝 Sin evoluciones registradas.")
 
-    indicaciones = st.session_state.get("indicaciones_db", [])
-    activas = [
-        r for r in indicaciones
-        if r.get("paciente") == paciente_sel
-        and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
-        and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
-    ]
     if activas:
         st.sidebar.caption(f"💊 Medicación activa ({len(activas)} indicación/es):")
         for med in activas[:3]:
@@ -173,7 +177,6 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         if len(activas) > 3:
             st.sidebar.caption(f"  ... y {len(activas) - 3} más")
 
-    # Alerta de medicacion: cruzar indicaciones activas con alergias
     if alergias:
         try:
             from core.alertas_medicacion import verificar_alergias_medicacion
@@ -182,8 +185,6 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
                 st.sidebar.error(f"🚨 {a['mensaje'][:120]}", icon=None)
         except Exception as _e:
             log_event("sidebar", f"alerta_medicacion:{type(_e).__name__}")
-    else:
-        st.sidebar.caption("💊 Sin medicación activa.")
 
     st.sidebar.caption("Diagnósticos activos")
     if patologias:
@@ -191,7 +192,6 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     else:
         st.sidebar.caption("Sin diagnósticos cargados.")
 
-    # Botón de ayuda IA contextual en sidebar
     _help_key = "_ai_sidebar_show_help"
     if st.sidebar.button("💡 Ayuda IA para este módulo", key="_ai_sidebar_help", use_container_width=True):
         st.session_state[_help_key] = not st.session_state.get(_help_key, False)
@@ -217,22 +217,15 @@ def render_mobile_contexto_clinico(paciente_sel):
     visible solo en móviles (donde el sidebar está oculto)."""
     st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
 
-    detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
+    ctx = _cached_contexto(paciente_sel)
+    detalles = ctx["detalles"]
+    vitales_orden = ctx["vitales_top3"]
+    ultima_ev = ctx["ultima_ev"]
+    activas = ctx["activas"]
     alergias = str(detalles.get("alergias", "") or "").strip()
     patologias = str(detalles.get("patologias", "") or "").strip()
 
-    vitales = st.session_state.get("vitales_db", [])
-    if not isinstance(vitales, list):
-        vitales = []
-    vitales_orden = []
-    for v in reversed(vitales):
-        if v.get("paciente") != paciente_sel:
-            continue
-        vitales_orden.append(v)
-        if len(vitales_orden) >= 3:
-            break
-
-    with st.expander("📋 Contexto clínico", expanded=True):
+    with st.expander("📋 Contexto clínico", expanded=False):
         if alergias:
             st.warning(f"⚠️ Alergias: {alergias}")
         if vitales_orden:
@@ -251,20 +244,10 @@ def render_mobile_contexto_clinico(paciente_sel):
         if alergias:
             st.caption(f"**Alergias:** {alergias}")
 
-        evoluciones = st.session_state.get("evoluciones_db", [])
-        evs_pac = [e for e in evoluciones if e.get("paciente") == paciente_sel]
-        if evs_pac:
-            ultima_ev = max(evs_pac, key=lambda x: x.get("fecha", ""))
+        if ultima_ev:
             _nota_ev = str(ultima_ev.get("nota", ""))[:120].replace("\n", " ")
             st.caption(f"**Última evolución:** {_nota_ev}{'...' if len(str(ultima_ev.get('nota', ''))) > 120 else ''}")
 
-        indicaciones = st.session_state.get("indicaciones_db", [])
-        activas = [
-            r for r in indicaciones
-            if r.get("paciente") == paciente_sel
-            and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
-            and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
-        ]
         if activas:
             st.caption(f"**Medicación activa ({len(activas)}):**")
             for med in activas[:3]:

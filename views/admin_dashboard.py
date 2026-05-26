@@ -267,27 +267,29 @@ def render_audit_tab():
     
     with col1:
         if st.button("📥 Exportar JSON", width='stretch'):
-            desde = (ahora() - timedelta(days=30)).strftime("%Y-%m-%d")
-            hasta = ahora().strftime("%Y-%m-%d")
+            _ahora = ahora()
+            desde = (_ahora - timedelta(days=30)).strftime("%Y-%m-%d")
+            hasta = _ahora.strftime("%Y-%m-%d")
             export = trail.export_for_compliance(desde, hasta, format="json")
             
             st.download_button(
                 "Descargar JSON",
                 export,
-                file_name=f"audit_export_{ahora().strftime('%Y%m%d')}.json",
+                file_name=f"audit_export_{_ahora.strftime('%Y%m%d')}.json",
                 mime="application/json"
             )
     
     with col2:
         if st.button("📄 Exportar CSV", width='stretch'):
-            desde = (ahora() - timedelta(days=30)).strftime("%Y-%m-%d")
-            hasta = ahora().strftime("%Y-%m-%d")
+            _ahora = ahora()
+            desde = (_ahora - timedelta(days=30)).strftime("%Y-%m-%d")
+            hasta = _ahora.strftime("%Y-%m-%d")
             export = trail.export_for_compliance(desde, hasta, format="csv")
             
             st.download_button(
                 "Descargar CSV",
                 export,
-                file_name=f"audit_export_{ahora().strftime('%Y%m%d')}.csv",
+                file_name=f"audit_export_{_ahora.strftime('%Y%m%d')}.csv",
                 mime="text/csv"
             )
 
@@ -308,7 +310,7 @@ def render_performance_tab():
     # Funciones más lentas
     slow_functions = profiler.get_slow_functions(threshold=0.1)
     if slow_functions:
-        with st.expander("🐌 Funciones Lentas (>100ms)", expanded=True):
+        with st.expander("🐌 Funciones Lentas (>100ms)", expanded=False):
             for func in slow_functions[:10]:
                 st.text(
                     f"🐌 {func.name}\n"

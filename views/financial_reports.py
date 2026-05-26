@@ -16,11 +16,10 @@ Características:
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, timedelta
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, Any
 from collections import defaultdict
 
 from core.app_logging import log_event
-from core.audit_trail import audit_log, AuditEventType
 
 
 def render_financial_reports(mi_empresa=None, rol=None):
@@ -500,11 +499,9 @@ def filter_by_date_range(data: list, desde: date, hasta: date) -> list:
 
 
 def export_to_excel(df: pd.DataFrame, sheet_name: str) -> bytes:
-    """Exporta DataFrame a Excel."""
-    output = pd.ExcelWriter(f"{sheet_name}.xlsx", engine='openpyxl')
-    df.to_excel(output, sheet_name=sheet_name, index=False)
-    
+    """Exporta DataFrame a Excel en memoria."""
     import io
     buffer = io.BytesIO()
-    output.book.save(buffer)
+    with pd.ExcelWriter(buffer, engine='openpyxl') as output:
+        df.to_excel(output, sheet_name=sheet_name, index=False)
     return buffer.getvalue()

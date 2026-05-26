@@ -397,3 +397,74 @@ def test_user_feedback_importable():
     from core.user_feedback import render_modulo_fallo_ui
 
     assert callable(render_modulo_fallo_ui)
+
+
+def test_db_sql_pacientes_cache_sin_supabase():
+    """Las funciones cacheadas retornan []/None cuando supabase es None."""
+    from core._db_sql_pacientes import (
+        get_pacientes_by_empresa,
+        get_paciente_by_id,
+    )
+    assert get_pacientes_by_empresa("fake_empresa") == []
+    assert get_paciente_by_id("fake_id") is None
+
+
+def test_db_sql_clinico_cache_sin_supabase():
+    """Las funciones cacheadas clínicas retornan [] cuando supabase es None."""
+    from core._db_sql_clinico import (
+        get_indicaciones_paciente,
+        get_indicaciones_activas,
+        get_evoluciones_by_paciente,
+        get_estudios_by_paciente,
+    )
+    assert get_indicaciones_paciente("fake_id") == []
+    assert get_indicaciones_activas("fake_id") == []
+    assert get_evoluciones_by_paciente("fake_id") == []
+    assert get_estudios_by_paciente("fake_id") == []
+
+
+def test_db_sql_operativo_cache_sin_supabase():
+    """Las funciones cacheadas operativas no crashean cuando no hay datos."""
+    from core._db_sql_operativo import (
+        get_administraciones_by_fecha,
+        get_emergencias_by_paciente,
+    )
+    # No deben lanzar excepción (el resultado exacto depende del mock)
+    get_administraciones_by_fecha("fake_id", "2024-01-01", "2024-01-02")
+    get_emergencias_by_paciente("fake_id")
+
+
+def test_cache_clear_methods_exist():
+    """Verifica que los métodos .clear() existen en funciones cacheadas privadas."""
+    from core._db_sql_pacientes import _get_pacientes_by_empresa, _get_pacientes_globales
+    from core._db_sql_clinico import _get_indicaciones_paciente
+    from core._db_sql_operativo import get_administraciones_by_fecha
+
+    for fn in (_get_pacientes_by_empresa, _get_pacientes_globales,
+               _get_indicaciones_paciente):
+        assert hasattr(fn, 'clear'), f"{fn.__name__} debe tener .clear()"
+        fn.clear()
+
+    # get_administraciones_by_fecha es @st.cache_data directo (sin wrapper)
+    assert hasattr(get_administraciones_by_fecha, 'clear')
+    get_administraciones_by_fecha.clear()
+
+
+def test_user_feedback_sin_traceback():
+    """render_modulo_fallo_ui nunca expone traceback al usuario.
+    Verifica que no haya st.code(traceback) ni st.exception() en el código."""
+    from core.user_feedback import render_modulo_fallo_ui
+    import inspect
+    source = inspect.getsource(render_modulo_fallo_ui)
+    assert "st.code(traceback." not in source
+    assert "st.exception(" not in source
+
+
+def test_no_quedan_invalidate_cache_prefix():
+    """Verifica que se eliminó el patrón _invalidate_cache_prefix de _db_sql_*."""
+    import inspect
+    from core._db_sql_pacientes import _clear_pacientes_cache
+    source = inspect.getsource(_clear_pacientes_cache)
+    # Debe usar .clear() en cada función, no session_state.pop
+    assert ".clear()" in source
+    assert "session_state.pop" not in source

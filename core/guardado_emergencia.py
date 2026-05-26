@@ -29,16 +29,11 @@ def _guardar_supabase_signos_vitales(
     """Guarda en Supabase (nube)."""
     try:
         import streamlit as st
-        from supabase import create_client
+        from core._database_supabase import init_supabase
         
-        # Obtener credenciales
-        supabase_url = st.secrets.get("SUPABASE_URL", "")
-        supabase_key = st.secrets.get("SUPABASE_KEY", "")
-        
-        if not supabase_url or not supabase_key:
-            return False, "Sin credenciales Supabase"
-        
-        supabase = create_client(supabase_url, supabase_key)
+        supabase = init_supabase()
+        if supabase is None:
+            return False, "Sin conexión Supabase"
         
         # Buscar paciente_uuid por DNI
         response_paciente = supabase.table('pacientes').select('id').eq('dni', str(paciente_id)).limit(1).execute()
@@ -178,17 +173,12 @@ def guardar_signos_vitales_local(
 
 
 def _guardar_supabase_evolucion(paciente_id: str, evolucion: str, indicaciones: str) -> tuple[bool, str]:
-    """Guarda evolucion en Supabase."""
     try:
-        from supabase import create_client
+        from core._database_supabase import init_supabase
         
-        supabase_url = st.secrets.get("SUPABASE_URL", "")
-        supabase_key = st.secrets.get("SUPABASE_KEY", "")
-        
-        if not supabase_url or not supabase_key:
-            return False, "Sin credenciales"
-        
-        supabase = create_client(supabase_url, supabase_key)
+        supabase = init_supabase()
+        if supabase is None:
+            return False, "Sin conexión Supabase"
         
         # Buscar paciente_uuid
         response_paciente = supabase.table('pacientes').select('id').eq('dni', str(paciente_id)).limit(1).execute()
@@ -294,17 +284,12 @@ def guardar_evolucion_local(
 
 
 def _obtener_supabase_signos_vitales(paciente_id: str) -> List[Dict]:
-    """Obtiene signos vitales de Supabase."""
     try:
-        from supabase import create_client
+        from core._database_supabase import init_supabase
         
-        supabase_url = st.secrets.get("SUPABASE_URL", "")
-        supabase_key = st.secrets.get("SUPABASE_KEY", "")
-        
-        if not supabase_url or not supabase_key:
+        supabase = init_supabase()
+        if supabase is None:
             return []
-        
-        supabase = create_client(supabase_url, supabase_key)
         
         # Buscar paciente por DNI
         resp_p = supabase.table('pacientes').select('id').eq('dni', str(paciente_id)).limit(1).execute()

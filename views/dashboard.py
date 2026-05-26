@@ -151,7 +151,7 @@ def render_dashboard(mi_empresa, rol):
             if _stock_crit:
                 with st.expander(
                     f"🔴 Stock crítico — {len(_stock_crit)} insumo(s) por debajo del mínimo",
-                    expanded=True,
+                    expanded=False,
                 ):
                     for item in _stock_crit[:10]:
                         st.markdown(
@@ -382,12 +382,17 @@ def render_dashboard(mi_empresa, rol):
 
     # Activity data: compute once, reuse for 7-day chart + 30-day heatmap
     with st.spinner("Calculando actividad..."):
+        from collections import defaultdict
+        _ag_count = defaultdict(int)
+        for x in agenda_enriquecida:
+            _ag_count[x["_fecha_dt"].date()] += 1
+        _ch_count = defaultdict(int)
+        for x in checkins:
+            _ch_count[parse_fecha_hora(x.get("fecha_hora", "")).date()] += 1
         _actividad_por_dia = {}
         for i in range(29, -1, -1):
             d = hoy - timedelta(days=i)
-            ag = sum(1 for x in agenda_enriquecida if x["_fecha_dt"].date() == d)
-            ch = sum(1 for x in checkins if parse_fecha_hora(x.get("fecha_hora", "")).date() == d)
-            _actividad_por_dia[d] = ag + ch
+            _actividad_por_dia[d] = _ag_count.get(d, 0) + _ch_count.get(d, 0)
 
     if not es_movil:
         st.divider()

@@ -28,7 +28,7 @@ def _secrets_dict() -> Dict[str, Any]:
     try:
         import streamlit as st
 
-        return dict(st.secrets)
+        return {k: st.secrets[k] for k in ("jira", "JIRA_URL", "JIRA_TOKEN", "JIRA_EMAIL", "JIRA_API_TOKEN") if k in st.secrets}
     except Exception:
         return {}
 

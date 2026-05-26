@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.app_logging import log_event, get_recent_errors
-from core.error_tracker import report_exception
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELF_HEALING_LOG_KEY = "_self_healing_log"

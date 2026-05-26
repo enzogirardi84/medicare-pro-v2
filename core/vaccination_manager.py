@@ -28,7 +28,7 @@ Alertas automáticas:
 - Campañas de vacunación
 """
 import json
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone, timedelta
 from enum import Enum, auto

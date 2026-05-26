@@ -1,8 +1,4 @@
-"""Panel de evolución clínica.
-
-Versión corregida: se elimina la sugerencia de evolución con IA porque el proveedor
-no está configurado y generaba avisos innecesarios en la pantalla móvil.
-"""
+"""Panel de evolución clínica."""
 
 from __future__ import annotations
 
@@ -25,6 +21,8 @@ from core.utils import (
     registrar_auditoria_legal,
     seleccionar_limite_registros,
 )
+from core.ai_assistant import is_llm_enabled, get_evolution_assistant
+from core.ai_features import ai_not_available_warning
 from core.view_helpers import bloque_estado_vacio, lista_plegable
 from views._tareas_panel import render_tareas_panel
 
@@ -121,6 +119,32 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             st.caption("Se carga una guía sugerida. Podés editarla antes de guardar.")
 
         _value_for_textarea = st.session_state.get(_draft_key, "")
+
+        _ai_suggest_key = f"_ai_suggest_{paciente_sel}"
+        if is_llm_enabled():
+            if st.button("🤖 Sugerir evolución con IA", key=_ai_suggest_key, use_container_width=True):
+                with st.spinner("Generando sugerencia de evolución..."):
+                    assistant = get_evolution_assistant()
+                    vitales = st.session_state.get("vitales_db") or []
+                    ultimos_vitales = vitales[-1] if vitales else None
+                    evs = get_patient_records("evoluciones_db", paciente_sel)
+                    ultima_ev = max(evs, key=lambda x: x.get("fecha", "")) if evs else None
+                    from core.utils_pacientes import get_detalles_from_db_cache
+                    data = get_detalles_from_db_cache(paciente_sel) or {}
+                    result = assistant.generate_evolution_suggestion(
+                        patient_data=data,
+                        vital_signs=ultimos_vitales,
+                        symptoms="",
+                        previous_evolution=ultima_ev.get("texto", "") if ultima_ev else None,
+                    )
+                    if result.get("suggestion"):
+                        st.session_state[_draft_key] = result["suggestion"]
+                        st.rerun()
+                    else:
+                        err = result.get("error", "Error al generar sugerencia")
+                        st.error(err)
+        else:
+            ai_not_available_warning()
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
@@ -326,7 +350,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}"):
                 if es_urgente:
                     st.error("Marcada como URGENTE")
-                st.markdown(f"**Fecha:** `{fecha}`", unsafe_allow_html=True)
+                st.markdown(f"**Fecha:** `{html.escape(fecha)}`", unsafe_allow_html=True)
                 if plantilla:
                     st.markdown(f"**Plantilla:** {html.escape(str(plantilla))}", unsafe_allow_html=True)
                 if nota:
@@ -336,8 +360,8 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 if evo_img:
                     img_tipo = ev.get("adjunto_img_tipo", "image/png")
                     st.markdown(
-                        f"<img src='data:{img_tipo};base64,{evo_img}' "
-                        f"style='max-width:300px;max-height:200px;border-radius:8px;margin:4px 0;'/>" ,
+                        f"<img src='data:{html.escape(img_tipo)};base64,{evo_img}' "
+                        f"style='max-width:300px;max-height:200px;border-radius:8px;margin:4px 0;'/>",
                         unsafe_allow_html=True,
                     )
                 if firma and firma.strip():

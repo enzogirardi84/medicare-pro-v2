@@ -451,13 +451,11 @@ def render_diagnosticos(user=None):
             log_event("diagnosticos", f"error: No se pudo cargar el modulo de Vigia: {exc}")
             st.error(f"No se pudo cargar el módulo de Vigía: {exc}")
             st.stop()
-            return
 
         stats = get_summary_stats()
         if not stats.get("enabled"):
             st.info("El Vigía de Errores está desactivado (ERROR_TRACKER_ENABLED=False).")
             st.stop()
-            return
 
         # Métricas
         c1, c2 = st.columns(2)

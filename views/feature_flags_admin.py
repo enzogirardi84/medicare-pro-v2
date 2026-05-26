@@ -14,8 +14,6 @@ Permite activar/desactivar funcionalidades en tiempo real.
 
 import streamlit as st
 
-from datetime import datetime
-
 from core.feature_flags import FeatureFlags, get_feature_flags
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
@@ -92,7 +90,7 @@ def render_global_flags(flags: FeatureFlags):
     }
     
     for category, flag_list in categories.items():
-        with st.expander(f"📁 {category}", expanded=True):
+        with st.expander(f"📁 {category}", expanded=False):
             for flag_name, description, default_value in flag_list:
                 col1, col2, col3 = st.columns([2, 1, 1])
                 
@@ -147,38 +145,46 @@ def render_user_flags(flags: FeatureFlags):
         placeholder="usuario@ejemplo.com"
     )
     
-    if user_email:
-        # Mostrar flags para este usuario
-        user_flags = {
-            "beta_access": False,
-            "new_ui_preview": False,
-            "ai_assistant_beta": False,
-            "advanced_reporting": False,
-        }
+    if not user_email:
+        return
+
+    _store = st.session_state.setdefault("_user_feature_flags", {})
+    user_flags = _store.setdefault(user_email, {
+        "beta_access": False,
+        "new_ui_preview": False,
+        "ai_assistant_beta": False,
+        "advanced_reporting": False,
+    })
+    
+    st.subheader(f"Flags para {user_email}")
+    
+    changed = False
+    for flag_name, description in [
+        ("beta_access", "Acceso Beta"),
+        ("new_ui_preview", "Preview Nueva UI"),
+        ("ai_assistant_beta", "Beta Asistente IA"),
+        ("advanced_reporting", "Reportes Avanzados"),
+    ]:
+        col1, col2, col3 = st.columns([3, 1, 1])
         
-        st.subheader(f"Flags para {user_email}")
+        with col1:
+            st.text(description)
         
-        for flag_name, description in [
-            ("beta_access", "Acceso Beta"),
-            ("new_ui_preview", "Preview Nueva UI"),
-            ("ai_assistant_beta", "Beta Asistente IA"),
-            ("advanced_reporting", "Reportes Avanzados"),
-        ]:
-            col1, col2 = st.columns([3, 1])
-            
-            with col1:
-                st.text(description)
-            
-            with col2:
-                current = st.toggle(
-                    "Habilitar",
-                    value=user_flags.get(flag_name, False),
-                    key=f"user_flag_{flag_name}_{user_email}"
-                )
-                
-                if current != user_flags.get(flag_name):
-                    # Actualizar en storage
-                    st.success("✅ Actualizado")
+        with col2:
+            current = st.toggle(
+                "Habilitar",
+                value=user_flags.get(flag_name, False),
+                key=f"user_flag_{flag_name}_{user_email}"
+            )
+        
+        with col3:
+            if current != user_flags.get(flag_name):
+                user_flags[flag_name] = current
+                changed = True
+    
+    if changed:
+        st.success("✅ Flags actualizados")
+        log_event("feature_flags", f"user_flags_updated:{user_email}:{user_flags}")
 
 
 def render_flags_analytics():

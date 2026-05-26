@@ -70,7 +70,7 @@ def _dni_duplicado(dni, excluir_paciente=None):
 def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False, empresa_filtro=""):
     import hashlib
     cache_key = f"_pacientes_cache_{mi_empresa}_{rol}_{busqueda}_{incluir_altas}_{empresa_filtro}"
-    cache_key_hash = hashlib.md5(cache_key.encode()).hexdigest()[:12]
+    cache_key_hash = hashlib.md5(cache_key.encode(), usedforsecurity=False).hexdigest()[:12]
     
     cached_data = st.session_state.get(f"_cache_{cache_key_hash}")
     if cached_data is not None:
@@ -95,6 +95,12 @@ def _listar_pacientes_gestion(mi_empresa, rol, busqueda="", incluir_altas=False,
         })
     
     st.session_state[f"_cache_{cache_key_hash}"] = pacientes
+    # Evitar acumulación: limpiar entradas viejas cuando supera 50
+    _cache_prefix = "_cache_"
+    _cache_keys = [k for k in st.session_state.keys() if k.startswith(_cache_prefix)]
+    if len(_cache_keys) > 50:
+        for k in sorted(_cache_keys)[:-50]:
+            del st.session_state[k]
     return pacientes
 
 

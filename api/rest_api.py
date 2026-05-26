@@ -37,14 +37,14 @@ from fastapi import FastAPI, HTTPException, Depends, Query, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from starlette.middleware.base import BaseHTTPMiddleware
 import jwt
 import uvicorn
 
 from core.app_logging import log_event
 from core.config_secure import get_settings
-from core.phi_encryption import get_phi_manager, encrypt_patient_data, decrypt_patient_data
+from core.phi_encryption import encrypt_patient_data
 from core.security_middleware import PatientDataValidator
 
 
@@ -142,6 +142,11 @@ def rate_limit(max_requests: int = 10, window_seconds: int = 60):
             if now > reset_at:
                 count = 0
                 reset_at = now + window_seconds
+            # Limpiar entradas expiradas periódicamente
+            if len(_rate_limit_store) > 1000:
+                expired = [k for k, (_, t) in _rate_limit_store.items() if now > t]
+                for k in expired:
+                    del _rate_limit_store[k]
             count += 1
             _rate_limit_store[key] = (count, reset_at)
             if count > max_requests:
@@ -175,7 +180,8 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=6, example="SecurePass123!")
     empresa: Optional[str] = Field(None, example="Clínica Central")
     
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def username_alphanumeric(cls, v):
         if not v.replace('.', '').replace('_', '').isalnum():
             raise ValueError('Username solo puede contener letras, números, puntos y guiones bajos')
@@ -201,7 +207,8 @@ class PatientBase(BaseModel):
     obra_social: Optional[str] = Field(None, example="OSDE")
     sexo: Optional[str] = Field(None, pattern="^(M|F|O)$", example="M")
     
-    @validator('dni')
+    @field_validator('dni')
+    @classmethod
     def validate_dni(cls, v):
         v_clean = v.replace('.', '').replace('-', '').replace(' ', '')
         if not v_clean.isdigit():
@@ -223,8 +230,7 @@ class PatientResponse(PatientBase):
     creado_en: str
     actualizado_en: Optional[str]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EvolutionBase(BaseModel):
@@ -249,8 +255,7 @@ class EvolutionResponse(EvolutionBase):
     fecha: str
     creado_en: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VitalsBase(BaseModel):
@@ -264,12 +269,12 @@ class VitalsBase(BaseModel):
     peso: Optional[float] = Field(None, ge=0.5, le=300, example=70.5)
     altura: Optional[float] = Field(None, ge=0.3, le=2.5, example=1.75)
     
-    @validator('presion_diastolica')
-    def validate_presion(cls, v, values):
-        if v and values.get('presion_sistolica'):
-            if v >= values['presion_sistolica']:
+    @model_validator(mode='after')
+    def check_presion(self):
+        if self.presion_diastolica and self.presion_sistolica:
+            if self.presion_diastolica >= self.presion_sistolica:
                 raise ValueError('Presión diastólica debe ser menor que sistólica')
-        return v
+        return self
 
 
 class VitalsCreate(VitalsBase):
@@ -281,8 +286,7 @@ class VitalsResponse(VitalsBase):
     fecha_hora: str
     registrado_por: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SearchQuery(BaseModel):

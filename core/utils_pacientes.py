@@ -200,6 +200,9 @@ def obtener_pacientes_visibles(
     incluir_altas: bool = False,
     busqueda: str = "",
 ) -> list[tuple]:
+    if not rol_actual:
+        registrar_estado_pacientes_sql(session_state, ok=False, empresa=mi_empresa, rows=0, error=ValueError("rol_actual vacio"))
+        return []
     busqueda_norm = _texto_normalizado(busqueda)
 
     from core.db_sql import get_pacientes_by_empresa

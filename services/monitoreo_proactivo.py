@@ -2,6 +2,7 @@
 
 Si la latencia supera un umbral o hay errores recurrentes,
 notifica al administrador via log, toast o email.
+Incluye panel de estado de servicios externos.
 """
 
 from __future__ import annotations
@@ -74,12 +75,55 @@ class ProactiveMonitor:
             }]
         return []
     
+    def check_memory(self) -> List[Dict[str, Any]]:
+        """Revisa uso de memoria del sistema."""
+        alerts = []
+        try:
+            import psutil
+            mem = psutil.virtual_memory()
+            if mem.percent > 90:
+                alerts.append({
+                    "tipo": "memoria",
+                    "severidad": "critica",
+                    "mensaje": f"RAM al {mem.percent}% ({mem.used/1e9:.1f}/{mem.total/1e9:.1f} GB)",
+                    "timestamp": time.time(),
+                })
+            elif mem.percent > 75:
+                alerts.append({
+                    "tipo": "memoria",
+                    "severidad": "alta",
+                    "mensaje": f"RAM al {mem.percent}% ({mem.used/1e9:.1f}/{mem.total/1e9:.1f} GB)",
+                    "timestamp": time.time(),
+                })
+        except Exception:
+            pass
+        return alerts
+    
+    def check_session_state_size(self) -> List[Dict[str, Any]]:
+        """Estima el tamano de session_state."""
+        alerts = []
+        try:
+            import sys
+            total = sum(sys.getsizeof(v) for v in st.session_state.values())
+            if total > 50 * 1024 * 1024:
+                alerts.append({
+                    "tipo": "session_size",
+                    "severidad": "alta",
+                    "mensaje": f"SessionState grande: ~{total/1e6:.1f} MB",
+                    "timestamp": time.time(),
+                })
+        except Exception:
+            pass
+        return alerts
+    
     def run_all_checks(self) -> List[Dict[str, Any]]:
         """Ejecuta todas las verificaciones y retorna alertas."""
         alerts = []
         alerts.extend(self.check_latency())
         alerts.extend(self.check_errors())
         alerts.extend(self.check_circuit_breaker())
+        alerts.extend(self.check_memory())
+        alerts.extend(self.check_session_state_size())
         return alerts
 
 
@@ -90,10 +134,11 @@ def render_monitoreo_dashboard():
     
     st.subheader("🚨 Monitoreo Proactivo")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     col1.metric("Umbral latencia", f"{monitor.latency_threshold:.0f}ms")
     col2.metric("Ventana", f"{monitor._window_minutes}min")
-    col3.metric("Alertas activas", str(len(alerts)))
+    col3.metric("Alertas", str(len(alerts)))
+    col4.metric("Umbral errores", str(monitor.error_threshold))
     
     if alerts:
         for alert in alerts:
@@ -107,12 +152,11 @@ def render_monitoreo_dashboard():
     else:
         st.success("Sistema saludable. Sin alertas activas.")
     
-    # Boton para forzar verificacion
     if st.button("🔄 Forzar verificacion ahora", use_container_width=True):
         alerts = monitor.run_all_checks()
         if not alerts:
             st.success("Verificacion completada: 0 alertas.")
-        st.rerun()
+            st.rerun()
 
 
 def track_error():

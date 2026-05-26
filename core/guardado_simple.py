@@ -10,7 +10,6 @@ SISTEMA DE GUARDADO SIMPLE Y ROBUSTO
 """
 
 import json
-import os
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
@@ -81,13 +80,14 @@ def guardar_historial_clinico(
         data = _load_data()
         
         # Crear registro de historial
+        _now = datetime.now()
         registro = {
-            "id": f"hist_{int(datetime.now().timestamp())}",
+            "id": f"hist_{int(_now.timestamp())}",
             "paciente_id": paciente_id,
             "paciente_nombre": paciente_nombre,
             "tipo": tipo_registro,
-            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "timestamp": datetime.now().isoformat(),
+            "fecha": _now.strftime("%d/%m/%Y %H:%M"),
+            "timestamp": _now.isoformat(),
             "datos": datos
         }
         

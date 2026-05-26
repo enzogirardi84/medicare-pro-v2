@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import time
 from typing import Any, Dict, List, Optional
 
 import streamlit as st
@@ -37,13 +36,6 @@ def check_supabase_connection() -> bool:
         st.session_state["_db_conn_error_shown"] = True
         log_event("db_sql", "error:Supabase en check_supabase_connection: cliente no inicializado. Datos desde cache local.")
     return ok
-
-
-def _invalidate_cache_prefix(prefix: str) -> None:
-    """Elimina del session_state todas las claves de cache que empiecen con prefix."""
-    for k in list(st.session_state.keys()):
-        if k.startswith(prefix):
-            st.session_state.pop(k, None)
 
 
 def nombre_paciente_sql(row: Dict[str, Any]) -> str:
@@ -85,22 +77,27 @@ def _build_pacientes_query(
     return query.limit(limit)
 
 
+def _clear_pacientes_cache() -> None:
+    _get_pacientes_by_empresa.clear()
+    _get_pacientes_globales.clear()
+    _get_paciente_by_id.clear()
+    _get_empresa_by_nombre.clear()
+    _get_paciente_by_dni_empresa.clear()
+
+
 def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas: bool = False) -> List[Dict[str, Any]]:
-    """Obtiene pacientes. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_pac_list_{empresa_id}_{hash(busqueda)}_{int(incluir_altas)}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return []
+    return _get_pacientes_by_empresa(empresa_id, busqueda, incluir_altas)
+
+
+@st.cache_data(ttl=300, max_entries=500, show_spinner=False)
+def _get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas: bool = False) -> List[Dict[str, Any]]:
     attempts = (
         (PACIENTES_LIST_COLUMNS, False, "updated_at"),
         ("*", True, "created_at"),
         ("*", True, None),
     )
-    last_error = None
     for columns, legacy, order_by in attempts:
         try:
             response = _supabase_execute_with_retry(
@@ -109,34 +106,26 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
                     empresa_id, busqueda, incluir_altas, c, l, o
                 ).execute(),
             )
-            data = getattr(response, "data", None) or []
-            st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-            return data
+            return getattr(response, "data", None) or []
         except Exception as e:
-            last_error = e
-    if last_error is not None:
-        log_event("db_sql", f"error_get_pacientes:{type(last_error).__name__}")
-        log_event("db_sql", f"error:Supabase en get_pacientes_by_empresa: {str(last_error)}")
+            log_event("db_sql", f"error_get_pacientes:{type(e).__name__}")
     return []
 
 
 def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
-    """Lista global para administradores. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_pac_global_{limit}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 300:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return []
+    return _get_pacientes_globales(limit)
+
+
+@st.cache_data(ttl=300, max_entries=200, show_spinner=False)
+def _get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
     limit = max(1, min(int(limit or 1000), 2000))
     attempts = (
         (PACIENTES_LIST_COLUMNS, "updated_at"),
         ("*", "created_at"),
         ("*", None),
     )
-    last_error = None
     for columns, order_by in attempts:
         try:
             def _query(c=columns, o=order_by):
@@ -144,90 +133,69 @@ def get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
                 if o:
                     q = q.order(o, desc=True)
                 return q.limit(limit).execute()
-
             response = _supabase_execute_with_retry("get_pacientes_globales", _query)
-            data = getattr(response, "data", None) or []
-            st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-            return data
+            return getattr(response, "data", None) or []
         except Exception as e:
-            last_error = e
-    if last_error is not None:
-        log_event("db_sql", f"error_get_pacientes_globales:{type(last_error).__name__}")
-        log_event("db_sql", f"error:Supabase en get_pacientes_globales: {str(last_error)}")
+            log_event("db_sql", f"error_get_pacientes_globales:{type(e).__name__}")
     return []
 
 
 def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
-    """Obtiene detalles completos de un paciente. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_pac_id_{paciente_id}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 120:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
         return None
+    return _get_paciente_by_id(paciente_id)
+
+
+@st.cache_data(ttl=120, max_entries=500, show_spinner=False)
+def _get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_paciente_id",
             lambda: supabase.table("pacientes").select("*").eq("id", paciente_id).limit(1).execute(),
         )
-        data = (getattr(response, "data", None) or [None])[0]
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        return data
+        return (getattr(response, "data", None) or [None])[0]
     except Exception as e:
         log_event("db_sql", f"error_get_paciente_id:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_paciente_by_id: {str(e)}")
         return None
 
 
 def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
-    """Busca una empresa por nombre exacto. Cache manual a prueba de fallos."""
-    empresa_fallback = empresa_record_configurado(nombre_empresa)
-    cache_key = f"_sql_pac_emp_n_{nombre_empresa}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 3600:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
     if not check_supabase_connection():
-        return empresa_fallback
+        return empresa_record_configurado(nombre_empresa)
+    return _get_empresa_by_nombre(nombre_empresa)
+
+
+@st.cache_data(ttl=3600, max_entries=100, show_spinner=False)
+def _get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
+    empresa_fallback = empresa_record_configurado(nombre_empresa)
     try:
         response = _supabase_execute_with_retry(
             "get_empresa_nombre",
             lambda: supabase.table("empresas").select(EMPRESAS_MIN_COLUMNS).eq("nombre", nombre_empresa).limit(1).execute(),
         )
-        data = (getattr(response, "data", None) or [empresa_fallback])[0]
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        return data
+        return (getattr(response, "data", None) or [empresa_fallback])[0]
     except Exception as e:
         log_event("db_sql", f"error_get_empresa_nombre:{type(e).__name__}")
-        log_event("db_sql", f"error:detallado Supabase get_empresa_by_nombre: {str(e)}")
         st.warning("Error al cargar datos de la empresa desde el servidor. Se usarán datos locales.")
         return empresa_fallback
 
 
 def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str, Any]]:
-    """Busca un paciente por DNI dentro de una empresa. Cache manual a prueba de fallos."""
-    cache_key = f"_sql_pac_dni_{empresa_id}_{dni}"
-    cached = st.session_state.get(cache_key)
-    if cached:
-        if time.monotonic() - cached["ts"] < 120:
-            return cached["data"]
-        st.session_state.pop(cache_key, None)
     if not check_supabase_connection() or not empresa_id or not dni:
         return None
+    return _get_paciente_by_dni_empresa(empresa_id, dni)
+
+
+@st.cache_data(ttl=120, max_entries=500, show_spinner=False)
+def _get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str, Any]]:
     try:
         response = _supabase_execute_with_retry(
             "get_paciente_dni_empresa",
             lambda: supabase.table("pacientes").select("*").eq("empresa_id", empresa_id).eq("dni", dni).limit(1).execute(),
         )
-        data = (getattr(response, "data", None) or [None])[0]
-        st.session_state[cache_key] = {"data": data, "ts": time.monotonic()}
-        return data
+        return (getattr(response, "data", None) or [None])[0]
     except Exception as e:
         log_event("db_sql", f"error_get_paciente_dni_empresa:{type(e).__name__}")
-        log_event("db_sql", f"error:Supabase en get_paciente_by_dni_empresa: {str(e)}")
         return None
 
 
@@ -255,7 +223,7 @@ def upsert_paciente(datos_paciente: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 raise
             payload.pop("updated_at", None)
             response = _upsert_paciente_payload(payload)
-        _invalidate_cache_prefix("_sql_pac_")
+        _clear_pacientes_cache()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_upsert_paciente:{type(e).__name__}")
@@ -284,7 +252,7 @@ def update_paciente_by_id(paciente_id: str, datos_update: Dict[str, Any]) -> Opt
                 "update_paciente",
                 lambda: supabase.table("pacientes").update(payload).eq("id", paciente_id).execute(),
             )
-        _invalidate_cache_prefix("_sql_pac_")
+        _clear_pacientes_cache()
         return response.data[0] if response and response.data else None
     except Exception as e:
         log_event("db_sql", f"error_update_paciente:{type(e).__name__}")
@@ -300,7 +268,7 @@ def delete_paciente_by_id(paciente_id: str) -> bool:
             "delete_paciente",
             lambda: supabase.table("pacientes").delete().eq("id", paciente_id).execute(),
         )
-        _invalidate_cache_prefix("_sql_pac_")
+        _clear_pacientes_cache()
         return True
     except Exception as e:
         log_event("db_sql", f"error_delete_paciente:{type(e).__name__}")
