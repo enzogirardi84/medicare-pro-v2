@@ -689,15 +689,16 @@ class ClinicalAlertEngine:
             else:
                 color = "🔵"
             
-            with st.expander(f"{color} {alert.title} - {alert.patient_name}", 
-                           expanded=alert.severity == AlertSeverity.CRITICAL.value and not alert.acknowledged):
-                st.write(f"**Paciente:** {alert.patient_name}")
-                st.write(f"**Mensaje:** {alert.message}")
-                st.write(f"**Regla:** {alert.rule_name}")  # Corregir sintaxis f-string faltante
-                st.write(f"**Fecha:** {alert.triggered_at[:16]}")
+                with st.expander(f"{color} {alert.title} - {alert.patient_name}",
+                                expanded=alert.severity == AlertSeverity.CRITICAL.value and not alert.acknowledged,
+                                key=f"alert_{alert.id}"):
+                    st.write(f"**Paciente:** {alert.patient_name}")
+                    st.write(f"**Mensaje:** {alert.message}")
+                    st.write(f"**Regla:** {alert.rule_name}")  # Corregir sintaxis f-string faltante
+                    st.write(f"**Fecha:** {alert.triggered_at[:16]}")
                 
                 if alert.relevant_data:
-                    with st.expander("📊 Datos relevantes"):
+                    with st.expander("📊 Datos relevantes", key=f"alert_data_{alert.id}"):
                         st.json(alert.relevant_data)
                 
                 def _on_acknowledge_alert(alert_id: str):

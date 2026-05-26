@@ -634,7 +634,8 @@ class ChronicDiseaseDashboard:
             st.warning(f"⚠️ {len(pending_dm)} pacientes con control de diabetes vencido")
             
             for patient in pending_dm[:10]:  # Mostrar primeros 10
-                with st.expander(f"Paciente {patient['patient_id']} - {patient['days_overdue']} días vencido"):
+                with st.expander(f"Paciente {patient['patient_id']} - {patient['days_overdue']} días vencido",
+                             key=f"cdm_{patient['patient_id']}"):
                     st.write(f"Último control: {patient['last_control'][:10]}")
                     st.write(f"Última HbA1c: {patient['hba1c_last']}%" if patient['hba1c_last'] else "Sin HbA1c registrada")
         else:

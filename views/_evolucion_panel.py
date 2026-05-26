@@ -347,7 +347,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             firma = str(ev.get("firma", ""))
             es_urgente = ev.get("urgente", False) or "urgente" in nota.lower()
 
-            with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}"):
+            with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}", key=f"ev_exp_{idx}_{ev.get('id', '')}"):
                 if es_urgente:
                     st.error("Marcada como URGENTE")
                 st.markdown(f"**Fecha:** `{html.escape(fecha)}`", unsafe_allow_html=True)

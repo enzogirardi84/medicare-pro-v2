@@ -523,7 +523,8 @@ class QualityManagementSystem:
                 }
                 icon = severity_colors.get(incident.severity, "⚪")
                 
-                with st.expander(f"{icon} {incident.incident_date} - {incident.incident_type.value} ({incident.status.value})"):
+                with st.expander(f"{icon} {incident.incident_date} - {incident.incident_type.value} ({incident.status.value})",
+                             key=f"qinc_{incident.id}"):
                     col1, col2 = st.columns([3, 1])
                     
                     with col1:

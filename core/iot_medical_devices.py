@@ -630,7 +630,8 @@ class IoTMedicalDeviceManager:
                 st.info("No hay dispositivos emparejados")
             else:
                 for device in devices:
-                    with st.expander(f"{device.manufacturer} {device.model} ({device.device_type})"):
+                    with st.expander(f"{device.manufacturer} {device.model} ({device.device_type})",
+                             key=f"iot_{device.device_id}"):
                         st.write(f"**ID:** {device.device_id}")
                         st.write(f"**Conexión:** {device.connection_type}")
                         st.write(f"**Emparejado:** {device.paired_at[:16]}")

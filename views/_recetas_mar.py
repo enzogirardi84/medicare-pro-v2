@@ -714,7 +714,7 @@ def render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_ho
         titulo = f"🕒 {hora_programada} | 💊 {medicamento}"
         expanded = idx < 2 and fila.get("Estado") != "Realizada"
 
-        with st.expander(titulo, expanded=expanded):
+        with st.expander(titulo, expanded=expanded, key=f"rx_mar_{idx}"):
             st.markdown('<div class="mc-rx-ficha-topbar" aria-hidden="true"></div>', unsafe_allow_html=True)
             estado_card = str(fila.get("Estado", "") or "").strip()
             estado_l = estado_card.lower()

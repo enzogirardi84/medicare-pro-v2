@@ -201,7 +201,7 @@ def render_dashboard(mi_empresa, rol):
         if _resultados:
             st.success(f"📄 {sum(len(v) for v in _resultados.values())} resultados en {len(_resultados)} pacientes")
             for _pac, _evos in sorted(_resultados.items()):
-                with st.expander(f"**{_pac}** ({len(_evos)} resultados)"):
+                with st.expander(f"**{_pac}** ({len(_evos)} resultados)", key=f"dash_evos_{_pac}"):
                     for _evo in _evos[-10:]:  # último 10 por paciente
                         _fecha = _evo.get("fecha", "")[:16]
                         _texto_corto = (_evo.get("texto", "") or _evo.get("nota", "") or "")[:200]

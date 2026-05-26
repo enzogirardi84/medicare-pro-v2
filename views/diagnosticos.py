@@ -518,7 +518,7 @@ def render_diagnosticos(user=None):
                                 queue_toast("Marcado como resuelto")
                                 st.rerun()
 
-                    with st.expander("Stack trace", expanded=False):
+                    with st.expander("Stack trace", expanded=False, key=f"vigia_stack_{rec.get('id', '')}"):
                         st.code(rec.get("stack_trace", "Sin traza"), language="text")
                         st.caption(f"Contexto: {rec.get('context', '—')} | Usuario: {rec.get('user', '—')} | ID: {eid}")
             st.markdown('</div>', unsafe_allow_html=True)

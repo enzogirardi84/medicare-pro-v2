@@ -612,7 +612,8 @@ class ComplianceMonitor:
                 for v in report.violations:
                     severity_color = "🔴" if v.severity == "critical" else "🟠" if v.severity == "high" else "🟡"
                     
-                    with st.expander(f"{severity_color} {v.control}: {v.description[:80]}..."):
+                    with st.expander(f"{severity_color} {v.control}: {v.description[:80]}...",
+                             key=f"compl_v_{v.id}"):
                         st.write(f"**Estándar:** {v.standard}")
                         st.write(f"**Severidad:** {v.severity}")
                         st.write(f"**Recurso:** {v.affected_resource}")
