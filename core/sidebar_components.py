@@ -57,7 +57,18 @@ def _cached_contexto(paciente_sel):
 def sidebar_patient_card(paciente_sel, detalles):
     with st.container(border=True):
         st.write("**Paciente activo**")
-        st.write(f"{escape(paciente_sel)}")
+        foto_b64 = detalles.get("foto_perfil", "")
+        if foto_b64:
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0;">'
+                f'<img src="data:image/jpeg;base64,{foto_b64}" '
+                f'style="width:48px;height:48px;border-radius:50%;object-fit:cover;'
+                f'border:2px solid rgba(20,184,166,0.3);flex-shrink:0;">'
+                f'<div><strong>{escape(paciente_sel)}</strong></div></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.write(f"{escape(paciente_sel)}")
         st.caption(
             f"DNI: {escape(detalles.get('dni', 'S/D'))}  |  "
             f"OS: {escape(detalles.get('obra_social', 'S/D'))}  |  "

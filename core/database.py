@@ -545,6 +545,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                             "alergias": p.get("alergias", ""),
                             "patologias": p.get("patologias", ""),
                             "fecha_alta": p.get("fecha_alta", ""),
+                            "foto_perfil": p.get("foto_perfil", ""),
                         }
                 
                 # Fijar el cache para evitar guardados innecesarios

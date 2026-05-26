@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import io
 from datetime import date
 
 import streamlit as st
@@ -55,6 +57,22 @@ DB_LABELS = {
     "firmas_tactiles_db": "Firmas",
     "plantillas_whatsapp_db": "Plantillas WhatsApp",
 }
+
+
+def _procesar_foto_alta(uploaded_file) -> str:
+    """Procesa foto subida: redimensiona a 150x150, convierte a base64."""
+    if uploaded_file is None:
+        return ""
+    try:
+        from PIL import Image
+        img = Image.open(uploaded_file)
+        img = img.convert("RGB")
+        img.thumbnail((150, 150))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", optimize=True, quality=75)
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        return ""
 
 
 def _render_admision_gestion(mi_empresa, rol, admin_total):
@@ -458,20 +476,24 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
 
     with st.form("adm_form", clear_on_submit=True):
         with st.expander("Datos personales", expanded=True):
-            col_a, col_b, col_c = st.columns(3)
-            n = col_a.text_input("Nombre y apellido *", placeholder="Juan Perez")
-            d = col_b.text_input("DNI del paciente *", placeholder="35123456", key="_adm_dni_preview")
-            f_nac = col_c.date_input(
-                "Fecha de nacimiento",
-                value=date(1990, 1, 1),
-                min_value=date(1900, 1, 1),
-                max_value=ahora().date(),
-            )
-
-            col_d, col_e, col_f = st.columns(3)
-            se = col_d.selectbox("Sexo", ["F", "M", "Otro"])
-            o = col_e.text_input("Obra social / prepaga", placeholder="OSDE / PAMI / Particular")
-            email_alta = col_f.text_input("Email", placeholder="paciente@correo.com")
+            col_foto, col_campos = st.columns([1, 3])
+            with col_foto:
+                foto_alta = st.file_uploader("Foto", type=["jpg", "jpeg", "png"],
+                                              key="adm_foto_alta", label_visibility="collapsed")
+            with col_campos:
+                col_a, col_b = st.columns(2)
+                n = col_a.text_input("Nombre y apellido *", placeholder="Juan Perez")
+                d = col_b.text_input("DNI del paciente *", placeholder="35123456", key="_adm_dni_preview")
+                col_c2, col_d2 = st.columns(2)
+                f_nac = col_c2.date_input(
+                    "Fecha de nacimiento",
+                    value=date(1990, 1, 1),
+                    min_value=date(1900, 1, 1),
+                    max_value=ahora().date(),
+                )
+                se = col_d2.selectbox("Sexo", ["F", "M", "Otro"])
+                o = st.text_input("Obra social / prepaga", placeholder="OSDE / PAMI / Particular")
+                email_alta = st.text_input("Email", placeholder="paciente@correo.com")
 
         with st.expander("Contacto y direccion", expanded=False):
             col_g, col_h = st.columns(2)
@@ -579,6 +601,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                         "fecha_ingreso": fecha_ingreso_alta.strftime("%d/%m/%Y"),
                         "peso": _peso_val if _peso_val > 0 else "",
                         "talla": _talla_val if _talla_val > 0 else "",
+                        "foto_perfil": _procesar_foto_alta(foto_alta) if foto_alta else "",
                     }
                     # Guardar peso en vitales_db para uso en cálculo de dosis
                     if _peso_val > 0:
