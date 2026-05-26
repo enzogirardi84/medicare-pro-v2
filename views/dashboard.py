@@ -39,6 +39,7 @@ from core.charts import (
     COLOR_INFO,
 )
 from core.app_logging import log_event
+from core.computed_cache import cached_computed
 
 
 def render_dashboard(mi_empresa, rol):
@@ -217,23 +218,27 @@ def render_dashboard(mi_empresa, rol):
             from core.utils import ahora as _ahora
             _hoy = _ahora().strftime("%d/%m/%Y")
             _emp = mi_empresa
-            # Administraciones de hoy
-            _ads_hoy = [
-                a for a in st.session_state.get("administracion_med_db", [])
-                if a.get("fecha", "").startswith(_hoy) and a.get("empresa") == _emp and "Realizada" in a.get("estado", "")
-            ]
-            _evos_hoy = [
-                e for e in st.session_state.get("evoluciones_db", [])
-                if e.get("fecha", "").startswith(_hoy) and e.get("paciente")
-            ]
-            _consumos_hoy = [
-                c for c in st.session_state.get("consumos_db", [])
-                if c.get("fecha", "").startswith(_hoy) and c.get("empresa") == _emp
-            ]
-            _pend_fact = [
-                f for f in st.session_state.get("facturacion_db", [])
-                if f.get("estado", "").startswith("Pendiente") and f.get("empresa") == _emp
-            ]
+            # Administraciones de hoy (cacheado: solo recalcula cada 2s si datos cambian)
+            _adm_db = st.session_state.get("administracion_med_db", [])
+            _ads_hoy = cached_computed("dash_adm_hoy", _adm_db, ttl=2.0,
+                compute_fn=lambda db=_adm_db, h=_hoy, e=_emp: [
+                    a for a in db if a.get("fecha", "").startswith(h) and a.get("empresa") == e and "Realizada" in a.get("estado", "")
+                ])
+            _evo_db = st.session_state.get("evoluciones_db", [])
+            _evos_hoy = cached_computed("dash_evos_hoy", _evo_db, ttl=2.0,
+                compute_fn=lambda db=_evo_db, h=_hoy: [
+                    e for e in db if e.get("fecha", "").startswith(h) and e.get("paciente")
+                ])
+            _con_db = st.session_state.get("consumos_db", [])
+            _consumos_hoy = cached_computed("dash_cons_hoy", _con_db, ttl=2.0,
+                compute_fn=lambda db=_con_db, h=_hoy, e=_emp: [
+                    c for c in db if c.get("fecha", "").startswith(h) and c.get("empresa") == e
+                ])
+            _fac_db = st.session_state.get("facturacion_db", [])
+            _pend_fact = cached_computed("dash_fact_pend", _fac_db, ttl=2.0,
+                compute_fn=lambda db=_fac_db, e=_emp: [
+                    f for f in db if f.get("estado", "").startswith("Pendiente") and f.get("empresa") == e
+                ])
             with st.expander("📋 Resumen de turno (hoy)", expanded=False):
                 ca, cb = st.columns(2)
                 ca.metric("💊 Dosis administradas", len(_ads_hoy))
