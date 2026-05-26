@@ -124,7 +124,7 @@ _NAV_COLS = 3
 
 def _nav_select_y_colapsar(modulo):
     """Selecciona un módulo y fuerza el colapso de todas las cortinas."""
-    set_modulo_actual(modulo)
+    set_modulo_actual(modulo, rerun=True)
     st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
 
 
@@ -153,7 +153,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                     width='stretch',
                     type=tipo,
                 ):
-                    set_modulo_actual(nombre_raw)
+                    set_modulo_actual(nombre_raw, rerun=True)
 
 
 def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
