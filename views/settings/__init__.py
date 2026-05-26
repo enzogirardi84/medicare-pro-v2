@@ -8,10 +8,7 @@ import streamlit as st
 
 from core.database import guardar_datos
 
-from views.settings.components._apariencia_notificaciones import (
-    render_appearance_settings,
-    render_notification_settings,
-)
+from views.settings.components._apariencia_notificaciones import render_notification_settings
 from views.settings.components._integraciones_api import (
     render_integration_settings,
 )
@@ -56,7 +53,6 @@ def render_settings_page():
     st.caption(f"Usuario: {user.get('nombre', 'N/A')}")
 
     _tabs_list = [
-        "🎨 Apariencia",
         "🔔 Notificaciones",
         "🔗 Integraciones",
         "📦 Reglas de Insumos",
@@ -69,17 +65,15 @@ def render_settings_page():
     tabs = st.tabs(_tabs_list)
 
     with tabs[0]:
-        render_appearance_settings()
-    with tabs[1]:
         render_notification_settings()
-    with tabs[2]:
+    with tabs[1]:
         render_integration_settings(is_admin)
-    with tabs[3]:
+    with tabs[2]:
         render_insumos_rules_settings(is_admin)
-    with tabs[4]:
+    with tabs[3]:
         render_security_settings(is_admin)
-    with tabs[5]:
+    with tabs[4]:
         render_advanced_settings(is_admin)
     if is_admin:
-        with tabs[6]:
+        with tabs[5]:
             render_admin_usuarios()
