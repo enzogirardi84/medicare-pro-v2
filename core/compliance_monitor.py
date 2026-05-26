@@ -463,27 +463,52 @@ class ComplianceMonitor:
         violations = []
         
         # Verificar último backup exitoso
-        from core.backup_automated import get_backup_manager
-        
-        manager = get_backup_manager()
-        latest = manager.get_latest_successful_backup()
-        
-        if latest:
-            backup_time = datetime.fromisoformat(latest.timestamp)
-            hours_since_backup = (datetime.now(timezone.utc) - backup_time).total_seconds() / 3600
+        try:
+            from core.backup_automated import get_backup_manager
             
-            if hours_since_backup > 24:
+            manager = get_backup_manager()
+            latest = manager.get_latest_successful_backup()
+            
+            if latest:
+                backup_time = datetime.fromisoformat(latest.timestamp)
+                hours_since_backup = (datetime.now(timezone.utc) - backup_time).total_seconds() / 3600
+                
+                if hours_since_backup > 24:
+                    violations.append(ComplianceViolation(
+                        id=f"viol-backup-{hash(latest.id) % 10000}",
+                        standard=ComplianceStandard.HIPAA.value,
+                        control="Administrative Safeguards",
+                        severity="high",
+                        description=f"Último backup hace {hours_since_backup:.1f} horas (límite: 24h)",
+                        detected_at=datetime.now(timezone.utc).isoformat(),
+                        affected_resource="backup_system",
+                        remediation_required=True,
+                        remediation_deadline=(datetime.now(timezone.utc) + timedelta(hours=4)).isoformat()
+                    ))
+            else:
                 violations.append(ComplianceViolation(
-                    id=f"viol-backup-{hash(latest.id) % 10000}",
+                    id="viol-backup-none",
                     standard=ComplianceStandard.HIPAA.value,
                     control="Administrative Safeguards",
-                    severity="high",
-                    description=f"Último backup hace {hours_since_backup:.1f} horas (límite: 24h)",
+                    severity="medium",
+                    description="No se encontraron backups exitosos. Configure el sistema de backups.",
                     detected_at=datetime.now(timezone.utc).isoformat(),
                     affected_resource="backup_system",
                     remediation_required=True,
-                    remediation_deadline=(datetime.now(timezone.utc) + timedelta(hours=4)).isoformat()
+                    remediation_deadline=(datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
                 ))
+        except Exception as e:
+            log_event("compliance", f"error_check_backups:{type(e).__name__}:{e}")
+            violations.append(ComplianceViolation(
+                id="viol-backup-error",
+                standard=ComplianceStandard.HIPAA.value,
+                control="Administrative Safeguards",
+                severity="low",
+                description=f"No se pudo verificar backups: sistema no configurado",
+                detected_at=datetime.now(timezone.utc).isoformat(),
+                affected_resource="backup_system",
+                remediation_required=False,
+            ))
         else:
             violations.append(ComplianceViolation(
                 id="viol-backup-none",
