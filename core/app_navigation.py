@@ -41,6 +41,12 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
         st.session_state["modulo_anterior"] = modulo_actual
     st.session_state["modulo_actual"] = modulo_nuevo
 
+    # Cerrar cortina de navegacion si estaba abierta
+    if st.session_state.pop("_show_nav_cortina", None) is not None:
+        pass
+    # Colapsar todos los expanders del menu forzando nuevo nav_version
+    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
+
     if rerun:
         st.rerun()
 
@@ -123,9 +129,8 @@ _NAV_COLS = 3
 
 
 def _nav_select_y_colapsar(modulo):
-    """Selecciona un módulo y fuerza el colapso de todas las cortinas."""
+    """Selecciona un módulo (el incremento de _nav_version esta en set_modulo_actual)."""
     set_modulo_actual(modulo, rerun=True)
-    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
 
 
 def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
