@@ -68,7 +68,12 @@ def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
 
     for i, (name, render_fn) in enumerate(_TABS.items()):
         with tabs[i]:
-            render_fn(paciente_sel, user, centro_salud_id)
+            try:
+                render_fn(paciente_sel, user, centro_salud_id)
+            except Exception as e:
+                from core.app_logging import log_event
+                log_event("aps", f"tab_fallo:{name}:{type(e).__name__}:{e}")
+                st.error(f"Error en pestaña «{name}». Contacte a soporte.")
 
     if st.session_state.get("_aps_tab"):
         st.session_state.pop("_aps_tab", None)
