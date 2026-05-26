@@ -79,8 +79,8 @@ class EvolucionClinica:
 class EstudioMedico:
     """Registro de estudio médico estructurado."""
     tipo: str  # laboratorio, imagen, endoscopia, etc.
-    subtipo: Optional[str] = None  # hemograma, radiografia, etc.
     fecha: str
+    subtipo: Optional[str] = None  # hemograma, radiografia, etc.
     profesional_solicitante: Optional[str] = None
     resultados: Dict[str, Any] = None
     conclusiones: Optional[str] = None

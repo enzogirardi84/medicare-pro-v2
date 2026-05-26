@@ -54,3 +54,21 @@ MAX_LIST_ITEMS_GLOBAL = 1000
 # dry_run: genera fixes pero no los aplica automáticamente
 # active: aplica fixes que pasan validación
 SELF_HEALING_MODE = "passive"
+
+
+class FeatureFlags:
+    """Feature flags del sistema. Cada atributo es un flag configurable."""
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @classmethod
+    def from_module(cls):
+        return cls(**{k: v for k, v in globals().items()
+                      if k.isupper() and not k.startswith('_')})
+
+
+def get_feature_flags() -> FeatureFlags:
+    """Retorna los feature flags actuales."""
+    return FeatureFlags.from_module()
