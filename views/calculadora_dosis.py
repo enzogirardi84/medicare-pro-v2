@@ -133,11 +133,12 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
         if es_manual:
             with st.expander("Parametros del medicamento", expanded=False):
                 st.text_input("Nombre del medicamento", key="m_nombre")
-                st.columns(2)[0].number_input("Dosis min (mg/kg/dosis)", min_value=0.0, step=0.1, value=10.0, key="m_min")
-                st.columns(2)[0].number_input("Dosis max (mg/kg/dosis)", min_value=0.0, step=0.1, value=15.0, key="m_max")
-                st.columns(2)[0].number_input("Intervalo minimo (hs)", min_value=0.0, step=1.0, value=6.0, key="m_int")
-                st.columns(2)[1].number_input("Dosis max diaria (mg/kg)", min_value=0.0, step=1.0, value=60.0, key="m_diaria")
-                st.columns(2)[1].number_input("Dosis max por dosis (mg)", min_value=0.0, step=1.0, value=500.0, key="m_maxdosis")
+                c1, c2 = st.columns(2)
+                c1.number_input("Dosis min (mg/kg/dosis)", min_value=0.0, step=0.1, value=10.0, key="m_min")
+                c1.number_input("Dosis max (mg/kg/dosis)", min_value=0.0, step=0.1, value=15.0, key="m_max")
+                c1.number_input("Intervalo minimo (hs)", min_value=0.0, step=1.0, value=6.0, key="m_int")
+                c2.number_input("Dosis max diaria (mg/kg)", min_value=0.0, step=1.0, value=60.0, key="m_diaria")
+                c2.number_input("Dosis max por dosis (mg)", min_value=0.0, step=1.0, value=500.0, key="m_maxdosis")
         else:
             info = _TODOS_MEDICAMENTOS.get(medicamento)
             if isinstance(info, dict):

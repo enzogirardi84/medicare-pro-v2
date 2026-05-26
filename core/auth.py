@@ -128,6 +128,7 @@ def _auth_strip_pwreset_url_si_hay_param() -> bool:
         if qp.get("pwreset") is None:
             return False
     except Exception:
+        log_event("auth", f"query_params_error")
         return False
     _auth_strip_pwreset_query_param()
     st.session_state.pop("mc_pwreset_token", None)

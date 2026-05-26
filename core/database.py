@@ -574,6 +574,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                         pb, _ = dumps_db_sorted(cached)
                         return loads_db_payload(pb)
                     except Exception:
+                        log_event("db_cache", "orjson_roundtrip_fallback_deepcopy")
                         return copy.deepcopy(cached)
             return None
 
