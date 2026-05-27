@@ -27,6 +27,11 @@ _CATEGORY_EMOJIS = {
 }
 
 
+def _colapsar_todas_categorias():
+    for cat in list(_CATEGORY_EMOJIS.keys()):
+        st.session_state[f"_nav_cat_{cat}"] = False
+
+
 def set_modulo_actual(modulo_seleccionado, rerun=False):
     """Actualiza el modulo activo y preserva el anterior para atajos de vuelta."""
     modulo_nuevo = str(modulo_seleccionado or "").strip()
@@ -42,10 +47,9 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
     st.session_state["modulo_actual"] = modulo_nuevo
 
     # Cerrar cortina de navegacion si estaba abierta
-    if st.session_state.pop("_show_nav_cortina", None) is not None:
-        pass
-    # Colapsar todos los expanders del menu
-    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
+    st.session_state.pop("_show_nav_cortina", None)
+    # Colapsar todas las categorias
+    _colapsar_todas_categorias()
 
     if rerun:
         st.rerun()
@@ -129,7 +133,7 @@ _NAV_COLS = 3
 
 
 def _nav_select_y_colapsar(modulo):
-    """Selecciona un módulo (el incremento de _nav_version esta en set_modulo_actual)."""
+    """Selecciona un módulo (el colapso de categorias esta en set_modulo_actual)."""
     set_modulo_actual(modulo, rerun=True)
 
 
@@ -217,8 +221,6 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         None,
     )
 
-    nav_version = st.session_state.get("_nav_version", 0)
-    primera_vez = (nav_version == 0)
     _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
 
     for cat in cats_ok:
@@ -228,11 +230,18 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         label = f"{emoji}  {cat}"
-        expandido = not _mobile and primera_vez and (cat == cat_activa)
+        cat_key = f"_nav_cat_{cat}"
 
-        with st.expander(
-            label, expanded=expandido, key=f"_nav_e_{cat}_{nav_version}"
-        ):
+        if cat_key not in st.session_state:
+            st.session_state[cat_key] = not _mobile and (cat == cat_activa) and (st.session_state.get("modulo_actual") is None)
+
+        is_open = st.session_state.get(cat_key, False)
+        arrow = "▼" if is_open else "▶"
+        if st.button(f"{arrow} {label}", key=f"_nav_btn_{cat}", use_container_width=True):
+            st.session_state[cat_key] = not is_open
+            st.rerun()
+
+        if is_open:
             todos = [
                 m
                 for sg in obtener_subgrupos_categoria(cat).values()
