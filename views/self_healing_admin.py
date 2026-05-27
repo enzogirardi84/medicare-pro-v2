@@ -90,6 +90,7 @@ def render_escaneo(_paciente_sel):
                             queue_toast(f"Fix aplicado: {f.title}")
                             st.rerun()
                         else:
+                            log_event("self_healing", f"fix_fallo:{f.title[:60]}")
                             st.error(f"No se pudo aplicar el fix: {f.title}")
 
     col_info1, col_info2, col_info3 = st.columns(3)

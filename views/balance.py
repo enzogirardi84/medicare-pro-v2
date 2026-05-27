@@ -93,6 +93,7 @@ def render_balance(paciente_sel, user):
             if guardar_datos(spinner=True):
                 queue_toast(f"Balance guardado. Shift actual: {'+' if balance >= 0 else ''}{balance} ml")
             else:
+                log_event("balance", "error_guardar")
                 st.error("Error al guardar el balance. Revisá la conexión.")
             st.rerun()
 
@@ -190,7 +191,6 @@ def render_balance(paciente_sel, user):
                 color="#6366f1",
             )
         except Exception as _exc:
-            from core.app_logging import log_event
             log_event("balance_charts", f"fallo_render_graficos:{type(_exc).__name__}:{_exc}")
 
         col_chart1, col_chart2 = st.columns(2)

@@ -244,6 +244,7 @@ def render_pediatria(paciente_sel, user):
             if guardar_datos(spinner=True):
                 queue_toast("Guardado correctamente.")
             else:
+                log_event("pediatria", "error_guardar")
                 st.error("Error al guardar. Revisá la conexión.")
             st.rerun()
 

@@ -376,6 +376,7 @@ def render_clinica(paciente_sel, user=None):
             except ValueError:
                 pass  # Intencional: item ya fue removido por otra operación concurrente
             if not guardar_datos(spinner=True):
+                log_event("clinica", "error_eliminar_vital")
                 st.error("Error al eliminar el registro.")
             else:
                 queue_toast("Registro eliminado.")

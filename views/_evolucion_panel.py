@@ -142,6 +142,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         st.rerun()
                     else:
                         err = result.get("error", "Error al generar sugerencia")
+                        log_event("evolucion", f"ai_suggest_error:{err[:80]}")
                         st.error(err)
         else:
             ai_not_available_warning()

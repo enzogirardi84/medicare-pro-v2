@@ -101,7 +101,6 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
             insert_checkin(datos_sql)
             _sql_ok = True
     except Exception as e:
-        from core.app_logging import log_event
         log_event("visitas_sql", f"error_dual_write_checkin_{tipo.lower()}:{type(e).__name__}")
 
     # Guardia por paciente (no global)
@@ -227,7 +226,6 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
         else:
             registrar_estado_checkins_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0)
     except Exception as e:
-        from core.app_logging import log_event
         log_event("visitas_sql", f"error_lectura_checkins:{type(e).__name__}")
         registrar_estado_checkins_sql(st.session_state, ok=False, empresa=mi_empresa, rows=0, error=e)
     if not fichadas_hoy:
@@ -394,7 +392,6 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
                                     }
                                     insert_turno(datos_sql)
                     except Exception as e:
-                        from core.app_logging import log_event
                         log_event("visitas_sql", f"error_dual_write_turno:{type(e).__name__}")
                     guardar_datos(spinner=True)
                     tel_n = _normalizar_telefono_whatsapp(tel_paciente)
