@@ -216,7 +216,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         st.sidebar.write(f"**{escape(paciente_sel)}**")
     st.sidebar.caption("Panel rápido del paciente")
     if alergias:
-        st.sidebar.warning(f"⚠️ Alergias: {alergias}")
+        st.sidebar.error(f"🚨 Alergias: {alergias}")
     else:
         st.sidebar.caption("Sin alergias cargadas.")
 
@@ -247,13 +247,13 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         st.sidebar.caption("📝 Sin evoluciones registradas.")
 
     if activas:
-        st.sidebar.caption(f"💊 Medicación activa ({len(activas)} indicación/es):")
-        for med in activas[:3]:
-            _nom = (med.get("med") or "")[:40]
+        st.sidebar.warning(f"💊 Medicación activa ({len(activas)} indicación/es):")
+        for med in activas[:4]:
+            _nom = (med.get("med") or "")[:45]
             _frec = (med.get("frecuencia") or med.get("via") or "")[:20]
-            st.sidebar.caption(f"  • {_nom}" + (f" — {_frec}" if _frec else ""))
-        if len(activas) > 3:
-            st.sidebar.caption(f"  ... y {len(activas) - 3} más")
+            st.sidebar.markdown(f"<span style='color:#fbbf24;font-size:0.82rem;'>  • {_nom}" + (f" — {_frec}" if _frec else "") + "</span>", unsafe_allow_html=True)
+        if len(activas) > 4:
+            st.sidebar.caption(f"  ... y {len(activas) - 4} más")
 
     if alergias:
         try:
@@ -264,11 +264,10 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         except Exception as _e:
             log_event("sidebar", f"alerta_medicacion:{type(_e).__name__}")
 
-    st.sidebar.caption("Diagnósticos activos")
     if patologias:
-        st.sidebar.write(f"- {escape(patologias)}")
+        st.sidebar.error(f"⚠️ Patologías: {escape(patologias)}")
     else:
-        st.sidebar.caption("Sin diagnósticos cargados.")
+        st.sidebar.caption("Sin patologías cargadas.")
 
     _help_key = "_ai_sidebar_show_help"
     if st.sidebar.button("💡 Ayuda IA para este módulo", key="_ai_sidebar_help", use_container_width=True):

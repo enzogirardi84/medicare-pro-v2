@@ -314,6 +314,104 @@ def _get_render_fn(tab_name, view_config):
     return fn
 
 
+def _render_alertas_criticas(paciente_sel: str) -> None:
+    """Muestra alertas rojas criticas del paciente: alergias, patologias, medicacion pendiente."""
+    if not paciente_sel:
+        return
+    try:
+        from core.utils_pacientes import mapa_detalles_pacientes
+        from datetime import datetime, date
+
+        detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
+        if not detalles:
+            return
+
+        alertas = []
+        alergias = str(detalles.get("alergias", "") or "").strip()
+        patologias = str(detalles.get("patologias", "") or detalles.get("diagnostico", "") or "").strip()
+
+        if alergias:
+            alertas.append(("🚨 ALERGIAS", alergias, "#dc2626"))
+
+        if patologias:
+            alertas.append(("⚠️ PATOLOGÍAS / RIESGOS", patologias, "#ea580c"))
+
+        # Medicación activa pendiente de administrar hoy
+        hoy = date.today()
+        hoy_str = hoy.strftime("%d/%m/%Y")
+        activas = [
+            r for r in st.session_state.get("indicaciones_db", [])
+            if r.get("paciente") == paciente_sel
+            and r.get("estado_receta", "Activa") == "Activa"
+        ]
+        admin_hoy = {
+            (a.get("med", ""), a.get("horario_programado", ""))
+            for a in st.session_state.get("administracion_med_db", [])
+            if a.get("paciente") == paciente_sel
+            and (a.get("fecha") or "").startswith(hoy_str[:10])
+            and a.get("estado") == "Realizada"
+        }
+        pendientes = [
+            r for r in activas
+            if not any(
+                (r.get("med", ""), h) in admin_hoy
+                for h in (r.get("horarios_programados") or [r.get("frecuencia", "")])
+            )
+        ]
+        for p in pendientes[:3]:
+            med_nom = (p.get("med") or "")[:60]
+            alertas.append(("💊 MEDICACIÓN PENDIENTE", med_nom, "#dc2626"))
+        if len(pendientes) > 3:
+            alertas.append(("💊 MEDICACIÓN PENDIENTE", f"Y {len(pendientes) - 3} indicaciones más", "#dc2626"))
+
+        if not alertas:
+            return
+
+        # CSS inyectado una vez
+        if not st.session_state.get("_alert_css_injected"):
+            st.session_state["_alert_css_injected"] = True
+            st.markdown(
+                """
+        <style>
+        .alerta-critica {
+            padding: 12px 16px;
+            margin: 6px 0;
+            border-radius: 10px;
+            border-left: 5px solid;
+            font-size: 0.88rem;
+            line-height: 1.4;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .alerta-critica .alerta-titulo {
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 2px;
+        }
+        .alerta-critica .alerta-detalle {
+            font-weight: 500;
+        }
+        </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("##### 🔴 Alertas críticas del paciente")
+        for titulo, detalle, color in alertas:
+            st.markdown(
+                f'<div class="alerta-critica" style="background:{color}15;border-left-color:{color};">'
+                f'<div><div class="alerta-titulo" style="color:{color};">{titulo}</div>'
+                f'<div class="alerta-detalle">{detalle}</div></div></div>',
+                unsafe_allow_html=True,
+            )
+        st.divider()
+    except Exception as _e:
+        log_event("alertas", f"error_render_alertas:{type(_e).__name__}")
+
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_config, menu_set=None):
     """Renderiza la vista activa. Captura errores y muestra UI de fallback."""
     if menu_set is None:
@@ -322,6 +420,9 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
         log_event("app_navigation", "error: No tienes permisos para acceder a este modulo.")
         st.error("No tienes permisos para acceder a este modulo.")
         return
+
+    # Alertas críticas del paciente (en todos los módulos)
+    _render_alertas_criticas(paciente_sel)
 
     # Barra de navegación rápida (breadcrumb)
     try:
