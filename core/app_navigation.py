@@ -214,6 +214,32 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     if not cats_ok:
         return st.session_state.get("modulo_actual", vista_actual)
 
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stCheckbox"] label[data-testid="stWidgetLabel"] {
+            padding: 6px 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            width: 100% !important;
+        }
+        div[data-testid="stCheckbox"] {
+            min-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        div[data-testid="stCheckbox"] label[data-testid="stWidgetLabel"] p {
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     categorias_modulos = get_categorias_modulos()
 
     cat_activa = next(
@@ -237,11 +263,10 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         is_open = st.session_state.get(cat_key, False)
         arrow = "▼" if is_open else "▶"
-        if st.button(f"{arrow} {label}", key=f"_nav_btn_{cat}", use_container_width=True):
-            st.session_state[cat_key] = not is_open
-            st.rerun()
+        if st.checkbox(f"{arrow} {label}", key=cat_key):
+            pass
 
-        if is_open:
+        if st.session_state.get(cat_key, False):
             todos = [
                 m
                 for sg in obtener_subgrupos_categoria(cat).values()
