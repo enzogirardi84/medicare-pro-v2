@@ -196,24 +196,35 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
 
                 with st.form("adm_edit_form"):
                     with st.expander("Datos personales", expanded=False):
-                        col_e1, col_e2, col_e3 = st.columns(3)
-                        nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
-                        dni_edit = col_e2.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
-                        fnac_edit = col_e3.date_input(
-                            "Fecha de nacimiento",
-                            value=_parsear_fecha_guardada(detalle_sel.get("fnac", "")),
-                            min_value=date(1900, 1, 1),
-                            max_value=ahora().date(),
-                        )
-
-                        col_e4, col_e5, col_e6 = st.columns(3)
-                        sexo_opciones = ["F", "M", "Otro"]
-                        sexo_actual = detalle_sel.get("sexo", "F")
-                        if sexo_actual not in sexo_opciones:
-                            sexo_opciones.append(sexo_actual)
-                        sexo_edit = col_e4.selectbox("Sexo", sexo_opciones, index=sexo_opciones.index(sexo_actual))
-                        estado_edit = col_e5.selectbox("Estado", estados_disponibles, index=estados_disponibles.index(estado_actual))
-                        email_edit = col_e6.text_input("Email", value=detalle_sel.get("email", ""))
+                        col_foto_e, col_campos_e = st.columns([1, 3])
+                        with col_foto_e:
+                            foto_edit = st.file_uploader("Foto de perfil", type=["jpg", "jpeg", "png"],
+                                                          key="adm_foto_edit", label_visibility="collapsed")
+                            if detalle_sel.get("foto_perfil"):
+                                st.markdown(
+                                    f'<img src="data:image/jpeg;base64,{detalle_sel["foto_perfil"]}" '
+                                    f'style="width:80px;height:80px;border-radius:50%;object-fit:cover;'
+                                    f'border:2px solid rgba(20,184,166,0.3);margin-top:4px;">',
+                                    unsafe_allow_html=True,
+                                )
+                        with col_campos_e:
+                            col_e1, col_e2 = st.columns(2)
+                            nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
+                            dni_edit = col_e2.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
+                            col_e3, col_e4 = st.columns(2)
+                            fnac_edit = col_e3.date_input(
+                                "Fecha de nacimiento",
+                                value=_parsear_fecha_guardada(detalle_sel.get("fnac", "")),
+                                min_value=date(1900, 1, 1),
+                                max_value=ahora().date(),
+                            )
+                            sexo_opciones = ["F", "M", "Otro"]
+                            sexo_actual = detalle_sel.get("sexo", "F")
+                            if sexo_actual not in sexo_opciones:
+                                sexo_opciones.append(sexo_actual)
+                            sexo_edit = col_e4.selectbox("Sexo", sexo_opciones, index=sexo_opciones.index(sexo_actual))
+                            estado_edit = st.selectbox("Estado", estados_disponibles, index=estados_disponibles.index(estado_actual))
+                            email_edit = st.text_input("Email", value=detalle_sel.get("email", ""))
 
                     with st.expander("Contacto y direccion", expanded=False):
                         col_e7, col_e8 = st.columns(2)
@@ -307,6 +318,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                     "fecha_ingreso": fecha_ingreso_edit.strftime("%d/%m/%Y"),
                                     "diagnostico_ingreso": _texto_unilinea(diagnostico_ingreso_edit),
                                     "motivo_ingreso": _texto_unilinea(motivo_ingreso_edit),
+                                    "foto_perfil": _procesar_foto_alta(foto_edit) if foto_edit else detalle_sel.get("foto_perfil", ""),
                                 }
                                 if estado_edit == "De Alta" and fecha_egreso_edit is not None:
                                     payload["fecha_egreso"] = fecha_egreso_edit.strftime("%d/%m/%Y")
