@@ -133,6 +133,10 @@ from core.utils_roles import (  # noqa: E402
     _modulo_canonico,
 )
 
+from core.utils_pacientes import (  # noqa: E402
+    mapa_detalles_pacientes,
+    obtener_pacientes_visibles,
+)
 from core.utils_fechas import (  # noqa: E402
     ahora,
     calcular_estado_agenda,
@@ -389,7 +393,6 @@ def registrar_auditoria_legal(
     extra = dict(extra or {})
     usuario_ctx = usuario if isinstance(usuario, dict) else st.session_state.get("user", {})
     if empresa is None:
-        from core.utils_pacientes import mapa_detalles_pacientes
         detalles = mapa_detalles_pacientes(st.session_state).get(paciente, {})
         empresa = detalles.get("empresa") or usuario_ctx.get("empresa", "")
     try:
