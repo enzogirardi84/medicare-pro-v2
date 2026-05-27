@@ -219,57 +219,41 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
     _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
 
-    # Inyectar CSS para botones toggle con diseño tipo expander
-    st.html(
-        """
+    # CSS inyectado solo una vez por sesion
+    if not st.session_state.get("_nav_css_injected"):
+        st.session_state["_nav_css_injected"] = True
+        st.markdown(
+            """
         <style>
         [data-testid="stSidebar"] button[key^="_nav_toggle_"] {
-            background: rgba(15, 23, 42, 0.5) !important;
-            border: 1px solid rgba(51, 65, 85, 0.3) !important;
+            background: rgba(15,23,42,0.5) !important;
+            border: 1px solid rgba(51,65,85,0.3) !important;
             border-radius: 12px !important;
-            padding: 0.65rem 0.9rem !important;
+            padding: 0.6rem 0.85rem !important;
             font-weight: 700 !important;
-            font-size: 0.88rem !important;
-            letter-spacing: 0.01em !important;
+            font-size: 0.86rem !important;
             text-align: left !important;
             justify-content: flex-start !important;
             color: #e2e8f0 !important;
             width: 100% !important;
             display: flex !important;
             align-items: center !important;
-            gap: 8px !important;
+            gap: 6px !important;
             cursor: pointer !important;
-            margin: 3px 0 !important;
-            font-family: system-ui, -apple-system, sans-serif !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
-            min-height: 40px !important;
-            line-height: 1.4 !important;
-            transition: all 0.15s ease !important;
+            margin: 2px 0 !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15) !important;
+            min-height: 36px !important;
+            line-height: 1.3 !important;
+            transition: background 0.12s, border-color 0.12s !important;
         }
         [data-testid="stSidebar"] button[key^="_nav_toggle_"]:hover {
-            background: rgba(30, 41, 59, 0.8) !important;
-            border-color: rgba(20, 184, 166, 0.25) !important;
-            color: #f1f5f9 !important;
-        }
-        [data-testid="stSidebar"] button[key^="_nav_toggle_"][aria-expanded="true"],
-        [data-testid="stSidebar"] button._nav_open {
-            background: rgba(20, 184, 166, 0.08) !important;
-            border-color: rgba(20, 184, 166, 0.2) !important;
-            box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.08) !important;
-        }
-        [data-testid="stSidebar"] button[key^="_nav_toggle_"] ._nav_arrow {
-            display: inline-block;
-            font-size: 0.7rem;
-            opacity: 0.7;
-            transition: transform 0.15s ease;
-            min-width: 12px;
-        }
-        [data-testid="stSidebar"] button[key^="_nav_toggle_"] ._nav_arrow._open {
-            opacity: 1;
+            background: rgba(30,41,59,0.8) !important;
+            border-color: rgba(20,184,166,0.2) !important;
         }
         </style>
-        """
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
     # Inicializar estado en primera carga
     if st.session_state.get("_nav_first_load", True):
@@ -288,8 +272,9 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         is_open = st.session_state.get(cat_key, False)
         arrow = "▼" if is_open else "▶"
 
-        if st.button(f"{arrow} {label}", key=f"_nav_toggle_{cat}", use_container_width=True):
-            st.session_state[cat_key] = not is_open
+        btn_label = f"{arrow} {label}"
+        if st.button(btn_label, key=f"_nav_toggle_{cat}", use_container_width=True):
+            st.session_state[cat_key] = not st.session_state.get(cat_key, False)
             st.rerun()
 
         if st.session_state.get(cat_key, False):
@@ -300,8 +285,7 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
                 if m in menu_set
             ] or mods_in_cat
             if todos:
-                with st.container():
-                    _render_modulos_sub(todos, vista_actual, view_nav_labels)
+                _render_modulos_sub(todos, vista_actual, view_nav_labels)
 
     return st.session_state.get("modulo_actual", vista_actual)
 
