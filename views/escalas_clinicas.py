@@ -12,6 +12,22 @@ from core.db_sql import get_escalas_by_paciente, insert_escala
 from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
 from core.app_logging import log_event
 
+ESCALAS = ["Glasgow", "Braden", "Barthel", "EVA"]
+
+EVA_FACES = {
+    0: "😊 Sin dolor",
+    1: "🙂 1",
+    2: "😐 2",
+    3: "😐 3",
+    4: "😣 4",
+    5: "😣 5",
+    6: "😣 6",
+    7: "😫 7",
+    8: "😫 8",
+    9: "😫 9",
+    10: "😖 10",
+}
+
 
 def _glasgow(ocular, verbal, motora):
     return ocular + verbal + motora
@@ -27,40 +43,64 @@ def _interpretacion_visual(escala, puntaje, resumen):
         "detalle": "Lectura automatica del puntaje para apoyar la decision clinica.",
         "color": "#38bdf8",
         "fondo": "rgba(56, 189, 248, 0.12)",
+        "icono": "📋",
     }
     recomendaciones = {
         "Glasgow": {
-            "Compromiso severo": ("#ef4444", "Monitoreo intensivo y aviso medico inmediato."),
-            "Compromiso moderado": ("#f59e0b", "Revalorar neurologia y seguimiento estrecho."),
-            "Leve / normal": ("#22c55e", "Continuar control evolutivo segun cuadro clinico."),
+            "Compromiso severo": ("#ef4444", "Monitoreo intensivo y aviso medico inmediato.", "🧠"),
+            "Compromiso moderado": ("#f59e0b", "Revalorar neurologia y seguimiento estrecho.", "🧠"),
+            "Leve / normal": ("#22c55e", "Continuar control evolutivo segun cuadro clinico.", "🧠"),
         },
         "Braden": {
-            "Alto riesgo UPP": ("#ef4444", "Rotacion, alivio de presion y vigilancia de piel."),
-            "Riesgo moderado": ("#f59e0b", "Implementar medidas preventivas y control diario."),
-            "Bajo riesgo": ("#22c55e", "Mantener prevencion basica y reevaluacion periodica."),
+            "Alto riesgo UPP": ("#ef4444", "Rotacion, alivio de presion y vigilancia de piel.", "🛏️"),
+            "Riesgo moderado": ("#f59e0b", "Implementar medidas preventivas y control diario.", "🛏️"),
+            "Bajo riesgo": ("#22c55e", "Mantener prevencion basica y reevaluacion periodica.", "🛏️"),
         },
         "Barthel": {
-            "Dependencia total": ("#ef4444", "Requiere apoyo integral y plan intensivo de cuidados."),
-            "Dependencia severa": ("#f59e0b", "Priorizar asistencia funcional y seguimiento familiar."),
-            "Dependencia leve/moderada": ("#38bdf8", "Promover autonomia supervisada y reevaluacion."),
-            "Independiente": ("#22c55e", "Mantener control periodico y objetivos de sostén."),
+            "Dependencia total": ("#ef4444", "Requiere apoyo integral y plan intensivo de cuidados.", "🚶"),
+            "Dependencia severa": ("#f59e0b", "Priorizar asistencia funcional y seguimiento familiar.", "🚶"),
+            "Dependencia leve/moderada": ("#38bdf8", "Promover autonomia supervisada y reevaluacion.", "🚶"),
+            "Independiente": ("#22c55e", "Mantener control periodico y objetivos de sosten.", "🚶"),
         },
         "EVA": {
-            "Sin dolor": ("#22c55e", "Sin analgesia adicional inmediata."),
-            "Dolor leve": ("#38bdf8", "Continuar seguimiento del dolor y respuesta clinica."),
-            "Dolor moderado": ("#f59e0b", "Revisar analgesia indicada y reevaluar pronto."),
-            "Dolor severo": ("#ef4444", "Escalar manejo del dolor y notificar conducta medica."),
+            "Sin dolor": ("#22c55e", "Sin analgesia adicional inmediata.", "😊"),
+            "Dolor leve": ("#38bdf8", "Continuar seguimiento del dolor y respuesta clinica.", "🙂"),
+            "Dolor moderado": ("#f59e0b", "Revisar analgesia indicada y reevaluar pronto.", "😣"),
+            "Dolor severo": ("#ef4444", "Escalar manejo del dolor y notificar conducta medica.", "😫"),
         },
     }
-    color, detalle = recomendaciones.get(escala, {}).get(resumen, (base["color"], base["detalle"]))
-    base["color"] = color
-    base["detalle"] = detalle
-    base["fondo"] = {
-        "#ef4444": "rgba(239, 68, 68, 0.14)",
-        "#f59e0b": "rgba(245, 158, 11, 0.16)",
-        "#22c55e": "rgba(34, 197, 94, 0.14)",
-    }.get(color, "rgba(56, 189, 248, 0.12)")
+    color, detalle, icono = recomendaciones.get(escala, {}).get(resumen, (base["color"], base["detalle"], base["icono"]))
+    base.update({
+        "color": color,
+        "detalle": detalle,
+        "icono": icono,
+        "fondo": {
+            "#ef4444": "rgba(239, 68, 68, 0.14)",
+            "#f59e0b": "rgba(245, 158, 11, 0.16)",
+            "#22c55e": "rgba(34, 197, 94, 0.14)",
+        }.get(color, "rgba(56, 189, 248, 0.12)"),
+    })
     return base
+
+
+def _render_tarjeta_interpretacion(card, puntaje):
+    st.markdown(
+        f"""
+        <div style="border:1px solid {card['color']};background:{card['fondo']};border-radius:16px;padding:18px 20px;margin:10px 0 14px 0;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="font-size:2.2rem;">{card['icono']}</div>
+                <div style="flex:1;">
+                    <div style="font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:{card['color']};font-weight:700;">
+                        {card['titulo']}
+                    </div>
+                    <div style="font-size:1.6rem;font-weight:800;color:#f8fafc;margin-top:2px;">{puntaje} pts</div>
+                    <div style="font-size:0.92rem;color:#cbd5e1;margin-top:4px;">{card['detalle']}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _resolver_uuid_paciente_sql(paciente_sel, empresa):
@@ -84,7 +124,6 @@ def render_escalas_clinicas(paciente_sel, user):
         or ""
     ).strip()
 
-    # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     registros = []
     try:
         paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, empresa_actual)
@@ -105,10 +144,8 @@ def render_escalas_clinicas(paciente_sel, user):
     except Exception as e:
         log_event("error_leer_escalas_sql", str(e))
 
-    # 2. Fallback a JSON si SQL falla o esta vacio
     if not registros:
         registros = get_patient_records("escalas_clinicas_db", paciente_sel)
-        # Ordenar JSON por fecha descendente para igualar SQL
         registros.sort(key=lambda x: x.get("fecha", ""), reverse=True)
 
     st.markdown(
@@ -117,79 +154,95 @@ def render_escalas_clinicas(paciente_sel, user):
             <h2 class="mc-hero-title">Escalas clinicas</h2>
             <p class="mc-hero-text">Registra puntajes estructurados para neurologia, riesgo de ulceras, dependencia y dolor con lectura rapida del estado del paciente.</p>
             <div class="mc-chip-row">
-                <span class="mc-chip">Glasgow</span>
-                <span class="mc-chip">Braden</span>
-                <span class="mc-chip">Barthel</span>
-                <span class="mc-chip">EVA</span>
+                <span class="mc-chip">🧠 Glasgow</span>
+                <span class="mc-chip">🛏️ Braden</span>
+                <span class="mc-chip">🚶 Barthel</span>
+                <span class="mc-chip">😊 EVA</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    bloque_mc_grid_tarjetas(
-        [
-            ("Glasgow / Braden", "Neurologia y riesgo de UPP con lectura automatica."),
-            ("Barthel / EVA", "Dependencia funcional y escala de dolor."),
-            ("Historial", "Cada registro queda vinculado al paciente."),
-        ]
-    )
-    st.caption(
-        "Elegi la escala en el selector; el bloque de abajo cambia los campos. Al guardar, el puntaje y la lectura sugerida quedan en el historial del paciente."
-    )
+    bloque_mc_grid_tarjetas([
+        ("🧠 Glasgow / 🛏️ Braden", "Neurologia y riesgo de UPP con lectura automatica."),
+        ("🚶 Barthel / 😊 EVA", "Dependencia funcional y escala de dolor."),
+        ("📋 Historial", "Cada registro queda vinculado al paciente con grafico evolutivo."),
+    ])
 
-    escala = st.radio("Escala", ["Glasgow", "Braden", "Barthel", "EVA"], horizontal=False)
+    escala = st.radio("Escala", ESCALAS, horizontal=True)
+    form_key = f"escala_form_{escala}"
 
     with st.container(border=True):
-        st.markdown(f"### Registro de {escala}")
+        st.markdown(f"### {_interpretacion_visual(escala, 0, '')['icono']} Registro de {escala}")
         resumen = ""
         puntaje = 0
+        escala_val = escala
 
         if escala == "Glasgow":
             c1, c2, c3 = st.columns(3)
-            ocular = c1.selectbox("Respuesta ocular", [1, 2, 3, 4], index=3, label_visibility="collapsed")
-            verbal = c2.selectbox("Respuesta verbal", [1, 2, 3, 4, 5], index=4, label_visibility="collapsed")
-            motora = c3.selectbox("Respuesta motora", [1, 2, 3, 4, 5, 6], index=5, label_visibility="collapsed")
+            with c1.container(border=True):
+                st.caption("👁️ Ocular")
+                ocular = st.selectbox("", [1, 2, 3, 4], index=3, label_visibility="collapsed", key=f"gl_oc_{form_key}")
+            with c2.container(border=True):
+                st.caption("🗣️ Verbal")
+                verbal = st.selectbox("", [1, 2, 3, 4, 5], index=4, label_visibility="collapsed", key=f"gl_ve_{form_key}")
+            with c3.container(border=True):
+                st.caption("🏃 Motor")
+                motora = st.selectbox("", [1, 2, 3, 4, 5, 6], index=5, label_visibility="collapsed", key=f"gl_mo_{form_key}")
             puntaje = _glasgow(ocular, verbal, motora)
             resumen = "Compromiso severo" if puntaje <= 8 else "Compromiso moderado" if puntaje <= 12 else "Leve / normal"
-            st.metric("Puntaje Glasgow", puntaje)
+
         elif escala == "Braden":
-            c1, c2, c3 = st.columns(3)
-            sensorial = c1.selectbox("Percepcion sensorial", [1, 2, 3, 4], index=3, label_visibility="collapsed")
-            humedad = c2.selectbox("Humedad", [1, 2, 3, 4], index=3, label_visibility="collapsed")
-            actividad = c3.selectbox("Actividad", [1, 2, 3, 4], index=3, label_visibility="collapsed")
-            c4, c5, c6 = st.columns(3)
-            movilidad = c4.selectbox("Movilidad", [1, 2, 3, 4], index=3, label_visibility="collapsed")
-            nutricion = c5.selectbox("Nutricion", [1, 2, 3, 4], index=3, label_visibility="collapsed")
-            friccion = c6.selectbox("Friccion / roce", [1, 2, 3], index=2, label_visibility="collapsed")
+            st.markdown("##### Sub-puntajes Braden")
+            r1, r2 = st.columns(2)
+            with r1.container(border=True):
+                sensorial = st.selectbox("🧠 Percepcion sensorial", [1, 2, 3, 4], index=3, key=f"br_se_{form_key}")
+                humedad = st.selectbox("💧 Humedad", [1, 2, 3, 4], index=3, key=f"br_hu_{form_key}")
+                actividad = st.selectbox("🏃 Actividad", [1, 2, 3, 4], index=3, key=f"br_ac_{form_key}")
+            with r2.container(border=True):
+                movilidad = st.selectbox("🔄 Movilidad", [1, 2, 3, 4], index=3, key=f"br_mo_{form_key}")
+                nutricion = st.selectbox("🍽️ Nutricion", [1, 2, 3, 4], index=3, key=f"br_nu_{form_key}")
+                friccion = st.selectbox("⚡ Friccion / roce", [1, 2, 3], index=2, key=f"br_fr_{form_key}")
             puntaje = _braden(sensorial, humedad, actividad, movilidad, nutricion, friccion)
             resumen = "Alto riesgo UPP" if puntaje <= 12 else "Riesgo moderado" if puntaje <= 16 else "Bajo riesgo"
-            st.metric("Puntaje Braden", puntaje)
+
         elif escala == "Barthel":
-            puntaje = st.slider("Indice de Barthel", min_value=0, max_value=100, value=60, step=5)
+            col_b1, col_b2 = st.columns([3, 1])
+            with col_b1:
+                puntaje = st.slider("Indice de Barthel", 0, 100, 60, 5, key=f"bar_{form_key}")
+            with col_b2:
+                st.metric("Puntaje", puntaje)
             resumen = "Dependencia total" if puntaje <= 20 else "Dependencia severa" if puntaje <= 60 else "Dependencia leve/moderada" if puntaje < 100 else "Independiente"
-            st.metric("Puntaje Barthel", puntaje)
+
         else:
-            puntaje = st.slider("Escala visual analogica del dolor", min_value=0, max_value=10, value=0, step=1)
+            col_e1, col_e2 = st.columns([3, 1])
+            with col_e1:
+                _face_opts = [(v, k) for k, v in EVA_FACES.items()]
+                _face_labels = [v for v, _ in _face_opts]
+                _face_values = [k for _, k in _face_opts]
+                face_idx = puntaje  # 0 on first load
+                puntaje = st.select_slider(
+                    "😊😐😣😫 Escala visual analogica del dolor",
+                    options=list(range(0, 11)),
+                    value=0,
+                    format_func=lambda x: EVA_FACES.get(x, str(x)),
+                    key=f"eva_{form_key}",
+                )
+            with col_e2:
+                _eva_emoji = EVA_FACES.get(puntaje, "😊").split(" ")[0]
+                st.markdown(
+                    f"<div style='font-size:3.5rem;text-align:center;'>{_eva_emoji}</div>"
+                    f"<div style='font-size:1.2rem;text-align:center;font-weight:700;'>{puntaje}/10</div>",
+                    unsafe_allow_html=True,
+                )
             resumen = "Sin dolor" if puntaje == 0 else "Dolor leve" if puntaje <= 3 else "Dolor moderado" if puntaje <= 6 else "Dolor severo"
-            st.metric("Puntaje EVA", puntaje)
 
-        observaciones = st.text_area("Observaciones", height=90)
+        observaciones = st.text_area("📝 Observaciones", height=80, key=f"obs_{form_key}")
         card = _interpretacion_visual(escala, puntaje, resumen)
-        st.markdown(
-            f"""
-            <div style="border:1px solid {card['color']}; background:{card['fondo']}; border-radius:18px; padding:16px 18px; margin:8px 0 12px 0;">
-                <div style="font-size:0.82rem; letter-spacing:0.08em; text-transform:uppercase; color:{card['color']}; font-weight:700;">Interpretacion automatica</div>
-                <div style="font-size:1.15rem; font-weight:700; color:#f8fafc; margin-top:4px;">{card['titulo']}</div>
-                <div style="font-size:0.98rem; color:#cbd5e1; margin-top:6px;">{card['detalle']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        _render_tarjeta_interpretacion(card, puntaje)
 
-        if st.button(f"Guardar {escala}", width='stretch', type="primary"):
+        if st.button(f"💾 Guardar {escala}", width='stretch', type="primary", key=f"save_{form_key}"):
             fecha_str = ahora().strftime("%d/%m/%Y %H:%M:%S")
-            
-            # 1. Guardar en SQL (Dual-Write)
             try:
                 paciente_uuid = _resolver_uuid_paciente_sql(paciente_sel, empresa_actual)
                 if paciente_uuid:
@@ -199,14 +252,13 @@ def render_escalas_clinicas(paciente_sel, user):
                         "tipo_escala": escala,
                         "puntaje_total": puntaje,
                         "interpretacion": resumen,
-                        "observaciones": observaciones.strip()
+                        "observaciones": observaciones.strip(),
                     }
                     insert_escala(datos_sql)
                     log_event("escala_sql_insert", f"Paciente: {paciente_uuid}")
             except Exception as e:
                 log_event("error_escala_sql", str(e))
 
-            # 2. Guardar en JSON (Legacy)
             nuevo = {
                 "paciente": paciente_sel,
                 "fecha": fecha_str,
@@ -222,10 +274,9 @@ def render_escalas_clinicas(paciente_sel, user):
             st.session_state["escalas_clinicas_db"].append(nuevo)
             from core.database import _trim_db_list
             _trim_db_list("escalas_clinicas_db", 500)
-            
+
             registrar_auditoria_legal(
-                "Escala Clinica",
-                paciente_sel,
+                "Escala Clinica", paciente_sel,
                 f"Registro {escala}",
                 user.get("nombre", ""),
                 user.get("matricula", ""),
@@ -235,80 +286,76 @@ def render_escalas_clinicas(paciente_sel, user):
             queue_toast(f"Escala {escala} guardada.")
             st.rerun()
 
-    # ── Alerta empeoramiento vs último registro de la misma escala ──
+    # ── Alerta empeoramiento vs último registro ──
     registros_misma_escala = [r for r in registros if r.get("escala") == escala]
-    if len(registros_misma_escala) >= 2:
+    if len(registros_misma_escala) >= 2 and puntaje > 0:
         _sorted = sorted(registros_misma_escala, key=lambda x: x.get("fecha", ""))
         p_prev = _sorted[-2].get("puntaje", 0)
         p_actual = puntaje
-        # Braden y Barthel: mayor puntaje = mejor; Glasgow y EVA: menor = mejor
-        if escala in {"Braden", "Barthel"}:
-            empeoro = p_actual < p_prev
-            mejoro = p_actual > p_prev
-        else:
-            empeoro = p_actual < p_prev  # Glasgow: menor es peor; EVA: mayor es peor
-            mejoro = p_actual > p_prev
-            if escala == "EVA":
-                empeoro = p_actual > p_prev
-                mejoro = p_actual < p_prev
+        menor_es_peor = escala in {"Glasgow", "Braden", "Barthel"}
+        empeoro = p_actual < p_prev if menor_es_peor else p_actual > p_prev
+        mejoro = p_actual > p_prev if menor_es_peor else p_actual < p_prev
         delta_val = p_actual - p_prev
         if empeoro:
             st.warning(
-                f" **{escala} empeoró**: anterior {p_prev} → actual {p_actual} "
-                f"({'+'  if delta_val > 0 else ''}{delta_val} pts). Revisar conducta."
+                f"⚠️ **{escala} empeoró**: anterior {p_prev} → actual {p_actual} "
+                f"({' +' if delta_val > 0 else ' '}{delta_val} pts). Revisar conducta."
             )
         elif mejoro:
             st.success(
-                f" **{escala} mejoró**: anterior {p_prev} → actual {p_actual} "
-                f"({'+'  if delta_val > 0 else ''}{delta_val} pts)."
+                f"✅ **{escala} mejoró**: anterior {p_prev} → actual {p_actual} "
+                f"({' +' if delta_val > 0 else ' '}{delta_val} pts)."
             )
 
+    # ── Historial ──
     st.divider()
-    st.markdown("### Historial de escalas")
+    st.markdown("### 📋 Historial de escalas")
     if not registros:
         st.info("Todavia no hay escalas registradas para este paciente.")
         return
 
-    # ── Resumen del último puntaje por escala ─────────────────────────────
     escalas_con_data = {}
     for r in registros:
         e_key = r.get("escala", "")
         if e_key and (e_key not in escalas_con_data or r.get("fecha", "") > escalas_con_data[e_key].get("fecha", "")):
             escalas_con_data[e_key] = r
+
     if escalas_con_data:
+        st.markdown("##### Último registro por escala")
         _cols = st.columns(len(escalas_con_data))
         for idx, (e_key, r) in enumerate(escalas_con_data.items()):
             _icard = _interpretacion_visual(e_key, r.get("puntaje", 0), r.get("interpretacion") or r.get("resumen", ""))
-            _cols[idx].metric(
-                f"Último {e_key}",
-                f"{r.get('puntaje', '?')} pts",
-                delta=r.get("interpretacion") or r.get("resumen", ""),
-                delta_color="off",
-            )
-            _cols[idx].caption(r.get("fecha", "")[:16])
+            with _cols[idx].container(border=True):
+                st.markdown(f"<div style='font-size:1.5rem;'>{_icard['icono']}</div>", unsafe_allow_html=True)
+                st.metric(
+                    f"{e_key}",
+                    f"{r.get('puntaje', '?')} pts",
+                    delta=r.get("interpretacion") or r.get("resumen", ""),
+                    delta_color="off",
+                )
+                st.caption(r.get("fecha", "")[:16])
 
-    # ── Gráfico de evolución del puntaje por escala ──────────────────
     df_hist = pd.DataFrame(registros)
     if not df_hist.empty and "escala" in df_hist.columns and "puntaje" in df_hist.columns:
         df_hist["puntaje"] = pd.to_numeric(df_hist["puntaje"], errors="coerce")
         df_hist["fecha_dt"] = pd.to_datetime(df_hist["fecha"], format="%d/%m/%Y %H:%M:%S", errors="coerce")
         df_hist = df_hist.dropna(subset=["fecha_dt"]).sort_values("fecha_dt")
-        escalas_presentes = [e for e in ["Glasgow", "Braden", "Barthel", "EVA"] if e in df_hist["escala"].values]
+        escalas_presentes = [e for e in ESCALAS if e in df_hist["escala"].values]
         if escalas_presentes:
+            st.markdown("##### Evolución por escala")
             for e_key in escalas_presentes:
                 df_e = df_hist[df_hist["escala"] == e_key].set_index("fecha_dt")["puntaje"]
                 if len(df_e) >= 2:
-                    st.caption(f"Evolución {e_key} ({len(df_e)} registros)")
-                    st.line_chart(df_e, width='stretch', height=140)
+                    st.caption(f"{_interpretacion_visual(e_key, 0, '')['icono']} {e_key} ({len(df_e)} registros)")
+                    st.line_chart(df_e, width='stretch', height=130)
 
     limite = seleccionar_limite_registros(
-        "Escalas a mostrar",
-        len(registros),
-        key=f"limite_escalas_{paciente_sel}",
-        default=30,
+        "Escalas a mostrar", len(registros),
+        key=f"limite_escalas_{paciente_sel}", default=30,
     )
-    with lista_plegable("Historial de escalas (tabla)", count=min(limite, len(registros)), expanded=False, height=460):
-        mostrar_dataframe_con_scroll(
-            pd.DataFrame(registros[-limite:]).drop(columns=["paciente"], errors="ignore").iloc[::-1],
-            height=400,
-        )
+    with lista_plegable(
+        f"📄 Historial completo de escalas",
+        count=min(limite, len(registros)), expanded=False, height=460,
+    ):
+        df_tabla = pd.DataFrame(registros[-limite:]).drop(columns=["paciente"], errors="ignore").iloc[::-1]
+        mostrar_dataframe_con_scroll(df_tabla, height=400)
