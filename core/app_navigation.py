@@ -45,7 +45,7 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
     if st.session_state.pop("_show_nav_cortina", None) is not None:
         pass
     # Colapsar todos los expanders del menu
-    st.session_state["_nav_toggle"] = not st.session_state.get("_nav_toggle", False)
+    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
 
     if rerun:
         st.rerun()
@@ -129,7 +129,7 @@ _NAV_COLS = 3
 
 
 def _nav_select_y_colapsar(modulo):
-    """Selecciona un módulo (el toggle _nav_toggle esta en set_modulo_actual)."""
+    """Selecciona un módulo (el incremento de _nav_version esta en set_modulo_actual)."""
     set_modulo_actual(modulo, rerun=True)
 
 
@@ -217,7 +217,8 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         None,
     )
 
-    nav_toggle = st.session_state.get("_nav_toggle", False)
+    nav_version = st.session_state.get("_nav_version", 0)
+    primera_vez = (nav_version == 0)
     _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
 
     for cat in cats_ok:
@@ -227,10 +228,10 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         label = f"{emoji}  {cat}"
-        expandido = not _mobile and (cat == cat_activa)
+        expandido = not _mobile and primera_vez and (cat == cat_activa)
 
         with st.expander(
-            label, expanded=expandido, key=f"_nav_e_{cat}_{nav_toggle}"
+            label, expanded=expandido, key=f"_nav_e_{cat}_{nav_version}"
         ):
             todos = [
                 m
