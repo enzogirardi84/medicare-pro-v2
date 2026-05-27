@@ -43,9 +43,9 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
 
     # Cerrar cortina de navegacion si estaba abierta
     st.session_state.pop("_show_nav_cortina", None)
-    # Colapsar todos los expanders del menu via session_state
+    # Colapsar todas las categorias del menu
     for cat in ("Clínica", "Gestión", "Emergencias", "Legal y documentación"):
-        st.session_state[f"_nav_e_{cat}"] = False
+        st.session_state[f"_nav_cat_{cat}"] = False
 
     if rerun:
         st.rerun()
@@ -194,9 +194,9 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     """
     Renderiza la navegación de módulos como acordeón por categorías.
 
-    Desktop y móvil comparten el mismo acordeón. Cada categoría es un
-    ``st.expander`` con key fija. El estado expandido se controla via
-    ``st.session_state`` para colapsar al navegar sin crear widgets fantasma.
+    Cada categoría es un botón con emoji que actúa como toggle.
+    El estado abierto/cerrado se controla via ``st.session_state``,
+    evitando widgets fantasma al colapsar al navegar.
     """
     if not menu:
         return None
@@ -219,10 +219,44 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
     _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
 
-    # Inicializar estado de expanders en primera carga
-    if not any(k.startswith("_nav_e_") for k in st.session_state.keys()):
+    # Inyectar CSS para que los botones toggle imiten el expander original
+    st.html(
+        """
+        <style>
+        [data-testid="stSidebar"] button[key^="_nav_toggle_"] {
+            background: rgba(11, 18, 33, 0.4) !important;
+            border: none !important;
+            border-radius: 18px !important;
+            padding: 0.6rem 0.8rem !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            text-align: left !important;
+            justify-content: flex-start !important;
+            color: #f1f5f9 !important;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            cursor: pointer !important;
+            margin: 1px 0 !important;
+            font-family: system-ui, sans-serif !important;
+            box-shadow: none !important;
+            min-height: 38px !important;
+            line-height: 1.3 !important;
+            text-wrap: wrap !important;
+        }
+        [data-testid="stSidebar"] button[key^="_nav_toggle_"]:hover {
+            background: rgba(30, 41, 59, 0.7) !important;
+        }
+        </style>
+        """
+    )
+
+    # Inicializar estado en primera carga
+    if st.session_state.get("_nav_first_load", True):
         for cat in cats_ok:
-            st.session_state[f"_nav_e_{cat}"] = not _mobile and (cat == cat_activa)
+            st.session_state[f"_nav_cat_{cat}"] = not _mobile and (cat == cat_activa)
+        st.session_state["_nav_first_load"] = False
 
     for cat in cats_ok:
         mods_in_cat = [m for m in categorias_modulos.get(cat, []) if m in menu_set]
@@ -231,9 +265,15 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         label = f"{emoji}  {cat}"
-        expandido = st.session_state.get(f"_nav_e_{cat}", False)
+        cat_key = f"_nav_cat_{cat}"
+        is_open = st.session_state.get(cat_key, False)
+        arrow = "▼" if is_open else "▶"
 
-        with st.expander(label, expanded=expandido, key=f"_nav_e_{cat}"):
+        if st.button(f"{arrow} {label}", key=f"_nav_toggle_{cat}", use_container_width=True):
+            st.session_state[cat_key] = not is_open
+            st.rerun()
+
+        if st.session_state.get(cat_key, False):
             todos = [
                 m
                 for sg in obtener_subgrupos_categoria(cat).values()
@@ -241,7 +281,8 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
                 if m in menu_set
             ] or mods_in_cat
             if todos:
-                _render_modulos_sub(todos, vista_actual, view_nav_labels)
+                with st.container():
+                    _render_modulos_sub(todos, vista_actual, view_nav_labels)
 
     return st.session_state.get("modulo_actual", vista_actual)
 
