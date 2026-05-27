@@ -317,6 +317,21 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                         else:
                             fecha_egreso_edit = None
 
+                    _peso_val_edit = detalle_sel.get("peso", "") or ""
+                    _talla_val_edit = detalle_sel.get("talla", "") or ""
+                    with st.expander("Datos fisicos", expanded=False):
+                        col_p1, col_p2 = st.columns(2)
+                        try:
+                            _peso_default = float(_peso_val_edit) if _peso_val_edit else 0.0
+                        except Exception:
+                            _peso_default = 0.0
+                        try:
+                            _talla_default = float(_talla_val_edit) if _talla_val_edit else 0.0
+                        except Exception:
+                            _talla_default = 0.0
+                        peso_edit = col_p1.number_input("Peso (kg)", min_value=0.0, max_value=500.0, value=_peso_default, step=0.1, format="%.1f")
+                        talla_edit = col_p2.number_input("Talla (cm)", min_value=0.0, max_value=250.0, value=_talla_default, step=0.5, format="%.1f")
+
                     with st.expander("Alertas clinicas", expanded=False):
                         col_e14, col_e15 = st.columns(2)
                         alergias_edit = col_e14.text_area("Alergias", value=detalle_sel.get("alergias", ""), height=90)
@@ -365,6 +380,8 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                     "diagnostico_ingreso": _texto_unilinea(diagnostico_ingreso_edit),
                                     "motivo_ingreso": _texto_unilinea(motivo_ingreso_edit),
                                     "foto_perfil": _procesar_foto_alta(foto_edit) if foto_edit else detalle_sel.get("foto_perfil", ""),
+                                    "peso": float(peso_edit) if peso_edit > 0 else (_peso_val_edit or ""),
+                                    "talla": float(talla_edit) if talla_edit > 0 else (_talla_val_edit or ""),
                                 }
                                 if estado_edit == "De Alta" and fecha_egreso_edit is not None:
                                     payload["fecha_egreso"] = fecha_egreso_edit.strftime("%d/%m/%Y")
@@ -401,12 +418,17 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                 )
                                 st.session_state.pop("_mc_mapa_pacientes_cache", None)
                                 guardar_datos(spinner=True)
-                                _sincronizar_edicion_paciente_sql_best_effort(
-                                    detalle_anterior=detalle_anterior,
-                                    detalle_nuevo=detalles_actualizados,
-                                    nombre_nuevo=campos_legajo["nombre"],
-                                )
-                                queue_toast("Legajo actualizado correctamente.")
+                                _estado_guardado = obtener_estado_guardado()
+                                if _estado_guardado.get("estado") == "error":
+                                    st.error("Error al guardar los cambios. Revisa la conexion e intenta de nuevo.")
+                                    log_event("admision", "error: guardado fallo tras editar legajo")
+                                else:
+                                    _sincronizar_edicion_paciente_sql_best_effort(
+                                        detalle_anterior=detalle_anterior,
+                                        detalle_nuevo=detalles_actualizados,
+                                        nombre_nuevo=campos_legajo["nombre"],
+                                    )
+                                    queue_toast("Legajo actualizado correctamente.")
                                 st.rerun()
 
             with st.expander("Eliminar paciente y registros asociados (solo si el legajo fue cargado por error)", expanded=False):
