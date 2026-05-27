@@ -219,34 +219,53 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
     _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
 
-    # Inyectar CSS para que los botones toggle imiten el expander original
+    # Inyectar CSS para botones toggle con diseño tipo expander
     st.html(
         """
         <style>
         [data-testid="stSidebar"] button[key^="_nav_toggle_"] {
-            background: rgba(11, 18, 33, 0.4) !important;
-            border: none !important;
-            border-radius: 18px !important;
-            padding: 0.6rem 0.8rem !important;
-            font-weight: 600 !important;
-            font-size: 0.9rem !important;
+            background: rgba(15, 23, 42, 0.5) !important;
+            border: 1px solid rgba(51, 65, 85, 0.3) !important;
+            border-radius: 12px !important;
+            padding: 0.65rem 0.9rem !important;
+            font-weight: 700 !important;
+            font-size: 0.88rem !important;
+            letter-spacing: 0.01em !important;
             text-align: left !important;
             justify-content: flex-start !important;
-            color: #f1f5f9 !important;
+            color: #e2e8f0 !important;
             width: 100% !important;
             display: flex !important;
             align-items: center !important;
-            gap: 6px !important;
+            gap: 8px !important;
             cursor: pointer !important;
-            margin: 1px 0 !important;
-            font-family: system-ui, sans-serif !important;
-            box-shadow: none !important;
-            min-height: 38px !important;
-            line-height: 1.3 !important;
-            text-wrap: wrap !important;
+            margin: 3px 0 !important;
+            font-family: system-ui, -apple-system, sans-serif !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+            min-height: 40px !important;
+            line-height: 1.4 !important;
+            transition: all 0.15s ease !important;
         }
         [data-testid="stSidebar"] button[key^="_nav_toggle_"]:hover {
-            background: rgba(30, 41, 59, 0.7) !important;
+            background: rgba(30, 41, 59, 0.8) !important;
+            border-color: rgba(20, 184, 166, 0.25) !important;
+            color: #f1f5f9 !important;
+        }
+        [data-testid="stSidebar"] button[key^="_nav_toggle_"][aria-expanded="true"],
+        [data-testid="stSidebar"] button._nav_open {
+            background: rgba(20, 184, 166, 0.08) !important;
+            border-color: rgba(20, 184, 166, 0.2) !important;
+            box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.08) !important;
+        }
+        [data-testid="stSidebar"] button[key^="_nav_toggle_"] ._nav_arrow {
+            display: inline-block;
+            font-size: 0.7rem;
+            opacity: 0.7;
+            transition: transform 0.15s ease;
+            min-width: 12px;
+        }
+        [data-testid="stSidebar"] button[key^="_nav_toggle_"] ._nav_arrow._open {
+            opacity: 1;
         }
         </style>
         """
