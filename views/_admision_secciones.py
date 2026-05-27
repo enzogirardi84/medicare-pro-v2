@@ -60,16 +60,62 @@ DB_LABELS = {
 
 
 def _procesar_foto_alta(uploaded_file) -> str:
-    """Procesa foto subida: redimensiona a 150x150, convierte a base64."""
+    """Procesa foto: redimensiona manteniendo aspecto (max 200px), devuelve base64.
+    Soporta JPG, PNG, WEBP, GIF, BMP."""
     if uploaded_file is None:
         return ""
     try:
         from PIL import Image
         img = Image.open(uploaded_file)
-        img = img.convert("RGB")
-        img.thumbnail((150, 150))
+        fmt = img.format or "JPEG"
+        if fmt.upper() in ("PNG", "WEBP", "GIF") and img.mode in ("RGBA", "P", "PA"):
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "RGBA":
+                bg.paste(img, mask=img.split()[3])
+            else:
+                bg.paste(img)
+            img = bg
+        elif img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        img.thumbnail((200, 200))
+        save_fmt = "PNG" if fmt.upper() == "PNG" else "JPEG"
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", optimize=True, quality=75)
+        img.save(buf, format=save_fmt, optimize=True, quality=80)
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        return ""
+
+
+def _img_mime(base64_str: str) -> str:
+    """Detecta MIME type de una imagen en base64 por su header."""
+    if not base64_str:
+        return "image/jpeg"
+    if base64_str.startswith("iVBOR"):
+        return "image/png"
+    if base64_str.startswith("R0lG"):
+        return "image/gif"
+    return "image/jpeg"
+    try:
+        from PIL import Image
+        img = Image.open(uploaded_file)
+        # Detectar formato original
+        fmt = img.format or "JPEG"
+        # Convertir a RGB si tiene canal alpha (para guardar como JPEG)
+        if fmt.upper() in ("PNG", "WEBP", "GIF") and img.mode in ("RGBA", "P", "PA"):
+            bg = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "RGBA":
+                bg.paste(img, mask=img.split()[3])
+            else:
+                bg.paste(img)
+            img = bg
+        elif img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+        # Redimensionar manteniendo aspecto
+        img.thumbnail((200, 200))
+        # Guardar en formato original o JPEG
+        save_fmt = "PNG" if fmt.upper() == "PNG" else "JPEG"
+        buf = io.BytesIO()
+        img.save(buf, format=save_fmt, optimize=True, quality=80)
         return base64.b64encode(buf.getvalue()).decode("utf-8")
     except Exception:
         return ""
@@ -198,11 +244,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                     with st.expander("Datos personales", expanded=False):
                         col_foto_e, col_campos_e = st.columns([1, 3])
                         with col_foto_e:
-                            foto_edit = st.file_uploader("Foto de perfil", type=["jpg", "jpeg", "png"],
+                            foto_edit = st.file_uploader("Foto de perfil", type=["jpg", "jpeg", "png", "webp", "gif", "bmp"],
                                                           key="adm_foto_edit", label_visibility="collapsed")
                             if detalle_sel.get("foto_perfil"):
                                 st.markdown(
-                                    f'<img src="data:image/jpeg;base64,{detalle_sel["foto_perfil"]}" '
+                                    f'<img src="data:{_img_mime(detalle_sel.get("foto_perfil", ""))};base64,{detalle_sel["foto_perfil"]}" '
                                     f'style="width:80px;height:80px;border-radius:50%;object-fit:cover;'
                                     f'border:2px solid rgba(20,184,166,0.3);margin-top:4px;">',
                                     unsafe_allow_html=True,
@@ -490,7 +536,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
         with st.expander("Datos personales", expanded=True):
             col_foto, col_campos = st.columns([1, 3])
             with col_foto:
-                foto_alta = st.file_uploader("Foto", type=["jpg", "jpeg", "png"],
+                foto_alta = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp", "gif", "bmp"],
                                               key="adm_foto_alta", label_visibility="collapsed")
             with col_campos:
                 col_a, col_b = st.columns(2)

@@ -74,6 +74,17 @@ def _cached_contexto(paciente_sel):
     return result
 
 
+def _foto_img_mime(b64: str) -> str:
+    """Detecta MIME de imagen base64 por su header."""
+    if not b64:
+        return "image/jpeg"
+    if b64.startswith("iVBOR"):
+        return "image/png"
+    if b64.startswith("R0lG"):
+        return "image/gif"
+    return "image/jpeg"
+
+
 # ---------------------------------------------------------------------------
 # Tarjetas de marca y paciente
 # ---------------------------------------------------------------------------
@@ -83,9 +94,10 @@ def sidebar_patient_card(paciente_sel, detalles):
         st.write("**Paciente activo**")
         foto_b64 = detalles.get("foto_perfil", "")
         if foto_b64:
+            _mime = _foto_img_mime(foto_b64)
             st.markdown(
                 f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0;">'
-                f'<img src="data:image/jpeg;base64,{foto_b64}" '
+                f'<img src="data:{_mime};base64,{foto_b64}" '
                 f'style="width:48px;height:48px;border-radius:50%;object-fit:cover;'
                 f'border:2px solid rgba(20,184,166,0.3);flex-shrink:0;">'
                 f'<div><strong>{escape(paciente_sel)}</strong></div></div>',
@@ -191,9 +203,10 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
     # Foto + nombre del paciente
     foto_b64 = detalles.get("foto_perfil", "")
     if foto_b64:
+        _mime = _foto_img_mime(foto_b64)
         st.sidebar.markdown(
             f'<div style="display:flex;align-items:center;gap:10px;margin:2px 0 6px;">'
-            f'<img src="data:image/jpeg;base64,{foto_b64}" '
+            f'<img src="data:{_mime};base64,{foto_b64}" '
             f'style="width:40px;height:40px;border-radius:50%;object-fit:cover;'
             f'border:2px solid rgba(20,184,166,0.3);flex-shrink:0;">'
             f'<div><strong style="font-size:0.9rem;">{escape(paciente_sel)}</strong></div></div>',
@@ -293,9 +306,10 @@ def render_mobile_contexto_clinico(paciente_sel):
     # Foto + nombre
     foto_b64 = detalles.get("foto_perfil", "")
     if foto_b64:
+        _mime = _foto_img_mime(foto_b64)
         st.markdown(
             f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0;">'
-            f'<img src="data:image/jpeg;base64,{foto_b64}" '
+            f'<img src="data:{_mime};base64,{foto_b64}" '
             f'style="width:36px;height:36px;border-radius:50%;object-fit:cover;'
             f'border:2px solid rgba(20,184,166,0.3);flex-shrink:0;">'
             f'<strong>{escape(paciente_sel)}</strong></div>',
