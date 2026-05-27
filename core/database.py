@@ -557,7 +557,6 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                 
                 return estructura
         except Exception as _exc:
-            from core.app_logging import log_event
             log_event("db_guardar", f"fallo_guardado_dualwrite:{type(_exc).__name__}:{_exc}")
         # ------------------------------
 
@@ -688,7 +687,6 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
 
             record_perf("db.cargar_datos", (time.monotonic() - t0) * 1000.0, ok=ok)
         except Exception as _exc:
-            from core.app_logging import log_event
             log_event("db_cargar", f"fallo_record_perf:{type(_exc).__name__}:{_exc}")
 
 

@@ -233,7 +233,6 @@ def render_estudios(paciente_sel, user, rol=None):
         else:
             registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0)
     except Exception as e:
-        from core.app_logging import log_event
         log_event("estudios_sql", f"error_lectura:{type(e).__name__}")
         registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0, error=e)
         
@@ -271,7 +270,6 @@ def render_estudios(paciente_sel, user, rol=None):
                 if f_est and (hoy_dt.replace(tzinfo=None) - f_est).days > 7:
                     criticos_sin_respuesta.append(e)
             except Exception as _exc:
-                from core.app_logging import log_event
                 log_event("estudios_fecha_parse", f"fallo_parse_fecha_critica:{e.get('tipo','S/D')}:{e.get('fecha','')}:{type(_exc).__name__}")
 
     if criticos_sin_respuesta:

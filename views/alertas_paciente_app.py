@@ -228,9 +228,6 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
             key="mc_alertas_csv",
         )
     except Exception as e:
-
-        from core.app_logging import log_event
-
         log_event('alertas_paciente_app_error', f'Error: {e}')
 
     st.divider()

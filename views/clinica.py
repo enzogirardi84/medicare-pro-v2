@@ -234,7 +234,6 @@ def render_clinica(paciente_sel, user=None):
                     + _ta_txt
                 )
             except Exception as e:
-                from core.app_logging import log_event
                 log_event('clinica_error', f'Error: {e}')
 
         if len(vits_ordenados) >= 3:

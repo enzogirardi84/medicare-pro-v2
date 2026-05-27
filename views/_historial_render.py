@@ -144,7 +144,6 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any], idx: int, pacien
         try:
             st.image(base64.b64decode(firma_b64), caption="Firma médica", width=220)
         except Exception as e:
-            from core.app_logging import log_event
             log_event("historial_error", f"Error: {e}")
     if adjunto_b64 := registro.get("adjunto_papel_b64"):
         try:
