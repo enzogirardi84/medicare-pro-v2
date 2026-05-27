@@ -74,7 +74,7 @@ def render_inventario(mi_empresa):
 
     if not inv_mio and st.session_state.get("inventario_db"):
         inv_mio = st.session_state["inventario_db"]
-        inv_mio = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
+        inv_mio = [i for i in st.session_state.get("inventario_db", []) if i is not None and i.get("empresa") == mi_empresa]
 
     def _umbral_critico(item):
         sm = int(item.get("stock_minimo", 0) or 0)
@@ -377,8 +377,8 @@ def render_inventario(mi_empresa):
 
         with lista_plegable("Ajuste manual, corrección y baja de insumos", expanded=False, height=None):
             st.markdown("#### Ajuste manual y corrección")
-            item_a_editar = st.selectbox("Seleccionar insumo a corregir", [i["item"] for i in inv_mio], key="edit_sel")
-            _item_data = next((i for i in inv_mio if i["item"] == item_a_editar), {})
+            item_a_editar = st.selectbox("Seleccionar insumo a corregir", [i.get("item", "") for i in inv_mio if i is not None], key="edit_sel")
+            _item_data = next((i for i in inv_mio if i is not None and i.get("item") == item_a_editar), {})
             _s_act = _item_data.get("stock", 0)
             _s_min = int(_item_data.get("stock_minimo", 0) or 0)
             _costo = float(_item_data.get("costo_unitario", 0) or 0)
@@ -407,7 +407,7 @@ def render_inventario(mi_empresa):
                     log_event("error_inventario_sql_update", str(e))
                 if "inventario_db" in st.session_state:
                     for i in st.session_state["inventario_db"]:
-                        if i["item"] == item_a_editar and i.get("empresa") == mi_empresa:
+                        if i is not None and i.get("item") == item_a_editar and i.get("empresa") == mi_empresa:
                             i["stock"] = nuevo_stock
                             i["stock_minimo"] = nuevo_min
                             i["costo_unitario"] = nuevo_costo
@@ -419,7 +419,7 @@ def render_inventario(mi_empresa):
 
             if puede_eliminar_stock:
                 col_del1, col_del2 = st.columns([3, 1])
-                del_item = col_del1.selectbox("Eliminar insumo por completo", [i["item"] for i in inv_mio], key="del_sel")
+                del_item = col_del1.selectbox("Eliminar insumo por completo", [i.get("item", "") for i in inv_mio if i is not None], key="del_sel")
                 confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
                 if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
                     sql_ok = False
@@ -435,7 +435,7 @@ def render_inventario(mi_empresa):
 
                     if "inventario_db" in st.session_state:
                         st.session_state["inventario_db"] = [
-                            i for i in st.session_state["inventario_db"] if not (i["item"] == del_item and i.get("empresa") == mi_empresa)
+                            i for i in st.session_state["inventario_db"] if i is None or not (i.get("item") == del_item and i.get("empresa") == mi_empresa)
                         ]
                     if not sql_ok:
                         guardar_datos(spinner=True)
@@ -500,6 +500,8 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
         pdf.set_text_color(40, 40, 40)
         total_valor = 0
         for idx, item in enumerate(inventario, 1):
+            if item is None:
+                continue
             stock = item.get("stock", 0)
             costo = item.get("costo_unitario", 0) or 0
             total_valor += int(stock) * float(costo)

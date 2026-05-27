@@ -207,9 +207,9 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         st.sidebar.markdown(
             f'<div style="display:flex;align-items:center;gap:10px;margin:2px 0 6px;">'
             f'<img src="data:{_mime};base64,{foto_b64}" '
-            f'style="width:40px;height:40px;border-radius:50%;object-fit:cover;'
+            f'style="width:56px;height:56px;border-radius:50%;object-fit:cover;'
             f'border:2px solid rgba(20,184,166,0.3);flex-shrink:0;">'
-            f'<div><strong style="font-size:0.9rem;">{escape(paciente_sel)}</strong></div></div>',
+            f'<div><strong style="font-size:0.95rem;">{escape(paciente_sel)}</strong></div></div>',
             unsafe_allow_html=True,
         )
     else:
