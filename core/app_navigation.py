@@ -43,8 +43,9 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
 
     # Cerrar cortina de navegacion si estaba abierta
     st.session_state.pop("_show_nav_cortina", None)
-    # Colapsar expanders del menu (cambiando key para que Streamlit los trate como nuevos)
-    st.session_state["_nav_version"] = st.session_state.get("_nav_version", 0) + 1
+    # Colapsar todos los expanders del menu via session_state
+    for cat in ("Clínica", "Gestión", "Emergencias", "Legal y documentación"):
+        st.session_state[f"_nav_e_{cat}"] = False
 
     if rerun:
         st.rerun()
@@ -128,7 +129,7 @@ _NAV_COLS = 3
 
 
 def _nav_select_y_colapsar(modulo):
-    """Selecciona un módulo (el incremento de _nav_version esta en set_modulo_actual)."""
+    """Selecciona un módulo (el colapso de expanders esta en set_modulo_actual)."""
     set_modulo_actual(modulo, rerun=True)
 
 
@@ -194,8 +195,8 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
     Renderiza la navegación de módulos como acordeón por categorías.
 
     Desktop y móvil comparten el mismo acordeón. Cada categoría es un
-    ``st.expander``. Solo la categoría activa aparece expandida en la primera
-    carga; al hacer clic en un módulo todas colapsan (experiencia premium).
+    ``st.expander`` con key fija. El estado expandido se controla via
+    ``st.session_state`` para colapsar al navegar sin crear widgets fantasma.
     """
     if not menu:
         return None
@@ -216,9 +217,12 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
         None,
     )
 
-    nav_version = st.session_state.get("_nav_version", 0)
-    primera_vez = (nav_version == 0)
     _mobile = st.session_state.get("mc_liviano_modo") == "on" or st.session_state.get("_mc_liviano_activo")
+
+    # Inicializar estado de expanders en primera carga
+    if not any(k.startswith("_nav_e_") for k in st.session_state.keys()):
+        for cat in cats_ok:
+            st.session_state[f"_nav_e_{cat}"] = not _mobile and (cat == cat_activa)
 
     for cat in cats_ok:
         mods_in_cat = [m for m in categorias_modulos.get(cat, []) if m in menu_set]
@@ -227,11 +231,9 @@ def render_module_nav(menu, vista_actual, view_nav_labels, menu_set=None):
 
         emoji = _CATEGORY_EMOJIS.get(cat, "\U0001F4CB")
         label = f"{emoji}  {cat}"
-        expandido = not _mobile and primera_vez and (cat == cat_activa)
+        expandido = st.session_state.get(f"_nav_e_{cat}", False)
 
-        with st.expander(
-            label, expanded=expandido, key=f"_nav_e_{cat}_{nav_version}"
-        ):
+        with st.expander(label, expanded=expandido, key=f"_nav_e_{cat}"):
             todos = [
                 m
                 for sg in obtener_subgrupos_categoria(cat).values()
