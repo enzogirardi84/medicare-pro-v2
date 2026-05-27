@@ -44,7 +44,31 @@ def _cached_contexto(paciente_sel):
         and str(r.get("estado_receta", "Activa")).strip().lower() not in ("suspendida", "cancelada")
         and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
     ]
-    result = {"detalles": detalles, "vitales_top3": vitales_top3, "ultima_ev": ultima_ev, "activas": activas}
+    result = {"detalles": detalles, "vitales_top3": vitales_top3, "ultima_ev": ultima_ev, "activas": activas, "ultimo_mes": None, "ultimo_ano": None}
+    
+    # Determinar ultimo mes con datos del paciente
+    _fechas = []
+    for r in vitales:
+        if r.get("paciente") == paciente_sel and r.get("fecha"):
+            _fechas.append(r.get("fecha", ""))
+    for r in evoluciones:
+        if r.get("paciente") == paciente_sel and r.get("fecha"):
+            _fechas.append(r.get("fecha", ""))
+    for c in st.session_state.get("consumos_db", []):
+        if c.get("paciente") == paciente_sel and c.get("fecha"):
+            _fechas.append(c.get("fecha", ""))
+    if _fechas:
+        _fechas.sort(reverse=True)
+        _ultima = _fechas[0][:10]
+        try:
+            from datetime import datetime
+            _dt = datetime.strptime(_ultima, "%d/%m/%Y") if "/" in _ultima else datetime.fromisoformat(_ultima)
+            meses = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+            result["ultimo_mes"] = meses[_dt.month]
+            result["ultimo_ano"] = str(_dt.year)
+        except Exception:
+            pass
+    
     st.session_state[_cache_key] = result
     st.session_state[_cache_ts] = now
     return result
@@ -69,6 +93,24 @@ def sidebar_patient_card(paciente_sel, detalles):
             )
         else:
             st.write(f"{escape(paciente_sel)}")
+        
+        # Mostrar ultimo mes con datos (rojo si es el mes actual)
+        ctx = _cached_contexto(paciente_sel)
+        _mes = ctx.get("ultimo_mes")
+        _ano = ctx.get("ultimo_ano")
+        if _mes and _ano:
+            from datetime import datetime
+            _hoy = datetime.now()
+            meses = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+            _mes_actual = meses[_hoy.month]
+            _es_actual = (_mes == _mes_actual and _ano == str(_hoy.year))
+            _color = "#ef4444" if _es_actual else "#64748b"
+            st.markdown(
+                f'<span style="color:{_color};font-size:0.8rem;font-weight:600;">'
+                f'{"● " if _es_actual else ""}Ult. datos: {_mes} {_ano}</span>',
+                unsafe_allow_html=True,
+            )
+        
         st.caption(
             f"DNI: {escape(detalles.get('dni', 'S/D'))}  |  "
             f"OS: {escape(detalles.get('obra_social', 'S/D'))}  |  "
