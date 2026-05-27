@@ -167,7 +167,7 @@ def render_patient_selector(mi_empresa, rol, obtener_pacientes_fn, mapa_detalles
     # Cache de pacientes para evitar re-fetch en cada rerun.
     _cache_key = "_mc_pacientes_cache"
     _cache_ts_key = "_mc_pacientes_cache_ts"
-    _cache_ttl = 5.0
+    _cache_ttl = 30.0
     p_f = None
     _cached = st.session_state.get(_cache_key)
     _cached_ts = st.session_state.get(_cache_ts_key, 0.0)

@@ -36,6 +36,7 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
             try:
                 import google.generativeai as genai
             except ImportError:
+                log_event("integraciones", "gemini_no_disponible")
                 st.error("Gemini requiere: pip install google-generativeai")
                 return False
             genai.configure(api_key=clean_key)
@@ -50,6 +51,7 @@ def _probar_conexion_ia(provider_display: str, api_key: str, model: str) -> bool
             return content is not None and "OK" in content.strip()
     except Exception as e:
         import traceback
+        log_event("integraciones", f"error_conexion:{type(e).__name__}:{e}")
         st.error(f"Error de conexion: {e}")
         st.caption(f"Detalle: {traceback.format_exc(limit=1)}")
         return False

@@ -189,8 +189,8 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                     st.error(f"ALERTA: {resultado['alerta']}", icon="🚨")
                 log_event("calculadora_dosis", f"{medicamento} - {peso}kg")
             except ValueError as e:
-                st.error("Datos inválidos. Verificá el peso, dosis y medicamento ingresados.")
                 log_event("calculadora_dosis", f"error:{type(e).__name__}:{e}")
+                st.error("Datos inválidos. Verificá el peso, dosis y medicamento ingresados.")
 
     with st.expander("Informacion de seguridad", expanded=False):
         st.markdown("""

@@ -102,11 +102,13 @@ def _chart_barras_mes(df, x_col, y_col, titulo_x='Mes', titulo_y='Cantidad', col
     y_max = df[y_col].max()
     if pd.isna(y_max):
         y_max = 0
+    df = df.copy()
+    df["_is_max"] = df[y_col] == y_max
     return alt.Chart(df).mark_bar(cornerRadiusEnd=4).encode(
         x=alt.X(f'{x_col}:N', title=titulo_x, axis=alt.Axis(labelAngle=-45)),
         y=alt.Y(f'{y_col}:Q', title=titulo_y),
         color=alt.condition(
-            alt.datum[y_col] == y_max,
+            "_is_max",
             alt.value(COLOR_DANGER),
             alt.value(color),
         ),
@@ -369,13 +371,14 @@ def render_estadisticas(mi_empresa, rol):
                     }
                     for item in items_criticos[:500]
                 ])
+                df_stock["_bajo_minimo"] = df_stock["Stock"] <= df_stock["Mínimo"]
                 render_chart_card(
                     'Ítems por debajo del stock mínimo',
                     alt.Chart(df_stock).mark_bar(cornerRadiusEnd=4).encode(
                         x=alt.X('Ítem:N', title='Ítem', sort='-y'),
                         y=alt.Y('Stock:Q', title='Stock actual'),
                         color=alt.condition(
-                            alt.datum.Stock <= alt.datum.Mínimo,
+                            "_bajo_minimo",
                             alt.value(COLOR_DANGER),
                             alt.value(COLOR_SUCCESS),
                         ),

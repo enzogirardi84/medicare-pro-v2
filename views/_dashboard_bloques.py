@@ -237,7 +237,7 @@ def render_vista_operativa(agenda_enriquecida, visitas_hoy, urgencias_30, pac_id
                     sugerencia="El equipo puede registrar llegada/salida en Visitas para ver barras acá.",
                 )
 
-    if not urg_chart.empty:
+    if not urg_chart.empty and not es_movil:
         st.caption("Urgencias por triage (ultimos 30 dias)")
         st.altair_chart(
             _chart_barras_altair(urg_chart, "Triage", "Eventos", titulo_eje_x="Grado de triage", titulo_eje_y="Eventos"),

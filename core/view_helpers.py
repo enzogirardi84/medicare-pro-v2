@@ -148,7 +148,10 @@ def aplicar_compactacion_movil_por_vista(nombre_vista: str) -> None:
     habilitar = es_movil and vista_compactable
     vista_slug = _slug_vista(nombre_vista)
 
-    st.markdown(
+    _cache_key = f"_compact_css_injected"
+    if not st.session_state.get(_cache_key):
+        st.session_state[_cache_key] = True
+        st.markdown(
         """
         <style>
         @media (max-width: 767px) {

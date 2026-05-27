@@ -99,7 +99,7 @@ def render_inventario(mi_empresa):
     for c in st.session_state.get("consumos_db", []):
         if c.get("empresa") != mi_empresa:
             continue
-        _fecha_str = c.get("fecha", "")[:10]
+        _fecha_str = (c.get("fecha") or "")[:10]
         try:
             _fecha_dt = datetime.strptime(_fecha_str, "%d/%m/%Y")
             if _fecha_dt >= _hace_7d_dt:
@@ -218,6 +218,8 @@ def render_inventario(mi_empresa):
                     if "inventario_db" not in st.session_state:
                         st.session_state["inventario_db"] = []
                     for i in st.session_state["inventario_db"]:
+                        if i is None:
+                            continue
                         if i.get("item", "").lower() == item_final.lower() and i.get("empresa") == mi_empresa:
                             i["stock"] = int(i.get("stock") or 0) + cantidad
                             if item_sql_id:
@@ -560,6 +562,7 @@ def _exportar_inventario_pdf(inventario: list, empresa: str) -> None:
                            file_name=f"inventario_{empresa}_{datetime.now().strftime('%Y%m%d')}.pdf",
                            mime="application/pdf", key="inv_dl_pdf")
     except ImportError:
+        log_event("inventario", "error_fpdf_no_disponible")
         st.error("FPDF no disponible. Instalar con: pip install fpdf2")
 
 

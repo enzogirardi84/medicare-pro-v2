@@ -416,16 +416,18 @@ def render_estudios(paciente_sel, user, rol=None):
                             st.rerun()
 
                 if cargar_multimedia:
-                    if est.get("archivo_url") and est["archivo_url"].startswith("http"):
-                        if est.get("extension") == "pdf" or ".pdf" in est["archivo_url"].lower():
-                            st.link_button("Abrir PDF en el navegador", est["archivo_url"], width='stretch')
+                    url = est.get("archivo_url") or ""
+                    if url.startswith("http"):
+                        if est.get("extension") == "pdf" or ".pdf" in url.lower():
+                            st.link_button("Abrir PDF en el navegador", url, width='stretch')
                         else:
-                            st.image(est["archivo_url"], caption="Documento Adjunto", width='stretch')
+                            st.image(url, caption="Documento Adjunto", width='stretch')
                     elif est.get("imagen"):
                         try:
                             img_bytes = base64.b64decode(est["imagen"])
                             if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
-                                nombre_arch = f"Estudio_{est['fecha'][:10].replace('/', '-')}.pdf"
+                                fecha_est = (est.get("fecha") or "")[:10].replace("/", "-")
+                                nombre_arch = f"Estudio_{fecha_est}.pdf"
                                 st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", width='stretch')
                             else:
                                 st.image(img_bytes, caption="Documento Adjunto", width='stretch')
