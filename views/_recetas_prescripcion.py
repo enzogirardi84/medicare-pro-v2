@@ -264,6 +264,11 @@ def render_nueva_prescripcion(paciente_sel, mi_empresa, user, rol, nombre_usuari
                     if hasattr(adjunto_papel, 'size') and adjunto_papel.size > 5 * 1024 * 1024:
                         st.error("El archivo es demasiado grande (máx 5MB). Comprimí la imagen e intentá de nuevo.")
                     else:
+                        from core.seguridad import validate_uploaded_file
+                        ok, msg = validate_uploaded_file(adjunto_papel)
+                        if not ok:
+                            st.error(f"Archivo no válido: {msg}")
+                            st.stop()
                         adjunto_b64, adjunto_nombre, adjunto_tipo = _archivo_a_base64(adjunto_papel)
                 texto_receta = _construir_texto_indicacion(
                     tipo_indicacion=tipo_indicacion, med_final=med_final, via=via,

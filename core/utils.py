@@ -402,6 +402,11 @@ def registrar_auditoria_legal(
     if empresa is None:
         detalles = mapa_detalles_pacientes(st.session_state).get(paciente, {})
         empresa = detalles.get("empresa") or usuario_ctx.get("empresa", "")
+    from core.seguridad import registrar_auditoria_inmutable, sanitize_for_log
+    registrar_auditoria_inmutable(
+        seccion=tipo_evento, paciente=paciente, accion=accion,
+        usuario=actor, matricula=matricula, detalle=detalle,
+    )
     try:
         from core.db_sql import insert_auditoria
         from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
@@ -418,19 +423,19 @@ def registrar_auditoria_legal(
                 "paciente_id": paciente_uuid,
                 "fecha_evento": ahora().isoformat(),
                 "modulo": modulo or tipo_evento,
-                "accion": accion,
-                "detalle": detalle,
+                "accion": sanitize_for_log(accion)[:200],
+                "detalle": sanitize_for_log(detalle)[:300],
                 "usuario_id": None,
             }
             insert_auditoria(datos_sql)
     except Exception as e:
         from core.app_logging import log_event
-        log_event("error_auditoria_sql", str(e))
+        log_event("error_auditoria_sql", sanitize_for_log(str(e)))
     st.session_state.setdefault("auditoria_legal_db", [])
     st.session_state["auditoria_legal_db"].append(
         construir_registro_auditoria_legal(
-            tipo_evento=tipo_evento, paciente=paciente, accion=accion, actor=actor,
-            matricula=matricula, detalle=detalle, referencia=referencia, extra=extra,
+            tipo_evento=tipo_evento, paciente=paciente, accion=sanitize_for_log(accion), actor=actor,
+            matricula=matricula, detalle=sanitize_for_log(detalle), referencia=referencia, extra=extra,
             empresa=empresa or "", usuario=usuario_ctx, modulo=modulo, criticidad=criticidad,
         )
     )
