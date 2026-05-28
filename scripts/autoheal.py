@@ -604,6 +604,24 @@ class RealTimeMonitor:
 # ═══════════════════════════════════════════════════════════════════════
 
 
+def format_code_with_black(file_paths: list[str]) -> int:
+    """Ejecuta Black formatter sobre archivos modificados."""
+    formatted = 0
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "black", "--quiet", "--line-length", "120"] + file_paths,
+            capture_output=True, timeout=30,
+        )
+        result = subprocess.run(
+            [sys.executable, "-m", "black", "--check", "--quiet", "--line-length", "120"] + file_paths,
+            capture_output=True, text=True, timeout=30,
+        )
+        formatted = len(file_paths) - (result.returncode if result.returncode > 0 else 0)
+    except Exception:
+        pass
+    return formatted
+
+
 def smart_commit(memory: FixMemory, fixes: int, tests_created: int) -> bool:
     """Hace commit con mensaje descriptivo basado en fixes aplicados."""
     try:
@@ -777,6 +795,15 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
         if learned > 0:
             print(f"  🧠 Aprendidos {learned} patrones nuevos")
 
+    # 4b. FORMAT with Black (auto-formato de codigo)
+    formatted = 0
+    if fixes > 0:
+        fixed_files = list({f.file_path for f in scanner.findings if f.auto_fix and (REPO_ROOT / f.file_path).exists()})
+        if fixed_files:
+            formatted = format_code_with_black(fixed_files)
+            if formatted > 0:
+                print(f"  ✨ Formateados {formatted} archivos con Black")
+
     # 5. TESTS
     tests_created = 0
     passed = failed = 0
@@ -797,8 +824,8 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
 
     # 6. COMMIT
     commit_made = False
-    if do_commit and (fixes > 0 or tests_created > 0 or learned > 0):
-        commit_made = smart_commit(memory, fixes, tests_created)
+    if do_commit and (fixes > 0 or tests_created > 0 or learned > 0 or formatted > 0):
+        commit_made = smart_commit(memory, fixes + formatted, tests_created)
 
     # 7. RECORD HISTORY
     memory.record_scan(
@@ -813,7 +840,7 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
         "fixes": fixes, "tests_created": tests_created,
         "tests_passed": passed, "tests_failed": failed,
         "learned_patterns": learned, "log_errors": len(log_errors),
-        "commit": commit_made, "elapsed": elapsed,
+        "formatted": formatted, "commit": commit_made, "elapsed": elapsed,
     }
 
 
@@ -883,7 +910,7 @@ def main():
             print(
                 f"scan:{stats['findings']} "
                 f"crit:{stats['crit']} high:{stats['high']} "
-                f"fixes:{stats['fixes']} tests:{stats['tests_created']} "
+                f"fixes:{stats['fixes']} fmt:{stats['formatted']} tests:{stats['tests_created']} "
                 f"learned:{stats['learned_patterns']} logs:{stats['log_errors']} "
                 f"commit:{stats['commit']} {stats['elapsed']:.1f}s"
             )
