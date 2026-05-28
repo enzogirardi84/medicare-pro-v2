@@ -515,6 +515,8 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
             render_fn(mi_empresa, rol)
         elif tab_name == "Admin Feature Flags":
             render_fn()
+        elif tab_name == "AutoHeal v2":
+            render_fn()
         elif tab_name == "Self-Healing IA":
             render_fn(paciente_sel, mi_empresa, user, rol)
         elif tab_name == "Asistente IA":
