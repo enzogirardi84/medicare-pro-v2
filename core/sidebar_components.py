@@ -238,7 +238,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
 
     if ultima_ev:
         _prof_ev = (ultima_ev.get("firma") or "S/D")[:22]
-        _fecha_ev = ultima_ev(_fecha_ev = ultima_ev.get("fecha") or "S/D")[:16]
+        _fecha_ev = (ultima_ev.get("fecha") or "S/D")[:16]
         _nota_ev = str(ultima_ev.get("nota", ""))[:80].replace("\n", " ")
         st.sidebar.caption(f"📝 Última evolución: **{_fecha_ev}** — {_prof_ev}")
         if _nota_ev:
