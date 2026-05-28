@@ -803,48 +803,90 @@ input:focus, select:focus, textarea:focus,
 
 /* ── Columns(3+) en mobile: grid 2 columnas en vez de apilar ──── */
 @media screen and (max-width: 768px) {
-    .mc-content [data-testid="stHorizontalBlock"] {
+    [data-testid="stHorizontalBlock"]:not([data-testid="stSidebar"] [data-testid="stHorizontalBlock"]) {
         flex-direction: row !important;
         flex-wrap: wrap !important;
     }
-    .mc-content [data-testid="stHorizontalBlock"] > div {
+    [data-testid="stHorizontalBlock"]:not([data-testid="stSidebar"] [data-testid="stHorizontalBlock"]) > div {
         min-width: 45% !important;
         flex: 1 1 45% !important;
     }
-}
-
-/* ── Breakpoint para pantallas muy pequenas (< 480px) ──────────── */
-@media screen and (max-width: 480px) {
-    [data-testid="stMetricValue"] {
-        font-size: 16px !important;
+    /* Metric cards en mobile mas compactos */
+    [data-testid="stMetric"] {
+        padding: 0.4rem 0.5rem !important;
     }
     [data-testid="stMetricLabel"] {
-        font-size: 10px !important;
+        font-size: 0.7rem !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.2rem !important;
+    }
+    /* Reducir padding general en mobile */
+    .block-container {
+        padding: 1rem 0.5rem !important;
+    }
+    /* Inputs mas compactos */
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 2.4rem !important;
+    }
+    /* Botones mas compactos */
+    .stButton button {
+        min-height: 34px !important;
+        font-size: 0.82rem !important;
+    }
+    /* Tabs mas compactos */
+    button[data-baseweb="tab"] {
+        font-size: 0.78rem !important;
+        padding: 0.3rem 0.6rem !important;
+    }
+    /* DataFrames con scroll horizontal */
+    [data-testid="stDataFrame"] {
+        overflow-x: auto !important;
+        max-width: 100vw !important;
+    }
+    [data-testid="stDataFrame"] table {
+        font-size: 0.72rem !important;
+    }
+}
+
+/* ── Pantallas muy pequenas (< 480px) ──────────────────────────── */
+@media screen and (max-width: 480px) {
+    .block-container {
+        padding: 0.6rem 0.3rem !important;
     }
     [data-testid="stMetric"] {
         padding: 0.3rem !important;
     }
+    [data-testid="stMetricValue"] {
+        font-size: 1rem !important;
+    }
     .stButton button {
-        font-size: 0.78rem !important;
-        padding: 0.4rem 0.6rem !important;
-        min-height: 32px !important;
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.5rem !important;
+        min-height: 30px !important;
     }
     [data-testid="stTextInput"] input,
     [data-testid="stTextArea"] textarea,
     [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
         font-size: 15px !important;
-        min-height: 2.6rem !important;
+        min-height: 2.2rem !important;
+    }
+    h1 { font-size: 1.2rem !important; }
+    h2 { font-size: 1.05rem !important; }
+    h3 { font-size: 0.95rem !important; }
+    .mc-hero {
+        padding: 0.5rem 0.6rem !important;
+    }
+    .mc-hero-title {
+        font-size: 0.95rem !important;
+    }
+    .mc-hero-text {
+        font-size: 0.7rem !important;
     }
     h1, h2, h3 {
         word-break: break-word !important;
     }
-    .mc-hero {
-        padding: 0.6rem 0.7rem !important;
-    }
-    .mc-hero-title {
-        font-size: 1rem !important;
-    }
-    .mc-hero-text {
-        font-size: 0.72rem !important;
-    }
 }
+
