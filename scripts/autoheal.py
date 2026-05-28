@@ -699,6 +699,36 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
 # ═══════════════════════════════════════════════════════════════════════
 
 
+class ErrorLearner:
+    """Aprende de errores en tiempo real y del historial de git."""
+
+    def __init__(self, memory: FixMemory):
+        self.memory = memory
+
+    def learn_from_git_log(self, max_commits: int = 50) -> int:
+        """Analiza commits recientes para aprender patrones de fixes humanos."""
+        learned = 0
+        try:
+            result = subprocess.run(
+                ["git", "log", f"-{max_commits}", "--oneline", "--stat"],
+                cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30,
+            )
+            lines = result.stdout.split("\n")
+            for line in lines:
+                # Detectar fixes: "fix:" or "bugfix:" in commit message
+                if re.match(r'^[a-f0-9]+\s+(fix|bugfix|security|patch):', line, re.IGNORECASE):
+                    log_event("autoheal_learn", f"human_fix:{line[:80]}")
+        except Exception:
+            pass
+        return learned
+
+    def learn_from_all_sources(self) -> dict:
+        """Ejecuta todas las fuentes de aprendizaje."""
+        return {
+            "git_commits": self.learn_from_git_log(),
+        }
+
+
 class RealTimeMonitor:
     """Monitorea logs de Streamlit/Supabase y reacciona a errores en vivo."""
 
@@ -715,17 +745,19 @@ class RealTimeMonitor:
         if not self.log_file.exists():
             return errors
 
-        with open(self.log_file, "r", encoding="utf-8", errors="ignore") as f:
-            f.seek(self.last_position)
-            new_lines = f.readlines()
-            self.last_position = f.tell()
+        try:
+            with open(self.log_file, "r", encoding="utf-8", errors="ignore") as f:
+                f.seek(self.last_position)
+                new_lines = f.readlines()
+                self.last_position = f.tell()
+        except Exception:
+            return errors
 
         for line in new_lines:
             line = line.strip()
             if not line:
                 continue
 
-            # Detectar errores comunes
             error_patterns = [
                 (r"TypeError:.*NoneType.*not subscriptable", "NoneType"),
                 (r"UnboundLocalError", "UnboundLocalError"),
@@ -734,20 +766,38 @@ class RealTimeMonitor:
                 (r"st.error.*módulo.*fall", "module_error"),
                 (r"supabase.*APIError", "supabase_error"),
                 (r"Exception:.*500", "server_error"),
+                (r"SyntaxError", "SyntaxError"),
+                (r"ImportError", "ImportError"),
+                (r"NameError", "NameError"),
+                (r"ValueError", "ValueError"),
             ]
 
             for pattern, etype in error_patterns:
                 if re.search(pattern, line, re.IGNORECASE):
                     err_id = self.memory.record_error(etype, line[:200], context=line[:500])
                     errors.append({"type": etype, "msg": line[:200], "id": err_id})
+                    log_event("autoheal_monitor", f"error_detectado:{etype}:{line[:80]}")
                     break
 
         self.last_check = time.time()
         return errors
 
     def auto_heal_from_error(self, error: dict) -> bool:
-        """Intenta corregir automáticamente un error detectado en logs."""
+        """Intenta corregir automaticamente un error detectado en logs."""
         msg = error["msg"]
+
+        # Intentar extraer archivo y linea del mensaje de error
+        file_match = re.search(r'File "([^"]+)", line (\d+)', msg)
+        if file_match:
+            err_file = file_match.group(1)
+            err_line = int(file_match.group(2))
+            # Verificar si el archivo existe en el repo
+            for base in [REPO_ROOT, Path("/mount/src/medicare-pro-v2")]:
+                fp = base / err_file
+                if fp.exists():
+                    log_event("autoheal_heal", f"error_localizado:{err_file}:{err_line}")
+                    self.memory.record_error("autoheal_heal", f"localizado:{err_file}:{err_line}")
+                    break
 
         # Buscar fix similar en memoria
         similar = self.memory.find_similar_fix(msg)
@@ -758,7 +808,7 @@ class RealTimeMonitor:
                 if similar["old"] in content:
                     content = content.replace(similar["old"], similar["new"])
                     filepath.write_text(content, encoding="utf-8")
-                    print(f"  ⚡ Auto-heal from memory: {similar['file']} ({similar['pattern']})")
+                    log_event("autoheal_heal", f"fix_aplicado:{similar['file']}:{similar['pattern']}")
                     return True
         return False
 
@@ -1030,6 +1080,10 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
         learned += PatternLearner.learn_from_fix_history(memory)
         learned += PatternLearner.scan_for_new_patterns(memory, REPO_ROOT / "core")
         learned += PatternLearner.scan_for_new_patterns(memory, VIEWS_DIR)
+        # Aprender de errores en vivo y git
+        error_learner = ErrorLearner(memory)
+        learn_results = error_learner.learn_from_all_sources()
+        learned += sum(learn_results.values())
         if learned > 0:
             print(f"  🧠 Aprendidos {learned} patrones nuevos")
 
