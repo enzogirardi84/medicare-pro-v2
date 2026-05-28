@@ -29,8 +29,8 @@ def render_autoheal_dashboard():
         unsafe_allow_html=True,
     )
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Dashboard", "🔧 Correcciones", "🧠 Patrones", "⚙️ Configuracion"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📊 Dashboard", "🔧 Correcciones", "🧠 Patrones", "📋 Scanner", "⚙️ Configuracion"
     ])
 
     with tab1:
@@ -40,6 +40,8 @@ def render_autoheal_dashboard():
     with tab3:
         _render_patterns_tab()
     with tab4:
+        _render_scanner_tab()
+    with tab5:
         _render_config_tab()
 
 
@@ -246,7 +248,40 @@ def _render_patterns_tab():
 
 
 # ═══════════════════════════════════════════════════════════════════════
-#  TAB 4: CONFIGURACION
+#  TAB 4: SCANNER
+# ═══════════════════════════════════════════════════════════════════════
+
+def _render_scanner_tab():
+    st.markdown("##### Escaneadores activos")
+    scanners = [
+        ("🔴 CRITICAL", "UnboundLocalError", "log_event antes de import local", "Auto-fix"),
+        ("🟠 HIGH", "NoneType crash", ".get(key, default)[:N] sin guard", "Auto-fix"),
+        ("🟠 HIGH", "XSS risk", "unsafe_allow_html sin html.escape()", "Deteccion"),
+        ("🟠 HIGH", "st.error sin log_event", "Falta log_event() antes de st.error()", "Deteccion"),
+        ("🟡 MEDIUM", "Subindice en loop", "Variable[key] sin guard None", "Deteccion"),
+        ("🟡 MEDIUM", "Copy-paste error", "variable(keyword=variable.get(...))", "Auto-fix"),
+        ("🟡 MEDIUM", "Lista[0] sin guard", "Acceso a lista vacia", "Deteccion"),
+        ("🔵 LOW", "Imports no usados", "AST analysis de imports", "Deteccion"),
+        ("🔵 LOW", "Funciones muertas", "AST analysis de funciones", "Deteccion"),
+        ("✨ AUTO", "Black formatter", "Formateo automatico post-fix", "Auto-formato"),
+    ]
+    for sev, name, desc, action in scanners:
+        st.caption(f"{sev} **{name}**: {desc} ({action})")
+    st.divider()
+    st.markdown("##### Ultimos hallazgos por escaneo")
+    rows = _query(
+        "SELECT timestamp, total_findings, critical_count, high_count "
+        "FROM scan_history ORDER BY id DESC LIMIT 10"
+    )
+    if rows:
+        for r in rows:
+            st.caption(f"  [{r[0][:16]}] Total:{r[1]} C:{r[2]} H:{r[3]}")
+    else:
+        st.info("Ejecute un escaneo para ver resultados")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  TAB 5: CONFIGURACION
 # ═══════════════════════════════════════════════════════════════════════
 
 def _render_config_tab():
