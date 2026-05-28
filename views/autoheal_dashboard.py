@@ -75,6 +75,9 @@ def _render_dashboard_tab():
     # Health checks
     _render_health_checks()
 
+    # Performance
+    _render_perf_metrics()
+
     # Git status
     _render_git_status()
 
@@ -150,6 +153,19 @@ def _render_health_checks():
     for i, (icon, label, detail) in enumerate(checks):
         cols[i].markdown(f"**{icon} {label}**")
         cols[i].caption(detail)
+
+
+def _render_perf_metrics():
+    rows = _query("SELECT elapsed_seconds FROM scan_history ORDER BY id DESC LIMIT 20")
+    if len(rows) >= 3:
+        times = [r[0] for r in rows]
+        avg = sum(times) / len(times)
+        recent = sum(times[:5]) / 5 if len(times) >= 5 else avg
+        st.markdown("##### Rendimiento")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Avg scan", f"{avg:.1f}s")
+        c2.metric("Ultimos 5", f"{recent:.1f}s")
+        c3.metric("Mejor", f"{min(times):.1f}s")
 
 
 def _render_git_status():
@@ -263,6 +279,8 @@ def _render_scanner_tab():
         ("🟡 MEDIUM", "Lista[0] sin guard", "Acceso a lista vacia", "Deteccion"),
         ("🔵 LOW", "Imports no usados", "AST analysis de imports", "Deteccion"),
         ("🔵 LOW", "Funciones muertas", "AST analysis de funciones", "Deteccion"),
+        ("🔵 LOW", "Complejidad alta", "Funciones >15 ramas + lineas", "Deteccion"),
+        ("⚡ PERF", "Regresiones", "Tiempo de escaneo >1.5x historico", "Alerta"),
         ("✨ AUTO", "Black formatter", "Formateo automatico post-fix", "Auto-formato"),
     ]
     for sev, name, desc, action in scanners:
