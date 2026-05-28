@@ -215,6 +215,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             total_pend = sum(float(p.get("monto", 0)) for p in pendientes)
             st.metric("Total pendiente estimado", f"${total_pend:,.2f}")
             for i, p in enumerate(pendientes):
+                if p is None:
+                    continue
                 with st.container(border=True):
                     pa, pb, pc = st.columns([3, 1, 1])
                     with pa:
@@ -288,6 +290,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
 
             with st.container(height=480, border=False):
                 for i, mov in enumerate(reversed(fact_paciente[-limite:])):
+                    if mov is None:
+                        continue
                     with st.container(border=True):
                         col_r1, col_r2 = st.columns([4, 1])
                         with col_r1:

@@ -37,6 +37,8 @@ def _cache_set(key: str, value) -> None:
 
 def _restaurar_stock_local(mi_empresa, insumo, cantidad):
     for item in st.session_state.get("inventario_db", []):
+        if item is None:
+            continue
         if item.get("item") == insumo and item.get("empresa") == mi_empresa:
             item["stock"] = int(item.get("stock") or 0) + cantidad
             return
@@ -44,6 +46,8 @@ def _restaurar_stock_local(mi_empresa, insumo, cantidad):
 
 def _descontar_stock_local(mi_empresa, insumo, cantidad):
     for item in st.session_state.get("inventario_db", []):
+        if item is None:
+            continue
         if item.get("item") == insumo and item.get("empresa") == mi_empresa:
             item["stock"] = max(0, int(item.get("stock") or 0) - int(cantidad))
             return True

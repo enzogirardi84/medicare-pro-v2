@@ -25,6 +25,8 @@ def render_tareas_panel(paciente_sel):
     # Mostrar tareas pendientes
     if tareas_pendientes:
         for i, t in enumerate(tareas_pendientes):
+            if t is None:
+                continue
             _key = f"tarea_{id(t)}"
             c1, c2, c3 = st.columns([0.1, 0.7, 0.2])
             _done = c1.checkbox("", key=f"chk_{_key}")

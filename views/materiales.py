@@ -13,6 +13,8 @@ from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_r
 
 def _restaurar_stock(mi_empresa, insumo, cantidad):
     for item in st.session_state.get("inventario_db", []):
+        if item is None:
+            continue
         if item.get("item") == insumo and item.get("empresa") == mi_empresa:
             item["stock"] = int(item.get("stock") or 0) + cantidad
             return
@@ -53,7 +55,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
     )
 
     inv_mi_empresa = sorted(
-        [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa],
+        [i for i in st.session_state.get("inventario_db", []) if i is not None and i.get("empresa") == mi_empresa],
         key=lambda x: x.get("item", "").lower(),
     )
 
@@ -81,6 +83,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
             if st.form_submit_button("Registrar consumo", width='stretch', type="primary"):
                 stock_actualizado = False
                 for i in st.session_state["inventario_db"]:
+                    if i is None:
+                        continue
                     if i["item"] == insumo_sel and i.get("empresa") == mi_empresa:
                         stock_actual = i.get("stock", 0)
                         if stock_actual < cant_usada:
@@ -105,6 +109,8 @@ def render_materiales(paciente_sel, mi_empresa, user):
                         st.session_state.setdefault("facturacion_db", [])
                         _precio = None
                         for i in st.session_state.get("inventario_db", []):
+                            if i is None:
+                                continue
                             if i.get("item") == insumo_sel and i.get("empresa") == mi_empresa:
                                 _precio = i.get("costo_unitario")
                                 break

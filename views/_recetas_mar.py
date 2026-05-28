@@ -91,6 +91,8 @@ def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1
     # Fase 1 — cache (O(1) lookup, evita scan lineal)
     if cached_item_key:
         for item in inv_db:
+            if item is None:
+                continue
             if item.get("item", "").lower().strip() == cached_item_key and item.get("empresa") == mi_empresa:
                 stock_anterior = int(item.get("stock") or 0)
                 item["stock"] = max(0, stock_anterior - cantidad)
@@ -104,6 +106,8 @@ def _auto_descontar_stock(paciente_sel, mi_empresa, user, nombre_med, cantidad=1
     # Fase 2 — scan lineal con fuzzy match (solo si cache miss)
     if not encontrado:
         for item in inv_db:
+            if item is None:
+                continue
             item_key = item.get("item", "").lower().strip()
             if item.get("empresa") != mi_empresa:
                 continue

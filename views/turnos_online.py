@@ -58,6 +58,8 @@ def render_turnos_online(mi_empresa, rol):
     # Aplicar filtros
     turnos_filtrados = []
     for t in db:
+        if t is None:
+            continue
         if filtro_prof != "Todos" and t.get('profesional') != filtro_prof:
             continue
         if filtro_estado != "Todos" and t.get('estado') != filtro_estado:
@@ -113,10 +115,12 @@ def render_turnos_online(mi_empresa, rol):
                         st.warning("Esos slots ya existen.")
 
         # Mostrar slots creados hoy
-        slots_hoy = [t for t in db if t.get('fecha') == _today().strftime('%d/%m/%Y')]
+        slots_hoy = [t for t in db if t is not None and t.get('fecha') == _today().strftime('%d/%m/%Y')]
         if slots_hoy:
             with st.expander(f"Slots de hoy ({len(slots_hoy)})", expanded=False):
                 for s in slots_hoy:
+                    if s is None:
+                        continue
                     st.caption(f"{s['horario']} - {s['profesional']} - {s['estado']}")
 
     # ==================== RESERVAR ====================
@@ -159,6 +163,8 @@ def render_turnos_online(mi_empresa, rol):
             bloque_estado_vacio("Sin resultados", "No hay turnos con esos filtros.")
         else:
             for i, t in enumerate(turnos_filtrados):
+                if t is None:
+                    continue
                 color = {"Disponible": "#059669", "Reservado": "#2563eb", "Cancelado": "#dc2626"}
                 bg = {"Disponible": "rgba(5,150,105,0.1)", "Reservado": "rgba(37,99,235,0.1)", "Cancelado": "rgba(220,38,38,0.1)"}
                 est = t.get('estado', '')
