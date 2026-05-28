@@ -749,10 +749,15 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False) -> boo
     ctx = st.spinner("Guardando cambios...") if mostrar else nullcontext()
     try:
         with ctx:
-            _guardar_datos_ejecutar()
+            _result = _guardar_datos_ejecutar()
+        if _result is None:
+            log_event("db", "guardar_datos_abortado:version_conflict_or_missing_empresa")
+            _registrar_estado_guardado("error", "Guardado abortado por conflicto de version o empresa faltante.")
+            return False
         return True
     except Exception as e:
         log_event("db", f"guardar_datos_fatal:{type(e).__name__}:{e!s}")
+        _registrar_estado_guardado("error", f"Error: {type(e).__name__}")
         st.error(
             "Error inesperado al guardar. Los datos en pantalla no se vaciaron: reintenta guardar, "
             "revisa la conexion y, si sigue igual, recarga la pagina y copia el detalle tecnico para soporte."
@@ -852,6 +857,7 @@ def _guardar_datos_ejecutar_core():
             if current_version != expected_version:
                 log_event("db", f"conflicto_version: actual={current_version}, esperada={expected_version}")
                 st.warning("Otro usuario guardó datos mientras trabajabas. Recargá la página para ver los cambios actualizados.")
+                _registrar_estado_guardado("error", "Conflicto de version - otro usuario guardo datos.")
                 return
             if shard and not sesion_usa_monolito_legacy():
                 u = st.session_state.get("u_actual") or {}
