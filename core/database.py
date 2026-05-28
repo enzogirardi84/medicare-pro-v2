@@ -533,7 +533,8 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                             estructura["pacientes_db"].append(paciente_id_visual)
 
                         empresa_paciente = empresa_map.get(str(p.get("empresa_id") or ""), empresa_actual)
-                        estructura["detalles_pacientes_db"][paciente_id_visual] = {
+                        from core.seguridad import decrypt_patient_dict
+                        estructura["detalles_pacientes_db"][paciente_id_visual] = decrypt_patient_dict({
                             "dni": dni,
                             "fnac": str(p.get("fecha_nacimiento", "") or "").strip(),
                             "sexo": str(p.get("sexo", "") or "").strip(),
@@ -546,7 +547,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                             "patologias": p.get("patologias", ""),
                             "fecha_alta": p.get("fecha_alta", ""),
                             "foto_perfil": p.get("foto_perfil", ""),
-                        }
+                        })
                 
                 # Fijar el cache para evitar guardados innecesarios
                 # Le pasamos la estructura completa para que calcule el hash base

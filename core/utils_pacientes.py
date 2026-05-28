@@ -42,7 +42,8 @@ def mapa_detalles_pacientes(session_state: dict) -> dict:
                         nombre = p.get("nombre_completo", p.get("nombre", ""))
                         dni = p.get("dni", "")
                         pid = f"{nombre} - {dni}" if nombre and dni else p.get("id", "")
-                        m[pid] = {
+                        from core.seguridad import decrypt_patient_dict
+                        m[pid] = decrypt_patient_dict({
                             "dni": dni,
                             "telefono": p.get("telefono", ""),
                             "obra_social": p.get("obra_social", ""),
@@ -53,7 +54,7 @@ def mapa_detalles_pacientes(session_state: dict) -> dict:
                             "patologias": p.get("patologias", ""),
                             "fecha_nacimiento": p.get("fecha_nacimiento", ""),
                             "fecha_alta": p.get("fecha_alta", ""),
-                        }
+                        })
         except Exception as _exc:
             from core.app_logging import log_event
             log_event("utils_pacientes", f"mapa_detalles_sql_error:{type(_exc).__name__}:{_exc}")

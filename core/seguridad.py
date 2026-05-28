@@ -22,6 +22,9 @@ except Exception:
 
 # ── Cifrado de campos sensibles ───────────────────────────────────────
 
+SENSITIVE_FIELDS = {"alergias", "patologias", "diagnostico_ingreso", "motivo_ingreso"}
+
+
 def encrypt_field(value: str) -> str:
     if not value or not _FERNET:
         return value
@@ -38,6 +41,32 @@ def decrypt_field(encrypted: str) -> str:
         return _FERNET.decrypt(encrypted.encode()).decode()
     except Exception:
         return encrypted
+
+
+def encrypt_patient_dict(d: dict) -> dict:
+    """Encripta campos sensibles de un dict de paciente in-place."""
+    if not _FERNET:
+        return d
+    for field in SENSITIVE_FIELDS:
+        if field in d and d[field]:
+            try:
+                d[field] = encrypt_field(str(d[field]))
+            except Exception:
+                pass
+    return d
+
+
+def decrypt_patient_dict(d: dict) -> dict:
+    """Desencripta campos sensibles de un dict de paciente in-place."""
+    if not _FERNET:
+        return d
+    for field in SENSITIVE_FIELDS:
+        if field in d and d[field]:
+            try:
+                d[field] = decrypt_field(str(d[field]))
+            except Exception:
+                pass
+    return d
 
 
 # ── Sanitización de PII para logs ─────────────────────────────────────

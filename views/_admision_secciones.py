@@ -385,7 +385,9 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                 }
                                 if estado_edit == "De Alta" and fecha_egreso_edit is not None:
                                     payload["fecha_egreso"] = fecha_egreso_edit.strftime("%d/%m/%Y")
+                                from core.seguridad import encrypt_patient_dict
                                 detalles_actualizados.update(payload)
+                                encrypt_patient_dict(detalles_actualizados)
 
                                 pacientes_db = list(st.session_state.get("pacientes_db", []))
                                 if paciente_sel_admin in pacientes_db:
@@ -662,7 +664,8 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                     st.session_state["pacientes_db"] = list(dict.fromkeys(pacientes_db))
                     _peso_val = float(peso_ingreso or 0)
                     _talla_val = float(talla_ingreso or 0)
-                    asegurar_detalles_pacientes_en_sesion(st.session_state)[id_p] = {
+                    from core.seguridad import encrypt_patient_dict
+                    _nuevo_paciente = {
                         "dni": campos_legajo["dni"],
                         "fnac": f_nac.strftime("%d/%m/%Y"),
                         "sexo": se,
@@ -683,6 +686,8 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                         "talla": _talla_val if _talla_val > 0 else "",
                         "foto_perfil": _procesar_foto_alta(foto_alta) if foto_alta else "",
                     }
+                    encrypt_patient_dict(_nuevo_paciente)
+                    asegurar_detalles_pacientes_en_sesion(st.session_state)[id_p] = _nuevo_paciente
                     # Guardar peso en vitales_db para uso en cálculo de dosis
                     if _peso_val > 0:
                         _vitales = st.session_state.setdefault("vitales_db", [])
