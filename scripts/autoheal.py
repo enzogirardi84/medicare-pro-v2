@@ -448,6 +448,71 @@ class SmartScanner:
                         self.findings.append(f)
                     break
 
+    def scan_unused_imports(self, rel: str, content: str, lines: list[str]):
+        """Detecta imports que no se usan en el archivo."""
+        if "test_" in rel or rel.endswith("__init__.py"):
+            return
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return
+
+        imported_names: dict[str, tuple[int, str]] = {}
+        used_names: set[str] = set()
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    name = alias.asname or alias.name.split(".")[0]
+                    imported_names[name] = (node.lineno, f"import {alias.name}")
+            elif isinstance(node, ast.ImportFrom):
+                if node.module and node.module.startswith("_"):
+                    continue
+                for alias in node.names:
+                    name = alias.asname or alias.name
+                    imported_names[name] = (node.lineno, f"from {node.module} import {alias.name}")
+            elif isinstance(node, ast.Name):
+                used_names.add(node.id)
+
+        for name, (line_no, import_line) in imported_names.items():
+            if name not in used_names and name != "__future__":
+                f = Finding(rel, line_no, "LOW",
+                            f"Import no usado: {import_line}",
+                            code=import_line, pattern="unused_import", auto_fix=False)
+                if not self._is_known(f):
+                    self.findings.append(f)
+
+    def scan_dead_functions(self, rel: str, content: str, lines: list[str]):
+        """Detecta funciones definidas pero nunca llamadas fuera de su propia definicion."""
+        if rel.endswith("__init__.py"):
+            return
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return
+
+        funcs: dict[str, int] = {}
+        calls: set[str] = set()
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                funcs[node.name] = node.lineno
+            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                calls.add(node.func.id)
+            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                calls.add(node.func.attr)
+
+        for name, line_no in funcs.items():
+            if name.startswith("_"):
+                continue
+            if name not in calls:
+                f = Finding(rel, line_no, "LOW",
+                            f"Funcion '{name}' definida pero nunca llamada",
+                            code=lines[line_no - 1].strip() if line_no <= len(lines) else "",
+                            pattern="dead_function", auto_fix=False)
+                if not self._is_known(f):
+                    self.findings.append(f)
+
     def _find_func(self, lines: list[str], idx: int) -> str:
         for i in range(idx, -1, -1):
             m = re.match(r'def\s+(\w+)', lines[i])
@@ -769,6 +834,8 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
         scanner.scan_st_error_no_log(rel, content, lines)
         scanner.scan_unsafe_html(rel, content, lines)
         scanner.scan_subscript_loop(rel, content, lines)
+        scanner.scan_unused_imports(rel, content, lines)
+        scanner.scan_dead_functions(rel, content, lines)
 
     elapsed = time.time() - t0
     crit = sum(1 for f in scanner.findings if f.severity == "CRITICAL")
