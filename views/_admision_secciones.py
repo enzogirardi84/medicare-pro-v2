@@ -423,8 +423,25 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                 _estado_guardado = obtener_estado_guardado()
                                 if not _save_ok or _estado_guardado.get("estado") in ("error", "pendiente"):
                                     log_event("admision", f"guardado_estado:{_estado_guardado.get('estado')}:{_estado_guardado.get('detalle','')[:100]}")
-                                    if _estado_guardado.get("estado") == "error":
-                                        st.error("Error al guardar los cambios. Revisa la conexion e intenta de nuevo.")
+                                    # Force direct Supabase upsert as fallback
+                                    try:
+                                        from core.database import supabase
+                                        from core._database_supabase import compress_payload, dumps_db_sorted
+                                        if supabase:
+                                            _fallback_data = {k: st.session_state.get(k) for k in [
+                                                "detalles_pacientes_db", "pacientes_db", "usuarios_db"
+                                            ] if k in st.session_state}
+                                            _payload, _ = dumps_db_sorted(_fallback_data)
+                                            supabase.table("medicare_db").upsert(
+                                                {"id": 1, "datos": compress_payload(_fallback_data)},
+                                                on_conflict="id"
+                                            ).execute()
+                                            log_event("admision", "fallback_upsert_ok")
+                                            queue_toast("Legajo actualizado (fallback).")
+                                    except Exception as _fe:
+                                        log_event("admision", f"fallback_upsert_error:{type(_fe).__name__}")
+                                        if _estado_guardado.get("estado") == "error":
+                                            st.error("Error al guardar los cambios. Revisa la conexion e intenta de nuevo.")
                                 else:
                                     _sincronizar_edicion_paciente_sql_best_effort(
                                         detalle_anterior=detalle_anterior,
