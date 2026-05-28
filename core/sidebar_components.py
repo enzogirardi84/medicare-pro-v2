@@ -251,7 +251,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
         for med in activas[:4]:
             _nom = (med.get("med") or "")[:45]
             _frec = (med.get("frecuencia") or med.get("via") or "")[:20]
-            st.sidebar.markdown(f"<span style='color:#fbbf24;font-size:0.82rem;'>  • {html.escape(_nom)}" + (f" — {html.escape(_frec)}" if _frec else "") + "</span>", unsafe_allow_html=True)
+            st.sidebar.markdown(f"<span style='color:#fbbf24;font-size:0.82rem;'>  • {escape(_nom)}" + (f" — {escape(_frec)}" if _frec else "") + "</span>", unsafe_allow_html=True)
         if len(activas) > 4:
             st.sidebar.caption(f"  ... y {len(activas) - 4} más")
 
