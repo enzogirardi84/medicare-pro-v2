@@ -392,6 +392,17 @@ class SmartScanner:
                     if not self._is_known(f):
                         self.findings.append(f)
 
+    def scan_copy_paste_error(self, rel: str, content: str, lines: list[str]):
+        """Detecta patrones de copy-paste: variable(keyword = variable.get(...))"""
+        for i, line in enumerate(lines):
+            m = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*\1\.', line)
+            if m:
+                f = Finding(rel, i + 1, "CRITICAL",
+                            f"Copy-paste error: {m.group(1)}(...) mal formado → (variable.get(...))",
+                            code=line.strip(), pattern="copy_paste_error", auto_fix=False)
+                if not self._is_known(f):
+                    self.findings.append(f)
+
     def scan_list_index_without_guard(self, rel: str, content: str, lines: list[str]):
         """Detecta lista[0] sin verificar que la lista no está vacía."""
         for i, line in enumerate(lines):
@@ -473,6 +484,12 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
                         f".get('{key}', '{default}')[:{count}]",
                         f"({var_part}.get('{key}') or '{default}')[:{count}]",
                     )
+
+        elif f.pattern == "copy_paste_error":
+            # Fix: variable(keyword = variable.get(...)) → (variable.get(...))
+            m = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*(\1\.get\([^)]+\))\s*\)\s*\[:', old_line)
+            if m:
+                new_line = old_line.replace(f"{m.group(1)}({m.group(2)})", f"({m.group(2)})")
 
         elif f.pattern == "unbound_local":
             # Eliminar el import local redundante
