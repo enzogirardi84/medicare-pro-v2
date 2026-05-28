@@ -170,6 +170,45 @@ def safe_error(message: str, **kwargs: Any) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  DATAFRAME CACHE (Performance)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def cached_dataframe(key: str, data: list, ttl: float = 30.0) -> "pd.DataFrame":
+    """Crea o recupera un DataFrame cacheado en session_state.
+    
+    Args:
+        key: Clave unica de cache.
+        data: Datos fuente (lista de dicts).
+        ttl: Tiempo de vida en segundos (default 30s).
+    
+    Returns:
+        DataFrame creado a partir de los datos.
+    """
+    import pandas as pd
+    import time
+
+    _ts_key = f"_df_ts_{key}"
+    _df_key = f"_df_val_{key}"
+    now = time.monotonic()
+
+    cached_ts = st.session_state.get(_ts_key, 0)
+    if st.session_state.get(_df_key) is not None and (now - cached_ts) < ttl:
+        return st.session_state[_df_key]
+
+    df = pd.DataFrame(data)
+    st.session_state[_df_key] = df
+    st.session_state[_ts_key] = now
+    return df
+
+
+def invalidate_dataframe_cache(key: str) -> None:
+    """Invalida un DataFrame cacheado (llamar tras modificaciones)."""
+    st.session_state.pop(f"_df_val_{key}", None)
+    st.session_state.pop(f"_df_ts_{key}", None)
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  RESPONSIVE COLUMNS HELPER (Mobile-Friendly)
 # ═══════════════════════════════════════════════════════════════════════
 
