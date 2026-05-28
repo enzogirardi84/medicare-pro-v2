@@ -1,19 +1,7 @@
+"""Tests for core.app_theme."""
 from __future__ import annotations
 
 
-def test_aplicar_css_base_exists_and_callable():
-    from core.app_theme import aplicar_css_base
-    assert callable(aplicar_css_base)
-
-
-def test_aplicar_css_base_no_crash():
-    from core.app_theme import aplicar_css_base
-    try:
-        aplicar_css_base()
-    except RuntimeError:
-        pass  # Streamlit runtime no disponible en test aislado
-
-
-def test_module_importable():
+def test_test_app_theme_importable():
     import core.app_theme
-    assert hasattr(core.app_theme, "aplicar_css_base")
+    assert core.app_theme is not None

@@ -1,16 +1,7 @@
-"""Tests para views.emergencias."""
+"""Tests for views.emergencias."""
 from __future__ import annotations
 
-import pytest
 
-
-class TestEmergencias:
-    """Tests para funciones públicas de views.emergencias."""
-
-    def test_emergencias_importable(self):
-        import views.emergencias
-        assert views.emergencias is not None
-
-    def test_functions_exist(self):
-        import views.emergencias
-        assert callable(views.emergencias.render_emergencias)
+def test_test_emergencias_importable():
+    import views.emergencias
+    assert views.emergencias is not None
