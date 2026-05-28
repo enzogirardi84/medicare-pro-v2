@@ -390,11 +390,30 @@ class SmartScanner:
             if "unsafe_allow_html=True" not in line:
                 continue
             if re.search(r'["\'].*\{.*\}.*["\']', line):
-                if "safe_markdown" not in line and "html.escape" not in line:
+                if "safe_markdown" not in line and "html.escape" not in line and "escape(" not in line:
                     f = Finding(rel, i + 1, "HIGH", "unsafe_allow_html con f-string sin escape — XSS",
-                                code=line.strip(), pattern="unsafe_html")
+                                code=line.strip(), pattern="unsafe_html", auto_fix=True)
                     if not self._is_known(f):
                         self.findings.append(f)
+
+    def scan_missing_docstrings(self, rel: str, content: str, lines: list[str]):
+        """Detecta funciones publicas sin docstring."""
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if node.name.startswith("_"):
+                continue
+            if (not node.body) or (not isinstance(node.body[0], ast.Expr)) or (not isinstance(node.body[0].value, (ast.Constant, ast.Str))):
+                f = Finding(rel, node.lineno, "LOW",
+                            f"Funcion '{node.name}' sin docstring",
+                            code=lines[node.lineno - 1].strip() if node.lineno <= len(lines) else "",
+                            pattern="missing_docstring", auto_fix=False)
+                if not self._is_known(f):
+                    self.findings.append(f)
 
     def scan_copy_paste_error(self, rel: str, content: str, lines: list[str]):
         """Detecta patrones de copy-paste: variable(keyword = variable.get(...))
@@ -615,6 +634,41 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
         elif f.pattern == "unbound_local":
             # Eliminar el import local redundante
             new_line = re.sub(r'from core\.app_logging import log_event\s*', '', old_line)
+
+        elif f.pattern == "unsafe_html":
+            # Convertir st.markdown(f"...{var}...", unsafe_allow_html=True)
+            # a st.markdown(f"...{escape(var)}...", unsafe_allow_html=True)
+            # y agregar from html import escape si no existe
+            m = re.search(r'f(["\'])(.*?)\1', old_line)
+            if m:
+                fstring_content = m.group(2)
+                # Encontrar variables en el f-string: {varname} o {varname.attr}
+                vars_in_fstring = re.findall(r'\{(\w+(?:\.\w+)*)\}', fstring_content)
+                if vars_in_fstring:
+                    new_fstring = fstring_content
+                    for var in vars_in_fstring:
+                        new_fstring = new_fstring.replace(f"{{{var}}}", f"{{{var}}}", 1)
+                        # Solo reemplazar si no tiene escape ya
+                        old_pattern = "{" + var + "}"
+                        new_pattern = "{escape(" + var + ")}"
+                        if old_pattern in new_fstring:
+                            new_fstring = new_fstring.replace(old_pattern, new_pattern, 1)
+                    # Reconstruir la linea
+                    new_line = old_line.replace(
+                        "f" + m.group(0),
+                        "f" + m.group(1) + new_fstring + m.group(1)
+                    )
+                    # Asegurar que 'from html import escape' existe al inicio del archivo
+                    if "from html import escape" not in content and "from html import escape" not in lines[:10]:
+                        # Buscar donde insertar (despues de from __future__ o al inicio)
+                        insert_idx = 0
+                        for idx, l in enumerate(lines):
+                            if l.strip().startswith("from ") or l.strip().startswith("import "):
+                                insert_idx = idx + 1
+                        lines.insert(insert_idx, "from html import escape")
+                        # Ajustar indice de linea actual
+                        if insert_idx <= f.line - 1:
+                            f.line += 1
 
         if new_line != old_line:
             lines[f.line - 1] = new_line
@@ -935,6 +989,7 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
         scanner.scan_unused_imports(rel, content, lines)
         scanner.scan_dead_functions(rel, content, lines)
         scanner.scan_complexity(rel, content, lines)
+        scanner.scan_missing_docstrings(rel, content, lines)
 
     elapsed = time.time() - t0
     crit = sum(1 for f in scanner.findings if f.severity == "CRITICAL")

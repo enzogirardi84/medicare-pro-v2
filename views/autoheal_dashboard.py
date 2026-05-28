@@ -280,7 +280,9 @@ def _render_scanner_tab():
         ("🔵 LOW", "Imports no usados", "AST analysis de imports", "Deteccion"),
         ("🔵 LOW", "Funciones muertas", "AST analysis de funciones", "Deteccion"),
         ("🔵 LOW", "Complejidad alta", "Funciones >15 ramas + lineas", "Deteccion"),
+        ("🔵 LOW", "Sin docstring", "Funciones publicas sin documentacion", "Deteccion"),
         ("⚡ PERF", "Regresiones", "Tiempo de escaneo >1.5x historico", "Alerta"),
+        ("🛡️ XSS", "Auto-fix XSS", "Agrega escape() a f-strings peligrosos", "Auto-fix"),
         ("✨ AUTO", "Black formatter", "Formateo automatico post-fix", "Auto-formato"),
     ]
     for sev, name, desc, action in scanners:
