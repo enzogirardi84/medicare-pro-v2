@@ -239,9 +239,12 @@ def render_mi_equipo(mi_empresa, rol, user=None):
         if check_supabase_connection():
             empresa_uuid = _obtener_uuid_empresa(mi_empresa)
             if empresa_uuid:
-                res = supabase.table("usuarios").select("*").eq("empresa_id", empresa_uuid).execute()
-                if res.data:
-                    for u_sql in res.data:
+                _cache_key = f"_cache_usuarios_{empresa_uuid}"
+                if _cache_key not in st.session_state:
+                    res = supabase.table("usuarios").select("*").eq("empresa_id", empresa_uuid).execute()
+                    st.session_state[_cache_key] = res.data if res.data else []
+                if st.session_state[_cache_key]:
+                    for u_sql in st.session_state[_cache_key]:
                         fila = {
                             "_login": u_sql["nombre"],
                             "nombre": u_sql["nombre"],

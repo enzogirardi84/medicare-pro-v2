@@ -801,6 +801,18 @@ input:focus, select:focus, textarea:focus,
     }
 }
 
+/* ── Columns(3+) en mobile: grid 2 columnas en vez de apilar ──── */
+@media screen and (max-width: 768px) {
+    .mc-content [data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+    }
+    .mc-content [data-testid="stHorizontalBlock"] > div {
+        min-width: 45% !important;
+        flex: 1 1 45% !important;
+    }
+}
+
 /* ── Breakpoint para pantallas muy pequenas (< 480px) ──────────── */
 @media screen and (max-width: 480px) {
     [data-testid="stMetricValue"] {
