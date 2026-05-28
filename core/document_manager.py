@@ -508,6 +508,11 @@ class DocumentManager:
             
             if st.button("📤 Subir Documento", width='stretch', type="primary"):
                 user = st.session_state.get("u_actual", {})
+                from core.seguridad import validate_uploaded_file
+                ok_val, msg_val = validate_uploaded_file(uploaded_file)
+                if not ok_val:
+                    st.error(f"Archivo no válido: {msg_val}")
+                    st.stop()
                 try:
                     doc = self.upload_document(
                         file_data=uploaded_file.getvalue(),

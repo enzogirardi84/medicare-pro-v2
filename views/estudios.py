@@ -116,6 +116,11 @@ def render_estudios(paciente_sel, user, rol=None):
                 ext = ""
                 raw_bytes = None
                 if archivo_subido is not None:
+                    from core.seguridad import validate_uploaded_file
+                    ok_val, msg_val = validate_uploaded_file(archivo_subido)
+                    if not ok_val:
+                        st.error(f"Archivo no válido: {msg_val}")
+                        st.stop()
                     raw_bytes = archivo_subido.getvalue()
                     ext = archivo_subido.name.split('.')[-1].lower()
                     if ext in ["png", "jpg", "jpeg"]:

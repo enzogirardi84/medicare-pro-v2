@@ -31,7 +31,7 @@ from PIL import Image
 
 
 def test_password_hash_y_compatibilidad_legacy():
-    password = "ClaveSegura123"
+    password = "TestPasswordSecure123!"  # Solo para tests, no usar en producción
     hashed = generar_hash_password(password)
 
     assert hashed != password

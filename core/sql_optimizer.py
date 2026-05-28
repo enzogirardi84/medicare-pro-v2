@@ -22,6 +22,7 @@ from functools import lru_cache
 import streamlit as st
 
 from core.app_logging import log_event
+from core.seguridad import sanitize_for_log
 
 
 class IndexType(Enum):
@@ -339,8 +340,12 @@ class SQLOptimizer:
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
         
-        # ORDER BY
+        # ORDER BY — validación estricta contra SQL injection
         if order_by:
+            # Solo permitir: columna [ASC|DESC], columna [, columna [ASC|DESC]]
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(?:\s+(?:ASC|DESC))?(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*(?:\s+(?:ASC|DESC))?)*$', str(order_by)):
+                log_event("sql_optimizer", f"order_by_invalid:{sanitize_for_log(str(order_by)[:100])}")
+                order_by = "created_at DESC"  # fallback seguro
             sql += f" ORDER BY {order_by}"
         
         # LIMIT (siempre usar para paginación)
