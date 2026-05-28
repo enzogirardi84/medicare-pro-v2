@@ -71,11 +71,12 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     traslados = [x for x in eventos if x.get("ambulancia_solicitada")]
 
     if es_movil:
-        cols = st.columns(4)
+        cols = st.columns(2)
         cols[0].metric("Eventos", len(eventos))
-        cols[1].metric("Criticos activos", len(activos))
-        cols[2].metric("Traslados", len(traslados))
-        cols[3].metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
+        cols[1].metric("Criticos", len(activos))
+        cols_2 = st.columns(2)
+        cols_2[0].metric("Traslados", len(traslados))
+        cols_2[1].metric("Ultimo", eventos[-1]["fecha_evento"] if eventos else "—")
     else:
         col1, col2 = st.columns(2)
         with col1:
