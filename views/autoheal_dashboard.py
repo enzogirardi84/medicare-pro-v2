@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import sys
 import subprocess
 import time
@@ -77,31 +78,23 @@ def _render_dashboard_tab():
 
 
 def _render_last_scan_box():
-    try:
-        import sqlite3
-        if not DB_PATH.exists():
-            st.info("Sistema sin datos. Ejecute un escaneo para comenzar.")
-            return
-        conn = sqlite3.connect(str(DB_PATH))
-        last = conn.execute(
-            "SELECT timestamp, total_findings, critical_count, high_count, "
-            "fixes_applied, tests_passed, tests_failed, elapsed_seconds "
-            "FROM scan_history ORDER BY id DESC LIMIT 1"
-        ).fetchone()
-        conn.close()
-        if not last:
-            return
-        ts, total, crit, high, fixes, tp, tf, elapsed = last
-        st.markdown("##### Ultimo escaneo")
-        cols = st.columns(5)
-        cols[0].metric("Hallazgos", total)
-        cols[1].metric("Criticos", crit, delta_color="off")
-        cols[2].metric("Altos", high, delta_color="off")
-        cols[3].metric("Fixes", fixes)
-        cols[4].metric("Duracion", f"{elapsed:.1f}s")
-        st.caption(f"Realizado: {ts[:19]} | Tests: {tp}P/{tf}F")
-    except Exception as e:
-        st.caption(f"Error: {e}")
+    rows = _query(
+        "SELECT timestamp, total_findings, critical_count, high_count, "
+        "fixes_applied, tests_passed, tests_failed, elapsed_seconds "
+        "FROM scan_history ORDER BY id DESC LIMIT 1"
+    )
+    if not rows:
+        st.info("Sistema sin datos. Ejecute un escaneo para comenzar.")
+        return
+    ts, total, crit, high, fixes, tp, tf, elapsed = rows[0]
+    st.markdown("##### Ultimo escaneo")
+    cols = st.columns(5)
+    cols[0].metric("Hallazgos", total)
+    cols[1].metric("Criticos", crit, delta_color="off")
+    cols[2].metric("Altos", high, delta_color="off")
+    cols[3].metric("Fixes", fixes)
+    cols[4].metric("Duracion", f"{elapsed:.1f}s")
+    st.caption(f"Realizado: {ts[:19]} | Tests: {tp}P/{tf}F")
 
 
 def _render_scan_trends():
@@ -313,15 +306,16 @@ def _render_config_tab():
 # ═══════════════════════════════════════════════════════════════════════
 
 def _query(sql: str):
+    if not DB_PATH.exists():
+        return []
     try:
-        import sqlite3
-        if not DB_PATH.exists():
-            return []
         conn = sqlite3.connect(str(DB_PATH))
         rows = conn.execute(sql).fetchall()
         conn.close()
         return rows
     except sqlite3.OperationalError:
+        return []
+    except Exception:
         return []
 
 
