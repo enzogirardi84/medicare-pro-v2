@@ -55,6 +55,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Admin Feature Flags": ("views.feature_flags_admin", "render_feature_flags_admin"),
     "Self-Healing IA": ("views.self_healing_admin", "render_self_healing_admin"),
     "Asistente IA": ("views.ai_features_panel", "render_ai_features_panel"),
+    "AutoHeal v2": ("views.autoheal_dashboard", "render_autoheal_dashboard"),
 }
 
 VIEW_NAV_LABELS_BASE: Dict[str, str] = {

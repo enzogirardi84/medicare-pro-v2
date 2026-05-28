@@ -44,6 +44,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         "Estadisticas",
         # "Factura Electronica",  # ocultado
         "Turnos Online",
+        "AutoHeal v2",
     ],
     "Emergencias": [
         "Emergencias y Ambulancia",
@@ -92,6 +93,9 @@ _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
         ],
         "Reportes": [
             "Estadisticas", "Turnos Online",
+        ],
+        "Sistema": [
+            "AutoHeal v2",
         ],
     },
 }

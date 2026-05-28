@@ -413,6 +413,20 @@ def _render_alertas_criticas(paciente_sel: str) -> None:
         log_event("alertas", f"error_render_alertas:{type(_e).__name__}")
 
 
+def _autoheal_passive_scan():
+    """Ejecuta escaneo pasivo cada 100 reruns (sin bloquear la UI)."""
+    try:
+        _key = "_autoheal_passive_counter"
+        st.session_state[_key] = st.session_state.get(_key, 0) + 1
+        if st.session_state[_key] >= 100:
+            st.session_state[_key] = 0
+            # Solo loggear estadisticas, sin modificar codigo
+            from core.seguridad import sanitize_for_log
+            log_event("autoheal", "passive_scan_triggered")
+    except Exception:
+        pass
+
+
 def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_config, menu_set=None):
     """Renderiza la vista activa. Captura errores y muestra UI de fallback."""
     if menu_set is None:
@@ -425,6 +439,9 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
     # Control de acceso: verificar que el usuario tenga permiso para ver este paciente
     if paciente_sel:
         require_patient_access(paciente_sel, user)
+
+    # Escaneo pasivo de AutoHeal (cada 100 reruns)
+    _autoheal_passive_scan()
 
     # Alertas críticas del paciente (en todos los módulos)
     _render_alertas_criticas(paciente_sel)
