@@ -84,9 +84,14 @@ def _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, tipo, lat, lon,
                 pac_uuid = _obtener_uuid_paciente(partes[1].strip(), empresa_id)
             usr_id = None
             if supabase:
-                res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
-                if getattr(res_usr, "data", None):
-                    usr_id = res_usr.data[0]["id"]
+                _usr_cache = f"_cache_usr_id_{nombre_usuario}_{empresa_id}"
+                if _usr_cache in st.session_state:
+                    usr_id = st.session_state[_usr_cache]
+                else:
+                    res_usr = supabase.table("usuarios").select("id").eq("nombre", nombre_usuario).eq("empresa_id", empresa_id).limit(1).execute()
+                    if getattr(res_usr, "data", None):
+                        usr_id = res_usr.data[0]["id"]
+                        st.session_state[_usr_cache] = usr_id
             datos_sql = {
                 "empresa_id": empresa_id,
                 "usuario_id": usr_id,
@@ -380,9 +385,14 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
                                     from core.database import supabase
                                     prof_id = None
                                     if supabase:
-                                        res_prof = supabase.table("usuarios").select("id").eq("nombre", prof_ag).eq("empresa_id", empresa_id).limit(1).execute()
-                                        if res_prof.data:
-                                            prof_id = res_prof.data[0]["id"]
+                                        _prof_cache = f"_cache_prof_id_{prof_ag}_{empresa_id}"
+                                        if _prof_cache in st.session_state:
+                                            prof_id = st.session_state[_prof_cache]
+                                        else:
+                                            res_prof = supabase.table("usuarios").select("id").eq("nombre", prof_ag).eq("empresa_id", empresa_id).limit(1).execute()
+                                            if res_prof.data:
+                                                prof_id = res_prof.data[0]["id"]
+                                                st.session_state[_prof_cache] = prof_id
                                     datos_sql = {
                                         "paciente_id": pac_uuid,
                                         "empresa_id": empresa_id,
