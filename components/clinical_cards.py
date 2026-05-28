@@ -56,7 +56,7 @@ def _html_card_clinica(titulo, contenido, badge_text=None, badge_type="ok") -> s
             <div class="card-title" style="margin: 0;">{escape(str(titulo))}</div>
             {badge_html}
         </div>
-        <div class="card-text">{contenido}</div>
+        <div class="card-text">{escape(str(contenido))}</div>
     </div>"""
 
 

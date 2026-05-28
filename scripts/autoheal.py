@@ -380,6 +380,114 @@ def run_tests() -> tuple[int, int]:
     return passed, failed
 
 
+def auto_commit(message: str) -> bool:
+    """Autocommit y push si hay cambios. Retorna True si hubo commit."""
+    try:
+        result = subprocess.run(
+            ["git", "add", "-A"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30,
+        )
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode == 0:
+            return False  # no hay cambios
+
+        subprocess.run(
+            ["git", "commit", "-m", f"autoheal: {message}"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30,
+        )
+        subprocess.run(
+            ["git", "push"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=60,
+        )
+        return True
+    except Exception as exc:
+        print(f"  ⚠️ Auto-commit falló: {exc}")
+        return False
+
+
+def run_full_cycle(
+    scanner: Scanner,
+    files: list[Path],
+    do_fix: bool,
+    do_tests: bool,
+    do_auto_commit: bool,
+    log_file: Optional[str],
+) -> dict:
+    """Ejecuta un ciclo completo de scan + fix + tests + commit.
+    Retorna dict con estadísticas.
+    """
+    scanner.findings.clear()
+    fixes = 0
+    tests_created = 0
+    passed = failed = 0
+
+    # Scan
+    t0 = time.time()
+    for f in files:
+        scanner.scan_file(f)
+    elapsed = time.time() - t0
+
+    findings = scanner.findings
+    crit = sum(1 for f in findings if f.severity == "CRITICAL")
+    high = sum(1 for f in findings if f.severity == "HIGH")
+
+    msg = ""
+
+    # Fix
+    if do_fix and findings:
+        fixes = apply_fixes(findings)
+        if fixes > 0:
+            msg += f"{fixes} fixes"
+
+    # Create tests
+    if do_tests:
+        for f in files:
+            tp = generate_test_for_module(f)
+            if tp:
+                tests_created += 1
+        if tests_created > 0:
+            msg += f" +{tests_created} tests" if msg else f"{tests_created} tests"
+
+    # Auto-commit
+    if do_auto_commit and msg:
+        committed = auto_commit(f"scan:{len(findings)}issues_{msg}")
+        if committed:
+            print(f"  📤 Auto-commit realizado: {msg}")
+
+    # Run tests
+    if do_tests:
+        try:
+            passed, failed = run_tests()
+        except Exception as exc:
+            print(f"  ⚠️ Tests fallaron: {exc}")
+
+    # Log
+    if log_file:
+        with open(log_file, "a", encoding="utf-8") as lf:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            lf.write(
+                f"[{timestamp}] scan:{len(findings)} "
+                f"crit:{crit} high:{high} "
+                f"fixes:{fixes} tests_created:{tests_created} "
+                f"test_pass:{passed} test_fail:{failed} "
+                f"elapsed:{elapsed:.1f}s\n"
+            )
+
+    return {
+        "findings": len(findings),
+        "crit": crit,
+        "high": high,
+        "fixes": fixes,
+        "tests_created": tests_created,
+        "test_pass": passed,
+        "test_fail": failed,
+        "elapsed": elapsed,
+    }
+
+
 def main():
     import argparse
 
@@ -389,67 +497,108 @@ def main():
     parser.add_argument("--ci", action="store_true", help="Modo CI: exit 1 si hay issues críticos")
     parser.add_argument("--path", type=str, default="", help="Archivo o directorio específico a escanear")
     parser.add_argument("--run-tests", action="store_true", help="Ejecutar test suite al final")
+    parser.add_argument("--watch", type=int, default=0, metavar="MINUTOS",
+                        help="Modo daemon: ejecuta cada N minutos automáticamente")
+    parser.add_argument("--auto-commit", action="store_true",
+                        help="Auto-commit y push de correcciones (requiere --watch)")
+    parser.add_argument("--log", type=str, default="",
+                        help="Archivo de log para modo daemon")
+    parser.add_argument("--install-service", action="store_true",
+                        help="Instalar como servicio programado en Windows (SchTasks)")
     args = parser.parse_args()
 
+    # ── Instalar servicio Windows ────────────────────────────────────
+    if args.install_service:
+        script_path = Path(__file__).resolve()
+        task_name = "MediCareAutoHeal"
+        python_path = sys.executable
+        log_path = os.path.join(str(REPO_ROOT), "autoheal.log")
+        cmd = (
+            f'SchTasks /Create /SC MINUTE /MO 15 /TN "{task_name}" '
+            f'/TR "{python_path} {script_path} --watch 15 --fix --create-tests --run-tests --auto-commit --log {log_path}" '
+            f'/F'
+        )
+        try:
+            subprocess.run(cmd, shell=True, check=True, timeout=30)
+            print(f"✅ Servicio '{task_name}' instalado. Se ejecuta cada 15 minutos.")
+            print(f"   Para desinstalar: SchTasks /Delete /TN '{task_name}' /F")
+        except Exception as exc:
+            print(f"❌ Error al instalar servicio: {exc}")
+            print("   Podés ejecutar manualmente en segundo plano con: --watch 15")
+        return
+
+    # ── Modo daemon (watch) ──────────────────────────────────────────
+    if args.watch > 0:
+        interval = args.watch * 60
+        log_file = args.log or str(REPO_ROOT / "autoheal.log")
+        scanner = Scanner(fix=True, create_tests=True)
+
+        files = list(VIEWS_DIR.rglob("*.py")) + list(CORE_DIR.rglob("*.py"))
+        files = [f for f in files if not any(ign in f.parts for ign in IGNORE_DIRS)]
+
+        print(f"🤖 AutoHeal DAEMON iniciado — intervalo: {args.watch} min")
+        print(f"   Log: {log_file}")
+        print(f"   Auto-commit: {'ON' if args.auto_commit else 'OFF'}")
+        print(f"   {len(files)} archivos monitoreados")
+        print("   Presioná Ctrl+C para detener\n")
+
+        cycle = 0
+        while True:
+            cycle += 1
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] Ciclo #{cycle}...", end=" ")
+            stats = run_full_cycle(
+                scanner=scanner,
+                files=files,
+                do_fix=True,
+                do_tests=bool(args.run_tests),
+                do_auto_commit=bool(args.auto_commit),
+                log_file=log_file,
+            )
+            print(
+                f"scan:{stats['findings']} "
+                f"crit:{stats['crit']} high:{stats['high']} "
+                f"fixes:{stats['fixes']} tests:{stats['tests_created']} "
+                f"tests:{stats['test_pass']}P/{stats['test_fail']}F "
+                f"{stats['elapsed']:.1f}s"
+            )
+            time.sleep(interval)
+
+    # ── Modo single-run ──────────────────────────────────────────────
     scanner = Scanner(fix=args.fix, create_tests=args.create_tests)
 
-    # Determinar archivos a escanear
     if args.path:
         target = REPO_ROOT / args.path
         files = [target] if target.is_file() else list(target.rglob("*.py"))
     else:
         files = list(VIEWS_DIR.rglob("*.py")) + list(CORE_DIR.rglob("*.py"))
-
-    # Excluir ignorados
     files = [f for f in files if not any(ign in f.parts for ign in IGNORE_DIRS)]
 
-    print(f"🔍 Escaneando {len(files)} archivos...")
-    t0 = time.time()
+    stats = run_full_cycle(
+        scanner=scanner,
+        files=files,
+        do_fix=args.fix,
+        do_tests=args.run_tests,
+        do_auto_commit=False,
+        log_file=None,
+    )
 
-    for f in files:
-        scanner.scan_file(f)
-
-    elapsed = time.time() - t0
-
-    # Mostrar reporte
     print_report(scanner.findings)
+    print(f"⏱️  Escaneo completado en {stats['elapsed']:.2f}s")
+    print(f"   {stats['findings']} hallazgos | "
+          f"{stats['crit']} críticos | {stats['high']} altos | "
+          f"{stats['fixes']} fixes | {stats['tests_created']} tests creados")
 
-    # Crear tests faltantes
-    tests_created = 0
-    if args.create_tests:
-        print("📝 Creando tests faltantes...")
-        for f in files:
-            test_path = generate_test_for_module(f)
-            if test_path:
-                print(f"  ✅ Test creado: {test_path}")
-                tests_created += 1
-        if tests_created == 0:
-            print("  ✅ Todos los módulos ya tienen tests")
-        print()
-
-    # Aplicar fixes
-    if args.fix:
-        print("🔧 Aplicando correcciones automáticas...")
-        fixes = apply_fixes(scanner.findings)
-        print(f"  {fixes} corrección(es) aplicada(s)\n")
-
-    # Tests
     if args.run_tests:
-        print("🧪 Ejecutando test suite...")
-        passed, failed = run_tests()
-        print(f"  ✅ {passed} passed, ❌ {failed} failed\n")
-
-    print(f"⏱️  Escaneo completado en {elapsed:.2f}s")
+        print(f"   Tests: {stats['test_pass']} passed, {stats['test_fail']} failed")
 
     # CI mode
     if args.ci:
-        crit = sum(1 for f in scanner.findings if f.severity == "CRITICAL")
-        high = sum(1 for f in scanner.findings if f.severity == "HIGH")
-        if crit > 0:
-            print(f"\n❌ CI FAILED: {crit} hallazgos críticos")
+        if stats['crit'] > 0:
+            print(f"\n❌ CI FAILED: {stats['crit']} hallazgos críticos")
             sys.exit(1)
-        if high > 5:
-            print(f"\n❌ CI FAILED: {high} hallazgos altos (límite 5)")
+        if stats['high'] > 5:
+            print(f"\n❌ CI FAILED: {stats['high']} hallazgos altos (límite 5)")
             sys.exit(1)
         print("\n✅ CI PASSED")
 

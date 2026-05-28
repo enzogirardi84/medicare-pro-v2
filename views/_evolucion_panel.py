@@ -456,7 +456,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             )
                             _valido, _msg = _dsig_verify.verify_signature(_signed_doc)
                             if _valido:
-                                st.success(f"✅ Firma digital RSA {firma_digital.get('signature_algorithm', '')} válida — {firma_digital.get('signer_name', '')} ({firma_digital.get('signed_at', '')[:10]})")
+                                st.success(f"✅ Firma digital RSA {firma_digital.get('signature_algorithm', '')} válida — {firma_digital.get('signer_name', '')} ({firma_digital(st.success(f"✅ Firma digital RSA {firma_digital.get('signed_at') or '')[:10]})")
                             else:
                                 st.error(f"🔴 Firma digital INVÁLIDA: {_msg}")
                         except Exception as exc:

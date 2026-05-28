@@ -222,7 +222,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
 
     if vitales_orden:
         _sem = semaforo_vital_sidebar(vitales_orden[0])
-        _fecha_v = vitales_orden[0].get("fecha", "S/D")[:16]
+        _fecha_v = vitales_orden[0](_fecha_v = vitales_orden[0].get("fecha") or "S/D")[:16]
         st.sidebar.caption(f"{_sem} Últimos signos vitales — {escape(_fecha_v)}")
         v = vitales_orden[0]
         c1, c2, c3 = st.sidebar.columns(3)
@@ -238,7 +238,7 @@ def render_sidebar_contexto_clinico(paciente_sel, vista_actual):
 
     if ultima_ev:
         _prof_ev = (ultima_ev.get("firma") or "S/D")[:22]
-        _fecha_ev = ultima_ev.get("fecha", "S/D")[:16]
+        _fecha_ev = ultima_ev(_fecha_ev = ultima_ev.get("fecha") or "S/D")[:16]
         _nota_ev = str(ultima_ev.get("nota", ""))[:80].replace("\n", " ")
         st.sidebar.caption(f"📝 Última evolución: **{_fecha_ev}** — {_prof_ev}")
         if _nota_ev:
@@ -329,7 +329,7 @@ def render_mobile_contexto_clinico(paciente_sel):
             mc2.metric("FR", _vitales_valor_corto(v, "FR"))
             mc2.metric("Temp", _vitales_valor_corto(v, "Temp"))
             mc2.metric("HGT", _vitales_valor_corto(v, "HGT"))
-            _fecha_v = vitales_orden[0].get("fecha", "S/D")[:16]
+            _fecha_v = vitales_orden[0](_fecha_v = vitales_orden[0].get("fecha") or "S/D")[:16]
             st.caption(f"Últimos signos — {_fecha_v}")
         if patologias:
             st.caption(f"**Diagnósticos:** {patologias}")

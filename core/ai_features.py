@@ -131,7 +131,7 @@ def suggest_evolution_ai(paciente_sel: str) -> Optional[str]:
                 prompt += f"  {k}: {v[k]}\n"
     if data["evoluciones"]:
         e = data["evoluciones"][-1]
-        prompt += f"\nÚltima evolución: {e.get('texto', '')[:300]}\n"
+        prompt += f"\nÚltima evolución: {e(prompt += f"\nÚltima evolución: {e.get('texto') or '')[:300]}\n"
     prompt += (
         "\nGenera una evolución en formato SOAP (Subjetivo, Objetivo, Evaluación, Plan) "
         "en español, profesional y concisa."
@@ -154,9 +154,9 @@ def generate_patient_summary(paciente_sel: str) -> Optional[str]:
     if data["estudios"]:
         prompt += f"\nEstudios recientes:\n"
         for e in data["estudios"]:
-            prompt += f"  - {e.get('tipo', '?')}: {e.get('resultado', '')[:100]}\n"
+            prompt += f"  - {e.get('tipo', '?')}: {e(prompt += f"  - {e.get('resultado') or '')[:100]}\n"
     if data["evoluciones"]:
-        prompt += f"\nÚltima evolución: {data['evoluciones'][-1].get('texto', '')[:300]}\n"
+        prompt += f"\nÚltima evolución: {data['evoluciones'][-1](prompt += f"\nÚltima evolución: {data['evoluciones'][-1].get('texto') or '')[:300]}\n"
     prompt += (
         "\nIncluye: motivo de consulta, diagnóstico principal, medicación activa, "
         "alertas, estudios pendientes y plan de tratamiento."
@@ -240,7 +240,7 @@ def suggest_differential_ai(paciente_sel: str) -> Optional[str]:
         prompt += f"Signos vitales: TA={v.get('TA','?')}, FC={v.get('FC','?')}, Temp={v.get('Temp','?')}\n"
     if data["evoluciones"]:
         e = data["evoluciones"][-1]
-        prompt += f"Última evolución: {e.get('texto', '')[:300]}\n"
+        prompt += f"Última evolución: {e(prompt += f"Última evolución: {e.get('texto') or '')[:300]}\n"
     prompt += (
         "\nBasado en la información disponible, sugiere diagnósticos diferenciales "
         "ordenados por probabilidad. Devuelve SOLO un array JSON."
