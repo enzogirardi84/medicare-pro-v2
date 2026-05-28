@@ -12,6 +12,7 @@ from core._patient_index import get_patient_records
 from core.alert_toasts import queue_toast
 from core.app_logging import log_event
 from core.database import guardar_datos
+from core.seguridad import validate_uploaded_file, sanitize_for_log
 from core.guardado_universal import guardar_registro
 from core.utils import (
     ahora,
@@ -196,6 +197,10 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 imagen_nombre = ""
                 imagen_tipo = ""
                 if imagen_subida is not None:
+                    ok, msg = validate_uploaded_file(imagen_subida)
+                    if not ok:
+                        st.error(f"Archivo no válido: {msg}")
+                        st.stop()
                     imagen_bytes = imagen_subida.read()
                     max_img_bytes = 2 * 1024 * 1024
                     if len(imagen_bytes) > max_img_bytes:
@@ -228,6 +233,10 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
                 raw_foto = None
                 if archivo_foto is not None:
+                    ok, msg = validate_uploaded_file(archivo_foto)
+                    if not ok:
+                        st.error(f"Archivo no válido: {msg}")
+                        st.stop()
                     raw_foto = archivo_foto.getvalue()
                 elif foto_cam is not None:
                     raw_foto = foto_cam.getvalue()

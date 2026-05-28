@@ -16,6 +16,7 @@ from core.nav_helpers import (
 )
 from core.user_feedback import render_carga_modulo_fallo, render_modulo_fallo_ui
 from core.view_helpers import aplicar_compactacion_movil_por_vista
+from core.seguridad import require_patient_access, safe_markdown, sanitize_for_log
 
 _VIEW_FN_CACHE: dict = {}
 
@@ -401,11 +402,11 @@ def _render_alertas_criticas(paciente_sel: str) -> None:
 
         st.markdown("##### 🔴 Alertas críticas del paciente")
         for titulo, detalle, color in alertas:
-            st.markdown(
-                f'<div class="alerta-critica" style="background:{color}15;border-left-color:{color};">'
-                f'<div><div class="alerta-titulo" style="color:{color};">{titulo}</div>'
-                f'<div class="alerta-detalle">{detalle}</div></div></div>',
-                unsafe_allow_html=True,
+            safe_markdown(
+                '<div class="alerta-critica" style="background:{color}15;border-left-color:{color};">'
+                '<div><div class="alerta-titulo" style="color:{color};">{titulo}</div>'
+                '<div class="alerta-detalle">{detalle}</div></div></div>',
+                color=color, titulo=titulo, detalle=detalle,
             )
         st.divider()
     except Exception as _e:
@@ -420,6 +421,10 @@ def render_current_view(tab_name, paciente_sel, mi_empresa, user, rol, view_conf
         log_event("app_navigation", "error: No tienes permisos para acceder a este modulo.")
         st.error("No tienes permisos para acceder a este modulo.")
         return
+
+    # Control de acceso: verificar que el usuario tenga permiso para ver este paciente
+    if paciente_sel:
+        require_patient_access(paciente_sel, user)
 
     # Alertas críticas del paciente (en todos los módulos)
     _render_alertas_criticas(paciente_sel)
