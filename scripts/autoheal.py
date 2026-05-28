@@ -501,7 +501,7 @@ class SmartScanner:
             if name not in used_names and name != "__future__":
                 f = Finding(rel, line_no, "LOW",
                             f"Import no usado: {import_line}",
-                            code=import_line, pattern="unused_import", auto_fix=False)
+                            code=import_line, pattern="unused_import", auto_fix=True)
                 if not self._is_known(f):
                     self.findings.append(f)
 
@@ -634,6 +634,9 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
         elif f.pattern == "unbound_local":
             # Eliminar el import local redundante
             new_line = re.sub(r'from core\.app_logging import log_event\s*', '', old_line)
+
+        elif f.pattern == "unused_import":
+            new_line = ""
 
         elif f.pattern == "unsafe_html":
             # Convertir st.markdown(f"...{var}...", unsafe_allow_html=True)
