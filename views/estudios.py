@@ -276,7 +276,7 @@ def render_estudios(paciente_sel, user, rol=None):
         log_event("estudios", f"error: {len(criticos_sin_respuesta)} estudio(s) critico(s) sin resultado >7d")
         st.error(
             f"🔴 {len(criticos_sin_respuesta)} estudio(s) crítico(s) sin resultado en más de 7 días: "
-            + " | ".join(f"{e.get('tipo','S/D')} ({e.get('fecha','')[:10]})" for e in criticos_sin_respuesta[:3])
+            + " | ".join(f"{e.get('tipo','S/D')} ({(e.get('fecha') or '')[:10]})" for e in criticos_sin_respuesta[:3])
         )
     elif pendientes:
         st.warning(f"🟡 {len(pendientes)} estudio(s) sin resultado cargado.")

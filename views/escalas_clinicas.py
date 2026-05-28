@@ -394,7 +394,7 @@ def render_escalas_clinicas(paciente_sel, user):
                 st.markdown(f"<div style='font-size:1.8rem;text-align:center;'>{ic['icono']}</div>", unsafe_allow_html=True)
                 st.metric(f"{e_key}", f"{r.get('puntaje', '?')} pts",
                           delta=r.get("interpretacion") or r.get("resumen", ""), delta_color="off")
-                st.caption(r.get("fecha", "")[:16])
+                st.caption((r.get("fecha") or "")[:16])
 
     df_hist = pd.DataFrame(registros)
     if not df_hist.empty and "escala" in df_hist.columns and "puntaje" in df_hist.columns:

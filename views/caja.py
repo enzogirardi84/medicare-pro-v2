@@ -234,7 +234,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             _trim_db_list("facturacion_db", 500)
                             with st.spinner("Guardando..."):
                                 guardar_datos(spinner=False)
-                            queue_toast(f"✅ ${monto_edit:,.2f} cobrado - {p.get('serv', '')[:30]}")
+                            queue_toast(f"✅ ${monto_edit:,.2f} cobrado - {(p.get('serv') or '')[:30]}")
                             st.rerun()
 
     with tabs_caja[2]:

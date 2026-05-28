@@ -184,9 +184,9 @@ def _render_consent_tab(mi_empresa, user):
         revocados = sum(1 for c in consents if c.get("revocado"))
         st.metric("Revocados", revocados)
     with col_vigentes:
-        vigentes = sum(1 for c in consents if c.get("fecha", "")[:10] >= hoy_str and not c.get("revocado"))
+        vigentes = sum(1 for c in consents if (c.get("fecha") or "")[:10] >= hoy_str and not c.get("revocado"))
         st.metric("Vigentes", vigentes)
-        vencidos = sum(1 for c in consents if c.get("fecha", "")[:10] < hoy_str and not c.get("revocado"))
+        vencidos = sum(1 for c in consents if (c.get("fecha") or "")[:10] < hoy_str and not c.get("revocado"))
         st.metric("Vencidos", vencidos)
 
     with st.expander("Verificar integridad de consentimientos", expanded=False):

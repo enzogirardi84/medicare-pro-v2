@@ -87,7 +87,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
         for c in reversed(cons_pac[-10:]):
             with st.container(border=True):
                 st.markdown(f"**{c.get('fecha', '?')}** — {c.get('profesional', 'S/D')}")
-                st.caption(c.get("observaciones", "")[:150])
+                st.caption((c.get("observaciones") or "")[:150])
     else:
         st.info("Sin documentos firmados.")
 

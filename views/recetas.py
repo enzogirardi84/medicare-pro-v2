@@ -167,7 +167,7 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
                             "_sql_id": ind.get("id", ""),
                             "paciente": paciente_sel,
                             "med": ind.get("medicamento", ""),
-                            "fecha": ind.get("fecha_indicacion", "")[:16].replace("T", " ") if ind.get("fecha_indicacion") else "",
+                            "fecha": (ind.get("fecha_indicacion") or "")[:16].replace("T", " "),
                             "estado_receta": ind.get("estado", "Activa"),
                             "estado_clinico": ind.get("estado", "Activa"),
                             "via": ind.get("via_administracion", ""),

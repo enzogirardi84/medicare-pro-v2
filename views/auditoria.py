@@ -258,7 +258,7 @@ def render_auditoria(mi_empresa, user):
     _local_checkins = [c for c in _local_checkins_raw if isinstance(c, dict)]
     _local_map = {}
     for _lc in _local_checkins:
-        _key = (_lc.get("paciente", ""), _lc.get("fecha_hora", "")[:16])
+        _key = (_lc.get("paciente", ""), (_lc.get("fecha_hora") or "")[:16])
         _local_map[_key] = _lc.get("profesional", "")
 
     if _empresa_uuid:

@@ -204,7 +204,7 @@ def render_dashboard(mi_empresa, rol):
             for _pac, _evos in sorted(_resultados.items()):
                 with st.expander(f"**{_pac}** ({len(_evos)} resultados)", key=f"dash_evos_{_pac}"):
                     for _evo in _evos[-10:]:  # último 10 por paciente
-                        _fecha = _evo.get("fecha", "")[:16]
+                        _fecha = (_evo.get("fecha") or "")[:16]
                         _texto_corto = (_evo.get("texto", "") or _evo.get("nota", "") or "")[:200]
                         st.caption(f"📅 {_fecha}")
                         st.markdown(f"_{_texto_corto}_")
@@ -254,7 +254,7 @@ def render_dashboard(mi_empresa, rol):
     if _pendientes:
         with st.expander(f"📋 Tareas pendientes ({len(_pendientes)})", expanded=False):
             for t in _pendientes[:10]:
-                st.caption(f"**{t.get('paciente', '?')}**: {t.get('tarea', '')[:80]}")
+                st.caption(f"**{t.get('paciente', '?')}**: {(t.get('tarea') or '')[:80]}")
 
     # ── Estado del último backup ─────────────────────────────────
     _ultimo_backup_ts = st.session_state.get("_ultimo_backup_ts", 0)

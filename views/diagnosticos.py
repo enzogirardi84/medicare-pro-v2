@@ -493,11 +493,11 @@ def render_diagnosticos(user=None):
             st.markdown(f'<div {SCROLL}>', unsafe_allow_html=True)
             for rec in errores:
                 eid = rec.get("id", "?")
-                ts = rec.get("timestamp", "?")[:19].replace("T", " ")
+                ts = (rec.get("timestamp") or "?")[:19].replace("T", " ")
                 mod = rec.get("module", "?")
                 sev = rec.get("severity", "?")
                 tipo = rec.get("type", "?")
-                msg = rec.get("message", "?")[:180]
+                msg = (rec.get("message") or "?")[:180]
                 cnt = rec.get("count", 1)
                 resuelto = rec.get("resolved", False)
 

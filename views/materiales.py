@@ -142,7 +142,7 @@ def render_materiales(paciente_sel, mi_empresa, user):
         _mc1, _mc2, _mc3 = st.columns(3)
         _mc1.metric("Total consumos", len(cons_paciente))
         _mc2.metric("Unidades usadas", _tot_unidades)
-        _mc3.metric("Último registro", _ultimo_c.get("fecha", "S/D")[:16])
+        _mc3.metric("Último registro", (_ultimo_c.get("fecha") or "S/D")[:16])
 
         # Top 3 insumos más usados
         from collections import Counter
