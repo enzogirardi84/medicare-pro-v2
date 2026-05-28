@@ -28,7 +28,7 @@ import sys
 import time
 import traceback
 from collections import defaultdict, Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -130,7 +130,7 @@ class FixMemory:
             "INSERT INTO fixes (file_path, line, severity, pattern_name, old_code, new_code, fixer, timestamp, commit_hash, category) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (file_path, line, severity, pattern, old_code[:200], new_code[:200],
-             fixer, datetime.now(datetime.UTC).isoformat(), commit_hash, category)
+             fixer, datetime.now(timezone.utc).isoformat(), commit_hash, category)
         )
         fix_id = cur.lastrowid
         conn.commit()
@@ -144,7 +144,7 @@ class FixMemory:
         cur = conn.execute(
             "INSERT INTO errors (error_type, error_msg, file_path, line, context, timestamp) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            (error_type, error_msg[:300], file_path, line, context[:500], datetime.now(datetime.UTC).isoformat())
+            (error_type, error_msg[:300], file_path, line, context[:500], datetime.now(timezone.utc).isoformat())
         )
         err_id = cur.lastrowid
         conn.commit()
@@ -160,7 +160,7 @@ class FixMemory:
             "tests_created, tests_passed, tests_failed, elapsed_seconds, commit_made, timestamp) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (total, crit, high, fixes, tests_created, passed, failed, elapsed, int(commit),
-             datetime.now(datetime.UTC).isoformat())
+             datetime.now(timezone.utc).isoformat())
         )
         conn.commit()
         conn.close()
@@ -169,7 +169,7 @@ class FixMemory:
         conn = self._connect()
         conn.execute(
             "UPDATE learned_patterns SET hit_count = hit_count + 1, last_hit = ? WHERE pattern_name = ?",
-            (datetime.now(datetime.UTC).isoformat(), pattern_name)
+            (datetime.now(timezone.utc).isoformat(), pattern_name)
         )
         conn.commit()
         conn.close()
@@ -181,8 +181,8 @@ class FixMemory:
             conn.execute(
                 "INSERT INTO learned_patterns (pattern_name, regex, fix_template, severity, source, "
                 "auto_fix, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
-                (name, regex, fix_template, severity, source,
-                 datetime.now(datetime.UTC).isoformat(), datetime.now(datetime.UTC).isoformat())
+                (name, regex[:500], fix_template[:500], severity, source[:200],
+                 datetime.now(timezone.utc).isoformat(), datetime.now(timezone.utc).isoformat())
             )
             conn.commit()
             conn.close()
@@ -253,7 +253,7 @@ class PatternLearner:
                 # Intentar extraer patrón regex de la diferencia
                 diff = PatternLearner._extract_pattern(old, new)
                 if diff:
-                    name = f"learned_{pattern}_{datetime.now(datetime.UTC).strftime('%H%M%S')}"
+                    name = f"learned_{pattern}_{datetime.now(timezone.utc).strftime('%H%M%S')}"
                     if memory.learn_pattern(name, diff["regex"], diff["fix"],
                                             severity="HIGH", source="auto_learn"):
                         learned += 1
@@ -284,8 +284,8 @@ class PatternLearner:
             # Buscar: try: ... except: pass  (silent catch)
             for m in re.finditer(r'except\s*(?:\w+\s*)?:\s*\n\s*pass', content):
                 name = f"silent_except_{pyfile.stem}"
-                if memory.learn_pattern(name, str(m.group()), severity="MEDIUM",
-                                        source=f"{pyfile.relative_to(REPO_ROOT)}:{m.start()}"):
+                src = str(pyfile.relative_to(REPO_ROOT)) + "_" + str(m.start())
+                if memory.learn_pattern(name, str(m.group()), severity="MEDIUM", source=src):
                     found += 1
 
         return found
@@ -391,6 +391,27 @@ class SmartScanner:
                                 code=line.strip(), pattern="unsafe_html")
                     if not self._is_known(f):
                         self.findings.append(f)
+
+    def scan_list_index_without_guard(self, rel: str, content: str, lines: list[str]):
+        """Detecta lista[0] sin verificar que la lista no está vacía."""
+        for i, line in enumerate(lines):
+            # Buscar pattern: variable[0] o variable[0].
+            m = re.search(r'(\w+)\[0\]', line)
+            if not m:
+                continue
+            var = m.group(1)
+            # Verificar si hay un guard cerca (dentro de los 5 lines anteriores)
+            guard_found = False
+            for j in range(max(0, i - 5), i):
+                if re.search(rf'if\s+{re.escape(var)}\b', lines[j]):
+                    guard_found = True
+                    break
+            if not guard_found and not line.strip().startswith("#"):
+                f = Finding(rel, i + 1, "HIGH",
+                            f"{var}[0] sin guard de lista vacía → crash si lista vacía",
+                            code=line.strip(), pattern="list_index_guard")
+                if not self._is_known(f):
+                    self.findings.append(f)
 
     def scan_subscript_loop(self, rel: str, content: str, lines: list[str]):
         for i, line in enumerate(lines):
@@ -688,6 +709,7 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
 
         scanner.scan_get_key_slice(rel, content, lines)
         scanner.scan_unbound_local(rel, content, lines)
+        scanner.scan_list_index_without_guard(rel, content, lines)
         scanner.scan_st_error_no_log(rel, content, lines)
         scanner.scan_unsafe_html(rel, content, lines)
         scanner.scan_subscript_loop(rel, content, lines)
