@@ -8,11 +8,20 @@ Permite a pacientes:
 - Ver próximos turnos
 - Comunicarse con el médico
 - Actualizar datos personales
+
+Seguridad:
+- Autenticación bcrypt (checkpw) con tasa de reintento limitada
+- Bloqueo tras 5 intentos fallidos por 15 minutos
+- Sesión en st.session_state con timeout de inactividad
+- Hash almacenado en detalles_pacientes_db["portal_password_hash"]
+- Cumplimiento Art. 7 Ley 25.326 (Datos Sensibles)
 """
 
 from __future__ import annotations
 
 import streamlit as st
+import bcrypt
+import time
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
@@ -21,6 +30,7 @@ from enum import Enum, auto
 from core.app_logging import log_event
 from core.audit_trail import audit_log, AuditEventType
 from core.document_manager import get_document_manager, DocumentType
+from core.seguridad import sanitize_for_log
 
 
 class PortalAccessLevel(Enum):
@@ -43,64 +53,107 @@ class PortalSession:
 
 class PatientPortal:
     """
-    Portal de acceso para pacientes.
+    Portal de acceso para pacientes con autenticación bcrypt.
     
-    NOTA: Este es un módulo para futura implementación.
-    Requiere:
-    - Autenticación de pacientes
-    - Sistema de mensajería
-    - Notificaciones push
+    Flujo de seguridad:
+    1. Busca paciente por DNI en detalles_pacientes_db
+    2. Verifica portal habilitado (portal_enabled)
+    3. Compara password con portal_password_hash via bcrypt.checkpw
+    4. Rate limiting: MAX_LOGIN_ATTEMPTS intentos, luego LOCKOUT_MINUTES bloqueo
+    5. Sesión en st.session_state["portal_session"]
     """
-    
+
+    MAX_LOGIN_ATTEMPTS = 5
+    LOCKOUT_MINUTES = 15
+
     def __init__(self):
         self._sessions: Dict[str, PortalSession] = {}
-    
+
+    def _check_lockout(self, patient_dni: str) -> bool:
+        lockout_key = f"_portal_lockout_{patient_dni}"
+        bloqueado_hasta = st.session_state.get(lockout_key, 0.0)
+        if time.time() < bloqueado_hasta:
+            restante = int(bloqueado_hasta - time.time())
+            log_event("patient_portal", f"bloqueado:{sanitize_for_log(patient_dni)}:{restante}s")
+            return True
+        return False
+
+    def _register_failed_attempt(self, patient_dni: str) -> int:
+        attempts_key = f"_portal_attempts_{patient_dni}"
+        attempts = st.session_state.get(attempts_key, 0) + 1
+        st.session_state[attempts_key] = attempts
+        if attempts >= self.MAX_LOGIN_ATTEMPTS:
+            lockout_key = f"_portal_lockout_{patient_dni}"
+            st.session_state[lockout_key] = time.time() + (self.LOCKOUT_MINUTES * 60)
+            log_event("patient_portal", f"bloqueo_auto:{sanitize_for_log(patient_dni)}:{self.LOCKOUT_MINUTES}min")
+        return attempts
+
+    def _reset_attempts(self, patient_dni: str):
+        st.session_state.pop(f"_portal_attempts_{patient_dni}", None)
+        st.session_state.pop(f"_portal_lockout_{patient_dni}", None)
+
     def authenticate_patient(self, patient_dni: str, password: str) -> Optional[PortalSession]:
-        """
-        Autentica un paciente para acceder al portal.
-        
-        En producción:
-        - Verificar DNI + contraseña
-        - Enviar 2FA si es primer login
-        - Registrar intentos fallidos
-        """
+        if not patient_dni or not password:
+            return None
+
+        if self._check_lockout(patient_dni):
+            st.error(f"🔒 Cuenta temporalmente bloqueada por múltiples intentos. Espere {self.LOCKOUT_MINUTES} minutos.")
+            return None
+
         detalles = st.session_state.get("detalles_pacientes_db", {})
-        pacientes = {}
+        paciente = None
         for pid, pdata in detalles.items():
             dni = pdata.get("dni", "")
-            if dni:
-                pacientes[dni] = {"id": pid, **pdata}
-        
-        if patient_dni not in pacientes:
+            if dni and str(dni).strip() == str(patient_dni).strip():
+                paciente = {"id": pid, **pdata}
+                break
+
+        if not paciente:
+            log_event("patient_portal", f"dni_no_encontrado:{sanitize_for_log(patient_dni)}")
             return None
-        
-        paciente = pacientes[patient_dni]
-        
-        # Verificar si tiene acceso habilitado
+
         if not paciente.get("portal_enabled", False):
-            log_event("patient_portal", "error: Acceso al portal no habilitado")
+            log_event("patient_portal", f"portal_no_habilitado:{sanitize_for_log(patient_dni)}")
             st.error("🔒 Acceso al portal no habilitado. Contacte a recepción.")
             return None
-        
-        # Crear sesión
+
+        stored_hash = paciente.get("portal_password_hash", "")
+        if not stored_hash:
+            log_event("patient_portal", f"sin_hash:{sanitize_for_log(patient_dni)}")
+            st.error("❌ No se configuró una contraseña. Solicite en recepción.")
+            return None
+
+        try:
+            password_valid = bcrypt.checkpw(
+                password.encode("utf-8"),
+                stored_hash.encode("utf-8")
+            )
+        except Exception as e:
+            log_event("patient_portal", f"bcrypt_error:{sanitize_for_log(str(e))}")
+            st.error("❌ Error interno al verificar la contraseña.")
+            return None
+
+        if not password_valid:
+            attempts = self._register_failed_attempt(patient_dni)
+            restantes = self.MAX_LOGIN_ATTEMPTS - attempts
+            st.error(f"❌ DNI o contraseña incorrectos. Intentos restantes: {max(0, restantes)}")
+            log_event("patient_portal", f"fallo:{sanitize_for_log(patient_dni)}:intento_{attempts}")
+            return None
+
+        self._reset_attempts(patient_dni)
+        nombre = paciente.get("nombre", paciente.get("id", patient_dni))
+        apellido = paciente.get("apellido", "")
+
         session = PortalSession(
             patient_id=paciente.get("id", patient_dni),
-            patient_name=f"{paciente['nombre']} {paciente['apellido']}",
+            patient_name=f"{nombre} {apellido}".strip(),
             access_level=PortalAccessLevel.STANDARD,
             login_time=datetime.now(),
             last_activity=datetime.now()
         )
-        
+
         self._sessions[paciente.get("id", patient_dni)] = session
-        
-        audit_log(
-            AuditEventType.LOGIN_SUCCESS,
-            resource_type="patient_portal",
-            resource_id=patient_dni,
-            action="LOGIN",
-            description=f"Patient {session.patient_name} logged into portal"
-        )
-        
+        log_event("patient_portal", f"login_ok:{sanitize_for_log(patient_dni)}")
         return session
     
     def render_portal_landing(self):
@@ -350,34 +403,34 @@ class PatientPortal:
         st.header("👤 Mis Datos Personales")
         
         detalles = st.session_state.get("detalles_pacientes_db", {})
-        pacientes = {}
-        for pid, pdata in detalles.items():
-            pacientes[pid] = {"id": pid, **pdata}
         paciente = None
-        
-        # Buscar paciente por ID
-        for dni, p in pacientes.items():
-            if p.get("id") == session.patient_id:
-                paciente = p
+        pid_paciente = None
+        for pid, pdata in detalles.items():
+            if pdata.get("dni") and pdata.get("id") == session.patient_id:
+                paciente = pdata
+                pid_paciente = pid
                 break
+        if not paciente:
+            for pid, pdata in detalles.items():
+                if pdata.get("id") == session.patient_id:
+                    paciente = pdata
+                    pid_paciente = pid
+                    break
         
         if not paciente:
             log_event("patient_portal", "error: No se encontraron datos del paciente")
             st.error("❌ No se encontraron datos del paciente")
             return
         
-        # Mostrar datos (solo lectura en portal)
         col1, col2 = st.columns(2)
-        
         with col1:
             st.text_input("Nombre", value=paciente.get("nombre", ""), disabled=True)
             st.text_input("Apellido", value=paciente.get("apellido", ""), disabled=True)
             st.text_input("DNI", value=paciente.get("dni", ""), disabled=True)
-            st.date_input("Fecha de Nacimiento", 
-                         value=datetime.strptime(paciente.get("fecha_nacimiento", "01/01/1900"), "%d/%m/%Y").date() 
-                         if paciente.get("fecha_nacimiento") else None, 
-                         disabled=True)
-        
+            st.date_input("Fecha de Nacimiento",
+                value=datetime.strptime(paciente.get("fecha_nacimiento", "01/01/1900"), "%d/%m/%Y").date()
+                if paciente.get("fecha_nacimiento") else None,
+                disabled=True)
         with col2:
             st.text_input("Teléfono", value=paciente.get("telefono", ""), disabled=True)
             st.text_input("Email", value=paciente.get("email", ""), disabled=True)
@@ -386,17 +439,36 @@ class PatientPortal:
         
         st.info("ℹ️ Para actualizar sus datos, contacte a recepción.")
         
-        # Cambiar contraseña
+        # Cambiar contraseña con bcrypt
         st.divider()
         st.subheader("🔐 Seguridad")
-        
         with st.expander("Cambiar contraseña"):
-            st.text_input("Contraseña actual", type="password")
-            st.text_input("Nueva contraseña", type="password")
-            st.text_input("Confirmar nueva contraseña", type="password")
-            
-            if st.button("Actualizar contraseña"):
-                st.info("Función en desarrollo")
+            current_pw = st.text_input("Contraseña actual", type="password", key="portal_current_pw")
+            new_pw = st.text_input("Nueva contraseña (mín. 8 caracteres)", type="password", key="portal_new_pw")
+            confirm_pw = st.text_input("Confirmar nueva contraseña", type="password", key="portal_confirm_pw")
+            if st.button("Actualizar contraseña", type="primary", key="portal_change_pw"):
+                stored_hash = paciente.get("portal_password_hash", "")
+                if not stored_hash:
+                    st.error("❌ No se puede cambiar: contraseña no configurada. Contacte a recepción.")
+                elif not bcrypt.checkpw(current_pw.encode("utf-8"), stored_hash.encode("utf-8")):
+                    log_event("patient_portal", "error: password_actual_incorrecta")
+                    st.error("❌ La contraseña actual no es correcta.")
+                elif len(new_pw) < 8:
+                    st.error("❌ La nueva contraseña debe tener al menos 8 caracteres.")
+                elif new_pw != confirm_pw:
+                    st.error("❌ Las contraseñas nuevas no coinciden.")
+                else:
+                    try:
+                        new_hash = bcrypt.hashpw(new_pw.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+                        if pid_paciente and pid_paciente in st.session_state.get("detalles_pacientes_db", {}):
+                            st.session_state["detalles_pacientes_db"][pid_paciente]["portal_password_hash"] = new_hash
+                            from core.database import guardar_datos
+                            guardar_datos(spinner=True)
+                            log_event("patient_portal", "password_actualizada_ok")
+                            st.success("✅ Contraseña actualizada correctamente.")
+                    except Exception as e:
+                        log_event("patient_portal", f"error_hash:{sanitize_for_log(str(e))}")
+                        st.error("❌ Error al actualizar la contraseña.")
     
     def _render_messages(self, session: PortalSession):
         """Renderiza sistema de mensajes."""

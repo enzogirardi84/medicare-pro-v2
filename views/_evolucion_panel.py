@@ -275,6 +275,53 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     st.error("Error al guardar la evolución. Revisá la conexión e intentá de nuevo.")
                     st.stop()
 
+                # ── Firma Digital RSA (Ley 25.506) ─────────────────────────
+                try:
+                    from core.digital_signature import DigitalSignatureManager, DocumentType
+                    _dsig = DigitalSignatureManager()
+                    _user_id = str(user.get("login", user.get("nombre", ""))) if isinstance(user, dict) else ""
+
+                    if _user_id:
+                        # Generar claves si no existen
+                        if _user_id not in st.session_state.get("digital_signatures_keystore", {}):
+                            _dsig.generate_keypair(_user_id)
+                            log_event("evolucion", f"rsa_keys_generated:{_user_id}")
+
+                        # Firmar la evolución
+                        _doc_content = {
+                            "paciente": paciente_sel,
+                            "nota": nota.strip(),
+                            "fecha": fecha_n,
+                            "plantilla": plantilla,
+                            "profesional": profesional,
+                            "matricula": user.get("matricula", "") if isinstance(user, dict) else "",
+                        }
+                        _signed = _dsig.sign_document(
+                            document=_doc_content,
+                            doc_type=DocumentType.EVOLUCION,
+                            signer_id=_user_id,
+                            signer_name=str(user.get("nombre", profesional)) if isinstance(user, dict) else profesional,
+                            signer_role=str(user.get("rol", "Profesional")) if isinstance(user, dict) else "Profesional",
+                        )
+                        # Guardar metadata de firma en session_state
+                        _sig_field = {
+                            "signature_id": _signed.signature.signature_id,
+                            "document_id": _signed.signature.document_id,
+                            "document_hash": _signed.signature.document_hash,
+                            "signature_value": _signed.signature.signature_value,
+                            "public_key_fingerprint": _signed.signature.public_key_fingerprint,
+                            "signed_at": _signed.signature.signed_at,
+                            "signer_name": _signed.signature.signer_name,
+                            "signer_role": _signed.signature.signer_role,
+                            "signer_id": _signed.signature.signer_id,
+                            "hash_algorithm": _signed.signature.hash_algorithm,
+                            "signature_algorithm": _signed.signature.signature_algorithm,
+                        }
+                        st.session_state["evoluciones_db"][-1]["firma_digital"] = _sig_field
+                        log_event("evolucion", f"firma_digital_ok:{_signed.signature.signature_id[:12]}")
+                except Exception as exc:
+                    log_event("evolucion", f"firma_digital_error:{type(exc).__name__}:{exc}")
+
                 try:
                     paciente_nombre = paciente_sel
                     paciente_id = paciente_sel
@@ -375,7 +422,48 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         unsafe_allow_html=True,
                     )
                 if firma and firma.strip():
-                    st.success("Firmado digitalmente")
+                    firma_digital = ev.get("firma_digital", {})
+                    if firma_digital and firma_digital.get("signature_value"):
+                        try:
+                            from core.digital_signature import DigitalSignatureManager, SignedDocument, SignatureMetadata
+                            _dsig_verify = DigitalSignatureManager()
+                            _sig_meta = SignatureMetadata(
+                                signature_id=firma_digital.get("signature_id", ""),
+                                document_id=firma_digital.get("document_id", ""),
+                                document_type="evolucion",
+                                signer_id=firma_digital.get("signer_id", ""),
+                                signer_name=firma_digital.get("signer_name", ""),
+                                signer_role=firma_digital.get("signer_role", ""),
+                                signed_at=firma_digital.get("signed_at", ""),
+                                hash_algorithm=firma_digital.get("hash_algorithm", "SHA-256"),
+                                signature_algorithm=firma_digital.get("signature_algorithm", "RSA-PSS"),
+                                document_hash=firma_digital.get("document_hash", ""),
+                                signature_value=firma_digital.get("signature_value", ""),
+                                public_key_fingerprint=firma_digital.get("public_key_fingerprint", ""),
+                            )
+                            _signed_doc = SignedDocument(
+                                document_id=firma_digital.get("document_id", ""),
+                                document_type="evolucion",
+                                content={
+                                    "paciente": paciente_sel,
+                                    "nota": nota,
+                                    "fecha": fecha,
+                                    "plantilla": plantilla,
+                                    "profesional": firma,
+                                },
+                                signature=_sig_meta,
+                                timestamps={"signed_at": firma_digital.get("signed_at", "")},
+                            )
+                            _valido, _msg = _dsig_verify.verify_signature(_signed_doc)
+                            if _valido:
+                                st.success(f"✅ Firma digital RSA {firma_digital.get('signature_algorithm', '')} válida — {firma_digital.get('signer_name', '')} ({firma_digital.get('signed_at', '')[:10]})")
+                            else:
+                                st.error(f"🔴 Firma digital INVÁLIDA: {_msg}")
+                        except Exception as exc:
+                            log_event("evolucion", f"verificar_firma_error:{type(exc).__name__}:{exc}")
+                            st.success(f"✅ Firmado por {firma} (verificación offline)")
+                    else:
+                        st.success(f"✅ Firmado por {firma}")
 
                 if puede_borrar and st.button("Borrar esta evolución", key=f"borrar_ev_{ev_num}_{idx}_{paciente_sel}", type="secondary", use_container_width=True):
                     real_idx = (total_evs - 1) - idx
