@@ -525,7 +525,7 @@ def render_historial_prescripciones(paciente_sel, mi_empresa, user, es_movil, re
                     estado_arch = (r.get("estado_receta") or "Activa").replace(" ", "_")
                     nombre_arch = (
                         f"Receta_Legal_{paciente_sel.split(' - ')[0].replace(' ', '_')}_"
-                        f"{r(f"{r.get('fecha') or '')[:10].replace('/','')}_{ estado_arch}.pdf"
+                        f"{(r.get('fecha') or '')[:10].replace('/','')}_{ estado_arch}.pdf"
                     )
                     action_container.download_button(
                         "Descargar PDF legal", data=pdf_bytes, file_name=nombre_arch,

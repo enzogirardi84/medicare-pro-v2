@@ -225,7 +225,7 @@ def _render_consent_tab(mi_empresa, user):
             rev_pac = st.selectbox("Seleccionar paciente", cons_pacientes, key="rev_cons_pac")
             cons_pac_rev = [c for c in consents if c.get("paciente") == rev_pac and not c.get("revocado")]
             if cons_pac_rev:
-                rev_opts = {f"{c(rev_opts = {f"{c.get('fecha') or '')[:10]} - {c.get('firmante', '')}": c for c in cons_pac_rev}
+                rev_opts = {f"{(c.get('fecha') or '')[:10]} - {c.get('firmante', '')}": c for c in cons_pac_rev}
                 rev_sel = st.selectbox("Seleccionar consentimiento", list(rev_opts.keys()), key="rev_cons_sel")
                 rev_motivo = st.text_area("Motivo de revocacion", placeholder="Describir el motivo...", key="rev_motivo")
                 if st.button("Revocar consentimiento", type="primary", key="btn_revoke", use_container_width=True):
@@ -265,7 +265,7 @@ def _render_audit_trail_tab(mi_empresa, user):
         show = st.number_input("Ultimos N eventos", min_value=5, max_value=200, value=20)
         df = [
             {
-                "Timestamp": e("Timestamp": e.get("timestamp") or "")[:19] if isinstance(e.get("timestamp", ""), str) else "",
+                "Timestamp": (e.get("timestamp") or "")[:19] if isinstance(e.get("timestamp", ""), str) else "",
                 "Evento": e.get("event_type", ""),
                 "Usuario": e.get("user_id", ""),
                 "Accion": e.get("action", ""),

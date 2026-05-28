@@ -307,7 +307,7 @@ def _obtener_supabase_signos_vitales(paciente_id: str) -> List[Dict]:
             resultados = []
             for r in response.data:
                 resultados.append({
-                    "fecha": r("fecha": r.get('fecha_registro') or '')[:16].replace('T', ' '),
+                    "fecha": (r.get('fecha_registro') or '')[:16].replace('T', ' '),
                     "ta": r.get('tension_arterial', ''),
                     "fc": r.get('frecuencia_cardiaca', ''),
                     "fr": r.get('frecuencia_respiratoria', ''),

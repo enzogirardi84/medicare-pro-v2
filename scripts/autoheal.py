@@ -393,13 +393,22 @@ class SmartScanner:
                         self.findings.append(f)
 
     def scan_copy_paste_error(self, rel: str, content: str, lines: list[str]):
-        """Detecta patrones de copy-paste: variable(keyword = variable.get(...))"""
+        """Detecta patrones de copy-paste: variable(keyword = variable.get(...))
+        y variable(prompt += f"...{variable.get(...)"""
         for i, line in enumerate(lines):
             m = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*\1\.', line)
             if m:
                 f = Finding(rel, i + 1, "CRITICAL",
                             f"Copy-paste error: {m.group(1)}(...) mal formado → (variable.get(...))",
-                            code=line.strip(), pattern="copy_paste_error", auto_fix=False)
+                            code=line.strip(), pattern="copy_paste_error", auto_fix=True)
+                if not self._is_known(f):
+                    self.findings.append(f)
+            # Also detect: variable(prompt += f"...{variable.get(...)
+            m2 = re.search(r"(\w+)\s*\(\s*\w+\s*\+?=\s*f\".*?\{\1\.get\(", line)
+            if m2:
+                f = Finding(rel, i + 1, "CRITICAL",
+                            f"Copy-paste error: {m2.group(1)}(f-string...) con duplicación de variable",
+                            code=line.strip(), pattern="copy_paste_error_fstring", auto_fix=True)
                 if not self._is_known(f):
                     self.findings.append(f)
 
@@ -485,11 +494,23 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
                         f"({var_part}.get('{key}') or '{default}')[:{count}]",
                     )
 
-        elif f.pattern == "copy_paste_error":
-            # Fix: variable(keyword = variable.get(...)) → (variable.get(...))
-            m = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*(\1\.get\([^)]+\))\s*\)\s*\[:', old_line)
-            if m:
-                new_line = old_line.replace(f"{m.group(1)}({m.group(2)})", f"({m.group(2)})")
+        elif f.pattern in ("copy_paste_error", "copy_paste_error_fstring"):
+            # Fix patterns:
+            # 1. variable(keyword = variable.get(...)) → (variable.get(...))
+            # 2. variable(prompt += f"...{variable.get(...) → (variable.get(...)
+            m1 = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*(\1\.get\([^)]+\))\s*\)\s*\[:', old_line)
+            if m1:
+                new_line = old_line.replace(f"{m1.group(1)}({m1.group(2)})", f"({m1.group(2)})")
+            else:
+                m2 = re.search(r"(\w+)\s*\(\s*(\w+\s*\+?=\s*f\".*?\{)\1\.", old_line)
+                if m2:
+                    new_line = re.sub(
+                        rf"{re.escape(m2.group(1))}\(\s*{re.escape(m2.group(2))}",
+                        m2.group(2),
+                        old_line
+                    )
+                    # Also remove trailing orphaned content
+                    new_line = re.sub(r'\}\s*\)', '}', new_line)
 
         elif f.pattern == "unbound_local":
             # Eliminar el import local redundante

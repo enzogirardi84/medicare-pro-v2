@@ -174,4 +174,4 @@ def render_errores():
 
     for e in errors:
         with st.container(border=True):
-            st.caption(f"**{e.get('level', '?')}** — {e(st.caption(f"**{e.get('message') or '')[:200]}")
+            st.caption(f"**{e.get('level', '?')}** — {(e.get('message') or '')[:200]}")

@@ -430,7 +430,7 @@ def render_pending_data_alert(
         
         # Listar operaciones
         for i, op in enumerate(operations[:5]):  # Mostrar máximo 5
-            with st.expander(f"📋 {op.get('type', 'Operación')} - {op(with st.expander(f"📋 {op.get('timestamp') or 'Sin fecha')[:10]}", expanded=False):
+            with st.expander(f"📋 {op.get('type', 'Operación')} - {(op.get('timestamp') or 'Sin fecha')[:10]}", expanded=False):
                 st.json(op)
         
         if len(operations) > 5:

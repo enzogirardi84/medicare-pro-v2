@@ -321,7 +321,7 @@ def render_estudios(paciente_sel, user, rol=None):
         for est in reversed(estudios_pac[-200:]):
             label = f"{est.get('fecha', 'S/D')} - {est.get('tipo', 'Sin tipo')}"
             if est.get("detalle"):
-                label += f" | {est(label += f" | {est.get('detalle') or '')[:50]}..."
+                label += f" | {(est.get('detalle') or '')[:50]}..."
             opciones.append((label, est))
 
         estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
