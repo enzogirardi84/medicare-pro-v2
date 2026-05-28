@@ -313,13 +313,16 @@ def _render_config_tab():
 # ═══════════════════════════════════════════════════════════════════════
 
 def _query(sql: str):
-    import sqlite3
-    if not DB_PATH.exists():
+    try:
+        import sqlite3
+        if not DB_PATH.exists():
+            return []
+        conn = sqlite3.connect(str(DB_PATH))
+        rows = conn.execute(sql).fetchall()
+        conn.close()
+        return rows
+    except sqlite3.OperationalError:
         return []
-    conn = sqlite3.connect(str(DB_PATH))
-    rows = conn.execute(sql).fetchall()
-    conn.close()
-    return rows
 
 
 def _get_scan_count() -> int:
