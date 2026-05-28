@@ -63,26 +63,18 @@ def render_financial_dashboard():
     st.header("💰 Dashboard Financiero")
     
     # Período de análisis
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
+    from core.seguridad import responsive_columns
+    _c = responsive_columns(["Periodo", "Desde", "Hasta"])
+    with _c[0]:
         periodo = st.selectbox(
             "Período",
-            options=["Hoy", "Esta semana", "Este mes", "Últimos 3 meses", "Este año", "Personalizado"],
+            options=["Hoy", "Esta semana", "Este mes", "Ultimos 3 meses", "Este ano", "Personalizado"],
             index=2
         )
-    
-    with col2:
-        if periodo == "Personalizado":
-            fecha_desde = st.date_input("Desde", value=date.today() - timedelta(days=30))
-        else:
-            fecha_desde = calculate_period_start(periodo)
-    
-    with col3:
-        if periodo == "Personalizado":
-            fecha_hasta = st.date_input("Hasta", value=date.today())
-        else:
-            fecha_hasta = date.today()
+    with _c[1]:
+        fecha_desde = st.date_input("Desde", value=date.today() - timedelta(days=30)) if periodo == "Personalizado" else calculate_period_start(periodo)
+    with _c[2]:
+        fecha_hasta = st.date_input("Hasta", value=date.today()) if periodo == "Personalizado" else date.today()
     
     # Obtener datos financieros
     facturacion = st.session_state.get("facturacion_db", [])
