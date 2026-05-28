@@ -284,6 +284,7 @@ def _render_scanner_tab():
         ("⚡ PERF", "Regresiones", "Tiempo de escaneo >1.5x historico", "Alerta"),
         ("🛡️ XSS", "Auto-fix XSS", "Agrega escape() a f-strings peligrosos", "Auto-fix"),
         ("✨ AUTO", "Black formatter", "Formateo automatico post-fix", "Auto-formato"),
+        ("🧠 LEARN", "ErrorLearner", "Aprende de errores en vivo + commits humanos", "Auto-aprendizaje"),
     ]
     for sev, name, desc, action in scanners:
         st.caption(f"{sev} **{name}**: {desc} ({action})")
