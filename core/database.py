@@ -335,7 +335,6 @@ def _db_keys():
         "vacunacion_db",
         "turnos_online_db",
         "recetas_db",
-        "settings_db",
         "tareas_db",
     ]
 
