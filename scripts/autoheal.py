@@ -1,16 +1,20 @@
-"""AutoHeal v2 — Sistema Autónomo Inteligente con Memoria y Auto-aprendizaje.
+"""AutoHeal v3 — Sistema Autónomo Inteligente con Memoria, Auto-aprendizaje,
+Análisis de Complejidad, Detección de Regresiones y Monitor de Rendimiento.
 
 Arquitectura:
   - Memoria persistente SQLite: cada fix, error y patrón aprendido se guarda
   - Aprendizaje continuo: analiza el historial de fixes para detectar nuevos patrones
   - Monitor en tiempo real: captura errores de Streamlit/Supabase y los corrige al instante
   - Auto-mejora: refactoriza código basado en patrones históricos
+  - Análisis de complejidad ciclomática: detecta funciones demasiado complejas
+  - Detección de regresiones: compara tiempos de escaneo y alerta si aumentan
   - Commits automáticos descriptivos
 
 Uso:
   python scripts/autoheal.py --daemon              # Modo eterno con memoria
-  python scripts/autoheal.py --learn path/          # Aprender de un directorio
-  python scripts/autoheal.py --history              # Ver historial de fixes
+  python scripts/autoheal.py --scan                # Escaneo único
+  python scripts/autoheal.py --history             # Ver historial de fixes
+  python scripts/autoheal.py --perf                # Ver métricas de rendimiento
 """
 from __future__ import annotations
 
@@ -513,6 +517,37 @@ class SmartScanner:
                 if not self._is_known(f):
                     self.findings.append(f)
 
+    def scan_complexity(self, rel: str, content: str, lines: list[str]):
+        """Detecta funciones con alta complejidad ciclomatica."""
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            # Contar ramificaciones (if, elif, for, while, except, and, or)
+            branches = 0
+            for child in ast.walk(node):
+                if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, ast.ExceptHandler)):
+                    branches += 1
+                elif isinstance(child, ast.BoolOp):
+                    branches += len(child.values) - 1
+
+            # Contar lineas
+            end_line = node.end_lineno or node.lineno
+            line_count = end_line - node.lineno + 1
+
+            score = branches + line_count // 20
+            if score > 15:
+                f = Finding(rel, node.lineno, "MEDIUM",
+                            f"Alta complejidad: '{node.name}' ({branches} ramas, {line_count} lineas, score={score})",
+                            code=lines[node.lineno - 1].strip() if node.lineno <= len(lines) else "",
+                            pattern="high_complexity", auto_fix=False)
+                if not self._is_known(f):
+                    self.findings.append(f)
+
     def _find_func(self, lines: list[str], idx: int) -> str:
         for i in range(idx, -1, -1):
             m = re.match(r'def\s+(\w+)', lines[i])
@@ -736,6 +771,69 @@ def smart_commit(memory: FixMemory, fixes: int, tests_created: int) -> bool:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  DETECTOR DE REGRESIONES DE RENDIMIENTO
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def check_performance_regression(memory: FixMemory) -> dict:
+    """Analiza scan_history para detectar regresiones de rendimiento.
+    
+    Returns:
+        Dict con alertas de rendimiento.
+    """
+    alerts = {}
+    conn = memory._connect()
+    try:
+        # Comparar ultimos 10 scans vs los 10 anteriores
+        recent = conn.execute(
+            "SELECT elapsed_seconds FROM scan_history ORDER BY id DESC LIMIT 10"
+        ).fetchall()
+        older = conn.execute(
+            "SELECT elapsed_seconds FROM scan_history ORDER BY id DESC LIMIT 10 OFFSET 10"
+        ).fetchall()
+
+        if len(recent) >= 5 and len(older) >= 5:
+            recent_avg = sum(r[0] for r in recent) / len(recent)
+            older_avg = sum(r[0] for r in older) / len(older)
+
+            if older_avg > 0:
+                ratio = recent_avg / older_avg
+                if ratio > 1.5:
+                    alerts["scan_time"] = {
+                        "severity": "ALTA",
+                        "message": f"Tiempo de escaneo aumento {ratio:.1f}x: {older_avg:.1f}s -> {recent_avg:.1f}s",
+                        "recent_avg": recent_avg,
+                        "older_avg": older_avg,
+                    }
+                elif ratio > 1.2:
+                    alerts["scan_time"] = {
+                        "severity": "MEDIA",
+                        "message": f"Tiempo de escaneo aumento {ratio:.1f}x: {older_avg:.1f}s -> {recent_avg:.1f}s",
+                        "recent_avg": recent_avg,
+                        "older_avg": older_avg,
+                    }
+
+        # Verificar cantidad de hallazgos creciente
+        recent_findings = conn.execute(
+            "SELECT total_findings FROM scan_history ORDER BY id DESC LIMIT 10"
+        ).fetchall()
+        if len(recent_findings) >= 5:
+            trend = [r[0] for r in recent_findings]
+            if trend[0] > trend[-1] * 1.3:
+                alerts["findings_trend"] = {
+                    "severity": "MEDIA",
+                    "message": f"Los hallazgos aumentaron: {trend[-1]} -> {trend[0]} (ultimos 10 scans)",
+                }
+
+    except Exception as exc:
+        log_event("perf", f"regression_check_error:{type(exc).__name__}")
+    finally:
+        conn.close()
+
+    return alerts
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  GENERADOR INTELIGENTE DE TESTS
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -836,11 +934,19 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
         scanner.scan_subscript_loop(rel, content, lines)
         scanner.scan_unused_imports(rel, content, lines)
         scanner.scan_dead_functions(rel, content, lines)
+        scanner.scan_complexity(rel, content, lines)
 
     elapsed = time.time() - t0
     crit = sum(1 for f in scanner.findings if f.severity == "CRITICAL")
     high = sum(1 for f in scanner.findings if f.severity == "HIGH")
     medium = sum(1 for f in scanner.findings if f.severity == "MEDIUM")
+
+    # 1b. CHECK PERFORMANCE REGRESSION
+    perf_alerts = check_performance_regression(memory)
+    if perf_alerts:
+        for key, alert in perf_alerts.items():
+            print(f"  ⚡ Rendimiento: {alert['message']}")
+            log_event("autoheal_perf", f"{key}:{alert['message'][:100]}")
 
     # 2. CHECK LOGS (real-time monitoring)
     log_errors = monitor.check_logs()
@@ -916,6 +1022,40 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
 # ═══════════════════════════════════════════════════════════════════════
 
 
+def _print_perf(memory: FixMemory):
+    """Muestra metricas de rendimiento de escaneos."""
+    conn = memory._connect()
+    print(f"\n📈 AutoHeal v3 — Rendimiento")
+    print(f"{'=' * 50}")
+    try:
+        # Promedio por intervalo
+        rows = conn.execute(
+            "SELECT elapsed_seconds FROM scan_history ORDER BY id"
+        ).fetchall()
+        if rows:
+            times = [r[0] for r in rows]
+            print(f"  Escaneos totales:   {len(times)}")
+            print(f"  Tiempo promedio:    {sum(times)/len(times):.2f}s")
+            print(f"  Tiempo minimo:      {min(times):.2f}s")
+            print(f"  Tiempo maximo:      {max(times):.2f}s")
+            if len(times) >= 10:
+                print(f"  Ultimos 10 vs prev: {sum(times[-10:])/10:.2f}s vs {sum(times[-20:-10])/10:.2f}s")
+
+        # Tendencias de hallazgos
+        findings = conn.execute(
+            "SELECT total_findings, critical_count, high_count FROM scan_history ORDER BY id DESC LIMIT 20"
+        ).fetchall()
+        if findings:
+            avg_crit = sum(f[1] for f in findings) / len(findings)
+            avg_high = sum(f[2] for f in findings) / len(findings)
+            print(f"  Criticos promedio:  {avg_crit:.1f}")
+            print(f"  Altos promedio:     {avg_high:.1f}")
+    except Exception as exc:
+        print(f"  Error: {exc}")
+    conn.close()
+    print()
+
+
 def print_stats(memory: FixMemory):
     stats = memory.get_stats()
     print(f"\n📊 AutoHeal v2 — Estadísticas")
@@ -945,6 +1085,7 @@ def main():
     parser.add_argument("--learn", action="store_true", help="Aprender nuevos patrones")
     parser.add_argument("--history", action="store_true", help="Mostrar historial")
     parser.add_argument("--stats", action="store_true", help="Mostrar estadísticas")
+    parser.add_argument("--perf", action="store_true", help="Mostrar metricas de rendimiento")
     parser.add_argument("--no-commit", action="store_true", help="No auto-committear")
     args = parser.parse_args()
 
@@ -954,6 +1095,10 @@ def main():
 
     if args.stats or args.history:
         print_stats(memory)
+        return
+
+    if args.perf:
+        _print_perf(memory)
         return
 
     if args.daemon:
