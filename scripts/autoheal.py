@@ -643,13 +643,7 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
         elif f.pattern == "st_error_no_log":
             _mod = Path(f.file_path).stem
             _es = " " * (len(old_line) - len(old_line.lstrip()))
-            new_line = f"{_es}log_event(\"{_mod}\", \"ui_error:{old_line.strip()[:60]}\")\n" + old_line
-
-        elif f.pattern == "missing_docstring":
-            _es = " " * (len(old_line) - len(old_line.lstrip()))
-            _fn_match = re.search(r'def\s+(\w+)', old_line)
-            _fn_name = _fn_match.group(1) if _fn_match else "funcion"
-            new_line = old_line + f'\n{_es}"""{_fn_name.capitalize().replace("_", " ")}."""\n{_es}"""'
+            new_line = f"{_es}log_event('{_mod}', 'error:{old_line.strip()[:60]}')\n" + old_line
 
         elif f.pattern == "unsafe_html":
             # Convertir st.markdown(f"...{var}...", unsafe_allow_html=True)

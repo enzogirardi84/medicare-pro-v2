@@ -273,7 +273,7 @@ def _render_scanner_tab():
         ("🔴 CRITICAL", "UnboundLocalError", "log_event antes de import local", "Auto-fix"),
         ("🟠 HIGH", "NoneType crash", ".get(key, default)[:N] sin guard", "Auto-fix"),
         ("🟠 HIGH", "XSS risk", "unsafe_allow_html sin html.escape()", "Deteccion"),
-        ("🟠 HIGH", "st.error sin log_event", "Falta log_event() antes de st.error()", "Deteccion"),
+        ("🟠 HIGH", "st.error sin log_event", "Falta log_event() antes de st.error()", "Auto-fix"),
         ("🟡 MEDIUM", "Subindice en loop", "Variable[key] sin guard None", "Deteccion"),
         ("🟡 MEDIUM", "Copy-paste error", "variable(keyword=variable.get(...))", "Auto-fix"),
         ("🟡 MEDIUM", "Lista[0] sin guard", "Acceso a lista vacia", "Deteccion"),
