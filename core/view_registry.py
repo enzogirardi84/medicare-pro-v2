@@ -100,6 +100,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Admin Feature Flags": "⚙️ Feature Flags",
     "Self-Healing IA": "🛠 Self-Healing",
     "Asistente IA": "🤖 Asistente IA",
+    "AutoHeal v2": "🤖 AutoHeal",
 }
 
 

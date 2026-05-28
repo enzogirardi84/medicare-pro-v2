@@ -98,6 +98,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Admin Feature Flags": [],
     "Self-Healing IA": [],
     "Asistente IA": [],
+    "AutoHeal v2": [],
 }
 
 
