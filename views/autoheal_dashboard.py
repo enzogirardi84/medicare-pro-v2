@@ -277,7 +277,7 @@ def _render_scanner_tab():
         ("🟡 MEDIUM", "Subindice en loop", "Variable[key] sin guard None", "Deteccion"),
         ("🟡 MEDIUM", "Copy-paste error", "variable(keyword=variable.get(...))", "Auto-fix"),
         ("🟡 MEDIUM", "Lista[0] sin guard", "Acceso a lista vacia", "Deteccion"),
-        ("🔵 LOW", "Imports no usados", "AST analysis de imports", "Deteccion"),
+        ("🔵 LOW", "Imports no usados", "AST analysis de imports", "Auto-fix"),
         ("🔵 LOW", "Funciones muertas", "AST analysis de funciones", "Deteccion"),
         ("🔵 LOW", "Complejidad alta", "Funciones >15 ramas + lineas", "Deteccion"),
         ("🔵 LOW", "Sin docstring", "Funciones publicas sin documentacion", "Deteccion"),
