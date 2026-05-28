@@ -360,8 +360,15 @@ def _render_alertas_criticas(paciente_sel: str) -> None:
             )
         ]
         for p in pendientes[:3]:
-            med_nom = (p.get("med") or "")[:60]
-            alertas.append(("💊 MEDICACIÓN PENDIENTE", med_nom, "#dc2626"))
+            _med = (p.get("med") or "")
+            _via = (p.get("via") or "")
+            _frec = (p.get("frecuencia") or "")
+            _detalle = _med
+            if _via:
+                _detalle += f" | Via: {_via}"
+            if _frec:
+                _detalle += f" | Cada {_frec}"
+            alertas.append(("💊 MEDICACIÓN PENDIENTE", _detalle[:200], "#dc2626"))
         if len(pendientes) > 3:
             alertas.append(("💊 MEDICACIÓN PENDIENTE", f"Y {len(pendientes) - 3} indicaciones más", "#dc2626"))
 
