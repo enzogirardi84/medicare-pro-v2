@@ -421,8 +421,9 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                 st.session_state.pop("_mc_mapa_pacientes_cache", None)
                                 _save_ok = guardar_datos(spinner=True)
                                 _estado_guardado = obtener_estado_guardado()
+                                log_event("admision", f"edit_save:ok={_save_ok}:state={_estado_guardado.get('estado')}:{_estado_guardado.get('detalle','')[:80]}")
                                 if not _save_ok or _estado_guardado.get("estado") in ("error", "pendiente"):
-                                    log_event("admision", f"guardado_estado:{_estado_guardado.get('estado')}:{_estado_guardado.get('detalle','')[:100]}")
+                                    log_event("admision", f"save_fallo estado={_estado_guardado.get('estado')} ok={_save_ok}")
                                     # Force direct Supabase upsert as fallback
                                     try:
                                         from core.database import supabase

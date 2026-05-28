@@ -746,20 +746,6 @@ def guardar_datos(*, spinner: Optional[bool] = None, force: bool = False) -> boo
                             invalidate_index(_db_key)
             except Exception as _e_idx:
                 log_event("db", f"index_invalidation_fail:{type(_e_idx).__name__}")
-    # Cache hash check rapido: si el payload no cambio, no guardar
-    from core._database_supabase import dumps_db_sorted, loads_db_payload
-    claves = _db_keys()
-    data_preview = {k: st.session_state.get(k) for k in claves if k in st.session_state}
-    try:
-        pb_preview, _ = dumps_db_sorted(data_preview)
-        preview_hash = hashlib.sha256(pb_preview).hexdigest()
-        if st.session_state.get("_db_cache_hash") == preview_hash:
-            st.session_state["_guardar_datos_pendiente"] = False
-            _registrar_estado_guardado("sin_cambios", "Sin cambios.", guardado_nube=False, guardado_local=True)
-            return True
-    except Exception:
-        pass
-
     ctx = st.spinner("Guardando cambios...") if mostrar else nullcontext()
     try:
         with ctx:
