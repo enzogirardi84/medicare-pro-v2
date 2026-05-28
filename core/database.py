@@ -609,6 +609,12 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                 pb = _fijar_cache_y_hash(data_local)
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_local:{len(pb)}")
+                from core.seguridad import decrypt_patient_dict
+                _dd = data_local.get("detalles_pacientes_db")
+                if isinstance(_dd, dict):
+                    for k in list(_dd.keys()):
+                        if isinstance(_dd[k], dict):
+                            _dd[k] = decrypt_patient_dict(_dd[k])
                 st.session_state.setdefault("_db_version", time.time_ns())
                 st.session_state["_db_version_last_seen"] = st.session_state["_db_version"]
                 return copy.deepcopy(data_local)
@@ -632,6 +638,13 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                 st.session_state["_db_version_last_seen"] = st.session_state["_db_version"]
                 if pb and _payload_muy_grande(pb):
                     log_event("db", f"payload_grande_nube:{len(pb)}")
+                # Desencriptar campos sensibles si vienen cifrados desde JSONB
+                from core.seguridad import decrypt_patient_dict
+                _dd = data.get("detalles_pacientes_db")
+                if isinstance(_dd, dict):
+                    for k in list(_dd.keys()):
+                        if isinstance(_dd[k], dict):
+                            _dd[k] = decrypt_patient_dict(_dd[k])
                 return copy.deepcopy(data)
 
             # Conexión OK pero sin fila en nube (tenant nuevo / vacío): reutilizar backup local si existe.

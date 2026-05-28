@@ -387,7 +387,7 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                     payload["fecha_egreso"] = fecha_egreso_edit.strftime("%d/%m/%Y")
                                 from core.seguridad import encrypt_patient_dict
                                 detalles_actualizados.update(payload)
-                                encrypt_patient_dict(detalles_actualizados)
+                                detalles_actualizados = encrypt_patient_dict(detalles_actualizados)
 
                                 pacientes_db = list(st.session_state.get("pacientes_db", []))
                                 if paciente_sel_admin in pacientes_db:
@@ -419,11 +419,12 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                     empresa=detalles_actualizados.get("empresa", mi_empresa),
                                 )
                                 st.session_state.pop("_mc_mapa_pacientes_cache", None)
-                                guardar_datos(spinner=True)
+                                _save_ok = guardar_datos(spinner=True)
                                 _estado_guardado = obtener_estado_guardado()
-                                if _estado_guardado.get("estado") == "error":
-                                    st.error("Error al guardar los cambios. Revisa la conexion e intenta de nuevo.")
-                                    log_event("admision", "error: guardado fallo tras editar legajo")
+                                if not _save_ok or _estado_guardado.get("estado") in ("error", "pendiente"):
+                                    log_event("admision", f"guardado_estado:{_estado_guardado.get('estado')}:{_estado_guardado.get('detalle','')[:100]}")
+                                    if _estado_guardado.get("estado") == "error":
+                                        st.error("Error al guardar los cambios. Revisa la conexion e intenta de nuevo.")
                                 else:
                                     _sincronizar_edicion_paciente_sql_best_effort(
                                         detalle_anterior=detalle_anterior,
@@ -686,7 +687,7 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                         "talla": _talla_val if _talla_val > 0 else "",
                         "foto_perfil": _procesar_foto_alta(foto_alta) if foto_alta else "",
                     }
-                    encrypt_patient_dict(_nuevo_paciente)
+                    _nuevo_paciente = encrypt_patient_dict(_nuevo_paciente)
                     asegurar_detalles_pacientes_en_sesion(st.session_state)[id_p] = _nuevo_paciente
                     # Guardar peso en vitales_db para uso en cálculo de dosis
                     if _peso_val > 0:
