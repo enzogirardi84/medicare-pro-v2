@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import altair as alt
 import streamlit as st
 
@@ -77,7 +78,7 @@ def render_chart_card(titulo, chart, height=300):
     if chart is None:
         return
     with st.container():
-        st.markdown(f'<div style="font-size:0.9rem;font-weight:600;color:#e2e8f0;margin-bottom:4px;">{titulo}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:0.9rem;font-weight:600;color:#e2e8f0;margin-bottom:4px;">{html.escape(str(titulo))}</div>', unsafe_allow_html=True)
         st.altair_chart(chart, width='stretch')
 
 
