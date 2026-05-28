@@ -380,8 +380,10 @@ class SmartScanner:
                 continue
             has_log = any("log_event(" in lines[j] for j in range(max(0, i - 10), min(len(lines), i + 10)))
             if not has_log:
+                # Encontrar el modulo/nombre de archivo para el log
+                _mod_name = Path(rel).stem.replace(".py", "")
                 f = Finding(rel, i + 1, "HIGH", "st.error() sin log_event() cerca",
-                            code=line.strip(), pattern="st_error_no_log")
+                            code=line.strip(), pattern="st_error_no_log", auto_fix=True)
                 if not self._is_known(f):
                     self.findings.append(f)
 
@@ -637,6 +639,17 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
 
         elif f.pattern == "unused_import":
             new_line = ""
+
+        elif f.pattern == "st_error_no_log":
+            _mod = Path(f.file_path).stem
+            _es = " " * (len(old_line) - len(old_line.lstrip()))
+            new_line = f"{_es}log_event(\"{_mod}\", \"ui_error:{old_line.strip()[:60]}\")\n" + old_line
+
+        elif f.pattern == "missing_docstring":
+            _es = " " * (len(old_line) - len(old_line.lstrip()))
+            _fn_match = re.search(r'def\s+(\w+)', old_line)
+            _fn_name = _fn_match.group(1) if _fn_match else "funcion"
+            new_line = old_line + f'\n{_es}"""{_fn_name.capitalize().replace("_", " ")}."""\n{_es}"""'
 
         elif f.pattern == "unsafe_html":
             # Convertir st.markdown(f"...{var}...", unsafe_allow_html=True)
