@@ -170,6 +170,34 @@ def safe_error(message: str, **kwargs: Any) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  RESPONSIVE COLUMNS HELPER (Mobile-Friendly)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def responsive_columns(labels: list[str], cols_desktop: int = 3, cols_mobile: int = 2) -> list:
+    """Crea st.columns() adaptativo: menos columnas en mobile.
+    
+    Args:
+        labels: Lista de etiquetas para cada columna (solo para calcular cantidad).
+        cols_desktop: Columnas en desktop (default 3).
+        cols_mobile: Columnas en mobile (default 2).
+    
+    Returns:
+        Lista de objetos columna de Streamlit.
+    """
+    n = len(labels)
+    if n == 0:
+        return []
+
+    es_movil = (
+        st.session_state.get("mc_liviano_modo") == "on"
+        or st.session_state.get("_mc_liviano_activo")
+    )
+    cols_count = min(cols_mobile if es_movil else cols_desktop, n)
+    return st.columns(cols_count)
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  CONTROL DE ACCESO (TENANT ISOLATION)
 # ═══════════════════════════════════════════════════════════════════════
 
