@@ -407,6 +407,7 @@ def _render_alertas_criticas(paciente_sel: str) -> None:
                 '<div><div class="alerta-titulo" style="color:{color};">{titulo}</div>'
                 '<div class="alerta-detalle">{detalle}</div></div></div>',
                 color=color, titulo=titulo, detalle=detalle,
+                unsafe_allow_html=True,
             )
         st.divider()
     except Exception as _e:
