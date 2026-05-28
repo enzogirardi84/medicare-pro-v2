@@ -75,6 +75,9 @@ def _render_dashboard_tab():
     # Health checks
     _render_health_checks()
 
+    # Health diagnostics
+    _render_health_diagnostics()
+
     # Performance
     _render_perf_metrics()
 
@@ -153,6 +156,59 @@ def _render_health_checks():
     for i, (icon, label, detail) in enumerate(checks):
         cols[i].markdown(f"**{icon} {label}**")
         cols[i].caption(detail)
+
+
+def _render_health_diagnostics():
+    """Diagnostico completo de salud del sistema."""
+    st.markdown("##### Diagnostico del sistema")
+    diags = []
+
+    # 1. Compilacion
+    try:
+        import subprocess, sys
+        r = subprocess.run([sys.executable, "-m", "py_compile", str(REPO_ROOT / "core" / "seguridad.py")],
+                          capture_output=True, timeout=10)
+        diags.append(("✅" if r.returncode == 0 else "❌", "Compilacion Python", "core/seguridad.py"))
+    except Exception:
+        diags.append(("❓", "Compilacion Python", "Error al verificar"))
+
+    # 2. Tests
+    try:
+        r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=line", "-k", "not e2e",
+                           str(REPO_ROOT / "tests")], capture_output=True, text=True, timeout=30)
+        passed = r.stdout.count("passed")
+        failed = r.stdout.count("failed")
+        status = "✅" if failed == 0 else "⚠️"
+        diags.append((status, f"Tests: {passed}P/{failed}F", "Suite completa"))
+    except Exception:
+        diags.append(("❓", "Tests", "Timeout o error"))
+
+    # 3. Memoria AutoHeal
+    if DB_PATH.exists():
+        size_kb = os.path.getsize(DB_PATH) / 1024
+        diags.append(("✅", f"Memoria: {size_kb:.0f} KB", ".autoheal_memory.db"))
+    else:
+        diags.append(("⚪", "Memoria: Inactiva", "Ejecutar escaneo para crear"))
+
+    # 4. Archivos totales
+    py_count = len(list(REPO_ROOT.rglob("*.py"))) - len(list((REPO_ROOT / ".git").rglob("*.py")))
+    diags.append(("ℹ️", f"{py_count} archivos .py", "Total en el proyecto"))
+
+    # 5. Git status
+    try:
+        r = subprocess.run(["git", "log", "--oneline", "-1"], cwd=str(REPO_ROOT),
+                          capture_output=True, text=True, timeout=10)
+        diags.append(("ℹ️", f"Ultimo commit: {r.stdout.strip()[:50]}", ""))
+    except Exception:
+        pass
+
+    # Mostrar en grid
+    cols = st.columns(len(diags))
+    for i, (icon, label, detail) in enumerate(diags):
+        cols[i].markdown(f"**{icon}**")
+        cols[i].caption(label)
+        if detail:
+            cols[i].caption(detail)
 
 
 def _render_perf_metrics():
