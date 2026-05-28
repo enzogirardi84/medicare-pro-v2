@@ -252,8 +252,8 @@ def build_resumen_clinico_from_session(
                 evo = EvolucionClinica(
                     fecha_hora=str(e.get("fecha_hora", "")),
                     tipo=e.get("tipo", "nota"),
-                    resumen=e(resumen=e.get("resumen") or "")[:500],  # Truncar
-                    detalle_completo=e(detalle_completo=e.get("texto") or "")[:2000] if len(e.get("texto", "")) > 500 else e.get("texto"),
+                    resumen=(e.get("resumen") or "")[:500],
+                    detalle_completo=(e.get("texto") or "")[:2000] if len(e.get("texto", "")) > 500 else e.get("texto"),
                     profesional=e.get("profesional"),
                     especialidad=e.get("especialidad"),
                 )
