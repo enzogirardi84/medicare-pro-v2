@@ -853,6 +853,40 @@ input:focus, select:focus, textarea:focus,
     }
 }
 
+/* ── Touch targets: altura minima 44px para botones en movil ──── */
+@media (pointer: coarse) {
+    .stButton button, [data-testid="stButton"] button,
+    [data-testid="stFormSubmitButton"] button, button[kind],
+    [data-testid="baseButton-primary"], [data-testid="baseButton-secondary"] {
+        min-height: 44px !important;
+        min-width: 44px !important;
+    }
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        min-height: 44px !important;
+    }
+    [data-testid="stTextInput"] input {
+        min-height: 44px !important;
+    }
+    [data-testid="stCheckbox"] label {
+        min-height: 44px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+}
+
+/* ── Login en mobile ───────────────────────────────────────────── */
+@media screen and (max-width: 480px) {
+    section.main > div {
+        padding-top: 0.5rem !important;
+    }
+    h3 {
+        font-size: 1.1rem !important;
+    }
+    .stCaption {
+        font-size: 0.78rem !important;
+    }
+}
+
 /* ── Pantallas muy pequenas (< 480px) ──────────────────────────── */
 @media screen and (max-width: 480px) {
     .block-container {
