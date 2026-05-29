@@ -96,6 +96,138 @@
         min-height: 0 !important;
     }
 
+    /* ── Touch targets universales 44px ──────────────────────── */
+    button, a, select, input, textarea, label, [role="button"], [role="tab"],
+    [role="option"], [data-testid="stButton"] button,
+    [data-testid="stFormSubmitButton"] button,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stCheckbox"] label,
+    [data-testid="stRadio"] label,
+    [data-testid="stDataEditor"] td,
+    [data-testid="stDataFrame"] td,
+    .stDownloadButton button {
+        min-height: 44px !important;
+        touch-action: manipulation !important;
+    }
+    /* Evitar zoom automatico en inputs (iOS) */
+    input, textarea, select {
+        font-size: 16px !important;
+    }
+    /* Selectores con mayor altura tactil */
+    div[data-baseweb="select"] > div {
+        min-height: 52px !important;
+    }
+    /* Botones ancho completo */
+    [data-testid="stButton"], [data-testid="stFormSubmitButton"],
+    .stDownloadButton {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* ── Navegacion tipo pills touch ──────────────────────────── */
+    [data-testid="stHorizontalBlock"] > [data-testid="column"] > [data-testid="stButton"] button {
+        border-radius: 9999px !important;
+        padding: 10px 18px !important;
+        font-size: 0.82rem !important;
+        white-space: nowrap !important;
+    }
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 0.35rem !important;
+    }
+    [data-testid="stSelectbox"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    [data-testid="stSelectbox"] > div {
+        min-height: 48px !important;
+        border-radius: 9999px !important;
+    }
+
+    /* ── Formularios: inputs espaciados ────────────────────────── */
+    [data-testid="stTextInput"], [data-testid="stTextArea"],
+    [data-testid="stSelectbox"], [data-testid="stDateInput"],
+    [data-testid="stTimeInput"], [data-testid="stNumberInput"],
+    [data-testid="stMultiSelect"], [data-testid="stFileUploader"] {
+        margin-bottom: 0.75rem !important;
+    }
+    [data-testid="stVerticalBlock"] {
+        gap: 0.35rem !important;
+    }
+    [data-testid="stExpander"] details {
+        min-height: 48px !important;
+    }
+    [data-testid="stExpander"] summary {
+        min-height: 48px !important;
+        padding: 12px 14px !important;
+        border-radius: 14px !important;
+    }
+
+    /* ── Tablas y DataFrames scroll ───────────────────────────── */
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+    }
+    [data-testid="stDataFrame"] table, [data-testid="stTable"] table {
+        font-size: 0.78rem !important;
+    }
+    [data-testid="stDataFrame"] thead th,
+    [data-testid="stTable"] thead th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 2 !important;
+        background: #0f172a !important;
+    }
+
+    /* ── Metric cards compactas ───────────────────────────────── */
+    [data-testid="stMetric"] {
+        padding: 8px 10px !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.72rem !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.1rem !important;
+    }
+
+    /* ── Tabs y segmentados ───────────────────────────────────── */
+    [data-testid="stTabs"] [role="tablist"] {
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+        gap: 2px !important;
+    }
+    [data-testid="stTabs"] [role="tab"] {
+        flex: 0 0 auto !important;
+        min-height: 44px !important;
+        padding: 8px 14px !important;
+        font-size: 0.82rem !important;
+    }
+    [data-testid="stSegmentedControl"] {
+        overflow-x: auto !important;
+    }
+    [data-testid="stSegmentedControl"] [role="radiogroup"] {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+    }
+
+    /* ── Radio y checkbox touch ───────────────────────────────── */
+    [data-testid="stRadio"] div[role="radiogroup"] {
+        gap: 8px !important;
+    }
+    [data-testid="stRadio"] label, [data-testid="stCheckbox"] label {
+        padding: 10px 0 !important;
+        min-height: 44px !important;
+        align-items: center !important;
+    }
+
     .block-container {
         padding-left: 0.65rem !important;
         padding-right: 0.65rem !important;
