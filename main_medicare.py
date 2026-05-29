@@ -57,6 +57,21 @@ if not st.session_state.get("logeado"):
     except Exception:
         pass
 
+# ── Two-pass boot para móviles ──────────────────────────────────
+# El primer mensaje WebSocket debe ser minúsculo para que el
+# navegador móvil no aborte la conexión por payload grande.
+# En el primer pase enviamos solo un spinner; en el segundo
+# (tras el rerun) cargamos la app completa.
+if not st.session_state.get("_boot_done"):
+    st.session_state["_boot_done"] = True
+    st.markdown(
+        '<div style="display:flex;align-items:center;justify-content:center;'
+        'height:100vh;background:#0f172a;color:#94a3b8;font-family:sans-serif;'
+        'font-size:1.1rem;">Cargando...</div>',
+        unsafe_allow_html=True,
+    )
+    st.rerun()
+
 if "theme_applied_v5" not in st.session_state:
     st.session_state["theme_applied_v5"] = False
 
