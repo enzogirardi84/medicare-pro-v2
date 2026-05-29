@@ -12,6 +12,7 @@ _PART_1 = """
 
               :root {
                 --lp-void: #050812;
+                --lp-accent-glow: 0 0 40px rgba(45, 212, 191, 0.15);
                 --lp-panel: rgba(11, 18, 31, 0.88);
                 --lp-panel-soft: rgba(15, 24, 40, 0.78);
                 --lp-panel-strong: rgba(17, 28, 47, 0.96);
@@ -1241,6 +1242,85 @@ _PART_4 = """
                 }
               }
 
+              /* ── Scroll fade-in animations ─────────────── */
+              .mc-lp-fade {
+                opacity: 0;
+                transform: translateY(24px);
+                transition: opacity 0.6s ease, transform 0.6s ease;
+              }
+              .mc-lp-fade.is-visible {
+                opacity: 1;
+                transform: translateY(0);
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .mc-lp-fade { opacity: 1; transform: none; transition: none; }
+              }
+
+              /* ── FAQ accordion ─────────────────────────── */
+              .mc-lp-faq { margin-bottom: 40px; }
+              .mc-lp-faq details {
+                margin-bottom: 8px;
+                border-radius: 16px;
+                border: 1px solid rgba(148, 163, 184, 0.12);
+                background: rgba(10, 16, 29, 0.75);
+                overflow: hidden;
+                transition: border-color 0.2s;
+              }
+              .mc-lp-faq details[open] {
+                border-color: rgba(45, 212, 191, 0.35);
+              }
+              .mc-lp-faq summary {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                min-height: 52px;
+                padding: 14px 18px;
+                color: #e8f0fa;
+                font-size: 0.95rem;
+                font-weight: 700;
+                cursor: pointer;
+                list-style: none;
+              }
+              .mc-lp-faq summary::-webkit-details-marker { display: none; }
+              .mc-lp-faq summary::after {
+                content: "+";
+                font-size: 1.3rem;
+                font-weight: 400;
+                color: var(--lp-accent);
+                transition: transform 0.2s;
+              }
+              .mc-lp-faq details[open] summary::after {
+                content: "−";
+              }
+              .mc-lp-faq details > div {
+                padding: 0 18px 16px;
+                color: #a8b8cc;
+                font-size: 0.9rem;
+                line-height: 1.7;
+              }
+
+              /* ── SVG icon decorativos en cards ─────────── */
+              .mc-lp-cell-icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                margin-bottom: 14px;
+                border-radius: 14px;
+                background: rgba(255,255,255,0.04);
+                border: 1px solid rgba(148,163,184,0.12);
+              }
+              .mc-lp-cell-icon svg {
+                width: 24px;
+                height: 24px;
+                fill: none;
+                stroke: var(--lp-accent);
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+              }
+
               </style>
             """
 
@@ -1272,7 +1352,7 @@ _PART_5 = """
                 </div>
 
                 <main class="mc-lp-main">
-                <section class="mc-lp-hero">
+                <section class="mc-lp-hero mc-lp-fade">
                   <div class="mc-lp-copy">
                     <div class="mc-lp-hero-badge">Enterprise · Salud domiciliaria · Auditoría clínica</div>
                     <p class="mc-lp-kicker">Gestión integral para instituciones de salud y operación domiciliaria</p>
@@ -1367,7 +1447,7 @@ _PART_5 = """
                   </aside>
                 </section>
 
-                <section class="mc-lp-stats" aria-labelledby="mc-lp-stats-title">
+                <section class="mc-lp-stats mc-lp-fade" aria-labelledby="mc-lp-stats-title">
                   <header class="mc-lp-stats-head">
                     <h2 id="mc-lp-stats-title" class="mc-lp-stats-h2">Una plataforma, todas las áreas de su institución</h2>
                   </header>
@@ -1417,7 +1497,7 @@ _PART_5 = """
 
 
 _PART_6 = """
-                <section id="mc-lp-modulos" class="mc-lp-bento">
+                <section id="mc-lp-modulos" class="mc-lp-bento mc-lp-fade">
                   <article class="mc-lp-cell mc-lp-cell-hero">
                     <span class="mc-lp-cell-eyebrow">Coordinación y gestión</span>
                     <h3>Dirección con visibilidad total de la operación</h3>
@@ -1435,6 +1515,9 @@ _PART_6 = """
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-wide">
+                    <div class="mc-lp-cell-icon">
+                      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+                    </div>
                     <span class="mc-lp-cell-eyebrow">Historia clínica</span>
                     <h3>Registro clínico digital completo y unificado</h3>
                     <p>
@@ -1445,31 +1528,43 @@ _PART_6 = """
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
+                    <div class="mc-lp-cell-icon">
+                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M10 8v8M14 8v8M8 12h8"/></svg>
+                    </div>
                     <span class="mc-lp-cell-eyebrow">Farmacopea</span>
                     <h3>Medicación segura</h3>
                     <p>Vademécum integrado con 50+ fármacos, calculadora de dosis pediátricas y alertas de interacciones. Indicaciones médicas con plan de administración.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
+                    <div class="mc-lp-cell-icon">
+                      <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </div>
                     <span class="mc-lp-cell-eyebrow">Emergencias</span>
                     <h3>Respuesta coordinada</h3>
                     <p>Triage con niveles de prioridad, traslado, alertas a profesionales y acceso inmediato a antecedentes clínicos del paciente.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
+                    <div class="mc-lp-cell-icon">
+                      <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+                    </div>
                     <span class="mc-lp-cell-eyebrow">Telemedicina + App</span>
                     <h3>Asistencia remota</h3>
                     <p>Sala de teleconsulta por paciente y día. App del paciente con alertas, GPS, triage y comunicación directa con el equipo.</p>
                   </article>
 
                   <article class="mc-lp-cell mc-lp-cell-mini">
+                    <div class="mc-lp-cell-icon">
+                      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    </div>
                     <span class="mc-lp-cell-eyebrow">RRHH y caja</span>
                     <h3>Control administrativo</h3>
                     <p>Fichajes, asistencia, inventario de materiales, caja diaria y balance hídrico integrados al mismo ecosistema.</p>
                   </article>
                 </section>
 
-                <section class="mc-lp-two-up">
+                <section class="mc-lp-two-up mc-lp-fade">
                   <div class="mc-lp-panel">
                     <h3>Sin MediCare: cuando la información vive en silos</h3>
                     <p>
@@ -1492,7 +1587,7 @@ _PART_6 = """
                   </div>
                 </section>
 
-                <section class="mc-lp-mini-grid">
+                <section class="mc-lp-mini-grid mc-lp-fade">
                   <div class="mc-lp-mini-card">
                     <b>Dashboard ejecutivo</b>
                     <span>KPIs, gráficos de actividad semanal, calendario heatmap de 30 días y mapa geográfico de visitas con GPS.</span>
@@ -1515,7 +1610,7 @@ _PART_6 = """
 
 
 _PART_7 = """
-                <section id="mc-lp-contact" class="mc-lp-contact">
+                <section id="mc-lp-contact" class="mc-lp-contact mc-lp-fade">
                   <div class="mc-lp-contact-head">
                     <p>Implementación y soporte directo</p>
                     <h3>Agendemos una demo guiada</h3>
@@ -1548,6 +1643,32 @@ _PART_7 = """
                       <a class="mc-lp-su" href="mailto:enzogirardi84@gmail.com?subject=MediCare%20Enterprise%20-%20Incidencia%20tecnica" rel="noopener" aria-label="Abrir correo para reportar incidencia técnica">Reportar incidencia</a>
                     </div>
                   </div>
+                </section>
+
+                <section class="mc-lp-faq mc-lp-fade">
+                  <header class="mc-lp-stats-head" style="margin-bottom:20px;">
+                    <h2 class="mc-lp-stats-h2">Preguntas frecuentes</h2>
+                  </header>
+                  <details>
+                    <summary>¿Cuánto tiempo lleva la implementación?</summary>
+                    <div>La mayoría de las instituciones están operativas en 24-72 horas. La implementación incluye carga inicial de datos (pacientes, profesionales, farmacopea), configuración de roles y permisos, y una capacitación guiada por videollamada. No requiere infraestructura propia ni instalación de software.</div>
+                  </details>
+                  <details>
+                    <summary>¿Puedo acceder desde el celular de los profesionales?</summary>
+                    <div>Sí. La plataforma funciona en cualquier navegador moderno (Chrome, Safari, Firefox) tanto en escritorio como en celular. No requiere instalar ninguna aplicación. Los profesionales pueden fichar visitas, ver indicaciones y cargar evolución desde su teléfono personal.</div>
+                  </details>
+                  <details>
+                    <summary>¿Los datos están seguros? ¿Hay cifrado?</summary>
+                    <div>Todas las conexiones viajan cifradas con HTTPS. El almacenamiento utiliza cifrado en reposo y las claves de acceso se guardan con hashing bcrypt. La autenticación puede reforzarse con 2FA por correo. Los datos se alojan en servidores cloud con redundancia geográfica y backup diario automatizado.</div>
+                  </details>
+                  <details>
+                    <summary>¿Se puede facturar desde la plataforma?</summary>
+                    <div>Sí. El módulo de caja permite registrar cobros, generar comprobantes y llevar un libro diario. Para facturación electrónica con AFIP/ARCA, la plataforma se integra con sistemas externos mediante la API de exportación de datos contables.</div>
+                  </details>
+                  <details>
+                    <summary>¿Hay soporte técnico incluido?</summary>
+                    <div>Sí. El soporte está a cargo del equipo de desarrollo con respuesta por WhatsApp y correo electrónico en horario laboral. Las incidencias críticas (plataforma caída, error de acceso) se atienden con prioridad inmediata. Para implementaciones grandes se puede contratar soporte extendido 24/7.</div>
+                  </details>
                 </section>
 
                 <p class="mc-lp-tagline">
