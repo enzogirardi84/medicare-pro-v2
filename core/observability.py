@@ -385,5 +385,3 @@ if __name__ == "__main__":
     track_metric("api_latency", 0.234, tags={"endpoint": "/api/pacientes"})
 
     # Mostrar métricas
-    print("\nMétricas:")
-    print(get_metrics().get_prometheus_format())

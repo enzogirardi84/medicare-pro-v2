@@ -413,4 +413,3 @@ if __name__ == "__main__":
         # Código que puede fallar
         pass
 
-    print("Error handling system ready!")

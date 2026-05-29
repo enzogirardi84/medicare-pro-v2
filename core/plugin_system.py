@@ -375,7 +375,6 @@ def register_hook(hook: PluginHook):
         class MyPlugin(MedicarePlugin):
             @register_hook(PluginHook.PATIENT_CREATED)
             def on_patient_created(self, context):
-                print(f"Patient created: {context['patient_id']}")
     """
     def decorator(func: Callable) -> Callable:
         func._hook = hook

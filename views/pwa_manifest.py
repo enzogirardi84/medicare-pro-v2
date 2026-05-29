@@ -416,7 +416,6 @@ def save_pwa_files(output_dir: str = "assets/pwa"):
     sw_code = generate_service_worker()
     (output_path.parent / "service-worker.js").write_text(sw_code)
 
-    print(f"✅ PWA files saved to {output_path.parent}")
 
 
 # Offline page HTML
@@ -504,4 +503,3 @@ if __name__ == "__main__":
 
     # También guardar offline.html
     Path("assets/offline.html").write_text(OFFLINE_HTML)
-    print("✅ offline.html created")

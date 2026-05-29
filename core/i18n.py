@@ -558,14 +558,8 @@ def init_i18n():
 
 if __name__ == "__main__":
     # Demo
-    print("=== i18n Demo ===")
 
     i18n = get_i18n()
 
     for locale in SUPPORTED_LOCALES:
         i18n.set_locale(locale)
-        print(f"\n{locale.upper()}:")
-        print(f"  App: {i18n._('app_name')}")
-        print(f"  Welcome: {i18n._('welcome')}")
-        print(f"  Save: {i18n._('save')}")
-        print(f"  Days ago: {i18n._('date_days_ago', days=5)}")
