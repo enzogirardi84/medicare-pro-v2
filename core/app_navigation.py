@@ -403,77 +403,37 @@ def _render_alertas_ui(alertas: list):
 
     # CSS inyectado una vez
     if not st.session_state.get("_alert_css_injected"):
-            st.session_state["_alert_css_injected"] = True
-            st.markdown(
-                """
-        <style>
-        .alerta-critica {
-            padding: 12px 16px;
-            margin: 6px 0;
-            border-radius: 10px;
-            border-left: 5px solid;
-            font-size: 0.88rem;
-            line-height: 1.4;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-        .alerta-critica .alerta-titulo {
-            font-weight: 700;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-bottom: 2px;
-        }
-        .alerta-critica .alerta-detalle {
-            font-weight: 500;
-        }
-        button[key="_alert_toggle_btn"] {
-            background: rgba(239,68,68,0.08) !important;
-            border: 1px solid rgba(239,68,68,0.2) !important;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            font-size: 0.88rem !important;
-            color: #fca5a5 !important;
-            width: 100% !important;
-            justify-content: flex-start !important;
-            padding: 0.5rem 0.8rem !important;
-        }
-        button[key="_alert_toggle_btn"]:hover {
-            background: rgba(239,68,68,0.15) !important;
-            border-color: rgba(239,68,68,0.35) !important;
-        }
-        </style>
-                """,
+        st.session_state["_alert_css_injected"] = True
+        st.markdown("""<style>
+.alerta-critica{padding:12px 16px;margin:6px 0;border-radius:10px;border-left:5px solid;font-size:0.88rem;line-height:1.4;display:flex;align-items:flex-start;gap:10px}
+.alerta-critica .alerta-titulo{font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px}
+.alerta-critica .alerta-detalle{font-weight:500}
+button[key="_alert_toggle_btn"]{background:rgba(239,68,68,0.08)!important;border:1px solid rgba(239,68,68,0.2)!important;border-radius:10px!important;font-weight:600!important;font-size:0.88rem!important;color:#fca5a5!important;width:100%!important;justify-content:flex-start!important;padding:0.5rem 0.8rem!important}
+button[key="_alert_toggle_btn"]:hover{background:rgba(239,68,68,0.15)!important;border-color:rgba(239,68,68,0.35)!important}
+</style>""", unsafe_allow_html=True)
+
+    # Toggle button for alerts
+    _alert_key = "_show_alerts"
+    _alerts_open = st.session_state.get(_alert_key, False)
+    _n_crit = sum(1 for a in alertas if "ALERGIAS" in a[0] or "PATOLOG" in a[0])
+    _n_med = sum(1 for a in alertas if "MEDICACIÓN" in a[0])
+    _badge = "🔴 " + str(len(alertas)) + " alertas" + (f" ({_n_crit} criticas, {_n_med} medicacion)" if _n_crit > 0 else "")
+    if st.button(
+        ("▼" if _alerts_open else "▶") + " " + _badge,
+        key="_alert_toggle_btn", use_container_width=True, type="secondary",
+    ):
+        st.session_state[_alert_key] = not _alerts_open
+        st.rerun()
+
+    if _alerts_open:
+        for titulo, detalle, color in alertas:
+            safe_markdown(
+                '<div class="alerta-critica" style="background:{color}15;border-left-color:{color};">'
+                '<div><div class="alerta-titulo" style="color:{color};">{titulo}</div>'
+                '<div class="alerta-detalle">{detalle}</div></div></div>',
+                color=color, titulo=titulo, detalle=detalle,
                 unsafe_allow_html=True,
             )
-
-        # Toggle button for alerts
-        _alert_key = "_show_alerts"
-        _alerts_open = st.session_state.get(_alert_key, False)
-        _n_crit = sum(1 for a in alertas if "ALERGIAS" in a[0] or "PATOLOG" in a[0])
-        _n_med = sum(1 for a in alertas if "MEDICACIÓN" in a[0])
-        _badge = f"🔴 {len(alertas)} alertas" + (f" ({_n_crit} críticas, {_n_med} medicación)" if _n_crit > 0 else "")
-        if st.button(
-            f"{'▼' if _alerts_open else '▶'} {_badge}",
-            key="_alert_toggle_btn",
-            use_container_width=True,
-            type="secondary",
-        ):
-            st.session_state[_alert_key] = not _alerts_open
-            st.rerun()
-
-        if _alerts_open:
-            for titulo, detalle, color in alertas:
-                safe_markdown(
-                    '<div class="alerta-critica" style="background:{color}15;border-left-color:{color};">'
-                    '<div><div class="alerta-titulo" style="color:{color};">{titulo}</div>'
-                    '<div class="alerta-detalle">{detalle}</div></div></div>',
-                    color=color, titulo=titulo, detalle=detalle,
-                    unsafe_allow_html=True,
-                )
-    except Exception as _e:
-        log_event("alertas", f"error_render_alertas:{type(_e).__name__}")
 
 
 def _autoheal_passive_scan():
