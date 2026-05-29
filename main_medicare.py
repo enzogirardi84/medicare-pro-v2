@@ -60,12 +60,15 @@ aplicar_css_base()
 
 
 def _inject_mobile_css_asset() -> None:
-    """Carga los parches responsive para mobile."""
+    """Carga los parches responsive para mobile (solo 1 vez por sesion)."""
+    if st.session_state.get("_mobile_css_injected"):
+        return
     try:
         mobile_css_path = Path(__file__).resolve().parent / "assets" / "mobile.css"
         if mobile_css_path.exists():
             mobile_css_content = mobile_css_path.read_text(encoding="utf-8")
             st.markdown(f"<style>{mobile_css_content}</style>", unsafe_allow_html=True)
+            st.session_state["_mobile_css_injected"] = True
     except Exception as exc:
         log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
 
