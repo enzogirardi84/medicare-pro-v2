@@ -188,22 +188,28 @@ def render_dashboard(mi_empresa, rol):
     # ============================================================
     # BÚSQUEDA GLOBAL EN EVOLUCIONES
     # ============================================================
+    MAX_RESULTADOS = 100
     st.markdown("### 🔍 Búsqueda global en evoluciones")
     _global_q = st.text_input("Buscar texto en todas las evoluciones", placeholder="Ej: fiebre, caida, dolor...", key="global_search_v2")
     if _global_q.strip():
         _q = _global_q.strip().lower()
         _resultados = {}
         _evos_todas = st.session_state.get("evoluciones_db", [])
+        _total_revisados = 0
         for _evo in _evos_todas:
             _texto = (_evo.get("texto", "") + " " + _evo.get("detalle", "") + " " + _evo.get("nota", "")).lower()
             if _q in _texto:
                 _pac = _evo.get("paciente", "Desconocido")
                 _resultados.setdefault(_pac, []).append(_evo)
+                _total_revisados += 1
+                if _total_revisados >= MAX_RESULTADOS:
+                    break
         if _resultados:
-            st.success(f"📄 {sum(len(v) for v in _resultados.values())} resultados en {len(_resultados)} pacientes")
+            _total = sum(len(v) for v in _resultados.values())
+            st.success(f"📄 {_total} resultados en {len(_resultados)} pacientes" + (" (mostrando primeros 100)" if _total >= MAX_RESULTADOS else ""))
             for _pac, _evos in sorted(_resultados.items()):
                 with st.expander(f"**{_pac}** ({len(_evos)} resultados)", key=f"dash_evos_{_pac}"):
-                    for _evo in _evos[-10:]:  # último 10 por paciente
+                    for _evo in _evos[-8:]:
                         _fecha = (_evo.get("fecha") or "")[:16]
                         _texto_corto = (_evo.get("texto", "") or _evo.get("nota", "") or "")[:200]
                         st.caption(f"📅 {_fecha}")
@@ -380,7 +386,7 @@ def render_dashboard(mi_empresa, rol):
         (len(meds_suspendidas), "Cambios medicación", _calc_delta("meds_suspendidas"), "💊", COLOR_WARNING),
         (f"{balance_actual:.0f}ml", "Balance registrado", _calc_delta("balance_actual"), "⚖️", COLOR_INFO),
     ]
-    render_kpi_row(kpi_data, cols=4 if not es_movil else 2)
+    render_kpi_row(kpi_data, cols=4 if not es_movil else 2 if len(kpi_data) > 4 else 1)
 
     if fact_mes is not None:
         st.caption(f"Facturacion cargada en el sistema: ${fact_mes:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -463,13 +469,14 @@ def render_dashboard(mi_empresa, rol):
         st.markdown("#### Listados ejecutivos")
     render_listados_ejecutivos(agenda_enriquecida, meds_suspendidas, mi_empresa, rol, es_movil)
 
-    # Mapa geográfico de visitas + Reporte PDF (solo escritorio)
+    # Mapa geográfico de visitas (solo escritorio)
     if not es_movil:
         st.divider()
         st.markdown("#### Mapa de visitas (GPS real)")
         _gps_data = []
+        _checkins_gps = checkins[:500]
         with st.spinner("Procesando datos de GPS..."):
-            for c in checkins:
+            for c in _checkins_gps:
                 gps_str = c.get("gps", "")
                 if gps_str and "," in gps_str:
                     try:
