@@ -18,8 +18,10 @@ import streamlit as st
 try:
     exec(compile(open("main_medicare.py", encoding="utf-8").read(), "main_medicare.py", "exec"))
 except (SyntaxError, IndentationError) as _compile_err:
-    st.error(f"Error de compilacion. Recargue la pagina o contacte a soporte.")
+    st.error("Error de compilacion. Recargue la pagina o contacte a soporte.")
     st.caption(f"Detalle: {_compile_err}")
+    st.stop()
 except Exception as _run_err:
-    st.error(f"Error al iniciar la aplicacion. Recargue la pagina.")
+    st.error("Error al iniciar la aplicacion. Recargue la pagina.")
     st.caption(f"Detalle: {_run_err}")
+    st.stop()
