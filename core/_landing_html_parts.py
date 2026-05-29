@@ -93,19 +93,19 @@ _PART_1 = """
               }
 
               .mc-lp-inner {
-                max-width: 1180px;
+                max-width: 1100px;
                 margin: 0 auto;
-                padding: 40px clamp(18px, 4vw, 28px) 48px;
+                padding: 24px clamp(16px, 3vw, 24px) 28px;
               }
 
               .mc-lp-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 20px;
+                gap: 14px;
                 flex-wrap: wrap;
-                margin-bottom: 40px;
-                padding-bottom: 28px;
+                margin-bottom: 20px;
+                padding-bottom: 16px;
                 border-bottom: 1px solid rgba(148, 163, 184, 0.1);
               }
 
@@ -162,9 +162,9 @@ _PART_1 = """
               }
 
               .mc-lp-trust {
-                margin: -12px 0 36px;
-                padding: 14px 18px;
-                border-radius: 18px;
+                margin: -8px 0 18px;
+                padding: 10px 14px;
+                border-radius: 16px;
                 border: 1px solid rgba(148, 163, 184, 0.12);
                 background: linear-gradient(180deg, rgba(8, 14, 26, 0.75), rgba(5, 10, 18, 0.82));
                 box-shadow: var(--lp-inset), 0 12px 40px rgba(0, 0, 0, 0.18);
@@ -206,16 +206,16 @@ _PART_1 = """
 
               .mc-lp-hero {
                 display: grid;
-                grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
-                gap: 24px;
+                grid-template-columns: minmax(0, 1.12fr) minmax(300px, 0.88fr);
+                gap: 16px;
                 align-items: stretch;
-                margin-bottom: 32px;
+                margin-bottom: 20px;
               }
 
               .mc-lp-copy {
                 position: relative;
-                padding: 36px 36px 32px;
-                border-radius: var(--lp-radius-xl);
+                padding: 24px 24px 22px;
+                border-radius: 24px;
                 background:
                   var(--lp-sheen),
                   linear-gradient(165deg, rgba(10, 16, 28, 0.94) 0%, rgba(6, 11, 20, 0.9) 100%),
@@ -257,14 +257,14 @@ _PART_1 = """
               }
 
               .mc-lp-h1 {
-                margin: 0 0 20px;
+                margin: 0 0 12px;
                 max-width: 22ch;
                 color: #ffffff;
                 font-family: 'Fraunces', Georgia, serif;
-                font-size: clamp(2.35rem, 4.2vw, 3.65rem);
+                font-size: clamp(1.8rem, 3.6vw, 2.8rem);
                 font-weight: 800;
-                line-height: 1.05;
-                letter-spacing: -0.045em;
+                line-height: 1.08;
+                letter-spacing: -0.04em;
               }
 
               .mc-lp-h1 em {
@@ -278,11 +278,11 @@ _PART_1 = """
               }
 
               .mc-lp-lead {
-                margin: 0 0 26px;
+                margin: 0 0 16px;
                 max-width: 38rem;
                 color: #a8b8cc;
-                font-size: 1.02rem;
-                line-height: 1.75;
+                font-size: 0.92rem;
+                line-height: 1.6;
                 font-weight: 500;
               }
 
@@ -412,8 +412,8 @@ _PART_1 = """
 
               .mc-lp-board {
                 position: relative;
-                padding: 26px 24px 24px;
-                border-radius: var(--lp-radius-xl);
+                padding: 18px 18px 18px;
+                border-radius: 24px;
                 background:
                   var(--lp-sheen),
                   linear-gradient(168deg, rgba(13, 21, 36, 0.98) 0%, rgba(6, 10, 18, 0.99) 100%),
@@ -568,8 +568,8 @@ _PART_2 = """
               }
 
               .mc-lp-board-footer {
-                margin-top: 16px;
-                padding: 14px 16px;
+                margin-top: 10px;
+                padding: 10px 14px;
                 border-radius: 16px;
                 border: 1px solid rgba(148, 163, 184, 0.1);
                 background: rgba(8, 13, 23, 0.65);
@@ -589,13 +589,13 @@ _PART_2 = """
               }
 
               .mc-lp-stats {
-                margin: 0 0 52px;
+                margin: 0 0 28px;
               }
 
               .mc-lp-stats-head {
                 text-align: center;
                 max-width: 42rem;
-                margin: 0 auto 22px;
+                margin: 0 auto 14px;
                 padding: 0 8px;
               }
 
@@ -618,11 +618,11 @@ _PART_2 = """
               .mc-lp-stat-item {
                 position: relative;
                 display: flex;
-                gap: 16px;
+                gap: 12px;
                 align-items: flex-start;
-                padding: 24px 20px 22px;
-                min-height: 118px;
-                border-radius: 20px;
+                padding: 16px 16px 14px;
+                min-height: 90px;
+                border-radius: 16px;
                 border: 1px solid rgba(148, 163, 184, 0.11);
                 background: var(--lp-panel-soft);
                 box-shadow: 0 16px 44px rgba(0, 0, 0, 0.2), var(--lp-inset);
@@ -671,8 +671,8 @@ _PART_2 = """
               }
 
               .mc-lp-section-head {
-                margin-bottom: 28px;
-                padding-bottom: 8px;
+                margin-bottom: 16px;
+                padding-bottom: 4px;
               }
 
               .mc-lp-section-kicker {
@@ -711,14 +711,14 @@ _PART_3 = """
               .mc-lp-bento {
                 display: grid;
                 grid-template-columns: repeat(12, minmax(0, 1fr));
-                gap: 18px;
-                margin-bottom: 48px;
+                gap: 12px;
+                margin-bottom: 28px;
               }
 
               .mc-lp-cell {
                 height: 100%;
-                padding: 26px 24px;
-                border-radius: 22px;
+                padding: 18px 18px;
+                border-radius: 18px;
                 border: 1px solid rgba(148, 163, 184, 0.13);
                 background:
                   var(--lp-sheen),
@@ -798,13 +798,13 @@ _PART_3 = """
               .mc-lp-two-up {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 16px;
-                margin-bottom: 44px;
+                gap: 12px;
+                margin-bottom: 24px;
               }
 
               .mc-lp-panel {
-                padding: 30px 28px;
-                border-radius: 22px;
+                padding: 20px 20px;
+                border-radius: 18px;
                 border: 1px solid rgba(148, 163, 184, 0.11);
                 background: linear-gradient(180deg, rgba(14, 22, 36, 0.94), rgba(9, 15, 24, 0.9));
                 box-shadow: 0 22px 52px rgba(0, 0, 0, 0.22), var(--lp-inset);
@@ -852,13 +852,13 @@ _PART_3 = """
               .mc-lp-mini-grid {
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 14px;
-                margin-bottom: 44px;
+                gap: 10px;
+                margin-bottom: 24px;
               }
 
               .mc-lp-mini-card {
-                padding: 22px 20px;
-                border-radius: 18px;
+                padding: 14px 14px;
+                border-radius: 14px;
                 border: 1px solid rgba(148, 163, 184, 0.1);
                 background: rgba(8, 13, 23, 0.72);
                 box-shadow: var(--lp-inset);
@@ -891,8 +891,8 @@ _PART_4 = """
               .mc-lp-contact {
                 position: relative;
                 overflow: hidden;
-                padding: 44px 32px 32px;
-                border-radius: var(--lp-radius-xl);
+                padding: 28px 24px 24px;
+                border-radius: 24px;
                 border: 1px solid rgba(45, 212, 191, 0.26);
                 background:
                   var(--lp-sheen),
@@ -1008,10 +1008,10 @@ _PART_4 = """
               }
 
               .mc-lp-incident {
-                margin: 18px auto 0;
+                margin: 12px auto 0;
                 max-width: 680px;
-                padding: 18px 20px;
-                border-radius: 20px;
+                padding: 12px 16px;
+                border-radius: 16px;
                 border: 1px solid rgba(251, 191, 36, 0.28);
                 background: linear-gradient(180deg, rgba(74, 33, 6, 0.5), rgba(49, 22, 4, 0.42));
                 text-align: center;
@@ -1031,7 +1031,7 @@ _PART_4 = """
               }
 
               .mc-lp-cta-wrap {
-                padding: 28px 10px 8px;
+                padding: 16px 10px 4px;
                 text-align: center;
               }
 
@@ -1059,9 +1059,9 @@ _PART_4 = """
               }
 
               .mc-lp-tagline {
-                margin: 0 auto 8px;
+                margin: 0 auto 4px;
                 max-width: 640px;
-                padding: 20px 22px;
+                padding: 12px 16px;
                 border-radius: 16px;
                 border: 1px solid rgba(148, 163, 184, 0.1);
                 background: rgba(6, 11, 20, 0.55);
@@ -1079,14 +1079,14 @@ _PART_4 = """
               }
 
               .mc-lp-product-access {
-                margin: 20px auto 24px;
+                margin: 14px auto 18px;
                 max-width: 900px;
                 display: grid;
                 grid-template-columns: minmax(0, 1fr) auto;
-                gap: 18px;
+                gap: 14px;
                 align-items: center;
-                padding: 24px;
-                border-radius: 22px;
+                padding: 16px 18px;
+                border-radius: 18px;
                 border: 1px solid rgba(45, 212, 191, 0.26);
                 background:
                   var(--lp-sheen),
@@ -1184,34 +1184,42 @@ _PART_4 = """
 
               @media (max-width: 720px) {
                 .mc-lp-inner {
-                  padding: 34px 14px 24px;
+                  padding: 20px 12px 16px;
+                }
+
+                .mc-lp-header {
+                  margin-bottom: 14px;
+                  padding-bottom: 12px;
                 }
 
                 .mc-lp-trust {
-                  margin-bottom: 28px;
-                  padding: 12px 12px;
+                  margin-bottom: 18px;
+                  padding: 8px 10px;
                 }
 
-                .mc-lp-trust-inner {
-                  justify-content: flex-start;
+                .mc-lp-copy {
+                  padding: 16px 16px 18px;
                 }
 
-                .mc-lp-trust-item {
-                  font-size: 0.65rem;
-                  letter-spacing: 0.04em;
+                .mc-lp-board {
+                  padding: 14px 14px;
                 }
 
-                .mc-lp-copy,
-                .mc-lp-board,
-                .mc-lp-panel,
+                .mc-lp-panel {
+                  padding: 14px 14px;
+                }
+
                 .mc-lp-contact {
-                  padding-left: 18px;
-                  padding-right: 18px;
+                  padding: 18px 16px 20px;
                 }
 
                 .mc-lp-h1 {
                   max-width: none;
-                  font-size: clamp(2.05rem, 8.5vw, 2.85rem);
+                  font-size: clamp(1.55rem, 7vw, 2.2rem);
+                }
+
+                .mc-lp-lead {
+                  font-size: 0.86rem;
                 }
 
                 .mc-lp-proof-row,
@@ -1220,13 +1228,23 @@ _PART_4 = """
                   grid-template-columns: 1fr;
                 }
 
+                .mc-lp-stat-item {
+                  padding: 12px 14px;
+                  min-height: 76px;
+                }
+
+                .mc-lp-cell {
+                  padding: 14px 14px;
+                }
+
                 .mc-lp-pill-row {
-                  gap: 8px;
+                  gap: 6px;
                 }
 
                 .mc-lp-pill {
                   width: 100%;
                   justify-content: center;
+                  font-size: 0.76rem;
                 }
 
                 .mc-lp-product-link {
@@ -1235,10 +1253,21 @@ _PART_4 = """
 
                 .mc-lp-flow-card {
                   grid-template-columns: 44px 1fr;
+                  padding: 12px 12px;
                 }
 
                 .mc-lp-flow-tag {
                   display: none;
+                }
+
+                .mc-lp-faq summary {
+                  font-size: 0.84rem;
+                  min-height: 38px;
+                  padding: 8px 12px;
+                }
+                .mc-lp-faq details > div {
+                  font-size: 0.82rem;
+                  padding: 0 12px 10px;
                 }
               }
 
@@ -1255,26 +1284,22 @@ _PART_4 = """
               }
 
               /* ── FAQ accordion ─────────────────────────── */
-              .mc-lp-faq { margin-bottom: 40px; }
+              .mc-lp-faq { margin-bottom: 24px; }
               .mc-lp-faq details {
-                margin-bottom: 8px;
-                border-radius: 16px;
-                border: 1px solid rgba(148, 163, 184, 0.12);
-                background: rgba(10, 16, 29, 0.75);
-                overflow: hidden;
-                transition: border-color 0.2s;
+                margin-bottom: 4px;
+                border-radius: 12px;
+                border: 1px solid rgba(148, 163, 184, 0.1);
+                background: rgba(10, 16, 29, 0.7);
               }
-              .mc-lp-faq details[open] {
-                border-color: rgba(45, 212, 191, 0.35);
-              }
+              .mc-lp-faq details[open] { border-color: rgba(45, 212, 191, 0.3); }
               .mc-lp-faq summary {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                min-height: 52px;
-                padding: 14px 18px;
+                min-height: 42px;
+                padding: 10px 14px;
                 color: #e8f0fa;
-                font-size: 0.95rem;
+                font-size: 0.88rem;
                 font-weight: 700;
                 cursor: pointer;
                 list-style: none;
@@ -1282,19 +1307,15 @@ _PART_4 = """
               .mc-lp-faq summary::-webkit-details-marker { display: none; }
               .mc-lp-faq summary::after {
                 content: "+";
-                font-size: 1.3rem;
-                font-weight: 400;
+                font-size: 1.1rem;
                 color: var(--lp-accent);
-                transition: transform 0.2s;
               }
-              .mc-lp-faq details[open] summary::after {
-                content: "−";
-              }
+              .mc-lp-faq details[open] summary::after { content: "−"; }
               .mc-lp-faq details > div {
-                padding: 0 18px 16px;
+                padding: 0 14px 12px;
                 color: #a8b8cc;
-                font-size: 0.9rem;
-                line-height: 1.7;
+                font-size: 0.85rem;
+                line-height: 1.6;
               }
 
               /* ── SVG icon decorativos en cards ─────────── */
