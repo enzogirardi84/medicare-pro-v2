@@ -123,6 +123,9 @@ def _img_mime(base64_str: str) -> str:
 
 def _render_admision_gestion(mi_empresa, rol, admin_total):
     """Sección: Corregir o eliminar legajo."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     st.markdown("## Corregir o eliminar legajo")
     st.caption(
         "Esta seccion esta arriba: busca el paciente y edita el legajo. "
@@ -145,7 +148,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
             "**De Alta** archiva el legajo en la lista habitual (coordinacion puede volver a mostrarlo con **Incluir altas**)."
         )
     st.markdown("##### Gestion de pacientes por clinica")
-    col_f1, col_f2 = st.columns([2.2, 1])
+    if not es_movil:
+        col_f1, col_f2 = st.columns([2.2, 1])
+    else:
+        col_f1 = st.container()
+        col_f2 = st.container()
     buscar_gestion = col_f1.text_input(
         "Buscar en legajos cargados",
         placeholder="Nombre, DNI, obra social, clinica o estado",
@@ -175,7 +182,12 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
         empresa_filtro=empresa_filtro,
     )
 
-    col_m1, col_m2, col_m3 = st.columns(3)
+    if not es_movil:
+        col_m1, col_m2, col_m3 = st.columns(3)
+    else:
+        col_m1 = st.container()
+        col_m2 = st.container()
+        col_m3 = st.container()
     col_m1.metric("Pacientes visibles", len(pacientes_gestion))
     col_m2.metric("Activos", sum(1 for item in pacientes_gestion if item["estado"] == "Activo"))
     col_m3.metric("No activos", sum(1 for item in pacientes_gestion if item["estado"] != "Activo"))
@@ -242,7 +254,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
 
                 with st.form("adm_edit_form"):
                     with st.expander("Datos personales", expanded=False):
-                        col_foto_e, col_campos_e = st.columns([1, 3])
+                        if not es_movil:
+                            col_foto_e, col_campos_e = st.columns([1, 3])
+                        else:
+                            col_foto_e = st.container()
+                            col_campos_e = st.container()
                         with col_foto_e:
                             foto_edit = st.file_uploader("Foto de perfil", type=["jpg", "jpeg", "png", "webp", "gif", "bmp"],
                                                           key="adm_foto_edit", label_visibility="collapsed")
@@ -254,10 +270,18 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                                     unsafe_allow_html=True,
                                 )
                         with col_campos_e:
-                            col_e1, col_e2 = st.columns(2)
+                            if not es_movil:
+                                col_e1, col_e2 = st.columns(2)
+                            else:
+                                col_e1 = st.container()
+                                col_e2 = st.container()
                             nombre_edit = col_e1.text_input("Nombre y apellido *", value=_nombre_legible(paciente_sel_admin))
                             dni_edit = col_e2.text_input("DNI del paciente *", value=detalle_sel.get("dni", ""))
-                            col_e3, col_e4 = st.columns(2)
+                            if not es_movil:
+                                col_e3, col_e4 = st.columns(2)
+                            else:
+                                col_e3 = st.container()
+                                col_e4 = st.container()
                             fnac_edit = col_e3.date_input(
                                 "Fecha de nacimiento",
                                 value=_parsear_fecha_guardada(detalle_sel.get("fnac", "")),
@@ -273,7 +297,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                             email_edit = st.text_input("Email", value=detalle_sel.get("email", ""))
 
                     with st.expander("Contacto y direccion", expanded=False):
-                        col_e7, col_e8 = st.columns(2)
+                        if not es_movil:
+                            col_e7, col_e8 = st.columns(2)
+                        else:
+                            col_e7 = st.container()
+                            col_e8 = st.container()
                         telefono_edit = col_e7.text_input("WhatsApp / telefono", value=detalle_sel.get("telefono", ""))
                         if admin_total:
                             empresa_edit = col_e8.text_input("Empresa / clinica", value=detalle_sel.get("empresa", mi_empresa))
@@ -281,7 +309,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                             empresa_edit = mi_empresa
                             col_e8.info(f"Clinica fija: {mi_empresa}")
 
-                        col_e9, col_e10 = st.columns(2)
+                        if not es_movil:
+                            col_e9, col_e10 = st.columns(2)
+                        else:
+                            col_e9 = st.container()
+                            col_e10 = st.container()
                         contacto_emergencia_nombre_edit = col_e9.text_input("Contacto de emergencia (nombre)", value=detalle_sel.get("contacto_emergencia_nombre", ""))
                         contacto_emergencia_tel_edit = col_e10.text_input("Contacto de emergencia (telefono)", value=detalle_sel.get("contacto_emergencia_telefono", ""))
 
@@ -289,7 +321,12 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                         obra_edit = st.text_input("Obra social / prepaga", value=detalle_sel.get("obra_social", ""))
 
                     with st.expander("Datos de ingreso", expanded=False):
-                        col_e11, col_e12, col_e13 = st.columns(3)
+                        if not es_movil:
+                            col_e11, col_e12, col_e13 = st.columns(3)
+                        else:
+                            col_e11 = st.container()
+                            col_e12 = st.container()
+                            col_e13 = st.container()
                         fecha_ingreso_edit = col_e11.date_input(
                             "Fecha de ingreso",
                             value=_parsear_fecha_guardada(detalle_sel.get("fecha_ingreso", "")),
@@ -320,7 +357,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                     _peso_val_edit = detalle_sel.get("peso", "") or ""
                     _talla_val_edit = detalle_sel.get("talla", "") or ""
                     with st.expander("Datos fisicos", expanded=False):
-                        col_p1, col_p2 = st.columns(2)
+                        if not es_movil:
+                            col_p1, col_p2 = st.columns(2)
+                        else:
+                            col_p1 = st.container()
+                            col_p2 = st.container()
                         try:
                             _peso_default = float(_peso_val_edit) if _peso_val_edit else 0.0
                         except Exception:
@@ -333,7 +374,11 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
                         talla_edit = col_p2.number_input("Talla (cm)", min_value=0.0, max_value=250.0, value=_talla_default, step=0.5, format="%.1f")
 
                     with st.expander("Alertas clinicas", expanded=False):
-                        col_e14, col_e15 = st.columns(2)
+                        if not es_movil:
+                            col_e14, col_e15 = st.columns(2)
+                        else:
+                            col_e14 = st.container()
+                            col_e15 = st.container()
                         alergias_edit = col_e14.text_area("Alergias", value=detalle_sel.get("alergias", ""), height=90)
                         patologias_edit = col_e15.text_area(
                             "Patologias previas / riesgos",
@@ -529,6 +574,9 @@ def _render_admision_gestion(mi_empresa, rol, admin_total):
 
 def _render_admision_alta(mi_empresa, rol, admin_total):
     """Sección: Alta de paciente nuevo."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     st.divider()
     st.markdown("## Alta de paciente nuevo")
     st.markdown("##### Antes de dar el alta: buscar si ya existe")
@@ -577,15 +625,27 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
 
     with st.form("adm_form", clear_on_submit=True):
         with st.expander("Datos personales", expanded=True):
-            col_foto, col_campos = st.columns([1, 3])
+            if not es_movil:
+                col_foto, col_campos = st.columns([1, 3])
+            else:
+                col_foto = st.container()
+                col_campos = st.container()
             with col_foto:
                 foto_alta = st.file_uploader("Foto", type=["jpg", "jpeg", "png", "webp", "gif", "bmp"],
                                               key="adm_foto_alta", label_visibility="collapsed")
             with col_campos:
-                col_a, col_b = st.columns(2)
+                if not es_movil:
+                    col_a, col_b = st.columns(2)
+                else:
+                    col_a = st.container()
+                    col_b = st.container()
                 n = col_a.text_input("Nombre y apellido *", placeholder="Juan Perez")
                 d = col_b.text_input("DNI del paciente *", placeholder="35123456", key="_adm_dni_preview")
-                col_c2, col_d2 = st.columns(2)
+                if not es_movil:
+                    col_c2, col_d2 = st.columns(2)
+                else:
+                    col_c2 = st.container()
+                    col_d2 = st.container()
                 f_nac = col_c2.date_input(
                     "Fecha de nacimiento",
                     value=date(1990, 1, 1),
@@ -597,16 +657,29 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                 email_alta = st.text_input("Email", placeholder="paciente@correo.com")
 
         with st.expander("Contacto y direccion", expanded=False):
-            col_g, col_h = st.columns(2)
+            if not es_movil:
+                col_g, col_h = st.columns(2)
+            else:
+                col_g = st.container()
+                col_h = st.container()
             tel = col_g.text_input("WhatsApp / telefono", placeholder="3584302024")
             contacto_emergencia_nombre = col_h.text_input("Contacto de emergencia (nombre)", placeholder="Familiar a cargo")
 
-            col_i, col_j = st.columns(2)
+            if not es_movil:
+                col_i, col_j = st.columns(2)
+            else:
+                col_i = st.container()
+                col_j = st.container()
             contacto_emergencia_tel = col_i.text_input("Contacto de emergencia (telefono)", placeholder="3584302024")
             dir_p = col_j.text_input("Direccion exacta", placeholder="Calle 123, barrio, ciudad")
 
         with st.expander("Datos de ingreso", expanded=False):
-            col_k, col_l, col_m = st.columns(3)
+            if not es_movil:
+                col_k, col_l, col_m = st.columns(3)
+            else:
+                col_k = st.container()
+                col_l = st.container()
+                col_m = st.container()
             fecha_ingreso_alta = col_k.date_input(
                 "Fecha de ingreso",
                 value=ahora().date(),
@@ -624,7 +697,11 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
                 key="_adm_motivo_ingreso",
             )
 
-            col_n2, col_o2 = st.columns(2)
+            if not es_movil:
+                col_n2, col_o2 = st.columns(2)
+            else:
+                col_n2 = st.container()
+                col_o2 = st.container()
             peso_ingreso = col_n2.number_input(
                 "Peso (kg)",
                 min_value=0.0,
@@ -646,7 +723,11 @@ def _render_admision_alta(mi_empresa, rol, admin_total):
             )
 
         with st.expander("Alertas clinicas", expanded=False):
-            col_n, col_o = st.columns(2)
+            if not es_movil:
+                col_n, col_o = st.columns(2)
+            else:
+                col_n = st.container()
+                col_o = st.container()
             alergias = col_n.text_area("Alergias", placeholder="Ej: penicilina, ibuprofeno...", height=90)
             patologias = col_o.text_area("Patologias previas / riesgos", placeholder="Ej: DBT, HTA, marcapasos...", height=90)
 

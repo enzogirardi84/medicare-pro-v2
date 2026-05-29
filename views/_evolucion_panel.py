@@ -74,6 +74,9 @@ def _optimizar_foto_segura(raw_foto: bytes) -> bytes:
 
 
 def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_borrar):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     mi_empresa = user.get("empresa", "") if isinstance(user, dict) else ""
     profesional = user.get("nombre", "Sistema") if isinstance(user, dict) else "Sistema"
     _draft_key = f"_draft_evolucion_{paciente_sel}"
@@ -100,7 +103,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         evs_all = get_patient_records("evoluciones_db", paciente_sel)
         if evs_all:
             ultima_ev = max(evs_all, key=lambda x: x.get("fecha", ""))
-            c1, c2, c3 = st.columns(3)
+            if not es_movil:
+                c1, c2, c3 = st.columns(3)
+            else:
+                c1 = st.container()
+                c2 = st.container()
+                c3 = st.container()
             c1.metric("Última evolución", ultima_ev.get("fecha", "S/D"))
             c2.metric("Profesional", ultima_ev.get("firma") or "S/D")
             c3.metric("Total evoluciones", len(evs_all))
@@ -164,7 +172,11 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
             desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
             st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
-            col_up, col_cam = st.columns(2)
+            if not es_movil:
+                col_up, col_cam = st.columns(2)
+            else:
+                col_up = st.container()
+                col_cam = st.container()
             with col_up:
                 archivo_foto = st.file_uploader(
                     "Subir foto desde el dispositivo (galería o archivos)",
@@ -379,7 +391,11 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             default=20,
         )
 
-        c1, c2 = st.columns([0.7, 0.3])
+        if not es_movil:
+            c1, c2 = st.columns([0.7, 0.3])
+        else:
+            c1 = st.container()
+            c2 = st.container()
         with c1:
             st.markdown(f"**{len(evs_paciente)} evolución(es)**")
         with c2:
@@ -490,7 +506,11 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         st.rerun()
 
         if puede_borrar:
-            col_chk, col_btn = st.columns([1.2, 2.8])
+            if not es_movil:
+                col_chk, col_btn = st.columns([1.2, 2.8])
+            else:
+                col_chk = st.container()
+                col_btn = st.container()
             confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
             if col_btn.button("Borrar última evolución", use_container_width=True, disabled=not confirmar_borrado):
                 if not evs_paciente:
