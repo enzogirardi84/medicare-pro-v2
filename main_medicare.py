@@ -59,40 +59,21 @@ except Exception as exc:
 aplicar_css_base()
 
 
-def _inject_mobile_assets() -> None:
-    """Inyecta viewport meta tag + CSS responsive (1 vez por sesion).
-
-    El viewport meta se inyecta via JS porque st.markdown(<meta>) lo pone en
-    el <body> donde los browsers lo ignoran.
-    """
-    if st.session_state.get("_mobile_assets_injected"):
+def _inject_mobile_css() -> None:
+    """Inyecta CSS responsive (1 vez por sesion)."""
+    if st.session_state.get("_mobile_css_injected"):
         return
     try:
-        # Viewport via JS — unica forma de que termine en <head>
-        st.html(
-            '<script>'
-            'var m=document.querySelector(\'meta[name="viewport"]\')||document.createElement("meta");'
-            'm.name="viewport";'
-            'm.content="width=device-width, initial-scale=1.0";'
-            'document.head.appendChild(m);'
-            '</script>'
-        )
         mobile_css_path = Path(__file__).resolve().parent / "assets" / "mobile.css"
-        mobile_css_content = ""
         if mobile_css_path.exists():
             mobile_css_content = mobile_css_path.read_text(encoding="utf-8")
-            import re as _re
-            mobile_css_content = _re.sub(r'/\*.*?\*/', '', mobile_css_content, flags=_re.DOTALL)
-            mobile_css_content = _re.sub(r'\s+', ' ', mobile_css_content)
-            mobile_css_content = _re.sub(r'\s*([{}:;,])\s*', r'\1', mobile_css_content)
             st.markdown(f"<style>{mobile_css_content}</style>", unsafe_allow_html=True)
-        st.session_state["_mobile_assets_injected"] = True
-        log_event("mobile_css", f"inyectado:{len(mobile_css_content)}b")
+            st.session_state["_mobile_css_injected"] = True
     except Exception as exc:
         log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
 
 
-_inject_mobile_assets()
+_inject_mobile_css()
 
 from core.atajos_teclado import inject_atajos_teclado, render_ayuda_atajos
 inject_atajos_teclado()

@@ -6,14 +6,14 @@
 /* Helpers de visibilidad */
 .mc-mobile-only { display: none; }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 768px), screen and (max-width: 980px) and (hover: none) and (pointer: coarse) {
 
     .mc-mobile-only { display: block !important; }
     .mc-desktop-only,
     .mc-only-desktop { display: none !important; }
 
     /* ========================================================
-       1) RESET TOTAL DE VIEWPORT
+        1) RESET TOTAL DE VIEWPORT
        ======================================================== */
     html,
     body,
@@ -804,7 +804,7 @@ input:focus, select:focus, textarea:focus,
 }
 
 /* ── Columns(3+) en mobile: grid 2 columnas en vez de apilar ──── */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 768px), screen and (max-width: 980px) and (hover: none) and (pointer: coarse) {
     [data-testid="stHorizontalBlock"]:not([data-testid="stSidebar"] [data-testid="stHorizontalBlock"]) {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -875,7 +875,7 @@ input:focus, select:focus, textarea:focus,
 }
 
 /* ── Login en mobile ───────────────────────────────────────────── */
-@media screen and (max-width: 480px) {
+@media screen and (max-width: 480px), screen and (max-width: 980px) and (hover: none) and (pointer: coarse) {
     section.main > div {
         padding-top: 0.5rem !important;
     }
@@ -888,7 +888,7 @@ input:focus, select:focus, textarea:focus,
 }
 
 /* ── Pantallas muy pequenas (< 480px) ──────────────────────────── */
-@media screen and (max-width: 480px) {
+@media screen and (max-width: 480px), screen and (max-width: 980px) and (hover: none) and (pointer: coarse) {
     .block-container {
         padding: 0.6rem 0.3rem !important;
     }
