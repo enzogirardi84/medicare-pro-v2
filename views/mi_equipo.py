@@ -47,6 +47,9 @@ from views._mi_equipo_bloques import (
 
 
 def render_mi_equipo(mi_empresa, rol, user=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     # Siempre el rol canonico desde la sesion (evita desalineacion argumento vs u_actual y sesiones previas al login normalizado).
     raw_u = st.session_state.get("u_actual")
     if isinstance(raw_u, dict):
@@ -109,17 +112,27 @@ def render_mi_equipo(mi_empresa, rol, user=None):
             # al guardar OK hacemos st.rerun() y el formulario vuelve vacío.
             with st.form("equipo_alta_usuario", clear_on_submit=False):
                 st.markdown("##### Datos del nuevo acceso")
-                col_id, col_pw, col_pin = st.columns([2, 2, 1])
-                u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
-                with col_pw:
+                if es_movil:
+                    u_id = st.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
                     u_pw = st.text_input("Clave de acceso", type="password")
                     st.caption(f"Mínimo {password_min_length()} caracteres (configurable en secrets).")
-                u_pin = col_pin.text_input("PIN opcional", max_chars=4, placeholder="1234")
+                    u_pin = st.text_input("PIN opcional", max_chars=4, placeholder="1234")
+                else:
+                    col_id, col_pw, col_pin = st.columns([2, 2, 1])
+                    u_id = col_id.text_input("Usuario (Login)", placeholder="ej: maria.lopez")
+                    with col_pw:
+                        u_pw = st.text_input("Clave de acceso", type="password")
+                        st.caption(f"Mínimo {password_min_length()} caracteres (configurable en secrets).")
+                    u_pin = col_pin.text_input("PIN opcional", max_chars=4, placeholder="1234")
 
                 u_nm = st.text_input("Nombre Completo del Profesional")
-                col_dni, col_mt = st.columns(2)
-                u_dni = col_dni.text_input("DNI del Profesional")
-                u_mt = col_mt.text_input("Matricula / Matricula Profesional")
+                if es_movil:
+                    u_dni = st.text_input("DNI del Profesional")
+                    u_mt = st.text_input("Matricula / Matricula Profesional")
+                else:
+                    col_dni, col_mt = st.columns(2)
+                    u_dni = col_dni.text_input("DNI del Profesional")
+                    u_mt = col_mt.text_input("Matricula / Matricula Profesional")
 
                 u_ti = st.selectbox(
                     "Titulo / Cargo",
