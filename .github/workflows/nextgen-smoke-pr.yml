@@ -43,7 +43,6 @@ jobs:
           healthcheck_url: http://localhost:8000/health
           max_attempts: "60"
           sleep_seconds: "5"
-          initial_delay_seconds: "10"
 
       - name: Run smoke integration contracts
         env:

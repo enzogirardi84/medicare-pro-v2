@@ -7,8 +7,6 @@ on:
       - master
     paths:
       - "nextgen_platform/**"
-      - ".github/workflows/**"
-      - ".github/actions/**"
 
 concurrency:
   group: nextgen-ci-${{ github.ref }}

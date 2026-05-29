@@ -66,9 +66,11 @@ jobs:
 
       - name: Append to job summary
         run: |
-          echo "## Release draft (${{ inputs.version }})" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          cat nextgen_platform/ci_artifacts/release-draft.md >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Release draft (${{ inputs.version }})"
+            echo ""
+            cat nextgen_platform/ci_artifacts/release-draft.md
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload release draft artifact
         uses: actions/upload-artifact@v4

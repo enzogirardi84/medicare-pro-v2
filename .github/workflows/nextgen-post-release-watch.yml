@@ -47,21 +47,6 @@ on:
         required: false
         default: ""
         type: string
-      max_total_time_health_seconds:
-        description: "Optional threshold for /health (seconds)"
-        required: false
-        default: ""
-        type: string
-      max_total_time_live_seconds:
-        description: "Optional threshold for /live (seconds)"
-        required: false
-        default: ""
-        type: string
-      max_total_time_ready_seconds:
-        description: "Optional threshold for /ready (seconds)"
-        required: false
-        default: ""
-        type: string
       fail_on_latency_breach:
         description: "Fail workflow when aggregate avg latency exceeds configured threshold (🔴); set false for staging diagnostics only"
         required: false
@@ -90,9 +75,6 @@ jobs:
           POST_RELEASE_RETRY_ATTEMPTS: ${{ inputs.retry_attempts }}
           POST_RELEASE_RETRY_SLEEP_SECONDS: ${{ inputs.retry_sleep_seconds }}
           POST_RELEASE_MAX_TOTAL_TIME_SECONDS: ${{ inputs.max_total_time_seconds }}
-          POST_RELEASE_MAX_TOTAL_TIME_HEALTH_SECONDS: ${{ inputs.max_total_time_health_seconds }}
-          POST_RELEASE_MAX_TOTAL_TIME_LIVE_SECONDS: ${{ inputs.max_total_time_live_seconds }}
-          POST_RELEASE_MAX_TOTAL_TIME_READY_SECONDS: ${{ inputs.max_total_time_ready_seconds }}
         run: |
           set -euo pipefail
           mkdir -p nextgen_platform/ci_artifacts
@@ -123,9 +105,6 @@ jobs:
             echo "- Retry attempts: \`${{ inputs.retry_attempts }}\`"
             echo "- Retry sleep: \`${{ inputs.retry_sleep_seconds }}s\`"
             echo "- Max total time (optional): \`${{ inputs.max_total_time_seconds }}\`"
-            echo "- Max /health (optional): \`${{ inputs.max_total_time_health_seconds }}\`"
-            echo "- Max /live (optional): \`${{ inputs.max_total_time_live_seconds }}\`"
-            echo "- Max /ready (optional): \`${{ inputs.max_total_time_ready_seconds }}\`"
             echo "- Fail on aggregate latency breach: \`${{ inputs.fail_on_latency_breach }}\`"
             echo "- Result: ✅ watch completed"
             echo ""

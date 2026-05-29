@@ -4,16 +4,12 @@ on:
   pull_request:
     paths:
       - "nextgen_platform/**"
-      - ".github/workflows/**"
-      - ".github/actions/**"
   push:
     branches:
       - main
       - master
     paths:
       - "nextgen_platform/**"
-      - ".github/workflows/**"
-      - ".github/actions/**"
   workflow_dispatch:
 
 concurrency:
