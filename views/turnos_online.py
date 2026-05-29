@@ -26,6 +26,8 @@ def _today():
 
 
 def render_turnos_online(mi_empresa, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown("""
         <div class="mc-hero">
             <h2 class="mc-hero-title">Turnos Online</h2>
@@ -49,11 +51,17 @@ def render_turnos_online(mi_empresa, rol):
     # FILTROS
     # ================================================================
     with st.expander("Filtros", expanded=False):
-        cols = st.columns(2)
-        filtro_prof = cols[0].selectbox("Profesional", ["Todos"] + profesionales)
-        filtro_estado = cols[0].selectbox("Estado", ["Todos", "Disponible", "Reservado", "Cancelado"])
-        filtro_desde = cols[1].date_input("Desde", _today())
-        filtro_hasta = cols[1].date_input("Hasta", _today() + timedelta(days=30))
+        if not es_movil:
+            cols = st.columns(2)
+            filtro_prof = cols[0].selectbox("Profesional", ["Todos"] + profesionales)
+            filtro_estado = cols[0].selectbox("Estado", ["Todos", "Disponible", "Reservado", "Cancelado"])
+            filtro_desde = cols[1].date_input("Desde", _today())
+            filtro_hasta = cols[1].date_input("Hasta", _today() + timedelta(days=30))
+        else:
+            filtro_prof = st.selectbox("Profesional", ["Todos"] + profesionales)
+            filtro_estado = st.selectbox("Estado", ["Todos", "Disponible", "Reservado", "Cancelado"])
+            filtro_desde = st.date_input("Desde", _today())
+            filtro_hasta = st.date_input("Hasta", _today() + timedelta(days=30))
 
     # Aplicar filtros
     turnos_filtrados = []
@@ -81,9 +89,13 @@ def render_turnos_online(mi_empresa, rol):
     with tabs[0]:
         with st.form("slot_form"):
             st.markdown("##### Nuevo slot")
-            c1, c2 = st.columns(2)
-            prof = c1.text_input("Profesional *", placeholder="Ej: Dr. Juan Perez")
-            fecha = c2.date_input("Fecha", _today() + timedelta(days=1))
+            if not es_movil:
+                c1, c2 = st.columns(2)
+                prof = c1.text_input("Profesional *", placeholder="Ej: Dr. Juan Perez")
+                fecha = c2.date_input("Fecha", _today() + timedelta(days=1))
+            else:
+                prof = st.text_input("Profesional *", placeholder="Ej: Dr. Juan Perez")
+                fecha = st.date_input("Fecha", _today() + timedelta(days=1))
             horarios = st.multiselect("Horarios *", HORARIOS, default=HORARIOS[:4])
 
             if st.form_submit_button("Guardar slots", use_container_width=True, type="primary"):
@@ -169,36 +181,67 @@ def render_turnos_online(mi_empresa, rol):
                 bg = {"Disponible": "rgba(5,150,105,0.1)", "Reservado": "rgba(37,99,235,0.1)", "Cancelado": "rgba(220,38,38,0.1)"}
                 est = t.get('estado', '')
                 with st.container(border=True):
-                    c_prof, c_info, c_acc = st.columns([2, 1.2, 1])
-                    c_prof.markdown(f"**{t.get('profesional','?')}**")
-                    c_info.markdown(f"{t.get('fecha','?')} {t.get('horario','?')}hs")
-                    col = color.get(est, "#fff")
-                    c_acc.markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
-                    if t.get('paciente'):
-                        c_acc.markdown(f"Paciente: {t['paciente']}")
+                    if not es_movil:
+                        c_prof, c_info, c_acc = st.columns([2, 1.2, 1])
+                        c_prof.markdown(f"**{t.get('profesional','?')}**")
+                        c_info.markdown(f"{t.get('fecha','?')} {t.get('horario','?')}hs")
+                        col = color.get(est, "#fff")
+                        c_acc.markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
+                        if t.get('paciente'):
+                            c_acc.markdown(f"Paciente: {t['paciente']}")
+                    else:
+                        st.markdown(f"**{t.get('profesional','?')}**")
+                        st.markdown(f"{t.get('fecha','?')} {t.get('horario','?')}hs")
+                        col = color.get(est, "#fff")
+                        st.markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
+                        if t.get('paciente'):
+                            st.markdown(f"Paciente: {t['paciente']}")
 
-                    c_act1, c_act2 = st.columns(2)
-                    # Editar slot (solo disponibles)
-                    if est == "Disponible":
-                        if c_act1.button("✏️ Editar", use_container_width=True, key=f"ed_{i}"):
-                            st.session_state[f"_edit_slot_{i}"] = True
-                    if st.session_state.get(f"_edit_slot_{i}"):
-                        nuevo_prof = st.text_input("Profesional", t['profesional'], key=f"ep_{i}")
-                        nuevo_horario = st.selectbox("Horario", HORARIOS, index=HORARIOS.index(t['horario']) if t['horario'] in HORARIOS else 0, key=f"eh_{i}")
-                        if st.button("Guardar cambios", use_container_width=True, key=f"sv_{i}"):
-                            t['profesional'] = nuevo_prof
-                            t['horario'] = nuevo_horario
+                    if not es_movil:
+                        c_act1, c_act2 = st.columns(2)
+                        # Editar slot (solo disponibles)
+                        if est == "Disponible":
+                            if c_act1.button("✏️ Editar", use_container_width=True, key=f"ed_{i}"):
+                                st.session_state[f"_edit_slot_{i}"] = True
+                        if st.session_state.get(f"_edit_slot_{i}"):
+                            nuevo_prof = st.text_input("Profesional", t['profesional'], key=f"ep_{i}")
+                            nuevo_horario = st.selectbox("Horario", HORARIOS, index=HORARIOS.index(t['horario']) if t['horario'] in HORARIOS else 0, key=f"eh_{i}")
+                            if st.button("Guardar cambios", use_container_width=True, key=f"sv_{i}"):
+                                t['profesional'] = nuevo_prof
+                                t['horario'] = nuevo_horario
+                                guardar_datos(spinner=True)
+                                queue_toast("Slot actualizado.")
+                                st.session_state.pop(f"_edit_slot_{i}", None)
+                                st.rerun()
+
+                        # Eliminar slot
+                        if c_act2.button("🗑️ Eliminar", use_container_width=True, key=f"del_{i}"):
+                            db.remove(t)
                             guardar_datos(spinner=True)
-                            queue_toast("Slot actualizado.")
-                            st.session_state.pop(f"_edit_slot_{i}", None)
+                            queue_toast("Slot eliminado.")
                             st.rerun()
+                    else:
+                        # Editar slot (solo disponibles)
+                        if est == "Disponible":
+                            if st.button("✏️ Editar", use_container_width=True, key=f"ed_{i}"):
+                                st.session_state[f"_edit_slot_{i}"] = True
+                        if st.session_state.get(f"_edit_slot_{i}"):
+                            nuevo_prof = st.text_input("Profesional", t['profesional'], key=f"ep_{i}")
+                            nuevo_horario = st.selectbox("Horario", HORARIOS, index=HORARIOS.index(t['horario']) if t['horario'] in HORARIOS else 0, key=f"eh_{i}")
+                            if st.button("Guardar cambios", use_container_width=True, key=f"sv_{i}"):
+                                t['profesional'] = nuevo_prof
+                                t['horario'] = nuevo_horario
+                                guardar_datos(spinner=True)
+                                queue_toast("Slot actualizado.")
+                                st.session_state.pop(f"_edit_slot_{i}", None)
+                                st.rerun()
 
-                    # Eliminar slot
-                    if c_act2.button("🗑️ Eliminar", use_container_width=True, key=f"del_{i}"):
-                        db.remove(t)
-                        guardar_datos(spinner=True)
-                        queue_toast("Slot eliminado.")
-                        st.rerun()
+                        # Eliminar slot
+                        if st.button("🗑️ Eliminar", use_container_width=True, key=f"del_{i}"):
+                            db.remove(t)
+                            guardar_datos(spinner=True)
+                            queue_toast("Slot eliminado.")
+                            st.rerun()
 
                     # Reprogramar (reservados)
                     if est == "Reservado":
@@ -238,11 +281,19 @@ def render_turnos_online(mi_empresa, rol):
             reservados = sum(1 for t in db if t.get('estado') == 'Reservado')
             cancelados = sum(1 for t in db if t.get('estado') == 'Cancelado')
 
-            c1, c2 = st.columns(2)
-            c1.metric("Total slots", total)
-            c1.metric("Disponibles", disponibles)
-            c2.metric("Reservados", reservados)
-            c2.metric("Cancelados", cancelados)
+            if not es_movil:
+                c1, c2 = st.columns(2)
+                c1.metric("Total slots", total)
+                c1.metric("Disponibles", disponibles)
+                c2.metric("Reservados", reservados)
+                c2.metric("Cancelados", cancelados)
+            else:
+                with st.container():
+                    st.metric("Total slots", total)
+                    st.metric("Disponibles", disponibles)
+                with st.container():
+                    st.metric("Reservados", reservados)
+                    st.metric("Cancelados", cancelados)
 
             st.markdown("##### Todos los turnos")
             df = pd.DataFrame(db)

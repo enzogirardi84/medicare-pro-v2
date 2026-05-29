@@ -49,6 +49,8 @@ except ImportError:
     GEO_DISPONIBLE = False
 
 def render_visitas(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -94,13 +96,21 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
         if x.get("profesional") == nombre_usuario and x["estado_calc"] in {"Pendiente", "En curso", "Vencida"}
     )
 
-    col_r1, col_r2 = st.columns(2)
-    with col_r1:
-        st.metric("Pendientes", resumen["pendientes"])
-        st.metric("Vencidas", resumen["vencidas"])
-    with col_r2:
-        st.metric("Proximas 48h", resumen["proximas"])
-        st.metric("Carga de tu agenda", carga_profesional)
+    if not es_movil:
+        col_r1, col_r2 = st.columns(2)
+        with col_r1:
+            st.metric("Pendientes", resumen["pendientes"])
+            st.metric("Vencidas", resumen["vencidas"])
+        with col_r2:
+            st.metric("Proximas 48h", resumen["proximas"])
+            st.metric("Carga de tu agenda", carga_profesional)
+    else:
+        with st.container():
+            st.metric("Pendientes", resumen["pendientes"])
+            st.metric("Vencidas", resumen["vencidas"])
+        with st.container():
+            st.metric("Proximas 48h", resumen["proximas"])
+            st.metric("Carga de tu agenda", carga_profesional)
 
     st.caption(
         "Pendientes / vencidas: turnos activos segun fecha y estado. Proximas 48h: ventana corta para coordinar. "
@@ -135,16 +145,27 @@ def render_visitas(paciente_sel, mi_empresa, user, rol):
 
     st.divider()
     st.subheader("Contacto y ubicacion")
-    c_gps, c_agenda, c_wpp = st.columns(3)
-    with c_gps:
+    if not es_movil:
+        c_gps, c_agenda, c_wpp = st.columns(3)
+        with c_gps:
+            with st.container(border=True):
+                st.write("📍 **GPS legal**")
+                st.caption("El fichaje queda asociado a la direccion detectada para mejorar trazabilidad y auditoria.")
+        with c_agenda:
+            with st.container(border=True):
+                st.write("📅 **Agenda inteligente**")
+                st.caption("El sistema remarca pendientes, en curso y vencidas sin expandir listas enormes.")
+        with c_wpp:
+            with st.container(border=True):
+                st.write("💬 **WhatsApp**")
+                st.caption("El aviso con fecha, hora y datos del profesional se arma en la seccion superior de esta misma pantalla.")
+    else:
         with st.container(border=True):
             st.write("📍 **GPS legal**")
             st.caption("El fichaje queda asociado a la direccion detectada para mejorar trazabilidad y auditoria.")
-    with c_agenda:
         with st.container(border=True):
             st.write("📅 **Agenda inteligente**")
             st.caption("El sistema remarca pendientes, en curso y vencidas sin expandir listas enormes.")
-    with c_wpp:
         with st.container(border=True):
             st.write("💬 **WhatsApp**")
             st.caption("El aviso con fecha, hora y datos del profesional se arma en la seccion superior de esta misma pantalla.")

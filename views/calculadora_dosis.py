@@ -59,21 +59,41 @@ def _completar_con_vademecum() -> dict:
     return combinado
 
 
-def _mostrar_resultado(r):
-    cols = st.columns([1, 1, 1])
-    cols[0].metric("Dosis por dosis", f"{r['dosis_min_mg']} - {r['dosis_max_mg']} mg")
-    cols[1].metric("Dosis recomendada", f"{r['dosis_recomendada_mg']} mg")
-    cols[2].metric("Maximo por dosis", f"{r['dosis_max_por_dosis_mg']} mg")
-
-    cols2 = st.columns([1, 1, 1])
-    int_sel = r.get("intervalo_seleccionado_hs")
-    if int_sel:
-        dosis_x_dia = r.get("dosis_por_dia", round(24 / int_sel))
-        cols2[0].metric("Intervalo", f"cada {int_sel} hs ({dosis_x_dia}/dia)")
+def _mostrar_resultado(r, es_movil=False):
+    if not es_movil:
+        cols = st.columns([1, 1, 1])
+        cols[0].metric("Dosis por dosis", f"{r['dosis_min_mg']} - {r['dosis_max_mg']} mg")
+        cols[1].metric("Dosis recomendada", f"{r['dosis_recomendada_mg']} mg")
+        cols[2].metric("Maximo por dosis", f"{r['dosis_max_por_dosis_mg']} mg")
     else:
-        cols2[0].metric("Intervalo", r["intervalo"])
-    cols2[1].metric("Dosis diaria max", f"{r['dosis_diaria_max_mg']} mg/dia")
-    cols2[2].metric("Dosis diaria min", f"{r.get('dosis_diaria_min_mg', '?')} mg/dia")
+        with st.container():
+            st.metric("Dosis por dosis", f"{r['dosis_min_mg']} - {r['dosis_max_mg']} mg")
+        with st.container():
+            st.metric("Dosis recomendada", f"{r['dosis_recomendada_mg']} mg")
+        with st.container():
+            st.metric("Maximo por dosis", f"{r['dosis_max_por_dosis_mg']} mg")
+
+    if not es_movil:
+        cols2 = st.columns([1, 1, 1])
+        int_sel = r.get("intervalo_seleccionado_hs")
+        if int_sel:
+            dosis_x_dia = r.get("dosis_por_dia", round(24 / int_sel))
+            cols2[0].metric("Intervalo", f"cada {int_sel} hs ({dosis_x_dia}/dia)")
+        else:
+            cols2[0].metric("Intervalo", r["intervalo"])
+        cols2[1].metric("Dosis diaria max", f"{r['dosis_diaria_max_mg']} mg/dia")
+        cols2[2].metric("Dosis diaria min", f"{r.get('dosis_diaria_min_mg', '?')} mg/dia")
+    else:
+        int_sel = r.get("intervalo_seleccionado_hs")
+        if int_sel:
+            dosis_x_dia = r.get("dosis_por_dia", round(24 / int_sel))
+            st.metric("Intervalo", f"cada {int_sel} hs ({dosis_x_dia}/dia)")
+        else:
+            st.metric("Intervalo", r["intervalo"])
+        with st.container():
+            st.metric("Dosis diaria max", f"{r['dosis_diaria_max_mg']} mg/dia")
+        with st.container():
+            st.metric("Dosis diaria min", f"{r.get('dosis_diaria_min_mg', '?')} mg/dia")
 
     with st.expander("Presentaciones disponibles", expanded=False):
         st.markdown(f"**{r['presentacion']}**")
@@ -91,6 +111,8 @@ def _mostrar_resultado(r):
 
 
 def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -105,54 +127,109 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
     st.warning("Guia de referencia. La dosis final debe ser confirmada por el medico prescriptor.", icon="⚠️")
 
     detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
-    c1, c2 = st.columns([1, 1])
     _MANUAL_KEY = "✏️ Ingreso manual..."
 
-    with c1:
-        peso = st.number_input("Peso del paciente (kg) *", min_value=0.5, max_value=100.0, step=0.1, value=10.0)
-        fnac = detalles.get("fnac", detalles.get("fecha_nacimiento", ""))
-        if fnac:
-            try:
-                from datetime import datetime
-                nac = datetime.strptime(fnac, "%d/%m/%Y")
-                edad_dias = (datetime.now() - nac).days
-                if edad_dias < 30:
-                    st.caption(f"Edad: {edad_dias} dias")
-                elif edad_dias < 365:
-                    st.caption(f"Edad: {edad_dias // 30} meses")
-                else:
-                    anios = edad_dias // 365; meses = (edad_dias % 365) // 30
-                    st.caption(f"Edad: {anios} anios {meses} meses")
-            except Exception as _e_dc:
-                log_event("calculadora_dosis", f"edad_error:{type(_e_dc).__name__}")
+    if not es_movil:
+        c1, c2 = st.columns([1, 1])
 
-    with c2:
-        _todos = sorted(k for k, v in _TODOS_MEDICAMENTOS.items() if isinstance(v, dict)) + [_MANUAL_KEY]
-        medicamento = st.selectbox("Medicamento *", _todos)
-        es_manual = medicamento == _MANUAL_KEY
-        if es_manual:
-            with st.expander("Parametros del medicamento", expanded=False):
-                st.text_input("Nombre del medicamento", key="m_nombre")
-                c1, c2 = st.columns(2)
-                c1.number_input("Dosis min (mg/kg/dosis)", min_value=0.0, step=0.1, value=10.0, key="m_min")
-                c1.number_input("Dosis max (mg/kg/dosis)", min_value=0.0, step=0.1, value=15.0, key="m_max")
-                c1.number_input("Intervalo minimo (hs)", min_value=0.0, step=1.0, value=6.0, key="m_int")
-                c2.number_input("Dosis max diaria (mg/kg)", min_value=0.0, step=1.0, value=60.0, key="m_diaria")
-                c2.number_input("Dosis max por dosis (mg)", min_value=0.0, step=1.0, value=500.0, key="m_maxdosis")
-        else:
-            info = _TODOS_MEDICAMENTOS.get(medicamento)
-            if isinstance(info, dict):
-                int_min, int_max = parse_intervalo(info["intervalo_hs"])
-                if int_min > 0 and int_max > int_min:
-                    intervalo_sel = st.slider("Intervalo (hs)", min_value=int_min, max_value=int_max, value=int_max, step=1.0, key="int_selector")
-                else:
-                    intervalo_sel = int_min or info["intervalo_min_hs"]
-                    st.caption(f"Intervalo: cada {intervalo_sel:.0f} hs")
-                st.session_state["int_selector_val"] = intervalo_sel
-                st.caption(f"Dosis por dia: ~{round(24 / intervalo_sel)} toma(s) | Via: {info['via']}")
-                if info.get("alerta"):
-                    log_event("calculadora_dosis", f"ALERTA - {info['alerta']}")
-                    st.error(f"ALERTA: {info['alerta']}", icon="🚨")
+        with c1:
+            peso = st.number_input("Peso del paciente (kg) *", min_value=0.5, max_value=100.0, step=0.1, value=10.0)
+            fnac = detalles.get("fnac", detalles.get("fecha_nacimiento", ""))
+            if fnac:
+                try:
+                    from datetime import datetime
+                    nac = datetime.strptime(fnac, "%d/%m/%Y")
+                    edad_dias = (datetime.now() - nac).days
+                    if edad_dias < 30:
+                        st.caption(f"Edad: {edad_dias} dias")
+                    elif edad_dias < 365:
+                        st.caption(f"Edad: {edad_dias // 30} meses")
+                    else:
+                        anios = edad_dias // 365; meses = (edad_dias % 365) // 30
+                        st.caption(f"Edad: {anios} anios {meses} meses")
+                except Exception as _e_dc:
+                    log_event("calculadora_dosis", f"edad_error:{type(_e_dc).__name__}")
+
+        with c2:
+            _todos = sorted(k for k, v in _TODOS_MEDICAMENTOS.items() if isinstance(v, dict)) + [_MANUAL_KEY]
+            medicamento = st.selectbox("Medicamento *", _todos)
+            es_manual = medicamento == _MANUAL_KEY
+            if es_manual:
+                with st.expander("Parametros del medicamento", expanded=False):
+                    st.text_input("Nombre del medicamento", key="m_nombre")
+                    if not es_movil:
+                        c1, c2 = st.columns(2)
+                        c1.number_input("Dosis min (mg/kg/dosis)", min_value=0.0, step=0.1, value=10.0, key="m_min")
+                        c1.number_input("Dosis max (mg/kg/dosis)", min_value=0.0, step=0.1, value=15.0, key="m_max")
+                        c1.number_input("Intervalo minimo (hs)", min_value=0.0, step=1.0, value=6.0, key="m_int")
+                        c2.number_input("Dosis max diaria (mg/kg)", min_value=0.0, step=1.0, value=60.0, key="m_diaria")
+                        c2.number_input("Dosis max por dosis (mg)", min_value=0.0, step=1.0, value=500.0, key="m_maxdosis")
+                    else:
+                        st.number_input("Dosis min (mg/kg/dosis)", min_value=0.0, step=0.1, value=10.0, key="m_min")
+                        st.number_input("Dosis max (mg/kg/dosis)", min_value=0.0, step=0.1, value=15.0, key="m_max")
+                        st.number_input("Intervalo minimo (hs)", min_value=0.0, step=1.0, value=6.0, key="m_int")
+                        st.number_input("Dosis max diaria (mg/kg)", min_value=0.0, step=1.0, value=60.0, key="m_diaria")
+                        st.number_input("Dosis max por dosis (mg)", min_value=0.0, step=1.0, value=500.0, key="m_maxdosis")
+            else:
+                info = _TODOS_MEDICAMENTOS.get(medicamento)
+                if isinstance(info, dict):
+                    int_min, int_max = parse_intervalo(info["intervalo_hs"])
+                    if int_min > 0 and int_max > int_min:
+                        intervalo_sel = st.slider("Intervalo (hs)", min_value=int_min, max_value=int_max, value=int_max, step=1.0, key="int_selector")
+                    else:
+                        intervalo_sel = int_min or info["intervalo_min_hs"]
+                        st.caption(f"Intervalo: cada {intervalo_sel:.0f} hs")
+                    st.session_state["int_selector_val"] = intervalo_sel
+                    st.caption(f"Dosis por dia: ~{round(24 / intervalo_sel)} toma(s) | Via: {info['via']}")
+                    if info.get("alerta"):
+                        log_event("calculadora_dosis", f"ALERTA - {info['alerta']}")
+                        st.error(f"ALERTA: {info['alerta']}", icon="🚨")
+
+    else:
+        with st.container():
+            peso = st.number_input("Peso del paciente (kg) *", min_value=0.5, max_value=100.0, step=0.1, value=10.0)
+            fnac = detalles.get("fnac", detalles.get("fecha_nacimiento", ""))
+            if fnac:
+                try:
+                    from datetime import datetime
+                    nac = datetime.strptime(fnac, "%d/%m/%Y")
+                    edad_dias = (datetime.now() - nac).days
+                    if edad_dias < 30:
+                        st.caption(f"Edad: {edad_dias} dias")
+                    elif edad_dias < 365:
+                        st.caption(f"Edad: {edad_dias // 30} meses")
+                    else:
+                        anios = edad_dias // 365; meses = (edad_dias % 365) // 30
+                        st.caption(f"Edad: {anios} anios {meses} meses")
+                except Exception as _e_dc:
+                    log_event("calculadora_dosis", f"edad_error:{type(_e_dc).__name__}")
+
+        with st.container():
+            _todos = sorted(k for k, v in _TODOS_MEDICAMENTOS.items() if isinstance(v, dict)) + [_MANUAL_KEY]
+            medicamento = st.selectbox("Medicamento *", _todos)
+            es_manual = medicamento == _MANUAL_KEY
+            if es_manual:
+                with st.expander("Parametros del medicamento", expanded=False):
+                    st.text_input("Nombre del medicamento", key="m_nombre")
+                    st.number_input("Dosis min (mg/kg/dosis)", min_value=0.0, step=0.1, value=10.0, key="m_min")
+                    st.number_input("Dosis max (mg/kg/dosis)", min_value=0.0, step=0.1, value=15.0, key="m_max")
+                    st.number_input("Intervalo minimo (hs)", min_value=0.0, step=1.0, value=6.0, key="m_int")
+                    st.number_input("Dosis max diaria (mg/kg)", min_value=0.0, step=1.0, value=60.0, key="m_diaria")
+                    st.number_input("Dosis max por dosis (mg)", min_value=0.0, step=1.0, value=500.0, key="m_maxdosis")
+            else:
+                info = _TODOS_MEDICAMENTOS.get(medicamento)
+                if isinstance(info, dict):
+                    int_min, int_max = parse_intervalo(info["intervalo_hs"])
+                    if int_min > 0 and int_max > int_min:
+                        intervalo_sel = st.slider("Intervalo (hs)", min_value=int_min, max_value=int_max, value=int_max, step=1.0, key="int_selector")
+                    else:
+                        intervalo_sel = int_min or info["intervalo_min_hs"]
+                        st.caption(f"Intervalo: cada {intervalo_sel:.0f} hs")
+                    st.session_state["int_selector_val"] = intervalo_sel
+                    st.caption(f"Dosis por dia: ~{round(24 / intervalo_sel)} toma(s) | Via: {info['via']}")
+                    if info.get("alerta"):
+                        log_event("calculadora_dosis", f"ALERTA - {info['alerta']}")
+                        st.error(f"ALERTA: {info['alerta']}", icon="🚨")
 
     st.divider()
     if st.button("Calcular dosis", width="stretch", type="primary", key="calc_dosis"):
@@ -175,14 +252,14 @@ def render_calculadora_dosis(paciente_sel, mi_empresa, user, rol):
                        "presentacion": st.session_state.get("m_pres", ""), "via": st.session_state.get("m_via", "Oral"),
                        "observaciones": st.session_state.get("m_obs", ""), "alerta": None}
                 st.markdown(f"### Resultado — {nom} (manual)")
-                _mostrar_resultado(res)
+                _mostrar_resultado(res, es_movil)
                 log_event("calculadora_dosis", f"MANUAL:{nom} - {peso}kg")
         else:
             intervalo_sel = st.session_state.get("int_selector_val", None)
             try:
                 resultado = calcular_dosis_pediatrica_completa(medicamento, peso, _TODOS_MEDICAMENTOS, intervalo_sel)
                 st.markdown("### Resultado del calculo")
-                _mostrar_resultado(resultado)
+                _mostrar_resultado(resultado, es_movil)
                 st.markdown("### Observaciones")
                 st.info(resultado["observaciones"])
                 if resultado.get("alerta"):

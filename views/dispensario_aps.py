@@ -43,6 +43,8 @@ _TABS = {
 
 def render_dispensario_aps(paciente_sel, mi_empresa, user, rol):
     """Punto de entrada del modulo APS. Orquesta tabs y estado."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not st.session_state.get("pacientes_db"):
         aviso_sin_paciente()
         return
