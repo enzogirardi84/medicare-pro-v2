@@ -316,12 +316,25 @@ def _get_render_fn(tab_name, view_config):
 
 
 def _render_alertas_criticas(paciente_sel: str) -> None:
-    """Muestra alertas rojas criticas del paciente: alergias, patologias, medicacion pendiente."""
+    """Muestra alertas rojas criticas del paciente: alergias, patologias, medicacion pendiente.
+    Cacheado 30s para evitar recomputar en cada rerun.
+    """
     if not paciente_sel:
         return
     try:
         from core.utils_pacientes import mapa_detalles_pacientes
         from datetime import datetime, date
+
+        # Cache de alertas para evitar recomputar en cada rerun
+        _cache_key = f"_alertas_cache_{paciente_sel}"
+        _cached = st.session_state.get(_cache_key)
+        if _cached and isinstance(_cached, dict):
+            _ts = _cached.get("ts", 0)
+            if time.monotonic() - _ts < 30:
+                alertas = _cached["data"]
+                if alertas:
+                    _render_alertas_ui(alertas)
+                return
 
         detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
         if not detalles:
@@ -337,7 +350,6 @@ def _render_alertas_criticas(paciente_sel: str) -> None:
         if patologias:
             alertas.append(("⚠️ PATOLOGÍAS / RIESGOS", patologias, "#ea580c"))
 
-        # Medicación activa pendiente de administrar hoy
         hoy = date.today()
         hoy_str = hoy.strftime("%d/%m/%Y")
         activas = [
@@ -375,8 +387,22 @@ def _render_alertas_criticas(paciente_sel: str) -> None:
         if not alertas:
             return
 
-        # CSS inyectado una vez
-        if not st.session_state.get("_alert_css_injected"):
+        # Guardar en cache
+        st.session_state[_cache_key] = {"ts": time.monotonic(), "data": alertas}
+
+        # Renderizar UI
+        _render_alertas_ui(alertas)
+    except Exception as _e:
+        log_event("alertas", f"error_render_alertas:{type(_e).__name__}")
+
+
+def _render_alertas_ui(alertas: list):
+    """Renderiza la UI de alertas criticas."""
+    if not alertas:
+        return
+
+    # CSS inyectado una vez
+    if not st.session_state.get("_alert_css_injected"):
             st.session_state["_alert_css_injected"] = True
             st.markdown(
                 """
