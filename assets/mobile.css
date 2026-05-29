@@ -935,6 +935,33 @@ input:focus, select:focus, textarea:focus,
     }
 }
 
+/* ── Navegacion inline en mobile: pills compactas scrolleables ── */
+body:not(:has([data-testid="stSidebar"])) button[key^="_nav_toggle_"] {
+    min-height: 38px !important;
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    border-radius: 9999px !important;
+    background: rgba(15,23,42,0.5) !important;
+    border: 1px solid rgba(51,65,85,0.25) !important;
+    color: #e2e8f0 !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin: 2px 0 !important;
+}
+body:not(:has([data-testid="stSidebar"])) button[key^="_nav_module_"] {
+    min-height: 36px !important;
+    padding: 6px 14px !important;
+    font-size: 0.78rem !important;
+    border-radius: 9999px !important;
+    width: 100% !important;
+    text-align: left !important;
+    background: rgba(30,41,59,0.4) !important;
+    border: 1px solid rgba(100,180,255,0.06) !important;
+    color: #c8d8e8 !important;
+}
+
 /* ── Columns(3+) en mobile: grid 2 columnas en vez de apilar ──── */
 @media screen and (max-width: 768px), screen and (max-width: 980px) and (hover: none) and (pointer: coarse) {
     [data-testid="stHorizontalBlock"]:not([data-testid="stSidebar"] [data-testid="stHorizontalBlock"]) {

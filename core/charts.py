@@ -18,9 +18,59 @@ COLOR_INFO = "#06b6d4"
 COLORS_CATEGORICAL = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"]
 
 
+def _mobile_altura(altura: int) -> int:
+    """Reduce altura de graficos en móvil."""
+    try:
+        from core.ui_liviano import headers_sugieren_equipo_liviano
+        import streamlit as st
+        if headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on":
+            return max(120, int(altura * 0.65))
+    except Exception:
+        pass
+    return altura
+
+
 def chart_barras(df, x, y, color=None, titulo_x="", titulo_y="", altura=200):
-    """Gráfico de barras horizontal con Altair."""
-    if df is None or df.empty:
+    """Gráfico de barras con Altair."""
+    altura = _mobile_altura(altura)
+    import altair as alt
+    try:
+        chart = alt.Chart(df).mark_bar().encode(
+            x=alt.X(x, title=titulo_x),
+            y=alt.Y(y, title=titulo_y),
+            color=alt.Color(color, legend=None) if color and color in df.columns else alt.value(COLOR_PRIMARY),
+        ).properties(height=altura).configure_view(strokeWidth=0)
+        return chart
+    except Exception:
+        return None
+
+
+def chart_linea(df, x, y, color=None, titulo_x="", titulo_y="", altura=200):
+    """Gráfico de líneas con Altair."""
+    altura = _mobile_altura(altura)
+    import altair as alt
+    try:
+        chart = alt.Chart(df).mark_line(point=True).encode(
+            x=alt.X(x, title=titulo_x),
+            y=alt.Y(y, title=titulo_y),
+            color=alt.Color(color, legend=None) if color and color in df.columns else alt.value(COLOR_PRIMARY),
+        ).properties(height=altura).configure_view(strokeWidth=0)
+        return chart
+    except Exception:
+        return None
+
+
+def chart_area(df, x, y, color=COLOR_PRIMARY, titulo_x="", titulo_y="", altura=200):
+    """Gráfico de área con Altair."""
+    altura = _mobile_altura(altura)
+    import altair as alt
+    try:
+        chart = alt.Chart(df).mark_area(opacity=0.3, line={'color': color}).encode(
+            x=alt.X(x, title=titulo_x),
+            y=alt.Y(y, title=titulo_y),
+        ).properties(height=altura).configure_view(strokeWidth=0)
+        return chart
+    except Exception:
         return None
     base = alt.Chart(df).encode(
         x=alt.X(f"{y}:Q", title=titulo_y or y),
