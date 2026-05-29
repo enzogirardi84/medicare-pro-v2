@@ -241,47 +241,33 @@ def _render_git_status():
 # ═══════════════════════════════════════════════════════════════════════
 
 def _render_fixes_tab():
-    try:
-        import sqlite3
-        if not DB_PATH.exists():
-            st.info("No hay historial de correcciones. Ejecute un escaneo.")
-            return
-        conn = sqlite3.connect(str(DB_PATH))
+    if not DB_PATH.exists():
+        st.info("No hay historial de correcciones. Ejecute un escaneo.")
+        return
 
-        # Stats
-        total = conn.execute("SELECT COUNT(*) FROM fixes").fetchone()[0]
-        by_sev = conn.execute(
-            "SELECT severity, COUNT(*) FROM fixes GROUP BY severity ORDER BY severity"
-        ).fetchall()
+    total = _get_total_fixes()
+    by_sev = _query("SELECT severity, COUNT(*) FROM fixes GROUP BY severity ORDER BY severity")
+    fixes = _query("SELECT timestamp, file_path, pattern_name, severity, old_code, new_code FROM fixes ORDER BY id DESC LIMIT 50")
 
-        col1, col2 = st.columns(2)
-        col1.metric("Total correcciones", total)
-        if by_sev:
-            parts = " | ".join(f"{s}: {c}" for s, c in by_sev)
-            col2.caption(f"Por severidad: {parts}")
+    col1, col2 = st.columns(2)
+    col1.metric("Total correcciones", total)
+    if by_sev:
+        parts = " | ".join(f"{s}: {c}" for s, c in by_sev)
+        col2.caption(f"Por severidad: {parts}")
 
-        # Tabla de fixes
-        fixes = conn.execute(
-            "SELECT timestamp, file_path, pattern_name, severity, old_code, new_code "
-            "FROM fixes ORDER BY id DESC LIMIT 50"
-        ).fetchall()
-        conn.close()
-
-        if fixes:
-            st.markdown("##### Ultimas 50 correcciones")
-            for ts, fp, pat, sev, old, new in fixes:
-                icon = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵"}.get(sev, "⚪")
-                with st.expander(f"{icon} [{ts[:16]}] {pat} — {Path(fp).name}"):
-                    st.caption(f"**Archivo:** `{fp}`")
-                    st.caption(f"**Patron:** {pat}")
-                    if old:
-                        st.code(old[:200], language="python")
-                    if new:
-                        st.code(new[:200], language="python")
-        else:
-            st.info("Aun no se han aplicado correcciones automaticas")
-    except Exception as e:
-        st.caption(f"Error: {e}")
+    if fixes:
+        st.markdown("##### Ultimas 50 correcciones")
+        for ts, fp, pat, sev, old, new in fixes:
+            icon = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵"}.get(sev, "⚪")
+            with st.expander(f"{icon} [{ts[:16]}] {pat} — {Path(fp).name}"):
+                st.caption(f"**Archivo:** `{fp}`")
+                st.caption(f"**Patron:** {pat}")
+                if old:
+                    st.code(old[:200], language="python")
+                if new:
+                    st.code(new[:200], language="python")
+    else:
+        st.info("Aun no se han aplicado correcciones automaticas")
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -289,34 +275,29 @@ def _render_fixes_tab():
 # ═══════════════════════════════════════════════════════════════════════
 
 def _render_patterns_tab():
-    try:
-        import sqlite3
-        if not DB_PATH.exists():
-            st.info("No hay patrones aprendidos.")
-            return
-        conn = sqlite3.connect(str(DB_PATH))
-        patterns = conn.execute(
-            "SELECT id, pattern_name, severity, hit_count, source, auto_fix, created_at "
-            "FROM learned_patterns ORDER BY hit_count DESC"
-        ).fetchall()
-        conn.close()
+    if not DB_PATH.exists():
+        st.info("No hay patrones aprendidos.")
+        return
 
-        if not patterns:
-            st.info("Aun no se han aprendido patrones. Ejecute escaneos para que AutoHeal aprenda.")
-            return
+    patterns = _query(
+        "SELECT id, pattern_name, severity, hit_count, source, auto_fix, created_at "
+        "FROM learned_patterns ORDER BY hit_count DESC"
+    )
 
-        st.metric("Patrones aprendidos", len(patterns))
-        st.caption("AutoHeal descubre automaticamente nuevos patrones de codigo vulnerable analizando el historial de fixes.")
+    if not patterns:
+        st.info("Aun no se han aprendido patrones. Ejecute escaneos para que AutoHeal aprenda.")
+        return
 
-        for pid, name, sev, hits, src, auto_fix, created in patterns:
-            icon = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵"}.get(sev, "⚪")
-            fix_icon = "🔧" if auto_fix else "👁️"
-            with st.expander(f"{icon} {fix_icon} {name} ({hits} hits)"):
-                st.caption(f"**Severidad:** {sev} | **Auto-fix:** {'Si' if auto_fix else 'No'}")
-                st.caption(f"**Fuente:** {src or 'desconocida'}")
-                st.caption(f"**Creado:** {created[:16]}")
-    except Exception as e:
-        st.caption(f"Error: {e}")
+    st.metric("Patrones aprendidos", len(patterns))
+    st.caption("AutoHeal descubre automaticamente nuevos patrones de codigo vulnerable analizando el historial de fixes.")
+
+    for pid, name, sev, hits, src, auto_fix, created in patterns:
+        icon = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵"}.get(sev, "⚪")
+        fix_icon = "🔧" if auto_fix else "👁️"
+        with st.expander(f"{icon} {fix_icon} {name} ({hits} hits)"):
+            st.caption(f"**Severidad:** {sev} | **Auto-fix:** {'Si' if auto_fix else 'No'}")
+            st.caption(f"**Fuente:** {src or 'desconocida'}")
+            st.caption(f"**Creado:** {created[:16]}")
 
 
 # ═══════════════════════════════════════════════════════════════════════
