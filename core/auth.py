@@ -150,6 +150,7 @@ def render_login():
         from core.ui_liviano import headers_sugieren_equipo_liviano
 
         es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+        st.markdown('<span class="mc-auth-page-marker"></span>', unsafe_allow_html=True)
         _auth_strip_modulo_query_param()
         if _auth_strip_pwreset_url_si_hay_param():
             st.session_state["_mc_pwreset_url_aviso_once"] = True

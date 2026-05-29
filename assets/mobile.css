@@ -994,3 +994,93 @@ input:focus, select:focus, textarea:focus,
     }
 }
 
+/* Guardia final mobile: la app ya renderiza navegacion y acciones en el cuerpo.
+   El control nativo de sidebar de Streamlit se superpone en telefono y abre un
+   panel parcial/inestable; mantenerlo oculto evita que parezca que la app se rompio. */
+@media screen and (max-width: 768px) {
+    body:has(.mc-auth-page-marker) .block-container,
+    body:has(.mc-auth-page-marker) [data-testid="stMainBlockContainer"] {
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    body:has(.mc-auth-page-marker) [data-testid="stHorizontalBlock"] {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+    }
+
+    body:has(.mc-auth-page-marker) [data-testid="stHorizontalBlock"] > div,
+    body:has(.mc-auth-page-marker) [data-testid="stHorizontalBlock"] [data-testid="stColumn"],
+    body:has(.mc-auth-page-marker) [data-testid="column"],
+    body:has(.mc-auth-page-marker) div[data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+        margin: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    body:has(.mc-auth-page-marker) [data-testid="stForm"],
+    body:has(.mc-auth-page-marker) [data-testid="stForm"] > div,
+    body:has(.mc-auth-page-marker) [data-testid="stRadio"],
+    body:has(.mc-auth-page-marker) [data-testid="stTextInput"],
+    body:has(.mc-auth-page-marker) [data-testid="stFormSubmitButton"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    [data-testid="stSidebar"],
+    section[data-testid="stSidebar"],
+    aside[data-testid="stSidebar"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        transform: translateX(-120vw) !important;
+        position: absolute !important;
+        z-index: -1 !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] *,
+    [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] *,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stExpandSidebarButton"] *,
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapseButton"] *,
+    [data-testid="stSidebarHeader"],
+    [data-testid="stSidebarHeader"] *,
+    button[data-testid="stBaseButton-headerNoPadding"],
+    button[kind="headerNoPadding"],
+    button[kind="header"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        overflow: hidden !important;
+    }
+}
+

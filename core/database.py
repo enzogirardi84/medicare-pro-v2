@@ -414,6 +414,31 @@ def vaciar_datos_app_en_sesion() -> None:
         if _dk.startswith("_draft_") or _dk == "_draft_pending":
             st.session_state.pop(_dk, None)
 
+
+def _ensure_supabase_runtime():
+    """Recupera Supabase si el import inicial cayo por timeout.
+
+    El modulo de Supabase hace un intento corto al import para no bloquear
+    telefonos/redes lentas. Si ese intento vence, no debemos quedar en modo
+    local para toda la sesion: al cargar o guardar se prueba una vez mas.
+    """
+    global supabase
+    if supabase is not None:
+        return supabase
+    try:
+        from core import _database_supabase as supabase_mod
+
+        client = supabase_mod.init_supabase()
+        if client is not None:
+            supabase = client
+            supabase_mod.supabase = client
+            log_event("db", "supabase_lazy_init_ok")
+        return client
+    except Exception as exc:
+        log_event("db", f"supabase_lazy_init_fallo:{type(exc).__name__}")
+        return None
+
+
 def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_legacy: bool = False) -> dict | None:
     """
     Modo clásico: un único JSON (id=1 / local_data). La app no precarga este JSON al arranque: se llama desde login/recuperación.
@@ -597,6 +622,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                     return copy.deepcopy(cached)
 
         tk = tenant_key_normalizado(tenant_key) if tenant_key else ""
+        _ensure_supabase_runtime()
 
         if supabase is None:
             st.session_state["_modo_offline"] = True
@@ -849,6 +875,7 @@ def _guardar_datos_ejecutar_core():
     shard = modo_shard_activo()
     guardado_nube = False
     error_nube = ""
+    _ensure_supabase_runtime()
     if supabase is not None:
         try:
             current_version = st.session_state.get("_db_version", 0)

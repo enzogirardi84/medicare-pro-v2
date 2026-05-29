@@ -41,3 +41,13 @@ def test_mobile_css_keeps_touch_critical_rules():
 
     for snippet in required_snippets:
         assert snippet in css
+
+
+def test_mobile_css_hides_native_sidebar_controls_at_end():
+    css = MOBILE_CSS.read_text(encoding="utf-8")
+
+    assert "Guardia final mobile" in css
+    assert "body:has(.mc-auth-page-marker)" in css
+    assert '[data-testid="stSidebarCollapsedControl"]' in css
+    assert 'button[data-testid="stBaseButton-headerNoPadding"]' in css
+    assert "transform: translateX(-120vw)" in css
