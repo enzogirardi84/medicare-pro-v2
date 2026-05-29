@@ -72,13 +72,19 @@ def render_admin_dashboard():
 
 def render_metrics_tab():
     """Tab de métricas del sistema."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📈 Métricas en Tiempo Real")
 
     metrics = get_metrics()
     stats = metrics.get_stats()
 
     # KPIs principales
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         total_users = len(st.session_state.get("usuarios_db", {}))
@@ -101,7 +107,12 @@ def render_metrics_tab():
     # Métricas de aplicación
     st.subheader("Métricas de Aplicación")
 
-    col1, col2, col3 = st.columns(3)
+    if not es_movil:
+        col1, col2, col3 = st.columns(3)
+    else:
+        col1 = st.container()
+        col2 = st.container()
+        col3 = st.container()
 
     with col1:
         st.metric("Contadores", len(stats.get("counters", {})))
@@ -128,6 +139,8 @@ def render_metrics_tab():
 
 def render_users_tab():
     """Tab de gestión de usuarios."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("👥 Gestión de Usuarios")
 
     usuarios = st.session_state.get("usuarios_db", {})
@@ -137,7 +150,11 @@ def render_users_tab():
         return
 
     # Filtros
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         filter_rol = st.selectbox(
@@ -187,7 +204,12 @@ def render_users_tab():
     st.divider()
     st.subheader("Acciones")
 
-    col1, col2, col3 = st.columns(3)
+    if not es_movil:
+        col1, col2, col3 = st.columns(3)
+    else:
+        col1 = st.container()
+        col2 = st.container()
+        col3 = st.container()
 
     with col1:
         if st.button("➕ Crear Usuario", use_container_width=True):
@@ -205,12 +227,19 @@ def render_users_tab():
 
 def render_audit_tab():
     """Tab de auditoría visual."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("🔍 Auditoría del Sistema")
 
     trail = get_audit_trail()
 
     # Filtros de auditoría
-    col1, col2, col3 = st.columns(3)
+    if not es_movil:
+        col1, col2, col3 = st.columns(3)
+    else:
+        col1 = st.container()
+        col2 = st.container()
+        col3 = st.container()
 
     with col1:
         audit_event_type = st.selectbox(
@@ -264,7 +293,11 @@ def render_audit_tab():
 
     # Exportar auditoría
     st.divider()
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         if st.button("📥 Exportar JSON", use_container_width=True):
@@ -331,13 +364,20 @@ def render_performance_tab():
 
 def render_cache_tab():
     """Tab de monitoreo de caché."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("💾 Estado del Caché")
 
     cache = get_cache()
     stats = cache.get_stats()
 
     # Stats de caché
-    col1, col2, col3 = st.columns(3)
+    if not es_movil:
+        col1, col2, col3 = st.columns(3)
+    else:
+        col1 = st.container()
+        col2 = st.container()
+        col3 = st.container()
 
     with col1:
         local_stats = stats.get("local", {})
@@ -357,7 +397,12 @@ def render_cache_tab():
         st.subheader("Estadísticas de Redis")
 
         redis_stats = stats["redis"]
-        col1, col2, col3 = st.columns(3)
+        if not es_movil:
+            col1, col2, col3 = st.columns(3)
+        else:
+            col1 = st.container()
+            col2 = st.container()
+            col3 = st.container()
 
         with col1:
             st.metric("Memoria Usada", redis_stats.get("used_memory", "N/A"))
@@ -372,7 +417,11 @@ def render_cache_tab():
     st.divider()
     st.subheader("Acciones")
 
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         if st.button("🗑️ Limpiar Caché Local", use_container_width=True):

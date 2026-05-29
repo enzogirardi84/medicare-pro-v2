@@ -60,6 +60,8 @@ def render_feature_flags_admin(paciente_sel=None, mi_empresa=None, user=None, ro
 
 def render_global_flags(flags: FeatureFlags):
     """Renderiza flags globales del sistema."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("🌎 Flags Globales")
 
     # Categorías de flags
@@ -92,7 +94,12 @@ def render_global_flags(flags: FeatureFlags):
     for category, flag_list in categories.items():
         with st.expander(f"📁 {category}", expanded=False):
             for flag_name, description, default_value in flag_list:
-                col1, col2, col3 = st.columns([2, 1, 1])
+                if not es_movil:
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                else:
+                    col1 = st.container()
+                    col2 = st.container()
+                    col3 = st.container()
 
                 with col1:
                     st.text(description)
@@ -135,6 +142,8 @@ def render_global_flags(flags: FeatureFlags):
 
 def render_user_flags(flags: FeatureFlags):
     """Renderiza flags específicos por usuario."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("👤 Flags por Usuario")
 
     st.info("🚧 Feature: Activar funcionalidades beta para usuarios específicos")
@@ -165,7 +174,12 @@ def render_user_flags(flags: FeatureFlags):
         ("ai_assistant_beta", "Beta Asistente IA"),
         ("advanced_reporting", "Reportes Avanzados"),
     ]:
-        col1, col2, col3 = st.columns([3, 1, 1])
+        if not es_movil:
+            col1, col2, col3 = st.columns([3, 1, 1])
+        else:
+            col1 = st.container()
+            col2 = st.container()
+            col3 = st.container()
 
         with col1:
             st.text(description)
@@ -189,10 +203,16 @@ def render_user_flags(flags: FeatureFlags):
 
 def render_flags_analytics():
     """Renderiza analytics de uso de features."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📊 Analíticas")
 
     # Métricas simuladas
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         st.metric("Flags Activos", "12/24")
@@ -241,6 +261,8 @@ def render_flags_analytics():
 
 def render_flags_history():
     """Renderiza historial de cambios en flags."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📝 Historial")
 
     # Simular historial
@@ -277,7 +299,13 @@ def render_flags_history():
 
     for entry in history:
         with st.container():
-            col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
+            if not es_movil:
+                col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
+            else:
+                col1 = st.container()
+                col2 = st.container()
+                col3 = st.container()
+                col4 = st.container()
 
             with col1:
                 st.text(entry["timestamp"])

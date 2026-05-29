@@ -117,6 +117,8 @@ def _chart_barras_mes(df, x_col, y_col, titulo_x='Mes', titulo_y='Cantidad', col
 
 
 def render_estadisticas(mi_empresa, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown(
         """
         <div class="mc-hero">
@@ -178,7 +180,11 @@ def render_estadisticas(mi_empresa, rol):
                 anos.add(d.year)
     anos_disponibles = sorted(anos, reverse=True) or [hoy.year]
 
-    c_ano, _ = st.columns([1, 3])
+    if not es_movil:
+        c_ano, _ = st.columns([1, 3])
+    else:
+        c_ano = st.container()
+        _ = st.container()
     filtro_ano = c_ano.selectbox(
         'Filtrar por año', ['Todos'] + anos_disponibles,
         index=0, key='est_filtro_ano',
@@ -216,7 +222,10 @@ def render_estadisticas(mi_empresa, rol):
             (visitas, 'Visitas (check-ins)', None, '🏥', COLOR_PRIMARY),
             (stock_crit, 'Stock crítico', None, '🔴', COLOR_DANGER),
         ]
-        cols_kpi = st.columns(3)
+        if not es_movil:
+            cols_kpi = st.columns(3)
+        else:
+            cols_kpi = [st.container() for _ in range(3)]
         for i, (val, lab, delta, icono, color) in enumerate(kpi_data):
             with cols_kpi[i % 3]:
                 render_metric_card(val, lab, delta=delta, icono=icono, color=color)
@@ -237,7 +246,11 @@ def render_estadisticas(mi_empresa, rol):
                 theta=alt.Theta('Cantidad:Q'),
                 tooltip=['Estado:N', 'Cantidad:Q'],
             ).properties(height=250)
-            col_pie, col_est = st.columns([1, 1])
+            if not es_movil:
+                col_pie, col_est = st.columns([1, 1])
+            else:
+                col_pie = st.container()
+                col_est = st.container()
             with col_pie:
                 st.altair_chart(pie, width='stretch')
             with col_est:
@@ -354,7 +367,11 @@ def render_estadisticas(mi_empresa, rol):
                     if stock <= _parse_stock(sm):
                         items_criticos.append(item)
 
-            mc1, mc2 = st.columns(2)
+            if not es_movil:
+                mc1, mc2 = st.columns(2)
+            else:
+                mc1 = st.container()
+                mc2 = st.container()
             mc1.metric('Ítems en inventario', total_items)
             mc1.metric('Unidades totales', total_units)
             mc2.metric('Stock crítico', len(items_criticos))

@@ -60,6 +60,8 @@ def render_financial_reports(mi_empresa=None, rol=None):
 
 def render_financial_dashboard():
     """Dashboard financiero."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("💰 Dashboard Financiero")
 
     # Período de análisis
@@ -83,7 +85,11 @@ def render_financial_dashboard():
     facturas_filtradas = filter_by_date_range(facturacion, fecha_desde, fecha_hasta)
 
     # KPIs (vectorized via DataFrame)
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     if facturas_filtradas:
         _df_kpi = pd.DataFrame(facturas_filtradas)
@@ -147,7 +153,11 @@ def render_financial_dashboard():
     st.divider()
 
     # Desglose por tipo
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         st.subheader("Por Tipo de Atención")
@@ -189,7 +199,11 @@ def render_financial_dashboard():
     # Exportar
     st.divider()
 
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         if st.button("📥 Exportar a Excel", width='stretch'):
@@ -274,6 +288,8 @@ def render_productivity_dashboard():
 
 def render_patients_analytics():
     """Analítica de pacientes."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("👥 Análisis de Pacientes")
 
     pacientes = st.session_state.get("pacientes_db", {})
@@ -309,7 +325,11 @@ def render_patients_analytics():
         else:
             pacientes_recurrentes += 1
 
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         st.metric("Total Pacientes", total_pacientes)
@@ -334,7 +354,11 @@ def render_patients_analytics():
         data = [{"Obra Social": k, "Pacientes": v} for k, v in sorted(os_count.items(), key=lambda x: x[1], reverse=True)]
         df = pd.DataFrame(data)
 
-        col1, col2 = st.columns(2)
+        if not es_movil:
+            col1, col2 = st.columns(2)
+        else:
+            col1 = st.container()
+            col2 = st.container()
 
         with col1:
             st.dataframe(df, width='stretch', hide_index=True)
@@ -385,6 +409,8 @@ def render_insurance_analytics():
 
 def render_trends_forecast():
     """Tendencias y previsiones."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📅 Tendencias y Previsiones")
 
     evoluciones = st.session_state.get("evoluciones_db", [])
@@ -422,7 +448,11 @@ def render_trends_forecast():
 
             variacion = ((mes_actual - mes_anterior) / mes_anterior * 100) if mes_anterior > 0 else 0
 
-            col1, col2 = st.columns(2)
+            if not es_movil:
+                col1, col2 = st.columns(2)
+            else:
+                col1 = st.container()
+                col2 = st.container()
 
             with col1:
                 st.metric(

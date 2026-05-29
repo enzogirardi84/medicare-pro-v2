@@ -160,6 +160,8 @@ def _obtener_profesional_actual(user, mi_empresa):
 
 
 def render_red_profesionales(mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     rol_normalizado = str(rol or "").strip().lower()
     acceso_total = es_control_total(rol_normalizado)
     usuario_login = _identificador_profesional(user)
@@ -174,14 +176,22 @@ def render_red_profesionales(mi_empresa, user, rol):
         actual = _obtener_profesional_actual(user, mi_empresa) or {}
         st.markdown("### Tu ficha publica")
         with st.container(border=True):
-            col1, col2 = st.columns(2)
+            if not es_movil:
+                col1, col2 = st.columns(2)
+            else:
+                col1 = st.container()
+                col2 = st.container()
             nombre = col1.text_input("Nombre visible", value=actual.get("nombre", user.get("nombre", "")))
             tipo = col2.selectbox(
                 "Tipo de perfil",
                 TIPOS_PERFIL,
                 index=TIPOS_PERFIL.index(actual.get("tipo", "Enfermeria")) if actual.get("tipo", "Enfermeria") in TIPOS_PERFIL else 0,
             )
-            col3, col4 = st.columns(2)
+            if not es_movil:
+                col3, col4 = st.columns(2)
+            else:
+                col3 = st.container()
+                col4 = st.container()
             titulo = col3.text_input(
                 "Titulo / cargo",
                 value=actual.get("titulo", "Profesional de salud domiciliaria"),
@@ -191,10 +201,18 @@ def render_red_profesionales(mi_empresa, user, rol):
                 value=actual.get("especialidad", ""),
                 placeholder="Ej: Clinica medica, facturacion, cuidados paliativos, admision",
             )
-            col5, col6 = st.columns(2)
+            if not es_movil:
+                col5, col6 = st.columns(2)
+            else:
+                col5 = st.container()
+                col6 = st.container()
             matricula = col5.text_input("Matricula o identificacion", value=actual.get("matricula", user.get("matricula", "")))
             zona = col6.text_input("Zona de cobertura", value=actual.get("zona", "Rio Cuarto y alrededores"))
-            col7, col8 = st.columns(2)
+            if not es_movil:
+                col7, col8 = st.columns(2)
+            else:
+                col7 = st.container()
+                col8 = st.container()
             organizacion = col7.text_input("Organizacion / empresa", value=actual.get("organizacion", mi_empresa))
             modalidad = col8.selectbox(
                 "Modalidad de trabajo",
@@ -203,7 +221,11 @@ def render_red_profesionales(mi_empresa, user, rol):
                 if actual.get("modalidad", "Equipo institucional") in ["Independiente", "Prestador externo", "Equipo institucional", "Empresa de salud", "Organizacion mixta"]
                 else 2,
             )
-            col9, col10 = st.columns(2)
+            if not es_movil:
+                col9, col10 = st.columns(2)
+            else:
+                col9 = st.container()
+                col10 = st.container()
             whatsapp = col9.text_input("WhatsApp de contacto", value=actual.get("whatsapp", ""))
             disponibilidad = col10.selectbox(
                 "Disponibilidad",
@@ -296,7 +318,12 @@ def render_red_profesionales(mi_empresa, user, rol):
                 sugerencia="Usá la pestaña de alta para agregar el primer perfil visible.",
             )
         else:
-            colf1, colf2, colf3 = st.columns(3)
+            if not es_movil:
+                colf1, colf2, colf3 = st.columns(3)
+            else:
+                colf1 = st.container()
+                colf2 = st.container()
+                colf3 = st.container()
             tipo_filtro = colf1.selectbox("Tipo", ["Todos"] + TIPOS_PERFIL)
             servicio = colf2.selectbox("Servicio", ["Todos"] + _servicios_catalogo())
             zona = colf3.text_input("Zona")
@@ -353,14 +380,27 @@ def render_red_profesionales(mi_empresa, user, rol):
     with tab_solicitudes:
         st.markdown("### Pedidos de pacientes, familias e instituciones")
         with st.container(border=True):
-            col1, col2 = st.columns(2)
+            if not es_movil:
+                col1, col2 = st.columns(2)
+            else:
+                col1 = st.container()
+                col2 = st.container()
             nombre_paciente = col1.text_input("Nombre del paciente o solicitante", key="sol_nombre")
             telefono = col2.text_input("Telefono de contacto", key="sol_tel")
-            col3, col4, col5 = st.columns(3)
+            if not es_movil:
+                col3, col4, col5 = st.columns(3)
+            else:
+                col3 = st.container()
+                col4 = st.container()
+                col5 = st.container()
             tipo_requerido = col3.selectbox("Tipo de profesional requerido", TIPOS_PERFIL, key="sol_tipo")
             servicio = col4.selectbox("Servicio solicitado", _servicios_catalogo(), key="sol_serv")
             prioridad = col5.selectbox("Prioridad", ["Programado", "Hoy", "Urgente", "Critico"], key="sol_prio")
-            col6, col7 = st.columns(2)
+            if not es_movil:
+                col6, col7 = st.columns(2)
+            else:
+                col6 = st.container()
+                col7 = st.container()
             organizacion = col6.text_input("Organizacion que solicita", key="sol_org", placeholder="Particular, clinica, residencia, obra social")
             zona = col7.text_input("Zona / direccion", key="sol_zona")
             detalle = st.text_area("Detalle de la necesidad", key="sol_detalle", height=120)

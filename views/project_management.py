@@ -181,6 +181,8 @@ def _render_listado(titulo, items):
 
 
 def render_project_management(mi_empresa, user=None, rol=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     user = user or {}
     rol = rol or user.get("rol", "")
 
@@ -199,7 +201,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
         unsafe_allow_html=True,
     )
 
-    c1, c2 = st.columns(2)
+    if not es_movil:
+        c1, c2 = st.columns(2)
+    else:
+        c1 = st.container()
+        c2 = st.container()
     c1.metric("Empresa", mi_empresa or "MediCare")
     c1.metric("Estado", "Migracion silenciosa")
     c2.metric("Frontend destino", "Angular")
@@ -219,7 +225,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
         "Esta pantalla es documentacion interna: no modifica pacientes ni datos operativos. Usala para alinear equipo y proveedores."
     )
 
-    col_owner_1, col_owner_2 = st.columns(2)
+    if not es_movil:
+        col_owner_1, col_owner_2 = st.columns(2)
+    else:
+        col_owner_1 = st.container()
+        col_owner_2 = st.container()
     for col, owner in zip((col_owner_1, col_owner_2), OWNERS):
         with col:
             with st.container(border=True):
@@ -240,7 +250,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
             "y CSS personalizado."
         )
 
-        col_res_1, col_res_2 = st.columns(2)
+        if not es_movil:
+            col_res_1, col_res_2 = st.columns(2)
+        else:
+            col_res_1 = st.container()
+            col_res_2 = st.container()
         with col_res_1:
             with st.container(border=True):
                 st.markdown("**¿Hacia que profesionales va dirigido?**")
@@ -271,7 +285,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
             "estrategico para core clinico pesado, vademecum, geolocalizacion y analitica."
         )
 
-        col_a1, col_a2 = st.columns(2)
+        if not es_movil:
+            col_a1, col_a2 = st.columns(2)
+        else:
+            col_a1 = st.container()
+            col_a2 = st.container()
         with col_a1:
             with st.container(border=True):
                 _render_listado("Ventajas de Angular (frontend)", ANGULAR_ADVANTAGES)
@@ -299,7 +317,12 @@ def render_project_management(mi_empresa, user=None, rol=None):
         _promedio = sum(_progresos) / len(_progresos) if _progresos else 0
         _completados = sum(1 for p in _progresos if p == 100)
         _total = len(_progresos)
-        c_p1, c_p2, c_p3 = st.columns(3)
+        if not es_movil:
+            c_p1, c_p2, c_p3 = st.columns(3)
+        else:
+            c_p1 = st.container()
+            c_p2 = st.container()
+            c_p3 = st.container()
         c_p1.metric("Progreso general", f"{_promedio:.0f}%")
         c_p2.metric("Hitos completados", f"{_completados}/{_total}")
         c_p3.metric("Hitos pendientes", f"{_total - _completados}/{_total}")
@@ -312,7 +335,11 @@ def render_project_management(mi_empresa, user=None, rol=None):
             _color = _color_map.get(_estado, "#94a3b8")
             _prog = m.get("Progreso", 0)
             with st.container(border=True):
-                c_t1, c_t2 = st.columns([6, 1])
+                if not es_movil:
+                    c_t1, c_t2 = st.columns([6, 1])
+                else:
+                    c_t1 = st.container()
+                    c_t2 = st.container()
                 c_t1.markdown(f"**{m['Hito']}**  \n{m['Accion']}")
                 c_t2.markdown(
                     f"<div style='background:{_color};color:#fff;padding:2px 8px;border-radius:12px;"
@@ -408,7 +435,10 @@ def render_project_management(mi_empresa, user=None, rol=None):
                 df_j = pd.DataFrame(filas)
                 # Metricas por estado
                 _status_counts = df_j["Estado"].value_counts()
-                _status_cols = st.columns(min(len(_status_counts), 6))
+                if not es_movil:
+                    _status_cols = st.columns(min(len(_status_counts), 6))
+                else:
+                    _status_cols = [st.container() for _ in range(min(len(_status_counts), 6))]
                 for _col, (_est, _cnt) in zip(_status_cols, _status_counts.items()):
                     _col.metric(_est, int(_cnt))
                 with st.container(border=True):

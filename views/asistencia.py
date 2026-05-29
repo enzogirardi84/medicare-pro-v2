@@ -12,6 +12,8 @@ from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_r
 
 
 def render_asistencia(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     emp_e = escape(str(mi_empresa or ""))
     st.markdown(
         f"""
@@ -70,7 +72,11 @@ def render_asistencia(mi_empresa, user):
         with lista_plegable("En domicilio ahora", count=len(activos), expanded=True, height=380):
             for profesional, data in activos.items():
                 with st.container(border=True):
-                    col_info, col_btn = st.columns([3, 1])
+                    if not es_movil:
+                        col_info, col_btn = st.columns([3, 1])
+                    else:
+                        col_info = st.container()
+                        col_btn = st.container()
                     dt_llegada = data["llegada"]
                     duracion = ahora().replace(tzinfo=None) - dt_llegada
                     horas, rem = divmod(duracion.seconds, 3600)

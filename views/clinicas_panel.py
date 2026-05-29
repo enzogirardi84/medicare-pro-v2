@@ -96,6 +96,8 @@ def _listado_usuarios_clinica(session_state, key_norm: str):
 
 
 def render_clinicas_panel(mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     user = user or {}
     rol_n = str(rol or user.get("rol", "") or "").strip().lower()
     if rol_n not in {"superadmin", "admin"}:
@@ -167,7 +169,12 @@ def render_clinicas_panel(mi_empresa, user, rol):
     n_total = len(filas_resumen)
     n_susp = sum(1 for r in filas_resumen if str(r["Estado"]).strip().lower() == "suspendida")
     n_act = n_total - n_susp
-    m1, m2, m3 = st.columns(3)
+    if not es_movil:
+        m1, m2, m3 = st.columns(3)
+    else:
+        m1 = st.container()
+        m2 = st.container()
+        m3 = st.container()
     m1.metric("Clinicas registradas", n_total)
     m2.metric("Activas", n_act)
     m3.metric("Suspendidas", n_susp)
@@ -200,7 +207,12 @@ def render_clinicas_panel(mi_empresa, user, rol):
     key_norm = row["_key"]
     reg = db.get(key_norm, {})
 
-    c1, c2, c3 = st.columns(3)
+    if not es_movil:
+        c1, c2, c3 = st.columns(3)
+    else:
+        c1 = st.container()
+        c2 = st.container()
+        c3 = st.container()
     c1.metric("Estado actual", row["Estado"])
     c2.metric("Usuarios afectados al suspender", row["Usuarios"])
     c3.metric("Coordinadores", row["Coordinadores"])
@@ -220,7 +232,11 @@ def render_clinicas_panel(mi_empresa, user, rol):
         placeholder="Ej: mora facturacion marzo, solicitud de la clinica, etc.",
     )
 
-    b1, b2 = st.columns(2)
+    if not es_movil:
+        b1, b2 = st.columns(2)
+    else:
+        b1 = st.container()
+        b2 = st.container()
     with b1:
         if st.button(
             "Suspender clinica (bloquea accesos)",

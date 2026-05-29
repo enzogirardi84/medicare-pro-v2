@@ -10,6 +10,8 @@ from core.password_crypto import establecer_password_nuevo
 
 
 def render_admin_usuarios():
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     user = st.session_state.get("u_actual", {})
     rol = str(user.get("rol", "")).lower()
     if rol not in ("superadmin", "admin"):
@@ -28,7 +30,11 @@ def render_admin_usuarios():
     opciones_rol = ["superadmin", "admin", "Medico", "Enfermero/a", "Operativo", "Administrativo"]
     for login, datos in sorted(usuarios.items()):
         with st.container(border=True):
-            c1, c2 = st.columns(2)
+            if not es_movil:
+                c1, c2 = st.columns(2)
+            else:
+                c1 = st.container()
+                c2 = st.container()
             c1.text_input("Login", value=login, key=f"au_login_{login}", disabled=True)
             nombre_actual = datos.get("nombre", "")
             nombre_nuevo = c2.text_input("Nombre", value=nombre_actual, key=f"au_nombre_{login}")
@@ -42,7 +48,11 @@ def render_admin_usuarios():
             empresa_actual = datos.get("empresa", "")
             empresa_nueva = c2.text_input("Empresa", value=empresa_actual, key=f"au_empresa_{login}")
 
-            c_act1, c_act2 = st.columns(2)
+            if not es_movil:
+                c_act1, c_act2 = st.columns(2)
+            else:
+                c_act1 = st.container()
+                c_act2 = st.container()
             if c_act1.button("🗑️ Eliminar", use_container_width=True, key=f"au_del_{login}"):
                 if st.session_state.get(f"_confirm_del_{login}"):
                     del usuarios[login]

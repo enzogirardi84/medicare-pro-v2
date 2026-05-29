@@ -50,9 +50,15 @@ def render_self_healing_admin(paciente_sel, mi_empresa, user, rol):
 
 
 def render_escaneo(_paciente_sel):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.subheader("Diagnóstico del Sistema")
 
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
     with col1:
         full_scan = st.checkbox("Escaneo completo (todos los archivos)", value=False)
     with col2:
@@ -66,7 +72,12 @@ def render_escaneo(_paciente_sel):
 
         st.success(f"Escaneo completado en {elapsed:.1f}s")
 
-        m1, m2, m3 = st.columns(3)
+        if not es_movil:
+            m1, m2, m3 = st.columns(3)
+        else:
+            m1 = st.container()
+            m2 = st.container()
+            m3 = st.container()
         m1.metric("Archivos escaneados", report.files_scanned)
         m2.metric("Hallazgos", report.errors_found)
         m3.metric("Duración", f"{report.duration_ms:.0f}ms")
@@ -78,7 +89,11 @@ def render_escaneo(_paciente_sel):
                     "critical": "🔴", "high": "🟠", "medium": "🟡", "low": "⚪"
                 }.get(f.severity, "⚪")
                 with st.container(border=True):
-                    c1, c2 = st.columns([4, 1])
+                    if not es_movil:
+                        c1, c2 = st.columns([4, 1])
+                    else:
+                        c1 = st.container()
+                        c2 = st.container()
                     c1.markdown(f"{severity_color} **{escape(f.title)}**")
                     c1.caption(f"{escape(f.description[:200])}")
                     c2.caption(f"{f.file_path}:{f.line}")
@@ -93,7 +108,12 @@ def render_escaneo(_paciente_sel):
                             log_event("self_healing", f"fix_fallo:{f.title[:60]}")
                             st.error(f"No se pudo aplicar el fix: {f.title}")
 
-    col_info1, col_info2, col_info3 = st.columns(3)
+    if not es_movil:
+        col_info1, col_info2, col_info3 = st.columns(3)
+    else:
+        col_info1 = st.container()
+        col_info2 = st.container()
+        col_info3 = st.container()
     with col_info1:
         st.caption("Modo pasivo: solo detecta")
     with col_info2:
@@ -103,6 +123,8 @@ def render_escaneo(_paciente_sel):
 
 
 def render_hallazgos():
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.subheader("Hallazgos de escaneos anteriores")
     history = get_scan_history(limit=5)
     if not history:
@@ -128,7 +150,10 @@ def render_hallazgos():
         }.get(f.get("status", "pending"), "⏳")
 
         with st.container(border=True):
-            cols = st.columns([0.5, 3, 1, 1])
+            if not es_movil:
+                cols = st.columns([0.5, 3, 1, 1])
+            else:
+                cols = [st.container() for _ in range(4)]
             cols[0].markdown(f"{severity_color}{status_icon}")
             cols[1].markdown(f"**{escape(f.get('title', '?'))}**")
             cols[2].caption(f"{f.get('file', '?')}:{f.get('line', '?')}")
@@ -136,6 +161,8 @@ def render_hallazgos():
 
 
 def render_historial():
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.subheader("Historial de escaneos")
     history = get_scan_history(limit=50)
     if not history:
@@ -151,7 +178,10 @@ def render_historial():
         icon = "🔄" if scan_type == "manual_scan" else "🤖"
 
         with st.container(border=True):
-            cols = st.columns([1, 2, 1, 1])
+            if not es_movil:
+                cols = st.columns([1, 2, 1, 1])
+            else:
+                cols = [st.container() for _ in range(4)]
             cols[0].markdown(f"{icon}")
             cols[1].caption(f"{time.strftime('%d/%m/%Y %H:%M', time.localtime(ts))}")
             cols[2].caption(f"{scanned} archivos")
@@ -159,10 +189,17 @@ def render_historial():
 
 
 def render_errores():
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.subheader("Errores recientes del sistema")
     stats = get_summary_stats()
     if stats:
-        col_e1, col_e2, col_e3 = st.columns(3)
+        if not es_movil:
+            col_e1, col_e2, col_e3 = st.columns(3)
+        else:
+            col_e1 = st.container()
+            col_e2 = st.container()
+            col_e3 = st.container()
         col_e1.metric("Sin resolver", stats.get("unresolved", 0))
         col_e2.metric("Criticos", stats.get("critical", 0))
         col_e3.metric("Hoy", stats.get("today", 0))

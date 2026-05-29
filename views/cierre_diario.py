@@ -22,6 +22,8 @@ except ImportError:
 
 
 def render_cierre_diario(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     emp_e = escape(str(mi_empresa or ""))
     st.markdown(
         f"""
@@ -50,7 +52,11 @@ def render_cierre_diario(mi_empresa, user):
         "El radio de abajo cambia el detalle sin perder la fecha."
     )
 
-    c1_rep, _ = st.columns([1, 2])
+    if not es_movil:
+        c1_rep, _ = st.columns([1, 2])
+    else:
+        c1_rep = st.container()
+        _ = st.container()
     fecha_reporte = c1_rep.date_input("Filtrar por Fecha", value=ahora().date())
     fecha_str = fecha_reporte.strftime("%d/%m/%Y")
 
@@ -62,7 +68,12 @@ def render_cierre_diario(mi_empresa, user):
     total_facturado = sum(float(f.get("monto", 0) or 0) for f in facturacion_dia)
     stock_critico = len([s for s in stock_actual if s.get("stock", 0) <= 10])
 
-    col_m1, col_m2, col_m3 = st.columns(3)
+    if not es_movil:
+        col_m1, col_m2, col_m3 = st.columns(3)
+    else:
+        col_m1 = st.container()
+        col_m2 = st.container()
+        col_m3 = st.container()
     col_m1.metric("Insumos Consumidos", f"{total_insumos} unidades")
     col_m2.metric("Facturado del Dia", f"${total_facturado:,.2f}")
     col_m3.metric("Stock Critico", f"{stock_critico} insumos")
@@ -79,7 +90,11 @@ def render_cierre_diario(mi_empresa, user):
 
     if vista == "Resumen del Dia":
         with lista_plegable("Detalle del día — insumos y facturación", expanded=False, height=None):
-            col_r1, col_r2 = st.columns(2)
+            if not es_movil:
+                col_r1, col_r2 = st.columns(2)
+            else:
+                col_r1 = st.container()
+                col_r2 = st.container()
             with col_r1.container(border=True):
                 st.markdown("#### Insumos del dia")
                 if consumos_dia:
@@ -244,7 +259,11 @@ def render_cierre_diario(mi_empresa, user):
             ):
                 for i, r in enumerate(reportes_mios[:limite_archivo]):
                     with st.container(border=True):
-                        c1_hist, c2_hist = st.columns([4, 1])
+                        if not es_movil:
+                            c1_hist, c2_hist = st.columns([4, 1])
+                        else:
+                            c1_hist = st.container()
+                            c2_hist = st.container()
                         c1_hist.markdown(f"**Cierre del dia {r['fecha_reporte']}**")
                         c1_hist.caption(f"Generado el {r['fecha_generacion']} por {r['generado_por']}")
                         pdf_bytes = base64.b64decode(r['pdf_base64'])

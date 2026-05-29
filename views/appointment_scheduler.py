@@ -348,6 +348,8 @@ def render_appointment_scheduler():
 
 def render_new_appointment_form(scheduler: AppointmentScheduler):
     """Formulario para nuevo turno."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📋 Nuevo Turno")
 
     # Obtener datos
@@ -368,7 +370,11 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
         st.warning("⚠️ Debe haber pacientes y médicos registrados para agendar turnos.")
         return
 
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         # Seleccionar paciente
@@ -402,7 +408,12 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
         medico_id = medico_options[medico_selected]
         medico = medicos[medico_id]
 
-    col3, col4, col5 = st.columns(3)
+    if not es_movil:
+        col3, col4, col5 = st.columns(3)
+    else:
+        col3 = st.container()
+        col4 = st.container()
+        col5 = st.container()
 
     with col3:
         fecha = st.date_input("Fecha *", min_value=date.today(), value=date.today())
@@ -472,9 +483,15 @@ def render_new_appointment_form(scheduler: AppointmentScheduler):
 
 def render_daily_agenda(scheduler: AppointmentScheduler):
     """Renderiza agenda diaria."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📅 Agenda Diaria")
 
-    col1, col2 = st.columns([1, 3])
+    if not es_movil:
+        col1, col2 = st.columns([1, 3])
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         fecha = st.date_input("Fecha", value=date.today(), key="agenda_fecha")
@@ -517,7 +534,12 @@ def render_daily_agenda(scheduler: AppointmentScheduler):
 
             for turno in turnos:
                 with st.container():
-                    col_a, col_b, col_c = st.columns([1, 4, 2])
+                    if not es_movil:
+                        col_a, col_b, col_c = st.columns([1, 4, 2])
+                    else:
+                        col_a = st.container()
+                        col_b = st.container()
+                        col_c = st.container()
 
                     with col_a:
                         st.markdown(f"### {turno.time.strftime('%H:%M')}")
@@ -551,9 +573,15 @@ def render_daily_agenda(scheduler: AppointmentScheduler):
 
 def render_appointment_stats(scheduler: AppointmentScheduler):
     """Estadísticas de turnos."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.header("📊 Estadísticas de Turnos")
 
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         fecha_desde = st.date_input("Desde", value=date.today() - timedelta(days=30))
@@ -564,7 +592,11 @@ def render_appointment_stats(scheduler: AppointmentScheduler):
     stats = scheduler.get_statistics(fecha_desde, fecha_hasta)
 
     # KPIs
-    col1, col2 = st.columns(2)
+    if not es_movil:
+        col1, col2 = st.columns(2)
+    else:
+        col1 = st.container()
+        col2 = st.container()
 
     with col1:
         st.metric("Total Turnos", stats["total"])

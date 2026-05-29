@@ -28,6 +28,8 @@ from core.guardado_universal import (
 
 def render(paciente_sel=None, user=None):
     """Renderiza la vista con guardado DUAL: Supabase + Local."""
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
     st.markdown("# 🏥 Signos Vitales y Evoluciones")
 
@@ -56,7 +58,12 @@ def render(paciente_sel=None, user=None):
     st.markdown("### ➕ Nuevo Control de Signos Vitales")
 
     with st.form("form_signos_vitales_emergencia"):
-        col1, col2, col3 = st.columns(3)
+        if not es_movil:
+            col1, col2, col3 = st.columns(3)
+        else:
+            col1 = st.container()
+            col2 = st.container()
+            col3 = st.container()
 
         with col1:
             ta = st.text_input("🫀 Tensión Arterial", placeholder="120/80", key="ta_emer")
