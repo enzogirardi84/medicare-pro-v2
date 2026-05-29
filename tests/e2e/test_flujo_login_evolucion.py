@@ -7,6 +7,8 @@ Ejecutar: python -m pytest tests/e2e/ -v --tb=short
 
 from __future__ import annotations
 
+import importlib.util
+
 import pytest
 
 playwright_sync = pytest.importorskip(
@@ -15,6 +17,11 @@ playwright_sync = pytest.importorskip(
 )
 Page = playwright_sync.Page
 expect = playwright_sync.expect
+
+pytestmark = pytest.mark.skipif(
+    importlib.util.find_spec("pytest_playwright") is None,
+    reason="E2E opcional: falta pytest-playwright para proveer el fixture page.",
+)
 
 
 @pytest.fixture(scope="module")
