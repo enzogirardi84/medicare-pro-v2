@@ -158,6 +158,8 @@ def _generar_pdf_rrhh(mi_empresa, user, fecha_inicio, fecha_fin, df_mostrar, tot
 
 
 def render_rrhh(mi_empresa, rol, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     rol_normalizado = str(rol or "").strip().lower()
     acceso_total = es_control_total(rol_normalizado)
     emp_e = escape(str(mi_empresa or ""))
@@ -188,7 +190,10 @@ def render_rrhh(mi_empresa, rol, user):
         "Las horas se estiman al cerrar cada visita con EGRESO."
     )
 
-    col_f1, col_f2 = st.columns(2)
+    if not es_movil:
+        col_f1, col_f2 = st.columns(2)
+    else:
+        col_f1, col_f2 = st.container(), st.container()
     fecha_inicio = col_f1.date_input("Desde fecha", value=ahora().date() - timedelta(days=30), key="fichajes_desde")
     fecha_fin = col_f2.date_input("Hasta fecha", value=ahora().date(), key="fichajes_hasta")
     st.caption(
@@ -293,7 +298,10 @@ def render_rrhh(mi_empresa, rol, user):
     df_egresos = df_fichajes[df_fichajes["Accion"] == "EGRESO"]
     total_horas = sum(_parsear_duracion(t) for t in df_egresos["Tiempo Trabajado"])
 
-    col_m1, col_m2 = st.columns(2)
+    if not es_movil:
+        col_m1, col_m2 = st.columns(2)
+    else:
+        col_m1, col_m2 = st.container(), st.container()
     col_m1.metric("Total Fichajes", len(df_fichajes))
     col_m1.metric("Horas Trabajadas", f"{total_horas:.1f} hs")
     col_m2.metric("Profesionales", df_fichajes["Profesional"].nunique())
@@ -338,7 +346,10 @@ def render_rrhh(mi_empresa, rol, user):
             st.info("Todavia no hay egresos completos en el periodo para calcular horas trabajadas.")
             return
         resumen_prof = pd.DataFrame(resumen_rows).sort_values(by=["Horas Totales", "Visitas"], ascending=False)
-        c_r1, c_r2 = st.columns([2, 1])
+        if not es_movil:
+            c_r1, c_r2 = st.columns([2, 1])
+        else:
+            c_r1, c_r2 = st.container(), st.container()
         with c_r1:
             limite_resumen = seleccionar_limite_registros(
                 "Profesionales en resumen", len(resumen_prof),
@@ -378,7 +389,10 @@ def render_rrhh(mi_empresa, rol, user):
         if c.get("empresa") == mi_empresa or acceso_total
     ]
     if opciones_borrar:
-        col_del1, col_del2 = st.columns([3, 1])
+        if not es_movil:
+            col_del1, col_del2 = st.columns([3, 1])
+        else:
+            col_del1, col_del2 = st.container(), st.container()
         registro_sel = col_del1.selectbox("Seleccionar fichaje a eliminar", options=opciones_borrar, format_func=lambda x: x[0])
         confirmar_borrado = col_del1.checkbox("Confirmar eliminacion del fichaje", key="rrhh_conf_del_fichaje")
         if col_del2.button("Eliminar Fichaje", type="secondary", width='stretch', disabled=not confirmar_borrado):

@@ -25,6 +25,8 @@ def _restaurar_stock(mi_empresa, insumo, cantidad):
 
 
 def render_materiales(paciente_sel, mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -75,7 +77,10 @@ def render_materiales(paciente_sel, mi_empresa, user):
             unsafe_allow_html=True,
         )
         with st.form("form_mat", clear_on_submit=True):
-            c1, c2 = st.columns([3, 1])
+            if not es_movil:
+                c1, c2 = st.columns([3, 1])
+            else:
+                c1, c2 = st.container(), st.container()
             insumo_sel = c1.selectbox("Seleccionar insumo utilizado", [i["item"] for i in inv_mi_empresa], key="select_insumo")
             cant_usada = c2.number_input("Cantidad", min_value=1, value=1, step=1)
             stock_disponible = next((i.get("stock", 0) for i in inv_mi_empresa if i.get("item") == insumo_sel), 0)
@@ -145,7 +150,10 @@ def render_materiales(paciente_sel, mi_empresa, user):
         # ── Métricas + top insumos + último uso ────────────────────────────
         _tot_unidades = sum(int(c.get("cantidad", 0) or 0) for c in cons_paciente)
         _ultimo_c = max(cons_paciente, key=lambda x: x.get("fecha", ""))
-        _mc1, _mc2, _mc3 = st.columns(3)
+        if not es_movil:
+            _mc1, _mc2, _mc3 = st.columns(3)
+        else:
+            _mc1, _mc2, _mc3 = st.container(), st.container(), st.container()
         _mc1.metric("Total consumos", len(cons_paciente))
         _mc2.metric("Unidades usadas", _tot_unidades)
         _mc3.metric("Último registro", (_ultimo_c.get("fecha") or "S/D")[:16])
@@ -181,7 +189,10 @@ def render_materiales(paciente_sel, mi_empresa, user):
                 if qty >= 5:
                     st.warning(f"🟡 Uso elevado en últimas 2hs: **{ins}** — {qty} unidades. Verificar si es correcto.")
 
-        col_chk, col_btn = st.columns([1.2, 2.8])
+        if not es_movil:
+            col_chk, col_btn = st.columns([1.2, 2.8])
+        else:
+            col_chk, col_btn = st.container(), st.container()
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_consumo")
         if col_btn.button("Borrar ultimo consumo", width='stretch', disabled=not confirmar_borrado):
             if not cons_paciente:

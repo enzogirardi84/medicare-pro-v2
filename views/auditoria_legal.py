@@ -133,6 +133,8 @@ def generar_pdf_auditoria_legal(df, nombre_empresa=""):
 
 
 def render_auditoria_legal(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown(
         """
         <div class="mc-hero">

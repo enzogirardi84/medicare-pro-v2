@@ -23,6 +23,8 @@ except ImportError:
 
 
 def render_caja(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     rol_normalizado = str(rol or "").strip().lower()
     if not paciente_sel:
         aviso_sin_paciente()
@@ -111,7 +113,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     total_cobrado = cached["total_cobrado"]
     total_pendiente = cached["total_pendiente"]
 
-    col_m1, col_m2, col_m3 = st.columns(3)
+    if not es_movil:
+        col_m1, col_m2, col_m3 = st.columns(3)
+    else:
+        col_m1, col_m2, col_m3 = st.container(), st.container(), st.container()
     col_m1.metric("Total Cobrado", f"${total_cobrado:,.2f}")
     col_m2.metric("Pendiente de Cobro", f"${total_pendiente:,.2f}")
     col_m3.metric("Practicas Registradas", len(fact_paciente))
@@ -121,7 +126,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     with tabs_caja[0]:
       with st.form("caja_form", clear_on_submit=True):
         st.markdown("##### Registrar Nuevo Movimiento")
-        c1, c2 = st.columns([3, 1])
+        if not es_movil:
+            c1, c2 = st.columns([3, 1])
+        else:
+            c1, c2 = st.container(), st.container()
         practicas_comunes = [
             "Consulta Medica Domiciliaria", "Aplicacion IM/SC", "Curacion de Heridas",
             "Colocacion/Cambio de Sonda", "Control de Signos Vitales",
@@ -133,7 +141,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         # Validación: monto máximo 500000 (500k) para seguridad
         mon = c2.number_input("Monto a Facturar ($)", min_value=0.0, step=500.0, value=0.0, max_value=500000.0)
 
-        c3, c4 = st.columns(2)
+        if not es_movil:
+            c3, c4 = st.columns(2)
+        else:
+            c3, c4 = st.container(), st.container()
         opciones_pago = [
             "Efectivo", "Mercado Pago / MODO", "Transferencia Bancaria", "Tarjeta", "Link de Pago",
             "Bono / Coseguro", "Cobertura / Obra Social", "Cheque",
@@ -218,7 +229,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 if p is None:
                     continue
                 with st.container(border=True):
-                    pa, pb, pc = st.columns([3, 1, 1])
+                    if not es_movil:
+                        pa, pb, pc = st.columns([3, 1, 1])
+                    else:
+                        pa, pb, pc = st.container(), st.container(), st.container()
                     with pa:
                         st.markdown(f"**{p.get('serv', '')}**")
                         st.caption(f"{p.get('fecha', '')}")
@@ -293,7 +307,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     if mov is None:
                         continue
                     with st.container(border=True):
-                        col_r1, col_r2 = st.columns([4, 1])
+                        if not es_movil:
+                            col_r1, col_r2 = st.columns([4, 1])
+                        else:
+                            col_r1, col_r2 = st.container(), st.container()
                         with col_r1:
                             st.markdown(f"**{mov['fecha']}** - {mov['serv']}")
                             st.caption(f"{mov.get('estado', 'S/D')} | {mov.get('metodo', 'S/D')} | ${mov['monto']:,.2f}")

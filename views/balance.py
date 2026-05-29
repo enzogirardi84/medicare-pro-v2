@@ -13,6 +13,8 @@ from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_r
 
 
 def render_balance(paciente_sel, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -43,13 +45,19 @@ def render_balance(paciente_sel, user):
     )
 
     with st.form("bal", clear_on_submit=True):
-        col_meta1, col_meta2, col_meta3 = st.columns(3)
+        if not es_movil:
+            col_meta1, col_meta2, col_meta3 = st.columns(3)
+        else:
+            col_meta1, col_meta2, col_meta3 = st.container(), st.container(), st.container()
         fecha_bal = col_meta1.date_input("Fecha de control", value=ahora().date(), label_visibility="collapsed", key=f"fecha_bal_{paciente_sel}")
         hora_bal_str = col_meta2.text_input("Hora exacta (HH:MM)", value=ahora().strftime("%H:%M"), label_visibility="collapsed", key=f"hora_bal_{paciente_sel}")
         turno = col_meta3.selectbox("Turno de guardia", ["Manana (06 a 14hs)", "Tarde (14 a 22hs)", "Noche (22 a 06hs)"], label_visibility="collapsed")
 
         st.divider()
-        c1, c2 = st.columns(2)
+        if not es_movil:
+            c1, c2 = st.columns(2)
+        else:
+            c1, c2 = st.container(), st.container()
         with c1:
             st.markdown("#### Ingresos (ml)")
             i_oral = st.number_input("Oral / Enteral", min_value=0, step=50, value=0)
@@ -115,7 +123,10 @@ def render_balance(paciente_sel, user):
         egr_hoy = sum((x.get("egresos") or 0) for x in blp_hoy)
         bal_hoy = sum((x.get("balance") or 0) for x in blp_hoy)
         st.markdown(f"##### Resumen del día — {hoy_str}")
-        _d1, _d2 = st.columns(2)
+        if not es_movil:
+            _d1, _d2 = st.columns(2)
+        else:
+            _d1, _d2 = st.container(), st.container()
         _d1.metric("Turnos hoy", len(blp_hoy))
         _d1.metric("Ingresos hoy", f"{ing_hoy} ml")
         _d2.metric("Egresos hoy", f"{egr_hoy} ml")
@@ -157,7 +168,10 @@ def render_balance(paciente_sel, user):
     penultimo = df_temp["balance"].iloc[-2] if len(df_temp) >= 2 else None
     _delta_shift = int(ultimo) - int(penultimo) if penultimo is not None else None
 
-    col_met1, col_met2 = st.columns(2)
+    if not es_movil:
+        col_met1, col_met2 = st.columns(2)
+    else:
+        col_met1, col_met2 = st.container(), st.container()
     col_met1.metric(
         "Ultimo shift",
         f"{ultimo:+} ml",
@@ -193,7 +207,10 @@ def render_balance(paciente_sel, user):
         except Exception as _exc:
             log_event("balance_charts", f"fallo_render_graficos:{type(_exc).__name__}:{_exc}")
 
-        col_chart1, col_chart2 = st.columns(2)
+        if not es_movil:
+            col_chart1, col_chart2 = st.columns(2)
+        else:
+            col_chart1, col_chart2 = st.container(), st.container()
         with col_chart1:
             st.caption("Ingresos vs egresos (últimos 8 turnos)")
             st.bar_chart(
@@ -252,7 +269,10 @@ def render_balance(paciente_sel, user):
         )
 
     st.divider()
-    col_chk, col_btn = st.columns([1.2, 2.8])
+    if not es_movil:
+        col_chk, col_btn = st.columns([1.2, 2.8])
+    else:
+        col_chk, col_btn = st.container(), st.container()
     confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_balance")
     if col_btn.button("Borrar ultimo balance", width='stretch', type="secondary", disabled=not confirmar_borrado):
         try:

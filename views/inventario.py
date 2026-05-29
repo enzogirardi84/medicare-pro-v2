@@ -28,6 +28,8 @@ _COLORES_CATEGORIA = [
 
 
 def render_inventario(mi_empresa):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     usuario_actual = st.session_state.get("u_actual", {})
     puede_ver_stock = puede(usuario_actual, STOCK_VER)
     puede_ajustar_stock = puede(usuario_actual, STOCK_AJUSTAR)
@@ -109,7 +111,10 @@ def render_inventario(mi_empresa):
     _unid_7d = sum(int(c.get("cantidad", 0) or 0) for c in _cons_7d)
 
     if inv_mio:
-        cols = st.columns(3)
+        if not es_movil:
+            cols = st.columns(3)
+        else:
+            cols = st.columns(1)
         cols[0].metric("Ítems en inventario", len(inv_mio))
         cols[0].metric("🔴 Stock crítico", len(stock_critico), help="Según stock mínimo de cada ítem o ≤10 por defecto")
         cols[1].metric("🟡 Stock bajo", len(stock_bajo), help="Por debajo del doble del stock mínimo o ≤25 por defecto")
@@ -174,13 +179,19 @@ def render_inventario(mi_empresa):
     if puede_ajustar_stock:
         with st.form("form_inv", clear_on_submit=True):
             st.markdown("##### Ingreso de mercadería")
-            c1, c2, c3 = st.columns([2, 2, 1])
+            if not es_movil:
+                c1, c2, c3 = st.columns([2, 2, 1])
+            else:
+                c1, c2, c3 = st.container(), st.container(), st.container()
             lista_base_inv = ["-- Seleccionar del catálogo --"] + vademecum_base
 
             item_sel = c1.selectbox("1. Catálogo frecuente", lista_base_inv)
             nuevo_item = c2.text_input("2. Escribir insumo nuevo")
             cantidad = c3.number_input("Cantidad", min_value=1, value=10, step=1)
-            c4, c5 = st.columns([1, 1])
+            if not es_movil:
+                c4, c5 = st.columns([1, 1])
+            else:
+                c4, c5 = st.container(), st.container()
             _cat_input = c4.text_input("Categoría (opcional)", placeholder="Ej: Medicamentos, Descartables")
             _costo_input = c5.number_input("Costo unitario $ (opcional)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
 
@@ -259,7 +270,10 @@ def render_inventario(mi_empresa):
         })
 
         _categorias = sorted(set(i.get("categoria", "") for i in inv_mio if i.get("categoria")))
-        _filtros = st.columns([2, 1.2, 1])
+        if not es_movil:
+            _filtros = st.columns([2, 1.2, 1])
+        else:
+            _filtros = st.columns([1, 1, 1])
         _busq_inv = _filtros[0].text_input(
             "🔍 Buscar insumo", placeholder="Nombre...", key="inventario_busqueda",
         ).strip().lower()
@@ -384,7 +398,10 @@ def render_inventario(mi_empresa):
             _s_act = _item_data.get("stock", 0)
             _s_min = int(_item_data.get("stock_minimo", 0) or 0)
             _costo = float(_item_data.get("costo_unitario", 0) or 0)
-            c_aj1, c_aj2, c_aj3 = st.columns([1, 1, 1])
+            if not es_movil:
+                c_aj1, c_aj2, c_aj3 = st.columns([1, 1, 1])
+            else:
+                c_aj1, c_aj2, c_aj3 = st.container(), st.container(), st.container()
             nuevo_stock = c_aj1.number_input("Stock real", min_value=0, value=_s_act, key="new_stock")
             nuevo_min = c_aj2.number_input("Stock mínimo", min_value=0, value=_s_min, key="new_min")
             nuevo_costo = c_aj3.number_input("Costo unitario $", min_value=0.0, value=_costo, step=0.5, format="%.2f", key="new_costo")
@@ -395,7 +412,10 @@ def render_inventario(mi_empresa):
                     st.caption(f"💡 ≈**{_sug_min}** uds. según consumos")
             except Exception:
                 pass
-            c_save_col, _ = st.columns([1, 1])
+            if not es_movil:
+                c_save_col, _ = st.columns([1, 1])
+            else:
+                c_save_col, _ = st.container(), st.container()
             if c_save_col.button("Guardar cambios", use_container_width=True, type="primary"):
                 cambios = {"stock_actual": nuevo_stock, "stock_minimo": nuevo_min, "costo_unitario": nuevo_costo}
                 sql_ok = False
@@ -420,7 +440,10 @@ def render_inventario(mi_empresa):
                 st.rerun()
 
             if puede_eliminar_stock:
-                col_del1, col_del2 = st.columns([3, 1])
+                if not es_movil:
+                    col_del1, col_del2 = st.columns([3, 1])
+                else:
+                    col_del1, col_del2 = st.container(), st.container()
                 del_item = col_del1.selectbox("Eliminar insumo por completo", [i.get("item", "") for i in inv_mio if i is not None], key="del_sel")
                 confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
                 if col_del2.button("Eliminar insumo", use_container_width=True, type="secondary", disabled=not confirmar):
@@ -450,7 +473,10 @@ def render_inventario(mi_empresa):
     st.divider()
     st.markdown("### 📦 Reporte de inventario")
     with st.expander("Exportar reporte completo", expanded=False):
-        col_exp1, col_exp2 = st.columns(2)
+        if not es_movil:
+            col_exp1, col_exp2 = st.columns(2)
+        else:
+            col_exp1, col_exp2 = st.container(), st.container()
         with col_exp1:
             if st.button("📄 Exportar PDF", use_container_width=True, key="inv_export_pdf"):
                 try:

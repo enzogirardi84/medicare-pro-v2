@@ -104,6 +104,8 @@ def generar_pdf_auditoria_logs(df, nombre_empresa=""):
 
 
 def render_auditoria(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     emp_e = escape(str(mi_empresa or ""))
     st.markdown(
         f"""
@@ -179,7 +181,10 @@ def render_auditoria(mi_empresa, user):
             return
 
         df_logs = pd.DataFrame(logs_empresa)
-        col_f1, col_f2, col_f3 = st.columns([2, 2, 1])
+        if not es_movil:
+            col_f1, col_f2, col_f3 = st.columns([2, 2, 1])
+        else:
+            col_f1, col_f2, col_f3 = st.container(), st.container(), st.container()
         fecha_inicio = col_f1.date_input("Desde", value=ahora().date().replace(day=1), key="log_desde")
         fecha_fin = col_f2.date_input("Hasta", value=ahora().date(), key="log_hasta")
 
@@ -209,7 +214,10 @@ def render_auditoria(mi_empresa, user):
 
         df_filtrado = pd.DataFrame(registros_filtrados).convert_dtypes()
 
-        col_m1, col_m2, col_m3 = st.columns(3)
+        if not es_movil:
+            col_m1, col_m2, col_m3 = st.columns(3)
+        else:
+            col_m1, col_m2, col_m3 = st.container(), st.container(), st.container()
         col_m1.metric("Total registros", len(df_filtrado))
         col_m2.metric("Usuarios unicos", df_filtrado[col_usuario].nunique() if col_usuario and not df_filtrado.empty else 0)
         ultimo_valor = df_filtrado[col_fecha].iloc[-1] if col_fecha and not df_filtrado.empty else "-"
@@ -295,7 +303,10 @@ def render_auditoria(mi_empresa, user):
         return
 
     prof_sel = st.selectbox("Seleccionar Profesional", profesionales_lista, key="prof_rrhh_audit")
-    col_r1, col_r2 = st.columns(2)
+    if not es_movil:
+        col_r1, col_r2 = st.columns(2)
+    else:
+        col_r1, col_r2 = st.container(), st.container()
     fecha_desde = col_r1.date_input("Desde", value=ahora().date().replace(day=1), key="rrhh_desde_audit")
     fecha_hasta = col_r2.date_input("Hasta", value=ahora().date(), key="rrhh_hasta_audit")
 
@@ -331,7 +342,10 @@ def render_auditoria(mi_empresa, user):
     df_chk_raw["hora"] = df_chk_raw["fecha_dt"].dt.hour
     df_valida = df_chk_raw.dropna(subset=["fecha_dt"]).reset_index(drop=True)
 
-    col_m1, col_m2 = st.columns(2)
+    if not es_movil:
+        col_m1, col_m2 = st.columns(2)
+    else:
+        col_m1, col_m2 = st.container(), st.container()
     _dias_unicos = df_valida["dia"].nunique() if not df_valida.empty else 0
     col_m1.metric("Total fichadas", len(df_valida))
     col_m1.metric("Dias con actividad", _dias_unicos)
@@ -370,7 +384,10 @@ def render_auditoria(mi_empresa, user):
         mostrar_dataframe_con_scroll(df_chk_page[_cols_tabla], height=400)
 
     # 6. Exportaciones
-    col_exp1, col_exp2 = st.columns(2)
+    if not es_movil:
+        col_exp1, col_exp2 = st.columns(2)
+    else:
+        col_exp1, col_exp2 = st.container(), st.container()
     csv_bytes = dataframe_csv_bytes(df_chk[_cols_tabla]) if not df_chk.empty else b""
     col_exp1.download_button(
         "Descargar CSV",
