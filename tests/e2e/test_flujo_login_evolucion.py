@@ -32,9 +32,10 @@ def app_url() -> str:
 
 def test_login_muestra_formulario(app_url: str, page: Page):
     """Verifica que la pagina de login cargue correctamente."""
-    page.goto(app_url)
+    page.goto(f"{app_url}/?login=1")
     page.wait_for_load_state("networkidle")
-    expect(page.get_by_role("heading", name="MediCare PRO").first).to_be_visible(timeout=10000)
+    expect(page.get_by_text("Acceso a MediCare").first).to_be_visible(timeout=10000)
+    expect(page.get_by_text("Usuario").first).to_be_visible(timeout=10000)
 
 
 def test_navegacion_muestra_modulos(app_url: str, page: Page):

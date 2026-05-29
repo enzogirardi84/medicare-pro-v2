@@ -67,6 +67,7 @@ if not st.session_state.get("_boot_done"):
     _boot_qp_ok = False
     try:
         _boot_qp_ok = str(st.query_params.get("_mc_boot") or "").strip() == "1"
+        _boot_qp_ok = _boot_qp_ok or str(st.query_params.get("login") or "").strip() == "1"
     except Exception:
         _boot_qp_ok = False
     if not _boot_qp_ok:
@@ -135,7 +136,9 @@ if not st.session_state.get("_boot_done"):
             st.query_params["_mc_boot"] = "1"
         except Exception:
             pass
-        st.rerun()
+        # st.query_params suele disparar el segundo pase; si no, dejamos el
+        # boton visible para que el usuario pueda entrar sin pantalla negra.
+        st.stop()
     st.session_state["_boot_done"] = True
 
 if not st.session_state.get("_mc_boot_query_cleaned"):

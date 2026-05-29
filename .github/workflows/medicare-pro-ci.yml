@@ -9,6 +9,9 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   auto-heal:
     runs-on: ubuntu-latest
@@ -57,16 +60,22 @@ jobs:
             -not -path "./.git/*" \
             -exec python -c "compile(open('{}',encoding='utf-8').read(),'{}','exec')" \; 2>&1 | head -20
       - name: Metricas de codigo
-        run: python -c "
-import ast, os
-total = 0
-for root, dirs, files in os.walk('.'):
-    dirs[:] = [d for d in dirs if d not in {'.git','nextgen_platform','_gestion_ganadera_senasa_work'}]
-    for f in files:
-        if f.endswith('.py'):
-            total += 1
-print(f'Total archivos .py: {total}')
-"
+        run: |
+          python - <<'PY'
+          import os
+
+          total = 0
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [
+                  d for d in dirs
+                  if d not in {".git", "nextgen_platform", "_gestion_ganadera_senasa_work"}
+              ]
+              for filename in files:
+                  if filename.endswith(".py"):
+                      total += 1
+
+          print(f"Total archivos .py: {total}")
+          PY
 
   security:
     needs: auto-heal
