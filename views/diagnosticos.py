@@ -65,7 +65,7 @@ def render_diagnosticos(user=None):
         diag = st.session_state.get("_ultimo_diagnostico")
         diag_ts = st.session_state.get("_ultimo_diagnostico_ts", 0)
         CACHE_EXPIRE_SEGUNDOS = 600  # 10 minutos de cache para diagnosticos
-        
+
         if not diag or (time.time() - diag_ts) > CACHE_EXPIRE_SEGUNDOS:
             st.info("Presioná el botón para ejecutar el diagnóstico.")
             if diag and (time.time() - diag_ts) > CACHE_EXPIRE_SEGUNDOS:
@@ -112,11 +112,11 @@ def render_diagnosticos(user=None):
             # Tabla de estado de cada tabla
             st.markdown("#### Tablas SQL")
             tablas_data = diag.get("tablas", {})
-            
+
             df_cache_key = "_mc_diag_df_tablas"
             diag_hash = hash(str(sorted(tablas_data.items())))
             cached_df = st.session_state.get(df_cache_key)
-            
+
             if cached_df and cached_df.get("hash") == diag_hash:
                 df_tablas = cached_df["df"]
             else:
@@ -140,8 +140,8 @@ def render_diagnosticos(user=None):
                     })
                 df_tablas = pd.DataFrame(filas_estado)
                 st.session_state[df_cache_key] = {"hash": diag_hash, "df": df_tablas}
-            
-            st.dataframe(df_tablas, width='stretch', hide_index=True)
+
+            st.dataframe(df_tablas, use_container_width=True, hide_index=True)
 
     # === TAB 2: EMPRESA / PACIENTES ===
     with tab2:
@@ -222,7 +222,7 @@ def render_diagnosticos(user=None):
             conteos.append({"Tipo": t, "Total registros": len(registros), "Pacientes únicos": pacientes_unicos})
 
         df_local = pd.DataFrame(conteos)
-        st.dataframe(df_local, width='stretch', hide_index=True)
+        st.dataframe(df_local, use_container_width=True, hide_index=True)
 
         # Conteos session_state
         st.markdown("#### Registros en Sesión Activa (RAM)")
@@ -233,7 +233,7 @@ def render_diagnosticos(user=None):
             val = st.session_state.get(clave, [])
             ss_data.append({"Clave": clave, "Items": len(val) if isinstance(val, list) else 0})
         df_ss = pd.DataFrame(ss_data)
-        st.dataframe(df_ss, width='stretch', hide_index=True)
+        st.dataframe(df_ss, use_container_width=True, hide_index=True)
 
         # Backups
         st.markdown("#### Backups Disponibles")
@@ -248,12 +248,12 @@ def render_diagnosticos(user=None):
     # === TAB 4: DIAGNOSTICO TECNICO AVANZADO ===
     with tab4:
         st.markdown("### 🔧 Diagnóstico Técnico del Sistema")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.markdown("#### 🖥️ Estado del Sistema")
-            
+
             try:
                 import psutil
                 mem = psutil.virtual_memory()
@@ -283,20 +283,20 @@ def render_diagnosticos(user=None):
                 st.info("ℹ️ Instalar `psutil` para ver RAM y disco")
             except Exception as e:
                 st.info(f"ℹ️ Disco/RAM: no disponible ({type(e).__name__})")
-            
+
             try:
                 import streamlit as st_mod
                 st.caption(f"Streamlit: {st_mod.__version__}")
             except Exception as _exc:
                 log_event("diagnosticos_sistema", f"fallo_version_streamlit:{type(_exc).__name__}")
-        
+
         with col2:
             st.markdown("#### 🔐 Variables de Entorno")
-            
+
             # Verificar secrets/configuración
             required_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
             secrets_ok = True
-            
+
             for var in required_vars:
                 try:
                     val = st.secrets.get(var, "")
@@ -311,19 +311,19 @@ def render_diagnosticos(user=None):
                     log_event("diagnosticos", f"error: {var}: {str(e)[:50]}")
                     st.error(f"❌ {var}: Error - {str(e)[:50]}")
                     secrets_ok = False
-            
+
             if not secrets_ok:
                 st.warning("⚠️ Algunas variables de entorno no están configuradas correctamente")
-        
+
         st.markdown("---")
-        
+
         # Logs de errores recientes
         st.markdown("#### 📋 Logs de Errores Recientes")
-        
+
         try:
             from core.app_logging import get_recent_errors
             errores = get_recent_errors(limit=20)
-            
+
             if errores:
                 log_event("diagnosticos", f"error: {len(errores)} errores recientes detectados")
                 st.error(f"⚠️ {len(errores)} errores recientes detectados")
@@ -337,12 +337,12 @@ def render_diagnosticos(user=None):
                 st.success("✅ No hay errores recientes en el log")
         except Exception as e:
             st.info(f"ℹ️ Sistema de logs en memoria no disponible: {e}")
-        
+
         st.markdown("---")
-        
+
         # Verificación de archivos críticos
         st.markdown("#### 📁 Verificación de Archivos Críticos")
-        
+
         archivos_criticos = [
             ("main.py", "Archivo principal"),
             ("core/database.py", "Base de datos"),
@@ -350,7 +350,7 @@ def render_diagnosticos(user=None):
             ("assets/style.css", "Estilos CSS"),
             ("requirements.txt", "Dependencias"),
         ]
-        
+
         cols = st.columns(3)
         for i, (archivo, desc) in enumerate(archivos_criticos):
             path = Path(archivo)
@@ -363,11 +363,11 @@ def render_diagnosticos(user=None):
                     log_event("diagnosticos", f"error: Archivo no encontrado: {archivo}")
                     st.error(f"❌ {desc}")
                     st.caption(f"Archivo no encontrado: {archivo}")
-        
+
         st.markdown("---")
-        
+
         # Botón de diagnóstico completo
-        if st.button("🔄 Ejecutar Diagnóstico Completo del Sistema", type="primary", width='stretch'):
+        if st.button("🔄 Ejecutar Diagnóstico Completo del Sistema", type="primary", use_container_width=True):
             with st.spinner("Analizando todo el sistema..."):
                 dependencias_faltantes = []
                 deps = [
@@ -394,12 +394,12 @@ def render_diagnosticos(user=None):
                 for key in required_keys:
                     if key not in st.session_state:
                         problemas_session.append(f"Falta: {key}")
-                
+
                 # Mostrar resultados
                 st.markdown("#### 📊 Resultados del Diagnóstico")
-                
+
                 col1, col2, col3 = st.columns(3)
-                
+
                 with col1:
                     if dependencias_faltantes:
                         log_event("diagnosticos", f"error: {len(dependencias_faltantes)} dependencias faltantes: {', '.join(dependencias_faltantes)}")
@@ -407,7 +407,7 @@ def render_diagnosticos(user=None):
                         st.code(", ".join(dependencias_faltantes))
                     else:
                         st.success("✅ Todas las dependencias OK")
-                
+
                 with col2:
                     if errores_conexion:
                         log_event("diagnosticos", f"error: {len(errores_conexion)} problemas de conexion: {'; '.join(errores_conexion)}")
@@ -416,7 +416,7 @@ def render_diagnosticos(user=None):
                             st.caption(e)
                     else:
                         st.success("✅ Conexiones OK")
-                
+
                 with col3:
                     if problemas_session:
                         st.warning(f"⚠️ {len(problemas_session)} claves de sesión faltantes")
@@ -424,10 +424,10 @@ def render_diagnosticos(user=None):
                             st.caption(p)
                     else:
                         st.success("✅ Session State OK")
-                
+
                 # Resumen final
                 total_problemas = len(dependencias_faltantes) + len(errores_conexion) + len(problemas_session)
-                
+
                 if total_problemas == 0:
                     st.success("🎉 Sistema completamente saludable. No se detectaron problemas.")
                 else:

@@ -39,7 +39,7 @@ class FloatingActionButton:
     """
     Botón flotante de acción principal con menú expandible.
     """
-    
+
     def __init__(
         self,
         main_icon: str = "➕",
@@ -53,7 +53,7 @@ class FloatingActionButton:
         self.primary_color = primary_color
         self.actions: List[FABAction] = []
         self._is_open_key = "_fab_open"
-    
+
     def add_action(
         self,
         id: str,
@@ -74,29 +74,29 @@ class FloatingActionButton:
             badge=badge,
             disabled=disabled,
         ))
-    
+
     def render(self, key: str = "fab_main"):
         """Renderizar el FAB completo."""
         # Inyectar CSS
         self._inject_css()
-        
+
         # Verificar estado
         is_open = st.session_state.get(f"{key}_{self._is_open_key}", False)
-        
+
         # Posición CSS
         position_css = {
             FABPosition.BOTTOM_RIGHT: "bottom: 2rem; right: 2rem;",
             FABPosition.BOTTOM_LEFT: "bottom: 2rem; left: 2rem;",
             FABPosition.BOTTOM_CENTER: "bottom: 2rem; left: 50%; transform: translateX(-50%);",
         }.get(self.position, "bottom: 2rem; right: 2rem;")
-        
+
         # Renderizar menú de acciones si está abierto
         if is_open and self.actions:
             self._render_actions_menu(key, position_css)
-        
+
         # Renderizar botón principal
         self._render_main_button(key, position_css, is_open)
-    
+
     def _on_close_overlay(self, key: str):
         """Callback: cerrar menú FAB."""
         st.session_state[f"{key}_{self._is_open_key}"] = False
@@ -203,12 +203,12 @@ def create_medicare_fab(
 ) -> FloatingActionButton:
     """
     Crear FAB preconfigurado para MediCare.
-    
+
     Args:
         paciente_actual: ID del paciente seleccionado
         on_*: Callbacks para cada acción
         pending_count: Número de items pendientes
-    
+
     Returns:
         FloatingActionButton configurado
     """
@@ -218,7 +218,7 @@ def create_medicare_fab(
         position=FABPosition.BOTTOM_RIGHT,
         primary_color="#3b82f6",
     )
-    
+
     # Nueva evolución (solo si hay paciente)
     if paciente_actual:
         fab.add_action(
@@ -228,7 +228,7 @@ def create_medicare_fab(
             color="#3b82f6",
             on_click=on_nueva_evolucion,
         )
-        
+
         fab.add_action(
             id="nueva_receta",
             icon="💊",
@@ -236,7 +236,7 @@ def create_medicare_fab(
             color="#22c55e",
             on_click=on_nueva_receta,
         )
-        
+
         fab.add_action(
             id="ver_ultimo",
             icon="👁️",
@@ -244,7 +244,7 @@ def create_medicare_fab(
             color="#8b5cf6",
             on_click=on_ver_ultimo,
         )
-    
+
     # Siempre disponible
     fab.add_action(
         id="buscar_paciente",
@@ -254,7 +254,7 @@ def create_medicare_fab(
         on_click=on_buscar_paciente,
         badge=str(pending_count) if pending_count > 0 else None,
     )
-    
+
     return fab
 
 
@@ -268,13 +268,13 @@ def render_quick_actions_bar(
 ):
     """
     Barra de acciones rápidas fija (alternativa al FAB para desktop).
-    
+
     Args:
         actions: Lista de dicts con keys: icon, label, on_click, color
     """
     # Renderizar barra
     cols = st.columns(len(actions))
-    
+
     for i, (col, action) in enumerate(zip(cols, actions)):
         with col:
             icon = action.get("icon", "")
@@ -282,7 +282,7 @@ def render_quick_actions_bar(
             color = action.get("color", "#3b82f6")
             on_click = action.get("on_click")
             disabled = action.get("disabled", False)
-            
+
             if st.button(
                 f"{icon} {label}",
                 key=f"{key}_action_{i}",
@@ -302,20 +302,20 @@ def demo_floating_action_button():
     """Demo interactiva del FAB."""
     st.markdown("## ⚡ Floating Action Button")
     st.caption("Acciones rápidas desde cualquier parte de la aplicación")
-    
+
     # Tabs para diferentes demos
     tab1, tab2 = st.tabs(["FAB Móvil", "Barra Desktop"])
-    
+
     with tab1:
         st.markdown("### Botón Flotante (Mobile)")
-        
+
         # Crear FAB con acciones de ejemplo
         fab = FloatingActionButton(
             main_icon="➕",
             main_label="Acciones",
             primary_color="#3b82f6",
         )
-        
+
         fab.add_action(
             id="evolucion",
             icon="📝",
@@ -323,7 +323,7 @@ def demo_floating_action_button():
             color="#3b82f6",
             on_click=lambda: st.toast("📝 Nueva evolución"),
         )
-        
+
         fab.add_action(
             id="receta",
             icon="💊",
@@ -332,7 +332,7 @@ def demo_floating_action_button():
             on_click=lambda: st.toast("💊 Nueva receta"),
             badge="3",
         )
-        
+
         fab.add_action(
             id="buscar",
             icon="🔍",
@@ -340,7 +340,7 @@ def demo_floating_action_button():
             color="#f59e0b",
             on_click=lambda: st.toast("🔍 Buscando..."),
         )
-        
+
         fab.add_action(
             id="imprimir",
             icon="🖨️",
@@ -348,15 +348,15 @@ def demo_floating_action_button():
             color="#64748b",
             on_click=lambda: st.toast("🖨️ Imprimiendo..."),
         )
-        
+
         # Renderizar
         fab.render(key="demo_fab")
-        
+
         st.info("💡 En móvil, el FAB aparece en la esquina inferior derecha")
-    
+
     with tab2:
         st.markdown("### Barra de Acciones (Desktop)")
-        
+
         actions = [
             {
                 "icon": "📝",
@@ -389,18 +389,18 @@ def demo_floating_action_button():
                 "on_click": lambda: st.toast("🖨️ Imprimiendo..."),
             },
         ]
-        
+
         render_quick_actions_bar(actions, key="demo_bar")
-        
+
         st.info("💡 En desktop, se muestra una barra de acciones sticky al final de la página")
-    
+
     st.markdown("---")
-    
+
     # FAB predefinido de MediCare
     st.markdown("### FAB Predefinido de MediCare")
-    
+
     paciente_sel = st.checkbox("Simular paciente seleccionado", value=True)
-    
+
     medicare_fab = create_medicare_fab(
         paciente_actual="paciente_123" if paciente_sel else None,
         on_nueva_evolucion=lambda: st.toast("📝 Nueva evolución"),
@@ -409,8 +409,8 @@ def demo_floating_action_button():
         on_ver_ultimo=lambda: st.toast("👁️ Ver último paciente"),
         pending_count=2 if paciente_sel else 0,
     )
-    
+
     medicare_fab.render(key="medicare_fab")
-    
+
     st.markdown("---")
     st.caption("ℹ️ El FAB se adapta automáticamente: si hay paciente seleccionado, muestra acciones relevantes")

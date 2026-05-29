@@ -24,13 +24,13 @@ def test_guardar_json_db_retorna_bool():
     """Verifica que guardar_json_db() retorne booleano."""
     import streamlit as st
     from core.database import guardar_json_db
-    
+
     test_key = "_test_guardar_json"
     st.session_state[test_key] = []
-    
+
     result = guardar_json_db(test_key, {"test": True}, spinner=False, max_items=100)
     assert isinstance(result, bool)
-    
+
     st.session_state.pop(test_key, None)
 
 
@@ -38,11 +38,11 @@ def test_optimistic_locking_version_incrementa():
     """Verifica que el version counter se incremente al guardar."""
     import streamlit as st
     from core.database import guardar_datos
-    
+
     v0 = st.session_state.get("_db_version", 0)
     guardar_datos(spinner=False)
     v1 = st.session_state.get("_db_version", 0)
-    
+
     assert v1 >= v0
 
 
@@ -50,11 +50,11 @@ def test_guardar_datos_incrementa_version():
     """Verifica que guardar_datos() mantenga o incremente _db_version."""
     import streamlit as st
     from core.database import guardar_datos
-    
+
     v0 = st.session_state.get("_db_version", 0)
     guardar_datos(spinner=False)
     v1 = st.session_state.get("_db_version", 0)
-    
+
     assert isinstance(v1, (int, float))
     assert v1 >= v0
 

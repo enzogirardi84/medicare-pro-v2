@@ -82,45 +82,45 @@ class InformedConsent:
     patient_name: str
     consent_type: ConsentType
     status: ConsentStatus
-    
+
     # Documento
     template_id: str
     template_version: str
     content: str  # Contenido HTML/texto del consentimiento
-    
+
     # Firmas
     patient_signature: Optional[ConsentSignature] = None
     physician_signature: Optional[ConsentSignature] = None
     witness_signature: Optional[ConsentSignature] = None
-    
+
     # Metadata
     created_at: datetime = None
     expires_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    
+
     # Campos dinámicos del template
     field_values: Dict[str, Any] = None
-    
+
     # Hash de integridad
     content_hash: Optional[str] = None
-    
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now()
         if self.field_values is None:
             self.field_values = {}
-    
+
     def calculate_hash(self) -> str:
         """Calcula hash del contenido para verificación."""
         data = f"{self.content}{self.patient_id}{self.template_version}"
         return hashlib.sha256(data.encode()).hexdigest()
-    
+
     def verify_integrity(self) -> bool:
         """Verifica que el contenido no fue modificado."""
         if not self.content_hash:
             return True  # No se guardó hash
         return self.calculate_hash() == self.content_hash
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convierte a diccionario."""
         return {
@@ -132,7 +132,7 @@ class InformedConsent:
 
 class ConsentTemplate:
     """Template de consentimiento."""
-    
+
     TEMPLATES = {
         ConsentType.GENERAL: {
             "title": "Consentimiento General de Tratamiento Médico",
@@ -174,7 +174,7 @@ class ConsentTemplate:
 """,
             "required_fields": ["patient_name", "patient_dni", "physician_name"]
         },
-        
+
         ConsentType.PROCEDURE: {
             "title": "Consentimiento para Procedimiento Específico",
             "content": """
@@ -204,7 +204,7 @@ class ConsentTemplate:
 """,
             "required_fields": ["procedure_name", "procedure_description", "procedure_risks"]
         },
-        
+
         ConsentType.DATA_USE: {
             "title": "Consentimiento para Uso de Datos (LGPD/GDPR)",
             "content": """
@@ -254,7 +254,7 @@ class ConsentTemplate:
 """,
             "required_fields": []
         },
-        
+
         ConsentType.TELEMEDICINE: {
             "title": "Consentimiento para Telemedicina",
             "content": """
@@ -287,18 +287,18 @@ class ConsentTemplate:
             "required_fields": ["patient_name"]
         }
     }
-    
+
     @classmethod
     def get_template(cls, consent_type: ConsentType) -> Dict[str, Any]:
         """Obtiene template por tipo."""
         return cls.TEMPLATES.get(consent_type, cls.TEMPLATES[ConsentType.GENERAL])
-    
+
     @classmethod
     def render_template(cls, consent_type: ConsentType, field_values: Dict[str, Any]) -> str:
         """Renderiza template con valores."""
         template = cls.get_template(consent_type)
         content = template["content"]
-        
+
         # Valores por defecto
         defaults = {
             "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -306,14 +306,14 @@ class ConsentTemplate:
             "patient_dni": "[DNI]",
             "physician_name": "[Nombre del Médico]"
         }
-        
+
         # Combinar
         values = {**defaults, **field_values}
-        
+
         # Reemplazar placeholders (escapando HTML para prevenir XSS)
         for key, value in values.items():
             content = content.replace(f"{{{key}}}", sanitizar_html(str(value)))
-        
+
         return content
 
 
@@ -321,11 +321,11 @@ class ConsentManager:
     """
     Manager de consentimientos informados.
     """
-    
+
     def __init__(self):
         self._consents: Dict[str, InformedConsent] = {}
         self._load_consents()
-    
+
     def _load_consents(self):
         """Carga consentimientos desde session_state."""
         if "informed_consents" in st.session_state:
@@ -355,7 +355,7 @@ class ConsentManager:
                             )
             except Exception as e:
                 log_event("consent", f"Failed to load consents: {e}")
-    
+
     def _dict_to_signature(self, data: Optional[Dict]) -> Optional[ConsentSignature]:
         """Convierte dict a ConsentSignature."""
         if not data:
@@ -369,15 +369,15 @@ class ConsentManager:
             user_agent=data.get("user_agent"),
             document_hash=data.get("document_hash")
         )
-    
+
     def _save_consents(self):
         """Guarda consentimientos a session_state."""
         consents_dict = {}
         for k, v in self._consents.items():
             consents_dict[k] = v.to_dict()
-        
+
         st.session_state["informed_consents"] = consents_dict
-    
+
     def create_consent(
         self,
         patient_id: str,
@@ -388,22 +388,22 @@ class ConsentManager:
     ) -> InformedConsent:
         """
         Crea un nuevo consentimiento.
-        
+
         Args:
             patient_id: ID del paciente
             patient_name: Nombre del paciente
             consent_type: Tipo de consentimiento
             field_values: Valores para el template
             expires_days: Días hasta expiración
-        
+
         Returns:
             InformedConsent creado
         """
         import uuid
-        
+
         # Renderizar contenido
         content = ConsentTemplate.render_template(consent_type, field_values)
-        
+
         # Crear consentimiento
         consent = InformedConsent(
             id=str(uuid.uuid4()),
@@ -417,16 +417,16 @@ class ConsentManager:
             field_values=field_values,
             expires_at=datetime.now() + timedelta(days=expires_days) if expires_days else None
         )
-        
+
         # Calcular hash
         consent.content_hash = consent.calculate_hash()
-        
+
         # Guardar
         self._consents[consent.id] = consent
         self._save_consents()
-        
+
         log_event("consent", f"Created consent: {consent_type.name} for {patient_name}")
-        
+
         audit_log(
             AuditEventType.CONFIG_CHANGE,
             resource_type="consent",
@@ -434,9 +434,9 @@ class ConsentManager:
             action="CREATE",
             description=f"Consent created: {consent_type.name} for {patient_name}"
         )
-        
+
         return consent
-    
+
     def sign_consent(
         self,
         consent_id: str,
@@ -447,22 +447,22 @@ class ConsentManager:
     ) -> bool:
         """
         Firma un consentimiento.
-        
+
         Args:
             consent_id: ID del consentimiento
             signer_name: Nombre del firmante
             signer_role: Rol (paciente, médico, testigo)
             signature_data: Datos de la firma (SVG)
             ip_address: IP del firmante
-        
+
         Returns:
             True si se firmó exitosamente
         """
         if consent_id not in self._consents:
             return False
-        
+
         consent = self._consents[consent_id]
-        
+
         # Crear firma
         signature = ConsentSignature(
             signer_name=signer_name,
@@ -472,7 +472,7 @@ class ConsentManager:
             ip_address=ip_address,
             document_hash=consent.content_hash
         )
-        
+
         # Asignar según rol
         if signer_role == "paciente":
             consent.patient_signature = signature
@@ -480,44 +480,44 @@ class ConsentManager:
             consent.physician_signature = signature
         elif signer_role == "testigo":
             consent.witness_signature = signature
-        
+
         # Verificar si está completo
         if consent.patient_signature and consent.physician_signature:
             consent.status = ConsentStatus.SIGNED
             consent.completed_at = datetime.now()
-        
+
         self._save_consents()
-        
+
         log_event("consent", f"Consent signed: {consent_id} by {signer_name} ({signer_role})")
-        
+
         return True
-    
+
     def get_consent(self, consent_id: str) -> Optional[InformedConsent]:
         """Obtiene consentimiento por ID."""
         return self._consents.get(consent_id)
-    
+
     def get_patient_consents(self, patient_id: str) -> List[InformedConsent]:
         """Obtiene todos los consentimientos de un paciente."""
         return [c for c in self._consents.values() if c.patient_id == patient_id]
-    
+
     def verify_consent(self, consent_id: str) -> Dict[str, Any]:
         """
         Verifica integridad de un consentimiento.
-        
+
         Returns:
             Dict con resultado de verificación
         """
         consent = self._consents.get(consent_id)
-        
+
         if not consent:
             return {"valid": False, "error": "Consent not found"}
-        
+
         # Verificar integridad del contenido
         content_valid = consent.verify_integrity()
-        
+
         # Verificar firmas
         signatures_valid = []
-        
+
         for sig in [consent.patient_signature, consent.physician_signature, consent.witness_signature]:
             if sig:
                 sig_valid = sig.document_hash == consent.content_hash
@@ -527,7 +527,7 @@ class ConsentManager:
                     "valid": sig_valid,
                     "date": sig.signed_at
                 })
-        
+
         return {
             "valid": content_valid and all(s["valid"] for s in signatures_valid),
             "content_valid": content_valid,
@@ -535,20 +535,20 @@ class ConsentManager:
             "status": consent.status.value,
             "tampered": not content_valid
         }
-    
+
     def export_to_pdf(self, consent_id: str) -> Optional[bytes]:
         """Exporta consentimiento a PDF."""
         consent = self._consents.get(consent_id)
         if not consent:
             return None
-        
+
         try:
             from fpdf import FPDF
-            
+
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=12)
-            
+
             # Convertir HTML a texto plano básico
             content = consent.content
             content = content.replace("<h2>", "\n\n").replace("</h2>", "\n")
@@ -558,28 +558,28 @@ class ConsentManager:
             content = content.replace("<li>", "\n- ").replace("</li>", "")
             content = content.replace("<ul>", "").replace("</ul>", "")
             content = content.replace("<ol>", "").replace("</ol>", "")
-            
+
             # Limpiar tags restantes
             import re
             content = re.sub('<[^<]+?>', '', content)
-            
+
             # Escribir contenido
             pdf.multi_cell(0, 5, content)
-            
+
             # Agregar firmas si existen
             if consent.patient_signature:
                 pdf.add_page()
                 pdf.cell(0, 10, "FIRMAS:", ln=True)
-                
+
                 if consent.patient_signature:
                     pdf.cell(0, 10, f"Paciente: {consent.patient_signature.signer_name}", ln=True)
                     pdf.cell(0, 10, f"Fecha: {consent.patient_signature.signed_at}", ln=True)
-                
+
                 if consent.physician_signature:
                     pdf.cell(0, 10, f"Médico: {consent.physician_signature.signer_name}", ln=True)
-            
+
             return pdf_output_bytes(pdf)
-            
+
         except ImportError:
             # Fallback a HTML
             html_content = f"""
@@ -596,28 +596,28 @@ class ConsentManager:
             </html>
             """
             return html_content.encode("utf-8")
-    
+
     def render_consent_ui(self, consent_id: str):
         """Renderiza UI para firmar un consentimiento."""
         consent = self._consents.get(consent_id)
-        
+
         if not consent:
             log_event("consent_manager", "error: Consentimiento no encontrado")
             st.error("Consentimiento no encontrado")
             return
-        
+
         st.title("📋 Consentimiento Informado")
-        
+
         # Mostrar contenido
         st.markdown(consent.content, unsafe_allow_html=True)
-        
+
         st.divider()
-        
+
         # Estado de firmas
         st.subheader("Estado de Firmas")
-        
+
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
             if consent.patient_signature:
                 st.success("✅ Paciente firmado")
@@ -625,38 +625,38 @@ class ConsentManager:
                 st.caption(f"Fecha: {consent.patient_signature.signed_at.strftime('%d/%m/%Y %H:%M')}")
             else:
                 st.warning("⏳ Pendiente firma del paciente")
-        
+
         with col2:
             if consent.physician_signature:
                 st.success("✅ Médico firmado")
             else:
                 st.warning("⏳ Pendiente firma del médico")
-        
+
         with col3:
             if consent.witness_signature:
                 st.info("✅ Testigo (opcional)")
             else:
                 st.caption("Sin testigo")
-        
+
         # Botón de firma
         if consent.status != ConsentStatus.SIGNED:
             st.divider()
             st.subheader("🖊️ Firmar Documento")
-            
+
             signer_name = st.text_input("Nombre completo del firmante")
             signer_role = st.selectbox(
                 "Rol",
                 options=["paciente", "médico", "testigo"]
             )
-            
+
             st.info("En un sistema de producción, aquí iría un componente de firma digital con touch/mouse.")
-            
+
             # Simulación de firma
             if st.checkbox("Confirmo que he leído y acepto el contenido del documento"):
                 if st.button("✍️ Firmar Documento", width='stretch'):
                     # En producción: capturar firma digital real
                     signature_placeholder = "signature_svg_data_placeholder"
-                    
+
                     self.sign_consent(
                         consent_id=consent_id,
                         signer_name=signer_name,
@@ -664,23 +664,23 @@ class ConsentManager:
                         signature_data=signature_placeholder,
                         ip_address="127.0.0.1"  # En producción: obtener IP real
                     )
-                    
+
                     st.success("✅ Documento firmado exitosamente")
         else:
             st.success("✅ Documento completamente firmado")
-            
+
             # Verificación
             verification = self.verify_consent(consent_id)
-            
+
             with st.expander("🔐 Verificar Integridad"):
                 if verification["valid"]:
                     st.success("✅ Documento verificado - No ha sido modificado")
                 else:
                     log_event("consent_manager", "error: El documento puede haber sido alterado")
                     st.error("⚠️ ALERTA: El documento puede haber sido alterado")
-                
+
                 st.json(verification)
-            
+
             # Exportar
             if st.button("📥 Exportar PDF"):
                 pdf_data = self.export_to_pdf(consent_id)

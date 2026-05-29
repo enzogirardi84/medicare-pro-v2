@@ -13,7 +13,7 @@ import streamlit as st
 
 def cached_computed(key: str, data_ref: list, ttl: float = 2.0, compute_fn: Callable = None) -> Any:
     """Cachea el resultado de compute_fn() mientras data_ref no cambie y no expire el TTL.
-    
+
     Uso:
         resultados = cached_computed("dash_pacientes_hoy", pacientes_db, ttl=2.0,
                                      compute_fn=lambda: [p for p in pacientes_db ...])
@@ -21,20 +21,20 @@ def cached_computed(key: str, data_ref: list, ttl: float = 2.0, compute_fn: Call
     cache_key = f"_cc_{key}"
     sig_key = f"_cc_sig_{key}"
     ts_key = f"_cc_ts_{key}"
-    
+
     data_sig = str(id(data_ref))
     now = time.monotonic()
-    
+
     cached_val = st.session_state.get(cache_key)
     cached_sig = st.session_state.get(sig_key, "")
     cached_ts = st.session_state.get(ts_key, 0.0)
-    
+
     if cached_val is not None and cached_sig == data_sig and (now - cached_ts) < ttl:
         return cached_val
-    
+
     if compute_fn is None:
         return None
-    
+
     result = compute_fn()
     st.session_state[cache_key] = result
     st.session_state[sig_key] = data_sig

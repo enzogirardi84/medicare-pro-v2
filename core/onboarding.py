@@ -52,13 +52,13 @@ class InteractiveTour:
     """
     Tour interactivo paso a paso para nuevos usuarios.
     """
-    
+
     def __init__(self, tour_id: str = "main"):
         self.tour_id = tour_id
         self.steps: List[TourStep] = []
         self._current_step_key = f"_tour_{tour_id}_step"
         self._completed_key = f"_tour_{tour_id}_completed"
-    
+
     def add_step(
         self,
         id: str,
@@ -79,21 +79,21 @@ class InteractiveTour:
             position=position,
             action_button=action_button,
         ))
-    
+
     def start(self):
         """Iniciar el tour."""
         st.session_state[self._current_step_key] = 0
         st.session_state[self._completed_key] = False
-    
+
     def stop(self):
         """Detener el tour."""
         st.session_state[self._current_step_key] = -1
-    
+
     def is_active(self) -> bool:
         """Verificar si el tour está activo."""
         current = st.session_state.get(self._current_step_key, -1)
         return current >= 0 and current < len(self.steps)
-    
+
     def is_completed(self) -> bool:
         """Verificar si el tour fue completado."""
         return st.session_state.get(self._completed_key, False)
@@ -128,18 +128,18 @@ class InteractiveTour:
         """Renderizar el paso actual del tour."""
         if not self.is_active():
             return
-        
+
         current_idx = st.session_state[self._current_step_key]
         step = self.steps[current_idx]
         total = len(self.steps)
-        
+
         # Overlay
         st.markdown('<div class="mc-tour-overlay"></div>', unsafe_allow_html=True)
-        
+
         # Tooltip del tour
         progress = (current_idx + 1) / total
         progress_percent = int(progress * 100)
-        
+
         col1, col2, col3 = st.columns([1, 3, 1])
         with col2:
             st.markdown(f"""
@@ -154,7 +154,7 @@ class InteractiveTour:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            
+
             # Botones de navegación
             cols = st.columns([1, 1, 2])
 
@@ -173,17 +173,17 @@ class InteractiveTour:
             with cols[2]:
                 if step.action_button:
                     st.button(f"⚡ {step.action_button}", key=f"tour_{self.tour_id}_action", on_click=self._on_action)
-    
+
 class FirstStepsChecklist:
     """
     Checklist de primeros pasos para nuevos usuarios.
     """
-    
+
     def __init__(self, user_id: str):
         self.user_id = user_id
         self.items: List[ChecklistItem] = []
         self._key = f"_checklist_{user_id}"
-    
+
     def add_item(
         self,
         id: str,
@@ -202,12 +202,12 @@ class FirstStepsChecklist:
             action=action,
             icon=icon,
         ))
-    
+
     def _is_completed(self, item_id: str) -> bool:
         """Verificar si un item está completado."""
         key = f"{self._key}_{item_id}"
         return st.session_state.get(key, False)
-    
+
     def mark_completed(self, item_id: str):
         """Marcar item como completado."""
         key = f"{self._key}_{item_id}"
@@ -229,12 +229,12 @@ class FirstStepsChecklist:
         """Obtener progreso (completados, total)."""
         completed = sum(1 for item in self.items if item.completed)
         return completed, len(self.items)
-    
+
     def render(self, title: str = "✅ Primeros Pasos"):
         """Renderizar la checklist."""
         completed, total = self.get_progress()
         progress_percent = int((completed / total * 100)) if total > 0 else 0
-        
+
         st.markdown(f"""
         <div class="mc-checklist-container">
             <div class="mc-checklist-header">
@@ -246,22 +246,22 @@ class FirstStepsChecklist:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         # Items
         for item in self.items:
             self._render_item(item)
-    
+
     def _render_item(self, item: ChecklistItem):
         """Renderizar un item individual."""
         is_done = item.completed
-        
+
         opacity = "0.6" if is_done else "1"
         text_decoration = "line-through" if is_done else "none"
         bg = "rgba(34, 197, 94, 0.1)" if is_done else "rgba(30, 41, 59, 0.5)"
         border = "rgba(34, 197, 94, 0.3)" if is_done else "rgba(148, 163, 184, 0.1)"
-        
+
         cols = st.columns([1, 8, 2])
-        
+
         with cols[0]:
             icon_color = "#22c55e" if is_done else "#64748b"
             st.markdown(f"""
@@ -269,7 +269,7 @@ class FirstStepsChecklist:
                 {item.icon if is_done else "○"}
             </div>
             """, unsafe_allow_html=True)
-        
+
         with cols[1]:
             st.markdown(f"""
             <div style="opacity: {opacity};">
@@ -281,7 +281,7 @@ class FirstStepsChecklist:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        
+
         with cols[2]:
             if not is_done and item.action:
                 st.button("Ir", key=f"checklist_action_{item.id}", on_click=self._on_item_action, args=(item.id,))
@@ -294,47 +294,47 @@ class FirstStepsChecklist:
 def create_medicare_tour(rol: str) -> InteractiveTour:
     """
     Crear tour predefinido para MediCare según el rol.
-    
+
     Args:
         rol: Rol del usuario
-    
+
     Returns:
         InteractiveTour configurado
     """
     tour = InteractiveTour(tour_id=f"medicare_{rol}")
-    
+
     # Paso 1: Bienvenida (todos los roles)
     tour.add_step(
         id="welcome",
         title="👋 ¡Bienvenido a MediCare Pro!",
         content="""
         Tu plataforma integral para gestión de clínicas y historias clínicas.
-        
+
         Este tour te guiará por las funcionalidades principales para que aproveches al máximo el sistema.
         """,
         type=TourStepType.WELCOME,
     )
-    
+
     # Paso 2: Sidebar (todos)
     tour.add_step(
         id="sidebar",
         title="🧭 Navegación Principal",
         content="""
         **La barra lateral** es tu centro de control:
-        
+
         • **Buscador**: Encuentra pacientes por nombre o DNI
         • **Selector**: Elige el paciente activo para trabajar
         • **Card del paciente**: Información rápida del seleccionado
         • **Alertas**: Notificaciones clínicas importantes
-        
+
         💡 *Todo módulo clínico requiere un paciente seleccionado*
         """,
         type=TourStepType.FEATURE,
     )
-    
+
     # Pasos específicos por rol
     r = str(rol or "").strip().lower()
-    
+
     if r in {"medico", "doctor", "enfermera", "enfermero"}:
         # Tour para personal médico
         tour.add_step(
@@ -342,7 +342,7 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             title="📝 Evolución Clínica",
             content="""
             Documenta el seguimiento diario del paciente:
-            
+
             • Notas de evolución clínica
             • Adjunto de fotos clínicas
             • Firma del paciente o familiar
@@ -351,13 +351,13 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             type=TourStepType.ACTION,
             action_button="Ver Evolución",
         )
-        
+
         tour.add_step(
             id="recetas",
             title="💊 Recetas Médicas",
             content="""
             Genera recetas profesionales:
-            
+
             • Medicamentos con posología
             • Diagnósticos codificados (CIE-10)
             • Impresión en formato profesional
@@ -366,13 +366,13 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             type=TourStepType.ACTION,
             action_button="Ver Recetas",
         )
-        
+
         tour.add_step(
             id="historial",
             title="📋 Historial Completo",
             content="""
             Visualiza toda la trayectoria del paciente:
-            
+
             • Evoluciones cronológicas
             • Estudios y resultados
             • Signos vitales en gráficos
@@ -380,7 +380,7 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             """,
             type=TourStepType.FEATURE,
         )
-    
+
     elif r in {"admin", "superadmin", "coordinador"}:
         # Tour para administrativos
         tour.add_step(
@@ -388,7 +388,7 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             title="📊 Dashboard",
             content="""
             Vista general de la clínica en tiempo real:
-            
+
             • Pacientes activos e internados
             • Estadísticas del día
             • Alertas del sistema
@@ -396,13 +396,13 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             """,
             type=TourStepType.FEATURE,
         )
-        
+
         tour.add_step(
             id="admision",
             title="📝 Admisión de Pacientes",
             content="""
             Gestiona el alta y seguimiento de pacientes:
-            
+
             • Nuevos ingresos
             • Actualización de datos
             • Historias clínicas nuevas
@@ -410,13 +410,13 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             """,
             type=TourStepType.ACTION,
         )
-        
+
         tour.add_step(
             id="mi_equipo",
             title="👥 Gestión de Equipo",
             content="""
             Administra usuarios y permisos:
-            
+
             • Alta de profesionales
             • Asignación de roles
             • Control de accesos
@@ -424,41 +424,41 @@ def create_medicare_tour(rol: str) -> InteractiveTour:
             """,
             type=TourStepType.FEATURE,
         )
-    
+
     # Paso final: Completado (todos)
     tour.add_step(
         id="completion",
         title="🎉 ¡Listo para comenzar!",
         content="""
         Ya conoces lo esencial de MediCare Pro.
-        
+
         **Próximos pasos sugeridos:**
         • Explora los módulos a tu propio ritmo
         • Selecciona tu primer paciente
         • Completa tu perfil de usuario
-        
+
         💡 *Puedes reiniciar este tour desde Configuración > Ayuda*
         """,
         type=TourStepType.COMPLETION,
     )
-    
+
     return tour
 
 
 def create_first_steps_checklist(rol: str, user_id: str) -> FirstStepsChecklist:
     """
     Crear checklist de primeros pasos según rol.
-    
+
     Args:
         rol: Rol del usuario
         user_id: ID del usuario
-    
+
     Returns:
         FirstStepsChecklist configurada
     """
     checklist = FirstStepsChecklist(user_id)
     r = str(rol or "").strip().lower()
-    
+
     # Items comunes para todos
     checklist.add_item(
         id="completar_perfil",
@@ -466,14 +466,14 @@ def create_first_steps_checklist(rol: str, user_id: str) -> FirstStepsChecklist:
         description="Agrega tu información profesional y firma",
         icon="👤",
     )
-    
+
     checklist.add_item(
         id="seleccionar_paciente",
         title="Seleccionar primer paciente",
         description="Usa el buscador para encontrar un paciente",
         icon="🔍",
     )
-    
+
     # Items específicos
     if r in {"medico", "doctor", "enfermera", "enfermero"}:
         checklist.add_item(
@@ -482,9 +482,9 @@ def create_first_steps_checklist(rol: str, user_id: str) -> FirstStepsChecklist:
             description="Documenta el estado de un paciente",
             icon="📝",
         )
-        
 
-    
+
+
     elif r in {"admin", "superadmin"}:
         checklist.add_item(
             id="revisar_dashboard",
@@ -492,21 +492,21 @@ def create_first_steps_checklist(rol: str, user_id: str) -> FirstStepsChecklist:
             description="Familiarízate con las métricas principales",
             icon="📊",
         )
-        
+
         checklist.add_item(
             id="configurar_alertas",
             title="Configurar alertas",
             description="Personaliza las notificaciones del sistema",
             icon="🔔",
         )
-    
+
     checklist.add_item(
         id="explorar_modulos",
         title="Explorar módulos",
         description="Navega por las diferentes secciones",
         icon="🧭",
     )
-    
+
     return checklist
 
 

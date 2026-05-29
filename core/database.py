@@ -10,10 +10,10 @@ from typing import Any, Callable
 
 def with_auto_healing(max_retries: int = 4, base_delay: float = 0.1):
     """Decorador de resiliencia de red con Backoff Exponencial y Jitter.
-    
+
     Intercepta micro-cortes de red de Supabase y reintenta automaticamente
     con backoff exponencial + jitter para no saturar el pool de conexiones.
-    
+
     Uso:
         @with_auto_healing()
         def operacion_critica():
@@ -234,7 +234,7 @@ def completar_claves_db_session() -> None:
             continue
         if not _coleccion_db_tipo_valido(k, st.session_state[k]):
             st.session_state[k] = _coleccion_fresca_como(default)
-            
+
         # NOTA: No se borran datos clinicos de la sesion.
         # La limpieza de RAM selectiva fue desactivada porque borraba
         # evoluciones_db, vitales_db, etc. antes de guardar, causando perdida de datos.
@@ -453,7 +453,7 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
             # (lógica existente de guardar_datos si hay cambios...)
             pass
         limpiar_cache_app()
-    
+
     t0 = time.monotonic()
     ok = True
     cache_key = "_db_cache"
@@ -572,14 +572,14 @@ def cargar_datos(force: bool = False, tenant_key: str | None = None, monolito_le
                             "fecha_alta": p.get("fecha_alta", ""),
                             "foto_perfil": p.get("foto_perfil", ""),
                         })
-                
+
                 # Fijar el cache para evitar guardados innecesarios
                 # Le pasamos la estructura completa para que calcule el hash base
                 _fijar_cache_y_hash(estructura)
-                
+
                 # También marcamos que no hay guardado pendiente
                 st.session_state["_guardar_datos_pendiente"] = False
-                
+
                 return estructura
         except Exception as _exc:
             log_event("db_guardar", f"fallo_guardado_dualwrite:{type(_exc).__name__}:{_exc}")
@@ -852,7 +852,7 @@ def _guardar_datos_ejecutar_core():
 
     claves = _db_keys()
     data = {k: st.session_state[k] for k in claves if k in st.session_state}
-    
+
     # Optimizacion: si solo cambio una clave, solo serializar esa
     payload_bytes, _ = dumps_db_sorted(data)
     payload_hash = hashlib.sha256(payload_bytes).hexdigest()

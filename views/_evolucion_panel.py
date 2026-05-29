@@ -182,7 +182,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 label_visibility="collapsed",
             )
 
-            guardar = st.form_submit_button("Firmar y guardar evolución", width="stretch", type="primary")
+            guardar = st.form_submit_button("Firmar y guardar evolución", use_container_width=True, type="primary")
 
         if guardar:
             if not nota.strip():
@@ -492,7 +492,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         if puede_borrar:
             col_chk, col_btn = st.columns([1.2, 2.8])
             confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
-            if col_btn.button("Borrar última evolución", width="stretch", disabled=not confirmar_borrado):
+            if col_btn.button("Borrar última evolución", use_container_width=True, disabled=not confirmar_borrado):
                 if not evs_paciente:
                     st.error("No hay evoluciones para borrar.")
                 else:
@@ -532,7 +532,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     if foto.get("descripcion"):
                         st.caption(foto.get("descripcion"))
                     try:
-                        st.image(base64.b64decode(foto.get("base64_foto", "")), width="stretch")
+                        st.image(base64.b64decode(foto.get("base64_foto", "")), use_container_width=True)
                     except Exception:
                         st.warning("No se pudo mostrar una foto registrada.")
 
@@ -569,7 +569,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 key="canvas_firma_evolucion",
             )
 
-        if st.button("Guardar firma digital", width="stretch", type="primary"):
+        if st.button("Guardar firma digital", use_container_width=True, type="primary"):
             b64_firma = firma_a_base64(
                 canvas_image_data=canvas_result.image_data if canvas_result is not None else None,
                 uploaded_file=firma_subida,

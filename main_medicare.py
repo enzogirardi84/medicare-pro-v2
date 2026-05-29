@@ -390,7 +390,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 with st.sidebar:
     st.button(
         "Cerrar sesión",
-        width='stretch',
+        use_container_width=True,
         key="sidebar_logout",
         on_click=_logout_callback,
     )
@@ -555,7 +555,7 @@ if mostrar_atajo or paciente_sel:
         etiqueta_ant = VIEW_NAV_LABELS.get(modulo_anterior, modulo_anterior)
         st.button(
             f"← Volver a {etiqueta_ant}",
-            width='content',
+            use_container_width=False,
             key="mc_atajo_modulo_anterior_solo",
             on_click=_swap_modulo_callback,
             args=(vista_actual, modulo_anterior),
@@ -612,7 +612,7 @@ from core.seguridad_operaciones import render_panel_seguridad
 render_panel_seguridad()
 render_ayuda_atajos()
 
-_do_backup = st.sidebar.button("Descargar Backup JSON", width='stretch', key="backup_rapido")
+_do_backup = st.sidebar.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido")
 st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
 _do_backup_mobile = st.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido_mobile")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -627,7 +627,7 @@ if _do_backup or _do_backup_mobile:
             data=backup_str.encode("utf-8"),
             file_name=f"medicare_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
             mime="application/json",
-            width='stretch',
+            use_container_width=True,
             key="download_backup"
         )
         log_event("backup", "backup_descargado")

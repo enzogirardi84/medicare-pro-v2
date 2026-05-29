@@ -45,7 +45,7 @@ class DrugInteraction:
     management: Optional[str] = None  # Qué hacer
     alternative_drugs: List[str] = None
     references: List[str] = None
-    
+
     def __post_init__(self):
         if self.alternative_drugs is None:
             self.alternative_drugs = []
@@ -69,14 +69,14 @@ class InteractionAlert:
 class DrugInteractionDatabase:
     """
     Base de datos de interacciones medicamentosas.
-    
+
     En producción, esto debería conectar con bases de datos como:
     - First Databank (FDB)
     - Cerner Multum
     - DrugBank
     - O bases locales del ministerio de salud
     """
-    
+
     # Base de datos local simplificada (subset de interacciones comunes)
     INTERACTIONS: Dict[Tuple[str, str], DrugInteraction] = {
         # Warfarina + AINES
@@ -91,7 +91,7 @@ class DrugInteractionDatabase:
             alternative_drugs=["acetaminofén", "celecoxib"],
             references=["FDA Drug Interactions", "Clinical Pharmacology"]
         ),
-        
+
         # Warfarina + Aspirina
         ("warfarina", "aspirina"): DrugInteraction(
             drug_a="warfarina",
@@ -101,7 +101,7 @@ class DrugInteractionDatabase:
             management="Generalmente contraindicado. Si es necesario, usar dosis bajas y monitorización intensiva.",
             alternative_drugs=["clopidogrel (bajo supervisión médica)"]
         ),
-        
+
         # IECA + Diurético ahorrador de potasio
         ("enalapril", "espironolactona"): DrugInteraction(
             drug_a="enalapril",
@@ -112,7 +112,7 @@ class DrugInteractionDatabase:
             management="Monitorizar potasio sérico. Reducir dosis o suspender uno de los fármacos si K+ > 5.0 mEq/L.",
             alternative_drugs=["furosemida", "tiazida"]
         ),
-        
+
         # Metformina + Yodo contrastado
         ("metformina", "contraste yodado"): DrugInteraction(
             drug_a="metformina",
@@ -121,7 +121,7 @@ class DrugInteractionDatabase:
             description="Riesgo de acidosis láctica",
             management="Suspender metformina 48h antes del estudio. Reiniciar cuando función renal esté verificada."
         ),
-        
+
         # Fluoxetina + Tramadol
         ("fluoxetina", "tramadol"): DrugInteraction(
             drug_a="fluoxetina",
@@ -132,7 +132,7 @@ class DrugInteractionDatabase:
             management="Evitar combinación. Si ocurre, suspender ambos fármacos y tratar sintomáticamente.",
             alternative_drugs=["amitriptilina", "nortriptilina"]
         ),
-        
+
         # Amiodarona + Warfarina
         ("amiodarona", "warfarina"): DrugInteraction(
             drug_a="amiodarona",
@@ -143,7 +143,7 @@ class DrugInteractionDatabase:
             management="Reducir dosis de warfarina 30-50%. Monitorizar INR semanalmente.",
             alternative_drugs=["dronedarona (con precaución)"]
         ),
-        
+
         # Digoxina + Amiodarona
         ("digoxina", "amiodarona"): DrugInteraction(
             drug_a="digoxina",
@@ -153,7 +153,7 @@ class DrugInteractionDatabase:
             clinical_effects="Toxicidad por digoxina (arritmias, náuseas, confusión)",
             management="Reducir dosis de digoxina 50%. Monitorizar niveles séricos."
         ),
-        
+
         # Clopidogrel + Omeprazol
         ("clopidogrel", "omeprazol"): DrugInteraction(
             drug_a="clopidogrel",
@@ -164,7 +164,7 @@ class DrugInteractionDatabase:
             management="Usar inhibidor de bomba de protones alternativo (pantoprazol, esomeprazol).",
             alternative_drugs=["pantoprazol", "esomeprazol", "ranitidina"]
         ),
-        
+
         # Estatina + Gemfibrozilo
         ("atorvastatina", "gemfibrozilo"): DrugInteraction(
             drug_a="atorvastatina",
@@ -175,7 +175,7 @@ class DrugInteractionDatabase:
             management="Evitar combinación. Si es necesario, usar dosis bajas de estatina y monitorizar CK.",
             alternative_drugs=["fenofibrato"]
         ),
-        
+
         # Litio + Diuréticos
         ("litio", "furosemida"): DrugInteraction(
             drug_a="litio",
@@ -186,7 +186,7 @@ class DrugInteractionDatabase:
             management="Evitar diuréticos de asa y tiazidas. Si es inevitable, monitorizar niveles de litio frecuentemente.",
             alternative_drugs=["amilorida (diurético ahorrador de litio)"]
         ),
-        
+
         # AINES + IECA/ARA II
         ("ibuprofeno", "enalapril"): DrugInteraction(
             drug_a="ibuprofeno",
@@ -197,7 +197,7 @@ class DrugInteractionDatabase:
             clinical_effects="Control tensional deficiente, posible daño renal",
             management="Limitar uso de AINES. Monitorizar presión arterial y función renal."
         ),
-        
+
         # Corticoides + NSAIDs
         ("prednisona", "ibuprofeno"): DrugInteraction(
             drug_a="prednisona",
@@ -206,7 +206,7 @@ class DrugInteractionDatabase:
             description="Mayor riesgo de úlcera gástrica y sangrado",
             management="Usar profilaxis con IBP si ambos son necesarios. Monitorizar síntomas GI."
         ),
-        
+
         # Triptanos + ISRS/SNRI
         ("sumatriptan", "sertralina"): DrugInteraction(
             drug_a="sumatriptan",
@@ -215,7 +215,7 @@ class DrugInteractionDatabase:
             description="Riesgo de síndrome serotoninérgico",
             management="Usar con precaución. Espaciar dosis. Monitorizar síntomas."
         ),
-        
+
         # Beta-bloqueantes no selectivos + Broncodilatadores beta-2
         ("propranolol", "salbutamol"): DrugInteraction(
             drug_a="propranolol",
@@ -224,7 +224,7 @@ class DrugInteractionDatabase:
             description="Propranolol antagoniza efecto broncodilatador",
             management="Usar beta-bloqueante cardioselectivo (metoprolol, bisoprolol) o ajustar dosis de broncodilatador."
         ),
-        
+
         # Insulina + Beta-bloqueantes
         ("insulina", "metoprolol"): DrugInteraction(
             drug_a="insulina",
@@ -234,7 +234,7 @@ class DrugInteractionDatabase:
             clinical_effects="Hipoglucemia silente (sin taquicardia, sudoración)",
             management="Monitorizar glucosa más frecuentemente. Educar al paciente sobre otros síntomas de hipoglucemia."
         ),
-        
+
         # Alopurinol + Azatioprina
         ("alopurinol", "azatioprina"): DrugInteraction(
             drug_a="alopurinol",
@@ -246,33 +246,33 @@ class DrugInteractionDatabase:
             alternative_drugs=["colchicina (para gota)", "febuxostat (si es necesario)"]
         ),
     }
-    
+
     @classmethod
     def get_interaction(cls, drug_a: str, drug_b: str) -> Optional[DrugInteraction]:
         """Busca interacción entre dos fármacos (en ambas direcciones)."""
         # Normalizar nombres
         drug_a_norm = drug_a.lower().strip()
         drug_b_norm = drug_b.lower().strip()
-        
+
         # Buscar en ambas direcciones
         interaction = cls.INTERACTIONS.get((drug_a_norm, drug_b_norm))
         if not interaction:
             interaction = cls.INTERACTIONS.get((drug_b_norm, drug_a_norm))
-        
+
         return interaction
-    
+
     @classmethod
     def check_interactions(cls, drugs: List[str]) -> List[DrugInteraction]:
         """Verifica interacciones en una lista de fármacos."""
         interactions = []
         drugs_lower = [d.lower().strip() for d in drugs]
-        
+
         for i, drug_a in enumerate(drugs_lower):
             for drug_b in drugs_lower[i+1:]:
                 interaction = cls.get_interaction(drug_a, drug_b)
                 if interaction:
                     interactions.append(interaction)
-        
+
         # Ordenar por severidad
         severity_order = {
             InteractionSeverity.CONTRAINDICATED: 0,
@@ -281,24 +281,24 @@ class DrugInteractionDatabase:
             InteractionSeverity.MINOR: 3,
             InteractionSeverity.UNKNOWN: 4
         }
-        
+
         interactions.sort(key=lambda x: severity_order.get(x.severity, 5))
-        
+
         return interactions
 
 
 class DrugInteractionMonitor:
     """
     Monitor de interacciones medicamentosas.
-    
+
     Se integra con el sistema de prescripción para alertar en tiempo real.
     """
-    
+
     def __init__(self):
         self._alerts: Dict[str, InteractionAlert] = {}
         self._dismissed_combinations: Set[Tuple[str, str, str]] = set()  # (patient_id, drug_a, drug_b)
         self._load_data()
-    
+
     def _load_data(self):
         """Carga datos persistidos."""
         if "interaction_alerts" in st.session_state:
@@ -310,7 +310,7 @@ class DrugInteractionMonitor:
                 log_event("drug_interactions", f"load_alerts_fail:{type(_e_ia).__name__}")
                 st.session_state["interaction_alerts"] = {}
                 data = {}
-        
+
         if "dismissed_interactions" in st.session_state:
             try:
                 dismissed = st.session_state["dismissed_interactions"]
@@ -319,12 +319,12 @@ class DrugInteractionMonitor:
                 log_event("drug_interactions", f"load_dismissed_fail:{type(_e_di).__name__}")
                 st.session_state["dismissed_interactions"] = {}
                 dismissed_data = {}
-    
+
     def _save_data(self):
         """Guarda datos."""
         st.session_state["interaction_alerts"] = self._alerts
         st.session_state["dismissed_interactions"] = [list(x) for x in self._dismissed_combinations]
-    
+
     def check_prescription(
         self,
         patient_id: str,
@@ -335,7 +335,7 @@ class DrugInteractionMonitor:
     ) -> Tuple[List[DrugInteraction], List[DrugInteraction]]:
         """
         Verifica interacciones al prescribir.
-        
+
         Returns:
             (critical_interactions, warnings)
             critical_interactions: severidad CONTRAINDICATED o MAJOR
@@ -343,28 +343,28 @@ class DrugInteractionMonitor:
         """
         if current_drugs is None:
             current_drugs = []
-        
+
         # Combinar todos los fármacos
         all_drugs = list(set([d.lower().strip() for d in new_drugs + current_drugs]))
-        
+
         # Verificar interacciones
         all_interactions = DrugInteractionDatabase.check_interactions(all_drugs)
-        
+
         # Filtrar según severidad
-        critical = [i for i in all_interactions 
+        critical = [i for i in all_interactions
                    if i.severity in [InteractionSeverity.CONTRAINDICATED, InteractionSeverity.MAJOR]]
-        warnings = [i for i in all_interactions 
+        warnings = [i for i in all_interactions
                    if i.severity in [InteractionSeverity.MODERATE, InteractionSeverity.MINOR]]
-        
+
         # Registrar alertas
         for interaction in all_interactions:
             # Verificar si fue descartada previamente
             combo_key = (patient_id, interaction.drug_a, interaction.drug_b)
             combo_key_rev = (patient_id, interaction.drug_b, interaction.drug_a)
-            
+
             if combo_key not in self._dismissed_combinations and combo_key_rev not in self._dismissed_combinations:
                 alert_id = f"{patient_id}_{prescription_id}_{interaction.drug_a}_{interaction.drug_b}"
-                
+
                 if alert_id not in self._alerts:
                     self._alerts[alert_id] = InteractionAlert(
                         id=alert_id,
@@ -373,15 +373,15 @@ class DrugInteractionMonitor:
                         interaction=interaction,
                         triggered_at=datetime.now().isoformat()
                     )
-        
+
         self._save_data()
-        
+
         # Log
         if critical or warnings:
             log_event("drug_interaction", f"Interactions detected for {patient_name}: {len(critical)} critical, {len(warnings)} warnings")
-        
+
         return critical, warnings
-    
+
     def dismiss_alert(self, alert_id: str, dismissed_by: str, reason: str):
         """Marca una alerta como descartada con justificación."""
         if alert_id in self._alerts:
@@ -389,13 +389,13 @@ class DrugInteractionMonitor:
             alert.acknowledged = True
             alert.acknowledged_by = dismissed_by
             alert.acknowledged_reason = reason
-            
+
             # Agregar a combinaciones descartadas
             combo = (alert.patient_id, alert.interaction.drug_a, alert.interaction.drug_b)
             self._dismissed_combinations.add(combo)
-            
+
             self._save_data()
-            
+
             # Audit
             audit_log(
                 AuditEventType.DATA_MODIFICATION,
@@ -404,67 +404,67 @@ class DrugInteractionMonitor:
                 action="DISMISS",
                 description=f"Alert dismissed by {dismissed_by}: {reason}"
             )
-    
+
     def render_interaction_checker(self):
         """Renderiza herramienta de verificación de interacciones."""
         st.title("⚠️ Verificador de Interacciones Medicamentosas")
-        
+
         st.markdown("""
         <div style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px;">
             <p style="margin: 0; color: #fca5a5;">
-                <strong>⚠️ Importante:</strong> Esta herramienta proporciona información sobre interacciones conocidas. 
+                <strong>⚠️ Importante:</strong> Esta herramienta proporciona información sobre interacciones conocidas.
                 Siempre use su criterio clínico y consulte fuentes adicionales cuando sea necesario.
             </p>
         </div>
         """, unsafe_allow_html=True)
-        
+
         # Verificador manual
         st.subheader("🔍 Verificar Interacción Manual")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             drug_a = st.text_input("Fármaco A", placeholder="Ej: warfarina").lower().strip()
-        
+
         with col2:
             drug_b = st.text_input("Fármaco B", placeholder="Ej: ibuprofeno").lower().strip()
-        
+
         if drug_a and drug_b:
             interaction = DrugInteractionDatabase.get_interaction(drug_a, drug_b)
-            
+
             if interaction:
                 self._render_interaction_detail(interaction)
             else:
                 st.success(f"✅ No se encontraron interacciones conocidas entre **{drug_a}** y **{drug_b}**")
                 st.info("💡 Nota: La ausencia de interacción en la base de datos no garantiza que sea segura.")
-        
+
         st.divider()
-        
+
         # Verificador de lista
         st.subheader("📋 Verificar Lista de Medicamentos")
-        
+
         drugs_input = st.text_area(
             "Ingrese los medicamentos (uno por línea)",
             placeholder="warfarina\nenalapril\nibuprofeno"
         )
-        
+
         if st.button("🔍 Verificar Interacciones", width='stretch'):
             drugs = [d.strip().lower() for d in drugs_input.split("\n") if d.strip()]
-            
+
             if len(drugs) < 2:
                 st.warning("Ingrese al menos 2 medicamentos para verificar interacciones")
             else:
                 interactions = DrugInteractionDatabase.check_interactions(drugs)
-                
+
                 if interactions:
                     log_event("drug_interactions", f"error: Se encontraron {len(interactions)} interacciones")
                     st.error(f"⚠️ Se encontraron **{len(interactions)}** interacciones")
-                    
+
                     for interaction in interactions:
                         self._render_interaction_detail(interaction)
                 else:
                     st.success("✅ No se encontraron interacciones conocidas entre estos medicamentos")
-    
+
     def _render_interaction_detail(self, interaction: DrugInteraction):
         """Renderiza detalle de una interacción."""
         severity_colors = {
@@ -474,12 +474,12 @@ class DrugInteractionMonitor:
             InteractionSeverity.MINOR: ("🟢", "#22c55e", "MENOR"),
             InteractionSeverity.UNKNOWN: ("⚪", "#94a3b8", "DESCONOCIDA")
         }
-        
+
         icon, color, label = severity_colors.get(
-            interaction.severity, 
+            interaction.severity,
             ("⚪", "#94a3b8", "DESCONOCIDA")
         )
-        
+
         with st.container():
             st.markdown(f"""
             <div style="
@@ -494,27 +494,27 @@ class DrugInteractionMonitor:
                 <p style="margin: 5px 0;">{interaction.description}</p>
             </div>
             """, unsafe_allow_html=True)
-            
+
             with st.expander("📖 Ver detalles completos"):
                 if interaction.mechanism:
                     st.markdown(f"**Mecanismo:** {interaction.mechanism}")
-                
+
                 if interaction.clinical_effects:
                     st.markdown(f"**Efectos clínicos:** {interaction.clinical_effects}")
-                
+
                 if interaction.management:
                     st.markdown(f"**Manejo recomendado:** {interaction.management}")
-                
+
                 if interaction.alternative_drugs:
                     st.markdown("**Alternativas seguras:**")
                     for alt in interaction.alternative_drugs:
                         st.markdown(f"- {alt}")
-                
+
                 if interaction.references:
                     st.markdown("**Referencias:**")
                     for ref in interaction.references:
                         st.caption(f"📚 {ref}")
-    
+
     def render_prescription_alerts(
         self,
         patient_id: str,
@@ -524,7 +524,7 @@ class DrugInteractionMonitor:
     ) -> bool:
         """
         Renderiza alertas durante la prescripción y retorna si es seguro continuar.
-        
+
         Returns:
             True si el médico puede continuar (aceptó o no hay alertas críticas)
             False si hay contraindicaciones que deben resolverse
@@ -536,37 +536,37 @@ class DrugInteractionMonitor:
             current_drugs=current_drugs,
             prescription_id=prescription_id
         )
-        
+
         # Mostrar alertas críticas (bloqueantes)
         if critical:
             log_event("drug_interactions", "error: INTERACCIONES CRÍTICAS DETECTADAS")
             st.error("## ⚠️ INTERACCIONES CRÍTICAS DETECTADAS")
             st.markdown("<p style='color: #ef4444;'>Estas combinaciones pueden ser peligrosas. Revise cuidadosamente.</p>", unsafe_allow_html=True)
-            
+
             for interaction in critical:
                 self._render_interaction_detail(interaction)
-            
+
             # Requerir confirmación para contraindicaciones
             contraindications = [i for i in critical if i.severity == InteractionSeverity.CONTRAINDICATED]
-            
+
             if contraindications:
                 log_event("drug_interactions", "error: CONTRAINDICACIONES ABSOLUTAS detectadas")
                 st.error("🚫 **CONTRAINDICACIONES ABSOLUTAS:** Estas combinaciones NO deben usarse juntas.")
-                
+
                 with st.form(key="override_contraindication"):
                     st.markdown("Para continuar a pesar de la contraindicación, debe justificar:")
-                    justification = st.text_area("Justificación clínica", 
+                    justification = st.text_area("Justificación clínica",
                                                 placeholder="Explique por qué es necesario usar estas drogas juntas a pesar de la contraindicación...")
                     confirm = st.checkbox("Asumo la responsabilidad de esta prescripción")
-                    
+
                     submitted = st.form_submit_button("Continuar con justificación", type="primary")
-                    
+
                     if submitted:
                         if not justification or not confirm:
                             log_event("drug_interactions", "error: No se proporcionó justificación o confirmación para override")
                             st.error("Debe proporcionar justificación y confirmar")
                             return False
-                        
+
                         user = st.session_state.get("u_actual", {})
                         self.dismiss_alert(
                             f"{patient_id}_{prescription_id}_{contraindications[0].drug_a}_{contraindications[0].drug_b}",
@@ -574,12 +574,12 @@ class DrugInteractionMonitor:
                             f"Override con justificación: {justification}"
                         )
                         return True
-                
+
                 return False
-            
+
             # Para interacciones MAYORES (no contraindicaciones)
             st.warning("Para continuar, confirme que ha revisado estas interacciones:")
-            
+
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("✅ He revisado y acepto los riesgos", width='stretch'):
@@ -587,15 +587,15 @@ class DrugInteractionMonitor:
             with col2:
                 if st.button("❌ Modificar prescripción", width='stretch'):
                     return False
-            
+
             return None  # Esperando decisión
-        
+
         # Mostrar advertencias (no bloqueantes)
         if warnings:
             with st.expander(f"⚠️ {len(warnings)} advertencias de interacciones moderadas/menores"):
                 for interaction in warnings:
                     self._render_interaction_detail(interaction)
-        
+
         return True
 
 

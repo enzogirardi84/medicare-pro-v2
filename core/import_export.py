@@ -77,7 +77,7 @@ class DataImporter:
     """
     Importador de datos con validación y preview.
     """
-    
+
     # Mapeos predefinidos
     PATIENT_IMPORT_MAPPING = {
         "dni": FieldMapping("dni", "dni", required=True),
@@ -90,10 +90,10 @@ class DataImporter:
         "direccion": FieldMapping("direccion", "direccion"),
         "obra_social": FieldMapping("obra_social", "obra_social"),
     }
-    
+
     def __init__(self):
         self.validator = get_validator()
-    
+
     def import_patients(
         self,
         file_data: bytes,
@@ -104,19 +104,19 @@ class DataImporter:
     ) -> ImportResult:
         """
         Importa pacientes desde archivo.
-        
+
         Args:
             file_data: Contenido del archivo
             file_format: Formato del archivo
             mapping: Mapeo personalizado de campos
             preview_only: Si True, solo muestra preview sin importar
             skip_validation: Si True, salta validación (no recomendado)
-        
+
         Returns:
             ImportResult con resultado
         """
         mapping = mapping or self.PATIENT_IMPORT_MAPPING
-        
+
         try:
             # Parsear archivo
             if file_format == ImportFormat.CSV:
@@ -127,20 +127,20 @@ class DataImporter:
                 rows = self._parse_json(file_data)
             else:
                 raise ValueError(f"Formato no soportado: {file_format}")
-            
+
             total_rows = len(rows)
             imported = 0
             failed = 0
             errors = []
-            
+
             # Preview o import
             preview_data = []
-            
+
             for idx, row in enumerate(rows):
                 try:
                     # Transformar según mapeo
                     patient_data = self._transform_row(row, mapping)
-                    
+
                     # Validar
                     if not skip_validation:
                         validation = self.validator.validate_all(patient_data, "patient")
@@ -152,7 +152,7 @@ class DataImporter:
                                 "errors": [e.message for e in validation["errors"]]
                             })
                             continue
-                    
+
                     if preview_only:
                         preview_data.append({
                             "row": idx + 1,
@@ -164,11 +164,11 @@ class DataImporter:
                         # Importar a session_state (en producción: DB)
                         self._save_patient(patient_data)
                         imported += 1
-                        
+
                 except Exception as e:
                     failed += 1
                     errors.append({"row": idx + 1, "error": str(e)})
-            
+
             # Audit log
             if not preview_only and imported > 0:
                 audit_log(
@@ -179,9 +179,9 @@ class DataImporter:
                     description=f"Imported {imported} patients from {file_format.name}",
                     metadata={"format": file_format.name, "total": total_rows, "imported": imported}
                 )
-            
+
             log_event("import", f"Import completed: {imported}/{total_rows} rows")
-            
+
             return ImportResult(
                 success=failed == 0 or imported > 0,
                 total_rows=total_rows,
@@ -192,7 +192,7 @@ class DataImporter:
                 preview_only=preview_only,
                 rollback_available=not preview_only and imported > 0
             )
-            
+
         except Exception as e:
             log_event("import_error", f"Import failed: {e}")
             return ImportResult(
@@ -205,32 +205,32 @@ class DataImporter:
                 preview_only=preview_only,
                 rollback_available=False
             )
-    
+
     def _parse_csv(self, file_data: bytes) -> List[Dict[str, Any]]:
         """Parsea archivo CSV."""
         text = file_data.decode('utf-8-sig')  # Handle BOM
         reader = csv.DictReader(io.StringIO(text))
         return list(reader)
-    
+
     def _parse_excel(self, file_data: bytes) -> List[Dict[str, Any]]:
         """Parsea archivo Excel."""
         try:
             import pandas as pd
-            
+
             df = pd.read_excel(io.BytesIO(file_data))
-            
+
             # Reemplazar NaN con None
             df = df.where(pd.notnull(df), None)
-            
+
             return df.to_dict('records')
-            
+
         except ImportError:
             raise ImportError("pandas y openpyxl requeridos para Excel: pip install pandas openpyxl")
-    
+
     def _parse_json(self, file_data: bytes) -> List[Dict[str, Any]]:
         """Parsea archivo JSON."""
         data = json.loads(file_data.decode('utf-8'))
-        
+
         # Asegurar que sea lista
         if isinstance(data, dict):
             # Puede ser un único objeto o tener una key con la lista
@@ -240,9 +240,9 @@ class DataImporter:
                 data = data['data']
             else:
                 data = [data]
-        
+
         return data
-    
+
     def _transform_row(
         self,
         row: Dict[str, Any],
@@ -250,35 +250,35 @@ class DataImporter:
     ) -> Dict[str, Any]:
         """Transforma una fila según el mapeo."""
         result = {}
-        
+
         for target_field, field_mapping in mapping.items():
             source_value = row.get(field_mapping.source_field)
-            
+
             # Aplicar transformación si existe
             if field_mapping.transform and source_value:
                 source_value = field_mapping.transform(source_value)
-            
+
             # Usar default si es None
             if source_value is None and field_mapping.default_value is not None:
                 source_value = field_mapping.default_value
-            
+
             result[target_field] = source_value
-        
+
         return result
-    
+
     def _save_patient(self, patient_data: Dict[str, Any]):
         """Guarda paciente en el sistema."""
         import streamlit as st
-        
+
         # Generar ID si no existe
         if "id" not in patient_data:
             import uuid
             patient_data["id"] = str(uuid.uuid4())
-        
+
         # Agregar a pacientes_db
         if "pacientes_db" not in st.session_state:
             st.session_state["pacientes_db"] = {}
-        
+
         st.session_state["pacientes_db"][patient_data["dni"]] = patient_data
 
 
@@ -286,10 +286,10 @@ class DataExporter:
     """
     Exportador de datos a múltiples formatos.
     """
-    
+
     def __init__(self):
         self.validator = get_validator()
-    
+
     def export_patients(
         self,
         patient_ids: Optional[List[str]] = None,
@@ -298,59 +298,59 @@ class DataExporter:
     ) -> Tuple[bytes, str, str]:
         """
         Exporta pacientes a archivo.
-        
+
         Args:
             patient_ids: IDs a exportar (None = todos)
             format: Formato de exportación
             include_fields: Campos a incluir (None = todos)
-        
+
         Returns:
             Tuple de (file_data, filename, mimetype)
         """
         import streamlit as st
-        
+
         # Obtener datos
         detalles = st.session_state.get("detalles_pacientes_db", {})
         pacientes_db = {pid: {"id": pid, **pdata} for pid, pdata in detalles.items()}
-        
+
         if patient_ids:
             patients = [p for p in pacientes_db.values() if p.get("id") in patient_ids]
         else:
             patients = list(pacientes_db.values())
-        
+
         # Filtrar campos
         if include_fields:
             patients = [
                 {k: v for k, v in p.items() if k in include_fields}
                 for p in patients
             ]
-        
+
         # Exportar según formato
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         if format == ExportFormat.CSV:
             data = self._export_csv(patients)
             filename = f"pacientes_{timestamp}.csv"
             mimetype = "text/csv"
-            
+
         elif format == ExportFormat.EXCEL:
             data = self._export_excel(patients)
             filename = f"pacientes_{timestamp}.xlsx"
             mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            
+
         elif format == ExportFormat.JSON:
             data = self._export_json(patients)
             filename = f"pacientes_{timestamp}.json"
             mimetype = "application/json"
-            
+
         elif format == ExportFormat.FHIR:
             data = self._export_fhir(patients)
             filename = f"pacientes_{timestamp}_fhir.json"
             mimetype = "application/fhir+json"
-            
+
         else:
             raise ValueError(f"Formato no soportado: {format}")
-        
+
         # Audit log
         audit_log(
             AuditEventType.DATA_EXPORT,
@@ -360,39 +360,39 @@ class DataExporter:
             description=f"Exported {len(patients)} patients to {format.name}",
             metadata={"format": format.name, "count": len(patients)}
         )
-        
+
         log_event("export", f"Export completed: {len(patients)} patients to {format.name}")
-        
+
         return data, filename, mimetype
-    
+
     def _export_csv(self, patients: List[Dict]) -> bytes:
         """Exporta a CSV."""
         if not patients:
             return b""
-        
+
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=patients[0].keys())
         writer.writeheader()
         writer.writerows(patients)
-        
+
         return output.getvalue().encode('utf-8-sig')  # BOM para Excel
-    
+
     def _export_excel(self, patients: List[Dict]) -> bytes:
         """Exporta a Excel."""
         try:
             import pandas as pd
-            
+
             df = pd.DataFrame(patients)
-            
+
             output = io.BytesIO()
             df.to_excel(output, index=False, engine='openpyxl')
-            
+
             return output.getvalue()
-            
+
         except ImportError:
             # Fallback a CSV
             return self._export_csv(patients)
-    
+
     def _export_json(self, patients: List[Dict]) -> bytes:
         """Exporta a JSON."""
         data = {
@@ -400,13 +400,13 @@ class DataExporter:
             "count": len(patients),
             "patients": patients
         }
-        
+
         return json.dumps(data, indent=2, ensure_ascii=False, default=str).encode('utf-8')
-    
+
     def _export_fhir(self, patients: List[Dict]) -> bytes:
         """
         Exporta a formato FHIR (Healthcare standard).
-        
+
         FHIR Patient resource: https://www.hl7.org/fhir/patient.html
         """
         fhir_bundle = {
@@ -418,15 +418,15 @@ class DataExporter:
             },
             "entry": []
         }
-        
+
         for patient in patients:
             fhir_patient = self._convert_to_fhir_patient(patient)
             fhir_bundle["entry"].append({
                 "resource": fhir_patient
             })
-        
+
         return json.dumps(fhir_bundle, indent=2, ensure_ascii=False).encode('utf-8')
-    
+
     def _convert_to_fhir_patient(self, patient: Dict[str, Any]) -> Dict[str, Any]:
         """Convierte paciente interno a recurso FHIR Patient."""
         fhir = {
@@ -447,11 +447,11 @@ class DataExporter:
             ],
             "gender": self._map_gender_fhir(patient.get("sexo", "")),
         }
-        
+
         # Fecha de nacimiento
         if patient.get("fecha_nacimiento"):
             fhir["birthDate"] = patient["fecha_nacimiento"]
-        
+
         # Contacto
         telecom = []
         if patient.get("telefono"):
@@ -465,19 +465,19 @@ class DataExporter:
                 "system": "email",
                 "value": patient["email"]
             })
-        
+
         if telecom:
             fhir["telecom"] = telecom
-        
+
         # Dirección
         if patient.get("direccion"):
             fhir["address"] = [{
                 "text": patient["direccion"],
                 "use": "home"
             }]
-        
+
         return fhir
-    
+
     def _map_gender_fhir(self, sexo: str) -> str:
         """Mapea sexo interno a género FHIR."""
         mapping = {
@@ -487,7 +487,7 @@ class DataExporter:
             "": "unknown"
         }
         return mapping.get(sexo.upper(), "unknown")
-    
+
     def export_evoluciones(
         self,
         paciente_id: Optional[str] = None,
@@ -497,28 +497,28 @@ class DataExporter:
     ) -> Tuple[bytes, str, str]:
         """
         Exporta evoluciones de un paciente.
-        
+
         Args:
             paciente_id: ID del paciente (None = todos)
             date_from: Fecha inicial
             date_to: Fecha final
             format: Formato de exportación
-        
+
         Returns:
             Tuple de (file_data, filename, mimetype)
         """
         import streamlit as st
-        
+
         # Obtener evoluciones
         evoluciones_db = st.session_state.get("evoluciones_db", [])
-        
+
         evoluciones = [
             e for e in evoluciones_db
             if (paciente_id is None or e.get("paciente_id") == paciente_id)
         ]
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
+
         if format == ExportFormat.PDF:
             data = self._export_evoluciones_pdf(evoluciones)
             filename = f"evoluciones_{timestamp}.pdf"
@@ -527,43 +527,43 @@ class DataExporter:
             data = self._export_json(evoluciones)
             filename = f"evoluciones_{timestamp}.json"
             mimetype = "application/json"
-        
+
         return data, filename, mimetype
-    
+
     def _export_evoluciones_pdf(self, evoluciones: List[Dict]) -> bytes:
         """Exporta evoluciones a PDF."""
         try:
             from fpdf import FPDF
-            
+
             pdf = FPDF()
             pdf.set_auto_page_break(auto=True, margin=15)
-            
+
             for evo in evoluciones:
                 pdf.add_page()
                 pdf.set_font("Arial", "B", 16)
                 pdf.cell(0, 10, f"Evolución - {evo.get('fecha', 'N/A')}", ln=True)
-                
+
                 pdf.set_font("Arial", "", 12)
                 pdf.cell(0, 10, f"Médico: {evo.get('medico_nombre', 'N/A')}", ln=True)
                 pdf.ln(5)
-                
+
                 pdf.set_font("Arial", "B", 12)
                 pdf.cell(0, 10, "Nota:", ln=True)
                 pdf.set_font("Arial", "", 12)
-                
+
                 # Multi-cell para texto largo
                 note = evo.get("nota", "Sin nota")
                 pdf.multi_cell(0, 5, note)
-                
+
                 if evo.get("diagnostico"):
                     pdf.ln(5)
                     pdf.set_font("Arial", "B", 12)
                     pdf.cell(0, 10, "Diagnóstico:", ln=True)
                     pdf.set_font("Arial", "", 12)
                     pdf.multi_cell(0, 5, evo["diagnostico"])
-            
+
             return pdf_output_bytes(pdf)
-            
+
         except ImportError:
             # Fallback a texto
             text = "Evoluciones Clínicas\n\n"
@@ -572,7 +572,7 @@ class DataExporter:
                 text += f"Médico: {evo.get('medico_nombre')}\n"
                 text += f"Nota: {evo.get('nota')}\n"
                 text += "-" * 50 + "\n"
-            
+
             return text.encode('utf-8')
 
 

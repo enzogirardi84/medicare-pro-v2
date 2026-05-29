@@ -83,33 +83,33 @@ class FHIRCoding:
 class FHIRConverter:
     """
     Convertidor entre formatos MediCare y FHIR R4.
-    
+
     Uso:
         converter = FHIRConverter()
-        
+
         # Exportar paciente a FHIR
         fhir_patient = converter.patient_to_fhir(medicare_patient)
-        
+
         # Importar desde FHIR
         medicare_patient = converter.patient_from_fhir(fhir_patient)
-        
+
         # Batch export
         bundle = converter.create_bundle([patient1, patient2], "transaction")
     """
-    
+
     # Sistemas de identificación
     DNI_SYSTEM = "http://www.renaper.gob.ar/dni"
     CUI_SYSTEM = "http://www.sisa.gob.ar/cui"
-    
+
     # Sistemas de codificación
     SNOMED_CT = "http://snomed.info/sct"
     LOINC = "http://loinc.org"
     ICD10 = "http://hl7.org/fhir/sid/icd-10"
     RXNORM = "http://www.nlm.nih.gov/research/umls/rxnorm"
-    
+
     def __init__(self):
         self._validation_errors: List[str] = []
-    
+
     def patient_to_fhir(self, medicare_patient: Dict[str, Any]) -> Dict[str, Any]:
         """Convierte paciente MediCare a recurso FHIR Patient."""
         fhir_patient = {
@@ -136,7 +136,7 @@ class FHIRConverter:
             "gender": self._map_gender(medicare_patient.get("sexo", "")),
             "birthDate": medicare_patient.get("fecha_nacimiento", ""),
         }
-        
+
         # Contactos (teléfono, email)
         telecom = []
         if medicare_patient.get("telefono"):
@@ -151,10 +151,10 @@ class FHIRConverter:
                 "value": medicare_patient["email"],
                 "use": "home"
             })
-        
+
         if telecom:
             fhir_patient["telecom"] = telecom
-        
+
         # Dirección
         if medicare_patient.get("direccion"):
             fhir_patient["address"] = [{
@@ -163,7 +163,7 @@ class FHIRConverter:
                 "city": medicare_patient.get("ciudad", ""),
                 "postalCode": medicare_patient.get("codigo_postal", "")
             }]
-        
+
         # Contacto de emergencia
         if medicare_patient.get("contacto_emergencia_nombre"):
             fhir_patient["contact"] = [{
@@ -176,28 +176,28 @@ class FHIRConverter:
                     "value": medicare_patient.get("contacto_emergencia_telefono", "")
                 }] if medicare_patient.get("contacto_emergencia_telefono") else []
             }]
-        
+
         return fhir_patient
-    
+
     def patient_from_fhir(self, fhir_patient: Dict[str, Any]) -> Dict[str, Any]:
         """Convierte recurso FHIR Patient a formato MediCare."""
         medicare_patient = {
             "id": fhir_patient.get("id"),
             "fhir_id": fhir_patient.get("id")
         }
-        
+
         # Identificadores
         for identifier in fhir_patient.get("identifier", []):
             if identifier.get("system") == self.DNI_SYSTEM:
                 medicare_patient["dni"] = identifier.get("value", "")
-        
+
         # Nombre
         for name in fhir_patient.get("name", []):
             if name.get("use") == "official":
                 medicare_patient["apellido"] = name.get("family", "")
                 given = name.get("given", [])
                 medicare_patient["nombre"] = given[0] if given else ""
-        
+
         # Género
         gender_map = {
             "male": "M",
@@ -206,18 +206,18 @@ class FHIRConverter:
             "unknown": "O"
         }
         medicare_patient["sexo"] = gender_map.get(fhir_patient.get("gender", ""), "O")
-        
+
         # Fecha nacimiento
         if fhir_patient.get("birthDate"):
             medicare_patient["fecha_nacimiento"] = fhir_patient["birthDate"]
-        
+
         # Contacto
         for telecom in fhir_patient.get("telecom", []):
             if telecom.get("system") == "phone":
                 medicare_patient["telefono"] = telecom.get("value", "")
             elif telecom.get("system") == "email":
                 medicare_patient["email"] = telecom.get("value", "")
-        
+
         # Dirección
         addresses = fhir_patient.get("address", [])
         if addresses:
@@ -225,9 +225,9 @@ class FHIRConverter:
             medicare_patient["direccion"] = address.get("text", "")
             medicare_patient["ciudad"] = address.get("city", "")
             medicare_patient["codigo_postal"] = address.get("postalCode", "")
-        
+
         return medicare_patient
-    
+
     def vitals_to_fhir_observations(
         self,
         vitals: Dict[str, Any],
@@ -237,7 +237,7 @@ class FHIRConverter:
         """Convierte signos vitales a recursos FHIR Observation."""
         observations = []
         timestamp = vitals.get("fecha_hora", datetime.now(timezone.utc).isoformat())
-        
+
         # Mapeo de vitales a LOINC codes
         vital_mappings = {
             "temperatura": ("8310-5", "Body temperature", "°C", "Cel"),
@@ -249,7 +249,7 @@ class FHIRConverter:
             "altura": ("8302-2", "Body height", "cm", "cm"),
             "glucosa": ("2339-0", "Glucose", "mg/dL", "mg/dL")
         }
-        
+
         for vital_name, (loinc_code, display, unit, unit_code) in vital_mappings.items():
             value = vitals.get(vital_name)
             if value is not None:
@@ -283,14 +283,14 @@ class FHIRConverter:
                         "code": unit_code
                     }
                 }
-                
+
                 if practitioner_id:
                     observation["performer"] = [{"reference": f"Practitioner/{practitioner_id}"}]
-                
+
                 observations.append(observation)
-        
+
         return observations
-    
+
     def encounter_to_fhir(
         self,
         encounter_data: Dict[str, Any],
@@ -316,7 +316,7 @@ class FHIRConverter:
                 "text": encounter_data.get("motivo_consulta", "")
             }]
         }
-        
+
         # Agregar diagnóstico si existe
         if encounter_data.get("diagnostico"):
             encounter["diagnosis"] = [{
@@ -331,9 +331,9 @@ class FHIRConverter:
                     }]
                 }
             }]
-        
+
         return encounter
-    
+
     def condition_to_fhir(
         self,
         diagnosis: str,
@@ -373,7 +373,7 @@ class FHIRConverter:
                 "text": diagnosis
             }
         }
-        
+
         # Agregar código ICD-10 si está disponible
         if icd10_code:
             condition["code"]["coding"] = [{
@@ -381,12 +381,12 @@ class FHIRConverter:
                 "code": icd10_code,
                 "display": diagnosis
             }]
-        
+
         if onset_date:
             condition["onsetDateTime"] = onset_date
-        
+
         return condition
-    
+
     def medication_request_to_fhir(
         self,
         prescription: Dict[str, Any],
@@ -416,9 +416,9 @@ class FHIRConverter:
                 }
             }]
         }
-        
+
         return med_request
-    
+
     def create_bundle(
         self,
         resources: List[Dict[str, Any]],
@@ -427,12 +427,12 @@ class FHIRConverter:
     ) -> Dict[str, Any]:
         """
         Crea un Bundle FHIR.
-        
+
         Args:
             resources: Lista de recursos FHIR
             bundle_type: Tipo de bundle (transaction, batch, document)
             patient_id: ID del paciente para referencias
-        
+
         Returns:
             Bundle FHIR
         """
@@ -447,23 +447,23 @@ class FHIRConverter:
             "total": len(resources),
             "entry": []
         }
-        
+
         for resource in resources:
             entry = {
                 "resource": resource,
                 "fullUrl": f"urn:uuid:{resource.get('id', str(uuid.uuid4()))}"
             }
-            
+
             if bundle_type == "transaction":
                 entry["request"] = {
                     "method": "POST",
                     "url": resource.get("resourceType", "")
                 }
-            
+
             bundle["entry"].append(entry)
-        
+
         return bundle
-    
+
     def _map_gender(self, gender: str) -> str:
         """Mapea género MediCare a FHIR."""
         mapping = {
@@ -473,56 +473,56 @@ class FHIRConverter:
             "": "unknown"
         }
         return mapping.get(gender, "unknown")
-    
+
     def validate_fhir_resource(self, resource: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """
         Valida un recurso FHIR básico.
-        
+
         Returns:
             (is_valid, errors)
         """
         errors = []
-        
+
         # Verificar resourceType
         if "resourceType" not in resource:
             errors.append("Falta resourceType")
-        
+
         # Verificar id
         if "id" not in resource:
             errors.append("Falta id")
-        
+
         # Validaciones específicas por tipo
         resource_type = resource.get("resourceType", "")
-        
+
         if resource_type == "Patient":
             if not resource.get("name"):
                 errors.append("Patient debe tener name")
             if not resource.get("birthDate"):
                 errors.append("Patient debe tener birthDate")
-        
+
         elif resource_type == "Observation":
             if not resource.get("code"):
                 errors.append("Observation debe tener code")
             if not resource.get("subject"):
                 errors.append("Observation debe tener subject")
-        
+
         return len(errors) == 0, errors
-    
+
     def export_patient_bundle(
         self,
         patient_id: str
     ) -> Optional[Dict[str, Any]]:
         """
         Exporta todos los datos de un paciente como Bundle FHIR.
-        
+
         Args:
             patient_id: ID del paciente
-        
+
         Returns:
             Bundle FHIR completo o None si no existe
         """
         resources = []
-        
+
         # Buscar paciente
         pacientes = st.session_state.get("pacientes_db", [])
         patient = None
@@ -530,28 +530,28 @@ class FHIRConverter:
             if p.get("id") == patient_id:
                 patient = p
                 break
-        
+
         if not patient:
             return None
-        
+
         # Agregar paciente
         fhir_patient = self.patient_to_fhir(patient)
         resources.append(fhir_patient)
-        
+
         # Agregar vitales
         vitales = st.session_state.get("vitales_db", [])
         for vital in vitales:
             if vital.get("paciente_id") == patient_id:
                 observations = self.vitals_to_fhir_observations(vital, patient_id)
                 resources.extend(observations)
-        
+
         # Agregar evoluciones como encounters
         evoluciones = st.session_state.get("evoluciones_db", [])
         for evo in evoluciones:
             if evo.get("paciente_id") == patient_id:
                 encounter = self.encounter_to_fhir(evo, patient_id)
                 resources.append(encounter)
-                
+
                 # Agregar diagnóstico como condition
                 if evo.get("diagnostico"):
                     condition = self.condition_to_fhir(
@@ -561,30 +561,30 @@ class FHIRConverter:
                         evo.get("cie10_code")
                     )
                     resources.append(condition)
-        
+
         return self.create_bundle(resources, "document", patient_id)
-    
+
     def render_fhir_manager(self) -> None:
         """Renderiza UI de gestión FHIR en Streamlit."""
         st.header("🏥 Integración FHIR (HL7)")
-        
+
         tab1, tab2, tab3 = st.tabs(["Exportar", "Validar", "Documentación"])
-        
+
         with tab1:
             st.subheader("Exportar Datos a FHIR")
-            
+
             patient_id = st.text_input("ID del Paciente a exportar")
-            
+
             if st.button("📤 Generar Bundle FHIR"):
                 with st.spinner("Generando..."):
                     bundle = self.export_patient_bundle(patient_id)
-                    
+
                     if bundle:
                         st.success(f"Bundle generado con {len(bundle.get('entry', []))} recursos")
-                        
+
                         with st.expander("Ver JSON FHIR"):
                             st.json(bundle)
-                        
+
                         # Botón de descarga
                         json_str = json.dumps(bundle, indent=2, ensure_ascii=False)
                         st.download_button(
@@ -596,17 +596,17 @@ class FHIRConverter:
                     else:
                         log_event("fhir", "error: Paciente no encontrado")
                         st.error("Paciente no encontrado")
-        
+
         with tab2:
             st.subheader("Validar Recurso FHIR")
-            
+
             json_input = st.text_area("Pegar JSON FHIR", height=200)
-            
+
             if st.button("✅ Validar"):
                 try:
                     resource = json.loads(json_input)
                     is_valid, errors = self.validate_fhir_resource(resource)
-                    
+
                     if is_valid:
                         st.success("✅ Recurso FHIR válido")
                     else:
@@ -614,14 +614,14 @@ class FHIRConverter:
                         st.error("❌ Errores de validación:")
                         for error in errors:
                             st.write(f"• {error}")
-                
+
                 except json.JSONDecodeError as e:
                     log_event("fhir", f"error: JSON inválido: {e}")
                     st.error(f"JSON inválido: {e}")
-        
+
         with tab3:
             st.subheader("Documentación FHIR")
-            
+
             st.write("**Recursos soportados:**")
             resources = [
                 "Patient - Datos demográficos",
@@ -635,10 +635,10 @@ class FHIRConverter:
                 "DocumentReference - Documentos",
                 "CarePlan - Planes de cuidado"
             ]
-            
+
             for resource in resources:
                 st.write(f"• {resource}")
-            
+
             st.caption("Versión FHIR: R4 (4.0.1)")
             st.caption("Perfil: Core Argentina")
 

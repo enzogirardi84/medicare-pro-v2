@@ -28,56 +28,56 @@ from core.guardado_universal import (
 
 def render(paciente_sel=None, user=None):
     """Renderiza la vista con guardado DUAL: Supabase + Local."""
-    
+
     st.markdown("# 🏥 Signos Vitales y Evoluciones")
-    
+
     # Obtener paciente (si no viene como parametro, usar session_state)
     if not paciente_sel:
         paciente_sel = st.session_state.get("paciente_sel", "")
-    
+
     if not paciente_sel:
         log_event("clinica_emergencia", "error: paciente no seleccionado")
         st.error("❌ Selecciona un paciente del menú lateral primero")
         return
-    
+
     # Extraer nombre y DNI
     paciente_nombre = paciente_sel
     paciente_id = paciente_sel
-    
+
     if isinstance(paciente_sel, str) and " - " in paciente_sel:
         partes = paciente_sel.split(" - ")
         paciente_nombre = " - ".join(partes[:-1])
         paciente_id = partes[-1]
-    
+
     st.info(f"👤 Paciente: **{paciente_nombre}** (DNI: {paciente_id})")
-    
+
     # === FORMULARIO SIGNOS VITALES ===
     st.markdown("---")
     st.markdown("### ➕ Nuevo Control de Signos Vitales")
-    
+
     with st.form("form_signos_vitales_emergencia"):
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
             ta = st.text_input("🫀 Tensión Arterial", placeholder="120/80", key="ta_emer")
             fc = st.number_input("❤️ Frecuencia Cardiaca", 30, 220, 75, key="fc_emer")
-        
+
         with col2:
             fr = st.number_input("🌬️ Frecuencia Respiratoria", 8, 60, 16, key="fr_emer")
             sat = st.number_input("💨 Saturación O2", 70, 100, 98, key="sat_emer")
-        
+
         with col3:
             temp = st.number_input("🌡️ Temperatura", 34.0, 42.0, 36.5, step=0.1, key="temp_emer")
             glucemia = st.number_input("🩸 Glucemia (mg/dL)", 0, 999, 110, step=1, key="hgt_emer")
-        
+
         observaciones = st.text_area("📝 Observaciones", key="obs_emer")
-        
+
         submitted = st.form_submit_button(
             "💾 GUARDAR SIGNOS VITALES (LOCAL)",
             width='stretch',
             type="primary"
         )
-        
+
         if submitted:
             ta_limpia = str(ta or "").strip()
             if ta_limpia and not (
@@ -108,16 +108,16 @@ def render(paciente_sel=None, user=None):
                 else:
                     log_event("clinica_emergencia", f"error: {mensaje}")
                     st.error(f"❌ {mensaje}")
-    
+
     # === TABLA DE SIGNOS VITALES GUARDADOS ===
     st.markdown("---")
     st.markdown("### 📊 Signos Vitales Guardados")
-    
+
     signos = obtener_signos_vitales(paciente_id)
-    
+
     if signos:
         st.success(f"✅ Hay {len(signos)} registros guardados localmente")
-        
+
         # Preparar datos para tabla bonita
         tabla_datos = []
         for s in signos:
@@ -132,13 +132,13 @@ def render(paciente_sel=None, user=None):
                 'Gluc': datos.get('glucemia', ''),
                 'Observaciones': datos.get('observaciones', '')
             })
-        
+
         import pandas as pd
         df = pd.DataFrame(tabla_datos)
         for _col in ["F.C.", "F.R.", "Temp", "SatO2"]:
             if _col in df.columns:
                 df[_col] = pd.to_numeric(df[_col], errors="coerce")
-        
+
         # Tabla con formato profesional
         st.dataframe(
             df,
@@ -156,7 +156,7 @@ def render(paciente_sel=None, user=None):
                 'Observaciones': st.column_config.TextColumn('Observaciones', width='large')
             }
         )
-        
+
         # Botón para descargar
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -168,7 +168,7 @@ def render(paciente_sel=None, user=None):
         )
     else:
         st.info("📋 No hay signos vitales guardados para este paciente. Usa el formulario de arriba para agregar el primero.")
-    
+
     # === INFO DE SEGURIDAD ===
     st.markdown("---")
     st.info("""

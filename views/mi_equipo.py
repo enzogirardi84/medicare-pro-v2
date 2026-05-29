@@ -229,13 +229,13 @@ def render_mi_equipo(mi_empresa, rol, user=None):
     buscar_usuario = st.text_input("Buscar usuario por nombre, login o DNI...", "")
 
     usuarios_base = []
-    
+
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     try:
         from core.db_sql import check_supabase_connection
         from core.database import supabase
         from core.nextgen_sync import _obtener_uuid_empresa
-        
+
         if check_supabase_connection():
             empresa_uuid = _obtener_uuid_empresa(mi_empresa)
             if empresa_uuid:

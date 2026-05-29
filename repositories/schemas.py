@@ -18,13 +18,13 @@ from core.security import FieldEncryptor
 
 class SanitizedString(str):
     """Tipo de dato que sanitiza automaticamente strings: escapa HTML, remover caracteres de control.
-    
+
     Previene XSS y datos corruptos antes de que toquen la base de datos.
     """
     @classmethod
     def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> CoreSchema:
         return core_schema.no_info_after_validator_function(cls.validate, core_schema.str_schema())
-    
+
     @classmethod
     def validate(cls, v: str) -> str:
         if not v:
@@ -69,7 +69,7 @@ class EncryptedEvolucionSchema(BaseModel):
     nota_subjetiva: str = Field(..., min_length=1)
     nota_objetiva: str = Field(default="")
     firma: str = Field(default="Sistema")
-    
+
     @field_validator('nota_subjetiva', 'nota_objetiva')
     @classmethod
     def cifrar_campo_sensible(cls, v: str) -> str:

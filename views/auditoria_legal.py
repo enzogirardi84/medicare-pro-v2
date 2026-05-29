@@ -215,6 +215,6 @@ def render_auditoria_legal(mi_empresa, user):
             data=st.session_state[cache_key],
             file_name=f"auditoria_legal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
             mime="application/pdf",
-            width='stretch',
+            use_container_width=True,
         )
     st.markdown("</div>", unsafe_allow_html=True)

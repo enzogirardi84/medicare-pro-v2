@@ -120,7 +120,7 @@ def diagnosticar_supabase() -> Dict[str, Any]:
     if local_path.exists():
         resultado["local_data_ok"] = True
         resultado["local_data_size_kb"] = round(local_path.stat().st_size / 1024, 1)
-    
+
     return resultado
 
 
@@ -141,7 +141,7 @@ def diagnosticar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
         if not supabase:
             resultado["error"] = "Sin conexion a Supabase"
             return resultado
-        
+
         resp = supabase.table("empresas").select("id,nombre").eq("nombre", nombre_empresa).execute()
         if resp.data:
             resultado["empresa_encontrada"] = True
@@ -172,7 +172,7 @@ def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
     try:
         from supabase import create_client
         import streamlit as st
-        
+
         # Intentar usar service role key para bypass RLS
         try:
             supabase_url = st.secrets.get("SUPABASE_URL", "")
@@ -185,11 +185,11 @@ def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
         except Exception:
             from core.database import supabase
             supabase_admin = supabase
-        
+
         if not supabase_admin:
             resultado["error"] = "Sin conexion a Supabase"
             return resultado
-        
+
         # Verificar si ya existe
         resp = supabase_admin.table("empresas").select("id,nombre").eq("nombre", nombre_empresa).execute()
         if resp.data:
@@ -197,7 +197,7 @@ def insertar_empresa_en_supabase(nombre_empresa: str) -> Dict[str, Any]:
             resultado["empresa_id"] = resp.data[0]["id"]
             resultado["error"] = "La empresa ya existe en Supabase"
             return resultado
-        
+
         # Insertar la empresa
         insert_resp = supabase_admin.table("empresas").insert({"nombre": nombre_empresa}).execute()
         if insert_resp.data:

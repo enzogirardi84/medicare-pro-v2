@@ -15,9 +15,9 @@ def diagnosticar():
     print("="*70)
     print("DIAGNOSTICO TOTAL - MEDICARE PRO")
     print("="*70)
-    
+
     errores = []
-    
+
     # 1. Verificar estructura de archivos
     print("\n1. Verificando archivos criticos...")
     archivos_criticos = [
@@ -29,19 +29,19 @@ def diagnosticar():
         "views/evolucion.py",
         ".streamlit/secrets.toml"
     ]
-    
+
     for archivo in archivos_criticos:
         if Path(archivo).exists():
             print(f"   [OK] {archivo}")
         else:
             print(f"   [ERROR] Falta: {archivo}")
             errores.append(f"Falta archivo: {archivo}")
-    
+
     # 2. Verificar imports
     print("\n2. Verificando imports...")
     try:
         sys.path.insert(0, str(Path.cwd()))
-        
+
         # Probar import de core modules
         try:
             from core import guardado_simple
@@ -49,7 +49,7 @@ def diagnosticar():
         except Exception as e:
             print(f"   [ERROR] core.guardado_simple: {e}")
             errores.append(f"Import error guardado_simple: {e}")
-        
+
         # Probar import de views
         try:
             from views import clinica_emergencia
@@ -57,10 +57,10 @@ def diagnosticar():
         except Exception as e:
             print(f"   [ERROR] views.clinica_emergencia: {e}")
             errores.append(f"Import error clinica: {e}")
-            
+
     except Exception as e:
         print(f"   [ERROR] General import error: {e}")
-    
+
     # 3. Verificar funciones de guardado
     print("\n3. Verificando funciones de guardado...")
     try:
@@ -69,7 +69,7 @@ def diagnosticar():
     except Exception as e:
         print(f"   [ERROR] {e}")
         errores.append(f"Funcion guardar_historial_clinico: {e}")
-    
+
     # 4. Verificar view_registry
     print("\n4. Verificando view_registry...")
     try:
@@ -84,12 +84,12 @@ def diagnosticar():
     except Exception as e:
         print(f"   [ERROR] {e}")
         errores.append(f"VIEW_CONFIG error: {e}")
-    
+
     # 5. Resumen
     print("\n" + "="*70)
     print("RESUMEN")
     print("="*70)
-    
+
     if errores:
         print(f"\n[CRITICO] Se encontraron {len(errores)} errores:")
         for i, error in enumerate(errores, 1):

@@ -25,7 +25,7 @@ class SearchResult:
     badge_type: str = "info"  # critical, warning, success, info, neutral, alergia, urgencia
     metadata: Dict[str, Any] = None
     score: float = 0.0  # Relevancia (0-1)
-    
+
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
@@ -35,11 +35,11 @@ class SmartSearchEngine:
     """
     Motor de búsqueda inteligente con scoring de relevancia.
     """
-    
+
     def __init__(self):
         self.search_history: List[str] = []
         self.max_history = 10
-    
+
     def search(
         self,
         query: str,
@@ -50,44 +50,44 @@ class SmartSearchEngine:
     ) -> List[SearchResult]:
         """
         Buscar en una lista de items con scoring inteligente.
-        
+
         Args:
             query: Término de búsqueda
             items: Lista de diccionarios a buscar
             searchable_fields: Campos a buscar (default: todos)
             filters: Filtros adicionales {campo: valor}
             limit: Máximo de resultados
-        
+
         Returns:
             Lista de SearchResult ordenados por relevancia
         """
         if not query or len(query.strip()) < 2:
             return []
-        
+
         query_lower = query.lower().strip()
         query_words = query_lower.split()
         results = []
-        
+
         for item in items:
             # Aplicar filtros primero
             if filters and not self._matches_filters(item, filters):
                 continue
-            
+
             # Calcular score de relevancia
             score = self._calculate_score(item, query_lower, query_words, searchable_fields)
-            
+
             if score > 0:
                 result = self._item_to_result(item, score)
                 results.append(result)
-        
+
         # Ordenar por score descendente
         results.sort(key=lambda x: x.score, reverse=True)
-        
+
         # Guardar en historial
         self._add_to_history(query)
-        
+
         return results[:limit]
-    
+
     def _calculate_score(
         self,
         item: Dict[str, Any],
@@ -97,15 +97,15 @@ class SmartSearchEngine:
     ) -> float:
         """Calcular score de relevancia (0-1)."""
         score = 0.0
-        
+
         # Determinar campos a buscar
         fields = searchable_fields or list(item.keys())
-        
+
         for field in fields:
             value = str(item.get(field, "")).lower()
             if not value:
                 continue
-            
+
             # Match exacto (máximo puntaje)
             if query_lower == value:
                 score += 1.0
@@ -122,34 +122,34 @@ class SmartSearchEngine:
             else:
                 word_matches = sum(1 for word in query_words if word in value)
                 score += (word_matches / len(query_words)) * 0.3
-        
+
         # Bonus por campos específicos
         nombre = str(item.get("nombre_completo", "")).lower()
         dni = str(item.get("dni", "")).lower()
-        
+
         if query_lower in nombre:
             score += 0.2
         if query_lower == dni:
             score += 0.3
-        
+
         return min(score, 1.0)  # Cap at 1.0
-    
+
     def _matches_filters(self, item: Dict[str, Any], filters: Dict[str, Any]) -> bool:
         """Verificar si un item cumple con los filtros."""
         for field, value in filters.items():
             item_value = str(item.get(field, "")).lower()
             filter_value = str(value).lower()
-            
+
             if filter_value not in item_value:
                 return False
         return True
-    
+
     def _item_to_result(self, item: Dict[str, Any], score: float) -> SearchResult:
         """Convertir item a SearchResult."""
         # Determinar estado para badge
         estado = item.get("estado", "Activo")
         badge_type = self._estado_to_badge_type(estado)
-        
+
         # Construir metadata útil
         metadata = {
             "dni": item.get("dni", ""),
@@ -160,7 +160,7 @@ class SmartSearchEngine:
             "edad": item.get("edad", ""),
             "sexo": item.get("sexo", ""),
         }
-        
+
         return SearchResult(
             id=str(item.get("id", "")),
             title=item.get("nombre_completo", "Sin nombre"),
@@ -170,7 +170,7 @@ class SmartSearchEngine:
             metadata=metadata,
             score=score,
         )
-    
+
     def _estado_to_badge_type(self, estado: str) -> str:
         """Convertir estado a tipo de badge."""
         estado_lower = estado.lower()
@@ -185,14 +185,14 @@ class SmartSearchEngine:
             "pendiente": "warning",
         }
         return mapping.get(estado_lower, "info")
-    
+
     def _add_to_history(self, query: str):
         """Agregar búsqueda al historial."""
         if query in self.search_history:
             self.search_history.remove(query)
         self.search_history.insert(0, query)
         self.search_history = self.search_history[:self.max_history]
-    
+
     def get_suggestions(self, partial: str) -> List[str]:
         """Obtener sugerencias basadas en historial."""
         partial_lower = partial.lower()
@@ -213,13 +213,13 @@ def render_smart_search_bar(
 ) -> str:
     """
     Renderizar barra de búsqueda inteligente con estilos mejorados.
-    
+
     Returns:
         Query ingresado por el usuario
     """
     # Contenedor visual
     st.markdown('<div class="mc-search-container">', unsafe_allow_html=True)
-    
+
     # Input de búsqueda con icono
     col1, col2 = st.columns([20, 1])
     with col1:
@@ -229,9 +229,9 @@ def render_smart_search_bar(
             key=f"{key}_input",
             label_visibility="collapsed",
         )
-    
+
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
     return query
 
 
@@ -389,7 +389,7 @@ def render_search_results(
     if not results:
         st.info(empty_message)
         return
-    
+
     # Contador de resultados
     st.markdown(
         f"<div style='font-size:0.875rem;color:#64748b;margin-bottom:1rem;'>"
@@ -397,7 +397,7 @@ def render_search_results(
         f"</div>",
         unsafe_allow_html=True
     )
-    
+
     # Resultados
     for i, result in enumerate(results):
         render_search_result_card(result, on_select, f"{key}_{i}")
@@ -498,18 +498,18 @@ def render_sidebar_smart_search(
         ID del paciente seleccionado
     """
     st.markdown('<div class="mc-sidebar-search">', unsafe_allow_html=True)
-    
+
     query = st.text_input(
         "🔍 Buscar",
         placeholder="Nombre o DNI...",
         key="sidebar_smart_search",
         label_visibility="collapsed",
     )
-    
+
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
     selected_id = None
-    
+
     if query and len(query) >= 2:
         engine = SmartSearchEngine()
         results = engine.search(
@@ -518,11 +518,11 @@ def render_sidebar_smart_search(
             searchable_fields=["nombre_completo", "dni"],
             limit=10,
         )
-        
+
         if results:
             # Mostrar como selectbox mejorado
             options = {r.id: f"{r.title} ({r.metadata.get('dni', 'N/A')})" for r in results}
-            
+
             selected = st.selectbox(
                 "Resultados",
                 options=list(options.keys()),
@@ -530,10 +530,10 @@ def render_sidebar_smart_search(
                 key="sidebar_search_results",
                 label_visibility="collapsed",
             )
-            
+
             if selected:
                 selected_id = selected
                 if on_paciente_selected:
                     on_paciente_selected(selected_id)
-    
+
     return selected_id

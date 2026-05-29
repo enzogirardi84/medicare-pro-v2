@@ -51,18 +51,18 @@ def migrate_clinico():
         # Simple approach: just insert cache check after docstring, before if not _ok
         # But we need to handle variable args. Let's use f-string with known params.
         # For simplicity, use the cache_key_str directly but interpolate known params.
-        
+
         # We'll construct the new function body manually
         start = m.start()
         end = m.end()
-        
+
         # Extract lambda body
         table_name = m.group(7)
         select_cols = m.group(8)
         lambda_tail = m.group(9).strip()
         op_name = m.group(6)
         error_key = m.group(11)
-        
+
         new_body = f'''    """Cache manual a prueba de fallos."""
     cache_key = {cache_key_str}
     cached = st.session_state.get(cache_key)

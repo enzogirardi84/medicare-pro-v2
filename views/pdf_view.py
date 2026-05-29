@@ -99,14 +99,14 @@ def _render_export_block(container, key_base, titulo, descripcion, prepare_label
             file_name=file_name,
             mime=mime,
             key=f"download_{key_base}",
-            width='stretch',
+            use_container_width=True,
         )
-        if container.button("Actualizar archivo", key=f"refresh_{key_base}", width='stretch'):
+        if container.button("Actualizar archivo", key=f"refresh_{key_base}", use_container_width=True):
             st.session_state.pop(cache_key, None)
             st.rerun()
         return
 
-    if container.button(prepare_label, key=f"prepare_{key_base}", width='stretch'):
+    if container.button(prepare_label, key=f"prepare_{key_base}", use_container_width=True):
         with st.spinner("Preparando archivo..."):
             try:
                 payload = build_fn()
@@ -275,7 +275,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
             )
 
         if puede_guardar_consentimiento:
-            if st.button("Guardar consentimiento legal", width='stretch', type="primary", key=f"save_consent_{paciente_sel}"):
+            if st.button("Guardar consentimiento legal", use_container_width=True, type="primary", key=f"save_consent_{paciente_sel}"):
                 if not acepta:
                     log_event("pdf", "error: Debe confirmar la aceptacion del tratamiento domiciliario.")
                     st.error("Debe confirmar la aceptacion del tratamiento domiciliario.")
@@ -419,7 +419,7 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
                             data=_zip_bytes,
                             file_name=f"Lote_HC_{ahora().strftime('%d%m%Y')}.zip",
                             mime="application/zip",
-                            width='stretch',
+                            use_container_width=True,
                         )
                     else:
                         st.warning("No se pudo generar ningun PDF. Verifica ReportLab.")

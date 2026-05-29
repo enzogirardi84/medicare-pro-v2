@@ -22,7 +22,7 @@ def _ensure_data_file():
     try:
         if not DATA_FILE.parent.exists():
             DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-        
+
         if not DATA_FILE.exists():
             initial_data = {
                 "pacientes_db": [],
@@ -78,7 +78,7 @@ def guardar_historial_clinico(
     """
     try:
         data = _load_data()
-        
+
         # Crear registro de historial
         _now = datetime.now()
         registro = {
@@ -90,13 +90,13 @@ def guardar_historial_clinico(
             "timestamp": _now.isoformat(),
             "datos": datos
         }
-        
+
         # Agregar a historial
         if "historial_db" not in data:
             data["historial_db"] = []
-        
+
         data["historial_db"].append(registro)
-        
+
         # También guardar en tabla específica según tipo
         if tipo_registro == "signos_vitales":
             if "vitales_db" not in data:
@@ -107,7 +107,7 @@ def guardar_historial_clinico(
                 "fecha": registro["fecha"],
                 "timestamp": registro["timestamp"]
             })
-        
+
         elif tipo_registro == "evolucion":
             if "evoluciones_db" not in data:
                 data["evoluciones_db"] = []
@@ -117,7 +117,7 @@ def guardar_historial_clinico(
                 "fecha": registro["fecha"],
                 "timestamp": registro["timestamp"]
             })
-        
+
         elif tipo_registro == "receta":
             if "recetas_db" not in data:
                 data["recetas_db"] = []
@@ -127,7 +127,7 @@ def guardar_historial_clinico(
                 "fecha": registro["fecha"],
                 "timestamp": registro["timestamp"]
             })
-        
+
         elif tipo_registro == "visita":
             if "visitas_db" not in data:
                 data["visitas_db"] = []
@@ -137,7 +137,7 @@ def guardar_historial_clinico(
                 "fecha": registro["fecha"],
                 "timestamp": registro["timestamp"]
             })
-        
+
         elif tipo_registro == "material":
             if "materiales_db" not in data:
                 data["materiales_db"] = []
@@ -147,11 +147,11 @@ def guardar_historial_clinico(
                 "fecha": registro["fecha"],
                 "timestamp": registro["timestamp"]
             })
-        
+
         # Guardar TODO
         _save_data(data)
         return True
-        
+
     except Exception as e:
         try:
             from core.app_logging import log_event

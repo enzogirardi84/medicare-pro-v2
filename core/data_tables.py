@@ -31,7 +31,7 @@ class DataTable:
     """
     Tabla de datos interactiva con ordenamiento y filtros.
     """
-    
+
     def __init__(
         self,
         data: List[Dict[str, Any]],
@@ -43,14 +43,14 @@ class DataTable:
         self.columns = columns
         self.key = key
         self.rows_per_page = rows_per_page
-        
+
         # Estado
         self._sort_key = f"{key}_sort"
         self._sort_order_key = f"{key}_sort_order"
         self._filters_key = f"{key}_filters"
         self._page_key = f"{key}_page"
         self._selected_key = f"{key}_selected"
-    
+
     def render(
         self,
         enable_sorting: bool = True,
@@ -62,50 +62,50 @@ class DataTable:
     ) -> List[Dict[str, Any]]:
         """
         Renderizar la tabla completa.
-        
+
         Returns:
             Lista de datos filtrados y ordenados
         """
         if not self.data:
             st.info(empty_message)
             return []
-        
+
         # Filtros
         filtered_data = self._apply_filters() if enable_filtering else self.data
-        
+
         # Ordenamiento
         sorted_data = self._apply_sorting(filtered_data) if enable_sorting else filtered_data
-        
+
         # Mostrar controles
         if enable_filtering:
             self._render_filters()
-        
+
         # Estadísticas
         st.caption(f"📊 Mostrando {len(sorted_data)} de {len(self.data)} registros")
-        
+
         # Paginación
         if enable_pagination:
             paginated_data, total_pages = self._apply_pagination(sorted_data)
         else:
             paginated_data = sorted_data
             total_pages = 1
-        
+
         # Renderizar tabla
         self._render_table_header()
         self._render_table_rows(paginated_data, enable_selection)
-        
+
         # Paginación UI
         if enable_pagination and total_pages > 1:
             self._render_pagination_controls(total_pages)
-        
+
         # Selección
         if enable_selection and on_select:
             selected = self._get_selected()
             if selected:
                 on_select(selected)
-        
+
         return paginated_data
-    
+
     def _on_sort_click(self, col_key: str):
         """Callback: ordenar por columna."""
         current_sort = st.session_state.get(self._sort_key)
@@ -131,124 +131,124 @@ class DataTable:
         """Renderizar controles de filtro."""
         with st.expander("🔍 Filtros", expanded=False):
             cols = st.columns(min(len(self.columns), 4))
-            
+
             for i, col in enumerate(self.columns):
                 if not col.filterable:
                     continue
-                
+
                 with cols[i % 4]:
                     filter_key = f"{self._filters_key}_{col.key}"
                     current_value = st.session_state.get(filter_key, "")
-                    
+
                     new_value = st.text_input(
                         col.label,
                         value=current_value,
                         key=filter_key,
                         placeholder=f"Filtrar {col.label}...",
                     )
-    
+
     def _apply_filters(self) -> List[Dict[str, Any]]:
         """Aplicar filtros a los datos."""
         filtered = self.data.copy()
-        
+
         for col in self.columns:
             if not col.filterable:
                 continue
-            
+
             filter_key = f"{self._filters_key}_{col.key}"
             filter_value = st.session_state.get(filter_key, "").strip().lower()
-            
+
             if filter_value:
                 filtered = [
                     row for row in filtered
                     if filter_value in str(row.get(col.key, "")).lower()
                 ]
-        
+
         return filtered
-    
+
     def _apply_sorting(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Aplicar ordenamiento a los datos."""
         sort_col = st.session_state.get(self._sort_key)
         sort_order = st.session_state.get(self._sort_order_key, "asc")
-        
+
         if not sort_col:
             return data
-        
+
         reverse = sort_order == "desc"
-        
+
         try:
             # Intentar ordenar como número
             return sorted(data, key=lambda x: float(x.get(sort_col, 0) or 0), reverse=reverse)
         except (ValueError, TypeError):
             # Ordenar como string
             return sorted(data, key=lambda x: str(x.get(sort_col, "")).lower(), reverse=reverse)
-    
+
     def _apply_pagination(self, data: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], int]:
         """Aplicar paginación."""
         total_pages = max(1, (len(data) + self.rows_per_page - 1) // self.rows_per_page)
-        
+
         current_page = st.session_state.get(self._page_key, 0)
         current_page = max(0, min(current_page, total_pages - 1))
-        
+
         start = current_page * self.rows_per_page
         end = start + self.rows_per_page
-        
+
         return data[start:end], total_pages
-    
+
     def _render_table_header(self):
         """Renderizar header de la tabla."""
         # Usar columnas de Streamlit para el header
         header_cols = st.columns([1 if col.width else 3 for col in self.columns])
-        
+
         for i, col in enumerate(self.columns):
             with header_cols[i]:
                 sort_indicator = ""
                 current_sort = st.session_state.get(self._sort_key)
                 current_order = st.session_state.get(self._sort_order_key, "asc")
-                
+
                 if current_sort == col.key:
                     sort_indicator = " ▲" if current_order == "asc" else " ▼"
                 elif col.sortable:
                     sort_indicator = " ⇅"
-                
+
                 label = f"{col.label}{sort_indicator}"
-                
+
                 if col.sortable:
                     st.button(label, key=f"{self.key}_sort_{col.key}", width='stretch', on_click=self._on_sort_click, args=(col.key,))
                 else:
                     st.caption(label)
-    
+
     def _render_table_rows(self, data: List[Dict[str, Any]], enable_selection: bool):
         """Renderizar filas de la tabla."""
         for row_idx, row in enumerate(data):
             row_cols = st.columns([1 if col.width else 3 for col in self.columns])
-            
+
             for col_idx, col in enumerate(self.columns):
                 with row_cols[col_idx]:
                     value = row.get(col.key, "")
-                    
+
                     # Aplicar formatter si existe
                     if col.formatter:
                         value = col.formatter(value)
-                    
+
                     # Alineación
                     align_style = f"text-align: {col.align};"
-                    
+
                     st.markdown(f"""
                     <div style="{align_style} padding: 0.5rem 0; color: #cbd5e1;">
                         {html.escape(str(value))}
                     </div>
                     """, unsafe_allow_html=True)
-            
+
             # Separador
             st.markdown("<hr style='margin: 0.25rem 0; opacity: 0.2;'>", unsafe_allow_html=True)
-    
+
     def _render_pagination_controls(self, total_pages: int):
         """Renderizar controles de paginación."""
         current_page = st.session_state.get(self._page_key, 0)
-        
+
         cols = st.columns([1, 3, 1])
-        
+
         with cols[0]:
             st.button("⬅️ Anterior", disabled=current_page == 0, key=f"{self.key}_prev", on_click=self._on_prev_page)
 
@@ -261,7 +261,7 @@ class DataTable:
 
         with cols[2]:
             st.button("Siguiente ➡️", disabled=current_page >= total_pages - 1, key=f"{self.key}_next", on_click=self._on_next_page)
-    
+
     def _get_selected(self) -> List[str]:
         """Obtener IDs de filas seleccionadas."""
         return st.session_state.get(self._selected_key, [])
@@ -278,22 +278,22 @@ def export_to_excel(
 ) -> bytes:
     """
     Exportar datos a Excel.
-    
+
     Returns:
         Bytes del archivo Excel
     """
     df = pd.DataFrame(data)
-    
+
     if columns:
         df = df[columns]
-    
+
     # Crear buffer
     import io
     buffer = io.BytesIO()
-    
+
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Datos')
-        
+
         # Auto-ajustar columnas
         worksheet = writer.sheets['Datos']
         for column in worksheet.columns:
@@ -307,7 +307,7 @@ def export_to_excel(
                     pass
             adjusted_width = min(max_length + 2, 50)
             worksheet.column_dimensions[column_letter].width = adjusted_width
-    
+
     return buffer.getvalue()
 
 
@@ -318,15 +318,15 @@ def export_to_csv(
 ) -> str:
     """
     Exportar datos a CSV.
-    
+
     Returns:
         String CSV
     """
     df = pd.DataFrame(data)
-    
+
     if columns:
         df = df[columns]
-    
+
     return df.to_csv(index=False)
 
 
@@ -340,9 +340,9 @@ def render_export_buttons(
     Renderizar botones de exportación.
     """
     cols = st.columns(3)
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-    
+
     with cols[0]:
         excel_data = export_to_excel(data, f"{filename_prefix}_{timestamp}.xlsx", columns)
         st.download_button(
@@ -353,7 +353,7 @@ def render_export_buttons(
             key=f"{key}_excel",
             width='stretch',
         )
-    
+
     with cols[1]:
         csv_data = export_to_csv(data, f"{filename_prefix}_{timestamp}.csv", columns)
         st.download_button(
@@ -364,7 +364,7 @@ def render_export_buttons(
             key=f"{key}_csv",
             width='stretch',
         )
-    
+
     with cols[2]:
         # JSON
         import json
@@ -389,11 +389,11 @@ def create_pacientes_table(
 ) -> DataTable:
     """
     Crear tabla predefinida para listado de pacientes.
-    
+
     Args:
         pacientes: Lista de diccionarios con datos de pacientes
         key: Clave única para la tabla
-    
+
     Returns:
         DataTable configurada
     """
@@ -405,7 +405,7 @@ def create_pacientes_table(
                     formatter=lambda x: f"<span class='mc-badge mc-badge-{'success' if x == 'Activo' else 'info'}'>{x}</span>"),
         TableColumn("telefono", "Teléfono", width="20%", align="center"),
     ]
-    
+
     return DataTable(pacientes, columns, key, rows_per_page=15)
 
 
@@ -416,33 +416,33 @@ def create_pacientes_table(
 def demo_data_tables():
     """Demo interactiva de las tablas mejoradas."""
     st.markdown("## 📊 Tablas de Datos Mejoradas")
-    
+
     # Datos de ejemplo
     sample_data = [
-        {"id": "1", "nombre_completo": "María González", "dni": "28.456.123", 
+        {"id": "1", "nombre_completo": "María González", "dni": "28.456.123",
          "obra_social": "OSDE", "estado": "Activo", "telefono": "11-4567-8901",
          "edad": 45, "ultima_visita": "2026-04-20"},
-        {"id": "2", "nombre_completo": "Juan Pérez", "dni": "25.678.901", 
+        {"id": "2", "nombre_completo": "Juan Pérez", "dni": "25.678.901",
          "obra_social": "Swiss Medical", "estado": "Internado", "telefono": "11-5678-9012",
          "edad": 62, "ultima_visita": "2026-04-22"},
-        {"id": "3", "nombre_completo": "Ana Rodríguez", "dni": "31.234.567", 
+        {"id": "3", "nombre_completo": "Ana Rodríguez", "dni": "31.234.567",
          "obra_social": "Galeno", "estado": "Activo", "telefono": "11-6789-0123",
          "edad": 34, "ultima_visita": "2026-04-18"},
-        {"id": "4", "nombre_completo": "Carlos Martínez", "dni": "19.876.543", 
+        {"id": "4", "nombre_completo": "Carlos Martínez", "dni": "19.876.543",
          "obra_social": "OSDE", "estado": "Alta", "telefono": "11-7890-1234",
          "edad": 78, "ultima_visita": "2026-04-15"},
-        {"id": "5", "nombre_completo": "Laura Silva", "dni": "32.109.876", 
+        {"id": "5", "nombre_completo": "Laura Silva", "dni": "32.109.876",
          "obra_social": "Medicus", "estado": "Activo", "telefono": "11-8901-2345",
          "edad": 28, "ultima_visita": "2026-04-21"},
     ] * 3  # Multiplicar para tener más datos
-    
+
     # Crear tabla
     table = create_pacientes_table(sample_data, key="demo_pacientes")
-    
+
     # Renderizar
     st.markdown("### Tabla de Pacientes")
     table.render(enable_selection=False)
-    
+
     # Exportar
     st.markdown("---")
     st.markdown("### 📥 Exportar Datos")

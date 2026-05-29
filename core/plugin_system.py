@@ -63,42 +63,42 @@ class PluginInfo:
 class MedicarePlugin(ABC):
     """
     Clase base para plugins de Medicare Pro.
-    
+
     Los plugins deben heredar de esta clase e implementar
     los métodos abstractos.
     """
-    
+
     def __init__(self):
         self.info: Optional[PluginInfo] = None
         self.config: Dict[str, Any] = {}
         self.enabled = False
-    
+
     @abstractmethod
     def get_info(self) -> PluginInfo:
         """Retorna metadata del plugin."""
         pass
-    
+
     @abstractmethod
     def initialize(self, config: Dict[str, Any]) -> bool:
         """
         Inicializa el plugin.
-        
+
         Args:
             config: Configuración del plugin
-        
+
         Returns:
             True si la inicialización fue exitosa
         """
         pass
-    
+
     def on_hook(self, hook: PluginHook, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Maneja un hook.
-        
+
         Args:
             hook: Tipo de hook
             context: Contexto del hook
-        
+
         Returns:
             Dict opcional con datos modificados o None
         """
@@ -107,21 +107,21 @@ class MedicarePlugin(ABC):
             handler = getattr(self, handler_name)
             return handler(context)
         return None
-    
+
     def get_config_schema(self) -> Dict[str, Any]:
         """Retorna schema de configuración para UI."""
         return self.info.config_schema if self.info else {}
-    
+
     def validate_config(self, config: Dict[str, Any]) -> List[str]:
         """Valida configuración del plugin."""
         errors = []
         schema = self.get_config_schema()
-        
+
         for key, value in config.items():
             if key in schema:
                 field_schema = schema[key]
                 field_type = field_schema.get("type", "string")
-                
+
                 # Validar tipo
                 if field_type == "string" and not isinstance(value, str):
                     errors.append(f"{key} debe ser string")
@@ -129,49 +129,49 @@ class MedicarePlugin(ABC):
                     errors.append(f"{key} debe ser número")
                 elif field_type == "boolean" and not isinstance(value, bool):
                     errors.append(f"{key} debe ser booleano")
-        
+
         return errors
 
 
 class PluginManager:
     """
     Manager central de plugins.
-    
+
     Gestiona:
     - Descubrimiento y carga de plugins
     - Registro de hooks
     - Configuración de plugins
     - Dependencias
     """
-    
+
     PLUGIN_DIR = "plugins"
-    
+
     def __init__(self):
         self._plugins: Dict[str, MedicarePlugin] = {}
         self._hooks: Dict[PluginHook, List[MedicarePlugin]] = {hook: [] for hook in PluginHook}
         self._config: Dict[str, Dict[str, Any]] = {}
-        
+
         # Asegurar directorio de plugins existe
         Path(self.PLUGIN_DIR).mkdir(exist_ok=True)
-    
+
     def discover_plugins(self) -> List[PluginInfo]:
         """
         Descubre plugins disponibles.
-        
+
         Returns:
             Lista de metadata de plugins encontrados
         """
         discovered = []
-        
+
         plugin_path = Path(self.PLUGIN_DIR)
         if not plugin_path.exists():
             return discovered
-        
+
         # Buscar archivos .py en directorio plugins
         for plugin_file in plugin_path.glob("*.py"):
             if plugin_file.name.startswith("__"):
                 continue
-            
+
             try:
                 # Cargar módulo temporalmente para obtener metadata
                 spec = importlib.util.spec_from_file_location(
@@ -179,102 +179,102 @@ class PluginManager:
                     plugin_file
                 )
                 module = importlib.util.module_from_spec(spec)
-                
+
                 # Buscar clase de plugin
                 plugin_class = self._find_plugin_class(module)
-                
+
                 if plugin_class:
                     # Instanciar temporalmente para obtener info
                     temp_instance = plugin_class()
                     info = temp_instance.get_info()
                     discovered.append(info)
-                    
+
             except Exception as e:
                 log_event("plugin", f"Failed to discover plugin {plugin_file}: {e}")
-        
+
         return discovered
-    
+
     def _find_plugin_class(self, module) -> Optional[Type[MedicarePlugin]]:
         """Encuentra clase de plugin en un módulo."""
         for name, obj in inspect.getmembers(module):
-            if (inspect.isclass(obj) and 
-                issubclass(obj, MedicarePlugin) and 
+            if (inspect.isclass(obj) and
+                issubclass(obj, MedicarePlugin) and
                 obj != MedicarePlugin):
                 return obj
         return None
-    
+
     def load_plugin(self, plugin_name: str) -> bool:
         """
         Carga e inicializa un plugin.
-        
+
         Args:
             plugin_name: Nombre del plugin (sin extensión)
-        
+
         Returns:
             True si se cargó exitosamente
         """
         if plugin_name in self._plugins:
             log_event("plugin", f"Plugin {plugin_name} already loaded")
             return True
-        
+
         plugin_file = Path(self.PLUGIN_DIR) / f"{plugin_name}.py"
-        
+
         if not plugin_file.exists():
             log_event("plugin_error", f"Plugin file not found: {plugin_file}")
             return False
-        
+
         try:
             # Cargar módulo
             spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
             module = importlib.util.module_from_spec(spec)
             sys.modules[plugin_name] = module
             spec.loader.exec_module(module)
-            
+
             # Encontrar clase
             plugin_class = self._find_plugin_class(module)
-            
+
             if not plugin_class:
                 log_event("plugin_error", f"No plugin class found in {plugin_name}")
                 return False
-            
+
             # Instanciar
             instance = plugin_class()
             info = instance.get_info()
-            
+
             # Verificar dependencias
             for required in info.requires:
                 if required not in self._plugins:
                     log_event("plugin_error", f"Plugin {plugin_name} requires {required}")
                     return False
-            
+
             # Obtener config
             plugin_config = self._config.get(plugin_name, {})
-            
+
             # Validar config
             errors = instance.validate_config(plugin_config)
             if errors:
                 log_event("plugin_error", f"Plugin {plugin_name} config errors: {errors}")
                 return False
-            
+
             # Inicializar
             if not instance.initialize(plugin_config):
                 log_event("plugin_error", f"Plugin {plugin_name} initialization failed")
                 return False
-            
+
             # Registrar
             self._plugins[plugin_name] = instance
             instance.info = info
             instance.config = plugin_config
             instance.enabled = True
-            
+
             # Registrar hooks
             for hook in info.hooks:
                 self._hooks[hook].append(instance)
                 # Ordenar por prioridad
                 self._hooks[hook].sort(key=lambda p: p.info.priority if p.info else 100)
-            
+
             log_event("plugin", f"Plugin {plugin_name} v{info.version} loaded successfully")
-            
+
             audit_log(
                 AuditEventType.CONFIG_CHANGE,
                 resource_type="plugin",
@@ -282,85 +282,85 @@ class PluginManager:
                 action="LOAD",
                 description=f"Plugin loaded: {info.name} v{info.version}"
             )
-            
+
             return True
-            
+
         except Exception as e:
             log_event("plugin_error", f"Failed to load plugin {plugin_name}: {e}")
             return False
-    
+
     def unload_plugin(self, plugin_name: str) -> bool:
         """Descarga un plugin."""
         if plugin_name not in self._plugins:
             return False
-        
+
         plugin = self._plugins[plugin_name]
-        
+
         # Desregistrar hooks
         for hook_list in self._hooks.values():
             if plugin in hook_list:
                 hook_list.remove(plugin)
-        
+
         # Eliminar
         del self._plugins[plugin_name]
-        
+
         log_event("plugin", f"Plugin {plugin_name} unloaded")
         return True
-    
+
     def trigger_hook(self, hook: PluginHook, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Dispara un hook y ejecuta todos los plugins registrados.
-        
+
         Args:
             hook: Tipo de hook
             context: Contexto del hook
-        
+
         Returns:
             Contexto posiblemente modificado
         """
         plugins = self._hooks.get(hook, [])
         modified_context = context.copy()
-        
+
         for plugin in plugins:
             if not plugin.enabled:
                 continue
-            
+
             try:
                 result = plugin.on_hook(hook, modified_context)
-                
+
                 if result:
                     # Merge resultado con contexto
                     modified_context.update(result)
-                    
+
             except Exception as e:
                 log_event("plugin_error", f"Plugin {plugin.info.name if plugin.info else 'unknown'} hook error: {e}")
-        
+
         return modified_context
-    
+
     def get_loaded_plugins(self) -> List[PluginInfo]:
         """Lista plugins cargados."""
         return [p.info for p in self._plugins.values() if p.info]
-    
+
     def set_plugin_config(self, plugin_name: str, config: Dict[str, Any]):
         """Establece configuración de plugin."""
         self._config[plugin_name] = config
-        
+
         # Si el plugin está cargado, recargar
         if plugin_name in self._plugins:
             plugin = self._plugins[plugin_name]
             plugin.config = config
-    
+
     def save_config(self):
         """Guarda configuración de plugins a disco."""
         config_path = Path(self.PLUGIN_DIR) / "plugin_config.json"
-        
+
         with open(config_path, 'w') as f:
             json.dump(self._config, f, indent=2)
-    
+
     def load_config(self):
         """Carga configuración de plugins."""
         config_path = Path(self.PLUGIN_DIR) / "plugin_config.json"
-        
+
         if config_path.exists():
             with open(config_path) as f:
                 self._config = json.load(f)
@@ -370,7 +370,7 @@ class PluginManager:
 def register_hook(hook: PluginHook):
     """
     Decorador para registrar métodos como handlers de hooks.
-    
+
     Uso:
         class MyPlugin(MedicarePlugin):
             @register_hook(PluginHook.PATIENT_CREATED)
@@ -405,7 +405,7 @@ def trigger_app_hook(hook: PluginHook, **context) -> Dict[str, Any]:
 # Ejemplo de plugin
 class ExamplePlugin(MedicarePlugin):
     """Plugin de ejemplo que demuestra la API."""
-    
+
     def get_info(self) -> PluginInfo:
         return PluginInfo(
             name="example_plugin",
@@ -430,24 +430,24 @@ class ExamplePlugin(MedicarePlugin):
                 }
             }
         )
-    
+
     def initialize(self, config: Dict[str, Any]) -> bool:
         self.webhook_url = config.get("webhook_url", "")
         self.notify_on_patient = config.get("notify_on_patient", True)
-        
+
         log_event("plugin", "Example plugin initialized")
         return True
-    
+
     def on_patient_created(self, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Handler para hook de paciente creado."""
         if not self.notify_on_patient:
             return None
-        
+
         patient_id = context.get("patient_id")
         patient_name = context.get("patient_name", "Unknown")
-        
+
         log_event("plugin", f"Example plugin: Patient {patient_name} created")
-        
+
         if self.webhook_url:
             try:
                 from urllib.parse import urlparse
@@ -467,9 +467,9 @@ class ExamplePlugin(MedicarePlugin):
                 )
             except Exception as e:
                 log_event("plugin_error", f"Webhook failed: {e}")
-        
+
         return None
-    
+
     def on_evolution_created(self, context: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Handler para hook de evolución creada."""
         log_event("plugin", "Example plugin: Evolution created")

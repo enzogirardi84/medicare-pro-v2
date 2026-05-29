@@ -86,7 +86,7 @@ def render_turnos_online(mi_empresa, rol):
             fecha = c2.date_input("Fecha", _today() + timedelta(days=1))
             horarios = st.multiselect("Horarios *", HORARIOS, default=HORARIOS[:4])
 
-            if st.form_submit_button("Guardar slots", width="stretch", type="primary"):
+            if st.form_submit_button("Guardar slots", use_container_width=True, type="primary"):
                 if not prof.strip():
                     log_event("turnos_online", "error: profesional_obligatorio")
                     st.error("El nombre del profesional es obligatorio.")
@@ -145,7 +145,7 @@ def render_turnos_online(mi_empresa, rol):
                 else:
                     pac = st.text_input("Paciente *", placeholder="Nombre del paciente")
 
-                if st.form_submit_button("Reservar", width="stretch", type="primary"):
+                if st.form_submit_button("Reservar", use_container_width=True, type="primary"):
                     if not pac or (isinstance(pac, str) and not pac.strip()):
                         log_event("turnos_online", "error: paciente_obligatorio")
                         st.error("Debes indicar el paciente.")

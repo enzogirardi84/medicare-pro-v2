@@ -24,7 +24,7 @@ T = TypeVar('T')
 class Debouncer:
     """
     Debouncer para inputs de usuario.
-    
+
     Espera a que el usuario deje de escribir antes de ejecutar.
     """
 
@@ -40,17 +40,17 @@ class Debouncer:
             with self._lock:
                 if self._timer:
                     self._timer.cancel()
-                
+
                 self._timer = threading.Timer(self.wait, func, args, kwargs)
                 self._timer.start()
-        
+
         return wrapper
 
 
 class Throttler:
     """
     Throttler para limitar frecuencia de ejecución.
-    
+
     Útil para scroll, resize, y eventos frecuentes.
     """
 
@@ -68,7 +68,7 @@ class Throttler:
                 if now - self._last_run >= self.limit:
                     self._last_run = now
                     return func(*args, **kwargs)
-        
+
         return wrapper
 
 
@@ -100,7 +100,7 @@ class VirtualListState:
 class VirtualListRenderer:
     """
     Renderizador de listas virtualizadas para grandes datasets.
-    
+
     Solo renderiza los items visibles + buffer.
     """
 
@@ -123,13 +123,13 @@ class VirtualListRenderer:
     ) -> List[Any]:
         """
         Renderiza solo los items visibles.
-        
+
         Args:
             items: Lista completa de items
             render_item: Función (item, index) -> widget
             item_height: Altura de cada item en píxeles
             viewport_height: Altura del viewport visible
-        
+
         Returns:
             Lista de widgets renderizados
         """
@@ -144,10 +144,10 @@ class VirtualListRenderer:
 
         # Espaciador superior (para scroll)
         top_spacer = start * item_height
-        
+
         # Renderizar items visibles
         rendered = []
-        
+
         if top_spacer > 0:
             st.markdown(
                 f"<div style='height:{top_spacer}px'></div>",
@@ -182,7 +182,7 @@ class VirtualListRenderer:
 class LazyComponentLoader:
     """
     Cargador lazy de componentes pesados.
-    
+
     Retrasa la carga hasta que sean necesarios.
     """
 
@@ -198,7 +198,7 @@ class LazyComponentLoader:
         """Carga un componente si no está cargado."""
         if key in self._loaded and not force:
             return None
-        
+
         loader = self._components.get(key)
         if loader:
             self._loaded[key] = True
@@ -217,7 +217,7 @@ class LazyComponentLoader:
 class RenderOptimizer:
     """
     Optimizador de re-renders de Streamlit.
-    
+
     Previende re-renders innecesarios usando cacheo de estado.
     """
 
@@ -228,7 +228,7 @@ class RenderOptimizer:
     def should_render(self, *args, **kwargs) -> bool:
         """
         Determina si se debe renderizar basado en cambios.
-        
+
         Compara hash de argumentos con la última ejecución.
         """
         import hashlib
@@ -260,7 +260,7 @@ class RenderOptimizer:
 class InputOptimizer:
     """
     Optimizador de inputs de usuario.
-    
+
     Reduce latencia y mejora UX.
     """
 
@@ -281,7 +281,7 @@ class InputOptimizer:
         """
         # Session key para valor debounced
         debounced_key = f"{key}_debounced"
-        
+
         # Crear input
         current = st.text_input(
             label,
@@ -318,15 +318,15 @@ class InputOptimizer:
         import time
 
         query = st.text_input(label, key=key)
-        
+
         # Debounce manual
         last_query_key = f"{key}_last_query"
         last_time_key = f"{key}_last_time"
         results_key = f"{key}_results"
-        
+
         now = time.time()
         last_time = st.session_state.get(last_time_key, 0)
-        
+
         if query != st.session_state.get(last_query_key, ""):
             if now - last_time >= debounce_ms / 1000:
                 # Ejecutar búsqueda
@@ -345,7 +345,7 @@ class InputOptimizer:
                 key=f"{key}_results_select"
             )
             return selected
-        
+
         return None
 
 
@@ -354,16 +354,16 @@ class InputOptimizer:
 def optimize_dataframe_display(df, max_rows: int = 1000, sample_size: int = 100):
     """
     Optimiza display de DataFrames grandes.
-    
+
     Muestra muestra representativa si es muy grande.
     """
     import pandas as pd
 
     total_rows = len(df)
-    
+
     if total_rows <= max_rows:
         return df
-    
+
     # Muestreo estratificado si es posible
     if 'categoria' in df.columns:
         # Muestrear por categoría
@@ -386,29 +386,29 @@ def paginated_dataframe(df, page_size: int = 50, key: str = "df_pag"):
     import math
 
     total_pages = math.ceil(len(df) / page_size)
-    
+
     page_key = f"{key}_page"
     if page_key not in st.session_state:
         st.session_state[page_key] = 1
-    
+
     col1, col2, col3 = st.columns([1, 2, 1])
-    
+
     with col1:
         if st.button("← Anterior", key=f"{key}_prev"):
             st.session_state[page_key] = max(1, st.session_state[page_key] - 1)
-    
+
     with col2:
         st.write(f"Página {st.session_state[page_key]} de {total_pages}")
-    
+
     with col3:
         if st.button("Siguiente →", key=f"{key}_next"):
             st.session_state[page_key] = min(total_pages, st.session_state[page_key] + 1)
-    
+
     # Mostrar página actual
     page = st.session_state[page_key]
     start = (page - 1) * page_size
     end = start + page_size
-    
+
     return df.iloc[start:end]
 
 

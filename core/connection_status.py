@@ -36,7 +36,7 @@ class ConnectionStatus:
     pending_count: int = 0
     latency_ms: Optional[int] = None
     error_message: Optional[str] = None
-    
+
     def to_dict(self) -> dict:
         return {
             "state": self.state.value,
@@ -52,7 +52,7 @@ class ConnectionMonitor:
     Monitor de conexión en background.
     Detecta cambios de estado y actualiza la UI.
     """
-    
+
     def __init__(self, check_interval: int = 30):
         self.check_interval = check_interval
         self._status = ConnectionStatus(ConnectionState.ONLINE)
@@ -60,18 +60,18 @@ class ConnectionMonitor:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._pending_operations: list = []
-    
+
     def start(self):
         """Iniciar monitoreo en background."""
         if not self._running:
             self._running = True
             self._thread = threading.Thread(target=self._monitor_loop, daemon=True)
             self._thread.start()
-    
+
     def stop(self):
         """Detener monitoreo."""
         self._running = False
-    
+
     def _monitor_loop(self):
         """Loop de monitoreo continuo."""
         while self._running:
@@ -80,26 +80,26 @@ class ConnectionMonitor:
                 time.sleep(self.check_interval)
             except Exception as e:
                 self._update_status(ConnectionState.ERROR, error=str(e))
-    
+
     def _check_connection(self):
         """Verificar estado de conexión con Supabase."""
         try:
             # Intentar una operación simple (ping)
             from core.database import supabase
-            
+
             if supabase is None:
                 self._update_status(ConnectionState.OFFLINE, error="No hay conexión con Supabase")
                 return
-            
+
             # Medir latencia
             start = time.time()
             # Query simple para test
             response = supabase.table("pacientes").select("count", count="exact").limit(1).execute()
             latency = int((time.time() - start) * 1000)
-            
+
             # Verificar datos pendientes
             pending = len(self._pending_operations)
-            
+
             if pending > 0:
                 self._update_status(
                     ConnectionState.PENDING,
@@ -112,15 +112,15 @@ class ConnectionMonitor:
                     latency_ms=latency,
                     pending_count=0
                 )
-                
+
         except Exception as e:
             self._update_status(ConnectionState.ERROR, error=str(e))
-    
-    def _update_status(self, state: ConnectionState, latency_ms: int = None, 
+
+    def _update_status(self, state: ConnectionState, latency_ms: int = None,
                        pending_count: int = None, error: str = None):
         """Actualizar estado y notificar listeners."""
         old_state = self._status.state
-        
+
         self._status.state = state
         self._status.last_sync = datetime.now().isoformat()
         if latency_ms:
@@ -129,7 +129,7 @@ class ConnectionMonitor:
             self._status.pending_count = pending_count
         if error:
             self._status.error_message = error
-        
+
         # Notificar si cambió el estado
         if old_state != state:
             for listener in self._listeners:
@@ -137,15 +137,15 @@ class ConnectionMonitor:
                     listener(self._status)
                 except Exception:
                     pass
-    
+
     def add_listener(self, callback: Callable[[ConnectionStatus], None]):
         """Agregar callback para cambios de estado."""
         self._listeners.append(callback)
-    
+
     def get_status(self) -> ConnectionStatus:
         """Obtener estado actual."""
         return self._status
-    
+
     def add_pending_operation(self, operation: dict):
         """Registrar operación pendiente."""
         self._pending_operations.append(operation)
@@ -153,7 +153,7 @@ class ConnectionMonitor:
             ConnectionState.PENDING,
             pending_count=len(self._pending_operations)
         )
-    
+
     def clear_pending(self):
         """Limpiar operaciones pendientes."""
         self._pending_operations.clear()
@@ -182,19 +182,19 @@ def render_connection_badge(
 ) -> ConnectionStatus:
     """
     Renderizar badge de estado de conexión.
-    
+
     Args:
         position: "fixed" (top-right) o "inline"
         show_details: Mostrar detalles al hacer hover
         key: Clave única
-    
+
     Returns:
         ConnectionStatus actual
     """
     # Obtener estado
     monitor = get_connection_monitor()
     status = monitor.get_status()
-    
+
     # Estilos según estado
     styles = {
         ConnectionState.ONLINE: {
@@ -238,9 +238,9 @@ def render_connection_badge(
             "pulse": True,
         },
     }
-    
+
     style = styles.get(status.state, styles[ConnectionState.ERROR])
-    
+
     # CSS para posición fija
     position_css = """
         position: fixed;
@@ -251,7 +251,7 @@ def render_connection_badge(
         display: inline-flex;
         margin-bottom: 0.5rem;
     """
-    
+
     # Animación de pulso si es necesario
     pulse_animation = """
         @keyframes pulse-conn {
@@ -262,13 +262,13 @@ def render_connection_badge(
             animation: pulse-conn 2s ease-in-out infinite;
         }
     """ if style["pulse"] else ""
-    
+
     # Detalles de tooltip
     details_html = ""
     if show_details:
         latency_text = f"{status.latency_ms}ms" if status.latency_ms else "N/A"
         last_sync = status.last_sync[:19] if status.last_sync else "Nunca"
-        
+
         details_html = f"""
         <div style="
             position: absolute;
@@ -294,20 +294,20 @@ def render_connection_badge(
             {f'<div style="color: #ef4444; margin-top: 0.5rem; font-size: 0.75rem;">{html.escape(status.error_message)}</div>' if status.error_message else ''}
         </div>
         """
-    
+
     html = f"""
     <style>
         {pulse_animation}
-        
+
         .conn-badge-container {{
             {position_css}
         }}
-        
+
         .conn-badge-container:hover .conn-tooltip {{
             opacity: 1;
             visibility: visible;
         }}
-        
+
         .conn-badge {{
             display: inline-flex;
             align-items: center;
@@ -323,13 +323,13 @@ def render_connection_badge(
             cursor: default;
             transition: all 0.2s ease;
         }}
-        
+
         .conn-badge:hover {{
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }}
     </style>
-    
+
     <div class="conn-badge-container">
         <div class="conn-badge {'conn-pulse' if style['pulse'] else ''}">
             <span>{style['icon']}</span>
@@ -338,9 +338,9 @@ def render_connection_badge(
         {details_html}
     </div>
     """
-    
+
     st.markdown(html, unsafe_allow_html=True)
-    
+
     return status
 
 
@@ -350,18 +350,18 @@ def render_sync_button(
 ) -> bool:
     """
     Botón de sincronización manual con indicador de estado.
-    
+
     Returns:
         True si se hizo clic en sincronizar
     """
     monitor = get_connection_monitor()
     status = monitor.get_status()
-    
+
     # Estilo según estado
     button_disabled = status.state == ConnectionState.SYNCING
-    
+
     cols = st.columns([1, 3])
-    
+
     with cols[0]:
         clicked = st.button(
             "🔄" if not button_disabled else "⏳",
@@ -369,7 +369,7 @@ def render_sync_button(
             disabled=button_disabled,
             help="Sincronizar datos pendientes" if not button_disabled else "Sincronizando...",
         )
-    
+
     with cols[1]:
         if status.pending_count > 0:
             st.caption(f"⏳ {status.pending_count} operaciones pendientes")
@@ -377,7 +377,7 @@ def render_sync_button(
             st.caption(f"✅ Sync: {status.last_sync[11:16]}")
         else:
             st.caption("Sin sincronizar")
-    
+
     if clicked and on_sync:
         # Simular sincronización
         monitor._update_status(ConnectionState.SYNCING)
@@ -388,7 +388,7 @@ def render_sync_button(
         except Exception as e:
             monitor._update_status(ConnectionState.ERROR, error=str(e))
             st.toast(f"❌ Error: {e}")
-    
+
     return clicked
 
 
@@ -399,14 +399,14 @@ def render_pending_data_alert(
 ):
     """
     Alerta visual cuando hay datos pendientes por sincronizar.
-    
+
     Args:
         operations: Lista de operaciones pendientes
         on_retry: Callback para reintentar
     """
     if not operations:
         return
-    
+
     with st.container():
         st.markdown(f"""
         <div style="
@@ -427,24 +427,24 @@ def render_pending_data_alert(
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         # Listar operaciones
         for i, op in enumerate(operations[:5]):  # Mostrar máximo 5
             with st.expander(f"📋 {op.get('type', 'Operación')} - {(op.get('timestamp') or 'Sin fecha')[:10]}", expanded=False):
                 st.json(op)
-        
+
         if len(operations) > 5:
             st.caption(f"... y {len(operations) - 5} operaciones más")
-        
+
         # Botón de reintento
         cols = st.columns([1, 1, 2])
         with cols[0]:
-            if st.button("🔄 Reintentar todo", key=f"{key}_retry", width='stretch'):
+            if st.button("🔄 Reintentar todo", key=f"{key}_retry", use_container_width=True):
                 if on_retry:
                     on_retry()
-        
+
         with cols[1]:
-            if st.button("❌ Descartar", key=f"{key}_discard", width='stretch'):
+            if st.button("❌ Descartar", key=f"{key}_discard", use_container_width=True):
                 if st.checkbox("Confirmar descarte de datos", key=f"{key}_confirm"):
                     operations.clear()
 
@@ -457,7 +457,7 @@ def init_connection_monitor():
     """Inicializar monitoreo de conexión en la app."""
     monitor = get_connection_monitor()
     monitor.start()
-    
+
     # Guardar en session_state para persistencia
     st.session_state["_connection_monitor"] = monitor
 
@@ -466,22 +466,22 @@ def check_connection_before_operation(operation_name: str = "operación") -> boo
     """
     Verificar conexión antes de operación crítica.
     Muestra warning si está offline.
-    
+
     Returns:
         True si se puede continuar
     """
     monitor = get_connection_monitor()
     status = monitor.get_status()
-    
+
     if status.state == ConnectionState.OFFLINE:
         st.warning(f"⚠️ Sin conexión. La {operation_name} se guardará localmente y se sincronizará cuando haya conexión.")
         return False
-    
+
     if status.state == ConnectionState.ERROR:
         log_event("connection", "error: conexion_fallida")
         st.error(f"❌ Error de conexión: {status.error_message}")
         return st.checkbox("Forzar operación de todos modos (guardar localmente)", key="force_offline")
-    
+
     return True
 
 
@@ -492,34 +492,34 @@ def check_connection_before_operation(operation_name: str = "operación") -> boo
 def demo_connection_status():
     """Demo interactiva del sistema de conexión."""
     st.markdown("## 🌐 Demo de Estado de Conexión")
-    
+
     # Simular estados
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
         st.button("🟢 Online", key="demo_online", use_container_width=True)
         st.caption("Estado: Conectado")
         st.button("⚠️ Error", key="demo_error", use_container_width=True)
         st.caption("Estado: Error de conexión")
-    
+
     with col2:
         st.button("🔴 Offline", key="demo_offline", use_container_width=True)
         st.caption("Estado: Sin conexión")
         st.button("⏳ Pending", key="demo_pending", use_container_width=True)
         st.caption("Estado: Datos pendientes")
-    
+
     with col3:
         st.button("🔄 Syncing", key="demo_syncing", use_container_width=True)
         st.caption("Estado: Sincronizando")
-    
+
     st.markdown("---")
     st.markdown("### Badge de Conexión")
-    
+
     # Renderizar badge actual
     status = render_connection_badge(position="inline", show_details=True)
-    
+
     st.json(status.to_dict())
-    
+
     st.markdown("---")
     st.markdown("### Botón de Sincronización")
     render_sync_button(on_sync=lambda: time.sleep(1))

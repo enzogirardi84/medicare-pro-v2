@@ -54,35 +54,35 @@ class WorkflowTask:
     description: str
     assignee_role: str  # médico, enfermera, recepción, admin
     assignee_id: Optional[str] = None
-    
+
     # Timing
     estimated_duration_minutes: int = 15
     due_after_minutes: Optional[int] = None  # Tiempo límite desde inicio workflow
     due_at: Optional[datetime] = None  # Fecha límite absoluta
-    
+
     # Estado
     status: TaskStatus = TaskStatus.PENDING
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     completed_by: Optional[str] = None
-    
+
     # Dependencias
     depends_on: List[str] = field(default_factory=list)  # IDs de tareas que deben completarse primero
-    
+
     # Acciones automáticas
     auto_actions: List[Dict[str, Any]] = field(default_factory=list)
-    
+
     # Condiciones para completar
     required_fields: List[str] = field(default_factory=list)
     validation_rules: List[Dict[str, Any]] = field(default_factory=list)
-    
+
     # Notas
     notes: Optional[str] = None
-    
+
     def can_start(self, completed_tasks: Set[str]) -> bool:
         """Verifica si la tarea puede iniciarse."""
         return all(dep in completed_tasks for dep in self.depends_on)
-    
+
     def is_overdue(self) -> bool:
         """Verifica si la tarea está vencida."""
         if self.due_at and self.status != TaskStatus.COMPLETED:
@@ -97,29 +97,29 @@ class WorkflowInstance:
     template_id: str
     name: str
     description: str
-    
+
     # Contexto
     patient_id: Optional[str] = None
     patient_name: Optional[str] = None
     context_data: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Estado
     status: WorkflowStatus = WorkflowStatus.PENDING
     current_task_index: int = 0
-    
+
     # Tareas
     tasks: List[WorkflowTask] = field(default_factory=list)
     completed_tasks: Set[str] = field(default_factory=set)
-    
+
     # Timeline
     created_at: datetime = field(default_factory=datetime.now)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    
+
     # Metadata
     created_by: str = ""
     priority: str = "normal"  # low, normal, high, urgent
-    
+
     def get_current_task(self) -> Optional[WorkflowTask]:
         """Obtiene la tarea actual."""
         for task in self.tasks:
@@ -127,14 +127,14 @@ class WorkflowInstance:
                 if task.can_start(self.completed_tasks):
                     return task
         return None
-    
+
     def get_progress_percentage(self) -> float:
         """Calcula porcentaje de progreso."""
         if not self.tasks:
             return 100.0
         completed = len([t for t in self.tasks if t.status == TaskStatus.COMPLETED])
         return (completed / len(self.tasks)) * 100
-    
+
     def to_dict(self) -> dict:
         """Convierte a diccionario."""
         return {
@@ -147,7 +147,7 @@ class WorkflowInstance:
 
 class WorkflowTemplate:
     """Template predefinido de workflow."""
-    
+
     TEMPLATES = {
         "pre_surgery_checklist": {
             "name": "Checklist Pre-Operatorio",
@@ -191,7 +191,7 @@ class WorkflowTemplate:
                 }
             ]
         },
-        
+
         "new_patient_admission": {
             "name": "Admisión de Nuevo Paciente",
             "description": "Proceso de admisión de paciente nuevo",
@@ -225,7 +225,7 @@ class WorkflowTemplate:
                 }
             ]
         },
-        
+
         "lab_results_review": {
             "name": "Revisión de Resultados de Laboratorio",
             "description": "Proceso de revisión y notificación de resultados",
@@ -252,7 +252,7 @@ class WorkflowTemplate:
                 }
             ]
         },
-        
+
         "discharge_process": {
             "name": "Proceso de Alta",
             "description": "Pasos para dar de alta a un paciente",
@@ -287,12 +287,12 @@ class WorkflowTemplate:
             ]
         }
     }
-    
+
     @classmethod
     def get_template(cls, template_id: str) -> Optional[Dict[str, Any]]:
         """Obtiene template por ID."""
         return cls.TEMPLATES.get(template_id)
-    
+
     @classmethod
     def list_templates(cls) -> List[Dict[str, str]]:
         """Lista templates disponibles."""
@@ -306,11 +306,11 @@ class WorkflowEngine:
     """
     Motor de ejecución de workflows.
     """
-    
+
     def __init__(self):
         self._workflows: Dict[str, WorkflowInstance] = {}
         self._load_workflows()
-    
+
     def _load_workflows(self):
         """Carga workflows activos."""
         if "active_workflows" in st.session_state:
@@ -323,12 +323,12 @@ class WorkflowEngine:
                             self._workflows[k] = self._dict_to_workflow(v)
             except Exception as e:
                 log_event("workflow", f"Error loading workflows: {e}")
-    
+
     def _save_workflows(self):
         """Guarda workflows."""
         data = {k: v.to_dict() for k, v in self._workflows.items()}
         st.session_state["active_workflows"] = data
-    
+
     def _dict_to_workflow(self, data: dict) -> WorkflowInstance:
         """Convierte dict a WorkflowInstance."""
         tasks = []
@@ -352,7 +352,7 @@ class WorkflowEngine:
                 validation_rules=t_data.get("validation_rules", []),
                 notes=t_data.get("notes")
             ))
-        
+
         return WorkflowInstance(
             id=data["id"],
             template_id=data["template_id"],
@@ -371,7 +371,7 @@ class WorkflowEngine:
             created_by=data.get("created_by", ""),
             priority=data.get("priority", "normal")
         )
-    
+
     def create_workflow(
         self,
         template_id: str,
@@ -385,13 +385,13 @@ class WorkflowEngine:
         Crea una nueva instancia de workflow desde template.
         """
         import uuid
-        
+
         template = WorkflowTemplate.get_template(template_id)
         if not template:
             log_event("workflow", f"error: Template no encontrado: {template_id}")
             st.error(f"❌ Template no encontrado: {template_id}")
             return None
-        
+
         # Crear tareas desde template
         tasks = []
         for i, task_template in enumerate(template["tasks"]):
@@ -404,7 +404,7 @@ class WorkflowEngine:
                 depends_on=task_template.get("depends_on", [])
             )
             tasks.append(task)
-        
+
         # Crear instancia
         workflow = WorkflowInstance(
             id=str(uuid.uuid4()),
@@ -418,10 +418,10 @@ class WorkflowEngine:
             priority=priority,
             created_by=created_by
         )
-        
+
         self._workflows[workflow.id] = workflow
         self._save_workflows()
-        
+
         # Crear recordatorio
         if patient_id:
             reminder_mgr = get_reminder_manager()
@@ -433,31 +433,31 @@ class WorkflowEngine:
                 description=f"Se ha iniciado el proceso: {template['description']}",
                 priority=ReminderPriority.HIGH if priority == "urgent" else ReminderPriority.MEDIUM
             )
-        
+
         log_event("workflow", f"Workflow created: {workflow.id} ({template['name']})")
-        
+
         return workflow
-    
+
     def start_workflow(self, workflow_id: str) -> bool:
         """Inicia un workflow."""
         if workflow_id not in self._workflows:
             return False
-        
+
         workflow = self._workflows[workflow_id]
         workflow.status = WorkflowStatus.ACTIVE
         workflow.started_at = datetime.now()
-        
+
         # Iniciar primera tarea
         first_task = workflow.get_current_task()
         if first_task:
             first_task.status = TaskStatus.IN_PROGRESS
             first_task.started_at = datetime.now()
-        
+
         self._save_workflows()
-        
+
         log_event("workflow", f"Workflow started: {workflow_id}")
         return True
-    
+
     def complete_task(
         self,
         workflow_id: str,
@@ -468,34 +468,34 @@ class WorkflowEngine:
         """Completa una tarea del workflow."""
         if workflow_id not in self._workflows:
             return False
-        
+
         workflow = self._workflows[workflow_id]
-        
+
         # Buscar tarea
         task = None
         for t in workflow.tasks:
             if t.id == task_id:
                 task = t
                 break
-        
+
         if not task:
             return False
-        
+
         # Verificar que puede completarse
         if not task.can_start(workflow.completed_tasks):
             log_event("workflow", "error: No se puede completar esta tarea aún. Hay dependencias pendientes.")
             st.error("❌ No se puede completar esta tarea aún. Hay dependencias pendientes.")
             return False
-        
+
         # Completar
         task.status = TaskStatus.COMPLETED
         task.completed_at = datetime.now()
         task.completed_by = completed_by
         if notes:
             task.notes = notes
-        
+
         workflow.completed_tasks.add(task_id)
-        
+
         # Avanzar a siguiente tarea
         next_task = workflow.get_current_task()
         if next_task:
@@ -505,19 +505,19 @@ class WorkflowEngine:
             # Workflow completado
             workflow.status = WorkflowStatus.COMPLETED
             workflow.completed_at = datetime.now()
-            
+
             st.success(f"✅ Workflow '{workflow.name}' completado exitosamente")
-        
+
         self._save_workflows()
-        
+
         log_event("workflow", f"Task completed: {task_id} in workflow {workflow_id}")
-        
+
         return True
-    
+
     def get_workflow(self, workflow_id: str) -> Optional[WorkflowInstance]:
         """Obtiene workflow por ID."""
         return self._workflows.get(workflow_id)
-    
+
     def get_workflows(
         self,
         patient_id: Optional[str] = None,
@@ -526,7 +526,7 @@ class WorkflowEngine:
     ) -> List[WorkflowInstance]:
         """Obtiene workflows con filtros."""
         results = []
-        
+
         for workflow in self._workflows.values():
             if patient_id and workflow.patient_id != patient_id:
                 continue
@@ -541,41 +541,41 @@ class WorkflowEngine:
                 )
                 if not has_task:
                     continue
-            
+
             results.append(workflow)
-        
+
         return sorted(results, key=lambda x: x.created_at, reverse=True)
-    
+
     def render_workflow_dashboard(self):
         """Renderiza dashboard de workflows."""
         st.title("⚙️ Gestión de Workflows y Procesos")
-        
+
         # Tabs
         tabs = st.tabs(["📋 Activos", "➕ Nuevo Workflow", "📊 Estadísticas"])
-        
+
         with tabs[0]:
             self._render_active_workflows()
-        
+
         with tabs[1]:
             self._render_create_workflow()
-        
+
         with tabs[2]:
             self._render_workflow_stats()
-    
+
     def _render_active_workflows(self):
         """Renderiza workflows activos."""
         st.header("📋 Workflows Activos")
-        
+
         workflows = self.get_workflows()
-        
+
         if not workflows:
             st.info("📭 No hay workflows activos")
             return
-        
+
         for workflow in workflows:
             with st.container():
                 col1, col2, col3 = st.columns([3, 2, 1])
-                
+
                 with col1:
                     status_colors = {
                         WorkflowStatus.PENDING: "⚪",
@@ -586,28 +586,28 @@ class WorkflowEngine:
                         WorkflowStatus.OVERDUE: "🔴"
                     }
                     icon = status_colors.get(workflow.status, "⚪")
-                    
+
                     st.markdown(f"**{icon} {workflow.name}**")
                     if workflow.patient_name:
                         st.caption(f"Paciente: {workflow.patient_name}")
                     st.caption(f"Creado: {workflow.created_at.strftime('%d/%m/%Y %H:%M')}")
-                
+
                 with col2:
                     progress = workflow.get_progress_percentage()
                     st.progress(progress / 100)
                     st.caption(f"Progreso: {progress:.0f}%")
-                    
+
                     # Tarea actual
                     current = workflow.get_current_task()
                     if current:
                         st.caption(f"Actual: {current.name}")
-                
+
                 with col3:
                     if st.button("👁️ Ver", key=f"view_wf_{workflow.id}"):
                         self._render_workflow_detail(workflow.id)
-                
+
                 st.divider()
-    
+
     def _render_workflow_detail(self, workflow_id: str):
         """Renderiza detalle de un workflow."""
         workflow = self._workflows.get(workflow_id)
@@ -615,17 +615,17 @@ class WorkflowEngine:
             log_event("workflow", "error: Workflow no encontrado")
             st.error("Workflow no encontrado")
             return
-        
+
         st.subheader(f"📋 {workflow.name}")
         st.caption(workflow.description)
-        
+
         # Timeline de tareas
         st.subheader("Tareas")
-        
+
         for task in workflow.tasks:
             with st.container():
                 col1, col2, col3 = st.columns([1, 4, 2])
-                
+
                 with col1:
                     status_icons = {
                         TaskStatus.PENDING: "⏳",
@@ -635,25 +635,25 @@ class WorkflowEngine:
                         TaskStatus.FAILED: "❌"
                     }
                     st.markdown(f"### {status_icons.get(task.status, '⚪')}")
-                
+
                 with col2:
                     st.markdown(f"**{task.name}**")
                     st.caption(task.description)
                     st.caption(f"Asignado a: {task.assignee_role}")
-                    
+
                     if task.notes:
                         st.caption(f"Notas: {task.notes}")
-                
+
                 with col3:
                     user = st.session_state.get("u_actual", {})
                     user_role = user.get("rol", "")
-                    
+
                     # Verificar si el usuario puede completar esta tarea
                     can_complete = (
                         task.status == TaskStatus.IN_PROGRESS and
                         (user_role == task.assignee_role or user_role in ["admin", "superadmin"])
                     )
-                    
+
                     def _on_complete_task(workflow_id: str, task_id: str, notes_key: str, user_name: str):
                         notes = st.session_state.get(notes_key, "")
                         try:
@@ -665,35 +665,35 @@ class WorkflowEngine:
                     if can_complete:
                         notes = st.text_input("Notas", key=f"notes_{task.id}")
                         st.button("✅ Completar", key=f"complete_{task.id}", on_click=_on_complete_task, args=(workflow_id, task.id, f"notes_{task.id}", user.get("nombre", "Sistema")))
-                    
+
                     if task.completed_at:
                         st.caption(f"Completado: {task.completed_at.strftime('%H:%M')}")
                         if task.completed_by:
                             st.caption(f"Por: {task.completed_by}")
-                
+
                 st.divider()
-    
+
     def _render_create_workflow(self):
         """Formulario para crear workflow."""
         st.header("➕ Iniciar Nuevo Workflow")
-        
+
         # Templates
         templates = WorkflowTemplate.list_templates()
-        
+
         if not templates:
             log_event("workflow", "error: No hay templates disponibles")
             st.error("No hay templates disponibles")
             return
-        
+
         template_options = {f"{t['name']} - {t['description']}": t['id'] for t in templates}
-        
+
         selected = st.selectbox(
             "Seleccionar tipo de workflow",
             options=list(template_options.keys())
         )
-        
+
         template_id = template_options[selected]
-        
+
         # Paciente (opcional)
         detalles = st.session_state.get("detalles_pacientes_db", {})
         pacientes_list = st.session_state.get("pacientes_db", [])
@@ -705,22 +705,22 @@ class WorkflowEngine:
             pacientes[dni] = {"nombre": nombre, "apellido": ""}
         paciente_options = {"Sin paciente específico": None}
         paciente_options.update({f"{p['apellido']}, {p['nombre']}": dni for dni, p in pacientes.items()})
-        
+
         paciente_selected = st.selectbox(
             "Paciente (opcional)",
             options=list(paciente_options.keys())
         )
-        
+
         paciente_dni = paciente_options[paciente_selected]
         paciente = pacientes.get(paciente_dni) if paciente_dni else None
-        
+
         # Prioridad
         priority = st.selectbox(
             "Prioridad",
             options=[("Baja", "low"), ("Normal", "normal"), ("Alta", "high"), ("Urgente", "urgent")],
             format_func=lambda x: x[0]
         )
-        
+
         def _on_start_workflow(template_id: str, patient_id: Optional[str], patient_name: Optional[str], priority: str, created_by: str):
             try:
                 workflow = self.create_workflow(
@@ -748,24 +748,24 @@ class WorkflowEngine:
                 priority=priority[1],
                 created_by=user.get("nombre", "Sistema")
             )
-    
+
     def _render_workflow_stats(self):
         """Estadísticas de workflows."""
         st.header("📊 Estadísticas de Workflows")
-        
+
         workflows = list(self._workflows.values())
-        
+
         if not workflows:
             st.info("No hay datos suficientes")
             return
-        
+
         # KPIs
         total = len(workflows)
         active = len([w for w in workflows if w.status == WorkflowStatus.ACTIVE])
         completed = len([w for w in workflows if w.status == WorkflowStatus.COMPLETED])
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.metric("Total", total)
             st.metric("Completados", completed)
@@ -773,12 +773,12 @@ class WorkflowEngine:
             st.metric("Activos", active)
             completion_rate = (completed / total * 100) if total > 0 else 0
             st.metric("Tasa de Éxito", f"{completion_rate:.1f}%")
-        
+
         # Por template
         by_template = {}
         for w in workflows:
             by_template[w.name] = by_template.get(w.name, 0) + 1
-        
+
         if by_template:
             st.subheader("Por Tipo")
             data = [{"Workflow": k, "Cantidad": v} for k, v in sorted(by_template.items(), key=lambda x: x[1], reverse=True)]

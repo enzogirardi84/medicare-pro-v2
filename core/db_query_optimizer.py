@@ -23,31 +23,31 @@ class CursorPaginator:
     Paginación basada en cursor para grandes datasets.
     Más eficiente que OFFSET en tablas con millones de registros.
     """
-    
+
     def __init__(self, page_size: int = 50):
         self.page_size = page_size
         self.cursor_stack: List[Any] = []
         self.current_page = 0
-    
+
     def next_page(self, next_cursor: Any):
         """Avanzar a siguiente página, guardando cursor anterior."""
         if next_cursor:
             self.cursor_stack.append(next_cursor)
         self.current_page += 1
-    
+
     def prev_page(self) -> Optional[Any]:
         """Volver a página anterior, retornando cursor."""
         if self.current_page > 0 and self.cursor_stack:
             self.cursor_stack.pop()
             self.current_page -= 1
         return self.get_current_cursor()
-    
+
     def get_current_cursor(self) -> Optional[Any]:
         """Obtener cursor de página actual."""
         if self.cursor_stack:
             return self.cursor_stack[-1]
         return None
-    
+
     def reset(self):
         """Reiniciar paginador."""
         self.cursor_stack = []
@@ -64,46 +64,46 @@ def fetch_with_cursor(
 ) -> Tuple[List[Dict], Optional[Any]]:
     """
     Fetch datos usando paginación por cursor (más eficiente).
-    
+
     Returns:
         Tuple de (datos, next_cursor)
     """
     from core.database import supabase, _supabase_execute_with_retry
-    
+
     if not supabase:
         return [], None
-    
+
     try:
         # Construir query base
         query = supabase.table(table).select(",".join(columns))
-        
+
         # Aplicar filtros
         if filters:
             for col, val in filters.items():
                 query = query.eq(col, val)
-        
+
         # Aplicar cursor si existe
         if cursor_value is not None:
             query = query.gt(order_column, cursor_value)
-        
+
         # Ordenar y limitar
         query = query.order(order_column).limit(page_size + 1)  # +1 para detectar next
-        
+
         response = _supabase_execute_with_retry(
             f"cursor_fetch_{table}",
             lambda: query.execute()
         )
-        
+
         data = response.data if response else []
-        
+
         # Detectar si hay más páginas
         next_cursor = None
         if len(data) > page_size:
             next_cursor = data[-2][order_column]  # Último item de página actual
             data = data[:-1]  # Remover item extra
-        
+
         return data, next_cursor
-        
+
     except Exception as e:
         log_event("db_query", f"error: Error en fetch_with_cursor: {e}")
         return [], None
@@ -115,7 +115,7 @@ def fetch_with_cursor(
 
 class QueryOptimizer:
     """Utilidades para construir queries optimizadas."""
-    
+
     # Mapeo de tablas a columnas comúnmente usadas (evitar SELECT *)
     TABLE_COLUMNS = {
         "pacientes": [
@@ -143,7 +143,7 @@ class QueryOptimizer:
             "id", "accion", "detalle", "created_at"
         ],
     }
-    
+
     @classmethod
     def get_optimized_columns(cls, table: str, extra_cols: Optional[List[str]] = None) -> str:
         """Obtener lista de columnas optimizada para una tabla."""
@@ -154,7 +154,7 @@ class QueryOptimizer:
             final_cols = base_cols + [c for c in extra_cols if c not in base_set]
             return ",".join(final_cols)
         return ",".join(base_cols)
-    
+
     @staticmethod
     def build_paginated_query(
         table: str,
@@ -167,7 +167,7 @@ class QueryOptimizer:
     ) -> Dict[str, Any]:
         """Construir query paginado con parámetros."""
         offset = page * page_size
-        
+
         query_params = {
             "table": table,
             "columns": columns,
@@ -177,7 +177,7 @@ class QueryOptimizer:
             "order_desc": order_desc,
             "filters": filters or {},
         }
-        
+
         return query_params
 
 
@@ -198,36 +198,36 @@ def fetch_pacientes_optimizado(
     Usa columnas específicas en lugar de SELECT *.
     """
     from core.database import supabase, _supabase_execute_with_retry
-    
+
     if not supabase:
         return []
-    
+
     try:
         # Columnas específicas (no SELECT *)
         columns = QueryOptimizer.get_optimized_columns("pacientes")
-        
+
         query = supabase.table("pacientes").select(columns)
         query = query.eq("empresa_id", empresa_id)
-        
+
         if solo_activos:
             query = query.eq("estado", "Activo")
-        
+
         if busqueda:
             # Búsqueda por nombre o DNI (ILIKE con sanitización)
             safe = busqueda.replace("%", "\\%").replace("_", "\\_")
             query = query.or_(f"nombre_completo.ilike.%{safe}%,dni.ilike.%{safe}%")
-        
+
         # Paginación
         offset = page * page_size
         query = query.order("nombre_completo").range(offset, offset + page_size - 1)
-        
+
         response = _supabase_execute_with_retry(
             "fetch_pacientes_optimizado",
             lambda: query.execute()
         )
-        
+
         return response.data if response else []
-        
+
     except Exception as e:
         log_event("db_query", f"error: Error al cargar pacientes: {e}")
         return []
@@ -243,29 +243,29 @@ def fetch_evoluciones_paciente(
     Fetch optimizado de evoluciones de un paciente.
     """
     from core.database import supabase, _supabase_execute_with_retry
-    
+
     if not supabase:
         return []
-    
+
     try:
         # Columnas específicas
         columns = QueryOptimizer.get_optimized_columns("evoluciones", ["texto"])
-        
+
         query = supabase.table("evoluciones").select(columns)
         query = query.eq("paciente_id", paciente_id)
-        
+
         if desde_fecha:
             query = query.gte("fecha_hora", desde_fecha)
-        
+
         query = query.order("fecha_hora", desc=True).limit(limit)
-        
+
         response = _supabase_execute_with_retry(
             "fetch_evoluciones_paciente",
             lambda: query.execute()
         )
-        
+
         return response.data if response else []
-        
+
     except Exception as e:
         log_event("db_query", f"error: Error al cargar evoluciones: {e}")
         return []
@@ -283,18 +283,18 @@ def lazy_data_loader(
 ) -> List[Dict]:
     """
     Loader lazy que cachea páginas en session_state.
-    
+
     Args:
         key: Clave única para este dataset
         load_fn: Función (offset, limit) -> datos
         page_size: Tamaño de página
         max_cached_pages: Máximo de páginas a mantener en cache
-    
+
     Returns:
         Lista completa de items cargados
     """
     state_key = f"_lazy_loader_{key}"
-    
+
     if state_key not in st.session_state:
         st.session_state[state_key] = {
             "items": [],
@@ -302,9 +302,9 @@ def lazy_data_loader(
             "has_more": True,
             "loading": False,
         }
-    
+
     state = st.session_state[state_key]
-    
+
     # Botón "Cargar más"
     if state["has_more"] and not state["loading"]:
         cols = st.columns([1, 4])
@@ -312,21 +312,21 @@ def lazy_data_loader(
             if st.button(f"+ {page_size} más", key=f"lazy_load_{key}"):
                 state["loading"] = True
                 state["current_page"] += 1
-                
+
                 offset = state["current_page"] * page_size
                 new_items = load_fn(offset, page_size)
-                
+
                 if new_items:
                     state["items"].extend(new_items)
                     state["has_more"] = len(new_items) == page_size
                 else:
                     state["has_more"] = False
-                
+
                 state["loading"] = False
 
         with cols[1]:
             st.caption(f"Mostrando {len(state['items'])} registros")
-    
+
     return state["items"]
 
 
@@ -341,34 +341,34 @@ def batch_insert(
 ) -> Tuple[int, List[Exception]]:
     """
     Insertar registros en batches para evitar timeouts.
-    
+
     Returns:
         Tuple de (insertados_count, errores)
     """
     from core.database import supabase, _supabase_execute_with_retry
-    
+
     if not supabase or not records:
         return 0, []
-    
+
     inserted = 0
     errors = []
-    
+
     for i in range(0, len(records), batch_size):
         batch = records[i:i + batch_size]
-        
+
         try:
             _supabase_execute_with_retry(
                 f"batch_insert_{table}",
                 lambda: supabase.table(table).insert(batch).execute()
             )
             inserted += len(batch)
-            
+
             # Pequeña pausa entre batches
             time.sleep(0.05)
-            
+
         except Exception as e:
             errors.append(e)
-    
+
     return inserted, errors
 
 
@@ -378,10 +378,10 @@ def batch_insert(
 
 class QueryProfiler:
     """Profiler simple para queries SQL."""
-    
+
     def __init__(self):
         self.queries: List[Dict] = []
-    
+
     def profile(self, name: str, fn: Callable[[], Any]) -> Any:
         """Ejecutar función y medir tiempo."""
         start = time.time()
@@ -404,20 +404,20 @@ class QueryProfiler:
                 "timestamp": datetime.now().isoformat(),
             })
             raise
-    
+
     def get_slow_queries(self, threshold_ms: float = 500) -> List[Dict]:
         """Obtener queries lentas (mayor a threshold en ms)."""
         return [q for q in self.queries if q["duration"] * 1000 > threshold_ms]
-    
+
     def report(self) -> str:
         """Generar reporte de performance."""
         if not self.queries:
             return "Sin queries registradas"
-        
+
         total = sum(q["duration"] for q in self.queries)
         avg = total / len(self.queries)
         slow = len(self.get_slow_queries())
-        
+
         return (
             f"📊 Query Profiler Report:\n"
             f"   Total queries: {len(self.queries)}\n"

@@ -36,7 +36,7 @@ def test_guardado_concurrente_30_enfermeros():
     st.session_state["evoluciones_db"] = []
     paciente_test = "Paciente Stress Test - 41440234"
     num_hilos = 30
-    
+
     resultados = []
     with ThreadPoolExecutor(max_workers=num_hilos) as executor:
         futures = [
@@ -45,13 +45,13 @@ def test_guardado_concurrente_30_enfermeros():
         ]
         for f in futures:
             resultados.append(f.result(timeout=30))
-    
+
     exitosos = sum(1 for r in resultados if r["exito"])
     fallos = sum(1 for r in resultados if not r["exito"])
-    
+
     print(f"📈 [STRESS TEST] {exitosos}/{num_hilos} guardados exitosamente, {fallos} fallos")
     print(f"📦 Total evoluciones en DB: {len(st.session_state['evoluciones_db'])}")
-    
+
     # Verificar que los datos estan en session_state aunque algunos saves
     # sean rate-limited (guardar_datos() retorna False si hay throttle)
     assert len(st.session_state["evoluciones_db"]) >= 25, f"Solo {len(st.session_state['evoluciones_db'])} evoluciones guardadas"
@@ -65,9 +65,9 @@ def test_optimistic_locking_guarda_sin_version_no_crashea():
     """Verifica que guardar_datos() no crashee aunque no haya _db_version."""
     st.session_state.pop("_db_version", None)
     st.session_state.pop("_db_version_last_seen", None)
-    
+
     st.session_state.setdefault("test_db", [])
     st.session_state["test_db"].append({"test": True})
-    
+
     resultado = guardar_datos(spinner=False)
     assert isinstance(resultado, bool)

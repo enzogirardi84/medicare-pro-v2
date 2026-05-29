@@ -31,11 +31,11 @@ def get_api_headers(token: Optional[str] = None) -> Dict[str, str]:
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    
+
     # Si tenemos un token en la sesión de Streamlit y no se pasó uno explícito
     elif "access_token" in st.session_state:
         headers["Authorization"] = f"Bearer {st.session_state['access_token']}"
-        
+
     return headers
 
 
@@ -47,7 +47,7 @@ def request_with_retry(method: str, endpoint: str, max_retries: int = 3, **kwarg
     """
     base_url = get_api_base_url()
     url = f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
-    
+
     # Inyectar headers por defecto si no vienen en kwargs
     if "headers" not in kwargs:
         kwargs["headers"] = get_api_headers()
@@ -78,7 +78,7 @@ def request_with_retry(method: str, endpoint: str, max_retries: int = 3, **kwarg
 
             retry_after_header = int(resp.headers.get("retry-after", "0"))
             retry_after = max(retry_after_header, retry_after_body, 1)
-            
+
             # Solo reintentamos en errores específicos de la API NextGen
             retryable = (resp.status_code == 503 and code == "server_busy") or \
                         (resp.status_code == 504 and code == "request_timeout")
@@ -92,16 +92,16 @@ def request_with_retry(method: str, endpoint: str, max_retries: int = 3, **kwarg
             backoff = min(5.0, 0.2 * (2 ** attempt))
             jitter = backoff * random.uniform(-0.25, 0.25)
             sleep_seconds = max(float(retry_after), backoff + jitter)
-            
+
             log_event("api_client", f"Reintento {attempt + 1}/{max_retries} para {url} en {sleep_seconds:.2f}s")
             time.sleep(sleep_seconds)
-            
+
         except requests.exceptions.RequestException as e:
             # Errores de red (connection refused, timeout de requests, etc)
             if attempt >= max_retries:
                 log_event("api_client", f"Fallo de red tras {max_retries} reintentos en {method} {url}: {e}")
                 raise
-            
+
             backoff = min(5.0, 0.2 * (2 ** attempt))
             jitter = backoff * random.uniform(-0.25, 0.25)
             time.sleep(backoff + jitter)

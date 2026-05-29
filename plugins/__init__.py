@@ -14,7 +14,7 @@ Para crear un plugin:
 
 Ejemplo:
     from core.plugin_system import MedicarePlugin, PluginInfo
-    
+
     class MyPlugin(MedicarePlugin):
         def get_info(self) -> PluginInfo:
             return PluginInfo(
@@ -24,11 +24,11 @@ Ejemplo:
                 author="Tu Nombre",
                 hooks=[PluginHook.PATIENT_CREATED]
             )
-        
+
         def initialize(self, config: dict) -> bool:
             # Inicialización
             return True
-        
+
         def on_patient_created(self, context: dict):
             # Handler del hook
             print(f"Paciente creado: {context}")

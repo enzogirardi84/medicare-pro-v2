@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 def calcular_edad(fecha_nacimiento: Optional[str]) -> Tuple[Optional[int], Optional[str]]:
     """Calcula edad a partir de fecha de nacimiento ISO.
-    
+
     Returns:
         (edad_en_anios, etiqueta_formateada)
     """
@@ -62,7 +62,7 @@ def mapear_detalles_paciente(paciente: Dict[str, Any]) -> Dict[str, Any]:
     apellido = str(paciente.get("apellido", ""))
     nombre_completo = f"{nombre} {apellido}".strip() or "S/D"
     edad, edad_str = calcular_edad(paciente.get("fecha_nacimiento"))
-    
+
     return {
         "nombre": nombre_completo,
         "dni": str(paciente.get("dni", "S/D")),

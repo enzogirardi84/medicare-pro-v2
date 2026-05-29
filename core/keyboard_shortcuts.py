@@ -37,12 +37,12 @@ class ShortcutManager:
     Gestor de atajos de teclado.
     Registra y maneja shortcuts globales y por módulo.
     """
-    
+
     def __init__(self):
         self.shortcuts: Dict[str, KeyboardShortcut] = {}
         self.actions: Dict[str, Callable] = {}
         self._enabled = True
-    
+
     def register(
         self,
         key: str,
@@ -54,7 +54,7 @@ class ShortcutManager:
     ):
         """
         Registrar un atajo de teclado.
-        
+
         Args:
             key: Combinación de teclas (ej: "Ctrl+S", "Escape", "Ctrl+K")
             description: Descripción legible
@@ -71,17 +71,17 @@ class ShortcutManager:
             module=module,
             prevent_default=prevent_default,
         )
-        
+
         self.shortcuts[key] = shortcut
         self.actions[key] = action
-    
+
     def unregister(self, key: str):
         """Eliminar un atajo registrado."""
         if key in self.shortcuts:
             del self.shortcuts[key]
         if key in self.actions:
             del self.actions[key]
-    
+
     def get_shortcuts_for_scope(
         self,
         scope: ShortcutScope,
@@ -89,20 +89,20 @@ class ShortcutManager:
     ) -> List[KeyboardShortcut]:
         """Obtener atajos para un ámbito específico."""
         result = []
-        
+
         for shortcut in self.shortcuts.values():
             if shortcut.scope == ShortcutScope.GLOBAL:
                 result.append(shortcut)
             elif shortcut.scope == scope:
                 if scope != ShortcutScope.MODULE or shortcut.module == module:
                     result.append(shortcut)
-        
+
         return result
-    
+
     def generate_js_handlers(self, scope: ShortcutScope, module: Optional[str] = None) -> str:
         """Generar JavaScript para manejar atajos."""
         shortcuts = self.get_shortcuts_for_scope(scope, module)
-        
+
         handlers = []
         for sc in shortcuts:
             # Parsear combinación
@@ -111,7 +111,7 @@ class ShortcutManager:
             has_alt = "Alt" in keys
             has_shift = "Shift" in keys
             main_key = keys[-1] if keys else ""
-            
+
             # Generar condición
             conditions = []
             if has_ctrl:
@@ -120,11 +120,11 @@ class ShortcutManager:
                 conditions.append("e.altKey")
             if has_shift:
                 conditions.append("e.shiftKey")
-            
+
             key_check = f"e.key === '{main_key}' || e.key === '{main_key.upper()}'"
-            
+
             all_conditions = " && ".join(conditions + [key_check]) if conditions else key_check
-            
+
             handler = f"""
             if ({all_conditions}) {{
                 {'e.preventDefault();' if sc.prevent_default else ''}
@@ -136,7 +136,7 @@ class ShortcutManager:
             }}
             """
             handlers.append(handler)
-        
+
         return f"""
         <script>
         document.addEventListener('keydown', function(e) {{
@@ -164,7 +164,7 @@ def get_shortcut_manager() -> ShortcutManager:
 def register_default_shortcuts():
     """Registrar atajos por defecto de MediCare."""
     manager = get_shortcut_manager()
-    
+
     # Atajos globales
     manager.register(
         key="Ctrl+S",
@@ -172,42 +172,42 @@ def register_default_shortcuts():
         action=lambda: st.toast("💾 Guardando..."),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+F",
         description="Buscar paciente",
         action=lambda: st.session_state.update({"_search_focus": True}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+K",
         description="Abrir menú de comandos",
         action=lambda: st.session_state.update({"_command_palette_open": True}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Escape",
         description="Cerrar modal/volver atrás",
         action=lambda: st.session_state.update({"_escape_pressed": True}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+N",
         description="Nuevo registro",
         action=lambda: st.session_state.update({"_new_record": True}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+P",
         description="Imprimir/PDF",
         action=lambda: st.session_state.update({"_print_requested": True}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     # Atajos de navegación
     manager.register(
         key="Ctrl+1",
@@ -215,28 +215,28 @@ def register_default_shortcuts():
         action=lambda: st.session_state.update({"current_view": "dashboard"}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+2",
         description="Ir a Evolución",
         action=lambda: st.session_state.update({"current_view": "evolucion"}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+3",
         description="Ir a Historial",
         action=lambda: st.session_state.update({"current_view": "historial"}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+4",
         description="Ir a Recetas",
         action=lambda: st.session_state.update({"current_view": "recetas"}),
         scope=ShortcutScope.GLOBAL,
     )
-    
+
     manager.register(
         key="Ctrl+0",
         description="Ir a Configuración",
@@ -255,15 +255,15 @@ def render_shortcuts_help(key: str = "shortcuts_help"):
     """
     manager = get_shortcut_manager()
     shortcuts = manager.shortcuts.values()
-    
+
     st.markdown("## ⌨️ Atajos de Teclado")
     st.caption("Navega más rápido sin usar el mouse")
-    
+
     # Agrupar por scope
     global_shortcuts = [s for s in shortcuts if s.scope == ShortcutScope.GLOBAL]
     module_shortcuts = [s for s in shortcuts if s.scope == ShortcutScope.MODULE]
     form_shortcuts = [s for s in shortcuts if s.scope == ShortcutScope.FORM]
-    
+
     if global_shortcuts:
         st.markdown("### 🌍 Globales")
         for sc in sorted(global_shortcuts, key=lambda x: x.key):
@@ -272,7 +272,7 @@ def render_shortcuts_help(key: str = "shortcuts_help"):
                 st.markdown(f"<kbd>{sc.key}</kbd>", unsafe_allow_html=True)
             with cols[1]:
                 st.caption(sc.description)
-    
+
     if module_shortcuts:
         st.markdown("### 📦 Por Módulo")
         for sc in sorted(module_shortcuts, key=lambda x: (x.module or "", x.key)):
@@ -283,7 +283,7 @@ def render_shortcuts_help(key: str = "shortcuts_help"):
                 st.caption(f"📁 {sc.module}")
             with cols[2]:
                 st.caption(sc.description)
-    
+
     st.markdown("---")
     st.info("💡 **Tip:** Presiona `Ctrl+K` en cualquier momento para abrir el menú de comandos")
 
@@ -291,14 +291,14 @@ def render_shortcuts_help(key: str = "shortcuts_help"):
 def render_keyboard_hint(key: str, hint: str, inline: bool = False):
     """
     Renderizar hint visual de atajo de teclado junto a un elemento.
-    
+
     Args:
         key: Combinación de teclas
         hint: Descripción corta
         inline: Si es True, muestra en línea
     """
     style = "" if inline else "margin-left: auto;"
-    
+
     html = f"""
     <span style="
         display: inline-flex;
@@ -323,7 +323,7 @@ def render_keyboard_hint(key: str, hint: str, inline: bool = False):
         <span>{hint}</span>
     </span>
     """
-    
+
     st.markdown(html, unsafe_allow_html=True)
 
 
@@ -338,12 +338,12 @@ def render_command_palette(
     """
     if not is_open:
         return
-    
+
     manager = get_shortcut_manager()
     shortcuts = list(manager.shortcuts.values())
-    
+
     # CSS consolidado en core/app_theme.py (sección COMMAND PALETTE OVERLAY)
-    
+
     # Input de búsqueda
     search = st.text_input(
         "Buscar comando...",
@@ -351,21 +351,21 @@ def render_command_palette(
         placeholder="Escribe para buscar comandos...",
         label_visibility="collapsed",
     )
-    
+
     # Filtrar shortcuts
     filtered = shortcuts
     if search:
         search_lower = search.lower()
         filtered = [
             s for s in shortcuts
-            if search_lower in s.description.lower() 
+            if search_lower in s.description.lower()
             or search_lower in s.key.lower()
         ]
-    
+
     # Mostrar resultados
     for i, sc in enumerate(filtered[:10]):  # Máximo 10 resultados
         cols = st.columns([4, 2])
-        
+
         with cols[0]:
             st.markdown(f"""
             <div style="padding: 0.5rem 0;">
@@ -375,10 +375,10 @@ def render_command_palette(
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        
+
         with cols[1]:
             render_keyboard_hint(sc.key, "")
-        
+
         # Click handler simulado con button invisible
         if st.button(f"Ejecutar: {sc.description}", key=f"{key}_cmd_{i}", type="secondary"):
             action = manager.actions.get(sc.action)
@@ -386,7 +386,7 @@ def render_command_palette(
                 action()
             if on_close:
                 on_close()
-    
+
     # Botón cerrar
     if st.button("Cerrar (Escape)", key=f"{key}_close"):
         if on_close:
@@ -404,7 +404,7 @@ def inject_shortcuts_js(scope: ShortcutScope = ShortcutScope.GLOBAL, module: Opt
     """
     manager = get_shortcut_manager()
     js_code = manager.generate_js_handlers(scope, module)
-    
+
     st.markdown(js_code, unsafe_allow_html=True)
 
 
@@ -416,12 +416,12 @@ def init_keyboard_shortcuts():
     """Inicializar sistema de atajos en la aplicación."""
     # Registrar atajos por defecto
     register_default_shortcuts()
-    
+
     # Guardar en session state
     if "_shortcuts_initialized" not in st.session_state:
         st.session_state._shortcuts_initialized = True
         st.session_state._command_palette_open = False
-    
+
     # Inyectar JS global
     inject_shortcuts_js(ShortcutScope.GLOBAL)
 
@@ -430,7 +430,7 @@ def check_shortcut_triggered(action: str) -> bool:
     """
     Verificar si un atajo fue activado.
     Usar en views para responder a shortcuts.
-    
+
     Returns:
         True si el atajo fue presionado
     """
@@ -449,32 +449,32 @@ def check_shortcut_triggered(action: str) -> bool:
 def demo_keyboard_shortcuts():
     """Demo interactiva de atajos de teclado."""
     st.markdown("## ⌨️ Demo de Atajos de Teclado")
-    
+
     # Inicializar
     init_keyboard_shortcuts()
-    
+
     # Mostrar ayuda
     with st.expander("Ver todos los atajos (Ctrl+H)", expanded=False):
         render_shortcuts_help()
-    
+
     # Simular triggers
     st.markdown("---")
     st.markdown("### 🧪 Simulación de Atajos")
-    
+
     cols = st.columns(3)
-    
+
     with cols[0]:
         if st.button("💾 Simular Ctrl+S"):
             st.toast("💾 Guardando...")
-    
+
     with cols[1]:
         if st.button("🔍 Simular Ctrl+F"):
             st.toast("🔍 Abriendo búsqueda...")
-    
+
     with cols[2]:
         if st.button("⌨️ Simular Ctrl+K"):
             st.session_state._command_palette_open = True
-    
+
     # Mostrar paleta de comandos
     if st.session_state.get("_command_palette_open"):
         st.markdown("---")
@@ -482,6 +482,6 @@ def demo_keyboard_shortcuts():
             is_open=True,
             on_close=lambda: st.session_state.update({"_command_palette_open": False})
         )
-    
+
     st.markdown("---")
     st.info("💡 **En una implementación real**, estos atajos funcionarían con el teclado físico")

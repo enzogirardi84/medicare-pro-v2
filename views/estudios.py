@@ -111,7 +111,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 if usar_cam:
                     foto_estudio = st.camera_input("Tomar foto en vivo", key=f"camara_estudio_{paciente_sel}")
 
-            if st.form_submit_button("Guardar Estudio Clinico", width='stretch', type="primary"):
+            if st.form_submit_button("Guardar Estudio Clinico", use_container_width=True, type="primary"):
                 img_b64 = ""
                 ext = ""
                 raw_bytes = None
@@ -145,7 +145,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 })
                 from core.database import _trim_db_list
                 _trim_db_list("estudios_db", 200)
-                
+
                 # --- NUEVO CÓDIGO SQL Y STORAGE ---
                 from core.database import supabase
                 from core.db_sql import insert_estudio
@@ -164,12 +164,12 @@ def render_estudios(paciente_sel, user, rol=None):
                                     # Subir a Storage
                                     file_path = f"{pac_uuid}/{uuid4()}.{ext}"
                                     content_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
-                                    
+
                                     # Usamos los bytes originales o los optimizados
                                     bytes_a_subir = raw_bytes
                                     supabase.storage.from_("medicare-estudios").upload(file_path, bytes_a_subir, {"content-type": content_type})
                                     archivo_url = supabase.storage.from_("medicare-estudios").get_public_url(file_path)
-                                    
+
                                 datos_sql = {
                                     "paciente_id": pac_uuid,
                                     "medico_solicitante": user.get("nombre", "Sistema"),
@@ -183,7 +183,7 @@ def render_estudios(paciente_sel, user, rol=None):
                 except Exception as e:
                     log_event("estudios_sql", f"error_dual_write:{type(e).__name__}")
                 # ----------------------------------
-                
+
                 if guardar_datos(spinner=True):
                     queue_toast("Estudio guardado correctamente.")
                 else:
@@ -195,24 +195,24 @@ def render_estudios(paciente_sel, user, rol=None):
     # --- SWITCH FINAL: LECTURA DESDE POSTGRESQL ---
     from core.db_sql import get_estudios_by_paciente
     from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
-    
+
     estudios_pac = []
     uso_sql = False
-    
+
     try:
         partes = paciente_sel.split(" - ")
         if len(partes) > 1:
             dni = partes[1].strip()
             empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
             empresa_id = _obtener_uuid_empresa(empresa)
-            
+
             if empresa_id:
                 pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                 if pac_uuid:
                     estudios_sql = get_estudios_by_paciente(pac_uuid)
                     uso_sql = True
                     registrar_estado_estudios_sql(st.session_state, ok=True, paciente=paciente_sel, rows=len(estudios_sql))
-                    
+
                     for e in estudios_sql:
                         fecha_raw = e.get("fecha_realizacion", "")
                         fecha_fmt = ""
@@ -220,7 +220,7 @@ def render_estudios(paciente_sel, user, rol=None):
                             d_parts = fecha_raw.split("-")
                             if len(d_parts) == 3:
                                 fecha_fmt = f"{d_parts[2]}/{d_parts[1]}/{d_parts[0]} 00:00:00"
-                        
+
                         estudios_pac.append({
                             "id_sql": e.get("id"),
                             "paciente": paciente_sel,
@@ -240,7 +240,7 @@ def render_estudios(paciente_sel, user, rol=None):
     except Exception as e:
         log_event("estudios_sql", f"error_lectura:{type(e).__name__}")
         registrar_estado_estudios_sql(st.session_state, ok=False, paciente=paciente_sel, rows=0, error=e)
-        
+
     if not uso_sql:
         estudios_pac = get_patient_records("estudios_db", paciente_sel)
         sql_status = estado_estudios_sql(st.session_state)
@@ -299,7 +299,7 @@ def render_estudios(paciente_sel, user, rol=None):
     if puede_borrar:
         col_del1, col_del1_chk = st.columns([3, 1.2])
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
-        if col_del1.button("Borrar ultimo estudio", width='stretch', disabled=not confirmar_ultimo):
+        if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
             if not estudios_pac:
                 log_event("estudios", "error: no hay estudios para borrar")
                 st.error("No hay estudios para borrar.")
@@ -310,13 +310,13 @@ def render_estudios(paciente_sel, user, rol=None):
                         st.session_state["estudios_db"].remove(ultimo_est)
                     except ValueError:
                         pass  # Intencional: item ya fue removido por otra operación concurrente
-                
+
                 # --- ACTUALIZAR EN SQL ---
                 if ultimo_est.get("id_sql"):
                     from core.db_sql import delete_estudio
                     delete_estudio(ultimo_est["id_sql"])
                 # -------------------------
-                
+
                 guardar_datos(spinner=True)
                 queue_toast("Estudio eliminado correctamente.")
                 st.rerun()
@@ -332,19 +332,19 @@ def render_estudios(paciente_sel, user, rol=None):
         estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
         col_sel_chk, col_sel_btn = st.columns([1.2, 2.8])
         confirmar_estudio = col_sel_chk.checkbox("Confirmar seleccion", key="conf_borrar_estudio")
-        if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", width='stretch', disabled=not confirmar_estudio):
+        if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True, disabled=not confirmar_estudio):
             objetivo = estudio_seleccionado[1]
             st.session_state["estudios_db"] = [
                 e for e in st.session_state.get("estudios_db", [])
                 if not _mismo_estudio(e, objetivo)
             ]
-            
+
             # --- ACTUALIZAR EN SQL ---
             if objetivo.get("id_sql"):
                 from core.db_sql import delete_estudio
                 delete_estudio(objetivo["id_sql"])
             # -------------------------
-            
+
             guardar_datos(spinner=True)
             queue_toast("Estudio eliminado correctamente.")
             st.rerun()
@@ -424,18 +424,18 @@ def render_estudios(paciente_sel, user, rol=None):
                     url = est.get("archivo_url") or ""
                     if url.startswith("http"):
                         if est.get("extension") == "pdf" or ".pdf" in url.lower():
-                            st.link_button("Abrir PDF en el navegador", url, width='stretch')
+                            st.link_button("Abrir PDF en el navegador", url, use_container_width=True)
                         else:
-                            st.image(url, caption="Documento Adjunto", width='stretch')
+                            st.image(url, caption="Documento Adjunto", use_container_width=True)
                     elif est.get("imagen"):
                         try:
                             img_bytes = base64.b64decode(est["imagen"])
                             if img_bytes.startswith(b"%PDF") or est.get("extension") == "pdf":
                                 fecha_est = (est.get("fecha") or "")[:10].replace("/", "-")
                                 nombre_arch = f"Estudio_{fecha_est}.pdf"
-                                st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", width='stretch')
+                                st.download_button("Descargar PDF", data=img_bytes, file_name=nombre_arch, mime="application/pdf", key=f"pdf_est_{est['fecha']}_{idx}", use_container_width=True)
                             else:
-                                st.image(img_bytes, caption="Documento Adjunto", width='stretch')
+                                st.image(img_bytes, caption="Documento Adjunto", use_container_width=True)
                         except Exception:
                             log_event("estudios", "error: no se pudo leer el archivo adjunto")
 

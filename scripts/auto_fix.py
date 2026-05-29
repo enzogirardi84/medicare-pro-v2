@@ -22,7 +22,7 @@ def log(msg):
 # 1. AUTO-FIX: use_container_width -> width (si quedaron)
 # ============================================================
 def fix_use_container_width() -> list:
-    """Reemplaza use_container_width=True/False por width='stretch'/'content'"""
+    """Reemplaza use_container_width=True/False por use_container_width=True/'content'"""
     fixes = []
     for py in REPO.rglob("*.py"):
         rel = py.relative_to(REPO)
@@ -31,9 +31,9 @@ def fix_use_container_width() -> list:
         texto = py.read_text(encoding="utf-8", errors="replace")
         if "use_container_width" not in texto:
             continue
-        nuevo = texto.replace("width='stretch'", "use_container_width=True")
-        nuevo = nuevo.replace('width="stretch"', "use_container_width=True")
-        nuevo = nuevo.replace("width='content'", "use_container_width=False")
+        nuevo = texto.replace("use_container_width=True", "use_container_width=True")
+        nuevo = nuevo.replace('use_container_width=True', "use_container_width=True")
+        nuevo = nuevo.replace("use_container_width=False", "use_container_width=False")
         if nuevo != texto:
             py.write_text(nuevo, encoding="utf-8")
             fixes.append(str(rel))

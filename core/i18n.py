@@ -45,7 +45,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "confirm": "Confirmar",
         "yes": "Sí",
         "no": "No",
-        
+
         # Navegación
         "nav_dashboard": "Dashboard",
         "nav_patients": "Pacientes",
@@ -57,7 +57,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav_admin": "Administración",
         "nav_settings": "Configuración",
         "nav_logout": "Cerrar Sesión",
-        
+
         # Pacientes
         "patient_new": "Nuevo Paciente",
         "patient_edit": "Editar Paciente",
@@ -75,7 +75,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "patient_allergies": "Alergias",
         "patient_medications": "Medicamentos Actuales",
         "patient_history": "Historial Médico",
-        
+
         # Signos Vitales
         "vital_blood_pressure": "Presión Arterial",
         "vital_heart_rate": "Frecuencia Cardíaca",
@@ -86,7 +86,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "vital_height": "Altura",
         "vital_bmi": "IMC",
         "vital_glucose": "Glucemia",
-        
+
         # Evolución
         "evolution_new": "Nueva Evolución",
         "evolution_note": "Nota de Evolución",
@@ -95,7 +95,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "evolution_next_visit": "Próxima Visita",
         "evolution_date": "Fecha",
         "evolution_doctor": "Médico",
-        
+
         # Mensajes
         "msg_saved": "Guardado exitosamente",
         "msg_error": "Ocurrió un error",
@@ -105,7 +105,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_success": "Operación exitosa",
         "msg_warning": "Advertencia",
         "msg_info": "Información",
-        
+
         # Errores
         "error_required": "Campo requerido",
         "error_invalid_email": "Email inválido",
@@ -113,7 +113,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "error_patient_exists": "El paciente ya existe",
         "error_unauthorized": "No autorizado",
         "error_server": "Error del servidor",
-        
+
         # Fechas
         "date_today": "Hoy",
         "date_yesterday": "Ayer",
@@ -121,7 +121,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "date_weeks_ago": "hace {weeks} semanas",
         "date_months_ago": "hace {months} meses",
     },
-    
+
     "pt": {
         # General
         "app_name": "Medicare Pro",
@@ -142,7 +142,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "confirm": "Confirmar",
         "yes": "Sim",
         "no": "Não",
-        
+
         # Navegación
         "nav_dashboard": "Painel",
         "nav_patients": "Pacientes",
@@ -154,7 +154,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav_admin": "Administração",
         "nav_settings": "Configurações",
         "nav_logout": "Sair",
-        
+
         # Pacientes
         "patient_new": "Novo Paciente",
         "patient_edit": "Editar Paciente",
@@ -172,7 +172,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "patient_allergies": "Alergias",
         "patient_medications": "Medicamentos Atuais",
         "patient_history": "Histórico Médico",
-        
+
         # Signos Vitales
         "vital_blood_pressure": "Pressão Arterial",
         "vital_heart_rate": "Frequência Cardíaca",
@@ -183,7 +183,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "vital_height": "Altura",
         "vital_bmi": "IMC",
         "vital_glucose": "Glicemia",
-        
+
         # Evolução
         "evolution_new": "Nova Evolução",
         "evolution_note": "Nota de Evolução",
@@ -192,7 +192,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "evolution_next_visit": "Próxima Visita",
         "evolution_date": "Data",
         "evolution_doctor": "Médico",
-        
+
         # Mensagens
         "msg_saved": "Salvo com sucesso",
         "msg_error": "Ocorreu um erro",
@@ -202,7 +202,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_success": "Operação bem-sucedida",
         "msg_warning": "Aviso",
         "msg_info": "Informação",
-        
+
         # Erros
         "error_required": "Campo obrigatório",
         "error_invalid_email": "Email inválido",
@@ -210,7 +210,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "error_patient_exists": "O paciente já existe",
         "error_unauthorized": "Não autorizado",
         "error_server": "Erro do servidor",
-        
+
         # Datas
         "date_today": "Hoje",
         "date_yesterday": "Ontem",
@@ -218,7 +218,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "date_weeks_ago": "há {weeks} semanas",
         "date_months_ago": "há {months} meses",
     },
-    
+
     "en": {
         # General
         "app_name": "Medicare Pro",
@@ -239,7 +239,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "confirm": "Confirm",
         "yes": "Yes",
         "no": "No",
-        
+
         # Navigation
         "nav_dashboard": "Dashboard",
         "nav_patients": "Patients",
@@ -251,7 +251,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav_admin": "Administration",
         "nav_settings": "Settings",
         "nav_logout": "Logout",
-        
+
         # Patients
         "patient_new": "New Patient",
         "patient_edit": "Edit Patient",
@@ -269,7 +269,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "patient_allergies": "Allergies",
         "patient_medications": "Current Medications",
         "patient_history": "Medical History",
-        
+
         # Vital Signs
         "vital_blood_pressure": "Blood Pressure",
         "vital_heart_rate": "Heart Rate",
@@ -280,7 +280,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "vital_height": "Height",
         "vital_bmi": "BMI",
         "vital_glucose": "Glucose",
-        
+
         # Evolution
         "evolution_new": "New Evolution",
         "evolution_note": "Evolution Note",
@@ -289,7 +289,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "evolution_next_visit": "Next Visit",
         "evolution_date": "Date",
         "evolution_doctor": "Doctor",
-        
+
         # Messages
         "msg_saved": "Saved successfully",
         "msg_error": "An error occurred",
@@ -299,7 +299,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "msg_success": "Operation successful",
         "msg_warning": "Warning",
         "msg_info": "Information",
-        
+
         # Errors
         "error_required": "Required field",
         "error_invalid_email": "Invalid email",
@@ -307,7 +307,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "error_patient_exists": "Patient already exists",
         "error_unauthorized": "Unauthorized",
         "error_server": "Server error",
-        
+
         # Dates
         "date_today": "Today",
         "date_yesterday": "Yesterday",
@@ -320,104 +320,104 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
 class I18nManager:
     """Manager de internacionalización."""
-    
+
     def __init__(self, default_locale: str = DEFAULT_LOCALE):
         self.default_locale = default_locale
         self._current_locale = default_locale
         self._translations = TRANSLATIONS
-    
+
     @property
     def current_locale(self) -> str:
         """Obtiene locale actual."""
         return self._current_locale
-    
+
     def set_locale(self, locale: str) -> bool:
         """
         Cambia el locale actual.
-        
+
         Args:
             locale: Código de locale (es, pt, en)
-        
+
         Returns:
             True si el cambio fue exitoso
         """
         if locale not in SUPPORTED_LOCALES:
             log_event("i18n", f"Unsupported locale: {locale}")
             return False
-        
+
         self._current_locale = locale
-        
+
         # Guardar en session_state de Streamlit
         if 'i18n_locale' in st.session_state:
             st.session_state['i18n_locale'] = locale
-        
+
         log_event("i18n", f"Locale changed to: {locale}")
         return True
-    
+
     def get_locale_from_session(self) -> str:
         """Obtiene locale desde session_state."""
         if 'i18n_locale' in st.session_state:
             return st.session_state['i18n_locale']
-        
+
         # Detectar del browser
         return self.detect_browser_locale()
-    
+
     def detect_browser_locale(self) -> str:
         """Detecta locale preferido del browser."""
         # En producción, esto vendría del request HTTP
         # Por ahora, default
         return self.default_locale
-    
+
     def _(self, key: str, **kwargs) -> str:
         """
         Traduce una clave al locale actual.
-        
+
         Args:
             key: Clave de traducción
             **kwargs: Variables para interpolación
-        
+
         Returns:
             Texto traducido
         """
         # Buscar en locale actual
         translation = self._translations.get(self._current_locale, {}).get(key)
-        
+
         # Fallback a default
         if translation is None:
             translation = self._translations.get(self.default_locale, {}).get(key, key)
-        
+
         # Interpolar variables
         if kwargs:
             try:
                 translation = translation.format(**kwargs)
             except KeyError:
                 pass  # Mantener {variable} si no se proporciona
-        
+
         return translation
-    
+
     def translate(self, key: str, locale: Optional[str] = None, **kwargs) -> str:
         """
         Traduce a un locale específico.
-        
+
         Args:
             key: Clave de traducción
             locale: Locale específico (opcional)
             **kwargs: Variables para interpolación
         """
         target_locale = locale or self._current_locale
-        
+
         translation = self._translations.get(target_locale, {}).get(key)
         if translation is None:
             translation = self._translations.get(self.default_locale, {}).get(key, key)
-        
+
         if kwargs:
             try:
                 translation = translation.format(**kwargs)
             except KeyError:
                 pass
-        
+
         return translation
-    
+
     def get_available_locales(self) -> List[Dict[str, str]]:
         """Retorna lista de locales disponibles."""
         locale_info = {
@@ -425,23 +425,23 @@ class I18nManager:
             "pt": {"name": "Português", "flag": "🇧🇷"},
             "en": {"name": "English", "flag": "🇺🇸"},
         }
-        
+
         return [
             {"code": code, **locale_info.get(code, {})}
             for code in SUPPORTED_LOCALES
         ]
-    
+
     def format_date(self, date_obj, format: str = "short") -> str:
         """
         Formatea fecha según locale.
-        
+
         Args:
             date_obj: Objeto fecha/datetime
             format: 'short', 'long', 'full'
         """
         if date_obj is None:
             return ""
-        
+
         formats = {
             "es": {
                 "short": "%d/%m/%Y",
@@ -459,14 +459,14 @@ class I18nManager:
                 "full": "%A, %B %d, %Y"
             }
         }
-        
+
         fmt = formats.get(self._current_locale, formats[self.default_locale]).get(format, "%d/%m/%Y")
-        
+
         try:
             return date_obj.strftime(fmt)
         except (ValueError, TypeError, AttributeError):
             return str(date_obj)
-    
+
     def format_number(self, number: float, decimals: int = 2) -> str:
         """Formatea número según locale."""
         if self._current_locale == "en":
@@ -474,14 +474,14 @@ class I18nManager:
         else:
             # Español/Portugués: coma como decimal, punto como miles
             return f"{number:,.{decimals}f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    
+
     def format_currency(self, amount: float, currency: str = "$") -> str:
         """Formatea moneda según locale."""
         if self._current_locale == "en":
             return f"{currency}{amount:,.2f}"
         else:
             return f"{currency} {self.format_number(amount, 2)}"
-    
+
     def relative_date(self, days: int) -> str:
         """Retorna fecha relativa (hace X días)."""
         if days == 0:
@@ -523,21 +523,21 @@ def set_locale(locale: str) -> bool:
 def render_language_selector():
     """Renderiza selector de idioma en Streamlit."""
     i18n = get_i18n()
-    
+
     locales = i18n.get_available_locales()
-    
+
     current = i18n.current_locale
     options = {f"{loc['flag']} {loc['name']}": loc['code'] for loc in locales}
-    
+
     selected_label = st.selectbox(
         "🌐 " + _("nav_settings"),
         options=list(options.keys()),
         index=list(options.values()).index(current) if current in options.values() else 0,
         key="language_selector"
     )
-    
+
     selected_code = options[selected_label]
-    
+
     if selected_code != current:
         if set_locale(selected_code):
             st.success(f"✅ Idioma cambiado a {selected_label}")
@@ -547,7 +547,7 @@ def render_language_selector():
 def init_i18n():
     """Inicializa sistema de i18n."""
     i18n = get_i18n()
-    
+
     # Intentar recuperar de session
     if 'i18n_locale' in st.session_state:
         i18n.set_locale(st.session_state['i18n_locale'])
@@ -559,9 +559,9 @@ def init_i18n():
 if __name__ == "__main__":
     # Demo
     print("=== i18n Demo ===")
-    
+
     i18n = get_i18n()
-    
+
     for locale in SUPPORTED_LOCALES:
         i18n.set_locale(locale)
         print(f"\n{locale.upper()}:")

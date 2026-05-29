@@ -15,12 +15,12 @@ import streamlit as st
 def tooltip(text: str, tooltip_text: str, position: str = "top") -> str:
     """
     Generar HTML para tooltip médico.
-    
+
     Args:
         text: Texto visible
         tooltip_text: Texto del tooltip
         position: "top" o "right"
-    
+
     Returns:
         HTML string
     """
@@ -41,12 +41,12 @@ def render_tooltip(text: str, tooltip_text: str, position: str = "top"):
 def badge(label: str, variant: str = "info") -> str:
     """
     Generar badge clínico.
-    
+
     Variantes: critical, warning, success, info, neutral, alergia, urgencia
     """
     valid_variants = ["critical", "warning", "success", "info", "neutral", "alergia", "urgencia"]
     variant = variant if variant in valid_variants else "info"
-    
+
     return f'<span class="mc-badge mc-badge-{variant}">{html.escape(label)}</span>'
 
 
@@ -77,7 +77,7 @@ def medical_card(
 ) -> str:
     """
     Generar card médica con animación.
-    
+
     Args:
         title: Título de la card
         content: Contenido HTML o texto
@@ -88,7 +88,7 @@ def medical_card(
     critical_class = "critica" if is_critical else ""
     animation_class = f"mc-animate-{animation.replace('-', '')}"
     stagger_class = f"mc-stagger-{stagger}" if stagger else ""
-    
+
     return f'''
     <div class="mc-medical-card {critical_class} {animation_class} {stagger_class}">
         <div class="mc-medical-card-header">
@@ -121,7 +121,7 @@ def timeline_item(
 ) -> str:
     """
     Generar item de timeline clínico.
-    
+
     Args:
         date: Fecha/hora del evento
         title: Título del evento
@@ -129,7 +129,7 @@ def timeline_item(
         status: normal, critico, mejora
     """
     status_class = status if status in ["critico", "mejora"] else ""
-    
+
     return f'''
     <div class="mc-timeline-item {status_class}">
         <div class="mc-timeline-header">
@@ -144,7 +144,7 @@ def timeline_item(
 def timeline(items: List[Dict[str, str]]) -> str:
     """
     Generar timeline completo desde lista de items.
-    
+
     Args:
         items: Lista de dicts con keys: date, title, content, status
     """
@@ -157,7 +157,7 @@ def timeline(items: List[Dict[str, str]]) -> str:
         )
         for item in items
     ])
-    
+
     return f'<div class="mc-timeline">{items_html}</div>'
 
 
@@ -179,7 +179,7 @@ def render_text_gradient(text: str):
 def glass_container(content: str, border: bool = False) -> str:
     """
     Contenedor con efecto glassmorphism.
-    
+
     Args:
         content: HTML content
         border: Si tiene borde gradiente
@@ -210,20 +210,20 @@ def patient_header_card(
     Card de encabezado de paciente con badges.
     """
     estado_badge = badge(estado, "success" if estado == "Activo" else "warning")
-    
+
     alertas_html = ""
     if alertas:
         alertas_badges = " ".join([badge(a, "alergia") for a in alertas])
         alertas_html = f'<div style="margin-top:0.5rem;">{alertas_badges}</div>'
-    
+
     info_extra = []
     if edad:
         info_extra.append(f"{edad} años")
     if obra_social:
         info_extra.append(html.escape(obra_social))
-    
+
     info_line = " | ".join(info_extra) if info_extra else ""
-    
+
     content = f'''
     <div style="display:flex;justify-content:space-between;align-items:center;">
         <div>
@@ -236,7 +236,7 @@ def patient_header_card(
     </div>
     {alertas_html}
     '''
-    
+
     return medical_card("", content, is_critical=bool(alertas))
 
 
@@ -261,7 +261,7 @@ def vital_sign_badge(tipo: str, valor: str, unidad: str, es_normal: bool = True)
     """
     status = "success" if es_normal else "critical"
     icono = {"presion": "cardiology", "frecuencia": "monitor_heart", "temperatura": "thermometer", "saturacion": "air"}.get(tipo, "monitoring")
-    
+
     return f'''
     <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;
                 background:rgba(30,41,59,0.6);border-radius:8px;margin:0.25rem;">
@@ -317,17 +317,17 @@ def styled_button(
         "download": "download",
         "view": "visibility",
     }
-    
+
     icon_str = icon or icons.get(variant, "")
-    
+
     colors = {
         "primary": "#3b82f6",
         "secondary": "#64748b",
         "danger": "#ef4444",
     }
-    
+
     color = colors.get(variant, "#3b82f6")
-    
+
     return f'''
     <button class="mc-btn-hover" style="
         background:{color};
@@ -353,7 +353,7 @@ def styled_button(
 def demo_all_components():
     """Demo de todos los componentes disponibles."""
     st.markdown("## 🎨 Demo de Componentes UI Médicos")
-    
+
     # Badges
     st.markdown("### Badges Clínicos")
     cols = st.columns(2)
@@ -363,7 +363,7 @@ def demo_all_components():
     with cols[1]:
         render_badge("ADVERTENCIA", "warning")
         render_badge("ALERGIA", "alergia")
-    
+
     # Status dots
     st.markdown("### Indicadores de Estado")
     cols = st.columns(3)
@@ -376,7 +376,7 @@ def demo_all_components():
     with cols[2]:
         st.markdown("Crítico:")
         render_status_dot("critical")
-    
+
     # Timeline
     st.markdown("### Timeline Clínico")
     timeline_items = [
@@ -400,7 +400,7 @@ def demo_all_components():
         }
     ]
     render_timeline(timeline_items)
-    
+
     # Cards
     st.markdown("### Cards Médicas")
     render_medical_card(
@@ -409,7 +409,7 @@ def demo_all_components():
         animation="fade-up",
         stagger=1
     )
-    
+
     render_medical_card(
         "⚠️ Alerta de Laboratorio",
         "Creatinina: 2.8 mg/dL (elevada). Considerar ajuste de dosis de antibióticos.",
@@ -417,7 +417,7 @@ def demo_all_components():
         animation="fade-up",
         stagger=2
     )
-    
+
     # Patient header
     st.markdown("### Header de Paciente")
     render_patient_header_card(

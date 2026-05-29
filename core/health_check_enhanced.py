@@ -60,7 +60,7 @@ class SystemHealthReport:
     overall_status: ComponentStatus
     components: List[ComponentHealth]
     system_metrics: Dict[str, Any]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convierte a diccionario para JSON."""
         return {
@@ -82,12 +82,12 @@ class SystemHealthReport:
 
 class HealthCheckEnhanced:
     """Health checks específicos para componentes de MediCare."""
-    
+
     def __init__(self):
         self._checks: Dict[str, Callable[[], ComponentHealth]] = {}
         self._last_report: Optional[SystemHealthReport] = None
         self._register_default_checks()
-    
+
     def _register_default_checks(self) -> None:
         """Registra health checks por defecto."""
         self._checks["supabase"] = self._check_supabase
@@ -95,21 +95,21 @@ class HealthCheckEnhanced:
         self._checks["session_state"] = self._check_session_state
         self._checks["disk_space"] = self._check_disk_space
         self._checks["memory"] = self._check_memory
-    
+
     def _check_supabase(self) -> ComponentHealth:
         """Verifica conexión a Supabase."""
         start = time.time()
-        
+
         try:
             from core._database_supabase import supabase as _supabase_mod, init_supabase
-            
+
             client = _supabase_mod or init_supabase()
-            
+
             if client:
                 # Ping simple
                 response = client.table("pacientes").select("count", count="exact").limit(1).execute()
                 latency = (time.time() - start) * 1000
-                
+
                 return ComponentHealth(
                     name="Supabase",
                     status=ComponentStatus.HEALTHY if latency < 1000 else ComponentStatus.DEGRADED,
@@ -127,7 +127,7 @@ class HealthCheckEnhanced:
                     message="Cliente no inicializado",
                     details={}
                 )
-                
+
         except Exception as e:
             return ComponentHealth(
                 name="Supabase",
@@ -137,15 +137,15 @@ class HealthCheckEnhanced:
                 message=f"Error: {type(e).__name__}",
                 details={"error": str(e)}
             )
-    
+
     def _check_redis(self) -> ComponentHealth:
         """Verifica conexión a Redis."""
         start = time.time()
-        
+
         try:
             settings = _get_settings()
             redis_url = settings.redis_url
-            
+
             if not redis_url:
                 return ComponentHealth(
                     name="Redis",
@@ -155,21 +155,21 @@ class HealthCheckEnhanced:
                     message="No configurado (opcional)",
                     details={}
                 )
-            
+
             import redis
             client = redis.from_url(
                 redis_url.get_secret_value(),
                 socket_connect_timeout=2,
                 socket_timeout=2
             )
-            
+
             # Ping
             client.ping()
             latency = (time.time() - start) * 1000
-            
+
             # Info básico
             info = client.info()
-            
+
             return ComponentHealth(
                 name="Redis",
                 status=ComponentStatus.HEALTHY if latency < 100 else ComponentStatus.DEGRADED,
@@ -182,7 +182,7 @@ class HealthCheckEnhanced:
                     "connected_clients": info.get("connected_clients")
                 }
             )
-            
+
         except Exception as e:
             return ComponentHealth(
                 name="Redis",
@@ -192,17 +192,17 @@ class HealthCheckEnhanced:
                 message=f"No disponible: {type(e).__name__}",
                 details={"error": str(e)}
             )
-    
+
     def _check_session_state(self) -> ComponentHealth:
         """Verifica estado de la sesión Streamlit."""
         try:
             # Verificar session_state accesible
             keys_count = len(st.session_state.keys())
-            
+
             # Verificar datos críticos presentes
             critical_keys = ["pacientes_db", "usuarios_db", "evoluciones_db"]
             missing = [k for k in critical_keys if k not in st.session_state]
-            
+
             # Calcular tamaño aproximado
             total_size = 0
             for key in st.session_state.keys():
@@ -211,15 +211,15 @@ class HealthCheckEnhanced:
                     total_size += sys.getsizeof(st.session_state[key])
                 except Exception:
                     pass
-            
+
             size_mb = total_size / (1024 * 1024)
-            
+
             status = ComponentStatus.HEALTHY
             if missing:
                 status = ComponentStatus.DEGRADED
             if size_mb > 100:  # >100MB
                 status = ComponentStatus.DEGRADED
-            
+
             return ComponentHealth(
                 name="Session State",
                 status=status,
@@ -232,7 +232,7 @@ class HealthCheckEnhanced:
                     "missing_critical": missing
                 }
             )
-            
+
         except Exception as e:
             return ComponentHealth(
                 name="Session State",
@@ -242,20 +242,20 @@ class HealthCheckEnhanced:
                 message=f"Error: {type(e).__name__}",
                 details={"error": str(e)}
             )
-    
+
     def _check_disk_space(self) -> ComponentHealth:
         """Verifica espacio en disco."""
         try:
             disk = psutil.disk_usage('/')
             percent_used = disk.percent
             free_gb = disk.free / (1024**3)
-            
+
             status = ComponentStatus.HEALTHY
             if percent_used > 90:
                 status = ComponentStatus.UNHEALTHY
             elif percent_used > 80:
                 status = ComponentStatus.DEGRADED
-            
+
             return ComponentHealth(
                 name="Disco",
                 status=status,
@@ -268,7 +268,7 @@ class HealthCheckEnhanced:
                     "total_gb": round(disk.total / (1024**3), 2)
                 }
             )
-            
+
         except Exception as e:
             return ComponentHealth(
                 name="Disco",
@@ -278,20 +278,20 @@ class HealthCheckEnhanced:
                 message=f"No verificable: {type(e).__name__}",
                 details={}
             )
-    
+
     def _check_memory(self) -> ComponentHealth:
         """Verifica uso de memoria."""
         try:
             memory = psutil.virtual_memory()
             percent_used = memory.percent
             available_gb = memory.available / (1024**3)
-            
+
             status = ComponentStatus.HEALTHY
             if percent_used > 95:
                 status = ComponentStatus.UNHEALTHY
             elif percent_used > 85:
                 status = ComponentStatus.DEGRADED
-            
+
             return ComponentHealth(
                 name="Memoria RAM",
                 status=status,
@@ -304,7 +304,7 @@ class HealthCheckEnhanced:
                     "total_gb": round(memory.total / (1024**3), 2)
                 }
             )
-            
+
         except Exception as e:
             return ComponentHealth(
                 name="Memoria RAM",
@@ -314,11 +314,11 @@ class HealthCheckEnhanced:
                 message=f"No verificable: {type(e).__name__}",
                 details={}
             )
-    
+
     def run_all_checks(self) -> SystemHealthReport:
         """Ejecuta todos los health checks registrados."""
         components = []
-        
+
         for name, check_fn in self._checks.items():
             try:
                 result = check_fn()
@@ -332,7 +332,7 @@ class HealthCheckEnhanced:
                     message=f"Check falló: {type(e).__name__}",
                     details={"error": str(e)}
                 ))
-        
+
         # Determinar estado general
         overall = ComponentStatus.HEALTHY
         for c in components:
@@ -341,25 +341,25 @@ class HealthCheckEnhanced:
                 break
             elif c.status == ComponentStatus.DEGRADED and overall == ComponentStatus.HEALTHY:
                 overall = ComponentStatus.DEGRADED
-        
+
         # Métricas del sistema
         system_metrics = self._get_system_metrics()
-        
+
         report = SystemHealthReport(
             timestamp=datetime.now(timezone.utc).isoformat(),
             overall_status=overall,
             components=components,
             system_metrics=system_metrics
         )
-        
+
         self._last_report = report
-        
+
         # Log si hay problemas
         if overall != ComponentStatus.HEALTHY:
             log_event("health_check", f"status:{overall.value}")
-        
+
         return report
-    
+
     def _get_system_metrics(self) -> Dict[str, Any]:
         """Obtiene métricas del sistema."""
         try:
@@ -370,16 +370,16 @@ class HealthCheckEnhanced:
             }
         except Exception:
             return {}
-    
+
     def get_last_report(self) -> Optional[SystemHealthReport]:
         """Retorna último reporte generado."""
         return self._last_report
-    
+
     def is_system_healthy(self) -> bool:
         """Retorna True si el sistema está saludable."""
         if not self._last_report:
             self.run_all_checks()
-        
+
         return self._last_report.overall_status == ComponentStatus.HEALTHY if self._last_report else False
 
 
@@ -402,11 +402,11 @@ def check_system_health() -> SystemHealthReport:
 def render_health_dashboard() -> None:
     """Renderiza dashboard de salud en Streamlit."""
     import streamlit as st
-    
+
     st.header("🩺 Estado del Sistema")
-    
+
     report = check_system_health()
-    
+
     # Estado general
     if report.overall_status == ComponentStatus.HEALTHY:
         st.success(f"## {report.overall_status.value}")
@@ -415,12 +415,12 @@ def render_health_dashboard() -> None:
     else:
         log_event("health_check", f"error: sistema no saludable: {report.overall_status.value}")
         st.error(f"## {report.overall_status.value}")
-    
+
     st.caption(f"Última actualización: {report.timestamp}")
-    
+
     # Componentes individuales
     cols = st.columns(len(report.components))
-    
+
     for idx, component in enumerate(report.components):
         with cols[idx]:
             st.metric(
@@ -429,12 +429,12 @@ def render_health_dashboard() -> None:
                 delta=f"{component.latency_ms}ms" if component.latency_ms > 0 else None
             )
             st.caption(component.message)
-    
+
     # Detalles expandibles
     with st.expander("📋 Detalles técnicos"):
         for component in report.components:
             st.subheader(component.name)
             st.json(component.details)
-        
+
         st.subheader("Métricas del sistema")
         st.json(report.system_metrics)

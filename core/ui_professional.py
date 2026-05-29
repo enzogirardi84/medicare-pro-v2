@@ -55,7 +55,7 @@ def metric_card(
     delta_class = "positive" if delta_type == "positive" else "negative" if delta_type == "negative" else "neutral"
     delta_html = f'<div class="metric-delta {delta_class}">{delta}</div>' if delta else ""
     icon_html = f"{icon} " if icon else ""
-    
+
     html = f"""
     <div class="metric-card">
         <div class="metric-value">{icon_html}{value}</div>
@@ -81,7 +81,7 @@ def alert(message: str, type_: str = "info", icon: Optional[str] = None) -> str:
         "info": "ℹ"
     }
     icon_display = icon or icons.get(type_, "ℹ")
-    
+
     return f"""
     <div class="alert alert-{type_}">
         <span style="font-size: 1.25rem;">{icon_display}</span>
@@ -97,7 +97,7 @@ def data_table(headers: List[str], rows: List[List[Any]]) -> str:
     for row in rows:
         cells = "".join([f"<td>{cell}</td>" for cell in row])
         rows_html += f"<tr>{cells}</tr>"
-    
+
     return f"""
     <table class="data-table">
         <thead><tr>{header_html}</tr></thead>
@@ -186,12 +186,12 @@ def render_sidebar_nav(items: List[Dict[str, Any]], active: Optional[str] = None
         <h3 style="margin: 0; color: #1E293B; font-size: 1.125rem;">📋 Menú</h3>
     </div>
     """, unsafe_allow_html=True)
-    
+
     for item in items:
         is_active = item.get('id') == active
         bg_color = "#DBEAFE" if is_active else "transparent"
         text_color = "#2563EB" if is_active else "#64748B"
-        
+
         st.sidebar.markdown(f"""
         <div style="
             padding: 0.5rem 0.75rem;
@@ -211,12 +211,12 @@ def render_sidebar_nav(items: List[Dict[str, Any]], active: Optional[str] = None
 def render_page_header(title: str, subtitle: Optional[str] = None, actions: Optional[List] = None):
     """Renderiza el encabezado de página profesional."""
     col1, col2 = st.columns([3, 1])
-    
+
     with col1:
         st.markdown(f"<h1>{title}</h1>", unsafe_allow_html=True)
         if subtitle:
             st.markdown(f"<p style='color: #64748B; font-size: 1.125rem; margin-top: -0.5rem;'>{subtitle}</p>", unsafe_allow_html=True)
-    
+
     with col2:
         if actions:
             for action in actions:
@@ -298,22 +298,22 @@ def format_number(num: Union[int, float]) -> str:
 
 if __name__ == "__main__":
     configure_professional_page("Demo UI", icon="🎨")
-    
+
     render_page_header(
         "Dashboard Profesional",
         "Sistema de gestión médica Medicare Pro"
     )
-    
+
     # Métricas
     render_metrics_row([
         {"value": "1,234", "label": "Pacientes", "delta": "+12%", "delta_type": "positive", "icon": "👥"},
         {"value": "89", "label": "Consultas hoy", "delta": "+5%", "delta_type": "positive", "icon": "📅"},
         {"value": "15", "label": "Urgencias", "delta": "-3%", "delta_type": "negative", "icon": "🚨"},
     ])
-    
+
     # Alerta
     render_alert("Sistema funcionando correctamente. Último backup: hace 2 horas.", "success")
-    
+
     # Card con tabla
     # Fix 2026-05-14: archivo venía truncado en mitad de esta expresión causando
     # SyntaxError fatal al importar core.ui_professional → pantalla azul al boot.

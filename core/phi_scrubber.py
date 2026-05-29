@@ -17,11 +17,11 @@ _PHI_PATTERNS = [
 
 def scrub_phi(text: str, replacement: str = "[PHI_OMITIDO]") -> str:
     """Reemplaza PHI en el texto con marcadores seguros.
-    
+
     Args:
         text: Texto que puede contener PHI.
         replacement: Texto de reemplazo por defecto.
-    
+
     Returns:
         Texto sin PHI.
     """

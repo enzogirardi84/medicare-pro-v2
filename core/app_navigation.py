@@ -156,7 +156,7 @@ def render_modulos_grid(modulos, modulo_actual=None, view_nav_labels=None):
                 if st.button(
                     f"{icono} {texto}",
                     key=f"nav_g_{nombre_raw}",
-                    width='stretch',
+                    use_container_width=True,
                     type=tipo,
                 ):
                     set_modulo_actual(nombre_raw, rerun=True)
@@ -182,7 +182,7 @@ def _render_modulos_sub(modulos, modulo_actual=None, view_nav_labels=None):
                 if st.button(
                     f"{icono} {texto}",
                     key=f"nav_a_{nombre_raw}",
-                    width='stretch',
+                    use_container_width=True,
                     type=tipo,
                 ):
                     _nav_select_y_colapsar(nombre_raw)

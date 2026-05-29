@@ -61,7 +61,7 @@ class EmailTemplate:
 class EmailNotificationManager:
     """
     Manager de notificaciones por email.
-    
+
     Soporta:
     - Envío sincrónico y async
     - Templates
@@ -69,10 +69,10 @@ class EmailNotificationManager:
     - Retry automático
     - Tracking de estado
     """
-    
+
     # Rate limiting: máximo 10 emails por hora a cada destinatario
     RATE_LIMIT_PER_HOUR = 10
-    
+
     # Templates predefinidos
     TEMPLATES = {
         "welcome": EmailTemplate(
@@ -134,7 +134,7 @@ El equipo de Medicare Pro
             """.strip(),
             required_vars=["nombre", "username", "empresa", "login_url"]
         ),
-        
+
         "password_reset": EmailTemplate(
             name="password_reset",
             subject="Recuperación de Contraseña - Medicare Pro",
@@ -157,8 +157,8 @@ Medicare Pro
 <head>
     <style>
         body { font-family: Arial, sans-serif; }
-        .code { font-size: 24px; font-weight: bold; letter-spacing: 4px; 
-                background: #0f172a; color: #14b8a6; padding: 15px; 
+        .code { font-size: 24px; font-weight: bold; letter-spacing: 4px;
+                background: #0f172a; color: #14b8a6; padding: 15px;
                 text-align: center; border-radius: 8px; }
     </style>
 </head>
@@ -174,7 +174,7 @@ Medicare Pro
             """.strip(),
             required_vars=["nombre", "reset_code"]
         ),
-        
+
         "appointment_reminder": EmailTemplate(
             name="appointment_reminder",
             subject="Recordatorio de Cita - Medicare Pro",
@@ -214,7 +214,7 @@ Medicare Pro
             """.strip(),
             required_vars=["nombre_paciente", "fecha", "hora", "profesional", "lugar"]
         ),
-        
+
         "security_alert": EmailTemplate(
             name="security_alert",
             subject="🚨 Alerta de Seguridad - Medicare Pro",
@@ -253,15 +253,15 @@ Medicare Pro Security
             required_vars=["detalle", "timestamp", "ip_address"]
         ),
     }
-    
+
     def __init__(self):
         self.provider = self._get_provider()
         self.cache = get_cache()
-    
+
     def _get_provider(self) -> EmailProvider:
         """Determina el provider de email configurado."""
         provider_str = os.getenv("EMAIL_PROVIDER", "smtp").lower()
-        
+
         if provider_str == "sendgrid":
             return EmailProvider.SENDGRID
         elif provider_str == "aws_ses":
@@ -270,27 +270,27 @@ Medicare Pro Security
             return EmailProvider.MAILGUN
         else:
             return EmailProvider.SMTP
-    
+
     def _check_rate_limit(self, to_email: str) -> bool:
         """Verifica rate limiting por destinatario."""
         cache_key = f"email_rate_limit:{to_email}"
-        
+
         # Contar emails enviados en la última hora
         count = self.cache.get(cache_key) or 0
-        
+
         if count >= self.RATE_LIMIT_PER_HOUR:
             log_event("email_rate_limit", f"Rate limit exceeded for {to_email}")
             return False
-        
+
         # Incrementar contador
         self.cache.set(cache_key, count + 1, ttl=3600)
         return True
-    
+
     def validate_email(self, email: str) -> bool:
         """Valida formato de email."""
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         return bool(re.match(pattern, email))
-    
+
     def render_template(
         self,
         template_name: str,
@@ -298,28 +298,28 @@ Medicare Pro Security
     ) -> EmailMessage:
         """
         Renderiza un template con variables.
-        
+
         Args:
             template_name: Nombre del template
             variables: Dict con variables a reemplazar
-        
+
         Returns:
             EmailMessage listo para enviar
         """
         template = self.TEMPLATES.get(template_name)
         if not template:
             raise ValueError(f"Template no encontrado: {template_name}")
-        
+
         # Verificar variables requeridas
         missing = [v for v in template.required_vars if v not in variables]
         if missing:
             raise ValueError(f"Variables faltantes: {missing}")
-        
+
         # Renderizar
         subject = template.subject
         body_text = template.body_text.format(**variables)
         body_html = template.body_html.format(**variables)
-        
+
         return EmailMessage(
             to=variables.get("email", ""),
             subject=subject,
@@ -328,7 +328,7 @@ Medicare Pro Security
             from_name="Medicare Pro",
             from_email=os.getenv("EMAIL_FROM", "noreply@medicare.local")
         )
-    
+
     def send_email(
         self,
         message: EmailMessage,
@@ -336,11 +336,11 @@ Medicare Pro Security
     ) -> Dict[str, Any]:
         """
         Envía un email.
-        
+
         Args:
             message: EmailMessage a enviar
             check_rate_limit: Si verificar rate limiting
-        
+
         Returns:
             Dict con resultado del envío
         """
@@ -351,7 +351,7 @@ Medicare Pro Security
                 "error": "Email inválido",
                 "message_id": None
             }
-        
+
         # Rate limiting
         if check_rate_limit and not self._check_rate_limit(message.to):
             return {
@@ -359,7 +359,7 @@ Medicare Pro Security
                 "error": "Rate limit exceeded",
                 "message_id": None
             }
-        
+
         # Enviar según provider
         try:
             if self.provider == EmailProvider.SMTP:
@@ -369,7 +369,7 @@ Medicare Pro Security
             else:
                 # Fallback a SMTP
                 return self._send_smtp(message)
-                
+
         except Exception as e:
             log_event("email_error", f"Failed to send email: {e}")
             return {
@@ -377,60 +377,60 @@ Medicare Pro Security
                 "error": str(e),
                 "message_id": None
             }
-    
+
     def _send_smtp(self, message: EmailMessage) -> Dict[str, Any]:
         """Envía email vía SMTP."""
         smtp_host = os.getenv("SMTP_HOST", "localhost")
         smtp_port = int(os.getenv("SMTP_PORT", "587"))
         smtp_user = os.getenv("SMTP_USER", "")
         smtp_password = os.getenv("SMTP_PASSWORD", "")
-        
+
         # Crear mensaje MIME
         msg = MIMEMultipart("alternative")
         msg["Subject"] = message.subject
         msg["From"] = formataddr((message.from_name, message.from_email))
         msg["To"] = message.to
-        
+
         if message.reply_to:
             msg["Reply-To"] = message.reply_to
-        
+
         # Adjuntar cuerpos
         msg.attach(MIMEText(message.body_text, "plain", "utf-8"))
         if message.body_html:
             msg.attach(MIMEText(message.body_html, "html", "utf-8"))
-        
+
         # Enviar
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.starttls()
             if smtp_user and smtp_password:
                 server.login(smtp_user, smtp_password)
-            
+
             server.sendmail(
                 message.from_email,
                 message.to,
                 msg.as_string()
             )
-        
+
         message_id = f"smtp-{datetime.now().timestamp()}"
-        
+
         log_event("email_sent", f"Email sent to {message.to}: {message.subject}")
-        
+
         return {
             "success": True,
             "error": None,
             "message_id": message_id,
             "provider": "smtp"
         }
-    
+
     def _send_sendgrid(self, message: EmailMessage) -> Dict[str, Any]:
         """Envía email vía SendGrid API."""
         try:
             from sendgrid import SendGridAPIClient
             from sendgrid.helpers.mail import Mail
-            
+
             api_key = os.getenv("SENDGRID_API_KEY", "")
             sg = SendGridAPIClient(api_key)
-            
+
             mail = Mail(
                 from_email=message.from_email,
                 to_emails=message.to,
@@ -438,21 +438,21 @@ Medicare Pro Security
                 html_content=message.body_html,
                 plain_text_content=message.body_text
             )
-            
+
             response = sg.send(mail)
-            
+
             return {
                 "success": response.status_code == 202,
                 "error": None if response.status_code == 202 else f"HTTP {response.status_code}",
                 "message_id": response.headers.get("X-Message-Id"),
                 "provider": "sendgrid"
             }
-            
+
         except Exception as e:
             # Fallback a SMTP
             log_event("email_fallback", f"SendGrid failed, falling back to SMTP: {e}")
             return self._send_smtp(message)
-    
+
     def send_template_email(
         self,
         template_name: str,
@@ -462,7 +462,7 @@ Medicare Pro Security
     ) -> Dict[str, Any]:
         """
         Envía email usando un template.
-        
+
         Args:
             template_name: Nombre del template
             to_email: Destinatario
@@ -471,13 +471,13 @@ Medicare Pro Security
         """
         # Agregar email a variables
         variables["email"] = to_email
-        
+
         # Renderizar
         message = self.render_template(template_name, variables)
-        
+
         # Enviar
         return self.send_email(message, check_rate_limit)
-    
+
     def queue_email(
         self,
         message: EmailMessage,
@@ -485,18 +485,18 @@ Medicare Pro Security
     ) -> str:
         """
         Encola un email para envío posterior.
-        
+
         Args:
             message: Email a enviar
             send_at: Cuándo enviar (None = lo antes posible)
-        
+
         Returns:
             ID de la tarea encolada
         """
         import uuid
-        
+
         task_id = str(uuid.uuid4())
-        
+
         # Guardar en caché/redis para procesamiento async
         task_data = {
             "id": task_id,
@@ -512,14 +512,14 @@ Medicare Pro Security
             "status": "queued",
             "created_at": datetime.now().isoformat()
         }
-        
+
         # Guardar en caché (en producción usar Redis/RQ/Celery)
         self.cache.set(f"email_queue:{task_id}", task_data, ttl=86400)
-        
+
         log_event("email_queued", f"Email queued: {task_id} to {message.to}")
-        
+
         return task_id
-    
+
     def get_queue_status(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Obtiene estado de un email encolado."""
         return self.cache.get(f"email_queue:{task_id}")

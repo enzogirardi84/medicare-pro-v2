@@ -197,7 +197,7 @@ def render_rrhh(mi_empresa, rol, user):
 
     fichajes_lista = []
     rastreador_ingresos = {}
-    
+
     # 1. Intentar leer desde PostgreSQL (Hybrid Read) + enriquecer nombres desde local
     checkins = []
     # Mapa local (paciente -> fecha -> profesional) para resolver nombres que SQL no pudo resolver
@@ -236,7 +236,7 @@ def render_rrhh(mi_empresa, rol, user):
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not checkins:
         checkins = [c for c in _local_checkins if c.get("empresa") == mi_empresa or acceso_total]
-        
+
     checkins_ordenados = sorted(checkins, key=lambda c: _obtener_dt(c.get("fecha_hora", "")))
 
     usuarios_db = st.session_state.get("usuarios_db", {})

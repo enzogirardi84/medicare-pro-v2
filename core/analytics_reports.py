@@ -74,7 +74,7 @@ class ClinicalKPIs:
     top_diagnoses: List[Tuple[str, int]]
     mortality_rate: Optional[float]
     readmission_rate: Optional[float]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -120,28 +120,28 @@ class QualityMetrics:
 class AnalyticsEngine:
     """
     Motor de análisis y generación de reportes.
-    
+
     Uso:
         engine = AnalyticsEngine()
-        
+
         # Generar reporte clínico
         kpis = engine.calculate_clinical_kpis(
             TimeRange.LAST_30_DAYS,
             doctor_id="dr.garcia"
         )
-        
+
         # Dashboard completo
         dashboard = engine.generate_dashboard(TimeRange.LAST_7_DAYS)
     """
-    
+
     def __init__(self):
         self._cache: Dict[str, Any] = {}
         self._cache_ttl = 300  # 5 minutos
-    
+
     def _get_time_range_dates(self, time_range: TimeRange) -> Tuple[datetime, datetime]:
         """Convierte TimeRange a fechas de inicio/fin."""
         now = datetime.now(timezone.utc)
-        
+
         if time_range == TimeRange.TODAY:
             start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end = now
@@ -172,9 +172,9 @@ class AnalyticsEngine:
         else:
             start = now - timedelta(days=30)
             end = now
-        
+
         return start, end
-    
+
     def calculate_clinical_kpis(
         self,
         time_range: TimeRange,
@@ -183,32 +183,32 @@ class AnalyticsEngine:
     ) -> ClinicalKPIs:
         """Calcula KPIs clínicos."""
         start, end = self._get_time_range_dates(time_range)
-        
+
         # En producción, consultaría base de datos
         # Aquí datos de ejemplo simulados
-        
+
         # Filtrar datos por rango de tiempo
         consultations = self._get_consultations_in_range(start, end, doctor_id)
-        
+
         total = len(consultations)
         new_patients = len([c for c in consultations if c.get("is_new", False)])
         follow_ups = total - new_patients
-        
+
         # Duración promedio
         durations = [c.get("duration_minutes", 30) for c in consultations]
         avg_duration = statistics.mean(durations) if durations else 0
-        
+
         # No-show rate
         no_shows = len([c for c in consultations if c.get("status") == "no_show"])
         no_show_rate = (no_shows / total * 100) if total > 0 else 0
-        
+
         # Diagnósticos principales
         diagnoses = defaultdict(int)
         for c in consultations:
             dx = c.get("diagnostico_principal", "Sin diagnóstico")
             diagnoses[dx] += 1
         top_diagnoses = sorted(diagnoses.items(), key=lambda x: x[1], reverse=True)[:5]
-        
+
         return ClinicalKPIs(
             total_consultations=total,
             new_patients=new_patients,
@@ -222,7 +222,7 @@ class AnalyticsEngine:
             mortality_rate=None,
             readmission_rate=None
         )
-    
+
     def _get_consultations_in_range(
         self,
         start: datetime,
@@ -259,7 +259,7 @@ class AnalyticsEngine:
                 "referral_made": True
             }
         ]
-    
+
     def calculate_operational_metrics(
         self,
         time_range: TimeRange,
@@ -267,7 +267,7 @@ class AnalyticsEngine:
     ) -> OperationalMetrics:
         """Calcula métricas operativas."""
         start, end = self._get_time_range_dates(time_range)
-        
+
         # Simulación de datos
         return OperationalMetrics(
             doctor_utilization={
@@ -287,7 +287,7 @@ class AnalyticsEngine:
             idle_time_percentage=15.3,
             overtime_hours=4.5
         )
-    
+
     def calculate_financial_summary(
         self,
         time_range: TimeRange,
@@ -314,7 +314,7 @@ class AnalyticsEngine:
             collection_rate=78.4,
             days_sales_outstanding=18.5
         )
-    
+
     def calculate_quality_metrics(
         self,
         time_range: TimeRange
@@ -329,7 +329,7 @@ class AnalyticsEngine:
             medication_errors=0,
             documentation_completeness=94.5
         )
-    
+
     def generate_trend_analysis(
         self,
         metric: str,
@@ -338,11 +338,11 @@ class AnalyticsEngine:
     ) -> List[Dict[str, Any]]:
         """Genera análisis de tendencias temporales."""
         start, end = self._get_time_range_dates(time_range)
-        
+
         # Generar datos de tendencia simulados
         trends = []
         current = start
-        
+
         while current <= end:
             value = 40 + (current.day * 2) + (hash(current.day) % 20)
             trends.append({
@@ -350,16 +350,16 @@ class AnalyticsEngine:
                 "value": value,
                 "metric": metric
             })
-            
+
             if granularity == "daily":
                 current += timedelta(days=1)
             elif granularity == "weekly":
                 current += timedelta(weeks=1)
             else:
                 current += timedelta(days=30)
-        
+
         return trends
-    
+
     def generate_dashboard(
         self,
         time_range: TimeRange,
@@ -367,11 +367,11 @@ class AnalyticsEngine:
     ) -> Dict[str, Any]:
         """Genera dashboard completo con todos los KPIs."""
         cache_key = f"dashboard_{time_range.value}_{clinic_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H')}"
-        
+
         # Verificar caché
         if cache_key in self._cache:
             return self._cache[cache_key]
-        
+
         dashboard = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "time_range": time_range.value,
@@ -385,12 +385,12 @@ class AnalyticsEngine:
                 "satisfaction": self.generate_trend_analysis("satisfaction", time_range)
             }
         }
-        
+
         # Cachear
         self._cache[cache_key] = dashboard
-        
+
         return dashboard
-    
+
     def export_to_excel(
         self,
         report_type: ReportType,
@@ -400,25 +400,25 @@ class AnalyticsEngine:
         """Exporta reporte a Excel."""
         try:
             data = self.generate_dashboard(time_range)
-            
+
             # Crear DataFrames
             clinical_df = pd.DataFrame([data["clinical"]])
             operational_df = pd.DataFrame([data["operational"]])
             financial_df = pd.DataFrame([data["financial"]])
-            
+
             # Guardar en Excel con múltiples hojas
             with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
                 clinical_df.to_excel(writer, sheet_name='Clínico', index=False)
                 operational_df.to_excel(writer, sheet_name='Operativo', index=False)
                 financial_df.to_excel(writer, sheet_name='Financiero', index=False)
-            
+
             log_event("analytics", f"excel_exported:{report_type.value}:{filepath}")
             return True
-            
+
         except Exception as e:
             log_event("analytics", f"excel_export_error:{type(e).__name__}")
             return False
-    
+
     def get_benchmark_comparison(
         self,
         metric: str,
@@ -433,12 +433,12 @@ class AnalyticsEngine:
             "collection_rate": {"excellent": 95, "good": 85, "average": 75, "poor": 60},
             "documentation_completeness": {"excellent": 98, "good": 95, "average": 90, "poor": 80}
         }
-        
+
         if metric not in benchmarks:
             return {"status": "unknown", "message": "No benchmark disponible"}
-        
+
         bench = benchmarks[metric]
-        
+
         # Determinar categoría
         if value <= bench["excellent"]:
             status = "excellent"
@@ -452,7 +452,7 @@ class AnalyticsEngine:
         else:
             status = "poor"
             percentile = 25
-        
+
         return {
             "status": status,
             "value": value,
@@ -460,7 +460,7 @@ class AnalyticsEngine:
             "percentile": percentile,
             "suggestion": self._get_benchmark_suggestion(metric, status)
         }
-    
+
     def _get_benchmark_suggestion(self, metric: str, status: str) -> str:
         """Genera sugerencia basada en benchmark."""
         suggestions = {
@@ -483,64 +483,64 @@ class AnalyticsEngine:
                 "excellent": "Capitalizar para marketing y referrals"
             }
         }
-        
+
         return suggestions.get(metric, {}).get(status, "")
-    
+
     def render_analytics_dashboard(self) -> None:
         """Renderiza dashboard analítico en Streamlit."""
         st.header("📊 Dashboard Analítico")
-        
+
         # Selector de período
         time_range = st.selectbox(
             "Período",
             [tr.value for tr in TimeRange],
             format_func=lambda x: x.replace("_", " ").title()
         )
-        
+
         time_range_enum = TimeRange(time_range)
-        
+
         # Generar dashboard
         with st.spinner("Generando reportes..."):
             dashboard = self.generate_dashboard(time_range_enum)
-        
+
         # Métricas clave
         st.subheader("KPIs Principales")
         cols = st.columns(2)
-        
+
         clinical = dashboard["clinical"]
         cols[0].metric("Consultas", clinical["total_consultations"])
         cols[0].metric("No-Show Rate", f"{clinical['no_show_rate']:.1f}%")
         cols[1].metric("Duración Promedio", f"{clinical['avg_consultation_duration']:.0f} min")
         cols[1].metric("Nuevos Pacientes", clinical["new_patients"])
-        
+
         # Diagnósticos principales
         with st.expander("📈 Diagnósticos Principales"):
             for dx, count in clinical["top_diagnoses"]:
                 st.write(f"**{dx}**: {count} casos")
-        
+
         # Tendencias
         st.subheader("Tendencias")
         tab1, tab2, tab3 = st.tabs(["Consultas", "Ingresos", "Satisfacción"])
-        
+
         with tab1:
             trend_data = dashboard["trends"]["consultations"]
             df = pd.DataFrame(trend_data)
             st.line_chart(df.set_index("date")["value"])
-        
+
         with tab2:
             trend_data = dashboard["trends"]["revenue"]
             df = pd.DataFrame(trend_data)
             st.line_chart(df.set_index("date")["value"])
-        
+
         with tab3:
             trend_data = dashboard["trends"]["satisfaction"]
             df = pd.DataFrame(trend_data)
             st.line_chart(df.set_index("date")["value"])
-        
+
         # Métricas operativas
         st.subheader("Métricas Operativas")
         operational = dashboard["operational"]
-        
+
         col1, col2 = st.columns(2)
         with col1:
             st.metric("Tiempo Espera Promedio", f"{operational['avg_wait_time']:.1f} min")
@@ -548,16 +548,16 @@ class AnalyticsEngine:
         with col2:
             st.metric("Turnos/Día", f"{operational['appointments_per_day']:.1f}")
             st.metric("Tiempo Ocioso", f"{operational['idle_time_percentage']:.1f}%")
-        
+
         # Resumen financiero
         st.subheader("Resumen Financiero")
         financial = dashboard["financial"]
-        
+
         fin_cols = st.columns(3)
         fin_cols[0].metric("Facturado", f"${financial['total_billed']:,.0f}")
         fin_cols[1].metric("Cobrado", f"${financial['total_collected']:,.0f}")
         fin_cols[2].metric("Tasa Cobro", f"{financial['collection_rate']:.1f}%")
-        
+
         # Exportar
         st.subheader("Exportar")
         if st.button("📥 Descargar Excel"):

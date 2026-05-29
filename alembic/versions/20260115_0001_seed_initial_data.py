@@ -28,7 +28,7 @@ def upgrade() -> None:
     """
     Insertar datos iniciales necesarios para el funcionamiento del sistema.
     """
-    
+
     # Tabla: users (datos de ejemplo - cambiar en producción)
     users_table = table(
         'users',
@@ -41,7 +41,7 @@ def upgrade() -> None:
         column('empresa', sa.String),
         column('activo', sa.Boolean),
     )
-    
+
     # Nota: En producción, usar password hash real generado con bcrypt
     op.bulk_insert(users_table, [
         {
@@ -55,7 +55,7 @@ def upgrade() -> None:
             'activo': True,
         },
     ])
-    
+
     # Insertar roles/perfiles de ejemplo
     # (En un sistema real, esto vendría de una tabla de roles)
 

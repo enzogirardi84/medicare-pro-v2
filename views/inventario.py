@@ -184,7 +184,7 @@ def render_inventario(mi_empresa):
             _cat_input = c4.text_input("Categoría (opcional)", placeholder="Ej: Medicamentos, Descartables")
             _costo_input = c5.number_input("Costo unitario $ (opcional)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
 
-            if st.form_submit_button("Sumar al stock", width='stretch', type="primary"):
+            if st.form_submit_button("Sumar al stock", use_container_width=True, type="primary"):
                 item_final = nuevo_item.strip().title() if nuevo_item.strip() else item_sel
                 if item_final and item_final != "-- Seleccionar del catálogo --":
                     sql_ok = False
@@ -320,7 +320,7 @@ def render_inventario(mi_empresa):
             .style.apply(colorear_stock, axis=1)
         )
         with lista_plegable("Tabla de stock actual", count=len(df_filtrado), expanded=False, height=520):
-            st.dataframe(styled, width='stretch', hide_index=True, height=496)
+            st.dataframe(styled, use_container_width=True, hide_index=True, height=496)
     else:
         bloque_estado_vacio(
             "Inventario vacío",
@@ -396,7 +396,7 @@ def render_inventario(mi_empresa):
             except Exception:
                 pass
             c_save_col, _ = st.columns([1, 1])
-            if c_save_col.button("Guardar cambios", width='stretch', type="primary"):
+            if c_save_col.button("Guardar cambios", use_container_width=True, type="primary"):
                 cambios = {"stock_actual": nuevo_stock, "stock_minimo": nuevo_min, "costo_unitario": nuevo_costo}
                 sql_ok = False
                 try:
@@ -423,7 +423,7 @@ def render_inventario(mi_empresa):
                 col_del1, col_del2 = st.columns([3, 1])
                 del_item = col_del1.selectbox("Eliminar insumo por completo", [i.get("item", "") for i in inv_mio if i is not None], key="del_sel")
                 confirmar = col_del1.checkbox("Confirmar eliminación definitiva", key="conf_del_item")
-                if col_del2.button("Eliminar insumo", width='stretch', type="secondary", disabled=not confirmar):
+                if col_del2.button("Eliminar insumo", use_container_width=True, type="secondary", disabled=not confirmar):
                     sql_ok = False
                     try:
                         empresa_uuid = _obtener_uuid_empresa(mi_empresa)

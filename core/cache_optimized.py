@@ -23,13 +23,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 class CacheManagerOptimized:
     """Gestor de caché con TTL y invalidación inteligente."""
-    
+
     # TTL por categoría (segundos)
     TTL_STATIC = 3600        # 1 hora: listas estáticas (obras sociales, etc.)
     TTL_CONFIG = 600         # 10 min: configuraciones
     TTL_PATIENT_LIST = 60    # 1 min: listas de pacientes
     TTL_CLINICAL_DATA = 30   # 30 seg: datos clínicos frescos
-    
+
     @staticmethod
     @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
     def get_obras_sociales_cached(_force_refresh: bool = False) -> List[Dict[str, str]]:
@@ -56,7 +56,7 @@ class CacheManagerOptimized:
             {"codigo": "ART", "nombre": "ART", "tipo": "accidente"},
         ]
         return obras_sociales
-    
+
     @staticmethod
     @st.cache_data(ttl=TTL_CONFIG, show_spinner=False)
     def get_app_config_cached(_tenant_id: Optional[str] = None) -> Dict[str, Any]:
@@ -70,7 +70,7 @@ class CacheManagerOptimized:
             "formato_fecha": "%d/%m/%Y",
             "formato_hora": "%H:%M",
         }
-        
+
         try:
             # Intentar cargar desde Supabase si está disponible
             from core._database_supabase import supabase
@@ -80,9 +80,9 @@ class CacheManagerOptimized:
                     return {**default_config, **response.data[0]}
         except Exception as e:
             log_event("cache", f"config_load_error:{type(e).__name__}")
-        
+
         return default_config
-    
+
     @staticmethod
     @st.cache_resource
     def get_pdf_templates_cached() -> Dict[str, Any]:
@@ -100,7 +100,7 @@ class CacheManagerOptimized:
             return templates
         except ImportError:
             return {}
-    
+
     @staticmethod
     def invalidate_cache_key(key: str) -> None:
         """Invalida una clave específica del caché."""
@@ -111,7 +111,7 @@ class CacheManagerOptimized:
 
 class SessionStateManager:
     """Gestor optimizado del estado de sesión con callbacks."""
-    
+
     @staticmethod
     def safe_set(key: str, value: Any, on_change: Optional[Callable] = None) -> None:
         """
@@ -123,14 +123,14 @@ class SessionStateManager:
             st.session_state[key] = value
             if on_change:
                 on_change()
-    
+
     @staticmethod
     def get_with_default(key: str, default: Any) -> Any:
         """Obtiene valor con default, inicializando si no existe."""
         if key not in st.session_state:
             st.session_state[key] = default
         return st.session_state[key]
-    
+
     @staticmethod
     def init_pagination_state(prefix: str = "pacientes") -> Dict[str, Any]:
         """Inicializa estado de paginación para tablas."""
@@ -141,13 +141,13 @@ class SessionStateManager:
             f"{prefix}_has_more": False,
             f"{prefix}_total_count": 0,
         }
-        
+
         for key, default in keys.items():
             if key not in st.session_state:
                 st.session_state[key] = default
-        
+
         return {k: st.session_state[k] for k in keys.keys()}
-    
+
     @staticmethod
     def reset_pagination(prefix: str = "pacientes") -> None:
         """Resetea estado de paginación."""
@@ -158,7 +158,7 @@ class SessionStateManager:
 def cached_query(ttl_seconds: int = 60, show_spinner: bool = False):
     """
     Decorador para queries a base de datos con caché.
-    
+
     Args:
         ttl_seconds: Tiempo de vida del caché
         show_spinner: Si mostrar spinner de carga
@@ -168,12 +168,12 @@ def cached_query(ttl_seconds: int = 60, show_spinner: bool = False):
         @st.cache_data(ttl=ttl_seconds, show_spinner=show_spinner)
         def cached_wrapper(*args, **kwargs):
             return func(*args, **kwargs)
-        
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             # Generar clave de caché única
             cache_key = _generate_cache_key(func.__name__, args, kwargs)
-            
+
             start = time.time()
             try:
                 result = cached_wrapper(*args, **kwargs)
@@ -184,7 +184,7 @@ def cached_query(ttl_seconds: int = 60, show_spinner: bool = False):
                 log_event("cache", f"miss:{func.__name__}:{type(e).__name__}")
                 # Fallback: ejecutar sin caché
                 return func(*args, **kwargs)
-        
+
         return cast(F, wrapper)
     return decorator
 

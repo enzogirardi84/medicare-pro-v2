@@ -180,7 +180,7 @@ class LoginRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, example="dr.garcia")
     password: str = Field(..., min_length=6, example="SecurePass123!")
     empresa: Optional[str] = Field(None, example="Clínica Central")
-    
+
     @field_validator('username')
     @classmethod
     def username_alphanumeric(cls, v):
@@ -207,7 +207,7 @@ class PatientBase(BaseModel):
     telefono: Optional[str] = Field(None, example="1144445555")
     obra_social: Optional[str] = Field(None, example="OSDE")
     sexo: Optional[str] = Field(None, pattern="^(M|F|O)$", example="M")
-    
+
     @field_validator('dni')
     @classmethod
     def validate_dni(cls, v):
@@ -230,7 +230,7 @@ class PatientResponse(PatientBase):
     estado: str = "activo"
     creado_en: str
     actualizado_en: Optional[str]
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -255,7 +255,7 @@ class EvolutionResponse(EvolutionBase):
     medico_id: str
     fecha: str
     creado_en: str
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -269,7 +269,7 @@ class VitalsBase(BaseModel):
     saturacion_o2: Optional[int] = Field(None, ge=50, le=100, example=98)
     peso: Optional[float] = Field(None, ge=0.5, le=300, example=70.5)
     altura: Optional[float] = Field(None, ge=0.3, le=2.5, example=1.75)
-    
+
     @model_validator(mode='after')
     def check_presion(self):
         if self.presion_diastolica and self.presion_sistolica:
@@ -286,7 +286,7 @@ class VitalsResponse(VitalsBase):
     id: str
     fecha_hora: str
     registrado_por: str
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -514,7 +514,7 @@ async def login(request: LoginRequest, raw_request: Request):
 async def health_check():
     """
     Health check del sistema.
-    
+
     No requiere autenticación. Útil para monitoreo.
     """
     return HealthResponse(
@@ -538,7 +538,7 @@ async def list_patients(
 ):
     """
     Lista pacientes con paginación. Solo devuelve pacientes de la empresa del usuario.
-    
+
     - **page**: Número de página (1-based)
     - **page_size**: Resultados por página (máx 100)
     - **search**: Filtrar por nombre o DNI
@@ -564,9 +564,9 @@ async def list_patients(
             actualizado_en=None
         )
     ]
-    
+
     log_event("api", f"list_patients:user:{current_user['username']}:page:{page}")
-    
+
     return patients
 
 
@@ -577,7 +577,7 @@ async def create_patient(
 ):
     """
     Crea un nuevo paciente.
-    
+
     Los datos sensibles (DNI, nombre, etc.) se encriptan automáticamente.
     Requiere rol: médico, admin o coordinador.
     """
@@ -587,11 +587,11 @@ async def create_patient(
         validator.validate_dni(patient.dni)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     # Encriptar datos sensibles
     patient_dict = patient.model_dump()
     encrypted = encrypt_patient_data(patient_dict)
-    
+
     # Crear paciente (mock)
     new_patient = PatientResponse(
         id=f"pat-{datetime.now(timezone.utc).timestamp()}",
@@ -600,9 +600,9 @@ async def create_patient(
         creado_en=datetime.now(timezone.utc).isoformat(),
         actualizado_en=None
     )
-    
+
     log_event("api", f"create_patient:user:{current_user['username']}")
-    
+
     return new_patient
 
 
@@ -613,7 +613,7 @@ async def get_patient(
 ):
     """
     Obtiene un paciente por ID. Verifica que pertenezca a la empresa del usuario.
-    
+
     Los datos se desencriptan automáticamente al retornar.
     """
     await verify_tenant_access(patient_id, current_user)
@@ -631,9 +631,9 @@ async def get_patient(
         creado_en=datetime.now(timezone.utc).isoformat(),
         actualizado_en=None
     )
-    
+
     log_event("api", f"get_patient:user:{current_user['username']}:patient:{patient_id}")
-    
+
     return patient
 
 
@@ -644,14 +644,14 @@ async def create_evolution(
 ):
     """
     Crea una evolución clínica.
-    
+
     Diagnóstico y tratamiento se encriptan automáticamente.
     Verifica que el paciente pertenezca a la empresa del usuario.
     """
     await verify_tenant_access(evolution.paciente_id, current_user)
     # Encriptar datos sensibles
     evolution_dict = evolution.model_dump()
-    
+
     new_evolution = EvolutionResponse(
         id=f"evo-{datetime.now(timezone.utc).timestamp()}",
         medico_id=current_user['username'],
@@ -659,9 +659,9 @@ async def create_evolution(
         creado_en=datetime.now(timezone.utc).isoformat(),
         **evolution_dict
     )
-    
+
     log_event("api", f"create_evolution:user:{current_user['username']}:patient:{evolution.paciente_id}")
-    
+
     return new_evolution
 
 
@@ -672,7 +672,7 @@ async def create_vitals(
 ):
     """
     Registra signos vitales.
-    
+
     Validaciones automáticas:
     - Temperatura: 30-45°C
     - FC: 30-250 bpm
@@ -687,9 +687,9 @@ async def create_vitals(
         registrado_por=current_user['username'],
         **vitals.model_dump()
     )
-    
+
     log_event("api", f"create_vitals:user:{current_user['username']}:patient:{vitals.paciente_id}")
-    
+
     return new_vitals
 
 
@@ -704,7 +704,7 @@ async def search(
 ):
     """
     Búsqueda global. Sanitiza el término y aplica rate limiting.
-    
+
     Busca en pacientes y/o evoluciones.
     """
     from core.security_middleware import sanitize_search_term
@@ -717,9 +717,9 @@ async def search(
         "evolutions": [],
         "total": 0
     }
-    
+
     log_event("api", f"search:user:{current_user['username']}:q_len:{len(q_safe)}")
-    
+
     return results
 
 

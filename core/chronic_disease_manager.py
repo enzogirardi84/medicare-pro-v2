@@ -79,14 +79,14 @@ class DiseaseControlRecord:
     notes: Optional[str] = None
     next_control_date: Optional[str] = None
     adherence_percentage: Optional[float] = None  # % adherencia al tratamiento
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
 
 class DiabetesManager:
     """Gestor específico para Diabetes Mellitus."""
-    
+
     # Metas clínicas según ADA (American Diabetes Association) 2024
     CLINICAL_TARGETS = {
         "hba1c": ClinicalTarget(
@@ -154,25 +154,25 @@ class DiabetesManager:
             priority="medium"
         )
     }
-    
+
     def __init__(self):
         self._records: Dict[str, List[DiseaseControlRecord]] = {}
         self._load_records()
-    
+
     def _load_records(self) -> None:
         """Carga registros de diabetes."""
         if "diabetes_records" in st.session_state:
             records_data = st.session_state["diabetes_records"]
             for patient_id, records in records_data.items():
                 self._records[patient_id] = [DiseaseControlRecord(**r) for r in records]
-    
+
     def _save_records(self) -> None:
         """Guarda registros de diabetes."""
         st.session_state["diabetes_records"] = {
             patient_id: [r.to_dict() for r in records]
             for patient_id, records in self._records.items()
         }
-    
+
     def record_control(
         self,
         patient_id: str,
@@ -191,7 +191,7 @@ class DiabetesManager:
         next_control_months: int = 3
     ) -> DiseaseControlRecord:
         """Registra un control de diabetes."""
-        
+
         parameters = {
             "hba1c": hba1c,
             "glucosa_ayunas": glucosa_ayunas,
@@ -202,12 +202,12 @@ class DiabetesManager:
             "trigliceridos": trigliceridos,
             "imc": imc
         }
-        
+
         # Remover None values
         parameters = {k: v for k, v in parameters.items() if v is not None}
-        
+
         record_id = f"dm-{datetime.now(timezone.utc).timestamp()}-{hash(patient_id) % 10000}"
-        
+
         record = DiseaseControlRecord(
             record_id=record_id,
             patient_id=patient_id,
@@ -220,25 +220,25 @@ class DiabetesManager:
             notes=notes,
             next_control_date=(datetime.now(timezone.utc) + timedelta(days=30*next_control_months)).isoformat()
         )
-        
+
         if patient_id not in self._records:
             self._records[patient_id] = []
-        
+
         self._records[patient_id].append(record)
         self._save_records()
-        
+
         # Verificar alertas
         self._check_alerts(patient_id, parameters)
-        
+
         log_event("chronic_disease", f"diabetes_control_recorded:{patient_id}:hba1c:{hba1c}")
-        
+
         return record
-    
+
     def _check_alerts(self, patient_id: str, parameters: Dict[str, Any]) -> None:
         """Verifica alertas de control."""
         hba1c = parameters.get("hba1c")
         glucosa = parameters.get("glucosa_ayunas")
-        
+
         # HbA1c muy alta
         if hba1c and hba1c > 9.0:
             send_critical_alert(
@@ -247,7 +247,7 @@ class DiabetesManager:
                 patient_id=patient_id,
                 priority=NotificationPriority.HIGH
             )
-        
+
         # Hipoglucemia
         if glucosa and glucosa < 70:
             send_critical_alert(
@@ -256,51 +256,51 @@ class DiabetesManager:
                 patient_id=patient_id,
                 priority=NotificationPriority.CRITICAL
             )
-    
+
     def get_control_status(self, patient_id: str) -> Tuple[ControlStatus, List[str]]:
         """
         Determina estado de control del paciente.
-        
+
         Returns:
             (status, messages)
         """
         records = self._records.get(patient_id, [])
-        
+
         if not records:
             return ControlStatus.UNKNOWN, ["Sin registros de control"]
-        
+
         # Obtener último registro
         latest = sorted(records, key=lambda r: r.date_recorded, reverse=True)[0]
-        
+
         parameters = latest.parameters
         messages = []
         out_of_target = 0
         total_measured = 0
-        
+
         for param_name, target in self.CLINICAL_TARGETS.items():
             value = parameters.get(param_name)
             if value is None:
                 continue
-            
+
             total_measured += 1
-            
+
             # Verificar si está en rango
             in_range = True
             if target.min_value is not None and value < target.min_value:
                 in_range = False
             if target.max_value is not None and value > target.max_value:
                 in_range = False
-            
+
             if not in_range:
                 out_of_target += 1
                 messages.append(f"{target.parameter}: {value} {target.unit} (meta: {target.min_value}-{target.max_value})")
-        
+
         # Determinar estado
         if total_measured == 0:
             return ControlStatus.UNKNOWN, ["Sin parámetros medidos"]
-        
+
         percentage_in_range = ((total_measured - out_of_target) / total_measured) * 100
-        
+
         if percentage_in_range >= 90:
             status = ControlStatus.WELL_CONTROLLED
         elif percentage_in_range >= 70:
@@ -309,9 +309,9 @@ class DiabetesManager:
             status = ControlStatus.POORLY_CONTROLLED
         else:
             status = ControlStatus.UNCONTROLLED
-        
+
         return status, messages
-    
+
     def get_trend_analysis(
         self,
         patient_id: str,
@@ -320,9 +320,9 @@ class DiabetesManager:
     ) -> List[Dict[str, Any]]:
         """Obtiene tendencia de un parámetro."""
         records = self._records.get(patient_id, [])
-        
+
         cutoff = datetime.now(timezone.utc) - timedelta(days=30*months)
-        
+
         trend = []
         for record in records:
             record_date = datetime.fromisoformat(record.date_recorded)
@@ -331,21 +331,21 @@ class DiabetesManager:
                     "date": record.date_recorded,
                     "value": record.parameters[parameter]
                 })
-        
+
         trend.sort(key=lambda x: x["date"])
         return trend
-    
+
     def get_pending_controls(self) -> List[Dict[str, Any]]:
         """Obtiene pacientes con controles vencidos."""
         pending = []
         now = datetime.now(timezone.utc)
-        
+
         for patient_id, records in self._records.items():
             if not records:
                 continue
-            
+
             latest = sorted(records, key=lambda r: r.date_recorded, reverse=True)[0]
-            
+
             if latest.next_control_date:
                 next_control = datetime.fromisoformat(latest.next_control_date)
                 if next_control < now:
@@ -357,14 +357,14 @@ class DiabetesManager:
                         "days_overdue": days_overdue,
                         "hba1c_last": latest.parameters.get("hba1c")
                     })
-        
+
         pending.sort(key=lambda x: x["days_overdue"], reverse=True)
         return pending
 
 
 class HypertensionManager:
     """Gestor específico para Hipertensión Arterial."""
-    
+
     # Metas clínicas según guías ESC/ESH 2023
     CLINICAL_TARGETS = {
         "pa_sistolica": ClinicalTarget(
@@ -392,25 +392,25 @@ class HypertensionManager:
             priority="medium"
         )
     }
-    
+
     def __init__(self):
         self._records: Dict[str, List[DiseaseControlRecord]] = {}
         self._load_records()
-    
+
     def _load_records(self) -> None:
         """Carga registros de hipertensión."""
         if "hypertension_records" in st.session_state:
             records_data = st.session_state["hypertension_records"]
             for patient_id, records in records_data.items():
                 self._records[patient_id] = [DiseaseControlRecord(**r) for r in records]
-    
+
     def _save_records(self) -> None:
         """Guarda registros de hipertensión."""
         st.session_state["hypertension_records"] = {
             patient_id: [r.to_dict() for r in records]
             for patient_id, records in self._records.items()
         }
-    
+
     def record_control(
         self,
         patient_id: str,
@@ -423,17 +423,17 @@ class HypertensionManager:
         notes: Optional[str] = None
     ) -> DiseaseControlRecord:
         """Registra un control de hipertensión."""
-        
+
         parameters = {
             "pa_sistolica": pa_sistolica,
             "pa_diastolica": pa_diastolica
         }
-        
+
         if frecuencia_cardiaca:
             parameters["frecuencia_cardiaca"] = frecuencia_cardiaca
-        
+
         record_id = f"ht-{datetime.now(timezone.utc).timestamp()}-{hash(patient_id) % 10000}"
-        
+
         record = DiseaseControlRecord(
             record_id=record_id,
             patient_id=patient_id,
@@ -446,13 +446,13 @@ class HypertensionManager:
             notes=notes,
             next_control_date=(datetime.now(timezone.utc) + timedelta(days=90)).isoformat()  # Cada 3 meses
         )
-        
+
         if patient_id not in self._records:
             self._records[patient_id] = []
-        
+
         self._records[patient_id].append(record)
         self._save_records()
-        
+
         # Verificar alertas
         if pa_sistolica > 180 or pa_diastolica > 110:
             send_critical_alert(
@@ -461,26 +461,26 @@ class HypertensionManager:
                 patient_id=patient_id,
                 priority=NotificationPriority.CRITICAL
             )
-        
+
         log_event("chronic_disease", f"hypertension_control_recorded:{patient_id}:pa:{pa_sistolica}/{pa_diastolica}")
-        
+
         return record
-    
+
     def get_control_status(self, patient_id: str) -> Tuple[ControlStatus, List[str]]:
         """Determina estado de control de HTA."""
         records = self._records.get(patient_id, [])
-        
+
         if not records:
             return ControlStatus.UNKNOWN, ["Sin registros"]
-        
+
         latest = sorted(records, key=lambda r: r.date_recorded, reverse=True)[0]
         parameters = latest.parameters
-        
+
         sistolica = parameters.get("pa_sistolica", 0)
         diastolica = parameters.get("pa_diastolica", 0)
-        
+
         messages = []
-        
+
         if sistolica > 140 or diastolica > 90:
             status = ControlStatus.POORLY_CONTROLLED
             messages.append(f"PA elevada: {sistolica}/{diastolica} mmHg")
@@ -489,55 +489,55 @@ class HypertensionManager:
             messages.append(f"PA limítrofe: {sistolica}/{diastolica} mmHg")
         else:
             status = ControlStatus.WELL_CONTROLLED
-        
+
         return status, messages
 
 
 class ChronicDiseaseDashboard:
     """Dashboard para gestión de enfermedades crónicas."""
-    
+
     def __init__(self):
         self.diabetes_manager = DiabetesManager()
         self.hypertension_manager = HypertensionManager()
-    
+
     def render(self) -> None:
         """Renderiza dashboard de enfermedades crónicas."""
         st.header("🏥 Gestión de Enfermedades Crónicas")
-        
+
         tab1, tab2, tab3 = st.tabs(["Diabetes", "Hipertensión", "Alertas"])
-        
+
         with tab1:
             self._render_diabetes_tab()
-        
+
         with tab2:
             self._render_hypertension_tab()
-        
+
         with tab3:
             self._render_alerts_tab()
-    
+
     def _render_diabetes_tab(self) -> None:
         """Renderiza pestaña de diabetes."""
         st.subheader("Diabetes Mellitus")
-        
+
         patient_id = st.text_input("ID del Paciente (Diabetes)", key="dm_patient")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             hba1c = st.number_input("HbA1c (%)", min_value=0.0, max_value=20.0, value=7.0, step=0.1)
             glucosa_ayunas = st.number_input("Glucosa Ayunas (mg/dL)", min_value=0, max_value=500, value=110)
             glucosa_post = st.number_input("Glucosa Postprandial (mg/dL)", min_value=0, max_value=500, value=140)
-        
+
         with col2:
             pa_sys = st.number_input("PA Sistólica", min_value=0, max_value=300, value=130)
             pa_dia = st.number_input("PA Diastólica", min_value=0, max_value=200, value=85)
             ldl = st.number_input("LDL (mg/dL)", min_value=0, max_value=300, value=100)
-        
+
         medications = st.multiselect(
             "Medicamentos",
             ["Metformina", "Glibenclamida", "Insulina NPH", "Insulina Glargina", "Atorvastatina", "Enalapril"]
         )
-        
+
         if st.button("💉 Registrar Control Diabetes", type="primary"):
             if patient_id:
                 record = self.diabetes_manager.record_control(
@@ -550,9 +550,9 @@ class ChronicDiseaseDashboard:
                     ldl=ldl,
                     medications=medications
                 )
-                
+
                 status, messages = self.diabetes_manager.get_control_status(patient_id)
-                
+
                 if status == ControlStatus.WELL_CONTROLLED:
                     st.success("✅ Diabetes bien controlada")
                 elif status == ControlStatus.FAIRLY_CONTROLLED:
@@ -560,14 +560,14 @@ class ChronicDiseaseDashboard:
                 else:
                     log_event("chronic_disease", f"error: Diabetes control status - {status.value}")
                     st.error(f"❌ {status.value}")
-                
+
                 if messages:
                     for msg in messages:
                         st.write(f"• {msg}")
             else:
                 log_event("chronic_disease", "error: Ingrese ID del paciente (diabetes)")
                 st.error("Ingrese ID del paciente")
-        
+
         # Mostrar tendencia
         if patient_id and st.checkbox("Ver tendencia HbA1c"):
             trend = self.diabetes_manager.get_trend_analysis(patient_id, "hba1c", months=6)
@@ -575,28 +575,28 @@ class ChronicDiseaseDashboard:
                 import pandas as pd
                 df = pd.DataFrame(trend)
                 st.line_chart(df.set_index("date")["value"])
-    
+
     def _render_hypertension_tab(self) -> None:
         """Renderiza pestaña de hipertensión."""
         st.subheader("Hipertensión Arterial")
-        
+
         patient_id = st.text_input("ID del Paciente (HTA)", key="hta_patient")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             pa_sys = st.number_input("PA Sistólica", min_value=0, max_value=300, value=130, key="hta_sys")
             frecuencia = st.number_input("Frecuencia Cardíaca", min_value=0, max_value=200, value=72)
-        
+
         with col2:
             pa_dia = st.number_input("PA Diastólica", min_value=0, max_value=200, value=85, key="hta_dia")
-        
+
         medications = st.multiselect(
             "Medicamentos",
             ["Enalapril", "Losartán", "Amlodipino", "Hidroclorotiazida", "Metoprolol"],
             key="hta_med"
         )
-        
+
         if st.button("🫀 Registrar Control HTA", type="primary"):
             if patient_id:
                 record = self.hypertension_manager.record_control(
@@ -606,9 +606,9 @@ class ChronicDiseaseDashboard:
                     frecuencia_cardiaca=frecuencia,
                     medications=medications
                 )
-                
+
                 status, messages = self.hypertension_manager.get_control_status(patient_id)
-                
+
                 if status == ControlStatus.WELL_CONTROLLED:
                     st.success("✅ HTA bien controlada")
                 elif status == ControlStatus.FAIRLY_CONTROLLED:
@@ -616,23 +616,23 @@ class ChronicDiseaseDashboard:
                 else:
                     log_event("chronic_disease", f"error: HTA control status - {status.value}")
                     st.error(f"❌ {status.value}")
-                
+
                 if messages:
                     for msg in messages:
                         st.write(f"• {msg}")
             else:
                 log_event("chronic_disease", "error: Ingrese ID del paciente (HTA)")
                 st.error("Ingrese ID del paciente")
-    
+
     def _render_alerts_tab(self) -> None:
         """Renderiza pestaña de alertas."""
         st.subheader("Alertas y Controles Pendientes")
-        
+
         pending_dm = self.diabetes_manager.get_pending_controls()
-        
+
         if pending_dm:
             st.warning(f"⚠️ {len(pending_dm)} pacientes con control de diabetes vencido")
-            
+
             for patient in pending_dm[:10]:  # Mostrar primeros 10
                 with st.expander(f"Paciente {patient['patient_id']} - {patient['days_overdue']} días vencido",
                              key=f"cdm_{patient['patient_id']}"):

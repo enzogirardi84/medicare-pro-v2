@@ -65,15 +65,15 @@ class SystemHealthReport:
     uptime_seconds: float
     version: str
     environment: str
-    
+
     @property
     def healthy_count(self) -> int:
         return sum(1 for c in self.checks if c.status == HealthStatus.HEALTHY)
-    
+
     @property
     def degraded_count(self) -> int:
         return sum(1 for c in self.checks if c.status == HealthStatus.DEGRADED)
-    
+
     @property
     def unhealthy_count(self) -> int:
         return sum(1 for c in self.checks if c.status == HealthStatus.UNHEALTHY)
@@ -82,10 +82,10 @@ class SystemHealthReport:
 class SystemHealthMonitor:
     """
     Monitor de salud del sistema.
-    
+
     Ejecuta checks periódicos y genera reportes.
     """
-    
+
     # Umbrales de alerta
     DISK_WARNING_PERCENT = 85
     DISK_CRITICAL_PERCENT = 95
@@ -93,15 +93,15 @@ class SystemHealthMonitor:
     MEMORY_CRITICAL_PERCENT = 95
     RESPONSE_TIME_WARNING_MS = 500
     RESPONSE_TIME_CRITICAL_MS = 2000
-    
+
     def __init__(self):
         self._checks: Dict[str, Callable[[], HealthCheck]] = {}
         self._last_report: Optional[SystemHealthReport] = None
         self._start_time = datetime.now()
-        
+
         # Registrar checks por defecto
         self._register_default_checks()
-    
+
     def _register_default_checks(self):
         """Registra los checks de salud por defecto."""
         self.register_check("database", self._check_database)
@@ -110,39 +110,39 @@ class SystemHealthMonitor:
         self.register_check("memory", self._check_memory)
         self.register_check("session_state", self._check_session_state)
         self.register_check("supabase", self._check_supabase)
-    
+
     def register_check(self, name: str, check_fn: Callable[[], HealthCheck]):
         """Registra un nuevo check de salud."""
         self._checks[name] = check_fn
-    
+
     def run_health_check(self, check_name: Optional[str] = None) -> SystemHealthReport:
         """
         Ejecuta health checks.
-        
+
         Args:
             check_name: Si especificado, solo ejecuta ese check
-        
+
         Returns:
             SystemHealthReport con resultados
         """
         checks_to_run = {check_name: self._checks[check_name]} if check_name else self._checks
-        
+
         results = []
         overall_status = HealthStatus.HEALTHY
-        
+
         for name, check_fn in checks_to_run.items():
             try:
                 start_time = time.time()
                 check = check_fn()
                 check.response_time_ms = (time.time() - start_time) * 1000
                 results.append(check)
-                
+
                 # Determinar overall status
                 if check.status == HealthStatus.UNHEALTHY:
                     overall_status = HealthStatus.UNHEALTHY
                 elif check.status == HealthStatus.DEGRADED and overall_status != HealthStatus.UNHEALTHY:
                     overall_status = HealthStatus.DEGRADED
-                    
+
             except Exception as e:
                 results.append(HealthCheck(
                     name=name,
@@ -152,10 +152,10 @@ class SystemHealthMonitor:
                     details={"error": str(e)}
                 ))
                 overall_status = HealthStatus.UNHEALTHY
-        
+
         # Calcular uptime
         uptime = (datetime.now() - self._start_time).total_seconds()
-        
+
         report = SystemHealthReport(
             overall_status=overall_status,
             checks=results,
@@ -164,25 +164,25 @@ class SystemHealthMonitor:
             version=self._get_version(),
             environment=os.getenv("MEDICARE_ENV", "unknown")
         )
-        
+
         self._last_report = report
-        
+
         # Log si hay problemas
         if overall_status != HealthStatus.HEALTHY:
             log_event("health_check", f"System health degraded: {overall_status.value}")
-        
+
         return report
-    
+
     def _check_database(self) -> HealthCheck:
         """Verifica conectividad a base de datos local."""
         start_time = time.time()
-        
+
         try:
             # Intentar acceder a session_state como proxy de DB
             _ = st.session_state.get("pacientes_db", {})
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             return HealthCheck(
                 name="database",
                 status=HealthStatus.HEALTHY,
@@ -190,7 +190,7 @@ class SystemHealthMonitor:
                 message="Local database accessible",
                 details={"type": "session_state"}
             )
-            
+
         except Exception as e:
             return HealthCheck(
                 name="database",
@@ -199,23 +199,23 @@ class SystemHealthMonitor:
                 message=f"Database access failed: {str(e)}",
                 suggestions=["Verificar permisos de escritura", "Reiniciar aplicación"]
             )
-    
+
     def _check_cache(self) -> HealthCheck:
         """Verifica estado de caché."""
         start_time = time.time()
-        
+
         try:
             cache = get_cache()
-            
+
             # Intentar operación simple
             cache.set("health_check_test", "test_value", ttl=10)
             value = cache.get("health_check_test")
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             if value == "test_value":
                 stats = cache.get_stats()
-                
+
                 return HealthCheck(
                     name="cache",
                     status=HealthStatus.HEALTHY,
@@ -231,7 +231,7 @@ class SystemHealthMonitor:
                     message="Cache read/write mismatch",
                     suggestions=["Verificar configuración de Redis"]
                 )
-                
+
         except Exception as e:
             return HealthCheck(
                 name="cache",
@@ -240,17 +240,17 @@ class SystemHealthMonitor:
                 message=f"Cache error: {str(e)}",
                 suggestions=["Verificar conexión a Redis", "Revisar REDIS_URL"]
             )
-    
+
     def _check_disk_space(self) -> HealthCheck:
         """Verifica espacio en disco."""
         start_time = time.time()
-        
+
         try:
             disk = psutil.disk_usage('/')
             percent_used = disk.percent
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             if percent_used >= self.DISK_CRITICAL_PERCENT:
                 status = HealthStatus.UNHEALTHY
                 message = f"CRITICAL: Disk {percent_used}% full"
@@ -260,7 +260,7 @@ class SystemHealthMonitor:
             else:
                 status = HealthStatus.HEALTHY
                 message = f"Disk space OK ({percent_used}% used)"
-            
+
             return HealthCheck(
                 name="disk",
                 status=status,
@@ -274,7 +274,7 @@ class SystemHealthMonitor:
                 },
                 suggestions=["Limpiar logs antiguos", "Eliminar backups viejos"] if status != HealthStatus.HEALTHY else []
             )
-            
+
         except Exception as e:
             return HealthCheck(
                 name="disk",
@@ -282,17 +282,17 @@ class SystemHealthMonitor:
                 response_time_ms=0,
                 message=f"Cannot check disk: {str(e)}"
             )
-    
+
     def _check_memory(self) -> HealthCheck:
         """Verifica uso de memoria."""
         start_time = time.time()
-        
+
         try:
             memory = psutil.virtual_memory()
             percent_used = memory.percent
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             if percent_used >= self.MEMORY_CRITICAL_PERCENT:
                 status = HealthStatus.UNHEALTHY
                 message = f"CRITICAL: Memory {percent_used}% used"
@@ -302,7 +302,7 @@ class SystemHealthMonitor:
             else:
                 status = HealthStatus.HEALTHY
                 message = f"Memory OK ({percent_used}% used)"
-            
+
             return HealthCheck(
                 name="memory",
                 status=status,
@@ -315,7 +315,7 @@ class SystemHealthMonitor:
                 },
                 suggestions=["Reiniciar aplicación", "Verificar fugas de memoria"] if status != HealthStatus.HEALTHY else []
             )
-            
+
         except Exception as e:
             return HealthCheck(
                 name="memory",
@@ -323,15 +323,15 @@ class SystemHealthMonitor:
                 response_time_ms=0,
                 message=f"Cannot check memory: {str(e)}"
             )
-    
+
     def _check_session_state(self) -> HealthCheck:
         """Verifica estado de session_state."""
         start_time = time.time()
-        
+
         try:
             # Contar elementos en session_state
             total_keys = len(st.session_state.keys())
-            
+
             # Verificar tamaño aproximado
             size_estimate = 0
             for key in ['pacientes_db', 'evoluciones_db', 'vitales_db', 'usuarios_db']:
@@ -341,9 +341,9 @@ class SystemHealthMonitor:
                         size_estimate += len(data)
                     elif isinstance(data, list):
                         size_estimate += len(data)
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             return HealthCheck(
                 name="session_state",
                 status=HealthStatus.HEALTHY,
@@ -354,7 +354,7 @@ class SystemHealthMonitor:
                     "estimated_records": size_estimate
                 }
             )
-            
+
         except Exception as e:
             return HealthCheck(
                 name="session_state",
@@ -362,11 +362,11 @@ class SystemHealthMonitor:
                 response_time_ms=(time.time() - start_time) * 1000,
                 message=f"Session state error: {str(e)}"
             )
-    
+
     def _check_supabase(self) -> HealthCheck:
         """Verifica conectividad a Supabase."""
         start_time = time.time()
-        
+
         supabase_url = os.getenv("SUPABASE_URL", "")
         if not supabase_url:
             return HealthCheck(
@@ -375,18 +375,18 @@ class SystemHealthMonitor:
                 response_time_ms=0,
                 message="Supabase not configured"
             )
-        
+
         try:
             # Intentar importar y conectar
             from core._database_supabase import get_supabase_client
-            
+
             client = get_supabase_client()
-            
+
             # Query simple de prueba
             response = client.table("pacientes").select("count", count="exact").limit(1).execute()
-            
+
             response_time = (time.time() - start_time) * 1000
-            
+
             return HealthCheck(
                 name="supabase",
                 status=HealthStatus.HEALTHY,
@@ -394,10 +394,10 @@ class SystemHealthMonitor:
                 message="Supabase connection OK",
                 details={"url": supabase_url.split("@")[-1] if "@" in supabase_url else supabase_url}
             )
-            
+
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
-            
+
             return HealthCheck(
                 name="supabase",
                 status=HealthStatus.DEGRADED,  # Degraded, no crítico
@@ -405,7 +405,7 @@ class SystemHealthMonitor:
                 message=f"Supabase connection issue: {str(e)}",
                 suggestions=["Verificar SUPABASE_URL", "Verificar SUPABASE_KEY", "Verificar conectividad"]
             )
-    
+
     def _get_version(self) -> str:
         """Obtiene versión de la aplicación."""
         try:
@@ -413,14 +413,14 @@ class SystemHealthMonitor:
             return RELEASES[0]["version"] if RELEASES else "unknown"
         except (ImportError, IndexError, KeyError):
             return "unknown"
-    
+
     def render_health_dashboard(self):
         """Renderiza dashboard de salud en Streamlit."""
         st.title("🏥 System Health Monitor")
-        
+
         # Ejecutar checks
         report = self.run_health_check()
-        
+
         # Header con status general
         status_colors = {
             HealthStatus.HEALTHY: "🟢",
@@ -428,9 +428,9 @@ class SystemHealthMonitor:
             HealthStatus.UNHEALTHY: "🔴",
             HealthStatus.UNKNOWN: "⚪"
         }
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             emoji = status_colors.get(report.overall_status, "⚪")
             st.metric(
@@ -438,47 +438,47 @@ class SystemHealthMonitor:
                 f"{emoji} {report.overall_status.value.upper()}"
             )
             st.metric("Healthy", report.healthy_count)
-        
+
         with col2:
             st.metric("Degraded", report.degraded_count)
             st.metric("Unhealthy", report.unhealthy_count)
-        
+
         # Uptime
         uptime_hours = report.uptime_seconds / 3600
         st.caption(f"⏱️ Uptime: {uptime_hours:.1f} hours | Version: {report.version} | Env: {report.environment}")
-        
+
         st.divider()
-        
+
         # Checks individuales
         st.subheader("Health Checks")
-        
+
         for check in report.checks:
             with st.container():
                 col1, col2, col3 = st.columns([1, 3, 1])
-                
+
                 with col1:
                     emoji = status_colors.get(check.status, "⚪")
                     st.markdown(f"### {emoji}")
-                
+
                 with col2:
                     st.markdown(f"**{check.name.upper()}**")
                     st.text(check.message)
-                    
+
                     if check.suggestions:
                         with st.expander("💡 Suggestions"):
                             for suggestion in check.suggestions:
                                 st.markdown(f"- {suggestion}")
-                
+
                 with col3:
                     st.caption(f"{check.response_time_ms:.1f}ms")
                     st.caption(check.timestamp.strftime("%H:%M:%S"))
-            
+
             st.divider()
-        
+
         # Botón de refresh
         if st.button("🔄 Refresh Health Check"):
             pass
-        
+
         # Exportar reporte
         if st.button("📥 Export Health Report"):
             report_json = json.dumps({
@@ -497,7 +497,7 @@ class SystemHealthMonitor:
                     for c in report.checks
                 ]
             }, indent=2)
-            
+
             st.download_button(
                 "Download JSON",
                 report_json,
@@ -522,7 +522,7 @@ def quick_health_check() -> Dict[str, str]:
     """Health check rápido para usar en otras partes."""
     monitor = get_health_monitor()
     report = monitor.run_health_check()
-    
+
     return {
         "status": report.overall_status.value,
         "healthy": str(report.healthy_count),

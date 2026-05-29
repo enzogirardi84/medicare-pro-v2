@@ -187,13 +187,13 @@ def _render_fichada_gps(paciente_sel, mi_empresa, nombre_usuario):
     direccion_final = direccion if lat is not None else "Ubicacion Omitida"
 
     col_in, col_out = st.columns(2)
-    if col_in.button("Fichar LLEGADA", width='stretch', type="primary"):
+    if col_in.button("Fichar LLEGADA", use_container_width=True, type="primary"):
         try:
             _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "LLEGADA", lat_val, lon_val, direccion_final)
         except Exception as e:
             log_event("visitas", f"error_fichada_llegada:{type(e).__name__}:{e}")
             st.error(f"Error al registrar llegada: {e}")
-    if col_out.button("Fichar SALIDA", width='stretch'):
+    if col_out.button("Fichar SALIDA", use_container_width=True):
         try:
             _registrar_fichada(paciente_sel, mi_empresa, nombre_usuario, "SALIDA", lat_val, lon_val, direccion_final)
         except Exception as e:
@@ -311,7 +311,7 @@ def _render_agendar_visita(paciente_sel, mi_empresa, user, rol, agenda_paciente,
             )
             idx_prof = profesionales.index(nombre_usuario) if nombre_usuario in profesionales else 0
             prof_ag = st.selectbox("Asignar Profesional", profesionales, index=idx_prof)
-            if st.form_submit_button("Agendar Visita", width='stretch', type="primary"):
+            if st.form_submit_button("Agendar Visita", use_container_width=True, type="primary"):
                 _fh_prog = datetime.combine(fecha_ag, hora_ag)
                 if _fh_prog < ahora().replace(tzinfo=None) - timedelta(hours=1):
                     log_event("visitas", "error: No se puede agendar una visita en el pasado. Corregi la fecha u hora.")
@@ -478,7 +478,7 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
     with c_w1:
         if tel_destino and texto_final_wa:
             link_wpp = f"https://wa.me/{tel_destino}?text={urllib.parse.quote(texto_final_wa)}"
-            res = st.link_button("Enviar mensaje por WhatsApp", link_wpp, width='stretch', type="primary")
+            res = st.link_button("Enviar mensaje por WhatsApp", link_wpp, use_container_width=True, type="primary")
             if res:
                 st.session_state["_ultimo_mensaje_wa"] = {
                     "paciente": paciente_sel,
@@ -490,13 +490,13 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
     with c_w2:
         if tel_destino:
             link_abrir = f"https://wa.me/{tel_destino}"
-            st.link_button("Abrir WhatsApp (solo numero)", link_abrir, width='stretch')
+            st.link_button("Abrir WhatsApp (solo numero)", link_abrir, use_container_width=True)
         _wa_ultimo = st.session_state.get("_ultimo_mensaje_wa")
         if _wa_ultimo and _wa_ultimo.get("paciente") == paciente_sel:
             st.link_button(
                 "Reenviar ultimo mensaje",
                 f"https://wa.me/{_wa_ultimo['tel']}?text={urllib.parse.quote(_wa_ultimo['texto'])}",
-                width='stretch',
+                use_container_width=True,
             )
 
     if agenda_paciente:
@@ -538,12 +538,12 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
                 st.caption("Estado de la agenda del paciente")
                 estado_chart = df_agenda.groupby("Estado").size().reset_index(name="Visitas")
                 if not estado_chart.empty:
-                    st.bar_chart(estado_chart.set_index("Estado")["Visitas"], width='stretch')
+                    st.bar_chart(estado_chart.set_index("Estado")["Visitas"], use_container_width=True)
             with col_g2:
                 st.caption("Carga por profesional")
                 prof_chart = df_agenda.groupby("Profesional").size().reset_index(name="Visitas").sort_values("Visitas", ascending=False)
                 if not prof_chart.empty:
-                    st.bar_chart(prof_chart.set_index("Profesional")["Visitas"], width='stretch')
+                    st.bar_chart(prof_chart.set_index("Profesional")["Visitas"], use_container_width=True)
             c_a1, c_a2 = st.columns([2, 1])
             opciones_accion = [f"{x['Fecha y Hora']} | {x['Profesional']} | {x['Estado']}" for _, x in df_filtrado.sort_values("_fecha_dt").iterrows()]
             seleccion = c_a1.selectbox("Accion rapida sobre una visita", ["Sin cambios"] + opciones_accion, key=f"agenda_accion_sel_{paciente_sel}")
@@ -551,7 +551,7 @@ def _render_whatsapp_agenda(paciente_sel, mi_empresa, user, rol, agenda_paciente
             _confirm_key = f"_agenda_confirm_{paciente_sel}"
             if _confirm_key not in st.session_state:
                 st.session_state[_confirm_key] = False
-            if st.button("Aplicar cambio de agenda", width='stretch', key=f"agenda_apply_{paciente_sel}"):
+            if st.button("Aplicar cambio de agenda", use_container_width=True, key=f"agenda_apply_{paciente_sel}"):
                 if seleccion == "Sin cambios":
                     st.warning("Selecciona una visita primero.")
                 elif not st.session_state[_confirm_key]:

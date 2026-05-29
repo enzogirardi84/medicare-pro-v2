@@ -139,7 +139,7 @@ def render_auditoria(mi_empresa, user):
         try:
             from core.db_sql import get_auditoria_by_empresa
             from core.nextgen_sync import _obtener_uuid_empresa
-            
+
             empresa_uuid = _obtener_uuid_empresa(mi_empresa)
             if empresa_uuid:
                 logs_sql = get_auditoria_by_empresa(empresa_uuid, limit=1000)
@@ -238,7 +238,7 @@ def render_auditoria(mi_empresa, user):
             st.session_state[pdf_key] = pdf_bytes
         if st.session_state.get(pdf_key):
             nombre_pdf = f"Auditoria_Logs_{sanitize_filename_component(ahora().strftime('%d_%m_%Y_%H%M'), 'logs')}.pdf"
-            st.download_button("Descargar auditoría PDF", data=st.session_state[pdf_key], file_name=nombre_pdf, mime="application/pdf", width='stretch')
+            st.download_button("Descargar auditoría PDF", data=st.session_state[pdf_key], file_name=nombre_pdf, mime="application/pdf", use_container_width=True)
         return
 
     # --- Asistencia por profesional ---
@@ -353,7 +353,7 @@ def render_auditoria(mi_empresa, user):
     with st.expander("Top pacientes visitados", expanded=False):
         if not df_valida.empty and "paciente" in df_valida.columns:
             _top10 = df_valida["paciente"].value_counts().head(10)
-            st.dataframe(_top10.reset_index().rename(columns={"index": "Paciente", "paciente": "Visitas"}), width='stretch')
+            st.dataframe(_top10.reset_index().rename(columns={"index": "Paciente", "paciente": "Visitas"}), use_container_width=True)
 
     # 5. Tabla paginada
     df_chk = df_valida.iloc[::-1].reset_index(drop=True) if not df_valida.empty else pd.DataFrame()
@@ -377,7 +377,7 @@ def render_auditoria(mi_empresa, user):
         data=csv_bytes,
         file_name=f"Asistencia_{sanitize_filename_component(prof_sel, 'prof')}_{fecha_desde.strftime('%d%m%Y')}.csv",
         mime="text/csv",
-        width='stretch',
+        use_container_width=True,
     )
 
     if FPDF_DISPONIBLE:
@@ -405,4 +405,4 @@ def render_auditoria(mi_empresa, user):
                 pdf.cell(55, 8, safe_text(str(r.get("gps", "-"))[:30]), border=1, ln=True)
             pdf_bytes = pdf_output_bytes(pdf)
             nombre_pdf = f"Asistencia_{sanitize_filename_component(prof_sel, 'prof')}_{fecha_desde.strftime('%d%m%Y')}.pdf"
-            st.download_button("Descargar PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", width='stretch')
+            st.download_button("Descargar PDF", data=pdf_bytes, file_name=nombre_pdf, mime="application/pdf", use_container_width=True)

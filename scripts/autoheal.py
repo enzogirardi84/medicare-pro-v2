@@ -901,7 +901,7 @@ def smart_commit(memory: FixMemory, fixes: int, tests_created: int) -> bool:
 
 def check_performance_regression(memory: FixMemory) -> dict:
     """Analiza scan_history para detectar regresiones de rendimiento.
-    
+
     Returns:
         Dict con alertas de rendimiento.
     """
@@ -964,7 +964,7 @@ def check_performance_regression(memory: FixMemory) -> dict:
 
 def generate_smart_tests(memory: FixMemory, force_all: bool = False) -> int:
     """Crea tests para módulos sin cobertura.
-    
+
     Args:
         memory: Memoria persistente.
         force_all: Si True, escanea TODOS los módulos core/ y views/.

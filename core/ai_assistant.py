@@ -127,10 +127,10 @@ class PriorityClassification:
 class AIEvolutionAssistant:
     """
     Asistente de redacción de evoluciones médicas.
-    
+
     Genera sugerencias y ayuda a estructurar notas clínicas.
     """
-    
+
     # Templates de prompts
     EVOLUTION_PROMPT = """Eres un médico clínico experimentado. Ayuda a redactar una evolución médica profesional.
 
@@ -168,7 +168,7 @@ NOTA DE EVOLUCIÓN:"""
         self.api_key = api_key
         self.model = model
         self.enabled = provider != "none" and bool(api_key)
-    
+
     def generate_evolution_suggestion(
         self,
         patient_data: Dict[str, Any],
@@ -178,7 +178,7 @@ NOTA DE EVOLUCIÓN:"""
     ) -> Dict[str, Any]:
         """
         Genera sugerencia de evolución médica.
-        
+
         Returns:
             Dict con sugerencia y metadatos
         """
@@ -189,7 +189,7 @@ NOTA DE EVOLUCIÓN:"""
                 "error": "AI no configurada. Configurar LLM_PROVIDER y LLM_API_KEY.",
                 "enabled": False
             }
-        
+
         try:
             prompt = self.EVOLUTION_PROMPT.format(
                 nombre=patient_data.get("nombre", "Paciente"),
@@ -200,19 +200,19 @@ NOTA DE EVOLUCIÓN:"""
                 sintomas=symptoms or "No reporta síntomas nuevos",
                 evolucion_previa=previous_evolution or "Primera consulta"
             )
-            
+
             # Llamar a LLM
             suggestion = self._call_llm(prompt, max_tokens=500, temperature=0.7)
-            
+
             log_event("ai", f"Generated evolution suggestion for patient: {patient_data.get('id', 'unknown')}")
-            
+
             return {
                 "suggestion": suggestion,
                 "enabled": True,
                 "provider": self.provider,
                 "model": self.model
             }
-            
+
         except Exception as e:
             log_event("ai_error", f"Failed to generate evolution: {e}")
             return {
@@ -220,23 +220,23 @@ NOTA DE EVOLUCIÓN:"""
                 "error": str(e),
                 "enabled": self.enabled
             }
-    
+
     def improve_note(self, draft_note: str, context: Optional[Dict] = None) -> str:
         """
         Mejora una nota clínica existente.
-        
+
         Args:
             draft_note: Nota en borrador
             context: Contexto adicional
-        
+
         Returns:
             Nota mejorada
         """
         if not self.enabled:
             return draft_note
-        
+
         prompt = f"""Mejora la siguiente nota clínica manteniendo toda la información médica relevante.
-        
+
 NOTA ORIGINAL:
 {draft_note}
 
@@ -248,13 +248,13 @@ INSTRUCCIONES:
 5. No agregues información que no exista
 
 NOTA MEJORADA:"""
-        
+
         try:
             return self._call_llm(prompt, max_tokens=600, temperature=0.5)
         except Exception as e:
             log_event("ai_error", f"Failed to improve note: {e}")
             return draft_note
-    
+
     def suggest_differential_diagnosis(
         self,
         symptoms: List[str],
@@ -263,9 +263,9 @@ NOTA MEJORADA:"""
     ) -> List[Dict[str, str]]:
         """
         Sugiere diagnósticos diferenciales basados en síntomas.
-        
+
         DISCLAIMER: Esto es solo para ayudar al médico, nunca para diagnóstico automático.
-        
+
         Returns:
             Lista de diagnósticos sugeridos con probabilidad estimada
         """
@@ -301,12 +301,12 @@ NOTA MEJORADA:"""
             })
 
         return suggestions
-    
+
     def _format_vitals(self, vitals: Optional[Dict]) -> str:
         """Formatea signos vitales para el prompt."""
         if not vitals:
             return "No disponibles"
-        
+
         parts = []
         if vitals.get("presion_arterial"):
             parts.append(f"PA: {vitals['presion_arterial']} mmHg")
@@ -316,9 +316,9 @@ NOTA MEJORADA:"""
             parts.append(f"T: {vitals['temperatura']}°C")
         if vitals.get("saturacion_o2"):
             parts.append(f"SatO2: {vitals['saturacion_o2']}%")
-        
+
         return ", ".join(parts) if parts else "No disponibles"
-    
+
     def _call_llm(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> str:
         """Llama al API de LLM según el provider configurado."""
         self._ensure_config()
@@ -336,14 +336,14 @@ NOTA MEJORADA:"""
             return self._call_local(prompt, max_tokens, temperature)
         else:
             raise ValueError(f"Provider no soportado: {self.provider}")
-    
+
     def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama API de OpenAI (v1.0+)."""
         self._ensure_config()
         try:
             from openai import OpenAI
             client = OpenAI(api_key=self.api_key, timeout=30.0)
-            
+
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -353,10 +353,10 @@ NOTA MEJORADA:"""
                 max_tokens=max_tokens,
                 temperature=temperature
             )
-            
+
             content = response.choices[0].message.content
             return content.strip() if content else ""
-            
+
         except Exception as e:
             error_msg = str(e)
             if "image" in error_msg.lower() or "vision" in error_msg.lower():
@@ -364,14 +364,14 @@ NOTA MEJORADA:"""
                 return "El modelo actual no soporta análisis de imágenes. Por favor, describe el contenido textual."
             log_event("ai_error", f"OpenAI API error: {e}")
             raise
-    
+
     def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama API de Anthropic (Claude) usando Messages API."""
         self._ensure_config()
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=self.api_key)
-            
+
             response = client.messages.create(
                 model=self.model,
                 max_tokens=max_tokens,
@@ -379,9 +379,9 @@ NOTA MEJORADA:"""
                 system="Eres un asistente médico profesional.",
                 messages=[{"role": "user", "content": prompt}]
             )
-            
+
             return response.content[0].text.strip()
-            
+
         except Exception as e:
             error_msg = str(e)
             if "image" in error_msg.lower() or "vision" in error_msg.lower() or "png" in error_msg.lower():
@@ -389,7 +389,7 @@ NOTA MEJORADA:"""
                 return "El modelo actual no soporta análisis de imágenes. Por favor, usa texto."
             log_event("ai_error", f"Anthropic API error: {e}")
             raise
-    
+
     def _call_deepseek(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Llama API de DeepSeek (compatible con OpenAI)."""
         self._ensure_config()
@@ -468,11 +468,11 @@ NOTA MEJORADA:"""
         self._ensure_config()
         try:
             import requests
-            
+
             local_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
             local_model = os.getenv("LOCAL_LLM_MODEL", "llama3.1")
             model = local_model if self.model in ("gpt-4", "gpt-3.5-turbo", "claude-3") else self.model
-            
+
             response = requests.post(
                 f"{local_url}/api/generate",
                 json={
@@ -486,10 +486,10 @@ NOTA MEJORADA:"""
                 },
                 timeout=60
             )
-            
+
             result = response.json()
             return result.get("response", "").strip()
-            
+
         except Exception as e:
             log_event("ai_error", f"Local LLM error: {e}")
             raise
@@ -498,10 +498,10 @@ NOTA MEJORADA:"""
 class ClinicalRiskPredictor:
     """
     Predice riesgo clínico basado en datos del paciente.
-    
+
     Usa reglas médicas establecidas + ML básico.
     """
-    
+
     def assess_risk(
         self,
         age: int,
@@ -512,14 +512,14 @@ class ClinicalRiskPredictor:
     ) -> ClinicalRiskAssessment:
         """
         Evalúa riesgo clínico del paciente.
-        
+
         Returns:
             ClinicalRiskAssessment con score y recomendaciones
         """
         score = 0
         factors = []
         recommendations = []
-        
+
         # Factor: Edad
         if age > 75:
             score += 15
@@ -528,7 +528,7 @@ class ClinicalRiskPredictor:
         elif age > 65:
             score += 10
             factors.append("Adulto mayor (>65)")
-        
+
         # Factor: Signos vitales
         if vital_signs.get("presion_arterial"):
             pa = vital_signs["presion_arterial"]
@@ -544,21 +544,21 @@ class ClinicalRiskPredictor:
                         factors.append("Hipertensión moderada-severa")
                 except (ValueError, TypeError):
                     pass
-        
+
         if vital_signs.get("frecuencia_cardiaca"):
             fc = vital_signs["frecuencia_cardiaca"]
             if fc > 120 or fc < 50:
                 score += 15
                 factors.append("Frecuencia cardíaca alterada")
                 recommendations.append("Evaluar causa de arritmia/bradicardia")
-        
+
         if vital_signs.get("temperatura"):
             temp = vital_signs["temperatura"]
             if temp > 38.5 or temp < 35.5:
                 score += 10
                 factors.append("Temperatura alterada")
                 recommendations.append("Evaluar infección/hipotermia")
-        
+
         if vital_signs.get("saturacion_o2"):
             sat = vital_signs["saturacion_o2"]
             if sat < 90:
@@ -569,7 +569,7 @@ class ClinicalRiskPredictor:
                 score += 15
                 factors.append("Hipoxemia leve (Sat <94%)")
                 recommendations.append("Evaluar función respiratoria")
-        
+
         # Factor: Síntomas críticos
         critical_symptoms = [
             "dolor de pecho", "opresión torácica", "disnea severa",
@@ -581,7 +581,7 @@ class ClinicalRiskPredictor:
                 factors.append(f"Síntoma crítico: {symptom}")
                 recommendations.append("Evaluación urgente inmediata")
                 break
-        
+
         # Factor: Comorbilidades
         high_risk_conditions = [
             "diabetes descompensada", "insuficiencia cardiaca",
@@ -591,7 +591,7 @@ class ClinicalRiskPredictor:
             if any(high in condition.lower() for high in high_risk_conditions):
                 score += 10
                 factors.append(f"Comorbilidad de alto riesgo: {condition}")
-        
+
         # Determinar nivel
         if score >= 70:
             level = "critical"
@@ -601,16 +601,16 @@ class ClinicalRiskPredictor:
             level = "medium"
         else:
             level = "low"
-        
+
         # Agregar recomendaciones generales según nivel
         if level == "critical":
             recommendations.insert(0, "CONSIDERAR TRASLADO A EMERGENCIAS")
         elif level == "high":
             recommendations.insert(0, "Evaluación médica prioritaria")
-        
+
         if not recommendations:
             recommendations.append("Seguimiento ambulatorio según protocolo")
-        
+
         return ClinicalRiskAssessment(
             score=score,
             level=level,
@@ -624,7 +624,7 @@ class VitalSignAnomalyDetector:
     """
     Detecta anomalías en series temporales de signos vitales.
     """
-    
+
     # Rangos normales por edad (adultos)
     NORMAL_RANGES = {
         "presion_arterial_systolic": (90, 140),
@@ -634,7 +634,7 @@ class VitalSignAnomalyDetector:
         "temperatura": (36.1, 37.2),
         "saturacion_o2": (95, 100),
     }
-    
+
     def _get_vital_value(self, vitals: Dict[str, Any], param: str) -> Optional[float]:
         """Extrae valor numérico de un signo vital, manejando alias de campo."""
         value = vitals.get(param)
@@ -668,12 +668,12 @@ class VitalSignAnomalyDetector:
     ) -> List[VitalSignAnomaly]:
         """
         Detecta anomalías en signos vitales actuales.
-        
+
         Returns:
             Lista de anomalías detectadas
         """
         anomalies = []
-        
+
         # 1. Detección de valores fuera de rango
         for param, (min_val, max_val) in self.NORMAL_RANGES.items():
             if param == "presion_arterial_systolic":
@@ -696,13 +696,13 @@ class VitalSignAnomalyDetector:
                     value = self._get_vital_value(current_vitals, param)
             else:
                 value = self._get_vital_value(current_vitals, param)
-            
+
             if value is None:
                 continue
-            
+
             if value < min_val or value > max_val:
                 severity = self._calculate_severity(param, value, min_val, max_val)
-                
+
                 anomalies.append(VitalSignAnomaly(
                     parameter=param,
                     value=value,
@@ -711,24 +711,24 @@ class VitalSignAnomalyDetector:
                     description=f"{param}: {value} (rango normal: {min_val}-{max_val})",
                     suggestion=self._get_suggestion(param, value, severity)
                 ))
-        
+
         # 2. Detección de cambios bruscos (si hay historial)
         if history and len(history) >= 2:
             previous = history[-2]  # Último registro anterior
-            
+
             for param in ["temperatura", "frecuencia_cardiaca", "saturacion_o2"]:
                 current_val = current_vitals.get(param)
                 previous_val = previous.get(param)
-                
+
                 if current_val is None or previous_val is None:
                     continue
-                
+
                 # Calcular cambio porcentual
                 if isinstance(current_val, (int, float)) and isinstance(previous_val, (int, float)):
                     if previous_val == 0:
                         continue
                     change_pct = abs(current_val - previous_val) / previous_val * 100
-                    
+
                     # Alertar si cambio > 20%
                     if change_pct > 20:
                         anomalies.append(VitalSignAnomaly(
@@ -739,9 +739,9 @@ class VitalSignAnomalyDetector:
                             description=f"Cambio brusco en {param}: {change_pct:.1f}%",
                             suggestion=f"Verificar tendencia de {param}"
                         ))
-        
+
         return anomalies
-    
+
     def _calculate_severity(
         self,
         parameter: str,
@@ -750,37 +750,37 @@ class VitalSignAnomalyDetector:
         max_val: float
     ) -> str:
         """Calcula severidad de la anomalía."""
-        
+
         # Rangos críticos específicos
         critical_ranges = {
             "saturacion_o2": (90, None),  # < 90% es critico
             "temperatura": (None, 35),    # < 35°C hipotermia severa
             "frecuencia_cardiaca": (40, 150),
         }
-        
+
         if parameter in critical_ranges:
             crit_min, crit_max = critical_ranges[parameter]
             if crit_min is not None and value < crit_min:
                 return "critical"
             if crit_max is not None and value > crit_max:
                 return "critical"
-        
+
         # Determinar por distancia al rango normal
         if value < min_val:
             distance = (min_val - value) / min_val if min_val != 0 else abs(value)
         else:
             distance = (value - max_val) / max_val if max_val != 0 else abs(value)
-        
+
         if distance > 0.5:
             return "high"
         elif distance > 0.2:
             return "medium"
         else:
             return "low"
-    
+
     def _get_suggestion(self, parameter: str, value: float, severity: str) -> str:
         """Genera sugerencia basada en anomalía."""
-        
+
         suggestions = {
             "saturacion_o2": {
                 "critical": "URGENTE: Administrar oxígeno inmediatamente",
@@ -803,7 +803,7 @@ class VitalSignAnomalyDetector:
                 "medium": "Monitorear PA"
             }
         }
-        
+
         param_suggestions = suggestions.get(parameter, {})
         return param_suggestions.get(severity, "Evaluar clínicamente")
 
@@ -812,7 +812,7 @@ class PriorityClassifier:
     """
     Clasifica prioridad de atención basada en triage.
     """
-    
+
     def classify_priority(
         self,
         symptoms: List[str],
@@ -822,22 +822,22 @@ class PriorityClassifier:
     ) -> PriorityClassification:
         """
         Clasifica prioridad de atención (triage).
-        
+
         Returns:
             PriorityClassification con nivel y timeframe sugerido
         """
-        
+
         # Puntuación de prioridad
         score = 0
         reasons = []
-        
+
         # Síntomas críticos (inmediato)
         critical_symptoms = [
             "paro cardiorrespiratorio", "convulsiones en curso",
             "dolor torácico severo", "dificultad respiratoria severa",
             "pérdida de conciencia", "hemorragia activa severa"
         ]
-        
+
         for symptom in symptoms:
             if any(crit in symptom.lower() for crit in critical_symptoms):
                 return PriorityClassification(
@@ -846,28 +846,28 @@ class PriorityClassifier:
                     suggested_timeframe="Inmediato - 0 minutos",
                     confidence=0.95
                 )
-        
+
         # Síntomas urgentes (10 minutos)
         urgent_symptoms = [
             "dolor de pecho", "disnea", "confusión",
             "fiebre alta >39°C", "dolor abdominal severo",
             "trauma cerrado", "sangrado moderado"
         ]
-        
+
         for symptom in symptoms:
             if any(urg in symptom.lower() for urg in urgent_symptoms):
                 score += 40
                 reasons.append(f"Síntoma urgente: {symptom}")
-        
+
         # Factor: Modo de llegada
         if arrival_mode == "ambulance":
             score += 20
             reasons.append("Arribo en ambulancia")
-        
+
         # Factor: Signos vitales alterados
         anomaly_detector = VitalSignAnomalyDetector()
         anomalies = anomaly_detector.detect_anomalies(vital_signs)
-        
+
         for anomaly in anomalies:
             if anomaly.severity == "critical":
                 score += 30
@@ -875,12 +875,12 @@ class PriorityClassifier:
             elif anomaly.severity == "high":
                 score += 20
                 reasons.append(f"SV alterado: {anomaly.parameter}")
-        
+
         # Factor: Edad vulnerable
         if age < 2 or age > 80:
             score += 15
             reasons.append(f"Edad vulnerable: {age} años")
-        
+
         # Determinar prioridad
         if score >= 50:
             priority = "urgent"
@@ -895,7 +895,7 @@ class PriorityClassifier:
             priority = "low"
             timeframe = "2-4 horas"
             reasons.append("Consulta ambulatoria estándar")
-        
+
         return PriorityClassification(
             priority=priority,
             reasons=reasons,

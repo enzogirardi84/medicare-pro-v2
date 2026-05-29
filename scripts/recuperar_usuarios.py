@@ -17,20 +17,20 @@ def recuperar_usuarios():
 
     print("Buscando backup del monolito en Supabase...")
     res = supabase.table("medicare_db").select("datos").eq("id", 1).execute()
-    
+
     if not res.data:
         print("❌ No se encontró el monolito en Supabase.")
         return
-        
+
     datos = res.data[0]["datos"]
     usuarios = datos.get("usuarios_db", {})
-    
+
     print(f"Se encontraron {len(usuarios)} usuarios en el backup de Supabase.")
-    
+
     # Escribir a un archivo para verlos
     with open("usuarios_backup.json", "w", encoding="utf-8") as f:
         json.dump(usuarios, f, indent=2, ensure_ascii=False)
-        
+
     print("Usuarios guardados en usuarios_backup.json")
 
 if __name__ == "__main__":

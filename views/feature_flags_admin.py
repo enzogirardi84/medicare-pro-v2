@@ -22,7 +22,7 @@ from core.audit_trail import audit_log, AuditEventType
 def render_feature_flags_admin(paciente_sel=None, mi_empresa=None, user=None, rol=None):
     """
     Renderiza panel de administración de Feature Flags.
-    
+
     Solo para usuarios admin/superadmin.
     """
     # Verificar permisos
@@ -31,10 +31,10 @@ def render_feature_flags_admin(paciente_sel=None, mi_empresa=None, user=None, ro
         log_event("feature_flags", "error: acceso denegado - solo administradores")
         st.error("🔒 Acceso denegado. Solo administradores.")
         return
-    
+
     st.title("🚩 Administración de Feature Flags")
     st.caption("Control de funcionalidades y rollouts graduales")
-    
+
     # Tabs
     tabs = st.tabs([
         "🌎 Flags Globales",
@@ -42,18 +42,18 @@ def render_feature_flags_admin(paciente_sel=None, mi_empresa=None, user=None, ro
         "📊 Analíticas",
         "📝 Historial"
     ])
-    
+
     flags = get_feature_flags()
-    
+
     with tabs[0]:
         render_global_flags(flags)
-    
+
     with tabs[1]:
         render_user_flags(flags)
-    
+
     with tabs[2]:
         render_flags_analytics()
-    
+
     with tabs[3]:
         render_flags_history()
 
@@ -61,7 +61,7 @@ def render_feature_flags_admin(paciente_sel=None, mi_empresa=None, user=None, ro
 def render_global_flags(flags: FeatureFlags):
     """Renderiza flags globales del sistema."""
     st.header("🌎 Flags Globales")
-    
+
     # Categorías de flags
     categories = {
         "Core Features": [
@@ -88,30 +88,30 @@ def render_global_flags(flags: FeatureFlags):
             ("ENABLE_WHATSAPP_INTEGRATION", "Integración WhatsApp", False),
         ],
     }
-    
+
     for category, flag_list in categories.items():
         with st.expander(f"📁 {category}", expanded=False):
             for flag_name, description, default_value in flag_list:
                 col1, col2, col3 = st.columns([2, 1, 1])
-                
+
                 with col1:
                     st.text(description)
                     st.caption(f"Flag: `{flag_name}`")
-                
+
                 with col2:
                     current_value = flags.is_enabled(flag_name, default=default_value)
-                    
+
                     # Toggle
                     new_value = st.toggle(
                         "Habilitado",
                         value=current_value,
                         key=f"toggle_{flag_name}"
                     )
-                    
+
                     # Guardar cambio
                     if new_value != current_value:
                         flags.set_feature(flag_name, new_value)
-                        
+
                         # Audit log
                         audit_log(
                             AuditEventType.CONFIG_CHANGE,
@@ -121,10 +121,10 @@ def render_global_flags(flags: FeatureFlags):
                             description=f"Feature flag {flag_name} cambiado a {new_value}",
                             metadata={"old_value": current_value, "new_value": new_value}
                         )
-                        
+
                         log_event("feature_flag", f"{flag_name} = {new_value}")
                         st.success(f"✅ {flag_name} actualizado")
-                
+
                 with col3:
                     # Badge de estado
                     if new_value:
@@ -136,15 +136,15 @@ def render_global_flags(flags: FeatureFlags):
 def render_user_flags(flags: FeatureFlags):
     """Renderiza flags específicos por usuario."""
     st.header("👤 Flags por Usuario")
-    
+
     st.info("🚧 Feature: Activar funcionalidades beta para usuarios específicos")
-    
+
     # Buscar usuario
     user_email = st.text_input(
         "Email del usuario",
         placeholder="usuario@ejemplo.com"
     )
-    
+
     if not user_email:
         return
 
@@ -155,9 +155,9 @@ def render_user_flags(flags: FeatureFlags):
         "ai_assistant_beta": False,
         "advanced_reporting": False,
     })
-    
+
     st.subheader(f"Flags para {user_email}")
-    
+
     changed = False
     for flag_name, description in [
         ("beta_access", "Acceso Beta"),
@@ -166,22 +166,22 @@ def render_user_flags(flags: FeatureFlags):
         ("advanced_reporting", "Reportes Avanzados"),
     ]:
         col1, col2, col3 = st.columns([3, 1, 1])
-        
+
         with col1:
             st.text(description)
-        
+
         with col2:
             current = st.toggle(
                 "Habilitar",
                 value=user_flags.get(flag_name, False),
                 key=f"user_flag_{flag_name}_{user_email}"
             )
-        
+
         with col3:
             if current != user_flags.get(flag_name):
                 user_flags[flag_name] = current
                 changed = True
-    
+
     if changed:
         st.success("✅ Flags actualizados")
         log_event("feature_flags", f"user_flags_updated:{user_email}:{user_flags}")
@@ -190,24 +190,24 @@ def render_user_flags(flags: FeatureFlags):
 def render_flags_analytics():
     """Renderiza analytics de uso de features."""
     st.header("📊 Analíticas")
-    
+
     # Métricas simuladas
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.metric("Flags Activos", "12/24")
         st.metric("Rollouts en Progreso", "2")
-    
+
     with col2:
         st.metric("Usuarios Beta", "5")
         st.metric("Cambios Hoy", "3")
-    
+
     # Gráfico de uso
     st.subheader("Uso de Features (últimos 7 días)")
-    
+
     # Simular datos
     import pandas as pd
-    
+
     data = {
         "Día": ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
         "Caché": [1200, 1350, 1100, 1400, 1300, 900, 850],
@@ -215,13 +215,13 @@ def render_flags_analytics():
         "AI Assistant": [45, 52, 48, 61, 55, 30, 25],
         "Anomaly Detection": [120, 135, 110, 140, 130, 90, 85],
     }
-    
+
     df = pd.DataFrame(data)
     st.bar_chart(df.set_index("Día"))
-    
+
     # Feature adoption
     st.subheader("Adopción de Features")
-    
+
     adoption_data = {
         "Feature": [
             "Caché Distribuido",
@@ -234,15 +234,15 @@ def render_flags_analytics():
         "Adopción (%)": [95, 100, 100, 75, 15, 60],
         "Estado": ["✅ Activo", "✅ Activo", "✅ Activo", "✅ Activo", "🔴 Beta", "✅ Activo"]
     }
-    
+
     df_adoption = pd.DataFrame(adoption_data)
-    st.dataframe(df_adoption, width='stretch', hide_index=True)
+    st.dataframe(df_adoption, use_container_width=True, hide_index=True)
 
 
 def render_flags_history():
     """Renderiza historial de cambios en flags."""
     st.header("📝 Historial")
-    
+
     # Simular historial
     history = [
         {
@@ -274,28 +274,28 @@ def render_flags_history():
             "reason": "Issue resolved, re-enabling"
         },
     ]
-    
+
     for entry in history:
         with st.container():
             col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
-            
+
             with col1:
                 st.text(entry["timestamp"])
-            
+
             with col2:
                 st.code(entry["flag"])
-            
+
             with col3:
                 if "false → true" in entry["change"]:
                     st.markdown("🔴 → 🟢 **ON**")
                 else:
                     st.markdown("🟢 → 🔴 **OFF**")
-            
+
             with col4:
                 st.caption(entry["reason"])
-        
+
         st.divider()
-    
+
     # Exportar historial
     if st.button("📥 Exportar Historial", use_container_width=True):
         st.info("Función de exportación disponible en versión Enterprise")
@@ -304,32 +304,32 @@ def render_flags_history():
 def render_feature_flag_toggles():
     """
     Renderiza toggles simples para uso en otras páginas.
-    
+
     Uso:
         from views.feature_flags_admin import render_feature_flag_toggles
         render_feature_flag_toggles()
     """
     st.sidebar.divider()
     st.sidebar.subheader("🚩 Activar/Desactivar Flags")
-    
+
     flags = get_feature_flags()
-    
+
     # Solo mostrar toggles de features no críticas
     user_flags = [
         ("ENABLE_AI_SUGGESTIONS", "💡 AI Suggestions", False),
         ("ENABLE_ADVANCED_SEARCH", "🔍 Advanced Search", True),
         ("ENABLE_DARK_MODE", "🌙 Dark Mode", False),
     ]
-    
+
     for flag_name, label, default in user_flags:
         current = flags.is_enabled(flag_name, default=default)
-        
+
         new_value = st.sidebar.toggle(
             label,
             value=current,
             key=f"sidebar_{flag_name}"
         )
-        
+
         if new_value != current:
             flags.set_feature(flag_name, new_value)
             st.rerun()

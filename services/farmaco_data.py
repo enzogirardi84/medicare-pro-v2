@@ -409,49 +409,49 @@ def calcular_dosis_pediatrica_completa(
     intervalo_seleccionado_hs: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Calcula dosis pediatrica completa con todas las variables.
-    
+
     Args:
         medicamento: Nombre del medicamento
         peso_kg: Peso del paciente en kg
         farmacos: Diccionario de farmacos (usa MEDICAMENTOS global si no se provee)
         intervalo_seleccionado_hs: Intervalo personalizado en horas
-    
+
     Returns:
         Dict con todos los parametros calculados
-    
+
     Raises:
         ValueError: Si no hay datos para el medicamento o peso invalido
     """
     if peso_kg <= 0:
         raise ValueError("El peso debe ser mayor a cero.")
-    
+
     farmacos = farmacos or MEDICAMENTOS
     info = farmacos.get(medicamento)
-    
+
     if info is None:
         base, _ = normalizar_medicamento(medicamento)
         for k, v in farmacos.items():
             if base.lower() in k.lower() or k.lower() in base.lower():
                 info = v
                 break
-    
+
     if info is None:
         raise ValueError(f"No hay datos de dosis pediatrica para '{medicamento}'")
-    
+
     intervalo = intervalo_seleccionado_hs or info["intervalo_min_hs"]
     dosis_por_dia = 24 / intervalo
-    
+
     dosis_min, dosis_max = info["dosis_mg_kg"]
     dosis_por_dosis_min = round(peso_kg * dosis_min, 1)
     dosis_por_dosis_max = round(peso_kg * dosis_max, 1)
-    
+
     max_por_dosis = info["dosis_max_por_dosis_mg"]
     dosis_recomendada = min(dosis_por_dosis_max, max_por_dosis)
-    
+
     dosis_diaria_min = round(peso_kg * dosis_min * dosis_por_dia, 1)
     dosis_diaria_max_por_peso = round(peso_kg * info["dosis_max_diaria_mg_kg"], 1)
     dosis_diaria_max = min(dosis_diaria_max_por_peso, round(max_por_dosis * dosis_por_dia, 1))
-    
+
     return {
         "medicamento": medicamento,
         "peso": peso_kg,

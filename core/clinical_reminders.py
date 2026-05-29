@@ -59,7 +59,7 @@ class Reminder:
     notified: bool = False  # Ya se envió notificación
     recurrence: Optional[str] = None  # daily, weekly, monthly, yearly
     metadata: Dict[str, Any] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convierte a diccionario."""
         return {
@@ -67,7 +67,7 @@ class Reminder:
             "type": self.type.name,
             "priority": self.priority.value
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Reminder":
         """Crea desde diccionario."""
@@ -92,18 +92,18 @@ class Reminder:
 class ClinicalReminderManager:
     """
     Manager de recordatorios clínicos.
-    
+
     Gestiona:
     - Creación de recordatorios
     - Notificaciones
     - Completación
     - Recurrencia
     """
-    
+
     def __init__(self):
         self._reminders: Dict[str, Reminder] = {}
         self._load_reminders()
-    
+
     def _load_reminders(self):
         """Carga recordatorios desde session_state."""
         if "clinical_reminders" in st.session_state:
@@ -117,14 +117,14 @@ class ClinicalReminderManager:
             except Exception as e:
                 log_event("reminders", f"Failed to load reminders: {e}")
                 self._reminders = {}
-    
+
     def _save_reminders(self):
         """Guarda recordatorios a session_state."""
         st.session_state["clinical_reminders"] = {
             k: v.to_dict() if isinstance(v, Reminder) else v
             for k, v in self._reminders.items()
         }
-    
+
     def create_reminder(
         self,
         reminder_type: ReminderType,
@@ -139,7 +139,7 @@ class ClinicalReminderManager:
     ) -> Reminder:
         """
         Crea un nuevo recordatorio.
-        
+
         Args:
             reminder_type: Tipo de recordatorio
             patient_id: ID del paciente
@@ -150,12 +150,12 @@ class ClinicalReminderManager:
             priority: Prioridad
             recurrence: Recurrencia (daily, weekly, monthly, yearly)
             metadata: Datos adicionales
-        
+
         Returns:
             Reminder creado
         """
         import uuid
-        
+
         reminder = Reminder(
             id=str(uuid.uuid4()),
             type=reminder_type,
@@ -171,23 +171,23 @@ class ClinicalReminderManager:
             recurrence=recurrence,
             metadata=metadata or {}
         )
-        
+
         self._reminders[reminder.id] = reminder
         self._save_reminders()
-        
+
         log_event("reminder", f"Created reminder: {title} for {patient_name}")
-        
+
         return reminder
-    
+
     def complete_reminder(self, reminder_id: str) -> bool:
         """Marca un recordatorio como completado."""
         if reminder_id not in self._reminders:
             return False
-        
+
         reminder = self._reminders[reminder_id]
         reminder.completed = True
         reminder.completed_at = datetime.now()
-        
+
         # Si tiene recurrencia, crear próximo
         if reminder.recurrence:
             next_date = self._calculate_next_date(reminder.due_date, reminder.recurrence)
@@ -203,12 +203,12 @@ class ClinicalReminderManager:
                     recurrence=reminder.recurrence,
                     metadata=reminder.metadata
                 )
-        
+
         self._save_reminders()
-        
+
         log_event("reminder", f"Completed reminder: {reminder.title}")
         return True
-    
+
     def _calculate_next_date(
         self,
         current_date: Optional[datetime],
@@ -217,7 +217,7 @@ class ClinicalReminderManager:
         """Calcula próxima fecha según recurrencia."""
         if not current_date:
             return None
-        
+
         if recurrence == "daily":
             return current_date + timedelta(days=1)
         elif recurrence == "weekly":
@@ -232,19 +232,19 @@ class ClinicalReminderManager:
             except ValueError:
                 # Febrero 29
                 return current_date + timedelta(days=365)
-        
+
         return None
-    
+
     def delete_reminder(self, reminder_id: str) -> bool:
         """Elimina un recordatorio."""
         if reminder_id not in self._reminders:
             return False
-        
+
         del self._reminders[reminder_id]
         self._save_reminders()
-        
+
         return True
-    
+
     def get_reminders(
         self,
         patient_id: Optional[str] = None,
@@ -256,7 +256,7 @@ class ClinicalReminderManager:
     ) -> List[Reminder]:
         """
         Obtiene recordatorios con filtros.
-        
+
         Args:
             patient_id: Filtrar por paciente
             reminder_type: Filtrar por tipo
@@ -264,31 +264,31 @@ class ClinicalReminderManager:
             completed: Filtrar por estado
             due_before: Filtrar por fecha límite
             limit: Máximo resultados
-        
+
         Returns:
             Lista de recordatorios
         """
         results = []
-        
+
         for reminder in self._reminders.values():
             # Aplicar filtros
             if patient_id and reminder.patient_id != patient_id:
                 continue
-            
+
             if reminder_type and reminder.type != reminder_type:
                 continue
-            
+
             if priority and reminder.priority != priority:
                 continue
-            
+
             if completed is not None and reminder.completed != completed:
                 continue
-            
+
             if due_before and reminder.due_date and reminder.due_date > due_before:
                 continue
-            
+
             results.append(reminder)
-        
+
         # Ordenar por prioridad y fecha
         priority_order = {
             ReminderPriority.CRITICAL: 0,
@@ -296,67 +296,67 @@ class ClinicalReminderManager:
             ReminderPriority.MEDIUM: 2,
             ReminderPriority.LOW: 3
         }
-        
+
         results.sort(key=lambda r: (
             priority_order.get(r.priority, 4),
             r.due_date or datetime.max
         ))
-        
+
         return results[:limit]
-    
+
     def get_pending_notifications(self) -> List[Reminder]:
         """Obtiene recordatorios pendientes de notificación."""
         now = datetime.now()
-        
+
         pending = []
         for reminder in self._reminders.values():
             if reminder.completed or reminder.notified:
                 continue
-            
+
             # Verificar si es hora de notificar
             if reminder.due_date:
                 # Notificar si falta 1 día o menos, o si ya pasó
                 days_until = (reminder.due_date - now).days
-                
+
                 if days_until <= 1:
                     pending.append(reminder)
             else:
                 # Sin fecha, notificar si es crítico
                 if reminder.priority in [ReminderPriority.CRITICAL, ReminderPriority.HIGH]:
                     pending.append(reminder)
-        
+
         return pending
-    
+
     def send_notifications(self) -> int:
         """
         Envía notificaciones para recordatorios pendientes.
-        
+
         Returns:
             Cantidad de notificaciones enviadas
         """
         pending = self.get_pending_notifications()
         sent = 0
-        
+
         for reminder in pending:
             try:
                 # Enviar notificación (email, push, etc.)
                 # Aquí integrar con el sistema de notificaciones
-                
+
                 # Marcar como notificado
                 reminder.notified = True
-                
+
                 log_event("reminder", f"Notification sent for: {reminder.title}")
                 sent += 1
-                
+
             except Exception as e:
                 log_event("reminder_error", f"Failed to send notification: {e}")
-        
+
         self._save_reminders()
-        
+
         return sent
-    
+
     # ====== Recordatorios automáticos ======
-    
+
     def create_follow_up_reminder(
         self,
         patient_id: str,
@@ -366,7 +366,7 @@ class ClinicalReminderManager:
     ) -> Reminder:
         """Crea recordatorio de seguimiento post-consulta."""
         due_date = datetime.now() + timedelta(days=days_from_now)
-        
+
         return self.create_reminder(
             reminder_type=ReminderType.FOLLOW_UP,
             patient_id=patient_id,
@@ -377,7 +377,7 @@ class ClinicalReminderManager:
             priority=ReminderPriority.MEDIUM,
             metadata={"consultation_date": datetime.now().isoformat()}
         )
-    
+
     def create_medication_reminder(
         self,
         patient_id: str,
@@ -390,7 +390,7 @@ class ClinicalReminderManager:
         """Crea recordatorio de medicación."""
         title = f"Medicación: {medication_name}"
         description = f"Tomar {dosage} - {frequency}"
-        
+
         # Crear recordatorio recurrente según frecuencia
         recurrence_map = {
             "cada 24 horas": "daily",
@@ -398,9 +398,9 @@ class ClinicalReminderManager:
             "cada 12 horas": "daily",  # Se simplifica
             "semanal": "weekly"
         }
-        
+
         recurrence = recurrence_map.get(frequency.lower(), "daily")
-        
+
         reminder = self.create_reminder(
             reminder_type=ReminderType.MEDICATION,
             patient_id=patient_id,
@@ -417,9 +417,9 @@ class ClinicalReminderManager:
                 "duration_days": duration_days
             }
         )
-        
+
         return reminder
-    
+
     def create_birthday_reminder(
         self,
         patient_id: str,
@@ -428,17 +428,17 @@ class ClinicalReminderManager:
     ) -> Reminder:
         """Crea recordatorio de cumpleaños del paciente."""
         today = date.today()
-        
+
         # Calcular próximo cumpleaños
         next_birthday = birth_date.replace(year=today.year)
         if next_birthday < today:
             next_birthday = birth_date.replace(year=today.year + 1)
-        
+
         # Crear a las 9 AM
         due_date = datetime.combine(next_birthday, datetime.min.time()) + timedelta(hours=9)
-        
+
         age = next_birthday.year - birth_date.year
-        
+
         return self.create_reminder(
             reminder_type=ReminderType.BIRTHDAY,
             patient_id=patient_id,
@@ -450,7 +450,7 @@ class ClinicalReminderManager:
             recurrence="yearly",
             metadata={"age": age}
         )
-    
+
     def create_study_reminder(
         self,
         patient_id: str,
@@ -460,7 +460,7 @@ class ClinicalReminderManager:
     ) -> Reminder:
         """Crea recordatorio de estudio pendiente."""
         due_date = datetime.now() + timedelta(days=due_days)
-        
+
         return self.create_reminder(
             reminder_type=ReminderType.STUDY_PENDING,
             patient_id=patient_id,
@@ -471,7 +471,7 @@ class ClinicalReminderManager:
             priority=ReminderPriority.MEDIUM,
             metadata={"study_type": study_type}
         )
-    
+
     def create_vital_alert(
         self,
         patient_id: str,
@@ -482,7 +482,7 @@ class ClinicalReminderManager:
     ) -> Reminder:
         """Crea alerta de signo vital anormal."""
         priority = ReminderPriority.CRITICAL if severity == "critical" else ReminderPriority.HIGH
-        
+
         return self.create_reminder(
             reminder_type=ReminderType.VITAL_ALERT,
             patient_id=patient_id,
@@ -493,20 +493,20 @@ class ClinicalReminderManager:
             priority=priority,
             metadata={"vital_sign": vital_sign, "value": value, "severity": severity}
         )
-    
+
     # ====== UI ======
-    
+
     def render_reminders_dashboard(self):
         """Renderiza dashboard de recordatorios."""
         st.title("⏰ Recordatorios Clínicos")
-        
+
         # Stats
         col1, col2 = st.columns(2)
-        
+
         all_reminders = list(self._reminders.values())
         pending = [r for r in all_reminders if not r.completed]
         overdue = [r for r in pending if r.due_date and r.due_date < datetime.now()]
-        
+
         with col1:
             st.metric("Total", len(all_reminders))
             st.metric("Vencidos", len(overdue))
@@ -514,29 +514,29 @@ class ClinicalReminderManager:
             st.metric("Pendientes", len(pending))
             critical = len([r for r in pending if r.priority == ReminderPriority.CRITICAL])
             st.metric("🚨 Críticos", critical)
-        
+
         st.divider()
-        
+
         # Tabs
         tabs = st.tabs(["📋 Pendientes", "✅ Completados", "➕ Nuevo"])
-        
+
         with tabs[0]:
             self._render_pending_reminders()
-        
+
         with tabs[1]:
             self._render_completed_reminders()
-        
+
         with tabs[2]:
             self._render_create_reminder()
-    
+
     def _render_pending_reminders(self):
         """Renderiza lista de recordatorios pendientes."""
         reminders = self.get_reminders(completed=False, limit=50)
-        
+
         if not reminders:
             st.info("No hay recordatorios pendientes")
             return
-        
+
         # Agrupar por prioridad
         by_priority = {}
         for r in reminders:
@@ -544,7 +544,7 @@ class ClinicalReminderManager:
             if p not in by_priority:
                 by_priority[p] = []
             by_priority[p].append(r)
-        
+
         # Mostrar por prioridad
         priority_labels = {
             ReminderPriority.CRITICAL: ("🔴 CRÍTICO", "error"),
@@ -552,21 +552,21 @@ class ClinicalReminderManager:
             ReminderPriority.MEDIUM: ("🟡 MEDIA", "info"),
             ReminderPriority.LOW: ("🟢 BAJA", "success")
         }
-        
-        for priority in [ReminderPriority.CRITICAL, ReminderPriority.HIGH, 
+
+        for priority in [ReminderPriority.CRITICAL, ReminderPriority.HIGH,
                         ReminderPriority.MEDIUM, ReminderPriority.LOW]:
             if priority not in by_priority:
                 continue
-            
+
             label, style = priority_labels[priority]
-            
-            with st.expander(f"{label} ({len(by_priority[priority])})", 
+
+            with st.expander(f"{label} ({len(by_priority[priority])})",
                             expanded=(priority in [ReminderPriority.CRITICAL, ReminderPriority.HIGH])):
-                
+
                 for reminder in by_priority[priority]:
                     with st.container():
                         col1, col2, col3 = st.columns([5, 2, 1])
-                        
+
                         with col1:
                             icons = {
                                 ReminderType.FOLLOW_UP: "📅",
@@ -577,11 +577,11 @@ class ClinicalReminderManager:
                                 ReminderType.VITAL_ALERT: "🚨",
                                 ReminderType.CUSTOM: "📌"
                             }
-                            
+
                             st.markdown(f"**{icons.get(reminder.type, '📌')} {reminder.title}**")
                             st.caption(f"Paciente: {reminder.patient_name}")
                             st.text(reminder.description[:100] + "..." if len(reminder.description) > 100 else reminder.description)
-                            
+
                             if reminder.due_date:
                                 days_left = (reminder.due_date - datetime.now()).days
                                 if days_left < 0:
@@ -591,7 +591,7 @@ class ClinicalReminderManager:
                                     st.warning("📅 Vence hoy")
                                 else:
                                     st.caption(f"📅 Vence en {days_left} días")
-                        
+
                         def _on_complete_reminder(rid: str):
                             self.complete_reminder(rid)
 
@@ -603,26 +603,26 @@ class ClinicalReminderManager:
 
                         with col3:
                             st.button("🗑️", key=f"delete_{reminder.id}", on_click=_on_delete_reminder, args=(reminder.id,))
-                    
+
                     st.divider()
-    
+
     def _render_completed_reminders(self):
         """Renderiza recordatorios completados."""
         reminders = self.get_reminders(completed=True, limit=20)
-        
+
         if not reminders:
             st.info("No hay recordatorios completados recientemente")
             return
-        
+
         for reminder in reminders:
             st.markdown(f"~~{reminder.title}~~")
             st.caption(f"Completado: {reminder.completed_at.strftime('%d/%m/%Y %H:%M') if reminder.completed_at else 'N/A'}")
             st.divider()
-    
+
     def _render_create_reminder(self):
         """Renderiza formulario para crear recordatorio."""
         st.subheader("Crear Nuevo Recordatorio")
-        
+
         # Seleccionar paciente
         detalles = st.session_state.get("detalles_pacientes_db", {})
         pacientes_list = st.session_state.get("pacientes_db", [])
@@ -632,15 +632,15 @@ class ClinicalReminderManager:
             dni = d.get("dni", pid.split(" - ")[-1] if " - " in pid else pid)
             nombre = pid.split(" - ")[0] if " - " in pid else pid
             pacientes[dni] = {"nombre": nombre, "apellido": "", **d}
-        paciente_options = {f"{p['apellido']}, {p['nombre']} (DNI: {dni})": dni 
+        paciente_options = {f"{p['apellido']}, {p['nombre']} (DNI: {dni})": dni
                            for dni, p in pacientes.items()}
-        
+
         selected_paciente = st.selectbox(
             "Paciente",
             options=list(paciente_options.keys()),
             key="reminder_paciente"
         )
-        
+
         if selected_paciente:
             dni = paciente_options[selected_paciente]
             paciente = pacientes.get(dni, {})

@@ -71,7 +71,7 @@ def tab_ficha_aps(paciente_sel, user, centro_salud_id):
     if not paciente_sel:
         return input_paciente_volatil(paciente_sel)
     header_paciente(paciente_sel, user)
-    if st.button("Ver historial completo", width='stretch'):
+    if st.button("Ver historial completo", use_container_width=True):
         st.session_state["_aps_tab"] = "historial"
         st.rerun()
 

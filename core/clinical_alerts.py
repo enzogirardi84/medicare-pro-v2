@@ -87,7 +87,7 @@ class ClinicalAlert:
     resolved: bool = False
     resolved_at: Optional[str] = None
     resolution_note: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -109,33 +109,33 @@ class AlertRule:
 class ClinicalAlertEngine:
     """
     Motor de alertas clínicas basado en reglas.
-    
+
     Evalúa reglas automáticamente contra datos del paciente y
     genera alertas cuando se cumplen condiciones de riesgo.
-    
+
     Uso:
         engine = ClinicalAlertEngine()
-        
+
         # Al guardar signos vitales
         vitals = {"temperatura": 38.5, "frecuencia_cardiaca": 120, ...}
         alerts = engine.evaluate_vitals(patient_id, vitals)
-        
+
         # Al recetar medicación
         alerts = engine.evaluate_prescription(patient_id, medications)
     """
-    
+
     def __init__(self):
         self._rules: Dict[str, AlertRule] = {}
         self._active_alerts: Dict[str, List[ClinicalAlert]] = {}  # patient_id -> alerts
         self._alert_history: List[ClinicalAlert] = []
         self._lock = threading.Lock()
         self._register_default_rules()
-    
+
     def _register_default_rules(self) -> None:
         """Registra reglas clínicas por defecto."""
-        
+
         # === SIGNOS VITALES ===
-        
+
         self._rules["shock_severe"] = AlertRule(
             name="shock_severe",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -150,7 +150,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["shock_lactate"] = AlertRule(
             name="shock_lactate",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -162,7 +162,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["fever_high"] = AlertRule(
             name="fever_high",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -174,7 +174,7 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=True
         )
-        
+
         self._rules["hypothermia"] = AlertRule(
             name="hypothermia",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -186,7 +186,7 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=True
         )
-        
+
         self._rules["bradycardia_severe"] = AlertRule(
             name="bradycardia_severe",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -198,7 +198,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["tachycardia_severe"] = AlertRule(
             name="tachycardia_severe",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -210,7 +210,7 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=True
         )
-        
+
         self._rules["hypoxia_severe"] = AlertRule(
             name="hypoxia_severe",
             category=AlertCategory.VITALS_ABNORMAL,
@@ -222,9 +222,9 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         # === LABORATORIO CRÍTICO ===
-        
+
         self._rules["hypoglycemia_severe"] = AlertRule(
             name="hypoglycemia_severe",
             category=AlertCategory.LAB_CRITICAL,
@@ -236,7 +236,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["hyperglycemia_critical"] = AlertRule(
             name="hyperglycemia_critical",
             category=AlertCategory.LAB_CRITICAL,
@@ -248,7 +248,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["hyperkalemia_severe"] = AlertRule(
             name="hyperkalemia_severe",
             category=AlertCategory.LAB_CRITICAL,
@@ -260,7 +260,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["hypokalemia_severe"] = AlertRule(
             name="hypokalemia_severe",
             category=AlertCategory.LAB_CRITICAL,
@@ -272,7 +272,7 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         self._rules["acute_kidney_injury"] = AlertRule(
             name="acute_kidney_injury",
             category=AlertCategory.LAB_CRITICAL,
@@ -284,7 +284,7 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=True
         )
-        
+
         self._rules["severe_anemia"] = AlertRule(
             name="severe_anemia",
             category=AlertCategory.LAB_CRITICAL,
@@ -296,9 +296,9 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=True
         )
-        
+
         # === SEPSIS ===
-        
+
         self._rules["sepsis_qsofa"] = AlertRule(
             name="sepsis_qsofa",
             category=AlertCategory.SEPSIS_RISK,
@@ -314,9 +314,9 @@ class ClinicalAlertEngine:
             requires_ack=True,
             auto_notify=True
         )
-        
+
         # === MEDICACIÓN ===
-        
+
         self._rules["drug_interaction_warfarin_aspirin"] = AlertRule(
             name="drug_interaction_warfarin_aspirin",
             category=AlertCategory.DRUG_INTERACTION,
@@ -331,7 +331,7 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=True
         )
-        
+
         self._rules["drug_renal_dose_adjustment"] = AlertRule(
             name="drug_renal_dose_adjustment",
             category=AlertCategory.DRUG_DOSAGE,
@@ -339,7 +339,7 @@ class ClinicalAlertEngine:
             description="Dosis de fármaco renal requiere ajuste",
             condition=lambda data: (
                 data.get("creatinina", 1) > 1.5 and
-                any(drug in str(data.get("medicamentos", [])).lower() 
+                any(drug in str(data.get("medicamentos", [])).lower()
                     for drug in ["metformina", "aminoglucósidos", "vancomicina"])
             ),
             message_template="💊 AJUSTE RENAL: Dosis requiere modificación",
@@ -347,9 +347,9 @@ class ClinicalAlertEngine:
             requires_ack=False,
             auto_notify=False
         )
-        
+
         log_event("clinical_alerts", f"rules_loaded:{len(self._rules)}")
-    
+
     def evaluate_vitals(
         self,
         patient_id: str,
@@ -359,23 +359,23 @@ class ClinicalAlertEngine:
     ) -> List[ClinicalAlert]:
         """
         Evalúa signos vitales contra todas las reglas de vital signs.
-        
+
         Args:
             patient_id: ID del paciente
             patient_name: Nombre del paciente
             vitals: Dict con signos vitales
             user_id: Quién registró los signos vitales
-        
+
         Returns:
             Lista de alertas generadas
         """
         triggered = []
-        
+
         relevant_rules = [
             r for r in self._rules.values()
             if r.category in [AlertCategory.VITALS_ABNORMAL, AlertCategory.SEPSIS_RISK]
         ]
-        
+
         for rule in relevant_rules:
             try:
                 if rule.condition(vitals):
@@ -386,9 +386,9 @@ class ClinicalAlertEngine:
                     self._process_alert(alert)
             except Exception as e:
                 log_event("clinical_alerts", f"rule_error:{rule.name}:{type(e).__name__}")
-        
+
         return triggered
-    
+
     def evaluate_labs(
         self,
         patient_id: str,
@@ -398,12 +398,12 @@ class ClinicalAlertEngine:
     ) -> List[ClinicalAlert]:
         """Evalúa resultados de laboratorio."""
         triggered = []
-        
+
         relevant_rules = [
             r for r in self._rules.values()
             if r.category == AlertCategory.LAB_CRITICAL
         ]
-        
+
         for rule in relevant_rules:
             try:
                 if rule.condition(labs):
@@ -414,9 +414,9 @@ class ClinicalAlertEngine:
                     self._process_alert(alert)
             except Exception as e:
                 log_event("clinical_alerts", f"rule_error:{rule.name}:{type(e).__name__}")
-        
+
         return triggered
-    
+
     def evaluate_prescription(
         self,
         patient_id: str,
@@ -427,15 +427,15 @@ class ClinicalAlertEngine:
     ) -> List[ClinicalAlert]:
         """Evalúa prescripción médica contra interacciones y contraindicaciones."""
         triggered = []
-        
+
         # Agregar medicamentos a datos de evaluación
         eval_data = {**patient_data, "medicamentos": medications}
-        
+
         relevant_rules = [
             r for r in self._rules.values()
             if r.category in [AlertCategory.DRUG_INTERACTION, AlertCategory.DRUG_DOSAGE]
         ]
-        
+
         for rule in relevant_rules:
             try:
                 if rule.condition(eval_data):
@@ -446,9 +446,9 @@ class ClinicalAlertEngine:
                     self._process_alert(alert)
             except Exception as e:
                 log_event("clinical_alerts", f"rule_error:{rule.name}:{type(e).__name__}")
-        
+
         return triggered
-    
+
     def _create_alert(
         self,
         patient_id: str,
@@ -464,9 +464,9 @@ class ClinicalAlertEngine:
             placeholder = "{" + key + "}"
             if placeholder in message:
                 message = message.replace(placeholder, str(value))
-        
+
         alert_id = f"alert-{datetime.now(timezone.utc).timestamp()}-{hash(rule.name) % 10000}"
-        
+
         return ClinicalAlert(
             id=alert_id,
             patient_id=patient_id,
@@ -480,36 +480,36 @@ class ClinicalAlertEngine:
             rule_name=rule.name,
             relevant_data=data
         )
-    
+
     def _process_alert(self, alert: ClinicalAlert) -> None:
         """Procesa una alerta: almacenar, notificar, loggear."""
         with self._lock:
             # Almacenar
             if alert.patient_id not in self._active_alerts:
                 self._active_alerts[alert.patient_id] = []
-            
+
             # Verificar duplicado reciente (misma regla, últimos 5 min)
             recent = [
                 a for a in self._active_alerts[alert.patient_id]
                 if a.rule_name == alert.rule_name
                 and (datetime.now(timezone.utc) - datetime.fromisoformat(a.triggered_at)).seconds < 300
             ]
-            
+
             if not recent:  # No duplicar
                 self._active_alerts[alert.patient_id].append(alert)
                 self._alert_history.append(alert)
-                
+
                 # Notificar si corresponde
                 rule = self._rules.get(alert.rule_name)
                 if rule and rule.auto_notify:
                     self._notify_alert(alert)
-                
+
                 # Loggear
                 log_event(
                     "clinical_alert",
                     f"triggered:{alert.rule_name}:{alert.severity}:{alert.patient_id}"
                 )
-    
+
     def _notify_alert(self, alert: ClinicalAlert) -> None:
         """Envía notificación de alerta."""
         # Mapear severidad a prioridad
@@ -519,9 +519,9 @@ class ClinicalAlertEngine:
             AlertSeverity.MEDIUM.value: NotificationPriority.NORMAL,
             AlertSeverity.LOW.value: NotificationPriority.LOW
         }
-        
+
         priority = priority_map.get(alert.severity, NotificationPriority.NORMAL)
-        
+
         # Determinar tipo
         type_map = {
             AlertCategory.VITALS_ABNORMAL.name: NotificationType.VITALS_ALERT,
@@ -531,13 +531,13 @@ class ClinicalAlertEngine:
             AlertCategory.DRUG_INTERACTION.name: NotificationType.DRUG_INTERACTION,
             AlertCategory.DRUG_ALLERGY.name: NotificationType.ALLERGY_WARNING,
         }
-        
+
         notif_type = type_map.get(alert.category, NotificationType.SYSTEM_ALERT)
-        
+
         # Enviar notificación
         try:
             from core.realtime_notifications import NotificationManager, Notification
-            
+
             notif = Notification.create(
                 notif_type=notif_type,
                 priority=priority,
@@ -546,12 +546,12 @@ class ClinicalAlertEngine:
                 patient_id=alert.patient_id,
                 data={"alert_id": alert.id, "rule": alert.rule_name}
             )
-            
+
             get_notification_manager().send_notification(notif)
-            
+
         except Exception as e:
             log_event("clinical_alerts", f"notify_error:{type(e).__name__}")
-    
+
     def acknowledge_alert(
         self,
         alert_id: str,
@@ -566,15 +566,15 @@ class ClinicalAlertEngine:
                         alert.acknowledged = True
                         alert.acknowledged_by = user_id
                         alert.acknowledged_at = datetime.now(timezone.utc).isoformat()
-                        
+
                         log_event(
                             "clinical_alert",
                             f"acknowledged:{alert_id}:by:{user_id}"
                         )
                         return True
-        
+
         return False
-    
+
     def resolve_alert(
         self,
         alert_id: str,
@@ -589,15 +589,15 @@ class ClinicalAlertEngine:
                         alert.resolved = True
                         alert.resolved_at = datetime.now(timezone.utc).isoformat()
                         alert.resolution_note = resolution_note
-                        
+
                         log_event(
                             "clinical_alert",
                             f"resolved:{alert_id}:by:{user_id}"
                         )
                         return True
-        
+
         return False
-    
+
     def get_active_alerts(
         self,
         patient_id: Optional[str] = None,
@@ -612,10 +612,10 @@ class ClinicalAlertEngine:
                     a for alerts in self._active_alerts.values()
                     for a in alerts
                 ]
-            
+
             if severity:
                 alerts = [a for a in alerts if a.severity == severity.value]
-            
+
             # Ordenar por severidad y fecha
             severity_order = {
                 AlertSeverity.CRITICAL.value: 0,
@@ -623,11 +623,11 @@ class ClinicalAlertEngine:
                 AlertSeverity.MEDIUM.value: 2,
                 AlertSeverity.LOW.value: 3
             }
-            
+
             alerts.sort(key=lambda a: (severity_order.get(a.severity, 99), a.triggered_at))
-            
+
             return [a for a in alerts if not a.resolved]
-    
+
     def get_alert_stats(self) -> Dict[str, Any]:
         """Estadísticas de alertas."""
         with self._lock:
@@ -635,10 +635,10 @@ class ClinicalAlertEngine:
                 a for alerts in self._active_alerts.values()
                 for a in alerts if not a.resolved
             ]
-            
+
             return {
                 "total_active": len(all_active),
-                "critical_unack": len([a for a in all_active 
+                "critical_unack": len([a for a in all_active
                                        if a.severity == AlertSeverity.CRITICAL.value and not a.acknowledged]),
                 "by_severity": {
                     "critical": len([a for a in all_active if a.severity == AlertSeverity.CRITICAL.value]),
@@ -648,15 +648,15 @@ class ClinicalAlertEngine:
                 },
                 "by_category": {}
             }
-    
+
     def render_alerts_dashboard(self) -> None:
         """Renderiza dashboard de alertas en Streamlit."""
         import streamlit as st
-        
+
         st.header("🚨 Alertas Clínicas Activas")
-        
+
         stats = self.get_alert_stats()
-        
+
         # Métricas
         cols = st.columns(2)
         with cols[0]:
@@ -665,19 +665,19 @@ class ClinicalAlertEngine:
         with cols[1]:
             st.metric("🟠 Altas", stats["by_severity"]["high"])
             st.metric("🔵 Bajas", stats["by_severity"]["low"])
-        
+
         # Alertas críticas sin reconocer
         if stats["critical_unack"] > 0:
             log_event("clinical_alerts", f"error: {stats['critical_unack']} alertas críticas sin reconocer")
             st.error(f"⚠️ {stats['critical_unack']} alertas críticas sin reconocer")
-        
+
         # Lista de alertas
         alerts = self.get_active_alerts()
-        
+
         if not alerts:
             st.success("✅ No hay alertas activas")
             return
-        
+
         for alert in alerts[:10]:  # Mostrar máximo 10
             # Color según severidad
             if alert.severity == AlertSeverity.CRITICAL.value:
@@ -688,7 +688,7 @@ class ClinicalAlertEngine:
                 color = "🟡"
             else:
                 color = "🔵"
-            
+
                 with st.expander(f"{color} {alert.title} - {alert.patient_name}",
                                 expanded=alert.severity == AlertSeverity.CRITICAL.value and not alert.acknowledged,
                                 key=f"alert_{alert.id}"):
@@ -696,11 +696,11 @@ class ClinicalAlertEngine:
                     st.write(f"**Mensaje:** {alert.message}")
                     st.write(f"**Regla:** {alert.rule_name}")  # Corregir sintaxis f-string faltante
                     st.write(f"**Fecha:** {alert.triggered_at[:16]}")
-                
+
                 if alert.relevant_data:
                     with st.expander("📊 Datos relevantes", key=f"alert_data_{alert.id}"):
                         st.json(alert.relevant_data)
-                
+
                 def _on_acknowledge_alert(alert_id: str):
                     user = st.session_state.get("u_actual", {}).get("username", "unknown")
                     try:

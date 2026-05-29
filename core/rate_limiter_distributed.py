@@ -7,7 +7,7 @@ Rate Limiting Distribuido con Redis - Protección contra Fuerza Bruta.
 
 Implementa:
 - Sliding window rate limiting
-- Circuit breaker para endpoints críticos  
+- Circuit breaker para endpoints críticos
 - Distributed tracking vía Redis
 - Fallback a memoria local si Redis no disponible
 """
@@ -61,25 +61,25 @@ class RateLimitStatus:
 class DistributedRateLimiter:
     """
     Rate limiter distribuido con Redis + fallback a memoria.
-    
+
     Usar para proteger:
     - Login (5 intentos/minuto)
     - API endpoints (100 requests/minuto)
     - Guardado de datos (30 requests/minuto)
     """
-    
+
     def __init__(self):
         self._redis = None
         self._local_cache: Dict[str, Dict[str, Any]] = {}
         self._initialized = False
         self._init_redis()
-    
+
     def _init_redis(self) -> None:
         """Inicializa conexión Redis si está disponible."""
         try:
             settings = _get_settings()
             redis_url = settings.redis_url
-            
+
             if redis_url:
                 import redis
                 self._redis = redis.from_url(
@@ -94,13 +94,13 @@ class DistributedRateLimiter:
         except Exception as e:
             log_event("rate_limiter", f"redis_fallback:{type(e).__name__}")
             self._redis = None
-    
+
     def _get_client_key(self, identifier: str, action: str) -> str:
         """Genera clave única para cliente+acción."""
         # Hashear para proteger privacidad
         raw = f"{identifier}:{action}"
         return hashlib.sha256(raw.encode()).hexdigest()[:32]
-    
+
     def _is_blocked_local(self, key: str) -> Tuple[bool, Optional[float]]:
         """Verifica bloqueo en caché local."""
         now = time.time()
@@ -110,7 +110,7 @@ class DistributedRateLimiter:
             if blocked_until and now < blocked_until:
                 return True, blocked_until
         return False, None
-    
+
     def check_rate_limit(
         self,
         identifier: str,
@@ -119,19 +119,19 @@ class DistributedRateLimiter:
     ) -> RateLimitStatus:
         """
         Verifica si el cliente puede realizar la acción.
-        
+
         Args:
             identifier: IP, user_id, o session_id
             action: Tipo de acción ("login", "api_call", "save_data")
             config: Configuración de rate limiting
-        
+
         Returns:
             RateLimitStatus con el resultado
         """
         config = config or RateLimitConfig()
         key = self._get_client_key(identifier, action)
         now = time.time()
-        
+
         # Verificar bloqueo existente
         if self._redis:
             try:
@@ -149,7 +149,7 @@ class DistributedRateLimiter:
                         )
             except Exception:
                 pass  # Fallback a local
-        
+
         # Check local fallback
         is_blocked, blocked_until = self._is_blocked_local(key)
         if is_blocked:
@@ -160,16 +160,16 @@ class DistributedRateLimiter:
                 blocked_until=blocked_until,
                 total_requests=0
             )
-        
+
         # Sliding window implementation
         if self._redis:
             try:
                 return self._check_sliding_window_redis(key, config, now)
             except Exception:
                 pass  # Fallback a local
-        
+
         return self._check_sliding_window_local(key, action, config, now)
-    
+
     def _check_sliding_window_redis(
         self,
         key: str,
@@ -178,7 +178,7 @@ class DistributedRateLimiter:
     ) -> RateLimitStatus:
         """Sliding window con Redis (precisión milisegundos)."""
         window_start = now - config.window_seconds
-        
+
         # Lua script atómico para sliding window
         lua_script = """
             local key = KEYS[1]
@@ -186,34 +186,34 @@ class DistributedRateLimiter:
             local now = tonumber(ARGV[2])
             local max_requests = tonumber(ARGV[3])
             local window_seconds = tonumber(ARGV[4])
-            
+
             -- Remover entradas antiguas
             redis.call('ZREMRANGEBYSCORE', key, 0, window_start)
-            
+
             -- Contar requests en ventana actual
             local current = redis.call('ZCARD', key)
-            
+
             -- Verificar límite
             if current >= max_requests then
                 return {0, current, now + window_seconds}
             end
-            
+
             -- Agregar request actual
             redis.call('ZADD', key, now, now)
             redis.call('EXPIRE', key, window_seconds)
-            
+
             return {1, max_requests - current - 1, now + window_seconds}
         """
-        
+
         result = self._redis.eval(
             lua_script, 1, key,
             window_start, now, config.max_requests, config.window_seconds
         )
-        
+
         allowed = bool(result[0])
         remaining = result[1]
         reset_time = result[2]
-        
+
         if not allowed:
             # Bloquear
             blocked_key = f"{key}:blocked"
@@ -222,14 +222,14 @@ class DistributedRateLimiter:
                 config.block_duration_seconds,
                 now + config.block_duration_seconds
             )
-        
+
         return RateLimitStatus(
             allowed=allowed,
             remaining=max(0, remaining),
             reset_time=reset_time,
             total_requests=config.max_requests - remaining
         )
-    
+
     def _check_sliding_window_local(
         self,
         key: str,
@@ -239,29 +239,29 @@ class DistributedRateLimiter:
     ) -> RateLimitStatus:
         """Sliding window con memoria local (fallback)."""
         window_start = now - config.window_seconds
-        
+
         # Inicializar estructura
         if key not in self._local_cache:
             self._local_cache[key] = {"requests": [], "blocked_until": None}
-        
+
         data = self._local_cache[key]
-        
+
         # Limpiar requests antiguos
         data["requests"] = [
             ts for ts in data["requests"]
             if ts > window_start
         ]
-        
+
         current_count = len(data["requests"])
-        
+
         # Verificar límite
         if current_count >= config.max_requests:
             # Bloquear
             blocked_until = now + config.block_duration_seconds
             data["blocked_until"] = blocked_until
-            
+
             log_event("rate_limiter", f"blocked:{key[:8]}:{action}")
-            
+
             return RateLimitStatus(
                 allowed=False,
                 remaining=0,
@@ -269,28 +269,28 @@ class DistributedRateLimiter:
                 blocked_until=blocked_until,
                 total_requests=current_count
             )
-        
+
         # Permitir request
         data["requests"].append(now)
-        
+
         return RateLimitStatus(
             allowed=True,
             remaining=config.max_requests - current_count - 1,
             reset_time=now + config.window_seconds,
             total_requests=current_count + 1
         )
-    
+
     def reset_limit(self, identifier: str, action: str) -> None:
         """Resetea el rate limit para un cliente (útil para login exitoso)."""
         key = self._get_client_key(identifier, action)
-        
+
         if self._redis:
             try:
                 self._redis.delete(key)
                 self._redis.delete(f"{key}:blocked")
             except Exception:
                 pass
-        
+
         if key in self._local_cache:
             del self._local_cache[key]
 
@@ -347,7 +347,7 @@ def rate_limit(
 ):
     """
     Decorador para rate limiting en funciones.
-    
+
     Args:
         action: Identificador de la acción
         config: Configuración de rate limiting
@@ -362,18 +362,18 @@ def rate_limit(
             else:
                 # Default: IP o user_id de session_state
                 identifier = _get_default_identifier()
-            
+
             limiter = get_rate_limiter()
             status = limiter.check_rate_limit(identifier, action, config)
-            
+
             if not status.allowed:
                 remaining_seconds = int(status.blocked_until - time.time())
                 raise RateLimitExceeded(
                     f"Demasiados intentos. Espere {remaining_seconds} segundos."
                 )
-            
+
             return func(*args, **kwargs)
-        
+
         return wrapper
     return decorator
 
@@ -388,7 +388,7 @@ def _get_default_identifier() -> str:
             return f"user:{user_id}"
     except Exception:
         pass
-    
+
     # Fallback a IP (simulado en Streamlit)
     return "ip:unknown"
 

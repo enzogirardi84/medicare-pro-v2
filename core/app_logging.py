@@ -30,7 +30,7 @@ _log_buffer: deque = deque(maxlen=100)
 
 class MemoryLogHandler(logging.Handler):
     """Handler que guarda logs en memoria para diagnóstico."""
-    
+
     def emit(self, record: logging.LogRecord) -> None:
         try:
             entry: Dict[str, Any] = {
@@ -58,17 +58,17 @@ def _setup_memory_handler() -> None:
     for handler in _LOGGER.handlers:
         if isinstance(handler, MemoryLogHandler):
             return
-    
+
     handler = MemoryLogHandler()
     handler.setLevel(logging.WARNING)  # Solo WARNING y superior
-    
+
     # Usar formatter JSON si está disponible
     if JSON_LOGGING_AVAILABLE:
         handler.setFormatter(StructuredLogFormatter())
     else:
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
-    
+
     _LOGGER.addHandler(handler)
     _log_buffer = deque(maxlen=100)
 

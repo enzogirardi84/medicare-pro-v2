@@ -40,27 +40,27 @@ class ValidationResult:
 class DataValidator:
     """
     Validador central de datos del sistema.
-    
+
     Valida:
     - Datos de pacientes (DNI, email, teléfono)
     - Datos médicos (prescripciones, diagnósticos)
     - Datos de usuarios (matrícula, roles)
     - Fechas y horarios
     """
-    
+
     # Patrones regex
     EMAIL_PATTERN = re.compile(
         r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     )
-    
+
     DNI_PATTERN = re.compile(r'^[0-9]{7,8}$')
-    
+
     PHONE_PATTERN = re.compile(
         r'^(?:(?:00|\+)?(?:(?:9[\s\-]?)?[\s\-]?(?:\(?[\s\-]?[1-9]\d{1,2}[\s\-]?\)?)?[\s\-]?))?(?:[1-9]\d{1,2}[\s\-]?)\d{2,4}[\s\-]?\d{4}$'
     )
-    
+
     MATRICULA_PATTERN = re.compile(r'^[A-Z]{2,3}-\d{4,6}$')
-    
+
     # Rangos médicos
     PESO_MIN = 0.5  # kg
     PESO_MAX = 300.0
@@ -72,14 +72,14 @@ class DataValidator:
     FC_MAX = 250
     SAT_O2_MIN = 50
     SAT_O2_MAX = 100
-    
+
     def validate_dni(self, dni: str) -> ValidationResult:
         """
         Valida DNI argentino.
-        
+
         Args:
             dni: Número de DNI (7-8 dígitos)
-        
+
         Returns:
             ValidationResult con resultado
         """
@@ -90,10 +90,10 @@ class DataValidator:
                 message="DNI es requerido",
                 severity=ValidationSeverity.ERROR
             )
-        
+
         # Limpiar
         dni_clean = str(dni).strip().replace(".", "").replace("-", "")
-        
+
         # Verificar que sea numérico
         if not dni_clean.isdigit():
             return ValidationResult(
@@ -103,7 +103,7 @@ class DataValidator:
                 severity=ValidationSeverity.ERROR,
                 suggestions=["Eliminar puntos y guiones", "Verificar que no haya letras"]
             )
-        
+
         # Verificar longitud
         if len(dni_clean) < 7 or len(dni_clean) > 8:
             return ValidationResult(
@@ -112,14 +112,14 @@ class DataValidator:
                 message=f"DNI debe tener 7 u 8 dígitos (tiene {len(dni_clean)})",
                 severity=ValidationSeverity.ERROR
             )
-        
+
         return ValidationResult(
             is_valid=True,
             field="dni",
             message="DNI válido",
             severity=ValidationSeverity.INFO
         )
-    
+
     def validate_email(self, email: str) -> ValidationResult:
         """Valida dirección de email."""
         if not email:
@@ -129,9 +129,9 @@ class DataValidator:
                 message="Email no proporcionado",
                 severity=ValidationSeverity.INFO
             )
-        
+
         email = str(email).strip().lower()
-        
+
         if len(email) > 254:
             return ValidationResult(
                 is_valid=False,
@@ -139,7 +139,7 @@ class DataValidator:
                 message="Email demasiado largo",
                 severity=ValidationSeverity.ERROR
             )
-        
+
         if not self.EMAIL_PATTERN.match(email):
             return ValidationResult(
                 is_valid=False,
@@ -148,18 +148,18 @@ class DataValidator:
                 severity=ValidationSeverity.ERROR,
                 suggestions=["Verificar @ y dominio", "Ejemplo: usuario@dominio.com"]
             )
-        
+
         return ValidationResult(
             is_valid=True,
             field="email",
             message="Email válido",
             severity=ValidationSeverity.INFO
         )
-    
+
     def validate_phone(self, phone: str) -> ValidationResult:
         """
         Valida número de teléfono.
-        
+
         Soporta formatos:
         - 11 5555-1234
         - +54 9 11 5555-1234
@@ -172,13 +172,13 @@ class DataValidator:
                 message="Teléfono no proporcionado",
                 severity=ValidationSeverity.INFO
             )
-        
+
         phone_clean = str(phone).strip()
-        
+
         # Eliminar caracteres comunes
         for char in [' ', '-', '(', ')', '.', '+']:
             phone_clean = phone_clean.replace(char, '')
-        
+
         # Verificar longitud mínima
         if len(phone_clean) < 8:
             return ValidationResult(
@@ -187,7 +187,7 @@ class DataValidator:
                 message="Número de teléfono demasiado corto",
                 severity=ValidationSeverity.WARNING
             )
-        
+
         if len(phone_clean) > 15:
             return ValidationResult(
                 is_valid=False,
@@ -195,7 +195,7 @@ class DataValidator:
                 message="Número de teléfono demasiado largo",
                 severity=ValidationSeverity.WARNING
             )
-        
+
         # Verificar que sea numérico (excepto por posible + inicial)
         digits_only = phone_clean.lstrip('+')
         if not digits_only.isdigit():
@@ -205,18 +205,18 @@ class DataValidator:
                 message="Teléfono debe contener solo números",
                 severity=ValidationSeverity.ERROR
             )
-        
+
         return ValidationResult(
             is_valid=True,
             field="telefono",
             message="Teléfono válido",
             severity=ValidationSeverity.INFO
         )
-    
+
     def validate_matricula(self, matricula: str, tipo: str = "medico") -> ValidationResult:
         """
         Valida matrícula profesional.
-        
+
         Args:
             matricula: Número de matrícula
             tipo: Tipo de profesional (medico, enfermera, etc.)
@@ -228,9 +228,9 @@ class DataValidator:
                 message="Matrícula es requerida para profesionales de la salud",
                 severity=ValidationSeverity.ERROR
             )
-        
+
         matricula = str(matricula).strip().upper()
-        
+
         # Formato típico: MP-12345, MN-123456, etc.
         if not self.MATRICULA_PATTERN.match(matricula):
             return ValidationResult(
@@ -240,26 +240,26 @@ class DataValidator:
                 severity=ValidationSeverity.WARNING,
                 suggestions=["Formato esperado: MP-12345", "Usar prefijo según provincia"]
             )
-        
+
         return ValidationResult(
             is_valid=True,
             field="matricula",
             message="Matrícula válida",
             severity=ValidationSeverity.INFO
         )
-    
+
     def validate_patient_data(self, data: Dict[str, Any]) -> List[ValidationResult]:
         """
         Valida todos los datos de un paciente.
-        
+
         Args:
             data: Diccionario con datos del paciente
-        
+
         Returns:
             Lista de resultados de validación
         """
         results = []
-        
+
         # DNI (requerido)
         if "dni" in data:
             results.append(self.validate_dni(data["dni"]))
@@ -270,7 +270,7 @@ class DataValidator:
                 message="DNI es requerido",
                 severity=ValidationSeverity.CRITICAL
             ))
-        
+
         # Nombre (requerido)
         nombre = data.get("nombre", "").strip()
         if not nombre:
@@ -294,7 +294,7 @@ class DataValidator:
                 message="Nombre válido",
                 severity=ValidationSeverity.INFO
             ))
-        
+
         # Apellido (requerido)
         apellido = data.get("apellido", "").strip()
         if not apellido:
@@ -311,22 +311,22 @@ class DataValidator:
                 message="Apellido válido",
                 severity=ValidationSeverity.INFO
             ))
-        
+
         # Email (opcional)
         if "email" in data:
             results.append(self.validate_email(data["email"]))
-        
+
         # Teléfono (opcional)
         if "telefono" in data:
             results.append(self.validate_phone(data["telefono"]))
-        
+
         # Fecha de nacimiento (opcional pero recomendada)
         if "fecha_nacimiento" in data:
             fecha_result = self.validate_birth_date(data["fecha_nacimiento"])
             results.append(fecha_result)
-        
+
         return results
-    
+
     def validate_birth_date(self, fecha: Union[str, date, datetime]) -> ValidationResult:
         """Valida fecha de nacimiento."""
         try:
@@ -346,13 +346,13 @@ class DataValidator:
                         severity=ValidationSeverity.ERROR,
                         suggestions=["Usar formato DD/MM/AAAA", "Ejemplo: 15/05/1985"]
                     )
-            
+
             elif isinstance(fecha, datetime):
                 fecha = fecha.date()
-            
+
             # Verificar rango
             hoy = date.today()
-            
+
             if fecha > hoy:
                 return ValidationResult(
                     is_valid=False,
@@ -360,9 +360,9 @@ class DataValidator:
                     message="Fecha de nacimiento no puede ser futura",
                     severity=ValidationSeverity.ERROR
                 )
-            
+
             edad = (hoy - fecha).days / 365.25
-            
+
             if edad > 150:
                 return ValidationResult(
                     is_valid=False,
@@ -370,7 +370,7 @@ class DataValidator:
                     message="Edad calculada excede 150 años",
                     severity=ValidationSeverity.WARNING
                 )
-            
+
             if edad < 0:
                 return ValidationResult(
                     is_valid=False,
@@ -378,14 +378,14 @@ class DataValidator:
                     message="Fecha inválida",
                     severity=ValidationSeverity.ERROR
                 )
-            
+
             return ValidationResult(
                 is_valid=True,
                 field="fecha_nacimiento",
                 message=f"Fecha válida (edad: {int(edad)} años)",
                 severity=ValidationSeverity.INFO
             )
-            
+
         except Exception as e:
             return ValidationResult(
                 is_valid=False,
@@ -393,19 +393,19 @@ class DataValidator:
                 message=f"Error validando fecha: {str(e)}",
                 severity=ValidationSeverity.ERROR
             )
-    
+
     def validate_vital_signs(self, vitals: Dict[str, Any]) -> List[ValidationResult]:
         """
         Valida signos vitales.
-        
+
         Args:
             vitals: Dict con signos vitales
-        
+
         Returns:
             Lista de resultados
         """
         results = []
-        
+
         # Peso
         if "peso" in vitals:
             peso = vitals["peso"]
@@ -424,7 +424,7 @@ class DataValidator:
                         message="Peso dentro de rango normal",
                         severity=ValidationSeverity.INFO
                     ))
-        
+
         # Altura
         if "talla" in vitals:
             talla = vitals["talla"]
@@ -443,7 +443,7 @@ class DataValidator:
                         message="Altura válida",
                         severity=ValidationSeverity.INFO
                     ))
-        
+
         # Temperatura
         if "temperatura" in vitals:
             temp = vitals["temperatura"]
@@ -469,7 +469,7 @@ class DataValidator:
                         message="Temperatura normal",
                         severity=ValidationSeverity.INFO
                     ))
-        
+
         # Frecuencia cardíaca
         if "frecuencia_cardiaca" in vitals:
             fc = vitals["frecuencia_cardiaca"]
@@ -495,7 +495,7 @@ class DataValidator:
                         message="FC normal",
                         severity=ValidationSeverity.INFO
                     ))
-        
+
         # Saturación
         if "saturacion_o2" in vitals:
             sat = vitals["saturacion_o2"]
@@ -528,56 +528,56 @@ class DataValidator:
                         message=f"✓ SatO2: {sat}%",
                         severity=ValidationSeverity.INFO
                     ))
-        
+
         return results
-    
+
     def sanitize_input(self, value: str, max_length: int = 255) -> str:
         """
         Sanitiza input de usuario.
-        
+
         - Elimina espacios extra
         - Limita longitud
         - Escapa caracteres peligrosos básicos
         """
         if not isinstance(value, str):
             value = str(value)
-        
+
         # Strip
         value = value.strip()
-        
+
         # Limitar longitud
         if len(value) > max_length:
             value = value[:max_length]
-        
+
         # Eliminar caracteres de control excepto newline y tab
         value = ''.join(char for char in value if char == '\n' or char == '\t' or ord(char) >= 32)
-        
+
         return value
-    
+
     def validate_all(self, data: Dict[str, Any], data_type: str = "patient") -> Dict[str, Any]:
         """
         Valida todos los datos y retorna resultado consolidado.
-        
+
         Args:
             data: Datos a validar
             data_type: Tipo de datos (patient, user, vitals, etc.)
-        
+
         Returns:
             Dict con resultado de validación
         """
         all_results = []
-        
+
         if data_type == "patient":
             all_results.extend(self.validate_patient_data(data))
         elif data_type == "vitals":
             all_results.extend(self.validate_vital_signs(data))
-        
+
         # Consolidar
         errors = [r for r in all_results if r.severity == ValidationSeverity.ERROR]
         warnings = [r for r in all_results if r.severity == ValidationSeverity.WARNING]
-        
+
         is_valid = len(errors) == 0
-        
+
         return {
             "is_valid": is_valid,
             "can_save": is_valid or all(r.severity != ValidationSeverity.CRITICAL for r in all_results),

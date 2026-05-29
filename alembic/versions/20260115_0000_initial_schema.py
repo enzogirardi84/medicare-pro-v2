@@ -8,7 +8,7 @@ Initial Schema
 Revision inicial con tablas core del sistema.
 
 Revision ID: 000000000000
-Revises: 
+Revises:
 Create Date: 2024-01-15 00:00:00.000000
 
 """
@@ -40,7 +40,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_users_email', 'users', ['email'])
     op.create_index('ix_users_empresa', 'users', ['empresa'])
-    
+
     # ### Tabla: pacientes ###
     op.create_table(
         'pacientes',
@@ -65,7 +65,7 @@ def upgrade() -> None:
     op.create_index('ix_pacientes_dni', 'pacientes', ['dni'])
     op.create_index('ix_pacientes_empresa', 'pacientes', ['empresa'])
     op.create_index('ix_pacientes_nombre', 'pacientes', ['nombre', 'apellido'])
-    
+
     # ### Tabla: evoluciones ###
     op.create_table(
         'evoluciones',
@@ -82,7 +82,7 @@ def upgrade() -> None:
     op.create_index('ix_evoluciones_paciente_id', 'evoluciones', ['paciente_id'])
     op.create_index('ix_evoluciones_fecha', 'evoluciones', ['fecha'])
     op.create_index('ix_evoluciones_medico_id', 'evoluciones', ['medico_id'])
-    
+
     # ### Tabla: signos_vitales ###
     op.create_table(
         'signos_vitales',
@@ -103,7 +103,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_vitales_paciente_id', 'signos_vitales', ['paciente_id'])
     op.create_index('ix_vitales_fecha', 'signos_vitales', ['fecha'])
-    
+
     # ### Tabla: recetas ###
     op.create_table(
         'recetas',
@@ -119,7 +119,7 @@ def upgrade() -> None:
     op.create_index('ix_recetas_paciente_id', 'recetas', ['paciente_id'])
     op.create_index('ix_recetas_medico_id', 'recetas', ['medico_id'])
     op.create_index('ix_recetas_fecha', 'recetas', ['fecha'])
-    
+
     # ### Tabla: medicamentos_receta ###
     op.create_table(
         'medicamentos_receta',
@@ -131,7 +131,7 @@ def upgrade() -> None:
         sa.Column('duracion', sa.String(100), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    
+
     # ### Tabla: estudios ###
     op.create_table(
         'estudios',
@@ -149,7 +149,7 @@ def upgrade() -> None:
     op.create_index('ix_estudios_paciente_id', 'estudios', ['paciente_id'])
     op.create_index('ix_estudios_tipo', 'estudios', ['tipo'])
     op.create_index('ix_estudios_estado', 'estudios', ['estado'])
-    
+
     # ### Tabla: audit_log (append-only) ###
     op.create_table(
         'audit_log',
@@ -175,7 +175,7 @@ def upgrade() -> None:
     op.create_index('ix_audit_user_id', 'audit_log', ['user_id'])
     op.create_index('ix_audit_resource', 'audit_log', ['resource_type', 'resource_id'])
     op.create_index('ix_audit_event_type', 'audit_log', ['event_type'])
-    
+
     # Restricción: audit_log es append-only (no updates, no deletes)
     op.execute("""
         CREATE OR REPLACE FUNCTION prevent_audit_modification()
@@ -185,13 +185,13 @@ def upgrade() -> None:
         END;
         $$ LANGUAGE plpgsql;
     """)
-    
+
     op.execute("""
         CREATE TRIGGER audit_log_no_update
         BEFORE UPDATE ON audit_log
         FOR EACH ROW EXECUTE FUNCTION prevent_audit_modification();
     """)
-    
+
     op.execute("""
         CREATE TRIGGER audit_log_no_delete
         BEFORE DELETE ON audit_log
@@ -204,7 +204,7 @@ def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS audit_log_no_delete ON audit_log")
     op.execute("DROP TRIGGER IF EXISTS audit_log_no_update ON audit_log")
     op.execute("DROP FUNCTION IF EXISTS prevent_audit_modification()")
-    
+
     op.drop_table('audit_log')
     op.drop_table('medicamentos_receta')
     op.drop_table('recetas')

@@ -18,7 +18,7 @@ def migrar_usuarios():
     # Leer el JSON directamente del disco para evitar el bypass de cargar_datos
     import json
     from core.database import LOCAL_DB_PATH
-    
+
     try:
         if LOCAL_DB_PATH.exists():
             datos = json.loads(LOCAL_DB_PATH.read_bytes())
@@ -30,7 +30,7 @@ def migrar_usuarios():
         return
 
     print("Datos JSON cargados. Iniciando migracion de usuarios a PostgreSQL...\n")
-    
+
     # 1. Obtener mapas de UUIDs de empresas
     print("Obteniendo UUIDs de empresas...")
     mapa_empresas = {}
@@ -42,14 +42,14 @@ def migrar_usuarios():
     print("\nMigrando Usuarios...")
     usuarios_db = datos.get("usuarios_db", {})
     count_usr = 0
-    
+
     for login, usr in usuarios_db.items():
         if not isinstance(usr, dict): continue
         if login == "admin": continue # El admin de emergencia no se migra
-        
+
         emp_nombre = str(usr.get("empresa", "Clinica General")).strip()
         emp_uuid = mapa_empresas.get(emp_nombre)
-        
+
         # Si la empresa no existe en SQL, la creamos al vuelo
         if not emp_uuid and emp_nombre:
             try:
@@ -61,7 +61,7 @@ def migrar_usuarios():
             except Exception as e:
                 print(f"  - Error creando empresa {emp_nombre}: {e}")
                 continue
-                
+
         datos_sql = {
             "empresa_id": emp_uuid,
             "nombre": str(usr.get("nombre", login))[:255],
@@ -73,7 +73,7 @@ def migrar_usuarios():
             "estado": str(usr.get("estado", "Activo"))[:50],
             "email": str(usr.get("email", ""))[:255]
         }
-        
+
         try:
             # Buscamos si ya existe por nombre y empresa
             res_exist = supabase.table("usuarios").select("id").eq("nombre", datos_sql["nombre"]).eq("empresa_id", emp_uuid).execute()
@@ -84,7 +84,7 @@ def migrar_usuarios():
                 print(f"  - Usuario ya existe: {datos_sql['nombre']}")
         except Exception as e:
             print(f"  - Error al migrar usuario {login}: {e}")
-            
+
     print(f"  - {count_usr} usuarios migrados exitosamente.")
     print("\n!MIGRACION COMPLETADA CON EXITO!")
 

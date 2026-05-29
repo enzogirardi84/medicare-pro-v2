@@ -207,7 +207,7 @@ def render_cierre_diario(mi_empresa, user):
 
         if st.checkbox("Preparar y guardar cierre en PDF", value=False):
             pdf_bytes = generar_pdf_cierre()
-            st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", width='stretch')
+            st.download_button("Descargar PDF del cierre", data=pdf_bytes, file_name=f"Cierre_Diario_{sanitize_filename_component(fecha_str.replace('/','-'), 'fecha')}.pdf", mime="application/pdf", use_container_width=True)
             if st.button("Guardar cierre en historial", use_container_width=True, type="primary"):
                 b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                 st.session_state.setdefault("reportes_diarios_db", [])
@@ -254,7 +254,7 @@ def render_cierre_diario(mi_empresa, user):
                             file_name=f"Cierre_Diario_{sanitize_filename_component(r['fecha_reporte'].replace('/','-'), 'fecha')}.pdf",
                             mime="application/pdf",
                             key=f"cierre_pdf_{i}",
-                            width='stretch',
+                            use_container_width=True,
                         )
         else:
             bloque_estado_vacio(

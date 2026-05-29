@@ -21,15 +21,15 @@ def _generate_nextgen_token(empresa: str) -> str:
     if not secret:
         log_event("nextgen", "FATAL: NEXTGEN_JWT_SECRET no configurado")
         return ""
-    
+
     # Generar UUIDs deterministas para el tenant y el usuario basados en sus nombres legacy
     tenant_hash = hashlib.md5(empresa.encode("utf-8")).hexdigest()
     tenant_uuid = str(uuid.UUID(tenant_hash))
-    
+
     user_login = st.session_state.get("u_actual", {}).get("usuario_login", "system")
     user_hash = hashlib.md5(user_login.encode("utf-8")).hexdigest()
     user_uuid = str(uuid.UUID(user_hash))
-    
+
     _user_role = st.session_state.get("u_actual", {}).get("rol", "operativo")
     payload = {
         "sub": user_uuid,
@@ -124,10 +124,10 @@ def sync_paciente_to_nextgen(nombre: str, dni: str, empresa: str) -> None:
         "full_name": nombre.strip(),
         "document_number": str(dni).strip()
     }
-    
+
     idem_key = f"paciente_creacion_{dni.strip()}"
     token = _generate_nextgen_token(empresa)
-    
+
     try:
         resp = post_api(
             "/patients",
@@ -158,7 +158,7 @@ def sync_visita_evolucion_to_nextgen(paciente_id: str, nota: str) -> None:
             dni = partes[1].strip()
             empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
             empresa_id = _obtener_uuid_empresa(empresa)
-            
+
             if empresa_id:
                 pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                 if pac_uuid:
@@ -184,10 +184,10 @@ def sync_visita_evolucion_to_nextgen(paciente_id: str, nota: str) -> None:
         "patient_id": patient_uuid,
         "notes": nota.strip()[:5000]
     }
-    
+
     empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica Default")
     token = _generate_nextgen_token(empresa)
-    
+
     try:
         resp = post_api(
             "/visits",
@@ -213,7 +213,7 @@ def sync_receta_to_sql(paciente_id: str, medicamento: str, via: str, frecuencia:
             dni = partes[1].strip()
             empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
             empresa_id = _obtener_uuid_empresa(empresa)
-            
+
             if empresa_id:
                 pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                 if pac_uuid:
@@ -242,7 +242,7 @@ def sync_administracion_to_sql(paciente_id: str, medicamento: str, horario: str,
             dni = partes[1].strip()
             empresa = st.session_state.get("u_actual", {}).get("empresa", "Clinica General")
             empresa_id = _obtener_uuid_empresa(empresa)
-            
+
             if empresa_id:
                 pac_uuid = _obtener_uuid_paciente(dni, empresa_id)
                 if pac_uuid:

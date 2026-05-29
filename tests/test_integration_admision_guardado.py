@@ -60,14 +60,14 @@ class TestAdmisionGuardado:
         from core.seguridad import encrypt_patient_dict, decrypt_patient_dict
 
         original = {"nombre": "Juan", "alergias": "Penicilina", "patologias": "Diabetes"}
-        
+
         # Simular edicion: se cifra primero, luego se aplica payload
         cifrado = encrypt_patient_dict(dict(original))
-        
+
         # Payload con cambios
         payload = {"alergias": "Penicilina, Ibuprofeno", "obra_social": "Swiss Medical"}
         cifrado.update(payload)
-        
+
         # Descifrar y verificar
         resultado = decrypt_patient_dict(cifrado)
         assert resultado["alergias"] == "Penicilina, Ibuprofeno"
@@ -103,7 +103,7 @@ class TestAdmisionGuardado:
     def test_flujo_completo_editar_y_guardar(self, mock_session_state):
         """Simula el flujo completo: editar paciente -> guardar -> recargar -> cambios presentes."""
         from copy import deepcopy
-        
+
         ss = mock_session_state
         paciente_id = "Juan Perez - 12345678"
         paciente = ss["detalles_pacientes_db"][paciente_id]
@@ -111,22 +111,22 @@ class TestAdmisionGuardado:
         # 1. Editar: agregar nueva patologia
         edited = deepcopy(paciente)
         edited["patologias"] = "Diabetes tipo 2, Hipertension"
-        
+
         # 2. Guardar en session_state
         ss["detalles_pacientes_db"][paciente_id] = edited
-        
+
         # 3. Verificar que el cambio esta en session_state
         assert ss["detalles_pacientes_db"][paciente_id]["patologias"] == "Diabetes tipo 2, Hipertension"
-        
+
         # 4. Simular recarga: los datos vienen de Supabase (simulado con copia guardada)
         #    En un escenario real, cargar_datos() leería de Supabase y sobreescribiría
         #    session_state. Si guardar_datos() fallo, los viejos datos reemplazarian.
         datos_guardados_en_nube = deepcopy(paciente)  # version vieja (sin editar)
-        
+
         # 5. Si el guardado fallo, al recargar se pierden los cambios
         ss["detalles_pacientes_db"][paciente_id] = datos_guardados_en_nube
         assert ss["detalles_pacientes_db"][paciente_id]["patologias"] == "Diabetes tipo 2"  # se perdio!
-        
+
         # 6. Verificar que el fix (guardar_datos exitoso) evita la perdida
         ss["detalles_pacientes_db"][paciente_id] = edited  # re-aplicar cambios
         # Ahora guardar_datos() funciona correctamente

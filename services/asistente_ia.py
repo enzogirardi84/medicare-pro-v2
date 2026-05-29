@@ -17,25 +17,25 @@ from core.app_logging import log_event
 
 class CircuitBreaker:
     """Circuit Breaker para APIs externas de IA."""
-    
+
     STATE_CLOSED = "closed"      # Funcionando normalmente
     STATE_OPEN = "open"          # Corte activo, no se llama a la API
     STATE_HALF_OPEN = "half_open"  # Probando si la API ya recupero
-    
+
     def __init__(self, failure_threshold: int = 3, recovery_timeout: float = 60.0):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.failure_count = 0
         self.last_failure_time = 0.0
         self.state = self.STATE_CLOSED
-    
+
     def call(self, fn, fallback=None):
         """Ejecuta la funcion si el circuito esta cerrado.
         Si esta abierto, retorna fallback.
         Si falla, incrementa contador y posiblemente abre el circuito.
         """
         now = time.monotonic()
-        
+
         # Half-open: permitir un reintento despues del timeout
         if self.state == self.STATE_OPEN:
             if now - self.last_failure_time >= self.recovery_timeout:
@@ -44,7 +44,7 @@ class CircuitBreaker:
             else:
                 log_event("circuit_breaker", "open: llamada bloqueada, usando fallback")
                 return fallback
-        
+
         try:
             result = fn()
             # Exito: resetear contadores
@@ -57,11 +57,11 @@ class CircuitBreaker:
             self.failure_count += 1
             self.last_failure_time = now
             log_event("circuit_breaker", f"failure:{self.failure_count}/{self.failure_threshold}:{type(e).__name__}")
-            
+
             if self.failure_count >= self.failure_threshold:
                 self.state = self.STATE_OPEN
                 log_event("circuit_breaker", f"open: circuito abierto por {self.recovery_timeout}s")
-            
+
             if fallback is not None:
                 return fallback
             raise
@@ -73,11 +73,11 @@ _ia_circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_timeout=60.0)
 
 def call_ia_seguro(llm_fn, fallback_msg: str = "El asistente IA esta temporalmente fuera de linea. Use las guias clinicas locales."):
     """Wrapper seguro para llamadas a IA con Circuit Breaker.
-    
+
     Args:
         llm_fn: Funcion que llama a la API de IA
         fallback_msg: Mensaje por defecto si el circuito esta abierto
-    
+
     Returns:
         Resultado de la funcion o mensaje de fallback
     """

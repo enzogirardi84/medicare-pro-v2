@@ -82,17 +82,17 @@ def render_pediatria(paciente_sel, user):
             if ped_sql:
                 for p in ped_sql:
                     dt = pd.to_datetime(p.get("fecha_registro", ""), errors="coerce")
-                    
+
                     # Calcular edad en meses y IMC para mostrar
                     edad_meses = 0.0
                     if pd.notnull(dt) and pd.notnull(f_n):
                         edad_meses = round((dt.tz_localize(None) - f_n).days / 30.4375, 1)
                         if edad_meses < 0: edad_meses = 0.0
-                        
+
                     peso = float(p.get("peso_kg") or 0)
                     talla = float(p.get("talla_cm") or 0)
                     imc = round(peso / ((talla / 100) ** 2), 2) if talla > 0 else 0.0
-                    
+
                     ped.append({
                         "paciente": paciente_sel,
                         "fecha": dt.strftime("%d/%m/%Y %H:%M") if pd.notnull(dt) else p.get("fecha_registro", ""),

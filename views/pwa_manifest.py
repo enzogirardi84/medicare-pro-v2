@@ -20,7 +20,7 @@ from pathlib import Path
 def generate_pwa_manifest() -> dict:
     """
     Genera manifest.json para PWA.
-    
+
     Returns:
         Dict con configuración del PWA
     """
@@ -151,7 +151,7 @@ def generate_pwa_manifest() -> dict:
 def generate_service_worker() -> str:
     """
     Genera Service Worker para PWA.
-    
+
     Returns:
         JavaScript code para service worker
     """
@@ -174,7 +174,7 @@ const STATIC_ASSETS = [
 // Instalación: cachear recursos estáticos
 self.addEventListener('install', (event) => {
     console.log('[SW] Installing...');
-    
+
     event.waitUntil(
         caches.open(STATIC_CACHE)
             .then(cache => {
@@ -183,14 +183,14 @@ self.addEventListener('install', (event) => {
             })
             .catch(err => console.error('[SW] Cache failed:', err))
     );
-    
+
     self.skipWaiting();
 });
 
 // Activación: limpiar cachés antiguas
 self.addEventListener('activate', (event) => {
     console.log('[SW] Activating...');
-    
+
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
@@ -203,7 +203,7 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
-    
+
     self.clients.claim();
 });
 
@@ -211,16 +211,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
-    
+
     // Ignorar requests no-GET
     if (request.method !== 'GET') {
         return;
     }
-    
+
     // Estrategia: Cache First para assets estáticos
-    if (STATIC_ASSETS.includes(url.pathname) || 
+    if (STATIC_ASSETS.includes(url.pathname) ||
         url.pathname.match(/\\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
-        
+
         event.respondWith(
             caches.match(request)
                 .then(cached => {
@@ -234,18 +234,18 @@ self.addEventListener('fetch', (event) => {
                                 }
                             })
                             .catch(() => {});
-                        
+
                         return cached;
                     }
-                    
+
                     return fetch(request)
                         .then(response => {
                             if (!response.ok) throw new Error('Fetch failed');
-                            
+
                             const clone = response.clone();
                             caches.open(STATIC_CACHE)
                                 .then(cache => cache.put(request, clone));
-                            
+
                             return response;
                         })
                         .catch(() => {
@@ -257,21 +257,21 @@ self.addEventListener('fetch', (event) => {
                 })
         );
     }
-    
+
     // Estrategia: Network First para API calls
     else if (url.pathname.startsWith('/api/')) {
         event.respondWith(
             fetch(request)
                 .then(response => {
                     if (!response.ok) throw new Error('API fetch failed');
-                    
+
                     // Cachear respuestas GET exitosas
                     if (request.method === 'GET') {
                         const clone = response.clone();
                         caches.open(DYNAMIC_CACHE)
                             .then(cache => cache.put(request, clone));
                     }
-                    
+
                     return response;
                 })
                 .catch(() => {
@@ -282,14 +282,14 @@ self.addEventListener('fetch', (event) => {
                                 // Agregar header indicando caché
                                 const headers = new Headers(cached.headers);
                                 headers.set('X-From-Cache', 'true');
-                                
+
                                 return new Response(cached.body, {
                                     status: 200,
                                     statusText: 'OK (from cache)',
                                     headers
                                 });
                             }
-                            
+
                             // Offline: retornar error JSON
                             return new Response(
                                 JSON.stringify({
@@ -319,7 +319,7 @@ async function syncData() {
     // Implementar sincronización de datos pendientes
     const db = await openDB('medicare-offline', 1);
     const pending = await db.getAll('pending_requests');
-    
+
     for (const request of pending) {
         try {
             await fetch(request.url, {
@@ -337,9 +337,9 @@ async function syncData() {
 // Push Notifications (futuro)
 self.addEventListener('push', (event) => {
     if (!event.data) return;
-    
+
     const data = event.data.json();
-    
+
     event.waitUntil(
         self.registration.showNotification(data.title, {
             body: data.body,
@@ -355,7 +355,7 @@ self.addEventListener('push', (event) => {
 // Click en notificación
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    
+
     event.waitUntil(
         clients.openWindow(event.notification.data?.url || '/')
     );
@@ -377,7 +377,7 @@ def inject_pwa_headers():
     st.session_state["_pwa_headers_injected"] = True
     manifest = generate_pwa_manifest()
     manifest_json = json.dumps(manifest, ensure_ascii=False)
-    
+
     # Icons inline como data URIs (SVG pequeño para compatibilidad)
     _svg_icon = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">'
@@ -387,7 +387,7 @@ def inject_pwa_headers():
     )
     _svg_b64 = base64.b64encode(_svg_icon.encode()).decode()
     _icon_data_uri = f"data:image/svg+xml;base64,{_svg_b64}"
-    
+
     pwa_meta = f"""
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="{manifest['theme_color']}">
@@ -397,7 +397,7 @@ def inject_pwa_headers():
     <meta name="apple-mobile-web-app-title" content="{manifest['short_name']}">
     <meta name="application-name" content="{manifest['short_name']}">
     <meta name="msapplication-TileColor" content="{manifest['theme_color']}">
-    
+
     <!-- Manifest via Blob URL (funciona en Streamlit Cloud) -->
     <script>
     (function() {{
@@ -409,36 +409,36 @@ def inject_pwa_headers():
         document.head.appendChild(link);
     }})();
     </script>
-    
+
     <!-- Icons inline (data URIs) -->
     <link rel="apple-touch-icon" sizes="192x192" href="{_icon_data_uri}">
     <link rel="icon" type="image/svg+xml" sizes="192x192" href="{_icon_data_uri}">
     <link rel="icon" type="image/png" sizes="512x512" href="{_icon_data_uri}">
     """
-    
+
     st.markdown(pwa_meta, unsafe_allow_html=True)
 
 
 def save_pwa_files(output_dir: str = "assets/pwa"):
     """
     Guarda archivos PWA en disco.
-    
+
     Args:
         output_dir: Directorio donde guardar los archivos
     """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    
+
     # Guardar manifest.json
     manifest = generate_pwa_manifest()
     (output_path.parent / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False)
     )
-    
+
     # Guardar service-worker.js
     sw_code = generate_service_worker()
     (output_path.parent / "service-worker.js").write_text(sw_code)
-    
+
     print(f"✅ PWA files saved to {output_path.parent}")
 
 
@@ -507,7 +507,7 @@ OFFLINE_HTML = """
 def check_pwa_installability():
     """
     Verifica si el PWA puede ser instalado.
-    
+
     Returns:
         Dict con status de instalación
     """
@@ -524,7 +524,7 @@ def check_pwa_installability():
 if __name__ == "__main__":
     # Guardar archivos PWA al ejecutar este módulo
     save_pwa_files()
-    
+
     # También guardar offline.html
     Path("assets/offline.html").write_text(OFFLINE_HTML)
     print("✅ offline.html created")

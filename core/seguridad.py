@@ -176,12 +176,12 @@ def safe_error(message: str, **kwargs: Any) -> None:
 
 def cached_dataframe(key: str, data: list, ttl: float = 30.0) -> "pd.DataFrame":
     """Crea o recupera un DataFrame cacheado en session_state.
-    
+
     Args:
         key: Clave unica de cache.
         data: Datos fuente (lista de dicts).
         ttl: Tiempo de vida en segundos (default 30s).
-    
+
     Returns:
         DataFrame creado a partir de los datos.
     """
@@ -215,12 +215,12 @@ def invalidate_dataframe_cache(key: str) -> None:
 
 def responsive_columns(labels: list[str], cols_desktop: int = 3, cols_mobile: int = 2) -> list:
     """Crea st.columns() adaptativo: menos columnas en mobile.
-    
+
     Args:
         labels: Lista de etiquetas para cada columna (solo para calcular cantidad).
         cols_desktop: Columnas en desktop (default 3).
         cols_mobile: Columnas en mobile (default 2).
-    
+
     Returns:
         Lista de objetos columna de Streamlit.
     """

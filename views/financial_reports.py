@@ -29,10 +29,10 @@ def render_financial_reports(mi_empresa=None, rol=None):
         log_event("financial", "error: acceso denegado - solo administradores y recepcion")
         st.error("Acceso denegado. Solo administradores y recepción.")
         return
-    
+
     st.title("📊 Reportes Financieros y Analíticos")
     st.caption(f"Usuario: {user.get('nombre', 'N/A')} | {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    
+
     # Tabs
     tabs = st.tabs([
         "💰 Financiero",
@@ -41,19 +41,19 @@ def render_financial_reports(mi_empresa=None, rol=None):
         "🏥 Obras Sociales",
         "📅 Tendencias"
     ])
-    
+
     with tabs[0]:
         render_financial_dashboard()
-    
+
     with tabs[1]:
         render_productivity_dashboard()
-    
+
     with tabs[2]:
         render_patients_analytics()
-    
+
     with tabs[3]:
         render_insurance_analytics()
-    
+
     with tabs[4]:
         render_trends_forecast()
 
@@ -61,7 +61,7 @@ def render_financial_reports(mi_empresa=None, rol=None):
 def render_financial_dashboard():
     """Dashboard financiero."""
     st.header("💰 Dashboard Financiero")
-    
+
     # Período de análisis
     from core.seguridad import responsive_columns
     _c = responsive_columns(["Periodo", "Desde", "Hasta"])
@@ -75,16 +75,16 @@ def render_financial_dashboard():
         fecha_desde = st.date_input("Desde", value=date.today() - timedelta(days=30)) if periodo == "Personalizado" else calculate_period_start(periodo)
     with _c[2]:
         fecha_hasta = st.date_input("Hasta", value=date.today()) if periodo == "Personalizado" else date.today()
-    
+
     # Obtener datos financieros
     facturacion = st.session_state.get("facturacion_db", [])
-    
+
     # Filtrar por fecha
     facturas_filtradas = filter_by_date_range(facturacion, fecha_desde, fecha_hasta)
-    
+
     # KPIs (vectorized via DataFrame)
     col1, col2 = st.columns(2)
-    
+
     if facturas_filtradas:
         _df_kpi = pd.DataFrame(facturas_filtradas)
         total_facturado = _df_kpi["monto"].sum() if "monto" in _df_kpi.columns else 0
@@ -94,7 +94,7 @@ def render_financial_dashboard():
         total_cobrado = 0
     total_deuda = total_facturado - total_cobrado
     cantidad_facturas = len(facturas_filtradas)
-    
+
     with col1:
         st.metric(
             "Total Facturado",
@@ -106,7 +106,7 @@ def render_financial_dashboard():
             f"${total_cobrado:,.2f}",
             delta=f"{((total_cobrado/total_facturado)*100 if total_facturado > 0 else 0):.1f}%" if total_facturado > 0 else None
         )
-    
+
     with col2:
         st.metric(
             "Por Cobrar",
@@ -119,60 +119,60 @@ def render_financial_dashboard():
             cantidad_facturas,
             help="Cantidad total de facturas en el período"
         )
-    
+
     st.divider()
-    
+
     # Evolución diaria
     st.subheader("Evolución Diaria")
-    
+
     if facturas_filtradas:
         df = pd.DataFrame(facturas_filtradas)
-        
+
         if "fecha" in df.columns:
             # Agrupar por día
             df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce")
             df = df.dropna(subset=["fecha"])
-            
+
             daily = df.groupby(df["fecha"].dt.date).agg({
                 "monto": "sum",
                 "monto_cobrado": "sum"
             }).reset_index()
-            
+
             daily.columns = ["Fecha", "Facturado", "Cobrado"]
-            
+
             st.line_chart(daily.set_index("Fecha"))
     else:
         st.info("No hay datos de facturación para el período seleccionado.")
-    
+
     st.divider()
-    
+
     # Desglose por tipo
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.subheader("Por Tipo de Atención")
-        
+
         if facturas_filtradas and "tipo" in _df_kpi.columns and "monto" in _df_kpi.columns:
             df_tipo = _df_kpi.groupby("tipo")["monto"].sum().reset_index()
             df_tipo.columns = ["Tipo", "Monto"]
             df_tipo = df_tipo.sort_values("Monto", ascending=False)
             st.bar_chart(df_tipo.set_index("Tipo"))
-    
+
     with col2:
         st.subheader("Estado de Pagos")
-        
+
         if facturas_filtradas and "monto_cobrado" in _df_kpi.columns and "monto" in _df_kpi.columns:
             pagadas = (_df_kpi["monto_cobrado"] >= _df_kpi["monto"]).sum()
             parciales = ((_df_kpi["monto_cobrado"] > 0) & (_df_kpi["monto_cobrado"] < _df_kpi["monto"])).sum()
             pendientes = (_df_kpi["monto_cobrado"] == 0).sum()
         else:
             pagadas = parciales = pendientes = 0
-        
+
         df_estado = pd.DataFrame({
             "Estado": ["Pagadas", "Parciales", "Pendientes"],
             "Cantidad": [pagadas, parciales, pendientes],
         })
-        
+
         try:
             import plotly.express as px
             fig = px.pie(df_estado, values="Cantidad", names="Estado", hole=0.4,
@@ -185,12 +185,12 @@ def render_financial_dashboard():
             st.plotly_chart(fig, width='stretch')
         except Exception:
             st.bar_chart(df_estado.set_index("Estado"))
-    
+
     # Exportar
     st.divider()
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         if st.button("📥 Exportar a Excel", width='stretch'):
             if facturas_filtradas:
@@ -201,7 +201,7 @@ def render_financial_dashboard():
                     output,
                     file_name=f"reporte_financiero_{datetime.now().strftime('%Y%m%d')}.xlsx"
                 )
-    
+
     with col2:
         if st.button("📄 Exportar a PDF", width='stretch'):
             st.info("Generación de PDF en desarrollo...")
@@ -210,36 +210,36 @@ def render_financial_dashboard():
 def render_productivity_dashboard():
     """Dashboard de productividad médica."""
     st.header("📈 Productividad del Equipo Médico")
-    
+
     # Obtener datos
     evoluciones = st.session_state.get("evoluciones_db", [])
     facturacion = st.session_state.get("facturacion_db", [])
-    
+
     # Período
     dias = st.slider("Período (días)", 7, 365, 30)
     fecha_desde = date.today() - timedelta(days=dias)
-    
+
     # Filtrar por fecha
     evo_filtradas = [e for e in evoluciones if parse_date(e.get("fecha")) >= fecha_desde]
-    
+
     # Estadísticas por médico
     medico_stats = defaultdict(lambda: {
         "evoluciones": 0,
         "pacientes_unicos": set(),
         "ingresos": 0.0
     })
-    
+
     for evo in evo_filtradas:
         medico = evo.get("medico_nombre", evo.get("medico_id", "Desconocido"))
         medico_stats[medico]["evoluciones"] += 1
         medico_stats[medico]["pacientes_unicos"].add(evo.get("paciente_id", "unknown"))
-    
+
     # Agregar datos de facturación
     fact_filtradas = [f for f in facturacion if parse_date(f.get("fecha")) >= fecha_desde]
     for fact in fact_filtradas:
         medico = fact.get("medico", "Desconocido")
         medico_stats[medico]["ingresos"] += fact.get("monto", 0) or 0
-    
+
     # Crear DataFrame
     data = []
     for medico, stats in sorted(medico_stats.items(), key=lambda x: x[1]["evoluciones"], reverse=True):
@@ -250,22 +250,22 @@ def render_productivity_dashboard():
             "Ingresos Generados": stats["ingresos"],
             "Promedio por Paciente": stats["ingresos"] / len(stats["pacientes_unicos"]) if stats["pacientes_unicos"] else 0
         })
-    
+
     if data:
         df = pd.DataFrame(data)
         st.dataframe(df, width='stretch', hide_index=True)
-        
+
         # Gráficos
         st.subheader("Comparación Visual")
-        
+
         tab1, tab2, tab3 = st.tabs(["Evoluciones", "Pacientes", "Ingresos"])
-        
+
         with tab1:
             st.bar_chart(df.set_index("Médico")["Evoluciones"])
-        
+
         with tab2:
             st.bar_chart(df.set_index("Médico")["Pacientes Únicos"])
-        
+
         with tab3:
             st.bar_chart(df.set_index("Médico")["Ingresos Generados"])
     else:
@@ -275,27 +275,27 @@ def render_productivity_dashboard():
 def render_patients_analytics():
     """Analítica de pacientes."""
     st.header("👥 Análisis de Pacientes")
-    
+
     pacientes = st.session_state.get("pacientes_db", {})
     evoluciones = st.session_state.get("evoluciones_db", [])
-    
+
     # KPIs
     total_pacientes = len(pacientes)
-    
+
     # Nuevos vs recurrentes (último mes)
     hoy = date.today()
     mes_pasado = hoy - timedelta(days=30)
-    
+
     pacientes_nuevos = 0
     pacientes_recurrentes = 0
-    
+
     # Contar evoluciones por paciente en el último mes
     paciente_evoluciones = defaultdict(int)
     for evo in evoluciones:
         fecha = parse_date(evo.get("fecha"))
         if fecha >= mes_pasado:
             paciente_evoluciones[evo.get("paciente_id", "")] += 1
-    
+
     # Si tienen 1 evolución y fueron creados recientemente = nuevo
     for p_id, count in paciente_evoluciones.items():
         if count == 1:
@@ -308,37 +308,37 @@ def render_patients_analytics():
                     pacientes_recurrentes += 1
         else:
             pacientes_recurrentes += 1
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.metric("Total Pacientes", total_pacientes)
         st.metric("Nuevos (30d)", pacientes_nuevos)
-    
+
     with col2:
         st.metric("Recurrentes (30d)", pacientes_recurrentes)
         tasa_retencion = (pacientes_recurrentes / (pacientes_nuevos + pacientes_recurrentes) * 100) if (pacientes_nuevos + pacientes_recurrentes) > 0 else 0
         st.metric("Tasa Retención", f"{tasa_retencion:.1f}%")
-    
+
     st.divider()
-    
+
     # Distribución por obra social
     st.subheader("Distribución por Obra Social")
-    
+
     os_count = defaultdict(int)
     for p in pacientes.values():
         os = p.get("obra_social", "Sin OS") or "Sin OS"
         os_count[os] += 1
-    
+
     if os_count:
         data = [{"Obra Social": k, "Pacientes": v} for k, v in sorted(os_count.items(), key=lambda x: x[1], reverse=True)]
         df = pd.DataFrame(data)
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.dataframe(df, width='stretch', hide_index=True)
-        
+
         with col2:
             st.bar_chart(df.head(10).set_index("Obra Social"))
 
@@ -346,22 +346,22 @@ def render_patients_analytics():
 def render_insurance_analytics():
     """Analítica por obra social/seguro."""
     st.header("🏥 Análisis por Obras Sociales y Seguros")
-    
+
     facturacion = st.session_state.get("facturacion_db", [])
-    
+
     if not facturacion:
         st.info("No hay datos de facturación disponibles.")
         return
-    
+
     # Análisis por obra social
     os_stats = defaultdict(lambda: {"facturas": 0, "monto": 0.0, "cobrado": 0.0})
-    
+
     for fact in facturacion:
         os = fact.get("obra_social", "Particular")
         os_stats[os]["facturas"] += 1
         os_stats[os]["monto"] += fact.get("monto", 0) or 0
         os_stats[os]["cobrado"] += fact.get("monto_cobrado", 0) or 0
-    
+
     data = []
     for os, stats in sorted(os_stats.items(), key=lambda x: x[1]["monto"], reverse=True):
         data.append({
@@ -372,12 +372,12 @@ def render_insurance_analytics():
             "Por Cobrar": stats["monto"] - stats["cobrado"],
             "% Cobranza": (stats["cobrado"] / stats["monto"] * 100) if stats["monto"] > 0 else 0
         })
-    
+
     df = pd.DataFrame(data)
     st.dataframe(df, width='stretch', hide_index=True)
-    
+
     st.divider()
-    
+
     # Visualización
     st.subheader("Top 5 Obras Sociales por Facturación")
     st.bar_chart(df.head(5).set_index("Obra Social")["Monto Total"])
@@ -386,51 +386,51 @@ def render_insurance_analytics():
 def render_trends_forecast():
     """Tendencias y previsiones."""
     st.header("📅 Tendencias y Previsiones")
-    
+
     evoluciones = st.session_state.get("evoluciones_db", [])
-    
+
     if not evoluciones:
         st.info("No hay datos históricos suficientes.")
         return
-    
+
     # Evolución mensual últimos 12 meses
     meses = defaultdict(int)
-    
+
     for evo in evoluciones:
         fecha = parse_date(evo.get("fecha"))
         if fecha:
             mes_key = fecha.strftime("%Y-%m")
             meses[mes_key] += 1
-    
+
     # Ordenar y tomar últimos 12
     sorted_meses = sorted(meses.items())[-12:]
-    
+
     if sorted_meses:
         data = [{"Mes": k, "Evoluciones": v} for k, v in sorted_meses]
         df = pd.DataFrame(data)
-        
+
         st.subheader("Evoluciones por Mes (Últimos 12 meses)")
         st.line_chart(df.set_index("Mes"))
-        
+
         # Tendencia simple
         if len(data) >= 3:
             ultimos_3 = [d["Evoluciones"] for d in data[-3:]]
             promedio_3 = sum(ultimos_3) / 3
-            
+
             mes_anterior = data[-2]["Evoluciones"] if len(data) >= 2 else 0
             mes_actual = data[-1]["Evoluciones"]
-            
+
             variacion = ((mes_actual - mes_anterior) / mes_anterior * 100) if mes_anterior > 0 else 0
-            
+
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 st.metric(
                     "Tendencia Mensual",
                     f"{variacion:+.1f}%",
                     delta_color="normal" if variacion >= 0 else "inverse"
                 )
-            
+
             with col2:
                 # Proyección simple para próximo mes
                 st.metric(
@@ -438,9 +438,9 @@ def render_trends_forecast():
                     f"{int(promedio_3)} evoluciones",
                     help="Promedio de los últimos 3 meses"
                 )
-    
+
     st.divider()
-    
+
     # Comparación año anterior
     st.subheader("Comparación Interanual")
     st.info("Comparación con el mismo período del año anterior estará disponible con más datos históricos.")
@@ -449,7 +449,7 @@ def render_trends_forecast():
 def calculate_period_start(periodo: str) -> date:
     """Calcula fecha de inicio según período."""
     hoy = date.today()
-    
+
     if periodo == "Hoy":
         return hoy
     elif periodo == "Esta semana":
@@ -468,7 +468,7 @@ def parse_date(fecha_str: str) -> date:
     """Parsea fecha de string."""
     if not fecha_str:
         return date.min
-    
+
     try:
         # Intentar formato DD/MM/YYYY
         return datetime.strptime(fecha_str[:10], "%d/%m/%Y").date()

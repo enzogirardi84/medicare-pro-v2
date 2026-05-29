@@ -45,7 +45,7 @@ def _cached_contexto(paciente_sel):
         and r.get("tipo_indicacion", "Medicacion") == "Medicacion"
     ]
     result = {"detalles": detalles, "vitales_top3": vitales_top3, "ultima_ev": ultima_ev, "activas": activas, "ultimo_mes": None, "ultimo_ano": None}
-    
+
     # Determinar ultimo mes con datos del paciente
     _fechas = []
     for r in vitales:
@@ -68,7 +68,7 @@ def _cached_contexto(paciente_sel):
             result["ultimo_ano"] = str(_dt.year)
         except Exception:
             pass
-    
+
     st.session_state[_cache_key] = result
     st.session_state[_cache_ts] = now
     return result
@@ -105,7 +105,7 @@ def sidebar_patient_card(paciente_sel, detalles):
             )
         else:
             st.write(f"{escape(paciente_sel)}")
-        
+
         # Mostrar ultimo mes con datos (rojo si es el mes actual)
         ctx = _cached_contexto(paciente_sel)
         _mes = ctx.get("ultimo_mes")
@@ -122,7 +122,7 @@ def sidebar_patient_card(paciente_sel, detalles):
                 f'{"● " if _es_actual else ""}Ult. datos: {_mes} {_ano}</span>',
                 unsafe_allow_html=True,
             )
-        
+
         st.caption(
             f"DNI: {escape(detalles.get('dni', 'S/D'))}  |  "
             f"OS: {escape(detalles.get('obra_social', 'S/D'))}  |  "

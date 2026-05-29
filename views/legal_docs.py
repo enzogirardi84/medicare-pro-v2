@@ -214,7 +214,7 @@ def _render_consent_tab(mi_empresa, user):
                 }
                 for c in reversed(consents[-50:])
             ],
-            width='stretch',
+            use_container_width=True,
         )
 
         st.divider()
@@ -273,7 +273,7 @@ def _render_audit_trail_tab(mi_empresa, user):
             }
             for e in reversed(entries[-show:])
         ]
-        st.dataframe(df, width='stretch')
+        st.dataframe(df, use_container_width=True)
 
         if st.button("Verificar integridad de la cadena", use_container_width=True):
             from core.audit_trail import get_audit_trail

@@ -13,31 +13,31 @@ from pathlib import Path
 
 def validar_schema():
     """Valida el esquema completo de Supabase."""
-    
+
     print("="*70)
     print("VALIDACIÓN DEL ESQUEMA SUPABASE")
     print("="*70)
-    
+
     # Tablas esperadas según el SQL compartido
     tablas_esperadas = {
         # Tablas clínicas
         'signos_vitales': {
-            'columnas_requeridas': ['id', 'paciente_id', 'usuario_id', 'fecha_registro', 
+            'columnas_requeridas': ['id', 'paciente_id', 'usuario_id', 'fecha_registro',
                                    'tension_arterial', 'frecuencia_cardiaca', 'temperatura'],
             'foreign_keys': ['paciente_id', 'usuario_id']
         },
         'cuidados_enfermeria': {
-            'columnas_requeridas': ['id', 'paciente_id', 'usuario_id', 'fecha_registro', 
+            'columnas_requeridas': ['id', 'paciente_id', 'usuario_id', 'fecha_registro',
                                    'tipo_cuidado', 'descripcion'],
             'foreign_keys': ['paciente_id', 'usuario_id']
         },
         'consentimientos': {
-            'columnas_requeridas': ['id', 'paciente_id', 'usuario_id', 'fecha_firma', 
+            'columnas_requeridas': ['id', 'paciente_id', 'usuario_id', 'fecha_firma',
                                    'tipo_documento', 'archivo_url'],
             'foreign_keys': ['paciente_id', 'usuario_id']
         },
         'auditoria_legal': {
-            'columnas_requeridas': ['id', 'empresa_id', 'paciente_id', 'usuario_id', 
+            'columnas_requeridas': ['id', 'empresa_id', 'paciente_id', 'usuario_id',
                                    'fecha_evento', 'modulo', 'accion'],
             'foreign_keys': ['empresa_id', 'paciente_id', 'usuario_id']
         },
@@ -104,21 +104,21 @@ def validar_schema():
             'foreign_keys': []
         }
     }
-    
+
     # Intentar conectar y verificar
     try:
         from supabase import create_client
         import toml
-        
+
         # Cargar secrets
         secrets = toml.load('.streamlit/secrets.toml')
         supabase_url = secrets['SUPABASE_URL']
         supabase_key = secrets['SUPABASE_KEY']
-        
+
         supabase = create_client(supabase_url, supabase_key)
-        
+
         print("\n✅ Conexión establecida")
-        
+
         reporte = {
             "fecha": datetime.now().isoformat(),
             "tablas": {},
@@ -129,14 +129,14 @@ def validar_schema():
                 "con_datos": 0
             }
         }
-        
+
         # Verificar cada tabla
         for tabla, config in tablas_esperadas.items():
             try:
                 # Verificar si existe
                 response = supabase.table(tabla).select("count", count="exact").limit(1).execute()
                 count = response.count if hasattr(response, 'count') else 0
-                
+
                 reporte["tablas"][tabla] = {
                     "existe": True,
                     "registros": count,
@@ -145,9 +145,9 @@ def validar_schema():
                 reporte["resumen"]["encontradas"] += 1
                 if count > 0:
                     reporte["resumen"]["con_datos"] += 1
-                    
+
                 print(f"✅ {tabla}: {count} registros")
-                
+
             except Exception as e:
                 reporte["tablas"][tabla] = {
                     "existe": False,
@@ -156,11 +156,11 @@ def validar_schema():
                 }
                 reporte["resumen"]["faltantes"].append(tabla)
                 print(f"❌ {tabla}: NO EXISTE - {str(e)[:50]}")
-        
+
         # Guardar reporte
         with open('validacion_schema.json', 'w', encoding='utf-8') as f:
             json.dump(reporte, f, indent=2, ensure_ascii=False)
-        
+
         # Resumen
         print("\n" + "="*70)
         print("RESUMEN DE VALIDACIÓN")
@@ -169,14 +169,14 @@ def validar_schema():
         print(f"Tablas encontradas: {reporte['resumen']['encontradas']}")
         print(f"Tablas con datos: {reporte['resumen']['con_datos']}")
         print(f"Tablas faltantes: {len(reporte['resumen']['faltantes'])}")
-        
+
         if reporte['resumen']['faltantes']:
             print("\n⚠️ Tablas que faltan:")
             for tabla in reporte['resumen']['faltantes']:
                 print(f"  - {tabla}")
-        
+
         print("\nReporte guardado: validacion_schema.json")
-        
+
         # Sugerencias
         if reporte['resumen']['faltantes']:
             print("\n🔧 ACCIÓN REQUERIDA:")
@@ -186,7 +186,7 @@ def validar_schema():
             print("El dual-write puede estar fallando o no hay datos guardados aún")
         else:
             print("\n✅ Esquema completo y funcionando")
-            
+
     except Exception as e:
         print(f"\n❌ Error de conexión: {e}")
         print("Verificar credenciales en .streamlit/secrets.toml")

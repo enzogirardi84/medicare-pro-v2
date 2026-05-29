@@ -70,7 +70,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     dt = pd.to_datetime(f.get("fecha_emision", ""), errors="coerce")
                     paciente_nombre = f.get("pacientes", {}).get("nombre_completo", "N/A") if isinstance(f.get("pacientes"), dict) else "N/A"
                     paciente_visual = paciente_lookup.get(paciente_nombre, paciente_nombre)
-                            
+
                     try:
                         _monto = float(f.get("monto_total") or 0)
                     except Exception:
@@ -105,7 +105,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             "total_cobrado": total_cobrado,
             "total_pendiente": total_pendiente
         }
-    
+
     cached = st.session_state[cache_key_caja]
     fact_paciente = cached["fact_paciente"]
     total_cobrado = cached["total_cobrado"]
@@ -141,10 +141,10 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         metodo = c3.selectbox("Metodo de Pago", opciones_pago)
         estado = c4.radio("Estado del Cobro", ["Cobrado", "Pendiente / A Facturar"], horizontal=False)
 
-        if st.form_submit_button("💰 Registrar Cobro / Practica", width='stretch', type="primary"):
+        if st.form_submit_button("💰 Registrar Cobro / Practica", use_container_width=True, type="primary"):
             # Validación extra de seguridad
             desc_final = practica_manual.strip() if practica_sel == "-- Otro (Especificar manualmente) --" else f"{practica_sel} {('- ' + practica_manual.strip()) if practica_manual.strip() else ''}"
-            
+
             # Validaciones de seguridad
             if not desc_final.strip():
                 log_event("caja", "error: Descripcion vacia.")
@@ -157,7 +157,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 st.error("⚠️ Monto máximo permitido: $500,000")
             else:
                 fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
-                
+
                 # 1. Guardar en SQL (Dual-Write)
                 try:
                     empresa_uuid = _obtener_uuid_empresa(mi_empresa)
@@ -306,7 +306,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                                     file_name=f"Recibo_{sanitize_filename_component(mov.get('paciente', i+1), 'recibo')}_{i+1}.pdf",
                                     mime="application/pdf",
                                     key=f"pdf_btn_{i}",
-                                    width='stretch',
+                                    use_container_width=True,
                                 )
         else:
             st.warning(
@@ -337,7 +337,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 )
                 mostrar_dataframe_con_scroll(df_mostrar.tail(limite_aud).iloc[::-1], height=420)
                 csv_data = dataframe_csv_bytes(df_mostrar)
-                st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", width='stretch')
+                st.download_button("Descargar CSV de Caja", data=csv_data, file_name=f"Caja_General_{sanitize_filename_component(mi_empresa, 'empresa')}_{ahora().strftime('%d_%m_%Y')}.csv", mime="text/csv", use_container_width=True)
             else:
                 bloque_estado_vacio(
                     "Caja sin movimientos",

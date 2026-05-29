@@ -450,22 +450,22 @@ def _html_cortina_resumen_visual(plan_dia_df):
 def render_marco_clinico_cortina():
     with st.expander("Seguridad del medicamento, trazabilidad y marco legal (referencia internacional)", expanded=False):
         st.markdown("""
-**Cinco correctos (referencia habitual OMS / buenas prácticas hospitalarias)**  
+**Cinco correctos (referencia habitual OMS / buenas prácticas hospitalarias)**
 Antes de confirmar cada administración, el equipo debería verificar de forma sistemática:
 
-1. **Paciente correcto** — identidad acorde a la política de la institución (idealmente dos identificadores).  
-2. **Medicamento correcto** — principio activo, presentación y equivalencia con la prescripción.  
-3. **Dosis correcta** — incluye concentración, dilución y dispositivo de medición cuando aplica.  
-4. **Vía correcta** — coherente con la indicación y el estado del paciente.  
+1. **Paciente correcto** — identidad acorde a la política de la institución (idealmente dos identificadores).
+2. **Medicamento correcto** — principio activo, presentación y equivalencia con la prescripción.
+3. **Dosis correcta** — incluye concentración, dilución y dispositivo de medición cuando aplica.
+4. **Vía correcta** — coherente con la indicación y el estado del paciente.
 5. **Momento correcto** — hora programada frente a hora real documentada (demoras, ayuno, procedimientos).
 
-**Registro en este sistema**  
+**Registro en este sistema**
 Cada acción queda asociada al **usuario autenticado**, **hora de registro en servidor** y, si está cargada, **matrícula profesional**, con copia en **auditoría legal** para inspecciones internas o requerimientos regulatorios.
 
-**Valor documental**  
+**Valor documental**
 Las entradas forman parte de la **documentación asistencial** y deben ser **veraces y oportunas**. El cumplimiento de **leyes sanitarias, profesionales y de protección de datos personales** depende de la **normativa y protocolos de tu país o provincia** y de las políticas institucionales — este módulo no reemplaza asesoramiento jurídico ni auditoría externa.
 
-**Alta vigilancia**  
+**Alta vigilancia**
 Medicación de riesgo (anticoagulantes, insulina, opioides, electrolitos IV, etc.): seguí **protocolos locales** (doble verificación, límites de dosis, observación).
         """)
 
@@ -484,7 +484,7 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
     ed_rap = st.data_editor(
-        rapida, hide_index=True, width='stretch',
+        rapida, hide_index=True, use_container_width=True,
         disabled=["Hora programada", "Medicamento", "Via", "Frecuencia"],
         column_config={
             "Hora programada": st.column_config.TextColumn("Prog.", width="small"),
@@ -497,7 +497,7 @@ def _render_cortina_tildado_rapido(pendientes_base, paciente_sel, mi_empresa, us
         key=f"cortina_rapida_{paciente_sel}_{fecha_hoy}",
     )
 
-    if st.button("Guardar tildes rápidos", width='stretch', type="primary", key=f"guardar_cortina_rapida_{paciente_sel}_{fecha_hoy}"):
+    if st.button("Guardar tildes rápidos", use_container_width=True, type="primary", key=f"guardar_cortina_rapida_{paciente_sel}_{fecha_hoy}"):
         n = 0
         for _, fila in ed_rap.iterrows():
             if not bool(fila.get("Dada")):
@@ -599,14 +599,14 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
                                       placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica de suspensión…")
                         b1, b2 = st.columns(2)
                         with b1:
-                            if st.button("Administración realizada", key=f"mar_ok_{suf}_{i}", type="primary", width='stretch',
+                            if st.button("Administración realizada", key=f"mar_ok_{suf}_{i}", type="primary", use_container_width=True,
                                          help="Registra administración conforme a la indicación (queda firmado y auditado)."):
                                 hr_val = str(st.session_state.get(k_hr, def_h) or "").strip() or def_h
                                 if registrar_administracion_dosis(paciente_sel, mi_empresa, user, fecha_hoy, med_raw,
                                                                    str(fila.get("Hora programada", "") or "").strip(), "Realizada", "", hora_real_admin=hr_val):
                                     st.rerun()
                         with b2:
-                            if st.button("No administrada / suspendida", key=f"mar_no_{suf}_{i}", width='stretch',
+                            if st.button("No administrada / suspendida", key=f"mar_no_{suf}_{i}", use_container_width=True,
                                          help="Requiere motivo clínico documentado (trazabilidad legal)."):
                                 just = str(st.session_state.get(k_just, "") or "").strip()
                                 hr_val = str(st.session_state.get(k_hr, def_h) or "").strip() or def_h
@@ -658,7 +658,7 @@ def render_bloque_cortina_medicacion(plan_dia_df, columnas_tabla, paciente_sel, 
             disabled_cols = [c for c in editor_columnas if c not in ("Accion", "Hora_real", "Justificacion")]
 
             editor_df = st.data_editor(
-                pendientes_df[editor_columnas], hide_index=True, width='stretch', disabled=disabled_cols,
+                pendientes_df[editor_columnas], hide_index=True, use_container_width=True, disabled=disabled_cols,
                 column_config={
                     "Accion": st.column_config.SelectboxColumn("Acción", options=["(sin cambio)", "Realizada", "No realizada"], required=True),
                     "Hora_real": st.column_config.TextColumn("Hora real (HH:MM)", max_chars=8),
@@ -667,7 +667,7 @@ def render_bloque_cortina_medicacion(plan_dia_df, columnas_tabla, paciente_sel, 
                 key=f"cortina_tabla_editor_{paciente_sel}_{fecha_hoy}",
             )
 
-            if st.button("Guardar registro avanzado (cortina)", width='stretch', key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}"):
+            if st.button("Guardar registro avanzado (cortina)", use_container_width=True, key=f"guardar_tildes_cortina_{paciente_sel}_{fecha_hoy}"):
                 registros_guardados = 0
                 errores = []
                 for _idx, fila in editor_df.iterrows():

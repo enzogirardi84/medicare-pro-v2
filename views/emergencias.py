@@ -26,7 +26,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {})
-    
+
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
     eventos = []
     try:
@@ -66,7 +66,7 @@ def render_emergencias(paciente_sel, mi_empresa, user):
     # 2. Fallback a JSON si SQL falla o esta vacio
     if not eventos:
         eventos = get_patient_records("emergencias_db", paciente_sel)
-        
+
     activos = [x for x in eventos if x.get("triage_grado") in {"Grado 1 - Rojo", "Grado 2 - Amarillo"}]
     traslados = [x for x in eventos if x.get("ambulancia_solicitada")]
 

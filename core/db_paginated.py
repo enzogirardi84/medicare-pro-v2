@@ -37,15 +37,15 @@ class PaginatedSupabaseQuery:
     Wrapper para consultas paginadas a Supabase.
     Obligatorio para tablas grandes (pacientes, evoluciones, etc.)
     """
-    
+
     DEFAULT_PAGE_SIZE = 50
     MAX_PAGE_SIZE = 100  # Límite de seguridad
-    
+
     def __init__(self, supabase_client):
         self.client = supabase_client
         self._cache_hits = 0
         self._cache_misses = 0
-    
+
     def _validate_page_size(self, size: int) -> int:
         """Valida y limita el tamaño de página."""
         if size < 1:
@@ -57,7 +57,7 @@ class PaginatedSupabaseQuery:
             )
             return self.MAX_PAGE_SIZE
         return size
-    
+
     @st.cache_data(
         ttl=300,  # 5 minutos
         show_spinner=False,
@@ -75,32 +75,32 @@ class PaginatedSupabaseQuery:
     ) -> Tuple[List[Dict], int, bool]:
         """
         Consulta cacheada a Supabase.
-        
+
         Returns:
             (items, total_count, has_more)
         """
         try:
             query = _self.client.table(table).select("*")
-            
+
             # Aplicar filtro de tenant si existe (RLS)
             if tenant_id:
                 query = query.eq("tenant_id", tenant_id)
-            
+
             # Ordenar
             if ascending:
                 query = query.order(order_by, desc=False)
             else:
                 query = query.order(order_by, desc=True)
-            
+
             # Paginación con range
             start = (page - 1) * page_size
             end = start + page_size - 1
             query = query.range(start, end)
-            
+
             # Ejecutar
             response = query.execute()
             items = response.data if response.data else []
-            
+
             # Contar total (optimizado: solo en primera página)
             total_count = 0
             if page == 1:
@@ -108,17 +108,17 @@ class PaginatedSupabaseQuery:
                     "*", count="exact", head=True
                 ).execute()
                 total_count = getattr(count_response, 'count', len(items))
-            
+
             # Determinar si hay más
             has_more = len(items) == page_size
-            
+
             _self._cache_hits += 1
             return items, total_count, has_more
-            
+
         except Exception as e:
             log_event("db_error", f"paginated_query_error:{table}:{type(e).__name__}")
             raise
-    
+
     def query_paginated(
         self,
         table: str,
@@ -131,7 +131,7 @@ class PaginatedSupabaseQuery:
     ) -> PageInfo:
         """
         Ejecuta consulta paginada con caché automático.
-        
+
         Args:
             table: Nombre de la tabla
             page: Número de página (1-based)
@@ -140,17 +140,17 @@ class PaginatedSupabaseQuery:
             ascending: True para ascendente
             tenant_id: Filtro de tenant para RLS
             filters: Filtros adicionales (dict de eq conditions)
-        
+
         Returns:
             PageInfo con items y metadatos
         """
         page_size = self._validate_page_size(page_size)
-        
+
         # Cache key único para la consulta
         cache_key = f"{table}:{page}:{page_size}:{order_by}:{ascending}:{tenant_id}:{hash(str(filters))}"
-        
+
         start_time = time.time()
-        
+
         try:
             items, total_count, has_more = self._cached_query(
                 self,  # _self para Streamlit cache
@@ -162,7 +162,7 @@ class PaginatedSupabaseQuery:
                 tenant_id,
                 cache_key
             )
-            
+
             # Aplicar filtros adicionales si existen (en memoria, ya que Supabase no permite múltiples eq)
             if filters and items:
                 filtered_items = items
@@ -172,14 +172,14 @@ class PaginatedSupabaseQuery:
                         if item.get(key) == value
                     ]
                 items = filtered_items
-            
+
             elapsed_ms = (time.time() - start_time) * 1000
-            
+
             log_event(
                 "db_query",
                 f"paginated:{table}:page_{page}:size_{len(items)}:{elapsed_ms:.1f}ms"
             )
-            
+
             return PageInfo(
                 items=items,
                 has_more=has_more,
@@ -188,7 +188,7 @@ class PaginatedSupabaseQuery:
                 next_cursor=str(page + 1) if has_more else None,
                 prev_cursor=str(page - 1) if page > 1 else None
             )
-            
+
         except Exception as e:
             log_event("db_error", f"query_paginated_failed:{table}:{type(e).__name__}")
             # Retornar página vacía en caso de error (fail-open para UX)
@@ -198,7 +198,7 @@ class PaginatedSupabaseQuery:
                 total_count=0,
                 page_size=page_size
             )
-    
+
     def search_paginated(
         self,
         table: str,
@@ -210,7 +210,7 @@ class PaginatedSupabaseQuery:
     ) -> PageInfo:
         """
         Búsqueda paginada con ilike.
-        
+
         Args:
             table: Tabla a consultar
             search_field: Campo a buscar (ej: "nombre")
@@ -220,28 +220,28 @@ class PaginatedSupabaseQuery:
             tenant_id: Filtro de tenant
         """
         page_size = self._validate_page_size(page_size)
-        
+
         try:
             query = self.client.table(table).select("*")
-            
+
             # Filtro de tenant
             if tenant_id:
                 query = query.eq("tenant_id", tenant_id)
-            
+
             # Búsqueda ilike (case insensitive)
             if search_term:
                 query = query.ilike(search_field, f"%{search_term}%")
-            
+
             # Paginación
             start = (page - 1) * page_size
             end = start + page_size - 1
             query = query.range(start, end)
-            
+
             response = query.execute()
             items = response.data if response.data else []
-            
+
             has_more = len(items) == page_size
-            
+
             return PageInfo(
                 items=items,
                 has_more=has_more,
@@ -249,7 +249,7 @@ class PaginatedSupabaseQuery:
                 next_cursor=str(page + 1) if has_more else None,
                 prev_cursor=str(page - 1) if page > 1 else None
             )
-            
+
         except Exception as e:
             log_event("db_error", f"search_paginated_failed:{table}:{type(e).__name__}")
             return PageInfo(items=[], has_more=False, page_size=page_size)
@@ -269,13 +269,13 @@ def get_paginated_patients(
     if supabase_client is None:
         from core._database_supabase import supabase
         supabase_client = supabase
-    
+
     if supabase_client is None:
         log_event("db_error", "supabase_not_initialized")
         return PageInfo(items=[], has_more=False, page_size=page_size)
-    
+
     paginator = PaginatedSupabaseQuery(supabase_client)
-    
+
     if search:
         return paginator.search_paginated(
             table="pacientes",

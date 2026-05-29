@@ -19,7 +19,7 @@ from typing import Dict, List, Tuple, Set
 
 class SaveAuditVisitor(ast.NodeVisitor):
     """AST visitor para detectar problemas de guardado."""
-    
+
     def __init__(self, filename: str):
         self.filename = filename
         self.issues: List[str] = []
@@ -30,13 +30,13 @@ class SaveAuditVisitor(ast.NodeVisitor):
         self.has_success_message = False
         self.current_function = None
         self.functions_with_saves: Set[str] = set()
-        
+
     def visit_FunctionDef(self, node):
         old_function = self.current_function
         self.current_function = node.name
         self.generic_visit(node)
         self.current_function = old_function
-        
+
     def visit_Call(self, node):
         # Detectar llamadas a guardar_datos
         if isinstance(node.func, ast.Name) and node.func.id == "guardar_datos":
@@ -44,7 +44,7 @@ class SaveAuditVisitor(ast.NodeVisitor):
             self.guardar_datos_calls += 1
             if self.current_function:
                 self.functions_with_saves.add(self.current_function)
-            
+
         # Detectar modificaciones a session_state
         if isinstance(node.func, ast.Attribute):
             if isinstance(node.func.value, ast.Subscript):
@@ -52,35 +52,35 @@ class SaveAuditVisitor(ast.NodeVisitor):
                     if node.func.value.value.id == "st" and node.func.attr in ["append", "extend", "update"]:
                         if isinstance(node.func.value.slice, ast.Constant):
                             self.session_state_modifications.append(str(node.func.value.slice.value))
-                            
+
         self.generic_visit(node)
-        
+
     def visit_Try(self, node):
         self.has_error_handling = True
         self.generic_visit(node)
-        
+
     def visit_ExceptHandler(self, node):
         # Verificar que no hay pass silenciando errores
         if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
             self.issues.append(f"ERROR CRÍTICO: except: pass en línea {node.lineno} - silencia errores de guardado")
         self.generic_visit(node)
-        
+
     def check_issues(self) -> List[str]:
         """Verifica problemas específicos."""
         issues = []
-        
+
         # Si modifica session_state pero no llama guardar_datos
         if self.session_state_modifications and not self.has_guardar_datos:
             issues.append(f"ERROR CRÍTICO: Modifica {self.session_state_modifications} pero NO llama guardar_datos()")
-            
+
         # Si tiene guardar_datos pero sin manejo de errores
         if self.has_guardar_datos and not self.has_error_handling:
             issues.append("ADVERTENCIA: Llama guardar_datos() sin try/except para manejo de errores")
-            
+
         # Si hay llamadas múltiples a guardar_datos
         if self.guardar_datos_calls > 3:
             issues.append(f"ADVERTENCIA: {self.guardar_datos_calls} llamadas a guardar_datos - puede ser ineficiente")
-            
+
         return issues + self.issues
 
 def analyze_view(filepath: Path) -> Dict:
@@ -88,14 +88,14 @@ def analyze_view(filepath: Path) -> Dict:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
-            
+
         tree = ast.parse(content)
         visitor = SaveAuditVisitor(filepath.name)
         visitor.visit(tree)
-        
+
         # Verificar imports
         has_database_import = "from core.database import" in content and "guardar_datos" in content
-        
+
         return {
             "filename": filepath.name,
             "has_guardar_datos": visitor.has_guardar_datos,
@@ -114,12 +114,12 @@ def analyze_view(filepath: Path) -> Dict:
 
 def generate_audit_report(results: List[Dict]) -> str:
     """Genera reporte HTML de auditoría."""
-    
+
     critical_issues = sum(1 for r in results for i in r.get("issues", []) if "ERROR CRÍTICO" in i)
     warnings = sum(1 for r in results for i in r.get("issues", []) if "ADVERTENCIA" in i)
     total_views = len(results)
     views_with_save = sum(1 for r in results if r.get("has_guardar_datos"))
-    
+
     report = f"""
 <!DOCTYPE html>
 <html>
@@ -153,19 +153,19 @@ def generate_audit_report(results: List[Dict]) -> str:
 </head>
 <body>
 """
-    
+
     # Header color based on issues
     has_critical = critical_issues > 0
     header_class = "" if has_critical else "safe"
     status_text = "PROBLEMAS CRÍTICOS ENCONTRADOS" if has_critical else "SISTEMA DE GUARDADO VERIFICADO"
-    
+
     report += f"""
     <div class="header {header_class}">
         <h1>Auditoria de Guardado - Medicare Pro</h1>
         <p>{status_text}</p>
         <p style="font-size: 0.875rem; opacity: 0.9;">Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
     </div>
-    
+
     <div class="stats">
         <div class="stat-card">
             <div class="stat-value {'critical' if critical_issues > 0 else 'good'}">{critical_issues}</div>
@@ -185,7 +185,7 @@ def generate_audit_report(results: List[Dict]) -> str:
         </div>
     </div>
 """
-    
+
     # Issues summary
     if has_critical:
         report += """
@@ -194,7 +194,7 @@ def generate_audit_report(results: List[Dict]) -> str:
         <p>Se encontraron problemas críticos que pueden causar pérdida de datos. Revisar inmediatamente las vistas marcadas.</p>
     </div>
 """
-    
+
     # Table of results
     report += """
     <h2>Detalle por Vista</h2>
@@ -210,13 +210,13 @@ def generate_audit_report(results: List[Dict]) -> str:
         </thead>
         <tbody>
 """
-    
+
     for result in sorted(results, key=lambda x: len(x.get("issues", [])), reverse=True):
         filename = result["filename"]
         has_save = result.get("has_guardar_datos", False)
         calls = result.get("guardar_datos_calls", 0)
         issues = result.get("issues", [])
-        
+
         # Status badge
         if any("ERROR CRÍTICO" in i for i in issues):
             status_badge = '<span class="badge badge-critical">CRÍTICO</span>'
@@ -224,7 +224,7 @@ def generate_audit_report(results: List[Dict]) -> str:
             status_badge = '<span class="badge badge-warning">ADVERTENCIA</span>'
         else:
             status_badge = '<span class="badge badge-good">OK</span>'
-        
+
         # Issues list
         if issues:
             issues_html = '<ul class="issue-list">'
@@ -234,7 +234,7 @@ def generate_audit_report(results: List[Dict]) -> str:
             issues_html += '</ul>'
         else:
             issues_html = "Sin problemas"
-        
+
         report += f"""
             <tr>
                 <td><strong>{filename}</strong></td>
@@ -244,11 +244,11 @@ def generate_audit_report(results: List[Dict]) -> str:
                 <td>{issues_html}</td>
             </tr>
 """
-    
+
     report += """
         </tbody>
     </table>
-    
+
     <div style="margin-top: 40px; padding: 20px; background: #F1F5F9; border-radius: 8px;">
         <h3>Recomendaciones</h3>
         <ol>
@@ -258,11 +258,11 @@ def generate_audit_report(results: List[Dict]) -> str:
             <li><strong>Prioridad 4:</strong> Agregar mensajes de éxito/error visibles al usuario</li>
         </ol>
     </div>
-    
+
 </body>
 </html>
 """
-    
+
     return report
 
 def main():
@@ -270,21 +270,21 @@ def main():
     print("\n" + "="*70)
     print("AUDITORÍA COMPLETA DEL SISTEMA DE GUARDADO")
     print("="*70)
-    
+
     views_dir = Path("views")
     if not views_dir.exists():
         print("ERROR: No se encuentra directorio 'views'")
         sys.exit(1)
-    
+
     results = []
     for py_file in sorted(views_dir.glob("*.py")):
         if py_file.name == "__init__.py":
             continue
-        
+
         print(f"\nAnalizando: {py_file.name}...")
         result = analyze_view(py_file)
         results.append(result)
-        
+
         # Print summary to console
         issues = result.get("issues", [])
         if issues:
@@ -293,17 +293,17 @@ def main():
                 print(f"  {prefix} {issue}")
         else:
             print(f"  [OK] Sin problemas ({result.get('guardar_datos_calls', 0)} llamadas)")
-    
+
     # Generate report
     report = generate_audit_report(results)
     report_path = Path("auditoria_guardado_report.html")
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(report)
-    
+
     # Summary
     critical = sum(1 for r in results for i in r.get("issues", []) if "ERROR CRÍTICO" in i)
     warnings = sum(1 for r in results for i in r.get("issues", []) if "ADVERTENCIA" in i)
-    
+
     print("\n" + "="*70)
     print("RESUMEN DE AUDITORÍA")
     print("="*70)
@@ -311,7 +311,7 @@ def main():
     print(f"Problemas críticos: {critical}")
     print(f"Advertencias: {warnings}")
     print(f"\nReporte generado: {report_path.absolute()}")
-    
+
     if critical > 0:
         print("\n[CRITICAL] SE ENCONTRARON PROBLEMAS CRITICOS - REVISAR INMEDIATAMENTE")
         sys.exit(1)

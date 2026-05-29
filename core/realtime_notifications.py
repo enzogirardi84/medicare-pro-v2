@@ -50,18 +50,18 @@ class NotificationType(Enum):
     EMERGENCY_CODE = auto()         # Código de emergencia
     ALLERGY_WARNING = auto()        # Alerta de alergia
     DRUG_INTERACTION = auto()     # Interacción medicamentosa
-    
+
     # Operativas
     APPOINTMENT_UPCOMING = auto()   # Turno en 15/30 min
     APPOINTMENT_CANCELLED = auto()  # Turno cancelado
     NEW_PATIENT = auto()           # Nuevo paciente registrado
     EVOLUTION_PENDING = auto()     # Evolución pendiente de firma
-    
+
     # Colaboración
     TEAM_MESSAGE = auto()          # Mensaje del equipo
     REFERRAL_RECEIVED = auto()     # Derivación recibida
     CONSULT_REQUEST = auto()      # Consulta solicitada
-    
+
     # Sistema
     BACKUP_COMPLETED = auto()    # Backup finalizado
     SYSTEM_ALERT = auto()          # Alerta del sistema
@@ -83,11 +83,11 @@ class Notification:
     read: bool = False
     read_at: Optional[str] = None
     acknowledged: bool = False  # Para alertas críticas
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convierte a diccionario."""
         return asdict(self)
-    
+
     @classmethod
     def create(
         cls,
@@ -118,37 +118,37 @@ class Notification:
 class NotificationManager:
     """
     Gestor central de notificaciones en tiempo real.
-    
+
     Usar:
         manager = NotificationManager()
-        
+
         # Enviar alerta crítica
         manager.send_critical_alert(
             title="Glucosa CRÍTICA",
             message="Paciente Juan Pérez: Glucosa 450 mg/dL",
             patient_id="patient-123"
         )
-        
+
         # En polling loop de Streamlit
         notifications = manager.get_unread_for_user("dr-garcia")
     """
-    
+
     MAX_NOTIFICATIONS_PER_USER = 100  # Límite de memoria
     NOTIFICATION_TTL_SECONDS = 86400    # 24 horas
-    
+
     def __init__(self):
         self._notifications: Dict[str, List[Notification]] = {}  # user_id -> notifications
         self._redis = None
         self._subscribers: Dict[str, List[Callable]] = {}  # user_id -> callbacks
         self._lock = threading.Lock()
         self._init_redis()
-    
+
     def _init_redis(self) -> None:
         """Inicializa Redis para pub/sub entre workers."""
         try:
             settings = get_settings()
             redis_url = settings.redis_url
-            
+
             if redis_url:
                 import redis
                 self._redis = redis.from_url(
@@ -161,13 +161,13 @@ class NotificationManager:
         except Exception as e:
             log_event("notifications", f"redis_unavailable:{type(e).__name__}")
             self._redis = None
-    
+
     def _get_user_notifications(self, user_id: str) -> List[Notification]:
         """Obtiene notificaciones de un usuario (crea si no existe)."""
         if user_id not in self._notifications:
             self._notifications[user_id] = []
         return self._notifications[user_id]
-    
+
     def send_notification(
         self,
         notification: Notification,
@@ -175,7 +175,7 @@ class NotificationManager:
     ) -> None:
         """
         Envía una notificación.
-        
+
         Args:
             notification: Notificación a enviar
             broadcast: Si True, envía a todos los usuarios
@@ -194,7 +194,7 @@ class NotificationManager:
                     # Broadcast si no hay destinatario
                     for user_id in self._notifications.keys():
                         self._add_to_user(user_id, notification)
-            
+
             # Publicar en Redis para otros workers
             if self._redis:
                 try:
@@ -202,36 +202,36 @@ class NotificationManager:
                     self._redis.publish(channel, json.dumps(notification.to_dict()))
                 except Exception:
                     pass
-        
+
         # Notificar suscriptores locales
         self._notify_subscribers(notification)
-        
+
         # Log según prioridad
         if notification.priority == NotificationPriority.CRITICAL.value:
             log_event("notification_critical", f"sent:{notification.title}")
-    
+
     def _add_to_user(self, user_id: str, notification: Notification) -> None:
         """Agrega notificación a usuario, respetando límite."""
         user_notifs = self._get_user_notifications(user_id)
         user_notifs.append(notification)
-        
+
         # Mantener solo las más recientes
         if len(user_notifs) > self.MAX_NOTIFICATIONS_PER_USER:
             # Ordenar por timestamp y mantener más recientes
             user_notifs.sort(key=lambda n: n.timestamp, reverse=True)
             self._notifications[user_id] = user_notifs[:self.MAX_NOTIFICATIONS_PER_USER]
-    
+
     def _notify_subscribers(self, notification: Notification) -> None:
         """Notifica a suscriptores locales."""
         recipient = notification.recipient
-        
+
         if recipient and recipient in self._subscribers:
             for callback in self._subscribers[recipient]:
                 try:
                     callback(notification)
                 except Exception:
                     pass
-        
+
         # También notificar a suscriptores globales
         if "*" in self._subscribers:
             for callback in self._subscribers["*"]:
@@ -239,19 +239,19 @@ class NotificationManager:
                     callback(notification)
                 except Exception:
                     pass
-    
+
     def subscribe(self, user_id: str, callback: Callable[[Notification], None]) -> None:
         """Suscribe un callback a notificaciones de usuario."""
         if user_id not in self._subscribers:
             self._subscribers[user_id] = []
         self._subscribers[user_id].append(callback)
-    
+
     def unsubscribe(self, user_id: str, callback: Callable[[Notification], None]) -> None:
         """Desuscribe un callback."""
         if user_id in self._subscribers:
             if callback in self._subscribers[user_id]:
                 self._subscribers[user_id].remove(callback)
-    
+
     def get_unread_for_user(
         self,
         user_id: str,
@@ -259,12 +259,12 @@ class NotificationManager:
     ) -> List[Notification]:
         """Obtiene notificaciones no leídas de un usuario."""
         user_notifs = self._get_user_notifications(user_id)
-        
+
         unread = [n for n in user_notifs if not n.read]
-        
+
         if priority_filter:
             unread = [n for n in unread if n.priority == priority_filter.value]
-        
+
         # Ordenar por prioridad y fecha
         priority_order = {
             NotificationPriority.CRITICAL.value: 0,
@@ -272,43 +272,43 @@ class NotificationManager:
             NotificationPriority.NORMAL.value: 2,
             NotificationPriority.LOW.value: 3
         }
-        
+
         unread.sort(key=lambda n: (priority_order.get(n.priority, 99), n.timestamp))
-        
+
         return unread
-    
+
     def mark_as_read(self, user_id: str, notification_id: str) -> bool:
         """Marca notificación como leída."""
         user_notifs = self._get_user_notifications(user_id)
-        
+
         for notif in user_notifs:
             if notif.id == notification_id:
                 notif.read = True
                 notif.read_at = datetime.now(timezone.utc).isoformat()
                 return True
-        
+
         return False
-    
+
     def acknowledge_critical(self, user_id: str, notification_id: str) -> bool:
         """Reconoce (ack) una alerta crítica."""
         user_notifs = self._get_user_notifications(user_id)
-        
+
         for notif in user_notifs:
             if notif.id == notification_id and notif.priority == NotificationPriority.CRITICAL.value:
                 notif.acknowledged = True
                 notif.read = True
                 notif.read_at = datetime.now(timezone.utc).isoformat()
-                
+
                 log_event("notification_ack", f"critical:{notification_id}:by:{user_id}")
                 return True
-        
+
         return False
-    
+
     def clear_old_notifications(self, max_age_hours: int = 24) -> int:
         """Limpia notificaciones antiguas. Retorna cantidad eliminada."""
         cutoff = datetime.now(timezone.utc).timestamp() - (max_age_hours * 3600)
         removed = 0
-        
+
         with self._lock:
             for user_id, notifs in self._notifications.items():
                 original_count = len(notifs)
@@ -317,9 +317,9 @@ class NotificationManager:
                     if datetime.fromisoformat(n.timestamp).timestamp() > cutoff
                 ]
                 removed += original_count - len(self._notifications[user_id])
-        
+
         return removed
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Estadísticas de notificaciones."""
         total = sum(len(n) for n in self._notifications.values())
@@ -332,7 +332,7 @@ class NotificationManager:
                 if notif.priority == NotificationPriority.CRITICAL.value and not notif.acknowledged)
             for notifs in self._notifications.values()
         )
-        
+
         return {
             "total_notifications": total,
             "unread": unread,
@@ -371,7 +371,7 @@ def send_critical_alert(
         recipient=recipient,
         data=data
     )
-    
+
     get_notification_manager().send_notification(notif)
     return notif
 
@@ -390,7 +390,7 @@ def send_appointment_reminder(
         message=f"Paciente {patient_name} a las {appointment_time} con {doctor_name}",
         recipient=recipient
     )
-    
+
     get_notification_manager().send_notification(notif)
     return notif
 
@@ -410,25 +410,25 @@ def send_team_message(
         sender=sender,
         recipient=recipient
     )
-    
+
     get_notification_manager().send_notification(notif)
     return notif
 
 
 def render_notification_badge() -> None:
     """Renderiza badge de notificaciones en Streamlit."""
-    
+
     try:
         user = st.session_state.get("u_actual", {})
         user_id = user.get("username")
-        
+
         if not user_id:
             return
-        
+
         manager = get_notification_manager()
         unread = manager.get_unread_for_user(user_id)
         critical = [n for n in unread if n.priority == NotificationPriority.CRITICAL.value]
-        
+
         # Badge en sidebar
         if critical:
             st.sidebar.error(f"🔴 {len(critical)} ALERTAS CRÍTICAS")
@@ -436,13 +436,13 @@ def render_notification_badge() -> None:
             st.sidebar.info(f"🔔 {len(unread)} notificaciones")
         else:
             st.sidebar.caption("🔕 Sin notificaciones")
-        
+
         # Mostrar críticas primero
         for notif in critical[:3]:  # Máximo 3 críticas visibles
             with st.sidebar.expander(f"🚨 {notif.title}", expanded=False):
                 st.write(notif.message)
                 if st.button("✓ Reconocer", key=f"ack_{notif.id}"):
                     manager.acknowledge_critical(user_id, notif.id)
-    
+
     except Exception as e:
         log_event("notification_ui", f"render_error:{type(e).__name__}")

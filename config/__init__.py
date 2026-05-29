@@ -6,11 +6,11 @@ Configuración por ambiente para Medicare Pro.
 
 Uso:
     from config import settings
-    
+
     # Acceder a configuración
     db_url = settings.DATABASE_URL
     debug = settings.DEBUG
-    
+
     # Verificar ambiente actual
     if settings.ENVIRONMENT == "production":
         # Lógica específica de producción
@@ -42,7 +42,7 @@ def validate_required_settings():
     required = [
         "DATABASE_URL",
     ]
-    
+
     if settings.ENVIRONMENT == "production":
         # En producción, requerir configuraciones adicionales
         required.extend([
@@ -51,13 +51,13 @@ def validate_required_settings():
             "SUPABASE_URL",
             "SUPABASE_KEY",
         ])
-    
+
     missing = []
     for key in required:
         value = getattr(settings, key, None)
         if not value or value == "default":
             missing.append(key)
-    
+
     if missing:
         raise ValueError(f"Configuraciones faltantes: {', '.join(missing)}")
 

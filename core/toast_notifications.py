@@ -23,7 +23,7 @@ class Toast:
     title: Optional[str] = None
     duration: int = 5000  # ms
     created_at: str = None
-    
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now().isoformat()
@@ -84,20 +84,20 @@ def generate_toast_html(
 ) -> str:
     """
     Generar HTML para un toast notification.
-    
+
     Args:
         message: Mensaje principal
         toast_type: success, error, warning, info
         title: Título opcional (si no, usa el default del tipo)
         toast_id: ID único para el toast
-    
+
     Returns:
         HTML string del toast
     """
     styles = get_toast_styles(toast_type)
     display_title = title or styles["title"]
     toast_id = toast_id or f"toast_{hash(message + datetime.now().isoformat())}"
-    
+
     return f"""
     <div id="{toast_id}" class="mc-toast mc-toast-{toast_type}">
         <div class="mc-toast-icon">{styles["icon"]}</div>
@@ -126,7 +126,7 @@ def inject_toast_css():
         max-width: 400px;
         pointer-events: none;
     }
-    
+
     /* Toast Individual */
     .mc-toast {
         display: flex;
@@ -142,7 +142,7 @@ def inject_toast_css():
         position: relative;
         overflow: hidden;
     }
-    
+
     .mc-toast::before {
         content: "";
         position: absolute;
@@ -151,7 +151,7 @@ def inject_toast_css():
         bottom: 0;
         width: 4px;
     }
-    
+
     /* Toast Types */
     .mc-toast-success {
         background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.1) 100%);
@@ -167,7 +167,7 @@ def inject_toast_css():
     .mc-toast-success .mc-toast-title {
         color: #86efac;
     }
-    
+
     .mc-toast-error {
         background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
         border: 1px solid rgba(239, 68, 68, 0.25);
@@ -182,7 +182,7 @@ def inject_toast_css():
     .mc-toast-error .mc-toast-title {
         color: #fca5a5;
     }
-    
+
     .mc-toast-warning {
         background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
         border: 1px solid rgba(245, 158, 11, 0.25);
@@ -197,7 +197,7 @@ def inject_toast_css():
     .mc-toast-warning .mc-toast-title {
         color: #fcd34d;
     }
-    
+
     .mc-toast-info {
         background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%);
         border: 1px solid rgba(59, 130, 246, 0.25);
@@ -212,7 +212,7 @@ def inject_toast_css():
     .mc-toast-info .mc-toast-title {
         color: #93c5fd;
     }
-    
+
     /* Toast Elements */
     .mc-toast-icon {
         width: 40px;
@@ -224,25 +224,25 @@ def inject_toast_css():
         font-size: 1.25rem;
         flex-shrink: 0;
     }
-    
+
     .mc-toast-content {
         flex: 1;
         min-width: 0;
     }
-    
+
     .mc-toast-title {
         font-weight: 600;
         font-size: 0.95rem;
         margin-bottom: 0.25rem;
     }
-    
+
     .mc-toast-message {
         color: #cbd5e1;
         font-size: 0.875rem;
         line-height: 1.5;
         word-wrap: break-word;
     }
-    
+
     .mc-toast-close {
         background: none;
         border: none;
@@ -261,12 +261,12 @@ def inject_toast_css():
         margin-top: -0.25rem;
         margin-right: -0.25rem;
     }
-    
+
     .mc-toast-close:hover {
         background: rgba(255, 255, 255, 0.1);
         color: #f1f5f9;
     }
-    
+
     /* Animations */
     @keyframes mc-toast-in {
         0% {
@@ -278,7 +278,7 @@ def inject_toast_css():
             transform: translateX(0) scale(1);
         }
     }
-    
+
     @keyframes mc-toast-out {
         0% {
             opacity: 1;
@@ -289,7 +289,7 @@ def inject_toast_css():
             transform: translateX(50px) scale(0.95);
         }
     }
-    
+
     /* Progress bar */
     .mc-toast::after {
         content: "";
@@ -301,12 +301,12 @@ def inject_toast_css():
         animation: mc-toast-progress 5s linear forwards;
         border-radius: 0 0 0 12px;
     }
-    
+
     @keyframes mc-toast-progress {
         0% { width: 100%; }
         100% { width: 0%; }
     }
-    
+
     /* Mobile */
     @media (max-width: 640px) {
         .mc-toast-container {
@@ -316,12 +316,12 @@ def inject_toast_css():
             right: 1rem;
             max-width: none;
         }
-        
+
         .mc-toast {
             animation: mc-toast-in-mobile 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
                        mc-toast-out-mobile 0.3s ease-in 4.7s forwards;
         }
-        
+
         @keyframes mc-toast-in-mobile {
             0% {
                 opacity: 0;
@@ -332,7 +332,7 @@ def inject_toast_css():
                 transform: translateY(0) scale(1);
             }
         }
-        
+
         @keyframes mc-toast-out-mobile {
             0% {
                 opacity: 1;
@@ -344,7 +344,7 @@ def inject_toast_css():
             }
         }
     }
-    
+
     /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
         .mc-toast {
@@ -366,7 +366,7 @@ def show_toast(
 ):
     """
     Mostrar un toast notification.
-    
+
     Args:
         message: Mensaje del toast
         toast_type: success, error, warning, info
@@ -374,10 +374,10 @@ def show_toast(
     """
     # Inyectar CSS si no está
     inject_toast_css()
-    
+
     # Generar HTML del toast
     toast_html = generate_toast_html(message, toast_type, title)
-    
+
     # Crear container y mostrar
     st.markdown(
         f'<div class="mc-toast-container">{toast_html}</div>',
@@ -421,7 +421,7 @@ def queue_toast(
     """
     if "_toast_queue" not in st.session_state:
         st.session_state._toast_queue = []
-    
+
     st.session_state._toast_queue.append({
         "message": message,
         "type": toast_type,
@@ -432,14 +432,14 @@ def queue_toast(
 def render_queued_toasts():
     """Renderizar todos los toasts en la cola."""
     inject_toast_css()
-    
+
     if "_toast_queue" not in st.session_state:
         return
-    
+
     queue = st.session_state._toast_queue
     if not queue:
         return
-    
+
     # Generar HTML de todos los toasts
     toasts_html = []
     for item in queue:
@@ -449,13 +449,13 @@ def render_queued_toasts():
             item["title"]
         )
         toasts_html.append(toast)
-    
+
     # Mostrar container con todos
     st.markdown(
         f'<div class="mc-toast-container">{ "".join(toasts_html) }</div>',
         unsafe_allow_html=True
     )
-    
+
     # Limpiar cola
     st.session_state._toast_queue = []
 
@@ -515,45 +515,45 @@ def demo_toasts():
     """Demo interactiva de todos los tipos de toast."""
     st.markdown("## 🔔 Demo de Toast Notifications")
     st.caption("Sistema de notificaciones moderno con animaciones suaves")
-    
+
     cols = st.columns(2)
-    
+
     with cols[0]:
         if st.button("✅ Éxito", use_container_width=True):
             toast_success("Operación completada exitosamente", "Guardado")
         if st.button("⚠️ Advertencia", use_container_width=True):
             toast_warning("Algunos campos están incompletos", "Atención")
-    
+
     with cols[1]:
         if st.button("❌ Error", use_container_width=True):
             toast_error("No se pudo conectar con el servidor", "Error de Conexión")
-    
+
     with cols[3]:
-        if st.button("ℹ️ Info", width='stretch'):
+        if st.button("ℹ️ Info", use_container_width=True):
             toast_info("Sincronización completada", "Actualización")
-    
+
     st.markdown("---")
     st.markdown("### Múltiples Toasts")
-    
+
     if st.button("🎬 Mostrar múltiples notificaciones"):
         queue_toast("Paciente actualizado", "success", "Éxito")
         queue_toast("Sincronizando con Supabase...", "info", "Sincronización")
         queue_toast("Se detectaron 3 registros pendientes", "warning", "Pendientes")
         render_queued_toasts()
-    
+
     st.markdown("---")
     st.markdown("### Toasts de Acciones Comunes")
-    
+
     cols2 = st.columns(3)
-    
+
     with cols2[0]:
-        if st.button("💾 Guardar", width='stretch'):
+        if st.button("💾 Guardar", use_container_width=True):
             toast_guardado_exitoso("Evolución")
-    
+
     with cols2[1]:
-        if st.button("🗑️ Eliminar", width='stretch'):
+        if st.button("🗑️ Eliminar", use_container_width=True):
             toast_eliminado_exitoso("Registro")
-    
+
     with cols2[2]:
-        if st.button("📄 Generar PDF", width='stretch'):
+        if st.button("📄 Generar PDF", use_container_width=True):
             toast_pdf_generado("historia_clinica_001.pdf")

@@ -549,8 +549,8 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
     with st.form("chatbot_form", clear_on_submit=True):
         mensaje = st.text_input("Tu consulta:", placeholder='Ej: "Que horarios?" o "buscar: dosis ibuprofeno" o "mostrame recetas"')
         cols = st.columns([3, 1])
-        enviar = cols[0].form_submit_button("Enviar", width="stretch", type="primary")
-        limpiar = cols[1].form_submit_button("Limpiar", width="stretch")
+        enviar = cols[0].form_submit_button("Enviar", use_container_width=True, type="primary")
+        limpiar = cols[1].form_submit_button("Limpiar", use_container_width=True)
 
     if limpiar:
         st.session_state["chatbot_conv"] = []

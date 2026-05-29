@@ -52,7 +52,7 @@ def handle_errors(
 ):
     """
     Decorador para manejo automático de errores.
-    
+
     Args:
         fallback_value: Valor a retornar si hay error
         log_error: Si debe loguear el error
@@ -90,7 +90,7 @@ def retry_on_error(
 ):
     """
     Decorador para reintentar automáticamente en caso de error.
-    
+
     Args:
         max_attempts: Número máximo de intentos
         delay: Tiempo entre intentos (segundos)
@@ -101,10 +101,10 @@ def retry_on_error(
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             import time
-            
+
             current_delay = delay
             last_exception = None
-            
+
             for attempt in range(1, max_attempts + 1):
                 try:
                     return func(*args, **kwargs)
@@ -113,12 +113,12 @@ def retry_on_error(
                     logger.warning(
                         f"Intento {attempt}/{max_attempts} fallido para {func.__name__}: {e}"
                     )
-                    
+
                     if attempt < max_attempts:
                         time.sleep(current_delay)
                         if backoff:
                             current_delay *= 2
-            
+
             # Si agotamos intentos, propagar el error
             raise last_exception
         return wrapper
@@ -156,7 +156,7 @@ def error_boundary(
 ):
     """
     Context manager para envolver operaciones con manejo de errores.
-    
+
     Uso:
         with error_boundary("guardar paciente"):
             guardar_paciente(datos)
@@ -166,10 +166,10 @@ def error_boundary(
     except Exception as e:
         if log_error:
             log_exception(e, context={"operation": operation})
-        
+
         if not suppress:
             raise
-        
+
         logger.warning(f"Error suprimido en '{operation}': {e}")
         return fallback_value
 
@@ -201,15 +201,15 @@ def log_exception(
         "traceback": traceback.format_exc(),
         "context": context or {}
     }
-    
+
     if isinstance(exception, MedicareError):
         error_data["error_code"] = exception.error_code
         error_data["category"] = exception.category.name
         error_data["severity"] = exception.severity.value
-    
+
     log_func = getattr(logger, level)
     log_func(f"Exception logged: {error_data}")
-    
+
     # Si es crítico, también guardar en archivo
     if isinstance(exception, MedicareError) and exception.severity == ErrorSeverity.CRITICAL:
         _save_critical_error(error_data)
@@ -219,7 +219,7 @@ def _save_critical_error(error_data: Dict[str, Any]):
     """Guarda errores críticos en archivo para revisión posterior."""
     import json
     from datetime import datetime
-    
+
     try:
         with open("critical_errors.log", "a") as f:
             entry = {
@@ -244,13 +244,13 @@ def safe_operation(
 ) -> Any:
     """
     Ejecuta una operación de forma segura en Streamlit.
-    
+
     Args:
         operation: Función a ejecutar
         error_message: Mensaje de error para mostrar
         fallback_value: Valor a retornar si hay error
         show_error: Si mostrar error en UI
-    
+
     Returns:
         Resultado de la operación o fallback_value
     """
@@ -258,7 +258,7 @@ def safe_operation(
         return operation()
     except Exception as e:
         log_exception(e, context={"operation": operation.__name__})
-        
+
         if show_error:
             try:
                 import streamlit as st
@@ -266,7 +266,7 @@ def safe_operation(
                 st.error(f"{error_message}")
             except Exception as _exc:
                 logger.warning(f"Fallo al mostrar st.error en manejador de errores: {type(_exc).__name__}")
-        
+
         return fallback_value
 
 
@@ -293,26 +293,26 @@ def validate_and_execute(
 
 class RecoveryStrategy:
     """Estrategias de recuperación ante fallos."""
-    
+
     @staticmethod
     def fallback_to_local_storage(data_key: str) -> Optional[Any]:
         """Intenta recuperar datos del almacenamiento local."""
         try:
             import json
             from pathlib import Path
-            
+
             local_file = Path(".streamlit/local_data.json")
             if not local_file.exists():
                 return None
-            
+
             with open(local_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            
+
             return data.get(data_key)
         except Exception as e:
             logger.warning(f"Fallback a local storage falló: {e}")
             return None
-    
+
     @staticmethod
     def use_cached_value(cache_key: str) -> Optional[Any]:
         """Intenta usar valor cacheado."""
@@ -326,7 +326,7 @@ class RecoveryStrategy:
         except Exception as e:
             logger.warning(f"Fallback a caché falló: {e}")
             return None
-    
+
     @staticmethod
     def degrade_gracefully(operation_name: str) -> Any:
         """Degrada funcionalidad de forma controlada."""
@@ -344,30 +344,30 @@ class RecoveryStrategy:
 
 class GlobalErrorHandler:
     """Handler global de errores para la aplicación."""
-    
+
     _instance = None
     _error_handlers: Dict[ErrorCategory, List[Callable]] = {}
     _error_counts: Dict[str, int] = {}
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def register_handler(self, category: ErrorCategory, handler: Callable):
         """Registra un handler para una categoría de error."""
         if category not in self._error_handlers:
             self._error_handlers[category] = []
         self._error_handlers[category].append(handler)
-    
+
     def handle(self, error: MedicareError, context: Optional[ErrorContext] = None):
         """Maneja un error usando los handlers registrados."""
         # Loguear siempre
         log_exception(error, context=context.__dict__ if context else None)
-        
+
         # Incrementar contador
         self._error_counts[error.error_code] = self._error_counts.get(error.error_code, 0) + 1
-        
+
         # Ejecutar handlers específicos
         handlers = self._error_handlers.get(error.category, [])
         for handler in handlers:
@@ -375,7 +375,7 @@ class GlobalErrorHandler:
                 handler(error, context)
             except Exception as e:
                 logger.error(f"Error handler falló: {e}")
-    
+
     def get_error_stats(self) -> Dict[str, int]:
         """Retorna estadísticas de errores."""
         return dict(self._error_counts)
@@ -398,7 +398,7 @@ if __name__ == "__main__":
         if not datos.get("nombre"):
             raise ValidationError("Nombre es requerido", field="nombre")
         return "paciente_123"
-    
+
     # Ejemplo 2: Retry automático
     @retry_on_error(max_attempts=3, delay=0.5)
     def conectar_base_datos():
@@ -407,10 +407,10 @@ if __name__ == "__main__":
         if random.random() < 0.5:
             raise NetworkError("Conexión fallida")
         return "Conectado"
-    
+
     # Ejemplo 3: Context manager
     with error_boundary("operación crítica", fallback_value="default"):
         # Código que puede fallar
         pass
-    
+
     print("Error handling system ready!")

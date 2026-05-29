@@ -21,7 +21,7 @@ def render_tareas_panel(paciente_sel):
     tareas_completadas = [t for t in tareas_pac if t.get("completada")]
 
     st.markdown("### 📋 Tareas pendientes")
-    
+
     # Mostrar tareas pendientes
     if tareas_pendientes:
         for i, t in enumerate(tareas_pendientes):

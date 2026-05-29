@@ -76,7 +76,7 @@ def guardar_registro(
     try:
         # 1. Cargar datos existentes
         data = _load_data()
-        
+
         # 2. Crear registro con metadata
         registro = {
             "id": f"{tipo}_{int(time.time())}",
@@ -87,23 +87,23 @@ def guardar_registro(
             "timestamp": time.time(),
             "datos": datos
         }
-        
+
         # 3. Agregar a la lista correspondiente
         if tipo not in data:
             data[tipo] = []
-        
+
         data[tipo].append(registro)
-        
+
         # 4. Tambien agregar al historial general
         if "historial" not in data:
             data["historial"] = []
         data["historial"].append(registro)
-        
+
         # 5. Guardar archivo
         _save_data(data)
-        
+
         return True, f"Guardado en {tipo} OK"
-        
+
     except Exception as e:
         error_msg = f"ERROR CRITICO guardando {tipo}: {str(e)}"
         try:
@@ -119,13 +119,13 @@ def obtener_registros(tipo: str, paciente_id: str = None) -> List[Dict]:
     try:
         data = _load_data()
         registros = data.get(tipo, [])
-        
+
         if paciente_id:
             registros = [r for r in registros if r.get("paciente_id") == str(paciente_id)]
-        
+
         # Ordenar por fecha (más reciente primero)
         registros.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
-        
+
         return registros
     except Exception as e:
         try:

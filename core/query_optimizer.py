@@ -25,7 +25,7 @@ T = TypeVar('T')
 class BloomFilter:
     """
     Filtro Bloom para membership testing eficiente.
-    
+
     Usa poca memoria para determinar si un elemento "quizás" está en un set.
     Falso positivo: posible | Falso negativo: imposible
     """
@@ -33,11 +33,11 @@ class BloomFilter:
     def __init__(self, capacity: int, false_positive_rate: float = 0.01):
         self.capacity = capacity
         self.fp_rate = false_positive_rate
-        
+
         # Calcular tamaño óptimo
         self.size = self._optimal_size(capacity, false_positive_rate)
         self.hash_count = self._optimal_hash_count(self.size, capacity)
-        
+
         # Bits (usamos bytearray para eficiencia)
         self.bit_array = bytearray(self.size // 8 + 1)
         self._count = 0
@@ -55,10 +55,10 @@ class BloomFilter:
         # Usar dos hashes independientes y combinar (Kirsch-Mitzenmacher)
         h1 = hashlib.md5(item.encode()).hexdigest()
         h2 = hashlib.sha256(item.encode()).hexdigest()
-        
+
         int1 = int(h1[:16], 16)
         int2 = int(h2[:16], 16)
-        
+
         return [
             ((int1 + i * int2) % self.size)
             for i in range(self.hash_count)
@@ -96,7 +96,7 @@ class IndexEntry:
 class InMemoryIndex:
     """
     Índice en memoria para búsquedas O(1).
-    
+
     Crea índices hash sobre campos frecuentemente consultados.
     """
 
@@ -111,34 +111,34 @@ class InMemoryIndex:
         """Construye el índice sobre una lista de items."""
         self._index.clear()
         self._total_items = len(items)
-        
+
         # Crear Bloom filter para membership testing rápido
         if self._total_items > 1000:
             self._bloom = BloomFilter(self._total_items)
-        
+
         for pos, item in enumerate(items):
             key = str(key_extractor(item))
-            
+
             if self._bloom is not None:
                 self._bloom.add(key)
-            
+
             if key not in self._index:
                 self._index[key] = []
-            
+
             if self.unique and self._index[key]:
                 raise ValueError(f"Duplicado en índice único: {key}")
-            
+
             self._index[key].append(pos)
 
     def lookup(self, value: Any) -> List[int]:
         """Busca un valor en el índice. Retorna posiciones."""
         key = str(value)
-        
+
         # Verificar Bloom filter primero (si existe)
         if self._bloom is not None:
             if key not in self._bloom:
                 return []  # Definitivamente no está
-        
+
         return self._index.get(key, [])
 
     def exists(self, value: Any) -> bool:
@@ -205,7 +205,7 @@ class BinarySearchHelper:
 class DataCompressor:
     """
     Compresión de datos para session_state.
-    
+
     Reduce uso de memoria para datos grandes.
     """
 
@@ -265,7 +265,7 @@ class QueryOptimizer:
         if index is None:
             # Fallback a búsqueda lineal
             return [item for item in items if str(value) in str(item)]
-        
+
         positions = index.lookup(value)
         return [items[pos] for pos in positions]
 
@@ -336,7 +336,7 @@ def _purge_compressed_cache(max_entries: int = 100):
             except Exception as _exc:
                 import logging
                 logging.getLogger("query_optimizer").debug(f"fallo_decompress:{type(_exc).__name__}")
-        
+
         # Fallback a normal
         return st.session_state.get(key)
 
@@ -371,7 +371,7 @@ def create_bloom_filter(capacity: int, fp_rate: float = 0.01) -> BloomFilter:
 def compress_large_data(data: Any, threshold_kb: int = 10) -> Tuple[Any, bool]:
     """
     Comprime datos si son grandes.
-    
+
     Returns:
         (data, was_compressed)
     """
