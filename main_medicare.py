@@ -82,6 +82,8 @@ if not st.session_state.get("_mc_boot_query_cleaned"):
     try:
         if st.query_params.get("_mc_boot") is not None:
             del st.query_params["_mc_boot"]
+        if st.query_params.get("login") is not None:
+            del st.query_params["login"]
     except Exception:
         pass
 
