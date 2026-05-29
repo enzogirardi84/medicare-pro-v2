@@ -71,74 +71,10 @@ if not st.session_state.get("_boot_done"):
     except Exception:
         _boot_qp_ok = False
     if not _boot_qp_ok:
-        st.markdown(
-            """
-            <style>
-            html, body, .stApp {
-                background: #0f172a !important;
-                margin: 0 !important;
-                min-height: 100vh !important;
-            }
-            .mc-boot-fallback {
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 24px;
-                color: #e2e8f0;
-                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                text-align: center;
-            }
-            .mc-boot-fallback__box {
-                width: min(100%, 360px);
-                border: 1px solid rgba(148, 163, 184, .22);
-                border-radius: 18px;
-                background: rgba(15, 23, 42, .92);
-                padding: 22px 18px;
-                box-shadow: 0 20px 42px rgba(2, 6, 23, .34);
-            }
-            .mc-boot-fallback__title {
-                margin: 0 0 8px;
-                font-size: 1.25rem;
-                font-weight: 800;
-            }
-            .mc-boot-fallback__text {
-                margin: 0 0 18px;
-                color: #94a3b8;
-                line-height: 1.45;
-                font-size: .94rem;
-            }
-            .mc-boot-fallback__btn {
-                display: inline-flex;
-                min-height: 48px;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                border-radius: 14px;
-                background: linear-gradient(135deg, #14b8a6, #2563eb);
-                color: #fff !important;
-                text-decoration: none !important;
-                font-weight: 800;
-                letter-spacing: .02em;
-            }
-            </style>
-            <div class="mc-boot-fallback">
-              <div class="mc-boot-fallback__box">
-                <p class="mc-boot-fallback__title">MediCare PRO</p>
-                <p class="mc-boot-fallback__text">Estamos abriendo la app. Si tu telefono queda en pantalla oscura, toca el boton para entrar directo.</p>
-                <a class="mc-boot-fallback__btn" href="?login=1&_mc_boot=1" target="_self">Ingresar al sistema</a>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        try:
-            st.query_params["_mc_boot"] = "1"
-        except Exception:
-            pass
-        # st.query_params suele disparar el segundo pase; si no, dejamos el
-        # boton visible para que el usuario pueda entrar sin pantalla negra.
-        st.stop()
+        # Mostrar la landing page de publicidad como primer pase
+        from core.landing_runner import render_publicidad_y_detener
+        render_publicidad_y_detener()
+        # render_publicidad_y_detener() llama a st.stop(), no llegamos aca
     st.session_state["_boot_done"] = True
 
 if not st.session_state.get("_mc_boot_query_cleaned"):

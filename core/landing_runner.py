@@ -285,7 +285,7 @@ def render_publicidad_y_detener() -> None:
         </style>
         <div class="mc-lp-sticky-btn-wrap">
             <div class="mc-lp-sticky-btns">
-                <a href="?login=1" target="_self">🚀 INGRESAR AL SISTEMA</a>
+                <a href="?login=1&amp;_mc_boot=1" target="_self">🚀 INGRESAR AL SISTEMA</a>
             </div>
         </div>
         """,
@@ -304,7 +304,7 @@ def render_publicidad_y_detener() -> None:
         """
         <br>
         <div style="text-align:center;padding:18px 0 28px;">
-            <a href="?login=1" target="_self" style="display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 32px;font-size:1rem;text-transform:uppercase;letter-spacing:0.12em;text-decoration:none !important;border-radius:9999px;border:1px solid rgba(186,230,253,0.24);background:linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%);color:#fff !important;box-shadow:0 18px 42px rgba(14,165,233,0.22);">🚀 Ingresar al sistema</a>
+            <a href="?login=1&amp;_mc_boot=1" target="_self" style="display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 32px;font-size:1rem;text-transform:uppercase;letter-spacing:0.12em;text-decoration:none !important;border-radius:9999px;border:1px solid rgba(186,230,253,0.24);background:linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%);color:#fff !important;box-shadow:0 18px 42px rgba(14,165,233,0.22);">🚀 Ingresar al sistema</a>
         </div>
         """,
         unsafe_allow_html=True,
@@ -377,7 +377,7 @@ def render_publicidad_y_detener() -> None:
             unsafe_allow_html=True,
         )
         st.markdown(
-            "<a href='?login=1' target='_self' style='display:block;text-align:center;padding:10px 0;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#2563eb);color:#fff!important;text-decoration:none!important;font-weight:700;font-size:0.92rem;'>🚀 Ingresar al sistema</a>",
+            "<a href='?login=1&amp;_mc_boot=1' target='_self' style='display:block;text-align:center;padding:10px 0;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#2563eb);color:#fff!important;text-decoration:none!important;font-weight:700;font-size:0.92rem;'>🚀 Ingresar al sistema</a>",
             unsafe_allow_html=True,
         )
 
