@@ -80,6 +80,8 @@ def _buscar_coincidencias_legajo(busqueda, mi_empresa, rol):
 
 
 def render_admision(mi_empresa, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     admin_total = es_control_total(rol)
     usuario_actual = st.session_state.get("u_actual", {})
     puede_editar_paciente = admin_total or puede(usuario_actual, PACIENTE_EDITAR)

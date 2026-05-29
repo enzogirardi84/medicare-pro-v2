@@ -55,6 +55,8 @@ def _mismo_estudio(registro, objetivo):
 
 
 def render_estudios(paciente_sel, user, rol=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -90,7 +92,11 @@ def render_estudios(paciente_sel, user, rol=None):
 
     if puede_registrar:
         with st.form("form_estudios", clear_on_submit=True):
-            col_e1, col_e2 = st.columns([1, 2])
+            if not es_movil:
+                col_e1, col_e2 = st.columns([1, 2])
+            else:
+                col_e1 = st.container()
+                col_e2 = st.container()
             tipo_estudio = col_e1.selectbox("Tipo de Estudio", [
                 "Laboratorio (Sangre/Orina)", "Radiografia (Rx)", "Ecografia",
                 "Electrocardiograma (ECG)", "Tomografia (TAC)", "Resonancia Magnetica (RMN)", "Otro"
@@ -286,7 +292,11 @@ def render_estudios(paciente_sel, user, rol=None):
     elif pendientes:
         st.warning(f"🟡 {len(pendientes)} estudio(s) sin resultado cargado.")
 
-    _c1, _c2 = st.columns(2)
+    if not es_movil:
+        _c1, _c2 = st.columns(2)
+    else:
+        _c1 = st.container()
+        _c2 = st.container()
     _c1.metric("Total estudios", len(estudios_pac))
     _c1.metric("Sin resultado", len(pendientes))
     _c2.metric("Críticos >7d", len(criticos_sin_respuesta))
@@ -297,7 +307,11 @@ def render_estudios(paciente_sel, user, rol=None):
     st.markdown("#### Archivo de Estudios del Paciente")
 
     if puede_borrar:
-        col_del1, col_del1_chk = st.columns([3, 1.2])
+        if not es_movil:
+            col_del1, col_del1_chk = st.columns([3, 1.2])
+        else:
+            col_del1 = st.container()
+            col_del1_chk = st.container()
         confirmar_ultimo = col_del1_chk.checkbox("Confirmar ultimo", key="conf_del_ultimo_estudio")
         if col_del1.button("Borrar ultimo estudio", use_container_width=True, disabled=not confirmar_ultimo):
             if not estudios_pac:
@@ -330,7 +344,11 @@ def render_estudios(paciente_sel, user, rol=None):
             opciones.append((label, est))
 
         estudio_seleccionado = st.selectbox("Elegir estudio a borrar", options=opciones, format_func=lambda x: x[0], key="selector_borrar_estudio")
-        col_sel_chk, col_sel_btn = st.columns([1.2, 2.8])
+        if not es_movil:
+            col_sel_chk, col_sel_btn = st.columns([1.2, 2.8])
+        else:
+            col_sel_chk = st.container()
+            col_sel_btn = st.container()
         confirmar_estudio = col_sel_chk.checkbox("Confirmar seleccion", key="conf_borrar_estudio")
         if col_sel_btn.button("Eliminar el estudio seleccionado", type="secondary", use_container_width=True, disabled=not confirmar_estudio):
             objetivo = estudio_seleccionado[1]
@@ -355,7 +373,11 @@ def render_estudios(paciente_sel, user, rol=None):
 
     # ── Filtros: tipo + búsqueda ───────────────────────────────────
     tipos_disponibles = sorted({e.get("tipo", "") for e in estudios_pac if e.get("tipo")})
-    _fcol1, _fcol2 = st.columns([2, 3])
+    if not es_movil:
+        _fcol1, _fcol2 = st.columns([2, 3])
+    else:
+        _fcol1 = st.container()
+        _fcol2 = st.container()
     filtro_tipo = _fcol1.selectbox(
         "Filtrar por tipo",
         ["Todos"] + tipos_disponibles,
@@ -393,7 +415,11 @@ def render_estudios(paciente_sel, user, rol=None):
     with lista_plegable("Archivo de estudios (detalle y adjuntos)", count=len(estudios_mostrar), expanded=False, height=520):
         for idx, est in enumerate(reversed(estudios_mostrar)):
             with st.container(border=True):
-                col1, col2 = st.columns([4, 1])
+                if not es_movil:
+                    col1, col2 = st.columns([4, 1])
+                else:
+                    col1 = st.container()
+                    col2 = st.container()
                 with col1:
                     st.markdown(f"**{est['fecha']}** | **{est['firma']}**")
                     st.markdown(f"**{est['tipo']}**")

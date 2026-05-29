@@ -32,6 +32,8 @@ def _resolver_uuid_paciente_sql(paciente_sel, empresa):
 
 
 def render_pediatria(paciente_sel, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -119,7 +121,11 @@ def render_pediatria(paciente_sel, user):
         penultimo_ped = ped_ord[-2] if len(ped_ord) >= 2 else None
 
         st.markdown("##### Resumen Actual")
-        c1, c2 = st.columns(2)
+        if not es_movil:
+            c1, c2 = st.columns(2)
+        else:
+            c1 = st.container()
+            c2 = st.container()
         _delta_peso = round(float(ultimo_ped.get('peso', 0) or 0) - float(penultimo_ped.get('peso', 0) or 0), 2) if penultimo_ped else None
         _delta_talla = round(float(ultimo_ped.get('talla', 0) or 0) - float(penultimo_ped.get('talla', 0) or 0), 1) if penultimo_ped else None
         c1.metric("Peso", f"{ultimo_ped.get('peso', '-')} kg", delta=f"{_delta_peso:+.2f} kg" if _delta_peso is not None else None)
@@ -150,7 +156,11 @@ def render_pediatria(paciente_sel, user):
         df_preview = df_preview.sort_values(by="fecha_dt")
         if len(df_preview) >= 2:
             st.markdown("##### Tendencia de crecimiento")
-            col_graph1, col_graph2 = st.columns(2)
+            if not es_movil:
+                col_graph1, col_graph2 = st.columns(2)
+            else:
+                col_graph1 = st.container()
+                col_graph2 = st.container()
             with col_graph1:
                 st.caption("Peso en el tiempo")
                 st.line_chart(
@@ -179,10 +189,18 @@ def render_pediatria(paciente_sel, user):
     with st.form("pedia", clear_on_submit=True):
         st.markdown("##### Nuevo Control")
         tipo_ctrl = st.radio("Tipo de control", ["Menor", "Adulto"], horizontal=True, key=f"tipo_ctrl_ped_{paciente_sel}")
-        col_time1, col_time2 = st.columns(2)
+        if not es_movil:
+            col_time1, col_time2 = st.columns(2)
+        else:
+            col_time1 = st.container()
+            col_time2 = st.container()
         fecha_toma = col_time1.date_input("Fecha", value=ahora().date(), key=f"fecha_ped_{paciente_sel}")
         hora_toma_str = col_time2.text_input("Hora (HH:MM)", value=ahora().strftime("%H:%M"), key=f"hora_ped_{paciente_sel}")
-        col_a, col_b = st.columns(2)
+        if not es_movil:
+            col_a, col_b = st.columns(2)
+        else:
+            col_a = st.container()
+            col_b = st.container()
         pes = col_a.number_input("Peso Actual (kg)", min_value=0.0, format="%.2f")
         tal = col_b.number_input("Talla Actual (cm)", min_value=0.0, format="%.2f")
         pc = col_a.number_input("Perimetro Cefalico (cm, solo percentilo)", min_value=0.0, format="%.2f")
@@ -254,7 +272,12 @@ def render_pediatria(paciente_sel, user):
             df_g = pd.DataFrame(ped)
             df_g["fecha_dt"] = df_g["fecha"].apply(_parse_fecha_hora)
             df_g = df_g.sort_values(by="fecha_dt")
-            col_g1, col_g2, col_g3 = st.columns(3)
+            if not es_movil:
+                col_g1, col_g2, col_g3 = st.columns(3)
+            else:
+                col_g1 = st.container()
+                col_g2 = st.container()
+                col_g3 = st.container()
             with col_g1:
                 st.caption("Peso (kg)")
                 st.line_chart(df_g.set_index("fecha")["peso"], width='stretch', color="#38bdf8")
@@ -265,7 +288,12 @@ def render_pediatria(paciente_sel, user):
                 st.caption("IMC")
                 st.area_chart(df_g.set_index("fecha")["imc"], width='stretch', color="#22c55e")
         st.divider()
-        col_tit, col_chk, col_btn = st.columns([3, 1.2, 1])
+        if not es_movil:
+            col_tit, col_chk, col_btn = st.columns([3, 1.2, 1])
+        else:
+            col_tit = st.container()
+            col_chk = st.container()
+            col_btn = st.container()
         col_tit.markdown("#### Historial")
         confirmar_borrado = col_chk.checkbox("Confirmar", key="conf_del_ped")
         if col_btn.button("Borrar ultimo", width='stretch', disabled=not confirmar_borrado):

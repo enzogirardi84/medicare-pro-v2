@@ -11,6 +11,8 @@ from views._enfermeria_plan import (
 
 
 def render_enfermeria(paciente_sel, mi_empresa, user, *, compact=False):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return

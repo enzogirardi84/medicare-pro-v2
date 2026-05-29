@@ -16,6 +16,8 @@ _TABS = ["Evolucion clinica", "Registro inteligente"]
 
 
 def render_evolucion(paciente_sel, user, rol=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return

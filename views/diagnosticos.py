@@ -21,6 +21,8 @@ SCROLL = 'style="max-height:380px;overflow-y:auto;border:1px solid #E2E8F0;borde
 
 
 def render_diagnosticos(user=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown("# 🔍 Diagnóstico del Sistema")
     st.caption("Verificación técnica completa - Solo Super Administradores")
 
@@ -46,7 +48,11 @@ def render_diagnosticos(user=None):
 
     # === TAB 1: ESTADO SUPABASE ===
     with tab1:
-        col_refresh, col_clear = st.columns([3, 1])
+        if not es_movil:
+            col_refresh, col_clear = st.columns([3, 1])
+        else:
+            col_refresh = st.container()
+            col_clear = st.container()
         with col_refresh:
             ejecutar = st.button("🔄 Ejecutar Diagnóstico Completo", type="primary", use_container_width=True)
         with col_clear:
@@ -249,7 +255,11 @@ def render_diagnosticos(user=None):
     with tab4:
         st.markdown("### 🔧 Diagnóstico Técnico del Sistema")
 
-        col1, col2 = st.columns(2)
+        if not es_movil:
+            col1, col2 = st.columns(2)
+        else:
+            col1 = st.container()
+            col2 = st.container()
 
         with col1:
             st.markdown("#### 🖥️ Estado del Sistema")
@@ -351,7 +361,10 @@ def render_diagnosticos(user=None):
             ("requirements.txt", "Dependencias"),
         ]
 
-        cols = st.columns(3)
+        if not es_movil:
+            cols = st.columns(3)
+        else:
+            cols = [st.container() for _ in range(3)]
         for i, (archivo, desc) in enumerate(archivos_criticos):
             path = Path(archivo)
             with cols[i % 3]:
@@ -398,7 +411,12 @@ def render_diagnosticos(user=None):
                 # Mostrar resultados
                 st.markdown("#### 📊 Resultados del Diagnóstico")
 
-                col1, col2, col3 = st.columns(3)
+                if not es_movil:
+                    col1, col2, col3 = st.columns(3)
+                else:
+                    col1 = st.container()
+                    col2 = st.container()
+                    col3 = st.container()
 
                 with col1:
                     if dependencias_faltantes:
@@ -458,7 +476,11 @@ def render_diagnosticos(user=None):
             st.stop()
 
         # Métricas
-        c1, c2 = st.columns(2)
+        if not es_movil:
+            c1, c2 = st.columns(2)
+        else:
+            c1 = st.container()
+            c2 = st.container()
         c1.metric("Total errores", stats.get("total", 0))
         c1.metric("Críticos", stats.get("critical", 0))
         c2.metric("Sin resolver", stats.get("unresolved", 0))
@@ -467,7 +489,11 @@ def render_diagnosticos(user=None):
         st.divider()
 
         # Filtros
-        col_f1, col_f2 = st.columns(2)
+        if not es_movil:
+            col_f1, col_f2 = st.columns(2)
+        else:
+            col_f1 = st.container()
+            col_f2 = st.container()
         with col_f1:
             filtro_sev = st.selectbox("Severidad", ["Todas", "critical", "error", "warning"], key="vigia_sev")
             mods = ["Todos"] + [m[0] for m in stats.get("top_modules", [])]
@@ -525,7 +551,11 @@ def render_diagnosticos(user=None):
 
         st.divider()
         # Acciones globales
-        col_a1, col_a2 = st.columns([1, 1])
+        if not es_movil:
+            col_a1, col_a2 = st.columns([1, 1])
+        else:
+            col_a1 = st.container()
+            col_a2 = st.container()
         with col_a1:
             if st.button("📥 Exportar JSON", use_container_width=True, key="vigia_export"):
                 st.download_button(

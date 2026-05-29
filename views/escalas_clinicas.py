@@ -195,6 +195,8 @@ def _render_evolucion_eva(puntaje):
 
 
 def render_escalas_clinicas(paciente_sel, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -253,7 +255,12 @@ def render_escalas_clinicas(paciente_sel, user):
         if escala == "Glasgow":
             st.markdown("##### 🧠 Escala de Coma de Glasgow")
             st.caption("Evalúa el nivel de conciencia mediante tres componentes")
-            c1, c2, c3 = st.columns(3)
+            if not es_movil:
+                c1, c2, c3 = st.columns(3)
+            else:
+                c1 = st.container()
+                c2 = st.container()
+                c3 = st.container()
             with c1:
                 ocular = _render_selectbox_item("👁️", "Apertura ocular", GLASGOW_ITEMS["Ocular"]["opts"], f"gl_o_{form_key}")
             with c2:
@@ -261,7 +268,11 @@ def render_escalas_clinicas(paciente_sel, user):
             with c3:
                 motora = _render_selectbox_item("🏃", "Respuesta motora", GLASGOW_ITEMS["Motora"]["opts"], f"gl_m_{form_key}")
             puntaje = _glasgow(ocular, verbal, motora)
-            col_g1, _, col_g2 = st.columns([2, 1, 2])
+            if not es_movil:
+                col_g1, _, col_g2 = st.columns([2, 1, 2])
+            else:
+                col_g1 = st.container()
+                col_g2 = st.container()
             col_g1.markdown(
                 f"<div class='escala-card'><div class='ec-titulo'>Puntaje total Glasgow</div>"
                 f"<div class='ec-valor'>{puntaje}/15</div>"
@@ -273,7 +284,11 @@ def render_escalas_clinicas(paciente_sel, user):
             st.markdown("##### 🛏️ Escala de Braden")
             st.caption("Valora el riesgo de úlceras por presión (UPP) en seis sub-puntajes")
             items = list(BRADEN_ITEMS.items())
-            c_left, c_right = st.columns(2)
+            if not es_movil:
+                c_left, c_right = st.columns(2)
+            else:
+                c_left = st.container()
+                c_right = st.container()
             vals = {}
             for i, (nombre, info) in enumerate(items[:3]):
                 with c_left:
@@ -282,7 +297,11 @@ def render_escalas_clinicas(paciente_sel, user):
                 with c_right:
                     vals[nombre] = _render_selectbox_item(info["icono"], nombre, info["opts"], f"br_{i+3}_{form_key}")
             puntaje = _braden(*vals.values())
-            col_b1, _, col_b2 = st.columns([2, 1, 2])
+            if not es_movil:
+                col_b1, _, col_b2 = st.columns([2, 1, 2])
+            else:
+                col_b1 = st.container()
+                col_b2 = st.container()
             col_b1.markdown(
                 f"<div class='escala-card'><div class='ec-titulo'>Puntaje total Braden</div>"
                 f"<div class='ec-valor'>{puntaje}/23</div>"
@@ -295,7 +314,12 @@ def render_escalas_clinicas(paciente_sel, user):
             st.caption("Mide la capacidad funcional y dependencia en actividades de la vida diaria")
             puntaje = st.slider("", 0, 100, 60, 5, label_visibility="collapsed", key=f"bar_{form_key}")
             bar_cat = "Dependencia total" if puntaje <= 20 else "Dependencia severa" if puntaje <= 60 else "Dependencia leve/moderada" if puntaje < 100 else "Independiente"
-            col_ba1, col_ba2, col_ba3 = st.columns([2, 1, 2])
+            if not es_movil:
+                col_ba1, col_ba2, col_ba3 = st.columns([2, 1, 2])
+            else:
+                col_ba1 = st.container()
+                col_ba2 = st.container()
+                col_ba3 = st.container()
             col_ba1.markdown(
                 f"<div class='escala-card'><div class='ec-titulo'>Índice de Barthel</div>"
                 f"<div class='ec-valor'>{puntaje}/100</div>"
@@ -307,7 +331,11 @@ def render_escalas_clinicas(paciente_sel, user):
         else:
             st.markdown("##### 😊 Escala Visual Analógica (EVA)")
             st.caption("Evalúa la intensidad del dolor reportado por el paciente")
-            col_e1, col_e2 = st.columns([2, 1])
+            if not es_movil:
+                col_e1, col_e2 = st.columns([2, 1])
+            else:
+                col_e1 = st.container()
+                col_e2 = st.container()
             with col_e1:
                 puntaje = st.select_slider("", options=list(range(11)), value=0,
                     format_func=lambda x: EVA_FACES.get(x, str(x)),
@@ -387,7 +415,10 @@ def render_escalas_clinicas(paciente_sel, user):
 
     if escalas_con_data:
         st.markdown("##### Último registro por escala")
-        _cols = st.columns(len(escalas_con_data))
+        if not es_movil:
+            _cols = st.columns(len(escalas_con_data))
+        else:
+            _cols = [st.container() for _ in range(len(escalas_con_data))]
         for idx, (e_key, r) in enumerate(escalas_con_data.items()):
             ic = _interpretacion(e_key, r.get("puntaje", 0))
             with _cols[idx].container(border=True):
