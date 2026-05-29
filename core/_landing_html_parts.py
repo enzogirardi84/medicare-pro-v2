@@ -1323,19 +1323,25 @@ _PART_4 = """
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 44px;
-                height: 44px;
+                width: 48px;
+                height: 48px;
                 margin-bottom: 14px;
-                border-radius: 14px;
-                background: rgba(255,255,255,0.04);
-                border: 1px solid rgba(148,163,184,0.12);
+                border-radius: 16px;
+                background: rgba(45, 212, 191, 0.1);
+                border: 1px solid rgba(45, 212, 191, 0.2);
+                box-shadow: 0 0 20px rgba(45, 212, 191, 0.08);
+              }
+              .mc-lp-cell-icon-hero {
+                background: rgba(45, 212, 191, 0.15);
+                border-color: rgba(45, 212, 191, 0.35);
+                box-shadow: 0 0 30px rgba(45, 212, 191, 0.12);
               }
               .mc-lp-cell-icon svg {
-                width: 24px;
-                height: 24px;
+                width: 26px;
+                height: 26px;
                 fill: none;
                 stroke: var(--lp-accent);
-                stroke-width: 1.8;
+                stroke-width: 2;
                 stroke-linecap: round;
                 stroke-linejoin: round;
               }
@@ -1518,6 +1524,9 @@ _PART_5 = """
 _PART_6 = """
                 <section id="mc-lp-modulos" class="mc-lp-bento mc-lp-fade">
                   <article class="mc-lp-cell mc-lp-cell-hero">
+                    <div class="mc-lp-cell-icon mc-lp-cell-icon-hero">
+                      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </div>
                     <span class="mc-lp-cell-eyebrow">Coordinación y gestión</span>
                     <h3>Dirección con visibilidad total de la operación</h3>
                     <p>
