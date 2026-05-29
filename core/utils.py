@@ -457,7 +457,9 @@ def asegurar_usuarios_base(solo_normalizar: bool = False) -> None:
             continue
         usuario_normalizado = normalizar_usuario_sistema(datos)
         usuario_normalizado.setdefault("usuario_login", login)
-        if password_requiere_migracion(usuario_normalizado.get("pass")):
+        # Solo migrar si NO tiene pass_hash — no pisar un hash bcrypt valido
+        # con un hash del campo texto-plano `pass` que puede estar stale.
+        if not usuario_normalizado.get("pass_hash") and password_requiere_migracion(usuario_normalizado.get("pass")):
             actualizar_password_usuario(usuario_normalizado, usuario_normalizado.get("pass"))
         st.session_state["usuarios_db"][login] = usuario_normalizado
 
