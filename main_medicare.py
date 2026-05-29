@@ -13,7 +13,7 @@ from core.app_bootstrap import insert_repo_root_on_path
 
 insert_repo_root_on_path()
 
-from core.app_logging import configurar_logging_basico, log_event  # noqa: E402
+from core.app_logging import configurar_logging_basico, log_event
 
 try:
     from core.error_tracker import setup_global_hooks, report_exception
