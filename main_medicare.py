@@ -46,6 +46,17 @@ st.set_page_config(
     page_icon="🩺",
 )
 
+# Limpiar query params de modulo si el usuario NO esta logueado
+# Evita que ?modulo=... de un marcador/enlace profundo congele la
+# pantalla en movil al intentar procesar navegacion en sesion fria.
+if not st.session_state.get("logeado"):
+    try:
+        qp = st.query_params
+        if qp and qp.get("modulo") is not None:
+            del qp["modulo"]
+    except Exception:
+        pass
+
 if "theme_applied_v5" not in st.session_state:
     st.session_state["theme_applied_v5"] = False
 
