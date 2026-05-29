@@ -2,8 +2,6 @@ from __future__ import annotations
 
 """Helpers de renderizado de secciones del Historial clínico.
 
-
-
 Extraído de views/historial.py.
 """
 import base64
@@ -11,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
+from core.ui_liviano import headers_sugieren_equipo_liviano
 
 from core.app_logging import log_event
 from core.utils import mostrar_dataframe_con_scroll
@@ -19,6 +18,21 @@ from views._historial_utils import (
     CLAVES_EXCLUIDAS_GENERICAS,
     COLUMNAS_EXCLUIDAS_TABLA,
 )
+
+
+def _img_movil(data: bytes, caption: str = "", width: int = 260, stretch: bool = False):
+    """Muestra imagen con tamaño reducido en móvil."""
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    if es_movil:
+        if stretch:
+            st.image(data, caption=caption, width=200)
+        else:
+            st.image(data, caption=caption, width=min(width, 200))
+    else:
+        if stretch:
+            st.image(data, caption=caption, use_container_width=True)
+        else:
+            st.image(data, caption=caption, width=width)
 
 
 def _ordenar_columnas_tabla(df: pd.DataFrame) -> pd.DataFrame:
@@ -67,7 +81,7 @@ def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) 
                     st.write(observaciones)
                 if firma_b64 := reg.get("firma_b64"):
                     try:
-                        st.image(base64.b64decode(firma_b64), caption="Firma paciente / familiar", width=260)
+                        _img_movil(base64.b64decode(firma_b64), caption="Firma paciente / familiar", width=260)
                     except Exception:
                         log_event("historial_render", "error: No se pudo leer la firma del consentimiento.")
                         st.error("No se pudo leer la firma del consentimiento.")
@@ -95,7 +109,7 @@ def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None
                                 width='stretch',
                             )
                         else:
-                            st.image(archivo, width='stretch')
+                            _img_movil(archivo, stretch=True)
                     except Exception:
                         log_event("historial_render", "error: No se pudo leer el adjunto.")
                         st.error("No se pudo leer el adjunto.")
@@ -111,7 +125,7 @@ def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
                 st.write(fh.get("descripcion", "Sin descripción"))
                 if mostrar_fotos and (foto_b64 := fh.get("base64_foto")):
                     try:
-                        st.image(base64.b64decode(foto_b64), width='stretch')
+                        _img_movil(base64.b64decode(foto_b64), stretch=True)
                     except Exception:
                         log_event("historial_render", "error: No se pudo leer la foto.")
                         st.error("No se pudo leer la foto.")
@@ -142,7 +156,7 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any], idx: int, pacien
         st.caption(f"Motivo: {motivo}")
     if firma_b64 := registro.get("firma_b64"):
         try:
-            st.image(base64.b64decode(firma_b64), caption="Firma médica", width=220)
+            _img_movil(base64.b64decode(firma_b64), caption="Firma médica", width=220)
         except Exception as e:
             log_event("historial_error", f"Error: {e}")
     if adjunto_b64 := registro.get("adjunto_papel_b64"):
