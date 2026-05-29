@@ -24,7 +24,6 @@ except ImportError:
 
 _LOGGER = logging.getLogger("medicare.app")
 
-# Buffer circular de logs para diagnóstico (últimos 100 entries)
 _log_buffer: deque = deque(maxlen=100)
 
 
