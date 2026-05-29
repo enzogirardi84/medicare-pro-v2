@@ -14,6 +14,8 @@ from core.view_helpers import aviso_sin_paciente
 
 
 def render_ai_features_panel(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -53,6 +55,8 @@ def render_ai_features_panel(paciente_sel, mi_empresa, user, rol):
 
 
 def render_resumen(paciente_sel, llm_ok):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.subheader("Resumen Clínico para Entrega / Derivación")
     st.caption("Genera un resumen estructurado del paciente ideal para cambio de turno, derivación o referencia.")
 
@@ -70,7 +74,11 @@ def render_resumen(paciente_sel, llm_ok):
     if st.session_state.get("_ai_summary_result"):
         st.markdown("---")
         st.info(st.session_state["_ai_summary_result"])
-        col_s1, col_s2 = st.columns(2)
+        if es_movil:
+            col_s1 = st.container()
+            col_s2 = st.container()
+        else:
+            col_s1, col_s2 = st.columns(2)
         with col_s1:
             if st.button("🗑️ Limpiar", use_container_width=True, key="ai_summary_clear"):
                 st.session_state.pop("_ai_summary_result", None)
@@ -201,6 +209,8 @@ def render_poblacion(mi_empresa, llm_ok):
 
 
 def render_clinico(paciente_sel):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.subheader("Evaluación Clínica (sin IA)")
     st.caption("Herramientas clínicas basadas en reglas que funcionan sin conexión a IA.")
 
@@ -211,7 +221,12 @@ def render_clinico(paciente_sel):
     detalles = st.session_state.get("detalles_pacientes_db", {}).get(paciente_sel, {})
     vitales = [v for v in (st.session_state.get("vitales_db") or []) if v.get("paciente") == paciente_sel]
 
-    col_c1, col_c2, col_c3 = st.columns(3)
+    if es_movil:
+        col_c1 = st.container()
+        col_c2 = st.container()
+        col_c3 = st.container()
+    else:
+        col_c1, col_c2, col_c3 = st.columns(3)
     with col_c1:
         st.metric("Riesgo Clínico", "Disponible" if predictor else "N/A")
     with col_c2:

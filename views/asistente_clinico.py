@@ -87,6 +87,8 @@ def _render_selector_secciones(dashboard: dict) -> str:
 
 
 def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user: dict, rol: Optional[str] = None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     inyectar_css()
     _inyectar_css_asistente_mobile()
 
@@ -136,14 +138,23 @@ def render_asistente_clinico(paciente_sel: Optional[str], mi_empresa: str, user:
         act_str = "Sin datos"
     act_str = escape(act_str)
 
-    c_info1, c_info2 = st.columns(2)
+    if es_movil:
+        c_info1 = st.container()
+        c_info2 = st.container()
+    else:
+        c_info1, c_info2 = st.columns(2)
     with c_info1:
         st.markdown(f"<div class='card-text'><strong>Edad:</strong> {edad_str} &nbsp;|&nbsp; <strong>Actualización:</strong> {act_str}</div>", unsafe_allow_html=True)
     with c_info2:
         st.markdown(f"<div class='card-text'><strong>Diagnóstico:</strong> {diag_str}</div>", unsafe_allow_html=True)
 
     delta_str = f"({act_str})" if ult_act is not None else None
-    c1, c2, c3 = st.columns(3)
+    if es_movil:
+        c1 = st.container()
+        c2 = st.container()
+        c3 = st.container()
+    else:
+        c1, c2, c3 = st.columns(3)
     with c1:
         metrica_clinica("TA (mmHg)", dashboard["ultima_ta"], delta=delta_str)
         metrica_clinica("FC (lat/min)", dashboard["ultima_fc"], delta=delta_str)
@@ -191,7 +202,13 @@ def _tab_alertas(dashboard: dict):
 
 
 def _tab_resumen_clinico(dashboard: dict, datos: dict):
-    col1, col2 = st.columns(2)
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    if es_movil:
+        col1 = st.container()
+        col2 = st.container()
+    else:
+        col1, col2 = st.columns(2)
     with col1:
         card_clinica(
             "Evoluciones recientes",
@@ -227,7 +244,11 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
     else:
         st.caption("Sin diagnósticos registrados.")
 
-    col_chart1, col_chart2 = st.columns(2)
+    if es_movil:
+        col_chart1 = st.container()
+        col_chart2 = st.container()
+    else:
+        col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
         st.markdown("### Tendencia TA")
         ta_data = dashboard.get("ta_tendencia", [])
@@ -246,7 +267,11 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
         else:
             st.caption("No hay datos de glucemia para graficar.")
 
-    col_b1, col_b2 = st.columns(2)
+    if es_movil:
+        col_b1 = st.container()
+        col_b2 = st.container()
+    else:
+        col_b1, col_b2 = st.columns(2)
     with col_b1:
         st.markdown("### Balance hídrico")
         bal_data = dashboard.get("balance_tendencia", [])
@@ -287,10 +312,16 @@ def renderizar_tarjeta_indicacion(ind: dict):
 
 
 def _tab_farmacologia(dashboard: dict, datos: dict):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     indicaciones = datos.get("indicaciones", [])
     administracion = datos.get("administracion_med", [])
 
-    col1, col2 = st.columns(2)
+    if es_movil:
+        col1 = st.container()
+        col2 = st.container()
+    else:
+        col1, col2 = st.columns(2)
     with col1:
         card_clinica(
             "Indicaciones activas",
@@ -345,7 +376,13 @@ def _tab_farmacologia(dashboard: dict, datos: dict):
 
 
 def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
-    col1, col2 = st.columns(2)
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+    if es_movil:
+        col1 = st.container()
+        col2 = st.container()
+    else:
+        col1, col2 = st.columns(2)
     with col1:
         card_clinica(
             "Balance hídrico",
@@ -411,7 +448,11 @@ def _tab_auditoria(paciente_sel: str, dashboard: dict, datos: dict):
     with st.expander("Ver informe completo", expanded=False):
         st.html(html_informe)
 
-    col_d1, col_d2 = st.columns(2)
+    if es_movil:
+        col_d1 = st.container()
+        col_d2 = st.container()
+    else:
+        col_d1, col_d2 = st.columns(2)
     with col_d1:
         pdf_bytes = generar_pdf_informe_profesional(paciente_sel, datos, dashboard)
         st.download_button(

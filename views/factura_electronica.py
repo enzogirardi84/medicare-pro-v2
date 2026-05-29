@@ -20,6 +20,8 @@ ESTADOS_COMPROBANTE = ['Emitido', 'Pendiente', 'Anulado', 'Vencido']
 
 
 def render_factura_electronica(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -59,10 +61,18 @@ def render_factura_electronica(paciente_sel, mi_empresa, user, rol):
 
     with tab_generar:
         with st.form('fe_form', clear_on_submit=True):
-            col1, col2 = st.columns(2)
+            if es_movil:
+                col1 = st.container()
+                col2 = st.container()
+            else:
+                col1, col2 = st.columns(2)
             tipo = col1.selectbox('Tipo de comprobante', TIPOS_COMPROBANTE)
             fecha_emision = col2.date_input('Fecha de emision', value=ahora().date())
-            col3, col4 = st.columns(2)
+            if es_movil:
+                col3 = st.container()
+                col4 = st.container()
+            else:
+                col3, col4 = st.columns(2)
             monto = col3.number_input('Monto ($)', min_value=0.0, step=100.0, value=0.0)
             estado = col4.selectbox('Estado', ESTADOS_COMPROBANTE, index=0)
             concepto = st.text_area('Concepto / Detalle', placeholder='Detalle del comprobante...')
@@ -109,7 +119,11 @@ def render_factura_electronica(paciente_sel, mi_empresa, user, rol):
 
             total_emitido = sum(f.get('monto', 0) for f in fe_paciente if f.get('estado') == 'Emitido')
             total_pendiente = sum(f.get('monto', 0) for f in fe_paciente if f.get('estado') == 'Pendiente')
-            col_t1, col_t2 = st.columns(2)
+            if es_movil:
+                col_t1 = st.container()
+                col_t2 = st.container()
+            else:
+                col_t1, col_t2 = st.columns(2)
             col_t1.metric('Total emitido', f'${total_emitido:,.2f}')
             col_t2.metric('Total pendiente', f'${total_pendiente:,.2f}')
         else:

@@ -46,6 +46,8 @@ def _cached_collect_patient_sections(paciente_sel: str):
     return collect_patient_sections(st.session_state, paciente_sel)
 
 def render_historial(paciente_sel: str, user=None) -> None:
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -112,11 +114,19 @@ def render_historial(paciente_sel: str, user=None) -> None:
     ultimo_base = _ultimo_evento_global(secciones_base)
 
     # ── Filtros globales compactos ───────────────────────────────────────
-    col_filt1, col_filt2 = st.columns(2)
+    if es_movil:
+        col_filt1 = st.container()
+        col_filt2 = st.container()
+    else:
+        col_filt1, col_filt2 = st.columns(2)
     opcion_limite = col_filt1.selectbox("Limite por seccion", list(LIMITES_REGISTROS.keys()), label_visibility="collapsed")
     limite = LIMITES_REGISTROS.get(opcion_limite, 200)
     solo_con_datos = col_filt2.checkbox("Solo secciones con datos", value=True, key=f"hist_solo_datos_{paciente_sel}")
-    col_filt3, col_filt4 = st.columns(2)
+    if es_movil:
+        col_filt3 = st.container()
+        col_filt4 = st.container()
+    else:
+        col_filt3, col_filt4 = st.columns(2)
     limite_timeline = col_filt3.selectbox(
         "Eventos timeline",
         [15, 25, 40, 60],
@@ -151,7 +161,11 @@ def render_historial(paciente_sel: str, user=None) -> None:
     with tab_r:
         render_resumen_clinico(paciente_sel, detalles, secciones_base, total_registros_base, ultimo_base)
         st.markdown("##### Exportar historia clinica")
-        r1, r2 = st.columns(2)
+        if es_movil:
+            r1 = st.container()
+            r2 = st.container()
+        else:
+            r1, r2 = st.columns(2)
         _render_lazy_download(
             r1,
             key_base=f"historial_pdf_{paciente_sel}",
@@ -172,7 +186,11 @@ def render_historial(paciente_sel: str, user=None) -> None:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             unavailable_message="Excel no disponible en este equipo.",
         )
-        r3, r4 = st.columns(2)
+        if es_movil:
+            r3 = st.container()
+            r4 = st.container()
+        else:
+            r3, r4 = st.columns(2)
         _render_lazy_download(
             r3,
             key_base=f"historial_respaldo_{paciente_sel}",
@@ -227,7 +245,12 @@ def render_historial(paciente_sel: str, user=None) -> None:
             return
 
         with st.expander("Filtros de la seccion", expanded=False):
-            col_f1, col_f2, col_f3 = st.columns(3)
+            if es_movil:
+                col_f1 = st.container()
+                col_f2 = st.container()
+                col_f3 = st.container()
+            else:
+                col_f1, col_f2, col_f3 = st.columns(3)
             usar_fecha = col_f1.checkbox(
                 "Filtrar por fechas",
                 value=False,
@@ -298,7 +321,11 @@ def render_historial(paciente_sel: str, user=None) -> None:
         total_registros_seccion = len(registros_ordenados)
         limite_pagina = min(max(int(limite), 1), 500)
         paginas = max((total_registros_seccion - 1) // limite_pagina + 1, 1)
-        col_pag1, col_pag2 = st.columns([2, 1])
+        if es_movil:
+            col_pag1 = st.container()
+            col_pag2 = st.container()
+        else:
+            col_pag1, col_pag2 = st.columns([2, 1])
         col_pag1.caption(f"Pagina: {limite_pagina} registro(s)")
         pagina = col_pag2.number_input(
             "Pagina",

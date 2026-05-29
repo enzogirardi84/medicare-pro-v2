@@ -122,6 +122,8 @@ def _render_export_block(container, key_base, titulo, descripcion, prepare_label
 
 
 def render_pdf(paciente_sel, mi_empresa, user, rol=None):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -140,7 +142,11 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     tab_docs, tab_cons = st.tabs(["Exportar documentos", "Consentimiento legal"])
 
     with tab_docs:
-        col_d1, col_d2 = st.columns(2)
+        if es_movil:
+            col_d1 = st.container()
+            col_d2 = st.container()
+        else:
+            col_d1, col_d2 = st.columns(2)
 
         with col_d1:
             if puede_exportar_historia:
@@ -224,10 +230,18 @@ def render_pdf(paciente_sel, mi_empresa, user, rol=None):
     with tab_cons:
         st.caption("Completa los datos del firmante, registra la firma y guarda para incorporarlo a la historia clinica.")
 
-        col_c1, col_c2 = st.columns(2)
+        if es_movil:
+            col_c1 = st.container()
+            col_c2 = st.container()
+        else:
+            col_c1, col_c2 = st.columns(2)
         firmante = col_c1.text_input("Nombre del paciente o familiar firmante", value=paciente_sel.split(" - ")[0], key=f"cons_firmante_{paciente_sel}")
         dni_firmante = col_c2.text_input("DNI del firmante", value=detalles.get("dni", ""), key=f"cons_dni_{paciente_sel}")
-        col_c3, col_c4 = st.columns(2)
+        if es_movil:
+            col_c3 = st.container()
+            col_c4 = st.container()
+        else:
+            col_c3, col_c4 = st.columns(2)
         vinculo = col_c3.selectbox("Vinculo", ["Paciente", "Familiar", "Tutor", "Responsable legal"], key=f"cons_vinc_{paciente_sel}")
         telefono = col_c4.text_input("Telefono de contacto", value=detalles.get("telefono", ""), key=f"cons_tel_{paciente_sel}")
         observaciones = st.text_area(

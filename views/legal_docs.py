@@ -117,6 +117,8 @@ def _render_ley(texto, idx):
 
 
 def render_legal_docs(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown(
         """
         <div class="mc-hero">
@@ -166,6 +168,8 @@ def render_legal_docs(mi_empresa, user):
 def _render_consent_tab(mi_empresa, user):
     import hashlib as _hl
     from datetime import timedelta
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
     st.markdown("### Consentimientos Informados")
     st.caption("Gestion de consentimientos con respaldo en Ley 26.529 (Art. 5, 6, 7) y Ley 25.326 (Art. 7, 8).")
@@ -178,7 +182,11 @@ def _render_consent_tab(mi_empresa, user):
     ahora_dt = ahora()
     hoy_str = ahora_dt.strftime("%d/%m/%Y")
 
-    col_estado, col_vigentes = st.columns(2)
+    if es_movil:
+        col_estado = st.container()
+        col_vigentes = st.container()
+    else:
+        col_estado, col_vigentes = st.columns(2)
     with col_estado:
         st.metric("Total", len(consents))
         revocados = sum(1 for c in consents if c.get("revocado"))
@@ -299,6 +307,8 @@ def _render_audit_trail_tab(mi_empresa, user):
 
 
 def _render_compliance_tab(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown("### Dashboard de Cumplimiento")
     st.caption("Verificacion automatica contra estandares normativos (HIPAA, GDPR, Ley 25.506, Ley 26.529).")
 
@@ -308,7 +318,11 @@ def _render_compliance_tab(mi_empresa, user):
             monitor = get_compliance_monitor()
             with st.spinner("Ejecutando controles automaticos..."):
                 report = monitor.run_compliance_audit(period_days=30)
-            c1, c2 = st.columns(2)
+            if es_movil:
+                c1 = st.container()
+                c2 = st.container()
+            else:
+                c1, c2 = st.columns(2)
             c1.metric("Estado general", report.overall_status.upper())
             c1.metric("Violaciones totales", report.summary["total_violations"])
             c2.metric("Criticas", report.summary["critical"])

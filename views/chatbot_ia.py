@@ -454,6 +454,8 @@ def _navegar_a(texto: str) -> Optional[str]:
 # CHAT UI
 # ============================================================
 def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         from core.view_helpers import aviso_sin_paciente
         aviso_sin_paciente()
@@ -481,7 +483,10 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
 
     # Acciones
     with st.expander("Acciones rapidas", expanded=False):
-        cols = st.columns(2)
+        if es_movil:
+            cols = [st.container() for _ in range(2)]
+        else:
+            cols = st.columns(2)
         acciones = [
             ("Datos paciente", "datos"), ("Medicacion", "med"), ("Signos vitales", "vitales"),
             ("Estudios", "ests"), ("Ultima evolucion", "evol"), ("Turnos", "turns"),
@@ -548,7 +553,10 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
     # Input
     with st.form("chatbot_form", clear_on_submit=True):
         mensaje = st.text_input("Tu consulta:", placeholder='Ej: "Que horarios?" o "buscar: dosis ibuprofeno" o "mostrame recetas"')
-        cols = st.columns([3, 1])
+        if es_movil:
+            cols = [st.container() for _ in range(2)]
+        else:
+            cols = st.columns([3, 1])
         enviar = cols[0].form_submit_button("Enviar", use_container_width=True, type="primary")
         limpiar = cols[1].form_submit_button("Limpiar", use_container_width=True)
 

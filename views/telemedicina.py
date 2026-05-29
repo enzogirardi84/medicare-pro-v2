@@ -16,6 +16,8 @@ def _coincide(item_paciente: str, paciente_sel: str) -> bool:
 
 
 def render_telemedicina(paciente_sel):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -52,7 +54,11 @@ def render_telemedicina(paciente_sel):
     sala_id = f"MediCare-{nombre_limpio}-{fecha_hoy}"
     jitsi_url = f"https://meet.jit.si/{sala_id}#config.disableDeepLinking=true&config.prejoinPageEnabled=false"
 
-    c_vid1, c_vid2 = st.columns([3, 1])
+    if es_movil:
+        c_vid1 = st.container()
+        c_vid2 = st.container()
+    else:
+        c_vid1, c_vid2 = st.columns([3, 1])
 
     with c_vid1:
         st.markdown("### Sala de Video en Vivo")
@@ -93,7 +99,10 @@ def render_telemedicina(paciente_sel):
                 if clave not in claves_excluidas and valor not in (None, "", " "):
                     items_v.append((str(clave).replace("_", " ").title(), valor))
             if items_v:
-                cols_v = st.columns(2)
+                if es_movil:
+                    cols_v = [st.container() for _ in range(2)]
+                else:
+                    cols_v = st.columns(2)
                 for i, (nombre, valor) in enumerate(items_v):
                     with cols_v[i % 2]:
                         st.metric(label=nombre, value=valor)

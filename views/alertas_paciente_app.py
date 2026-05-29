@@ -88,6 +88,8 @@ def _ordenar_filas(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = None) -> None:
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     st.markdown(
         """
         <div class="mc-hero">
@@ -137,7 +139,11 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
         key="mc_alertas_filtro_nivel",
     )
 
-    c_ref, c_lim = st.columns([1, 2])
+    if es_movil:
+        c_ref = st.container()
+        c_lim = st.container()
+    else:
+        c_ref, c_lim = st.columns([1, 2])
     with c_ref:
         if st.button("Actualizar lista", use_container_width=True, key="mc_alertas_refresh"):
             st.rerun()
@@ -172,7 +178,12 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
     n_ver = sum(1 for r in rows if str(r.get("nivel_urgencia")) == "Verde")
     n_pend = sum(1 for r in rows if str(r.get("estado")) == "Pendiente")
 
-    m1, m2, m3 = st.columns(3)
+    if es_movil:
+        m1 = st.container()
+        m2 = st.container()
+        m3 = st.container()
+    else:
+        m1, m2, m3 = st.columns(3)
     m1.metric("En pantalla", len(rows))
     m1.metric("Rojo", n_rojo)
     m2.metric("Amarillo", n_ama)
@@ -259,7 +270,11 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
     opts_estado = list(OPTIONS_ESTADO)
     st_actual = str(row.get("estado") or "Pendiente")
     idx_est = opts_estado.index(st_actual) if st_actual in opts_estado else 0
-    c1, c2 = st.columns(2)
+    if es_movil:
+        c1 = st.container()
+        c2 = st.container()
+    else:
+        c1, c2 = st.columns(2)
     with c1:
         nuevo = st.selectbox("Estado operativo", opts_estado, index=idx_est)
     with c2:

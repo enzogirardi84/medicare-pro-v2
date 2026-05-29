@@ -12,6 +12,8 @@ from core.export_utils import pdf_output_bytes
 
 
 def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -30,7 +32,10 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
 
     # ============ DATOS BASICOS ============
     with st.container(border=True):
-        cols = st.columns(3)
+        if es_movil:
+            cols = [st.container() for _ in range(3)]
+        else:
+            cols = st.columns(3)
         cols[0].markdown(f"**{nombre}**")
         cols[1].markdown(f"DNI: {dni}")
         cols[2].markdown(f"OS: {detalles.get('obra_social', 'S/D')}")
@@ -71,7 +76,12 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
             vac = v["vacuna"]
             if vac not in ultimas or (v.get("fecha_aplicacion") or "") > (ultimas[vac].get("fecha_aplicacion") or ""):
                 ultimas[vac] = v
-        col1, col2, col3 = st.columns(3)
+        if es_movil:
+            col1 = st.container()
+            col2 = st.container()
+            col3 = st.container()
+        else:
+            col1, col2, col3 = st.columns(3)
         for i, (vac, reg) in enumerate(sorted(ultimas.items())):
             (col1 if i % 3 == 0 else col2 if i % 3 == 1 else col3).markdown(
                 f"**{vac}**\n{reg.get('dosis','?')}\n{reg.get('fecha_aplicacion','?')}"

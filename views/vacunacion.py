@@ -43,6 +43,8 @@ _INTERVALOS = {
 
 
 def render_vacunacion(paciente_sel, mi_empresa, user, rol):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if not paciente_sel:
         aviso_sin_paciente()
         return
@@ -70,16 +72,28 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
     with tabs[0]:
         with st.form("vac_form", clear_on_submit=True):
             st.markdown("##### Datos de la dosis")
-            c1, c2 = st.columns(2)
+            if es_movil:
+                c1 = st.container()
+                c2 = st.container()
+            else:
+                c1, c2 = st.columns(2)
             vacuna = c1.selectbox("Vacuna", VACUNAS_CALENDARIO)
             vacuna_manual = c1.text_input("Nombre de la vacuna (si seleccionaste 'Otra')", placeholder="Ej: Vacuna experimental X") if vacuna == "-- Otra (especificar manualmente) --" else ""
             dosis = c2.selectbox("Dosis", DOSIS_OPCIONES)
 
-            c3, c4 = st.columns(2)
+            if es_movil:
+                c3 = st.container()
+                c4 = st.container()
+            else:
+                c3, c4 = st.columns(2)
             fecha_aplicacion = c3.date_input("Fecha de aplicacion", value=ahora().date())
             edad_paciente = c4.text_input("Edad del paciente al aplicar", placeholder="Ej: 2 meses, 5 anios...")
 
-            c5, c6 = st.columns(2)
+            if es_movil:
+                c5 = st.container()
+                c6 = st.container()
+            else:
+                c5, c6 = st.columns(2)
             lote = c5.text_input("Numero de lote")
             laboratorio = c6.text_input("Laboratorio / Marca", placeholder="Ej: Pfizer, Sinopharm, MSD...")
 
@@ -141,7 +155,10 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
                     dosis_ordenadas = sorted(dosis_list, key=lambda x: x.get("fecha_aplicacion", ""), reverse=True)
                     ultima = dosis_ordenadas[0] if dosis_ordenadas else {}
 
-                    cols = st.columns([2, 1, 1, 1])
+                    if es_movil:
+                        cols = [st.container() for _ in range(4)]
+                    else:
+                        cols = st.columns([2, 1, 1, 1])
                     cols[0].markdown(f"**{vacuna}**")
                     cols[1].markdown(f"{completas} dosis")
 
@@ -205,7 +222,10 @@ def render_vacunacion(paciente_sel, mi_empresa, user, rol):
                     hay_proximas = True
 
                 with st.container(border=True):
-                    cols = st.columns([2, 1, 1])
+                    if es_movil:
+                        cols = [st.container() for _ in range(3)]
+                    else:
+                        cols = st.columns([2, 1, 1])
                     cols[0].markdown(f"**{vacuna}**")
                     cols[1].markdown(f"Ultima: {reg['fecha_aplicacion']} ({reg['dosis']})")
                     cols[2].markdown(f"{estado}")
