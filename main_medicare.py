@@ -521,24 +521,7 @@ try:
 except Exception as exc:
     log_event("backup", f"auto_backup_fallo:{type(exc).__name__}:{exc}")
 
-st.markdown("""
-<script>
-if ("Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-}
-</script>
-""", unsafe_allow_html=True)
-
 _unsaved = st.session_state.get("_guardar_datos_pendiente", False) or st.session_state.get("_draft_pending", False)
-if _unsaved:
-    st.markdown("""
-    <script>
-    window.addEventListener('beforeunload', function(e) {
-        e.preventDefault();
-        e.returnValue = '';
-    });
-    </script>
-    """, unsafe_allow_html=True)
 
 from core.alert_toasts import render_queued_toasts
 
@@ -583,24 +566,6 @@ if st.sidebar.button("⚙️ Configuración", use_container_width=True, key="sid
 _modulo_previo_scroll = st.session_state.get("_mc_modulo_previo_scroll")
 if _modulo_previo_scroll != vista_actual:
     st.session_state["_mc_modulo_previo_scroll"] = vista_actual
-    st.markdown(
-        """<script>
-            setTimeout(function() {
-                try {
-                    const main = window.parent.document.querySelector('.main');
-                    if (!main) return;
-                    const vb = main.querySelectorAll('[data-testid="stVerticalBlock"]');
-                    for (let i = 0; i < vb.length; i++) {
-                        if (vb[i].offsetTop > 280) {
-                            vb[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            break;
-                        }
-                    }
-                } catch(e) {}
-            }, 350);
-        </script>""",
-        unsafe_allow_html=True,
-    )
 
 try:
     from core.self_healing import maybe_run_self_healing

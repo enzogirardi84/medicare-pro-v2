@@ -377,14 +377,11 @@ self.addEventListener('message', (event) => {
 
 
 def inject_pwa_headers():
-    """Inyecta headers PWA (1 vez por sesion)."""
+    """Inyecta iconos PWA (1 vez por sesion). Meta tags y script no funcionan via st.markdown."""
     if st.session_state.get("_pwa_headers_injected"):
         return
     st.session_state["_pwa_headers_injected"] = True
-    manifest = generate_pwa_manifest()
-    manifest_json = json.dumps(manifest, ensure_ascii=False)
 
-    # Icons inline como data URIs (SVG pequeño para compatibilidad)
     _svg_icon = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">'
         '<rect width="192" height="192" rx="32" fill="#14b8a6"/>'
@@ -394,35 +391,9 @@ def inject_pwa_headers():
     _svg_b64 = base64.b64encode(_svg_icon.encode()).decode()
     _icon_data_uri = f"data:image/svg+xml;base64,{_svg_b64}"
 
-    pwa_meta = f"""
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="{manifest['theme_color']}">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="{manifest['short_name']}">
-    <meta name="application-name" content="{manifest['short_name']}">
-    <meta name="msapplication-TileColor" content="{manifest['theme_color']}">
-
-    <!-- Manifest via Blob URL (funciona en Streamlit Cloud) -->
-    <script>
-    (function() {{
-        var manifestData = {manifest_json};
-        var blob = new Blob([JSON.stringify(manifestData)], {{type: 'application/json'}});
-        var link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = URL.createObjectURL(blob);
-        document.head.appendChild(link);
-    }})();
-    </script>
-
-    <!-- Icons inline (data URIs) -->
+    st.markdown(f"""
     <link rel="apple-touch-icon" sizes="192x192" href="{_icon_data_uri}">
-    <link rel="icon" type="image/svg+xml" sizes="192x192" href="{_icon_data_uri}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{_icon_data_uri}">
-    """
-
-    st.markdown(pwa_meta, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 
 def save_pwa_files(output_dir: str = "assets/pwa"):
