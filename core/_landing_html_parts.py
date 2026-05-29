@@ -1242,18 +1242,16 @@ _PART_4 = """
                 }
               }
 
-              /* ── Scroll fade-in animations ─────────────── */
+              /* ── Secciones aparecen con fade-in (CSS puro, sin JS) ── */
               .mc-lp-fade {
-                opacity: 0;
-                transform: translateY(24px);
-                transition: opacity 0.6s ease, transform 0.6s ease;
+                animation: mcFadeUp 0.7s ease both;
               }
-              .mc-lp-fade.is-visible {
-                opacity: 1;
-                transform: translateY(0);
+              @keyframes mcFadeUp {
+                from { opacity: 0; transform: translateY(18px); }
+                to   { opacity: 1; transform: translateY(0); }
               }
               @media (prefers-reduced-motion: reduce) {
-                .mc-lp-fade { opacity: 1; transform: none; transition: none; }
+                .mc-lp-fade { animation: none; opacity: 1; transform: none; }
               }
 
               /* ── FAQ accordion ─────────────────────────── */
