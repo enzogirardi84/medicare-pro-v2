@@ -28,7 +28,7 @@ def generate_pwa_manifest() -> dict:
         "name": "Medicare Pro",
         "short_name": "Medicare",
         "description": "Sistema de Gestión Clínica Profesional",
-        "start_url": "/",
+        "start_url": "/?login=1",
         "display": "standalone",
         "background_color": "#0f172a",
         "theme_color": "#14b8a6",
@@ -108,21 +108,21 @@ def generate_pwa_manifest() -> dict:
                 "name": "Nuevo Paciente",
                 "short_name": "Paciente",
                 "description": "Registrar nuevo paciente rápidamente",
-                "url": "/?action=new_patient",
+                "url": "/?login=1&action=new_patient",
                 "icons": [{"src": "/assets/icons/patient.png", "sizes": "192x192"}]
             },
             {
                 "name": "Buscar Paciente",
                 "short_name": "Buscar",
                 "description": "Buscar paciente existente",
-                "url": "/?action=search",
+                "url": "/?login=1&action=search",
                 "icons": [{"src": "/assets/icons/search.png", "sizes": "192x192"}]
             },
             {
                 "name": "Nueva Evolución",
                 "short_name": "Evolución",
                 "description": "Crear nueva evolución clínica",
-                "url": "/?action=new_evolution",
+                "url": "/?login=1&action=new_evolution",
                 "icons": [{"src": "/assets/icons/evolution.png", "sizes": "192x192"}]
             }
         ],
@@ -157,13 +157,12 @@ def generate_service_worker() -> str:
     """
     return """
 // Medicare Pro Service Worker
-const CACHE_NAME = 'medicare-pro-v1';
-const STATIC_CACHE = 'static-v1';
-const DYNAMIC_CACHE = 'dynamic-v1';
+const CACHE_NAME = 'medicare-pro-v2';
+const STATIC_CACHE = 'static-v2';
+const DYNAMIC_CACHE = 'dynamic-v2';
 
 // Recursos a cachear
 const STATIC_ASSETS = [
-    '/',
     '/assets/style.css',
     '/assets/mobile.css',
     '/assets/logo_medicare_pro.jpeg',
@@ -218,6 +217,13 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Estrategia: Cache First para assets estáticos
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request).catch(() => caches.match('/offline.html'))
+        );
+        return;
+    }
+
     if (STATIC_ASSETS.includes(url.pathname) ||
         url.pathname.match(/\\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
 

@@ -11,9 +11,8 @@ import streamlit as st
 
 SW_SCRIPT = """
 // Service Worker para MediCare Enterprise PRO - Cache offline
-const CACHE_NAME = "medicare-cache-v1";
+const CACHE_NAME = "medicare-cache-v2";
 const STATIC_RESOURCES = [
-  "/",
   "/_stcore/health",
 ];
 
@@ -38,8 +37,14 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Interceptar fetch: cache first, luego red
+// Interceptar fetch: nunca cachear navegaciones Streamlit.
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request).catch(() => caches.match("/offline.html")));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
