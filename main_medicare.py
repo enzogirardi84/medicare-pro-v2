@@ -60,17 +60,91 @@ if not st.session_state.get("logeado"):
 # ── Two-pass boot para móviles ──────────────────────────────────
 # El primer mensaje WebSocket debe ser minúsculo para que el
 # navegador móvil no aborte la conexión por payload grande.
-# En el primer pase enviamos solo un spinner; en el segundo
-# (tras el rerun) cargamos la app completa.
+# En el primer pase enviamos una pantalla de acceso/rescate visible; en el
+# segundo (tras el rerun) cargamos la app completa. El query param evita
+# bucles si Safari movil pierde session_state durante el primer handshake.
 if not st.session_state.get("_boot_done"):
+    _boot_qp_ok = False
+    try:
+        _boot_qp_ok = str(st.query_params.get("_mc_boot") or "").strip() == "1"
+    except Exception:
+        _boot_qp_ok = False
+    if not _boot_qp_ok:
+        st.markdown(
+            """
+            <style>
+            html, body, .stApp {
+                background: #0f172a !important;
+                margin: 0 !important;
+                min-height: 100vh !important;
+            }
+            .mc-boot-fallback {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                color: #e2e8f0;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                text-align: center;
+            }
+            .mc-boot-fallback__box {
+                width: min(100%, 360px);
+                border: 1px solid rgba(148, 163, 184, .22);
+                border-radius: 18px;
+                background: rgba(15, 23, 42, .92);
+                padding: 22px 18px;
+                box-shadow: 0 20px 42px rgba(2, 6, 23, .34);
+            }
+            .mc-boot-fallback__title {
+                margin: 0 0 8px;
+                font-size: 1.25rem;
+                font-weight: 800;
+            }
+            .mc-boot-fallback__text {
+                margin: 0 0 18px;
+                color: #94a3b8;
+                line-height: 1.45;
+                font-size: .94rem;
+            }
+            .mc-boot-fallback__btn {
+                display: inline-flex;
+                min-height: 48px;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                border-radius: 14px;
+                background: linear-gradient(135deg, #14b8a6, #2563eb);
+                color: #fff !important;
+                text-decoration: none !important;
+                font-weight: 800;
+                letter-spacing: .02em;
+            }
+            </style>
+            <div class="mc-boot-fallback">
+              <div class="mc-boot-fallback__box">
+                <p class="mc-boot-fallback__title">MediCare PRO</p>
+                <p class="mc-boot-fallback__text">Estamos abriendo la app. Si tu telefono queda en pantalla oscura, toca el boton para entrar directo.</p>
+                <a class="mc-boot-fallback__btn" href="?login=1&_mc_boot=1" target="_self">Ingresar al sistema</a>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        try:
+            st.query_params["_mc_boot"] = "1"
+        except Exception:
+            pass
+        st.rerun()
     st.session_state["_boot_done"] = True
-    st.markdown(
-        '<div style="display:flex;align-items:center;justify-content:center;'
-        'height:100vh;background:#0f172a;color:#94a3b8;font-family:sans-serif;'
-        'font-size:1.1rem;">Cargando...</div>',
-        unsafe_allow_html=True,
-    )
-    st.rerun()
+
+if not st.session_state.get("_mc_boot_query_cleaned"):
+    st.session_state["_mc_boot_query_cleaned"] = True
+    try:
+        if st.query_params.get("_mc_boot") is not None:
+            del st.query_params["_mc_boot"]
+    except Exception:
+        pass
 
 if "theme_applied_v5" not in st.session_state:
     st.session_state["theme_applied_v5"] = False

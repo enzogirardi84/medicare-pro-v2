@@ -8,7 +8,13 @@ Ejecutar: python -m pytest tests/e2e/ -v --tb=short
 from __future__ import annotations
 
 import pytest
-from playwright.sync_api import Page, expect
+
+playwright_sync = pytest.importorskip(
+    "playwright.sync_api",
+    reason="E2E opcional: requiere instalar playwright y pytest-playwright.",
+)
+Page = playwright_sync.Page
+expect = playwright_sync.expect
 
 
 @pytest.fixture(scope="module")
