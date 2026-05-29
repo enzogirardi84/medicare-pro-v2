@@ -474,8 +474,14 @@ class SmartScanner:
                     break
 
     def scan_unused_imports(self, rel: str, content: str, lines: list[str]):
-        """Detecta imports que no se usan en el archivo."""
+        """Detecta imports que no se usan en el archivo.
+        Salta archivos que son conocidos re-exportadores (utils, __init__).
+        """
         if "test_" in rel or rel.endswith("__init__.py"):
+            return
+        # Saltar re-export hubs
+        _skip_files = {"core/utils.py", "core/__init__.py"}
+        if rel in _skip_files:
             return
         try:
             tree = ast.parse(content)
@@ -638,7 +644,11 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
             new_line = re.sub(r'from core\.app_logging import log_event\s*', '', old_line)
 
         elif f.pattern == "unused_import":
-            new_line = ""
+            # No eliminar imports con # noqa (son intencionales)
+            if "# noqa" in old_line.lower():
+                new_line = old_line  # skip
+            else:
+                new_line = ""
 
         elif f.pattern == "st_error_no_log":
             _mod = Path(f.file_path).stem
