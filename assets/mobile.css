@@ -992,6 +992,55 @@ input:focus, select:focus, textarea:focus,
         border-color: #0ea5e9 !important;
         box-shadow: 0 0 0 2px rgba(14,165,233,0.1) !important;
     }
+
+    /* Landing page: eliminar blur, gradient text, sombras */
+    .block-container > div:first-of-type {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(3,5,10,0.93) !important;
+    }
+    .block-container > div:first-of-type div[data-testid="stButton"] > button[kind="primary"],
+    .mc-lp-sticky-btn-wrap a {
+        background: #2563eb !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        transform: none !important;
+    }
+    .block-container > div:first-of-type div[data-testid="stButton"] > button[kind="primary"]:hover,
+    .mc-lp-sticky-btn-wrap a:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        filter: none !important;
+    }
+    .mc-lp-hero-title {
+        background: none !important;
+        -webkit-background-clip: unset !important;
+        -webkit-text-fill-color: #f4f7fb !important;
+        background-clip: unset !important;
+        color: #f4f7fb !important;
+    }
+    .mc-lp-btn-primary {
+        background: #2563eb !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    .mc-lp-btn-primary:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    .mc-lp-card {
+        background: rgba(255,255,255,0.04) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    .mc-lp-card:hover {
+        transform: none !important;
+        border-color: rgba(14,165,233,0.2) !important;
+        box-shadow: none !important;
+    }
 }
 
 /* Guardia final mobile: la app ya renderiza navegacion y acciones en el cuerpo.
