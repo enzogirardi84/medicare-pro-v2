@@ -299,16 +299,7 @@ def render_publicidad_y_detener() -> None:
     else:
         st.markdown(_landing_html, unsafe_allow_html=True)
 
-    # Botón respaldo nativo al final del landing
-    st.markdown(
-        """
-        <br>
-        <div style="text-align:center;padding:18px 0 28px;">
-            <a href="?login=1&amp;_mc_boot=1" target="_self" style="display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 32px;font-size:1rem;text-transform:uppercase;letter-spacing:0.12em;text-decoration:none !important;border-radius:9999px;border:1px solid rgba(186,230,253,0.24);background:linear-gradient(135deg, rgba(18,184,166,0.98) 0%, rgba(37,99,235,0.98) 58%, rgba(56,189,248,0.96) 100%);color:#fff !important;box-shadow:0 18px 42px rgba(14,165,233,0.22);">🚀 Ingresar al sistema</a>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+
 
     # CSS para forzar visibilidad del botón nativo de Streamlit (hamburguesa >> / << sidebar)
     # en mobile, ya que otros módulos ocultan el nativo con display:none
