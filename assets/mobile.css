@@ -926,3 +926,71 @@ input:focus, select:focus, textarea:focus,
     }
 }
 
+/* ── OVERRIDE: efectos GPU pesados desactivados en touch ─────────
+   backdrop-filter blur, gradientes complejos y sombras grandes
+   saturan la GPU del telefono, crashean el tab y causan pantalla
+   azul. En dispositivos touch se reemplazan por colores planos. ──── */
+@media (hover: none) and (pointer: coarse) {
+    .stApp {
+        background: #0c1929 !important;
+    }
+    [data-testid="stSidebar"] {
+        background: #0a1628 !important;
+        border-right: 1px solid rgba(100,180,255,0.06) !important;
+    }
+    div[data-testid="stForm"],
+    div[data-testid="stMetric"],
+    div[data-testid="stDataFrame"],
+    div[data-testid="stTable"],
+    .stAlert, .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.04) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 1px solid rgba(100,180,255,0.06) !important;
+        border-radius: 14px !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stMetric"]:hover {
+        border-color: rgba(14,165,233,0.15) !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    div[data-testid="stButton"] > button {
+        border-radius: 12px !important;
+        font-weight: 500 !important;
+        border: 1px solid rgba(100,180,255,0.08) !important;
+        background: rgba(255,255,255,0.03) !important;
+        min-height: 40px !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        transform: none !important;
+        border-color: rgba(14,165,233,0.2) !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stButton"] > button[kind="primary"] {
+        background: #2563eb !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stButton"] > button[kind="primary"]:hover {
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    div[data-testid="stButton"] > button[kind="secondary"] {
+        background: #1e293b !important;
+        border: 1px solid rgba(100,180,255,0.1) !important;
+    }
+    input, select, textarea, div[data-baseweb="select"] > div {
+        border-radius: 10px !important;
+        border: 1px solid rgba(100,180,255,0.1) !important;
+        background: rgba(0,0,0,0.15) !important;
+        color: #e2e8f0 !important;
+        box-shadow: none !important;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: #0ea5e9 !important;
+        box-shadow: 0 0 0 2px rgba(14,165,233,0.1) !important;
+    }
+}
+
