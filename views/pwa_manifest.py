@@ -371,12 +371,10 @@ self.addEventListener('message', (event) => {
 
 
 def inject_pwa_headers():
-    """
-    Inyecta headers y metatags necesarios para PWA en Streamlit Cloud.
-    
-    Usa blob URL para el manifest (Streamlit Cloud no sirve /manifest.json).
-    Las apple-touch-icon usan data URIs inline para funcionar sin archivos estáticos.
-    """
+    """Inyecta headers PWA (1 vez por sesion)."""
+    if st.session_state.get("_pwa_headers_injected"):
+        return
+    st.session_state["_pwa_headers_injected"] = True
     manifest = generate_pwa_manifest()
     manifest_json = json.dumps(manifest, ensure_ascii=False)
     

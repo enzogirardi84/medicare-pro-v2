@@ -6,6 +6,11 @@ import streamlit as st
 
 
 def aplicar_css_base() -> None:
+    # Solo injectar UNA vez por sesion para evitar bloqueo en movil
+    if st.session_state.get("_css_base_injected"):
+        return
+    st.session_state["_css_base_injected"] = True
+
     # Restore persistent theme on first load
     if "_theme_restored_v1" not in st.session_state:
         st.session_state["_theme_restored_v1"] = True

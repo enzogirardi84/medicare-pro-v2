@@ -6,7 +6,10 @@ import streamlit as st
 
 
 def inject_atajos_teclado():
-    """Inyecta atajos de teclado via JavaScript."""
+    """Inyecta atajos de teclado via JavaScript (1 vez por sesion)."""
+    if st.session_state.get("_atajos_injected"):
+        return
+    st.session_state["_atajos_injected"] = True
     st.markdown("""
     <script>
     document.addEventListener('keydown', function(e) {
