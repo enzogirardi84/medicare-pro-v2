@@ -931,6 +931,16 @@ input:focus, select:focus, textarea:focus,
    saturan la GPU del telefono, crashean el tab y causan pantalla
    azul. En dispositivos touch se reemplazan por colores planos. ──── */
 @media (hover: none) and (pointer: coarse) {
+    /* GPU-safe global: eliminar blur y will-change en touch */
+    *, *::before, *::after {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    div[data-testid="stButton"] > button,
+    [data-testid="stMetric"] {
+        transform: none !important;
+        will-change: auto !important;
+    }
     .stApp {
         background: #0c1929 !important;
     }
