@@ -442,12 +442,24 @@ def render_project_management(mi_empresa, user=None, rol=None):
                 for _col, (_est, _cnt) in zip(_status_cols, _status_counts.items()):
                     _col.metric(_est, int(_cnt))
                 with st.container(border=True):
-                    st.dataframe(
-                        df_j,
-                        width='stretch',
-                        hide_index=True,
-                        height=min(420, 80 + len(df_j) * 36),
-                        column_config={
-                            "URL": st.column_config.LinkColumn("Enlace", display_text="Abrir"),
-                        },
-                    )
+                    if es_movil and len(df_j) > 25:
+                        st.caption(f"Mostrando 25 de {len(df_j)} registros. Usá escritorio para ver todos.")
+                        st.dataframe(
+                            df_j.head(25),
+                            width='stretch',
+                            hide_index=True,
+                            height=min(420, 80 + 25 * 36),
+                            column_config={
+                                "URL": st.column_config.LinkColumn("Enlace", display_text="Abrir"),
+                            },
+                        )
+                    else:
+                        st.dataframe(
+                            df_j,
+                            width='stretch',
+                            hide_index=True,
+                            height=min(420, 80 + len(df_j) * 36),
+                            column_config={
+                                "URL": st.column_config.LinkColumn("Enlace", display_text="Abrir"),
+                            },
+                        )

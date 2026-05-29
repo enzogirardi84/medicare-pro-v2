@@ -227,7 +227,11 @@ def render_alertas_paciente_app(mi_empresa: str, user: dict, rol: str | None = N
             )
         }
 
-    st.dataframe(df[show_cols], **df_kwargs)
+    if es_movil and len(df[show_cols]) > 25:
+        st.caption(f"Mostrando 25 de {len(df[show_cols])} registros. Usá escritorio para ver todos.")
+        st.dataframe(df[show_cols].head(25), **df_kwargs)
+    else:
+        st.dataframe(df[show_cols], **df_kwargs)
 
     try:
         csv_bytes = df[show_cols].to_csv(index=False).encode("utf-8-sig")

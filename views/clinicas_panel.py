@@ -181,12 +181,21 @@ def render_clinicas_panel(mi_empresa, user, rol):
 
     st.markdown("##### Resumen")
     df_pub = df.drop(columns=["_key"], errors="ignore")
-    st.dataframe(
-        df_pub,
-        width='stretch',
-        hide_index=True,
-        height=min(420, 60 + len(df) * 38),
-    )
+    if es_movil and len(df_pub) > 25:
+        st.caption(f"Mostrando 25 de {len(df_pub)} registros. Usá escritorio para ver todos.")
+        st.dataframe(
+            df_pub.head(25),
+            width='stretch',
+            hide_index=True,
+            height=min(420, 60 + 25 * 38),
+        )
+    else:
+        st.dataframe(
+            df_pub,
+            width='stretch',
+            hide_index=True,
+            height=min(420, 60 + len(df) * 38),
+        )
     buf = io.BytesIO()
     df_pub.to_csv(buf, index=False, encoding="utf-8-sig")
     st.download_button(

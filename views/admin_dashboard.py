@@ -190,11 +190,19 @@ def render_users_tab():
 
     # Tabla de usuarios
     if filtered_users:
-        st.dataframe(
-            filtered_users,
-            use_container_width=True,
-            hide_index=True
-        )
+        if es_movil and len(filtered_users) > 25:
+            st.caption(f"Mostrando 25 de {len(filtered_users)} registros. Usá escritorio para ver todos.")
+            st.dataframe(
+                filtered_users[:25],
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.dataframe(
+                filtered_users,
+                use_container_width=True,
+                hide_index=True
+            )
 
         st.caption(f"Mostrando {len(filtered_users)} de {len(usuarios)} usuarios")
     else:

@@ -147,22 +147,41 @@ def render(paciente_sel=None, user=None):
                 df[_col] = pd.to_numeric(df[_col], errors="coerce")
 
         # Tabla con formato profesional
-        st.dataframe(
-            df,
-            width='stretch',
-            hide_index=True,
-            height=min(400, len(df) * 45 + 50),
-            column_config={
-                'Fecha': st.column_config.TextColumn('Fecha/Hora', width='medium'),
-                'T.A.': st.column_config.TextColumn('Tensión Arterial', width='medium'),
-                'F.C.': st.column_config.NumberColumn('Frec. Cardiaca', width='small'),
-                'F.R.': st.column_config.NumberColumn('Frec. Respiratoria', width='small'),
-                'Temp': st.column_config.NumberColumn('Temperatura °C', width='small', format="%.1f"),
-                'SatO2': st.column_config.NumberColumn('Sat O2 %', width='small'),
-                'Gluc': st.column_config.TextColumn('Glucemia', width='small'),
-                'Observaciones': st.column_config.TextColumn('Observaciones', width='large')
-            }
-        )
+        if es_movil and len(df) > 25:
+            st.caption(f"Mostrando 25 de {len(df)} registros. Usá escritorio para ver todos.")
+            st.dataframe(
+                df.head(25),
+                width='stretch',
+                hide_index=True,
+                height=min(400, 25 * 45 + 50),
+                column_config={
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width='medium'),
+                    'T.A.': st.column_config.TextColumn('Tensión Arterial', width='medium'),
+                    'F.C.': st.column_config.NumberColumn('Frec. Cardiaca', width='small'),
+                    'F.R.': st.column_config.NumberColumn('Frec. Respiratoria', width='small'),
+                    'Temp': st.column_config.NumberColumn('Temperatura °C', width='small', format="%.1f"),
+                    'SatO2': st.column_config.NumberColumn('Sat O2 %', width='small'),
+                    'Gluc': st.column_config.TextColumn('Glucemia', width='small'),
+                    'Observaciones': st.column_config.TextColumn('Observaciones', width='large')
+                }
+            )
+        else:
+            st.dataframe(
+                df,
+                width='stretch',
+                hide_index=True,
+                height=min(400, len(df) * 45 + 50),
+                column_config={
+                    'Fecha': st.column_config.TextColumn('Fecha/Hora', width='medium'),
+                    'T.A.': st.column_config.TextColumn('Tensión Arterial', width='medium'),
+                    'F.C.': st.column_config.NumberColumn('Frec. Cardiaca', width='small'),
+                    'F.R.': st.column_config.NumberColumn('Frec. Respiratoria', width='small'),
+                    'Temp': st.column_config.NumberColumn('Temperatura °C', width='small', format="%.1f"),
+                    'SatO2': st.column_config.NumberColumn('Sat O2 %', width='small'),
+                    'Gluc': st.column_config.TextColumn('Glucemia', width='small'),
+                    'Observaciones': st.column_config.TextColumn('Observaciones', width='large')
+                }
+            )
 
         # Botón para descargar
         csv = df.to_csv(index=False).encode('utf-8')

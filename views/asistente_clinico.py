@@ -287,11 +287,20 @@ def _tab_resumen_clinico(dashboard: dict, datos: dict):
         consumos = datos.get("consumos", [])
         if consumos:
             conteo = Counter(str(c.get("insumo", c.get("material", "Otro"))) for c in consumos)
-            st.dataframe(
-                {"Insumo": list(conteo.keys()), "Cantidad": list(conteo.values())},
-                width='stretch',
-                hide_index=True,
-            )
+            df_consumos = {"Insumo": list(conteo.keys()), "Cantidad": list(conteo.values())}
+            if es_movil and len(conteo) > 25:
+                st.caption(f"Mostrando 25 de {len(conteo)} registros. Usá escritorio para ver todos.")
+                st.dataframe(
+                    {k: v[:25] for k, v in df_consumos.items()},
+                    width='stretch',
+                    hide_index=True,
+                )
+            else:
+                st.dataframe(
+                    df_consumos,
+                    width='stretch',
+                    hide_index=True,
+                )
         else:
             st.caption("No hay registros de consumos de insumos.")
 

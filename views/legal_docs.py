@@ -211,19 +211,21 @@ def _render_consent_tab(mi_empresa, user):
             st.write(f"**{ok}/{total}** consentimientos verificados correctamente.")
 
     if consents:
-        st.dataframe(
-            [
-                {
-                    "Paciente": c.get("paciente", ""),
-                    "Fecha": str(c.get("fecha", ""))[:10],
-                    "Firmante": c.get("firmante", ""),
-                    "Vinculo": c.get("vinculo", ""),
-                    "Estado": "Revocado" if c.get("revocado") else ("Vencido" if str(c.get("fecha", ""))[:10] < hoy_str else "Vigente"),
-                }
-                for c in reversed(consents[-50:])
-            ],
-            use_container_width=True,
-        )
+        consents_data = [
+            {
+                "Paciente": c.get("paciente", ""),
+                "Fecha": str(c.get("fecha", ""))[:10],
+                "Firmante": c.get("firmante", ""),
+                "Vinculo": c.get("vinculo", ""),
+                "Estado": "Revocado" if c.get("revocado") else ("Vencido" if str(c.get("fecha", ""))[:10] < hoy_str else "Vigente"),
+            }
+            for c in reversed(consents[-50:])
+        ]
+        if es_movil and len(consents_data) > 25:
+            st.caption(f"Mostrando 25 de {len(consents_data)} registros. Usá escritorio para ver todos.")
+            st.dataframe(consents_data[:25], use_container_width=True)
+        else:
+            st.dataframe(consents_data, use_container_width=True)
 
         st.divider()
         st.subheader("Revocar consentimiento")
@@ -281,7 +283,11 @@ def _render_audit_trail_tab(mi_empresa, user):
             }
             for e in reversed(entries[-show:])
         ]
-        st.dataframe(df, use_container_width=True)
+        if es_movil and len(df) > 25:
+            st.caption(f"Mostrando 25 de {len(df)} registros. Usá escritorio para ver todos.")
+            st.dataframe(df[:25], use_container_width=True)
+        else:
+            st.dataframe(df, use_container_width=True)
 
         if st.button("Verificar integridad de la cadena", use_container_width=True):
             from core.audit_trail import get_audit_trail
