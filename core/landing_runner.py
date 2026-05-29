@@ -165,6 +165,38 @@ def render_publicidad_y_detener() -> None:
     # CSS mejorado para la landing
     st.markdown(f"""<style>
     {LANDING_CHROME_CSS}
+    /* GPU-safe override para touch: sin blur, gradientes planos */
+    @media (hover: none) and (pointer: coarse) {{
+        .stApp {{ background: #03050a !important; }}
+        .block-container > div:first-of-type {{
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }}
+        .mc-lp-hero-title {{
+            background: none !important;
+            -webkit-text-fill-color: #f4f7fb !important;
+            color: #f4f7fb !important;
+        }}
+        .mc-lp-btn-primary {{
+            background: #2563eb !important;
+            box-shadow: none !important;
+        }}
+        .mc-lp-card {{
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: rgba(255,255,255,0.04) !important;
+            box-shadow: none !important;
+        }}
+        .mc-lp-sticky-btn-wrap a {{
+            background: #2563eb !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+        }}
+        *, *::before, *::after {{
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }}
+    }}
     /* Mejoras visuales landing */
     .mc-lp-hero-title {{
         font-size: clamp(1.8rem, 4vw, 3.2rem) !important;
