@@ -176,8 +176,6 @@ def _inject_mobile_css() -> None:
         log_event("mobile_css", f"carga_falla:{type(exc).__name__}:{exc}")
 
 
-_inject_mobile_css()
-
 from core.atajos_teclado import inject_atajos_teclado, render_ayuda_atajos
 inject_atajos_teclado()
 
@@ -228,6 +226,9 @@ try:
     inject_pwa_headers()
 except Exception as exc:
     log_event("pwa", f"inject_pwa_headers_falla:{type(exc).__name__}:{exc}")
+
+# CSS mobile post-login (solo para la app, no para landing/login)
+_inject_mobile_css()
 
 try:
     from core.ui_liviano import render_mc_liviano_cliente, render_mobile_sidebar_toggle
