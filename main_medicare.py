@@ -60,8 +60,13 @@ aplicar_css_base()
 
 
 def _inject_mobile_css_asset() -> None:
-    """Carga los parches responsive tambien en la landing publica."""
+    """Carga los parches responsive y viewport para mobile."""
     try:
+        # Viewport meta tag para escalar correctamente en movil
+        st.markdown(
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">',
+            unsafe_allow_html=True,
+        )
         mobile_css_path = Path(__file__).resolve().parent / "assets" / "mobile.css"
         if mobile_css_path.exists():
             mobile_css_content = mobile_css_path.read_text(encoding="utf-8")

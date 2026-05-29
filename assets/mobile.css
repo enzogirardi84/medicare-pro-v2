@@ -34,8 +34,11 @@
         margin-right: 0 !important;
         left: 0 !important;
         right: 0 !important;
+        padding: 0.5rem 0.6rem !important;
         transform: none !important;
-        overflow-x: hidden !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
         box-sizing: border-box !important;
     }
 
