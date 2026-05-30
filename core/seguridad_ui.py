@@ -350,44 +350,41 @@ def render_evolucion_form(paciente_sel: str, profesional: str) -> Optional[dict]
 # 6. SESSION TIMEOUT INDICATOR (usando st.fragment para eficiencia)
 # ═══════════════════════════════════════════════════════════════════
 
-@st.fragment(run_every=5)
-def _timeout_fragment() -> None:
-    """Fragmento aislado que solo actualiza el contador cada 5s.
-    No obliga a re-renderizar el resto de la app."""
-    last_activity = st.session_state.get("_session_last_activity")
-    if last_activity is None:
-        st.session_state["_session_last_activity"] = time.time()
-        return
-
-    elapsed = time.time() - last_activity
-    remaining = SESSION_TIMEOUT_MINUTES * 60 - elapsed
-
-    if remaining <= 0:
-        _auto_save_and_logout()
-        return
-
-    mins = int(remaining // 60)
-    secs = int(remaining % 60)
-    color = "#94a3b8" if mins > 10 else ("#f59e0b" if mins > 2 else "#ef4444")
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(
-        f"<div style='font-size:0.75rem;color:{color};text-align:center;'>"
-        f"Sesion: {mins:02d}:{secs:02d}</div>",
-        unsafe_allow_html=True,
-    )
-
-    if mins < 2 and not st.session_state.get("_session_timeout_warning_shown"):
-        st.session_state["_session_timeout_warning_shown"] = True
-        st.sidebar.warning("La sesion expirara en menos de 2 minutos. Los cambios se guardaran automaticamente.")
-
-
 def render_session_timeout_indicator() -> None:
-    """Wrapper que invoca el fragment del timeout."""
+    """Muestra el tiempo restante de sesion en la barra lateral.
+
+    NOTA: No usa st.fragment porque los fragmentos no soportan
+    st.sidebar. Se ejecuta en cada rerun pero es ligero.
+    """
     try:
-        _timeout_fragment()
+        last_activity = st.session_state.get("_session_last_activity")
+        if last_activity is None:
+            st.session_state["_session_last_activity"] = time.time()
+            return
+
+        elapsed = time.time() - last_activity
+        remaining = SESSION_TIMEOUT_MINUTES * 60 - elapsed
+
+        if remaining <= 0:
+            _auto_save_and_logout()
+            return
+
+        mins = int(remaining // 60)
+        secs = int(remaining % 60)
+        color = "#94a3b8" if mins > 10 else ("#f59e0b" if mins > 2 else "#ef4444")
+
+        st.sidebar.markdown("---")
+        st.sidebar.markdown(
+            f"<div style='font-size:0.75rem;color:{color};text-align:center;'>"
+            f"Sesion: {mins:02d}:{secs:02d}</div>",
+            unsafe_allow_html=True,
+        )
+
+        if mins < 2 and not st.session_state.get("_session_timeout_warning_shown"):
+            st.session_state["_session_timeout_warning_shown"] = True
+            st.sidebar.warning("La sesion expirara en menos de 2 minutos. Los cambios se guardaran automaticamente.")
     except Exception as exc:
-        log_event("seguridad_ui", f"timeout_fragment_error:{type(exc).__name__}")
+        log_event("seguridad_ui", f"timeout_indicator_error:{type(exc).__name__}")
 
 
 def _auto_save_and_logout() -> None:
