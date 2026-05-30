@@ -1,4 +1,4 @@
-﻿"""CSS de la landing pre-login (extraido de _landing_html_parts.py)."""
+"""CSS de la landing pre-login (extraido de _landing_html_parts.py)."""
 
 _PART_1 = """
             <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1345,6 +1345,7 @@ _PART_4 = """
 
               </style>
             """
+
 
 
 

@@ -1,4 +1,4 @@
-﻿"""HTML markup de la landing pre-login (extraido de _landing_html_parts.py)."""
+"""HTML markup de la landing pre-login (extraido de _landing_html_parts.py)."""
 
 _PART_5 = """
             <div class="mc-lp">
@@ -367,6 +367,7 @@ _PART_7 = """
               </div>
             </div>
             """
+
 
 
 
