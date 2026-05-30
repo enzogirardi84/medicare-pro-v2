@@ -122,7 +122,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     col_m2.metric("Pendiente de Cobro", f"${total_pendiente:,.2f}")
     col_m3.metric("Practicas Registradas", len(fact_paciente))
 
-    tabs_caja = st.tabs(["ðŸ’° Registrar cobro", "â³ Pendientes de Facturar", "ðŸ“‹ Historial del paciente", "ðŸ“Š AuditorÃ­a general"])
+    tabs_caja = st.tabs(["Registrar cobro", "Pendientes de facturar", "Historial", "Auditoria general"])
 
     with tabs_caja[0]:
       with st.form("caja_form", clear_on_submit=True):
