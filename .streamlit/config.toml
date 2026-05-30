@@ -8,9 +8,9 @@ font = "sans serif"
 
 [server]
 headless = true
-enableStaticServing = false
 enableCORS = false
 enableXsrfProtection = false
+enableStaticServing = false
 
 [runner]
 fastReruns = true

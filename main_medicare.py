@@ -612,8 +612,11 @@ except Exception as exc:
         "main",
         f"render_current_view_fallo:{vista_actual}:{type(exc).__name__}:{exc}",
     )
-    st.error(f"Error al cargar el módulo **{vista_actual}**. Consulta los logs del sistema.")
-    st.caption("Ocurrió un error inesperado. El equipo de soporte fue notificado.")
+    st.error(f"Error al cargar **{vista_actual}**")
+    st.caption("Ocurrió un error inesperado. Probá recargar la página (F5). Si el error persiste, avisá a soporte con el código del error.")
+    with st.expander("Detalle técnico"):
+        st.code(f"{type(exc).__name__}: {exc}", language="text")
+        st.caption(f"Módulo: {vista_actual} | Paciente: {paciente_sel}")
     try:
         report_exception(
             module=f"main.render_current_view.{vista_actual}",
