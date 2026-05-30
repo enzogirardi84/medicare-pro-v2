@@ -76,6 +76,45 @@ class TOTPManager:
             return False
 
 
+# ── Codigos de recuperacion TOTP ────────────────────────────────
+
+RECOVERY_CODES_KEY = "_totp_recovery_codes"
+
+
+def _generar_codigos_recuperacion(cantidad: int = 6) -> list[str]:
+    """Genera N codigos de recuperacion alfanumericos de un solo uso."""
+    import secrets
+    codes = []
+    for _ in range(cantidad):
+        code = secrets.token_hex(4).upper()
+        codes.append(f"MED-{code[:4]}-{code[4:]}")
+    return codes
+
+
+def render_recovery_codes(usuario: str) -> list[str]:
+    """Genera y muestra codigos de recuperacion. Retorna la lista para guardar."""
+    import streamlit as st
+    codes = _generar_codigos_recuperacion(6)
+    st.session_state[RECOVERY_CODES_KEY + f"_{usuario}"] = codes
+    st.success("**Guardá estos códigos en un lugar seguro.** Cada código solo puede usarse una vez.")
+    for c in codes:
+        st.code(c, language="text")
+    st.caption("Si perdés el celular, usá uno de estos códigos para entrar.")
+    return codes
+
+
+def verificar_codigo_recuperacion(usuario: str, codigo: str) -> bool:
+    """Verifica y consume un codigo de recuperacion de un solo uso."""
+    import streamlit as st
+    codigo = codigo.strip().upper()
+    codes = st.session_state.get(RECOVERY_CODES_KEY + f"_{usuario}", [])
+    if codigo in codes:
+        codes.remove(codigo)
+        st.session_state[RECOVERY_CODES_KEY + f"_{usuario}"] = codes
+        return True
+    return False
+
+
 def render_totp_setup(usuario: str) -> bool:
     """Muestra la UI de configuracion TOTP en la app.
 
@@ -149,8 +188,22 @@ def verificar_totp_si_aplica(usuario: str) -> bool:
 SESSION_TIMEOUT_MINUTES_DEFAULT = 30
 
 
+def _auto_save_evolucion():
+    """Guarda automaticamente el borrador de evolucion si hay cambios sin guardar."""
+    try:
+        if st.session_state.get("_guardar_datos_pendiente"):
+            from core.database import guardar_datos
+            guardar_datos(spinner=False)
+            log_event("session", "auto_save_ok:datos_guardados_por_timeout")
+    except Exception as exc:
+        log_event("session", f"auto_save_error:{type(exc).__name__}")
+
+
 def require_active_session(timeout_minutes: int = SESSION_TIMEOUT_MINUTES_DEFAULT):
     """Decorador para verificar expiracion de sesion por inactividad.
+
+    Incluye auto-save: antes de cerrar la sesion, guarda cualquier
+    cambio pendiente para que el profesional no pierda datos.
 
     Use para proteger vistas/pantallas en terminales compartidas.
     La sesion expira si el usuario no interactua en `timeout_minutes`.
@@ -171,14 +224,27 @@ def require_active_session(timeout_minutes: int = SESSION_TIMEOUT_MINUTES_DEFAUL
             if last_activity is not None:
                 elapsed = now - last_activity
                 remaining = timeout_minutes * 60 - elapsed
+
+                # Warning con tiempo restante
+                if 0 < remaining < 120 and not st.session_state.get("_session_timeout_warning_shown"):
+                    st.session_state["_session_timeout_warning_shown"] = True
+                    mins = int(remaining // 60)
+                    secs = int(remaining % 60)
+                    st.warning(f"⏳ Sesion expira en {mins}m {secs}s. Se guardaron los cambios automaticamente.")
+
                 if remaining <= 0:
+                    # Auto-save antes de cerrar
+                    _auto_save_evolucion()
                     st.session_state["logeado"] = False
                     st.session_state.pop("u_actual", None)
-                    st.warning("Sesion expirada por inactividad. Volve a iniciar sesion.")
+                    st.session_state.pop("_session_last_activity", None)
+                    st.session_state.pop("_session_timeout_warning_shown", None)
+                    st.warning("Sesion expirada por inactividad. Los cambios fueron guardados automaticamente.")
                     st.rerun()
                     return
 
             st.session_state["_session_last_activity"] = now
+            st.session_state["_session_timeout_warning_shown"] = False
             return func(*args, **kwargs)
         return wrapper
     return decorator

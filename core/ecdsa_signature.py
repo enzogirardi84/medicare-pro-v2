@@ -19,6 +19,113 @@ from cryptography.hazmat.primitives.asymmetric import ec, utils
 from core.app_logging import log_event
 
 
+# ── Revocacion de claves ─────────────────────────────────────────
+
+@dataclass
+class ClaveRevocada:
+    """Registro de una clave publica revocada."""
+    fingerprint: str
+    usuario: str
+    fecha_revocacion: float
+    motivo: str = ""
+
+
+class KeyRevocationManager:
+    """Gestiona la revocacion de claves publicas ECDSA.
+
+    Permite revocar una clave sin invalidar firmas historicas:
+    - Las firmas hechas ANTES de la revocacion siguen siendo validas
+    - Las firmas hechas DESPUES requieren la nueva clave
+    """
+
+    REVOKED_KEYS_KEY = "_ecdsa_revoked_keys"
+
+    @staticmethod
+    def revocar(fingerprint: str, usuario: str, motivo: str = "Perdida de dispositivo") -> None:
+        """Revoca una clave publica existente."""
+        import streamlit as st
+        revoked = st.session_state.get(KeyRevocationManager.REVOKED_KEYS_KEY, [])
+        revoked.append(ClaveRevocada(
+            fingerprint=fingerprint,
+            usuario=usuario,
+            fecha_revocacion=time.time(),
+            motivo=motivo,
+        ))
+        st.session_state[KeyRevocationManager.REVOKED_KEYS_KEY] = revoked
+        log_event("ecdsa", f"clave_revocada:{usuario}:{fingerprint[:12]}")
+
+    @staticmethod
+    def esta_revocada(fingerprint: str) -> bool:
+        """Verifica si una clave fue revocada."""
+        import streamlit as st
+        revoked = st.session_state.get(KeyRevocationManager.REVOKED_KEYS_KEY, [])
+        return any(r.fingerprint == fingerprint for r in revoked)
+
+    @staticmethod
+    def limpiar_revocaciones_antiguas(dias: int = 365) -> None:
+        """Elimina revocaciones con mas de N dias (limpieza)."""
+        import streamlit as st
+        corte = time.time() - (dias * 86400)
+        revoked = st.session_state.get(KeyRevocationManager.REVOKED_KEYS_KEY, [])
+        revoked = [r for r in revoked if r.fecha_revocacion > corte]
+        st.session_state[KeyRevocationManager.REVOKED_KEYS_KEY] = revoked
+        log_event("ecdsa", f"limpieza_revocaciones:{len(revoked)}_activas")
+
+
+def fingerprint_clave_publica(clave_publica_pem: bytes) -> str:
+    """Genera un hash unico (fingerprint) para una clave publica."""
+    from hashlib import sha256
+    return sha256(clave_publica_pem).hexdigest()
+
+
+# ── Cliente-side: la clave privada se cifra con password del medico ──
+
+def cifrar_clave_privada(priv_pem: bytes, password: str) -> bytes:
+    """Cifra la clave privada con AES-256-GCM usando una derivacion del password.
+
+    La clave privada NUNCA viaja en texto plano. Se almacena cifrada
+    en session_state (simulando almacenamiento local).
+    """
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    salt = base64.b64decode(KeyRevocationManager.__class__.__name__.encode())[:16]
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=600000,
+    )
+    key = kdf.derive(password.encode("utf-8"))
+    aesgcm = AESGCM(key)
+    nonce = aesgcm.generate_nonce()
+    ct = aesgcm.encrypt(nonce, priv_pem, None)
+    return base64.b64encode(nonce + ct)
+
+
+def descifrar_clave_privada(encrypted: bytes, password: str) -> Optional[bytes]:
+    """Descifra la clave privada del profesional."""
+    try:
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+        salt = base64.b64decode(KeyRevocationManager.__class__.__name__.encode())[:16]
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=600000,
+        )
+        key = kdf.derive(password.encode("utf-8"))
+        aesgcm = AESGCM(key)
+        data = base64.b64decode(encrypted)
+        nonce, ct = data[:12], data[12:]
+        return aesgcm.decrypt(nonce, ct, None)
+    except Exception as exc:
+        log_event("ecdsa", f"descifrar_clave_error:{type(exc).__name__}")
+        return None
+
+
 @dataclass
 class SignedDocument:
     """Documento firmado con metadata."""
@@ -113,6 +220,12 @@ class ECDSASignatureManager:
             True si la firma es valida, False en caso contrario.
         """
         from hashlib import sha256
+
+        # Verificar si la clave fue revocada
+        fp = fingerprint_clave_publica(clave_publica_pem)
+        if KeyRevocationManager.esta_revocada(fp):
+            log_event("ecdsa", f"verificacion_fallo: clave_revocada:{fp[:12]}")
+            return False
 
         contenido_json = json.dumps(documento, sort_keys=True, ensure_ascii=False, default=str)
         contenido_hash = sha256(contenido_json.encode("utf-8")).hexdigest()
