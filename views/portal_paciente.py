@@ -1,5 +1,6 @@
-"""Portal del Paciente - Autogestion, turnos, vacunas, documentos firmados."""
+﻿"""Portal del Paciente - Autogestion, turnos, vacunas, documentos firmados."""
 from __future__ import annotations
+from html import escape
 
 from datetime import datetime, timedelta
 
@@ -61,7 +62,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
     if turnos_pac:
         for _, t in turnos_pac[:5]:
             with st.container(border=True):
-                st.markdown(f"**{t.get('fecha', t.get('fecha_hora', '?'))}** — {t.get('profesional', t.get('tipo', '?'))}")
+                st.markdown(f"**{t.get('fecha', t.get('fecha_hora', '?'))}** â€” {t.get('profesional', t.get('tipo', '?'))}")
                 st.caption(f"Estado: {t.get('estado', 'Pendiente')}")
     else:
         st.info("No hay turnos programados.")
@@ -96,7 +97,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
     if cons_pac:
         for c in reversed(cons_pac[-10:]):
             with st.container(border=True):
-                st.markdown(f"**{c.get('fecha', '?')}** — {c.get('profesional', 'S/D')}")
+                st.markdown(f"**{c.get('fecha', '?')}** â€” {c.get('profesional', 'S/D')}")
                 st.caption((c.get("observaciones") or "")[:150])
     else:
         st.info("Sin documentos firmados.")
@@ -156,3 +157,4 @@ Documentos firmados: {len(cons_pac)} registros
             st.download_button("Descargar PDF", pdf_bytes, f"resumen_{dni}_{datetime.now().strftime('%Y%m%d')}.pdf", "application/pdf")
 
     st.caption(f"Documento generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} | Medicare Pro")
+

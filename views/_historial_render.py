@@ -1,8 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
+from html import escape
 
-"""Helpers de renderizado de secciones del Historial clínico.
+"""Helpers de renderizado de secciones del Historial clÃ­nico.
 
-Extraído de views/historial.py.
+ExtraÃ­do de views/historial.py.
 """
 import base64
 from typing import Any, Callable, Dict, List, Optional
@@ -21,7 +22,7 @@ from views._historial_utils import (
 
 
 def _img_movil(data: bytes, caption: str = "", width: int = 260, stretch: bool = False):
-    """Muestra imagen con tamaño reducido en móvil."""
+    """Muestra imagen con tamaÃ±o reducido en mÃ³vil."""
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
     if es_movil:
         if stretch:
@@ -74,7 +75,7 @@ def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) 
             with st.container(border=True):
                 st.markdown(f"**{reg.get('fecha', 'S/D')}**")
                 st.caption(
-                    f"Firmante: {reg.get('firmante', 'S/D')} | Vínculo: {reg.get('vinculo', 'S/D')} | "
+                    f"Firmante: {reg.get('firmante', 'S/D')} | VÃ­nculo: {reg.get('vinculo', 'S/D')} | "
                     f"DNI: {reg.get('dni_firmante', 'S/D')}"
                 )
                 if observaciones := reg.get("observaciones"):
@@ -88,7 +89,7 @@ def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) 
 
 
 def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
-    mostrar_adjuntos = st.checkbox("Cargar imágenes y PDF adjuntos", value=False, key=f"hist_adjuntos_{paciente_sel}")
+    mostrar_adjuntos = st.checkbox("Cargar imÃ¡genes y PDF adjuntos", value=False, key=f"hist_adjuntos_{paciente_sel}")
     with lista_plegable("Estudios en historia", count=len(registros), expanded=False, height=520):
         for idx, est in enumerate(registros):
             with st.container(border=True):
@@ -122,7 +123,7 @@ def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
             with st.container(border=True):
                 st.markdown(f"**{fh.get('fecha', '')}**")
                 st.caption(f"Registrado por: {fh.get('firma', 'S/D')}")
-                st.write(fh.get("descripcion", "Sin descripción"))
+                st.write(fh.get("descripcion", "Sin descripciÃ³n"))
                 if mostrar_fotos and (foto_b64 := fh.get("base64_foto")):
                     try:
                         _img_movil(base64.b64decode(foto_b64), stretch=True)
@@ -137,16 +138,16 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any], idx: int, pacien
     if estado == "Suspendida":
         log_event("historial_render", "error: Medicacion suspendida")
         st.error(
-            f"Medicación suspendida | Fecha: {registro.get('fecha_suspension', 'S/D')} | "
+            f"MedicaciÃ³n suspendida | Fecha: {registro.get('fecha_suspension', 'S/D')} | "
             f"Profesional: {registro.get('profesional_estado', 'S/D')}"
         )
     elif estado == "Modificada":
         st.warning(
-            f"Medicación modificada | Fecha: {registro.get('fecha_suspension', 'S/D')} | "
+            f"MedicaciÃ³n modificada | Fecha: {registro.get('fecha_suspension', 'S/D')} | "
             f"Profesional: {registro.get('profesional_estado', 'S/D')}"
         )
     else:
-        st.success("Medicación activa")
+        st.success("MedicaciÃ³n activa")
     if origen:
         if "papel" in str(origen).lower():
             st.info(f"Origen del registro: {origen}")
@@ -156,13 +157,13 @@ def _render_detalles_plan_terapeutico(registro: Dict[str, Any], idx: int, pacien
         st.caption(f"Motivo: {motivo}")
     if firma_b64 := registro.get("firma_b64"):
         try:
-            _img_movil(base64.b64decode(firma_b64), caption="Firma médica", width=220)
+            _img_movil(base64.b64decode(firma_b64), caption="Firma mÃ©dica", width=220)
         except Exception as e:
             log_event("historial_error", f"Error: {e}")
     if adjunto_b64 := registro.get("adjunto_papel_b64"):
         try:
             st.download_button(
-                "Descargar orden médica adjunta",
+                "Descargar orden mÃ©dica adjunta",
                 data=base64.b64decode(adjunto_b64),
                 file_name=registro.get("adjunto_papel_nombre", "indicacion_medica.pdf"),
                 mime=registro.get("adjunto_papel_tipo", "application/octet-stream"),
@@ -195,7 +196,7 @@ def _render_registros_genericos(
                     clave_formateada = str(clave).replace("_", " ").capitalize()
                     texto = str(valor)
                     if len(texto) > 1200:
-                        texto = texto[:1200] + "…"
+                        texto = texto[:1200] + "â€¦"
                     st.write(f"**{clave_formateada}:** {texto}")
 
 
@@ -234,3 +235,4 @@ def _render_lazy_download(
             container.info(unavailable_message)
         else:
             container.warning("No se pudo generar el archivo solicitado.")
+

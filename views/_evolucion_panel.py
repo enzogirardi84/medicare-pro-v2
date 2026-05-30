@@ -1,6 +1,7 @@
-"""Panel de evolución clínica."""
+﻿"""Panel de evoluciÃ³n clÃ­nica."""
 
 from __future__ import annotations
+from html import escape
 
 import base64
 import html
@@ -46,7 +47,7 @@ CANVAS_DISPONIBLE = bool(st_canvas)
 
 
 def _generar_pdf_historia_clinica(paciente_sel):
-    """Genera bytes del PDF de historia clínica."""
+    """Genera bytes del PDF de historia clÃ­nica."""
     detalles = st.session_state.get("db", {})
     mi_empresa = detalles.get("empresa", "")
     profesional = st.session_state.get("user", "")
@@ -81,22 +82,22 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
     profesional = user.get("nombre", "Sistema") if isinstance(user, dict) else "Sistema"
     _draft_key = f"_draft_evolucion_{paciente_sel}"
 
-    st.markdown("##### Evolución clínica")
+    st.markdown("##### EvoluciÃ³n clÃ­nica")
     st.divider()
 
     plantillas_evolucion = {
         "Libre": "",
-        "Clínica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
-        "SOAP": "S - Subjetivo (motivo / síntomas referidos):\nO - Objetivo (signos, examen físico):\nA - Evaluación / Diagnóstico:\nP - Plan y conducta:",
-        "Enfermería": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curación:\nTolerancia al procedimiento:\nIndicaciones para el próximo control:",
-        "Heridas": "Ubicación de la lesión:\nAspecto del lecho:\nExudado / olor:\nCuración aplicada:\nEvolución respecto al control previo:\n(Opcional: adjuntar foto con la cámara o un archivo debajo)",
-        "Respiratorio": "Saturación actual:\nDispositivo / flujo de oxígeno:\nTrabajo respiratorio:\nAuscultación:\nConducta y seguimiento:",
-        "EPOC / Asma": "Disnea (escala 0-10):\nUso de musculatura accesoria:\nSaturación / FEV1 estimado:\nBroncoespasmo / sibilancias:\nMedicación broncodilatadora aplicada:\nRespuesta y plan:",
-        "Neurológico / ACV": "Nivel de conciencia (GCS):\nFuerza y sensibilidad por miembro:\nLenguaje / afasia:\nNIHSS estimado:\nImagen solicitada:\nConducta y derivación:",
-        "Post-procedimiento": "Procedimiento realizado:\nAcceso / zona intervenida:\nComplicaciones inmediatas:\nEstado hemodinámico post:\nIndicaciones y cuidados:\nPróximo control:",
-        "Seguimiento crónico": "Diagnóstico de base:\nCumplimiento del tratamiento:\nSignos / síntomas actuales:\nLaboratorio / estudios recientes:\nAjuste de medicación:\nFecha próximo control:",
-        "Percentilo": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentación / hidratación:\nEvaluación general:\nPlan y recomendaciones:",
-        "Cuidados paliativos": "Síntomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las próximas horas:",
+        "ClÃ­nica general": "Motivo de la visita:\nSignos relevantes:\nConducta indicada:\nRespuesta del paciente:\nPlan y seguimiento:",
+        "SOAP": "S - Subjetivo (motivo / sÃ­ntomas referidos):\nO - Objetivo (signos, examen fÃ­sico):\nA - EvaluaciÃ³n / DiagnÃ³stico:\nP - Plan y conducta:",
+        "EnfermerÃ­a": "Procedimiento realizado:\nEstado general del paciente:\nSitio de acceso / curaciÃ³n:\nTolerancia al procedimiento:\nIndicaciones para el prÃ³ximo control:",
+        "Heridas": "UbicaciÃ³n de la lesiÃ³n:\nAspecto del lecho:\nExudado / olor:\nCuraciÃ³n aplicada:\nEvoluciÃ³n respecto al control previo:\n(Opcional: adjuntar foto con la cÃ¡mara o un archivo debajo)",
+        "Respiratorio": "SaturaciÃ³n actual:\nDispositivo / flujo de oxÃ­geno:\nTrabajo respiratorio:\nAuscultaciÃ³n:\nConducta y seguimiento:",
+        "EPOC / Asma": "Disnea (escala 0-10):\nUso de musculatura accesoria:\nSaturaciÃ³n / FEV1 estimado:\nBroncoespasmo / sibilancias:\nMedicaciÃ³n broncodilatadora aplicada:\nRespuesta y plan:",
+        "NeurolÃ³gico / ACV": "Nivel de conciencia (GCS):\nFuerza y sensibilidad por miembro:\nLenguaje / afasia:\nNIHSS estimado:\nImagen solicitada:\nConducta y derivaciÃ³n:",
+        "Post-procedimiento": "Procedimiento realizado:\nAcceso / zona intervenida:\nComplicaciones inmediatas:\nEstado hemodinÃ¡mico post:\nIndicaciones y cuidados:\nPrÃ³ximo control:",
+        "Seguimiento crÃ³nico": "DiagnÃ³stico de base:\nCumplimiento del tratamiento:\nSignos / sÃ­ntomas actuales:\nLaboratorio / estudios recientes:\nAjuste de medicaciÃ³n:\nFecha prÃ³ximo control:",
+        "Percentilo": "Motivo de consulta:\nPeso / talla / temperatura:\nAlimentaciÃ³n / hidrataciÃ³n:\nEvaluaciÃ³n general:\nPlan y recomendaciones:",
+        "Cuidados paliativos": "SÃ­ntomas predominantes:\nDolor / confort:\nApoyo familiar:\nIntervenciones realizadas:\nPlan para las prÃ³ximas horas:",
     }
 
     if puede_registrar:
@@ -109,12 +110,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 c1 = st.container()
                 c2 = st.container()
                 c3 = st.container()
-            c1.metric("Última evolución", ultima_ev.get("fecha", "S/D"))
+            c1.metric("Ãšltima evoluciÃ³n", ultima_ev.get("fecha", "S/D"))
             c2.metric("Profesional", ultima_ev.get("firma") or "S/D")
             c3.metric("Total evoluciones", len(evs_all))
 
         plantilla = st.selectbox(
-            "Plantilla de evolución",
+            "Plantilla de evoluciÃ³n",
             list(plantillas_evolucion.keys()),
             key="evol_plantilla_sel",
         )
@@ -125,14 +126,14 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             st.session_state[f"evol_plantilla_prev_{paciente_sel}"] = plantilla
 
         if plantilla != "Libre":
-            st.caption("Se carga una guía sugerida. Podés editarla antes de guardar.")
+            st.caption("Se carga una guÃ­a sugerida. PodÃ©s editarla antes de guardar.")
 
         _value_for_textarea = st.session_state.get(_draft_key, "")
 
         _ai_suggest_key = f"_ai_suggest_{paciente_sel}"
         if is_llm_enabled():
-            if st.button("🤖 Sugerir evolución con IA", key=_ai_suggest_key, use_container_width=True):
-                with st.spinner("Generando sugerencia de evolución..."):
+            if st.button("ðŸ¤– Sugerir evoluciÃ³n con IA", key=_ai_suggest_key, use_container_width=True):
+                with st.spinner("Generando sugerencia de evoluciÃ³n..."):
                     assistant = get_evolution_assistant()
                     vitales = st.session_state.get("vitales_db") or []
                     ultimos_vitales = vitales[-1] if vitales else None
@@ -158,20 +159,20 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
         with st.form("evol", clear_on_submit=False):
             nota = st.text_area(
-                "Nota médica / Evolución clínica",
+                "Nota mÃ©dica / EvoluciÃ³n clÃ­nica",
                 value=_value_for_textarea,
                 height=220,
-                placeholder="Escribir aquí la evolución...",
+                placeholder="Escribir aquÃ­ la evoluciÃ³n...",
                 key="evol_nota_textarea",
             )
             st.session_state[_draft_key] = nota
             if nota.strip():
                 st.session_state["_draft_pending"] = True
             if st.session_state.get(_draft_key, "").strip():
-                st.caption("💾 Borrador guardado automáticamente")
+                st.caption("ðŸ’¾ Borrador guardado automÃ¡ticamente")
 
-            desc_w = st.text_input("Descripción de la herida / lesión / imagen clínica (opcional)")
-            st.markdown("**Fotografía clínica** (herida, lesión, punto de acceso, etc.) — una sola imagen por guardado.")
+            desc_w = st.text_input("DescripciÃ³n de la herida / lesiÃ³n / imagen clÃ­nica (opcional)")
+            st.markdown("**FotografÃ­a clÃ­nica** (herida, lesiÃ³n, punto de acceso, etc.) â€” una sola imagen por guardado.")
             if not es_movil:
                 col_up, col_cam = st.columns(2)
             else:
@@ -179,12 +180,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 col_cam = st.container()
             with col_up:
                 archivo_foto = st.file_uploader(
-                    "Subir foto desde el dispositivo (galería o archivos)",
+                    "Subir foto desde el dispositivo (galerÃ­a o archivos)",
                     type=["png", "jpg", "jpeg", "webp"],
                     key="evol_foto_archivo",
                 )
             with col_cam:
-                usar_camara = st.checkbox("Usar cámara ahora", key="evol_usar_cam")
+                usar_camara = st.checkbox("Usar cÃ¡mara ahora", key="evol_usar_cam")
                 foto_cam = st.camera_input("Capturar imagen", key="cam_evol") if usar_camara else None
 
             imagen_subida = st.file_uploader(
@@ -194,12 +195,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 label_visibility="collapsed",
             )
 
-            guardar = st.form_submit_button("Firmar y guardar evolución", use_container_width=True, type="primary")
+            guardar = st.form_submit_button("Firmar y guardar evoluciÃ³n", use_container_width=True, type="primary")
 
         if guardar:
             if not nota.strip():
                 log_event("evolucion_panel", "error: nota_vacia")
-                st.error("La nota médica no puede estar vacía.")
+                st.error("La nota mÃ©dica no puede estar vacÃ­a.")
             else:
                 fecha_n = ahora().strftime("%d/%m/%Y %H:%M")
                 if "evoluciones_db" not in st.session_state or not isinstance(st.session_state["evoluciones_db"], list):
@@ -211,12 +212,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 if imagen_subida is not None:
                     ok, msg = validate_uploaded_file(imagen_subida)
                     if not ok:
-                        st.error(f"Archivo no válido: {msg}")
+                        st.error(f"Archivo no vÃ¡lido: {msg}")
                         st.stop()
                     imagen_bytes = imagen_subida.read()
                     max_img_bytes = 2 * 1024 * 1024
                     if len(imagen_bytes) > max_img_bytes:
-                        st.warning("⚠️ La imagen supera 2MB. Se redimensionará automáticamente.")
+                        st.warning("âš ï¸ La imagen supera 2MB. Se redimensionarÃ¡ automÃ¡ticamente.")
                         try:
                             imagen_bytes = _optimizar_foto_segura(imagen_bytes)
                         except Exception as exc:
@@ -247,7 +248,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 if archivo_foto is not None:
                     ok, msg = validate_uploaded_file(archivo_foto)
                     if not ok:
-                        st.error(f"Archivo no válido: {msg}")
+                        st.error(f"Archivo no vÃ¡lido: {msg}")
                         st.stop()
                     raw_foto = archivo_foto.getvalue()
                 elif foto_cam is not None:
@@ -273,21 +274,21 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
                 try:
                     registrar_auditoria_legal(
-                        "Evolución clínica",
+                        "EvoluciÃ³n clÃ­nica",
                         paciente_sel,
-                        "Nueva evolución",
+                        "Nueva evoluciÃ³n",
                         profesional,
                         user.get("matricula", "") if isinstance(user, dict) else "",
-                        f"Se registró evolución con plantilla {plantilla}.",
+                        f"Se registrÃ³ evoluciÃ³n con plantilla {plantilla}.",
                     )
                 except Exception as exc:
                     log_event("evolucion_panel", f"auditoria_error:{type(exc).__name__}:{exc}")
 
                 if not guardar_datos(spinner=True):
-                    st.error("Error al guardar la evolución. Revisá la conexión e intentá de nuevo.")
+                    st.error("Error al guardar la evoluciÃ³n. RevisÃ¡ la conexiÃ³n e intentÃ¡ de nuevo.")
                     st.stop()
 
-                # ── Firma Digital RSA (Ley 25.506) ─────────────────────────
+                # â”€â”€ Firma Digital RSA (Ley 25.506) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 try:
                     from core.digital_signature import DigitalSignatureManager, DocumentType
                     _dsig = DigitalSignatureManager()
@@ -299,7 +300,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             _dsig.generate_keypair(_user_id)
                             log_event("evolucion", f"rsa_keys_generated:{_user_id}")
 
-                        # Firmar la evolución
+                        # Firmar la evoluciÃ³n
                         _doc_content = {
                             "paciente": paciente_sel,
                             "nota": nota.strip(),
@@ -359,7 +360,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 st.session_state["_draft_pending"] = False
                 st.session_state.pop(_draft_key, None)
                 st.session_state[f"evol_plantilla_prev_{paciente_sel}"] = "Libre"
-                queue_toast("Evolución guardada correctamente.")
+                queue_toast("EvoluciÃ³n guardada correctamente.")
                 st.rerun()
     else:
         st.caption("La carga de nuevas evoluciones queda deshabilitada para este rol.")
@@ -370,9 +371,9 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
     if evs_paciente:
         st.divider()
-        st.markdown("#### Historial de evoluciones clínicas", unsafe_allow_html=True)
+        st.markdown("#### Historial de evoluciones clÃ­nicas", unsafe_allow_html=True)
 
-        evol_search = st.text_input("🔍 Buscar en evoluciones", placeholder="Palabra clave...", key="evol_fulltext_search")
+        evol_search = st.text_input("ðŸ” Buscar en evoluciones", placeholder="Palabra clave...", key="evol_fulltext_search")
         if evol_search.strip():
             q = evol_search.strip().lower()
             evs_paciente = [
@@ -397,7 +398,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             c1 = st.container()
             c2 = st.container()
         with c1:
-            st.markdown(f"**{len(evs_paciente)} evolución(es)**")
+            st.markdown(f"**{len(evs_paciente)} evoluciÃ³n(es)**")
         with c2:
             if st.button("Descargar PDF", key=f"btn_pdf_historial_{paciente_sel}", type="primary", use_container_width=True):
                 pdf_bytes = _generar_pdf_historia_clinica(paciente_sel)
@@ -420,7 +421,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             firma = str(ev.get("firma", ""))
             es_urgente = ev.get("urgente", False) or "urgente" in nota.lower()
 
-            with st.expander(f"Evolución #{ev_num} — {fecha} — {plantilla}", key=f"ev_exp_{idx}_{ev.get('id', '')}"):
+            with st.expander(f"EvoluciÃ³n #{ev_num} â€” {fecha} â€” {plantilla}", key=f"ev_exp_{idx}_{ev.get('id', '')}"):
                 if es_urgente:
                     st.error("Marcada como URGENTE")
                 st.markdown(f"**Fecha:** `{html.escape(fecha)}`", unsafe_allow_html=True)
@@ -472,16 +473,16 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             )
                             _valido, _msg = _dsig_verify.verify_signature(_signed_doc)
                             if _valido:
-                                st.success(f"✅ Firma digital RSA {firma_digital.get('signature_algorithm', '')} válida — {firma_digital.get('signer_name', '')} ({(firma_digital.get('signed_at') or '')[:10]})")
+                                st.success(f"âœ… Firma digital RSA {firma_digital.get('signature_algorithm', '')} vÃ¡lida â€” {firma_digital.get('signer_name', '')} ({(firma_digital.get('signed_at') or '')[:10]})")
                             else:
-                                st.error(f"🔴 Firma digital INVÁLIDA: {_msg}")
+                                st.error(f"ðŸ”´ Firma digital INVÃLIDA: {_msg}")
                         except Exception as exc:
                             log_event("evolucion", f"verificar_firma_error:{type(exc).__name__}:{exc}")
-                            st.success(f"✅ Firmado por {firma} (verificación offline)")
+                            st.success(f"âœ… Firmado por {firma} (verificaciÃ³n offline)")
                     else:
-                        st.success(f"✅ Firmado por {firma}")
+                        st.success(f"âœ… Firmado por {firma}")
 
-                if puede_borrar and st.button("Borrar esta evolución", key=f"borrar_ev_{ev_num}_{idx}_{paciente_sel}", type="secondary", use_container_width=True):
+                if puede_borrar and st.button("Borrar esta evoluciÃ³n", key=f"borrar_ev_{ev_num}_{idx}_{paciente_sel}", type="secondary", use_container_width=True):
                     real_idx = (total_evs - 1) - idx
                     if 0 <= real_idx < len(evs_paciente):
                         ev_borrada = evs_paciente.pop(real_idx)
@@ -502,7 +503,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             )
                         except Exception as exc:
                             log_event("evolucion", f"auditoria_legal tras borrado fallo: {type(exc).__name__}")
-                        queue_toast(f"Evolución #{ev_num} eliminada.", icon="🗑️")
+                        queue_toast(f"EvoluciÃ³n #{ev_num} eliminada.", icon="ðŸ—‘ï¸")
                         st.rerun()
 
         if puede_borrar:
@@ -512,7 +513,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 col_chk = st.container()
                 col_btn = st.container()
             confirmar_borrado = col_chk.checkbox("Confirmar", key=f"conf_del_evol_{paciente_sel}")
-            if col_btn.button("Borrar última evolución", use_container_width=True, disabled=not confirmar_borrado):
+            if col_btn.button("Borrar Ãºltima evoluciÃ³n", use_container_width=True, disabled=not confirmar_borrado):
                 if not evs_paciente:
                     st.error("No hay evoluciones para borrar.")
                 else:
@@ -525,19 +526,19 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         guardar_datos(spinner=True)
                     except Exception as exc:
                         log_event("evolucion", f"guardar_datos borrado fallo: {type(exc).__name__}")
-                    queue_toast("Evolución borrada.")
+                    queue_toast("EvoluciÃ³n borrada.")
                     st.rerun()
     else:
         bloque_estado_vacio(
-            "Sin evoluciones todavía",
-            "Este paciente no tiene evoluciones médicas registradas.",
-            sugerencia="Usá el formulario de arriba para cargar la primera evolución con firma.",
+            "Sin evoluciones todavÃ­a",
+            "Este paciente no tiene evoluciones mÃ©dicas registradas.",
+            sugerencia="UsÃ¡ el formulario de arriba para cargar la primera evoluciÃ³n con firma.",
         )
 
     fotos_heridas = get_patient_records("fotos_heridas_db", paciente_sel)
     if fotos_heridas:
         st.divider()
-        st.markdown("#### Línea de tiempo de heridas y lesiones (fotos clínicas)")
+        st.markdown("#### LÃ­nea de tiempo de heridas y lesiones (fotos clÃ­nicas)")
         limite_fotos = seleccionar_limite_registros(
             "Fotos a mostrar",
             len(fotos_heridas),
@@ -545,7 +546,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             default=12,
             opciones=(6, 12, 20, 30),
         )
-        with lista_plegable("Galería de fotos clínicas", count=min(limite_fotos, len(fotos_heridas)), expanded=False, height=520):
+        with lista_plegable("GalerÃ­a de fotos clÃ­nicas", count=min(limite_fotos, len(fotos_heridas)), expanded=False, height=520):
             for foto in reversed(fotos_heridas[-limite_fotos:]):
                 with st.container(border=True):
                     st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")
@@ -558,11 +559,11 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
     st.divider()
     st.markdown("##### Firma digital del paciente / familiar")
-    st.caption("Solicitar firma al finalizar la consulta, después de completar la evolución clínica.")
+    st.caption("Solicitar firma al finalizar la consulta, despuÃ©s de completar la evoluciÃ³n clÃ­nica.")
     if CANVAS_DISPONIBLE:
         firma_cfg = obtener_config_firma("evolucion")
         metodo_firma = st.radio(
-            "Método de firma",
+            "MÃ©todo de firma",
             ["Subir foto de la firma (recomendado en celulares viejos)", "Firmar en pantalla"],
             horizontal=False,
             key="metodo_firma_evolucion",
@@ -576,7 +577,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 key="firma_upload_evolucion",
             )
         else:
-            st.caption("Usá el lienzo solo si el teléfono responde fluido.")
+            st.caption("UsÃ¡ el lienzo solo si el telÃ©fono responde fluido.")
             canvas_result = st_canvas(
                 fill_color="rgba(255, 255, 255, 1)",
                 stroke_width=firma_cfg["stroke_width"],
@@ -611,11 +612,12 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                 queue_toast("Firma guardada correctamente.")
                 st.rerun()
             else:
-                st.error("No se detectó una firma válida. Podés subir una foto o usar el lienzo.")
+                st.error("No se detectÃ³ una firma vÃ¡lida. PodÃ©s subir una foto o usar el lienzo.")
     else:
-        st.warning("Librería de firma no disponible. Podés subir una imagen de la firma.")
+        st.warning("LibrerÃ­a de firma no disponible. PodÃ©s subir una imagen de la firma.")
         st.file_uploader(
             "Subir imagen de la firma",
             type=["png", "jpg", "jpeg"],
             key="firma_upload_evolucion_sin_canvas",
         )
+
