@@ -206,8 +206,20 @@ def render_login_totp(login_name: str) -> bool:
 # 4. ENROLAMIENTO TOTP (con QR cacheado)
 # ═══════════════════════════════════════════════════════════════════
 
-@ui_error_boundary("Error en la configuracion de 2FA.")
 def render_totp_enrollment(usuario: str) -> None:
+    try:
+        _render_totp_enrollment_impl(usuario)
+    except ImportError as exc:
+        st.error("Falta una libreria necesaria para 2FA. Contacta a soporte.")
+        st.caption(f"Detalle: {exc}")
+    except Exception as exc:
+        log_event("seguridad_ui", f"totp_enrollment_error:{type(exc).__name__}:{exc}")
+        st.error("Error en la configuracion de 2FA.")
+        with st.expander("Detalle"):
+            st.code(f"{type(exc).__name__}: {exc}", language="text")
+
+
+def _render_totp_enrollment_impl(usuario: str) -> None:
     """Configuracion de 2FA con QR cacheado y codigos de recuperacion."""
     st.markdown("### Autenticacion de dos factores (2FA)")
     st.caption("Configura TOTP con tu app de autenticacion.")
