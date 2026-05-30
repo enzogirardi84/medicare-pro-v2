@@ -357,7 +357,7 @@ def render_red_profesionales(mi_empresa, user, rol):
                 with lista_plegable("Perfiles coincidentes", count=n_perfiles, expanded=False, height=560):
                     for _, reg in df.head(limite).iterrows():
                         with st.container(border=True):
-                            st.markdown(f"**{reg.get('nombre', '')}** | {reg.get('titulo', '')}")
+                            st.markdown(f"**{escape(str(reg.get('nombre', '')))}** | {escape(str(reg.get('titulo', '')))}")
                             st.caption(
                                 f"Tipo: {reg.get('tipo', 'S/D')} | Especialidad: {reg.get('especialidad', 'S/D')} | "
                                 f"Organizacion: {reg.get('organizacion', 'S/D')}"

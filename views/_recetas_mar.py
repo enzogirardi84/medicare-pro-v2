@@ -734,9 +734,9 @@ def render_sabana_compacta(plan_dia_df, paciente_sel, mi_empresa, user, fecha_ho
                 st.markdown('<span class="mc-cortina-badge mc-cortina-badge--pend">Pendiente</span>', unsafe_allow_html=True)
 
             st.caption("Compará **hora programada** con **hora real**. Podés registrar con **hora libre** si el paciente no estaba, hubo procedimiento o cambió el esquema.")
-            st.markdown(f"**Vía / Frecuencia:** {texto_corto(fila.get('Via', 'S/D'), max_len=22)} | {texto_corto(fila.get('Frecuencia', 'S/D'), max_len=28)}")
-            st.markdown(f"**Detalle:** {texto_corto(fila.get('Detalle / velocidad', ''), fallback='Sin detalle operativo', max_len=120)}")
-            st.markdown(f"**Hora real en sistema:** {texto_corto(fila.get('Hora realizada', ''), fallback='Sin registro aún', max_len=24)}")
+            st.markdown(f"**Vía / Frecuencia:** {texto_corto(escape(str(fila.get('Via', 'S/D'))), max_len=22)} | {texto_corto(escape(str(fila.get('Frecuencia', 'S/D'))), max_len=28)}")
+            st.markdown(f"**Detalle:** {texto_corto(escape(str(fila.get('Detalle / velocidad', ''))), fallback='Sin detalle operativo', max_len=120)}")
+            st.markdown(f"**Hora real en sistema:** {texto_corto(escape(str(fila.get('Hora realizada', ''))), fallback='Sin registro aún', max_len=24)}")
             observacion = str(fila.get("Observacion", "") or "").strip()
             if observacion:
                 st.markdown(f"**Justificación / obs.:** {texto_corto(observacion, fallback='Sin observación', max_len=120)}")

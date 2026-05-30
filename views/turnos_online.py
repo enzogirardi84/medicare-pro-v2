@@ -190,8 +190,8 @@ def render_turnos_online(mi_empresa, rol):
                         if t.get('paciente'):
                             c_acc.markdown(f"Paciente: {t['paciente']}")
                     else:
-                        st.markdown(f"**{t.get('profesional','?')}**")
-                        st.markdown(f"{t.get('fecha','?')} {t.get('horario','?')}hs")
+                        st.markdown(f"**{escape(str(t.get('profesional','?')))}**")
+                        st.markdown(f"{escape(str(t.get('fecha','?')))} {escape(str(t.get('horario','?')))}hs")
                         col = color.get(est, "#fff")
                         st.markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
                         if t.get('paciente'):
