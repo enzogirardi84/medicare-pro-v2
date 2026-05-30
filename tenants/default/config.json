@@ -1,0 +1,8 @@
+{
+  "nombre": "MediCare PRO - Instancia Default",
+  "color_primario": "#1e3a5f",
+  "color_secundario": "#2d5a8e",
+  "session_timeout_min": 480,
+  "max_login_attempts": 5,
+  "lockout_seconds": 300
+}

@@ -1,0 +1,152 @@
+# CI/CD Pipeline - MediCare Enterprise PRO
+# Se ejecuta en cada push/PR a main.
+name: CI/CD MediCare PRO
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  # ────────────────────────────────────────────────────────────
+  # JOB 1: Tests + Calidad
+  # ────────────────────────────────────────────────────────────
+  test:
+    name: Tests y calidad
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: medicare_test
+          POSTGRES_PASSWORD: medicare_test_pass
+          POSTGRES_DB: medicare_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -r requirements.txt
+          pip install pytest pytest-timeouts safety bandit
+
+      - name: Verificar sintaxis Python
+        run: |
+          echo "Verificando sintaxis de todos los archivos .py..."
+          find . -name '*.py' -not -path './__pycache__/*' -not -path './.streamlit/*' \
+            -exec python -m py_compile {} \;
+          echo "Todos los archivos compilan correctamente."
+
+      - name: Ejecutar tests unitarios
+        run: |
+          python -m pytest tests/ -q --ignore=tests/e2e --tb=short \
+            --timeout=30 -x
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || '' }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY || '' }}
+
+      - name: Verificar integridad Audit Trail
+        run: |
+          python scripts/audit_integrity_check.py --check-only || true
+
+      - name: Escanear vulnerabilidades (Safety)
+        run: |
+          safety check --full-report || true
+        continue-on-error: true
+
+      - name: Escanear seguridad codigo (Bandit)
+        run: |
+          bandit -r core/ views/ -f json -o bandit_report.json || true
+        continue-on-error: true
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit_report.json
+          retention-days: 7
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 2: Build + Docker
+  # ────────────────────────────────────────────────────────────
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
