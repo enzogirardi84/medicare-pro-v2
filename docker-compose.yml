@@ -14,6 +14,25 @@ services:
     image: ghcr.io/enzogirardi84/medicare-pro-v2:latest
     container_name: medicare-app
     restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 3
+      resources:
+        limits:
+          cpus: "2"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "512M"
+      restart_policy:
+        condition: any
+        delay: 10s
+        max_attempts: 5
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
     ports:
       - "127.0.0.1:8501:8501"  # solo local, nginx proxy al frente
     environment:
