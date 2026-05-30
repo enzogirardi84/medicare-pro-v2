@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from core._landing_html_parts import _PART_1, _PART_2, _PART_3, _PART_4, _PART_5, _PART_6, _PART_7
+from core._landing_styles import _PART_1, _PART_2, _PART_3, _PART_4
+from core._landing_markup import _PART_5, _PART_6, _PART_7
 
 
 def obtener_html_landing_publicidad(logo_html: str) -> str:
