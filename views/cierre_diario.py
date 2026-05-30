@@ -60,9 +60,16 @@ def render_cierre_diario(mi_empresa, user):
     fecha_reporte = c1_rep.date_input("Filtrar por Fecha", value=ahora().date())
     fecha_str = fecha_reporte.strftime("%d/%m/%Y")
 
-    consumos_dia = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str) and c.get("empresa") == mi_empresa]
-    facturacion_dia = [f for f in st.session_state.get("facturacion_db", []) if f.get("fecha", "").startswith(fecha_str) and f.get("empresa") == mi_empresa]
-    stock_actual = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
+    # Cache filtrados por fecha+empresa para evitar iterar listas completas en cada rerun
+    _cache_key = f"_cier_{mi_empresa}_{fecha_str}"
+    _cached = st.session_state.get(_cache_key)
+    if _cached is None or st.session_state.get("_guardar_datos_pendiente"):
+        consumos_dia = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str) and c.get("empresa") == mi_empresa]
+        facturacion_dia = [f for f in st.session_state.get("facturacion_db", []) if f.get("fecha", "").startswith(fecha_str) and f.get("empresa") == mi_empresa]
+        stock_actual = [i for i in st.session_state.get("inventario_db", []) if i.get("empresa") == mi_empresa]
+        st.session_state[_cache_key] = (consumos_dia, facturacion_dia, stock_actual)
+    else:
+        consumos_dia, facturacion_dia, stock_actual = _cached
 
     total_insumos = sum(c.get("cantidad", 0) for c in consumos_dia)
     total_facturado = sum(float(f.get("monto", 0) or 0) for f in facturacion_dia)
