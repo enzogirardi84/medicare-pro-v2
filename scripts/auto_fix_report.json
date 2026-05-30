@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-05-30T11:48:07.785438",
+  "timestamp": "2026-05-30T12:00:50.523407",
   "archivos_corregidos": 0,
   "lineas_largas": 51,
   "metricas": {
     "archivos_py": 571,
-    "lineas_codigo": 105094,
+    "lineas_codigo": 103714,
     "clases": 384,
-    "funciones": 3449,
-    "timestamp": "2026-05-30T11:48:07.785299"
+    "funciones": 3432,
+    "timestamp": "2026-05-30T12:00:50.523255"
   }
 }

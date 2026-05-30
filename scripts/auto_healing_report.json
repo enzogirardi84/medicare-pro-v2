@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-05-30T11:48:04.639448",
+  "timestamp": "2026-05-30T12:00:47.188295",
   "resultados": {
-    "errores_sintaxis": 0,
+    "errores_sintaxis": 4,
     "errores_imports": 0,
     "archivos_faltantes": 0,
     "secrets_expuestos": 27,
@@ -9,5 +9,5 @@
     "dependencias_faltantes": 5,
     "sugerencias_optimizacion": 0
   },
-  "total_problemas": 32
+  "total_problemas": 36
 }
