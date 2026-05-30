@@ -47,14 +47,14 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     )
     bloque_mc_grid_tarjetas(
         [
-            ("Practicas", "Registra nomenclador, monto y estado de cobro."),
+            (            "Practicas", "Registra nomenclador, monto y estado de cobro"),
             ("Resumen", "Metricas de cobrado y pendiente por paciente."),
             ("Exportar", "Genera CSV o PDF cuando lo necesites."),
         ]
     )
     st.caption(
-        "Las metricas usan solo movimientos de este paciente en tu clinica. Registra cada practica con monto y estado; el historial permite PDF por movimiento. "
-        "Coordinacion ve abajo la auditoria general de caja."
+        "Las métricas usan solo movimientos de este paciente en tu clínica. Registra cada práctica con monto y estado; el historial permite PDF por movimiento. "
+        "Coordinación ve abajo la auditoría general de caja."
     )
 
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
