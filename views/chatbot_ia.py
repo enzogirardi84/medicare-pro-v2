@@ -504,7 +504,11 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
     act = st.session_state.pop("chat_act", None)
     if act == "clear":
         st.session_state["chatbot_conv"] = []
-        st.rerun()
+        _g = st.session_state.get("_rerun_guard_chatbot_ia", 0)
+        _n = __import__('time').time()
+        if _n - _g > 0.5:
+            st.session_state["_rerun_guard_chatbot_ia"] = _n
+            st.rerun()
     elif act == "export":
         data = _exportar_conversacion(conv)
         st.download_button("Descargar conversacion (.txt)", data, f"chat_{datetime.now().strftime('%Y%m%d_%H%M')}.txt", "text/plain", key="chat_export")

@@ -339,8 +339,13 @@ with st.sidebar:
         on_click=_logout_callback,
     )
 
-if st.session_state.pop("_mc_logout_requested", False):
-    st.rerun()
+_mc_logout = st.session_state.pop("_mc_logout_requested", False)
+if _mc_logout:
+    _g = st.session_state.get("_rerun_guard_main_medicare", 0)
+    _n = __import__('time').time()
+    if _n - _g > 0.5:
+        st.session_state["_rerun_guard_main_medicare"] = _n
+        st.rerun()
 
 if "sidebar_rendered" not in st.session_state:
     st.session_state["sidebar_rendered"] = True
