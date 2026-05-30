@@ -597,7 +597,11 @@ def render_cortina_mar_hospitalaria(plan_dia_df, paciente_sel, mi_empresa, user,
                                       help="Hora clínica a dejar en legajo; puede diferir de la programada.")
                         st.text_input("Motivo clínico (obligatorio si no se administra)", value="", max_chars=400, key=k_just,
                                       placeholder="Ej. Paciente ausente, rechazo, ayuno, orden médica de suspensión…")
-                        b1, b2 = st.columns(2)
+                        if es_movil:
+                            b1 = st.container()
+                            b2 = st.container()
+                        else:
+                            b1, b2 = st.columns(2)
                         with b1:
                             if st.button("Administración realizada", key=f"mar_ok_{suf}_{i}", type="primary", use_container_width=True,
                                          help="Registra administración conforme a la indicación (queda firmado y auditado)."):
