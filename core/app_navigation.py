@@ -44,9 +44,9 @@ def set_modulo_actual(modulo_seleccionado, rerun=False):
 
     # Cerrar cortina de navegacion si estaba abierta
     st.session_state.pop("_show_nav_cortina", None)
-    # Colapsar todas las categorias del menu
-    for cat in ("Clínica", "Gestión", "Emergencias", "Legal y documentación"):
-        st.session_state[f"_nav_cat_{cat}"] = False
+    # Reabrir la categoria del modulo activo
+    for cat, mods in get_categorias_modulos().items():
+        st.session_state[f"_nav_cat_{cat}"] = modulo_nuevo in mods
 
     if rerun:
         st.rerun()
