@@ -325,7 +325,7 @@ def render_mi_equipo(mi_empresa, rol, user=None):
                 if compacto_equipo:
                     h1, h2 = st.columns([2, 1])
                     with h1:
-                        st.markdown(f"**{d.get('nombre', 'Sin nombre')}**")
+                        st.markdown(f"**{escape(str(d.get('nombre', 'Sin nombre')))}**")
                     with h2:
                         st.caption(f"Estado\n**{estado_txt}**")
                     _mi_equipo_bloque_principal(

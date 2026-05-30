@@ -62,7 +62,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
     if turnos_pac:
         for _, t in turnos_pac[:5]:
             with st.container(border=True):
-                st.markdown(f"**{t.get('fecha', t.get('fecha_hora', '?'))}** â€” {t.get('profesional', t.get('tipo', '?'))}")
+                st.markdown(f"**{escape(str(t.get('fecha', t.get('fecha_hora', '?'))))}** â€” {escape(str(t.get('profesional', t.get('tipo', '?'))))}")
                 st.caption(f"Estado: {t.get('estado', 'Pendiente')}")
     else:
         st.info("No hay turnos programados.")
@@ -97,7 +97,7 @@ def render_portal_paciente(paciente_sel, mi_empresa, user, rol):
     if cons_pac:
         for c in reversed(cons_pac[-10:]):
             with st.container(border=True):
-                st.markdown(f"**{c.get('fecha', '?')}** â€” {c.get('profesional', 'S/D')}")
+                st.markdown(f"**{escape(str(c.get('fecha', '?')))}** â€” {escape(str(c.get('profesional', 'S/D')))}")
                 st.caption((c.get("observaciones") or "")[:150])
     else:
         st.info("Sin documentos firmados.")

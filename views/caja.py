@@ -235,7 +235,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                     else:
                         pa, pb, pc = st.container(), st.container(), st.container()
                     with pa:
-                        st.markdown(f"**{p.get('serv', '')}**")
+                        st.markdown(f"**{escape(str(p.get('serv', '')))}**")
                         st.caption(f"{p.get('fecha', '')}")
                     with pb:
                         monto_edit = st.number_input(

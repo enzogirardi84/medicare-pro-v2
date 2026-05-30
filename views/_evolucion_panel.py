@@ -572,7 +572,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
         with lista_plegable("GalerÃ­a de fotos clÃ­nicas", count=min(limite_fotos, len(fotos_heridas)), expanded=False, height=520):
             for foto in reversed(fotos_heridas[-limite_fotos:]):
                 with st.container(border=True):
-                    st.markdown(f"**{foto.get('fecha', 'S/D')}** | **{foto.get('firma', 'Sin firma')}**")
+                    st.markdown(f"**{escape(str(foto.get('fecha', 'S/D')))}** | **{escape(str(foto.get('firma', 'Sin firma')))}**")
                     if foto.get("descripcion"):
                         st.caption(foto.get("descripcion"))
                     try:

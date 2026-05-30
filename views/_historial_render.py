@@ -73,7 +73,7 @@ def _render_consentimientos(registros: List[Dict[str, Any]], paciente_sel: str) 
     with lista_plegable("Consentimientos (detalle)", count=len(registros), expanded=False, height=520):
         for idx, reg in enumerate(registros):
             with st.container(border=True):
-                st.markdown(f"**{reg.get('fecha', 'S/D')}**")
+                st.markdown(f"**{escape(str(reg.get('fecha', 'S/D')))}**")
                 st.caption(
                     f"Firmante: {reg.get('firmante', 'S/D')} | VÃ­nculo: {reg.get('vinculo', 'S/D')} | "
                     f"DNI: {reg.get('dni_firmante', 'S/D')}"
@@ -93,7 +93,7 @@ def _render_estudios(registros: List[Dict[str, Any]], paciente_sel: str) -> None
     with lista_plegable("Estudios en historia", count=len(registros), expanded=False, height=520):
         for idx, est in enumerate(registros):
             with st.container(border=True):
-                st.markdown(f"**{est.get('fecha', '')} - {est.get('tipo', '')}**")
+                st.markdown(f"**{escape(str(est.get('fecha', '')))} - {escape(str(est.get('tipo', '')))}**")
                 st.caption(f"Firmado/cargado por: {est.get('firma', 'S/D')}")
                 if detalle := est.get("detalle"):
                     st.write(detalle)
@@ -121,7 +121,7 @@ def _render_heridas(registros: List[Dict[str, Any]], paciente_sel: str) -> None:
     with lista_plegable("Fotos de heridas", count=len(registros), expanded=False, height=520):
         for idx, fh in enumerate(registros):
             with st.container(border=True):
-                st.markdown(f"**{fh.get('fecha', '')}**")
+                st.markdown(f"**{escape(str(fh.get('fecha', '')))}**")
                 st.caption(f"Registrado por: {fh.get('firma', 'S/D')}")
                 st.write(fh.get("descripcion", "Sin descripciÃ³n"))
                 if mostrar_fotos and (foto_b64 := fh.get("base64_foto")):

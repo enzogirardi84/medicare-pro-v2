@@ -300,7 +300,7 @@ def _render_plan_cuidados_enfermeria_legacy(
         c3.info(f"UPP: {_riesgo_color(ultimo.get('riesgo_upp',''))} {ultimo.get('riesgo_upp', 'S/D')}")
 
         with st.container(border=True):
-            st.markdown(f"#### Último plan — {ultimo.get('fecha', 'S/D')} | Turno: {ultimo.get('turno', 'S/D')} | Prof: {ultimo.get('profesional', 'S/D')}")
+            st.markdown(f"#### Último plan — {escape(str(ultimo.get('fecha', 'S/D')))} | Turno: {escape(str(ultimo.get('turno', 'S/D')))} | Prof: {escape(str(ultimo.get('profesional', 'S/D')))}")
             st.write(f"**Tipo de cuidado:** {ultimo.get('tipo_cuidado', 'S/D')}")
             st.write(f"**Objetivo:** {ultimo.get('objetivo', 'Sin objetivo consignado')}")
             st.write(f"**Intervención:** {ultimo.get('intervencion', 'S/D')}")
@@ -322,7 +322,7 @@ def _render_plan_cuidados_enfermeria_legacy(
                 for reg in evol_recientes:
                     with st.container(border=True):
                         icono = "🔴" if reg.get("prioridad") == "Alta" else "🟡"
-                        st.markdown(f"{icono} **{reg.get('fecha', '')}** | {reg.get('tipo_cuidado', '')}")
+                        st.markdown(f"{icono} **{escape(str(reg.get('fecha', '')))}** | {escape(str(reg.get('tipo_cuidado', '')))}")
                         st.caption(
                             f"Turno: {reg.get('turno', 'S/D')} | Prof: {reg.get('profesional', 'S/D')} | UPP: {reg.get('riesgo_upp', 'S/D')} | Caídas: {reg.get('riesgo_caidas', 'S/D')}"
                         )

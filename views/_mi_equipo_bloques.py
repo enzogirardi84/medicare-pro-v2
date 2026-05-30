@@ -129,7 +129,7 @@ def _mi_equipo_bloque_principal(
     omitir_titulo: bool,
 ) -> None:
     if not omitir_titulo:
-        st.markdown(f"**{d.get('nombre', 'Sin nombre')}**")
+        st.markdown(f"**{escape(str(d.get('nombre', 'Sin nombre')))}**")
     d_norm = normalizar_usuario_sistema(dict(d))
     perfil_usuario = d_norm.get("perfil_profesional", "") or inferir_perfil_profesional(d_norm) or "Sin perfil"
     email_actual = obtener_email_usuario(d_norm)
