@@ -153,8 +153,9 @@ def render_login():
         if _login_name:
             _totp_config = st.session_state.get(f"_totp_config_{_login_name}")
             if _totp_config and getattr(_totp_config, "habilitado", False):
-                from core.totp_mfa import verificar_totp_si_aplica
-                if not verificar_totp_si_aplica(_login_name):
+                from core.seguridad_ui import render_login_totp
+                st.markdown("---")
+                if not render_login_totp(_login_name):
                     st.stop()
                     return
 

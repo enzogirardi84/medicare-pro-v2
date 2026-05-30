@@ -539,6 +539,14 @@ from core.seguridad_operaciones import render_panel_seguridad
 render_panel_seguridad()
 render_ayuda_atajos()
 
+# Indicador de timeout de sesion en sidebar
+if st.session_state.get("logeado"):
+    try:
+        from core.seguridad_ui import render_session_timeout_indicator
+        render_session_timeout_indicator()
+    except Exception as exc:
+        log_event("seguridad_ui", f"timeout_indicator_fallo:{type(exc).__name__}")
+
 _do_backup = st.sidebar.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido")
 st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
 _do_backup_mobile = st.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido_mobile")
