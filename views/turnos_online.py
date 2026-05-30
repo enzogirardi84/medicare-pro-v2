@@ -195,7 +195,7 @@ def render_turnos_online(mi_empresa, rol):
                         col = color.get(est, "#fff")
                         st.markdown(f"<span style='color:{col}'>{escape(est)}</span>", unsafe_allow_html=True)
                         if t.get('paciente'):
-                            st.markdown(f"Paciente: {t['paciente']}")
+                            st.markdown(f"Paciente: {escape(str(t.get('paciente', '')))}")
 
                     if not es_movil:
                         c_act1, c_act2 = st.columns(2)
