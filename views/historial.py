@@ -52,6 +52,21 @@ def render_historial(paciente_sel: str, user=None) -> None:
         aviso_sin_paciente()
         return
 
+    # Audit trail: registrar acceso al historial
+    try:
+        from core.audit_trail_immutable import ImmutableAuditTrail
+        usuario = str(st.session_state.get("u_actual", {}).get("usuario_login", "desconocido"))
+        auditor = ImmutableAuditTrail()
+        auditor.registrar(
+            usuario=usuario,
+            accion="lectura",
+            recurso=f"historial:{paciente_sel[:50]}",
+            detalle=f"Acceso a historial clinico completo",
+        )
+    except Exception as exc:
+        from core.app_logging import log_event
+        log_event("audit", f"historial_access_error:{type(exc).__name__}")
+
     detalles = mapa_detalles_pacientes(st.session_state).get(paciente_sel, {}) or {}
     estado_badge = "[ARCHIVADO DE ALTA]" if detalles.get("estado") == "De Alta" else ""
 

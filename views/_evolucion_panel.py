@@ -214,6 +214,15 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     if not ok:
                         st.error(f"Archivo no vÃ¡lido: {msg}")
                         st.stop()
+                    # Validacion adicional con upload sanitizer (magic numbers + RCE)
+                    try:
+                        from core.upload_sanitizer import validar_estudio_adjunto
+                        ok2, msg2, info = validar_estudio_adjunto(imagen_subida)
+                        if not ok2:
+                            st.error(f"Archivo rechazado por seguridad: {msg2}")
+                            st.stop()
+                    except ImportError:
+                        pass  # upload_sanitizer opcional
                     imagen_bytes = imagen_subida.read()
                     max_img_bytes = 2 * 1024 * 1024
                     if len(imagen_bytes) > max_img_bytes:
@@ -227,7 +236,7 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     imagen_nombre = imagen_subida.name
                     imagen_tipo = imagen_subida.type
 
-                st.session_state["evoluciones_db"].append({
+                evol_entry = {
                     "paciente": paciente_sel,
                     "nota": nota.strip(),
                     "fecha": fecha_n,
@@ -236,7 +245,21 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                     "adjunto_img_b64": imagen_b64,
                     "adjunto_img_nombre": imagen_nombre,
                     "adjunto_img_tipo": imagen_tipo,
-                })
+                }
+
+                # Firmar digitalmente con ECDSA si hay clave disponible
+                try:
+                    priv_key_b64 = st.session_state.get(f"_ecdsa_priv_{profesional}")
+                    if priv_key_b64:
+                        from core.ecdsa_signature import ECDSASignatureManager
+                        priv_pem = base64.b64decode(priv_key_b64)
+                        signed = ECDSASignatureManager.firmar(evol_entry, priv_pem, firmante=profesional)
+                        evol_entry["_firma_ecdsa"] = ECDSASignatureManager.serializar(signed)
+                        log_event("ecdsa", f"evolucion_firmada:{paciente_sel}")
+                except Exception as exc:
+                    log_event("ecdsa", f"firma_evolucion_error:{type(exc).__name__}")
+
+                st.session_state["evoluciones_db"].append(evol_entry)
 
                 try:
                     from core.database import _trim_db_list

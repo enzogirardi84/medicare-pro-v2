@@ -146,6 +146,18 @@ def render_login():
         st.stop()
         return
 
+    # Verificar TOTP si el usuario lo tiene configurado
+    if not st.session_state.get("logeado"):
+        _usuario_actual = st.session_state.get("u_actual", {})
+        _login_name = str(_usuario_actual.get("usuario_login", "") if isinstance(_usuario_actual, dict) else "")
+        if _login_name:
+            _totp_config = st.session_state.get(f"_totp_config_{_login_name}")
+            if _totp_config and getattr(_totp_config, "habilitado", False):
+                from core.totp_mfa import verificar_totp_si_aplica
+                if not verificar_totp_si_aplica(_login_name):
+                    st.stop()
+                    return
+
     if not st.session_state.get("logeado"):
         from core.ui_liviano import headers_sugieren_equipo_liviano
 
