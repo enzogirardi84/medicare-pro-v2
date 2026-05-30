@@ -311,9 +311,9 @@ if _logo_ck not in st.session_state:
 logo_sidebar_b64 = st.session_state[_logo_ck]
 
 if st.session_state.get("_modo_offline"):
-    st.info(
-        "Modo local activo. Los cambios se guardan en este equipo "
-        "hasta configurar Supabase correctamente."
+    st.warning(
+        "📡 **Modo local** — Sin conexión con la nube. "
+        "Los cambios se guardan en este equipo hasta restaurar la conexión."
     )
 
 def _logout_callback():
