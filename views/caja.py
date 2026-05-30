@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 from html import escape
 
 from core.alert_toasts import queue_toast

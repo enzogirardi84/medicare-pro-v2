@@ -1,4 +1,4 @@
-﻿"""Panel de evoluciÃ³n clÃ­nica."""
+"""Panel de evoluciÃ³n clÃ­nica."""
 
 from __future__ import annotations
 from html import escape

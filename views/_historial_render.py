@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 from html import escape
 
 """Helpers de renderizado de secciones del Historial clÃ­nico.

@@ -1,4 +1,4 @@
-﻿"""Portal del Paciente - Autogestion, turnos, vacunas, documentos firmados."""
+"""Portal del Paciente - Autogestion, turnos, vacunas, documentos firmados."""
 from __future__ import annotations
 from html import escape
 
