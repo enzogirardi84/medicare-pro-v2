@@ -578,6 +578,13 @@ if st.sidebar.button("⚙️ Configuración", use_container_width=True, key="sid
     st.session_state["_show_settings"] = True
     st.rerun()
 
+# Acceso a configuracion de seguridad (TOTP)
+if st.session_state.get("logeado"):
+    user_login = str(st.session_state.get("u_actual", {}).get("usuario_login", ""))
+    if user_login and st.sidebar.button("🔐 Mi perfil / 2FA", use_container_width=True, key="sidebar_totp_setup"):
+        st.session_state["_show_totp_setup"] = True
+        st.rerun()
+
 _modulo_previo_scroll = st.session_state.get("_mc_modulo_previo_scroll")
 if _modulo_previo_scroll != vista_actual:
     st.session_state["_mc_modulo_previo_scroll"] = vista_actual
@@ -653,6 +660,17 @@ if st.session_state.get("_show_settings", False):
     if st.sidebar.button("⬅️ Volver al menú principal", use_container_width=True, key="settings_back"):
         st.session_state["_show_settings"] = False
         st.rerun()
+    st.stop()
+
+# Pantalla de configuracion TOTP
+if st.session_state.get("_show_totp_setup", False):
+    from core.seguridad_ui import render_totp_enrollment
+    user_login = str(st.session_state.get("u_actual", {}).get("usuario_login", ""))
+    if user_login:
+        render_totp_enrollment(user_login)
+        if st.sidebar.button("Volver", use_container_width=True, key="totp_back"):
+            st.session_state["_show_totp_setup"] = False
+            st.rerun()
     st.stop()
 
 render_metricas_admin_sidebar(rol)
