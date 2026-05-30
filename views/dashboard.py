@@ -469,6 +469,11 @@ def render_dashboard(mi_empresa, rol):
         st.markdown("#### Listados ejecutivos")
     render_listados_ejecutivos(agenda_enriquecida, meds_suspendidas, mi_empresa, rol, es_movil)
 
+    # Panel de rendimiento (expandible)
+    with st.expander("⚡ Rendimiento", expanded=False):
+        from core.perf_metrics import render_perf_panel
+        render_perf_panel()
+
     # Mapa geográfico de visitas (solo escritorio)
     if not es_movil:
         st.divider()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import sys
 import time
 
 import streamlit as st
@@ -50,6 +51,56 @@ def _percentile(values: list[float], p: float) -> float:
     if lo == hi:
         return float(values[lo])
     return float(values[lo] + (values[hi] - values[lo]) * (i - lo))
+
+
+def _session_data_size() -> str:
+    """Estima el tamano de los datos en sesion."""
+    total = 0
+    count = 0
+    for k, v in st.session_state.items():
+        if k.startswith("_") or k in ("u_actual",):
+            continue
+        try:
+            total += sys.getsizeof(v)
+            count += 1
+        except Exception:
+            pass
+    if total < 1024:
+        return f"{total} B ({count} claves)"
+    elif total < 1024 * 1024:
+        return f"{total / 1024:.0f} KB ({count} claves)"
+    else:
+        return f"{total / (1024*1024):.1f} MB ({count} claves)"
+
+
+def _payload_warning_activa() -> bool:
+    """True si el payload de datos supera 5MB."""
+    try:
+        from core.database import dumps_db_sorted
+        claves = [k for k in st.session_state.keys() if not k.startswith("_")]
+        data = {k: st.session_state[k] for k in claves if k in st.session_state}
+        pb, _ = dumps_db_sorted(data)
+        return len(pb) > 5_000_000
+    except Exception:
+        return False
+
+
+def render_perf_panel():
+    """Muestra metricas de rendimiento en un expander del dashboard."""
+    summary = summarize_perf(window_seconds=3600)
+    if not summary:
+        return
+    mod_times = {k: v for k, v in summary.items() if k.startswith("ui.modulo.")}
+    if not mod_times:
+        return
+    st.caption(f"**Rendimiento** — Datos en sesión: {_session_data_size()}")
+    if _payload_warning_activa():
+        st.warning("⚠️ El volumen de datos es muy grande (>5MB). Activá USE_TENANT_SHARDS para mejor rendimiento.")
+    slow = [(k, v["p95_ms"]) for k, v in mod_times.items() if v["p95_ms"] > 500]
+    if slow:
+        st.caption(f"**Módulos lentos** (>500ms p95):")
+        for name, ms in sorted(slow, key=lambda x: -x[1])[:5]:
+            st.caption(f"  • {name.replace('ui.modulo.', '')}: {ms:.0f}ms")
 
 
 def summarize_perf(window_seconds: int = 900) -> dict[str, dict]:

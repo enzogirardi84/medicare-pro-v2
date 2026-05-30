@@ -82,8 +82,6 @@ if not st.session_state.get("_mc_boot_query_cleaned"):
     try:
         if st.query_params.get("_mc_boot") is not None:
             del st.query_params["_mc_boot"]
-        if st.query_params.get("login") is not None:
-            del st.query_params["login"]
     except Exception:
         pass
 
@@ -138,6 +136,13 @@ if not st.session_state.get("entered_app"):
 
 eliminar_overlay_residual()
 inicializar_db_state_seguro()
+
+# Limpiar ?login=1 de la URL para que al recargar se muestre la landing
+try:
+    if st.query_params.get("login") is not None:
+        del st.query_params["login"]
+except Exception:
+    pass
 
 render_login()
 verificar_clinica_sesion_activa()

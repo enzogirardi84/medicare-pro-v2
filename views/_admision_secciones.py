@@ -95,30 +95,6 @@ def _img_mime(base64_str: str) -> str:
     if base64_str.startswith("R0lG"):
         return "image/gif"
     return "image/jpeg"
-    try:
-        from PIL import Image
-        img = Image.open(uploaded_file)
-        # Detectar formato original
-        fmt = img.format or "JPEG"
-        # Convertir a RGB si tiene canal alpha (para guardar como JPEG)
-        if fmt.upper() in ("PNG", "WEBP", "GIF") and img.mode in ("RGBA", "P", "PA"):
-            bg = Image.new("RGB", img.size, (255, 255, 255))
-            if img.mode == "RGBA":
-                bg.paste(img, mask=img.split()[3])
-            else:
-                bg.paste(img)
-            img = bg
-        elif img.mode not in ("RGB", "L"):
-            img = img.convert("RGB")
-        # Redimensionar manteniendo aspecto
-        img.thumbnail((200, 200))
-        # Guardar en formato original o JPEG
-        save_fmt = "PNG" if fmt.upper() == "PNG" else "JPEG"
-        buf = io.BytesIO()
-        img.save(buf, format=save_fmt, optimize=True, quality=80)
-        return base64.b64encode(buf.getvalue()).decode("utf-8")
-    except Exception:
-        return ""
 
 
 def _render_admision_gestion(mi_empresa, rol, admin_total):
