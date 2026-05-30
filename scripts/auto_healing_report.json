@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-05-30T00:01:43.338348",
+  "timestamp": "2026-05-30T00:14:05.785088",
   "resultados": {
-    "errores_sintaxis": 0,
+    "errores_sintaxis": 2,
     "errores_imports": 0,
     "archivos_faltantes": 0,
-    "secrets_expuestos": 26,
+    "secrets_expuestos": 27,
     "archivos_limpiados": 0,
     "dependencias_faltantes": 5,
     "sugerencias_optimizacion": 0
   },
-  "total_problemas": 31
+  "total_problemas": 34
 }
