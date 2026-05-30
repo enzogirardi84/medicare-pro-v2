@@ -71,6 +71,10 @@ PHI_FIELDS = {
     "usuarios": [
         "email_personal",
         "telefono_personal",
+    ],
+    "checkins": [
+        "gps",
+        "direccion",
     ]
 }
 
