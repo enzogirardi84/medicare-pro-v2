@@ -547,6 +547,15 @@ if st.session_state.get("logeado"):
     except Exception as exc:
         log_event("seguridad_ui", f"timeout_indicator_fallo:{type(exc).__name__}")
 
+    # Indicador de sincronizacion offline
+    try:
+        from core.offline_sync import SyncManager, render_offline_indicator
+        if "_sync_manager" not in st.session_state:
+            st.session_state["_sync_manager"] = SyncManager()
+        render_offline_indicator(st.session_state["_sync_manager"])
+    except Exception as exc:
+        log_event("offline_sync", f"indicator_fallo:{type(exc).__name__}")
+
 _do_backup = st.sidebar.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido")
 st.markdown('<div class="mc-mobile-only">', unsafe_allow_html=True)
 _do_backup_mobile = st.button("Descargar Backup JSON", use_container_width=True, key="backup_rapido_mobile")
