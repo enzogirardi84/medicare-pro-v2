@@ -106,7 +106,7 @@ class OfflineSLMEngine:
 
     En producción:
     - iOS: CoreML model (`.mlpackage`) compilado desde ONNX
-    - Android: ExecuTorch runtime (`.pte`) 
+    - Android: ExecuTorch runtime (`.pte`)
     - Python stub: simula inferencia para desarrollo y pruebas
 
     El modelo corre 100% offline. Zero latencia de red.

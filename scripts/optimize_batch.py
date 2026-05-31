@@ -36,12 +36,12 @@ def add_query_cache(filepath, line_num, query_regex, cache_fn_name, cache_code):
     """Add a @st.cache_data decorated function before the specified line."""
     path = Path(filepath)
     lines = path.read_text(encoding="utf-8").split("\n")
-    
+
     # Check if cache function already exists
     if any(cache_fn_name in l for l in lines):
         print(f"  Already cached: {filepath}")
         return
-    
+
     # Find the line
     for i, line in enumerate(lines):
         if query_regex in line and i >= line_num - 5:
@@ -66,14 +66,14 @@ def add_query_cache(filepath, line_num, query_regex, cache_fn_name, cache_code):
                 path.write_text("\n".join(lines), encoding="utf-8")
                 print(f"  Cache added: {filepath}")
                 return
-    
+
     print(f"  Query not found: {filepath}")
 
 
 def main():
     print("Adding CSS grid for mobile columns...")
     add_mobile_grid_css()
-    
+
     print("\nDone. Run 'git diff' to review changes.")
 
 
