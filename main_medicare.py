@@ -342,7 +342,8 @@ with st.sidebar:
 _mc_logout = st.session_state.pop("_mc_logout_requested", False)
 if _mc_logout:
     _g = st.session_state.get("_rerun_guard_main_medicare", 0)
-    _n = __import__('time').time()
+    import time as _time
+    _n = _time.time()
     if _n - _g > 0.5:
         st.session_state["_rerun_guard_main_medicare"] = _n
         st.rerun()

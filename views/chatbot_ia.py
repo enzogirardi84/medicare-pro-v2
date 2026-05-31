@@ -505,7 +505,8 @@ def render_chatbot_ia(paciente_sel, mi_empresa, user, rol):
     if act == "clear":
         st.session_state["chatbot_conv"] = []
         _g = st.session_state.get("_rerun_guard_chatbot_ia", 0)
-        _n = __import__('time').time()
+        import time as _time
+        _n = _time.time()
         if _n - _g > 0.5:
             st.session_state["_rerun_guard_chatbot_ia"] = _n
             st.rerun()
