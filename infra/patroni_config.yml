@@ -1,0 +1,61 @@
+# Patroni Configuration - PostgreSQL HA/DR
+# Replicacion fisica en streaming + failover automatico
+# 3 nodos: 1 primary + 2 replicas sincronicas
+
+scope: medicare
+namespace: /db/
+name: pg-mediare-0
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: pg-mediare-0:8008
+
+etcd:
+  host: etcd-cluster:2379  # Cluster etcd para coordinacion de failover
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576  # 1MB de lag maximo
+    postgresql:
+      use_pg_rewind: true
+      parameters:
+        max_connections: 200
+        shared_buffers: 2GB
+        effective_cache_size: 6GB
+        work_mem: 64MB
+        maintenance_work_mem: 512MB
+        wal_level: replica
+        max_wal_senders: 5
+        max_replication_slots: 5
+        synchronous_commit: "on"  # Escritura sincrona garantizada
+        synchronous_standby_names: "*"  # Esperar confirmacion de replicas
+
+  initdb:
+  - encoding: UTF8
+  - locale: C.UTF-8
+
+  pg_hba:
+  - host replication replicator 10.0.0.0/8 md5
+  - host all all 0.0.0.0/0 md5
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: pg-mediare-0:5432
+  data_dir: /data/patroni
+  bin_dir: /usr/lib/postgresql/16/bin
+  authentication:
+    replication:
+      username: replicator
+      password: ${REPLICATION_PASSWORD}
+    superuser:
+      username: postgres
+      password: ${POSTGRES_PASSWORD}
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false

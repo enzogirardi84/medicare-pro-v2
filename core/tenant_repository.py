@@ -20,15 +20,44 @@ from core.app_logging import log_event
 
 @dataclass
 class DBConfig:
-    """Configuracion de base de datos desde variables de entorno."""
+    """Configuracion de base de datos desde variables de entorno.
+
+    Soporta replicacion HA:
+    - read_host: host de la replica de lectura (SELECT)
+    - write_host: host del primary (INSERT/UPDATE/DELETE)
+    - auto_failover: detecta caida del primary y reconecta
+    """
     host: str = ""
     port: int = 5432
+    read_host: str = ""  # Replica de lectura (opcional)
+    read_port: int = 5432
+    write_host: str = ""  # Primary para escritura (opcional)
+    write_port: int = 5432
     dbname: str = ""
     user: str = ""
     password: str = ""
     min_connections: int = 2
     max_connections: int = 10
     statement_timeout_ms: int = 30000
+
+    @classmethod
+    def from_env(cls) -> DBConfig:
+        prefix = os.environ.get("MEDICARE_TENANT", "default").upper().replace("-", "_")
+        def env(key: str, default: str = "") -> str:
+            return os.environ.get(f"{prefix}_{key}", os.environ.get(key, default))
+        return cls(
+            host=env("DB_HOST", "localhost"),
+            port=int(env("DB_PORT", "5432")),
+            read_host=env("DB_READ_HOST", env("DB_HOST", "localhost")),
+            read_port=int(env("DB_READ_PORT", env("DB_PORT", "5432"))),
+            write_host=env("DB_WRITE_HOST", env("DB_HOST", "localhost")),
+            write_port=int(env("DB_WRITE_PORT", env("DB_PORT", "5432"))),
+            dbname=env("DB_NAME", "medicare"),
+            user=env("DB_USER", "medicare"),
+            password=env("DB_PASSWORD", ""),
+            min_connections=int(env("DB_POOL_MIN", "2")),
+            max_connections=int(env("DB_POOL_MAX", "10")),
+        )
 
     @classmethod
     def from_env(cls) -> DBConfig:

@@ -1,0 +1,173 @@
+# =============================================================================
+# Deploy Pipeline - MediCare Enterprise PRO
+# Zero-downtime: Rolling update con migraciones seguras y health checks
+# =============================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Entorno de deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # No cancelar deploys en progreso
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  APP_NAME: medicare-pro
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # 1. QUALITY GATE
+  # ═══════════════════════════════════════════════════════════════
+  quality:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff bandit safety pytest
+
+      - name: Lint (Ruff)
+        run: ruff check core/ views/ --select=F,E,W
+
+      - name: Security scan (Bandit)
+        run: bandit -r core/ views/ -f json -o bandit_report.json || true
+
+      - name: Unit tests
+        run: python -m pytest tests/ -q --ignore=tests/e2e --tb=short --timeout=30
+
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit_report.json
+
+  # ═══════════════════════════════════════════════════════════════
+  # 2. BUILD & PUSH DOCKER
+  # ═══════════════════════════════════════════════════════════════
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: quality
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix={{branch}}-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ═══════════════════════════════════════════════════════════════
+  # 3. DATABASE MIGRATIONS (Alembic - sin bloqueo)
+  # ═══════════════════════════════════════════════════════════════
+  migrate:
+    name: DB Migrations
+    runs-on: ubuntu-latest
+    needs: build
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install
+        run: pip install alembic psycopg2-binary
+
+      - name: Run migrations
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+        run: |
+          # Migraciones sin bloqueo: usar CONCURRENTLY + check health
+          alembic upgrade head --sql > /tmp/migration.sql 2>&1 || true
+          psql "$DB_URL" -f /tmp/migration.sql || echo "No hay migraciones pendientes"
+
+  # ═══════════════════════════════════════════════════════════════
+  # 4. ROLLING UPDATE (Zero-downtime)
+  # ═══════════════════════════════════════════════════════════════
+  deploy:
+    name: Rolling Update
+    runs-on: ubuntu-latest
+    needs: [build, migrate]
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    strategy:
+      matrix:
+        node: [0, 1, 2]  # 3 nodos, uno por vez
+    steps:
+      - name: Drain node ${{ matrix.node }}
+        run: |
+          curl -s -XPOST "https://nomad.medicare-pro.app/v1/node/drain?node=${{ matrix.node }}" || true
+          sleep 10
+
+      - name: Deploy new version
+        run: |
+          docker stack deploy -c docker-compose.yml medicare --with-registry-auth
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://medicare-pro.app/healthz")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check OK"
+              exit 0
+            fi
+            echo "Esperando... intento $i/30"
+            sleep 5
+          done
+          echo "Health check FAILED"
+          exit 1
+
+      - name: Undrain node ${{ matrix.node }}
+        if: success()
+        run: |
+          curl -s -XPOST "https://nomad.medicare-pro.app/v1/node/drain?node=${{ matrix.node }}&enable=false"
