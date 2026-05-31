@@ -1,0 +1,78 @@
+# Alertas Prometheus - MediCare Enterprise PRO
+# Deteccion de anomalias criptograficas y de concurrencia en <5 min
+
+groups:
+  - name: medicare_crypto_alerts
+    interval: 5m
+    rules:
+
+      # ─── Fallos de integridad criptografica (Data Tampering) ───────
+      - alert: IntegrityFailureSpike
+        expr: |
+          rate(medicare_integrity_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Fallos de integridad criptografica detectados"
+          description: |
+            Se detectaron {{ $value | humanize }} fallos de hash/ECDSA en los ultimos 5 minutos.
+            Posible alteracion no autorizada de datos clinicos (Data Tampering).
+            Tenant: {{ $labels.tenant }}
+            Accion: Verificar audit trail inmutable inmediatamente.
+
+      # ─── Errores de concurrencia optimista (version conflicts) ─────
+      - alert: OptimisticLockErrorRate
+        expr: |
+          rate(medicare_optimistic_lock_errors_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Alta tasa de conflictos de version"
+          description: |
+            {{ $value | humanize }} conflictos de version/minuto.
+            Posible condicion de carrera en sync offline.
+            Verificar conectividad de profesionales en campo.
+
+      # ─── Latencia de sync anomala ─────────────────────────────────
+      - alert: SyncLatencyHigh
+        expr: |
+          medicare_sync_latency_p95_ms > 10000
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Latencia de sincronizacion alta"
+          description: |
+            P95 de sync > 10s. Posible saturacion del pool de conexiones.
+            Verificar pool_size y conexiones activas.
+
+      # ─── Tasa de aciertos de cache baja ───────────────────────────
+      - alert: CacheMissRateHigh
+        expr: |
+          1 - medicare_cache_ratio < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Tasa de aciertos de cache baja"
+          description: |
+            Cache ratio < 50%. Posible invalidacion excesiva o Redis caido.
+            Verificar tenant_cache y conexion Redis.
+
+      # ─── Caida de Redis ────────────────────────────────────────────
+      - alert: RedisDown
+        expr: |
+          medicare_cache_ratio == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Redis no disponible"
+          description: "Cache Redis caido. Usando fallback LRU local."

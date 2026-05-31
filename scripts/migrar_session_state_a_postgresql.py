@@ -174,12 +174,32 @@ def main():
         print(f"    {k}: {v}")
     print(f"{'='*60}")
 
-    # Opcional: persistir a PostgreSQL
-    print(f"\nPara persistir, ejecutar con --persistir o usar:")
-    print(f"  from core.tenant_repository import TenantRepository")
-    print(f"  repo = TenantRepository()")
-    print(f"  # repo.insert_batch('pacientes', pacientes)")
-    print(f"  # repo.insert_batch('evoluciones', evoluciones)")
+    # Persistir a PostgreSQL con transacciones por lote
+    if len(sys.argv) > 1 and "--persistir" in sys.argv:
+        import asyncio
+        from core.tenant_repository import TenantRepository
+        repo = TenantRepository()
+        repo.set_tenant_context(tenant_id)
+
+        async def persistir():
+            async with repo.connect() as conn:
+                async with conn.transaction():
+                    BATCH = 100
+                    for tabla, registros in [
+                        ("pacientes", pacientes),
+                        ("evoluciones", evoluciones),
+                    ]:
+                        for i in range(0, len(registros), BATCH):
+                            batch = registros[i:i + BATCH]
+                            for reg in batch:
+                                await repo.insert(conn, tabla, reg)
+                            print(f"  {tabla}: {i + len(batch)}/{len(registros)} registros")
+
+        asyncio.run(persistir())
+        print("Migracion completada con transacciones por lote.")
+    else:
+        print(f"\nPara persistir, ejecutar con --persistir")
+        print(f"  python scripts/migrar_session_state_a_postgresql.py --persistir")
 
     return 0
 

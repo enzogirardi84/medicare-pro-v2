@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import threading
 from collections import OrderedDict
 from typing import Any, Optional
 
@@ -20,42 +21,45 @@ class LRUCache:
     """Cache LRU en memoria con TTL por clave.
 
     Usa OrderedDict para mantener orden de acceso.
-    Invalida automaticamente cuando expira el TTL.
+    Protegido por threading.Lock para prevenir race conditions
+    entre hilos de escritura (coordinador web) y lectura (API movil).
     """
 
     def __init__(self, maxsize: int = 1000, ttl: int = 300):
+        self._lock = threading.Lock()
         self._cache: OrderedDict = OrderedDict()
         self._ttl: dict[str, float] = {}
         self._maxsize = maxsize
         self._default_ttl = ttl
 
     def get(self, key: str) -> Optional[Any]:
-        if key not in self._cache:
-            return None
-        # Verificar TTL
-        if time.time() > self._ttl.get(key, 0):
-            self._cache.pop(key, None)
-            self._ttl.pop(key, None)
-            return None
-        # Mover al final (mas recientemente usado)
-        self._cache.move_to_end(key)
-        return self._cache[key]
+        with self._lock:
+            if key not in self._cache:
+                return None
+            if time.time() > self._ttl.get(key, 0):
+                self._cache.pop(key, None)
+                self._ttl.pop(key, None)
+                return None
+            self._cache.move_to_end(key)
+            return self._cache[key]
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
-        if len(self._cache) >= self._maxsize:
-            self._cache.popitem(last=False)  # Eliminar LRU
-        self._cache[key] = value
-        self._ttl[key] = time.time() + (ttl or self._default_ttl)
+        with self._lock:
+            if len(self._cache) >= self._maxsize:
+                self._cache.popitem(last=False)
+            self._cache[key] = value
+            self._ttl[key] = time.time() + (ttl or self._default_ttl)
 
     def invalidate(self, pattern: str) -> int:
         """Invalida claves que contengan el patron.
 
         Retorna cantidad de claves invalidadas.
         """
-        keys = [k for k in self._cache if pattern in k]
-        for k in keys:
-            self._cache.pop(k, None)
-            self._ttl.pop(k, None)
+        with self._lock:
+            keys = [k for k in self._cache if pattern in k]
+            for k in keys:
+                self._cache.pop(k, None)
+                self._ttl.pop(k, None)
         return len(keys)
 
     def clear(self) -> None:

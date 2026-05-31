@@ -18,18 +18,39 @@ async def refresh_mv_concurrently(mv_name: str, conn_string: str) -> dict:
 
     La opcion CONCURRENTLY permite lecturas simultaneas.
     Requiere un indice UNIQUE en la vista.
+
+    Usa pg_advisory_lock para evitar ejecuciones solapadas
+    si el cron anterior tarda mas de 15 minutos.
     """
     import asyncpg
 
     t0 = time.perf_counter()
+    conn = await asyncpg.connect(conn_string)
     try:
-        conn = await asyncpg.connect(conn_string)
-        await conn.execute(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {mv_name}")
-        await conn.close()
+        # Advisory lock: evita dos refrescos simultaneos
+        # Lock ID = hash del nombre de la vista
+        lock_id = hash(mv_name) % (2 ** 31)
+        adquirido = await conn.fetchval(
+            "SELECT pg_try_advisory_lock($1)", lock_id
+        )
+        if not adquirido:
+            return {
+                "vista": mv_name, "estado": "saltado",
+                "error": "Ejecucion previa en progreso (advisory lock)"
+            }
+
+        try:
+            await conn.execute(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {mv_name}")
+        finally:
+            await conn.execute("SELECT pg_advisory_unlock($1)", lock_id)
+
         dt = (time.perf_counter() - t0) * 1000
         return {"vista": mv_name, "estado": "ok", "tiempo_ms": round(dt, 1)}
+
     except Exception as exc:
         return {"vista": mv_name, "estado": "error", "error": str(exc)[:100]}
+    finally:
+        await conn.close()
 
 
 async def crear_particiones_pendientes(conn_string: str) -> list[str]:

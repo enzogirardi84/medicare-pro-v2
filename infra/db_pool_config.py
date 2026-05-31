@@ -77,7 +77,22 @@ def create_async_pool(config: Optional[PoolConfig] = None) -> Any:
     )
 
     log_event("db_pool", f"Pool creado: size={cfg.pool_size}, overflow={cfg.max_overflow}")
+
+    # Almacenar engine para shutdown graceful
+    session_factory._engine = engine
+
     return session_factory
+
+
+async def shutdown_pool(session_factory: Any) -> None:
+    """Cierra el pool de conexiones gracefulmente.
+
+    Llamar en el shutdown handler de FastAPI/Streamlit.
+    """
+    engine = getattr(session_factory, "_engine", None)
+    if engine:
+        await engine.dispose()
+        log_event("db_pool", "Pool cerrado correctamente")
 
 
 # ═══════════════════════════════════════════════════════════════════
