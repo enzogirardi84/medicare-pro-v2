@@ -1,0 +1,13 @@
+apiVersion: v2
+name: medicare-pro
+description: MediCare Enterprise PRO - Multi-Region Health Platform
+type: application
+version: 2.1.0
+appVersion: "2.1.0"
+sources:
+  - https://github.com/enzogirardi84/medicare-pro-v2
+keywords:
+  - healthcare
+  - fhir
+  - hipaa
+  - multi-tenant

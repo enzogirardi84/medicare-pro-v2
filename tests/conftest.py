@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 # Mockear streamlit ANTES de que cualquier test importe modulos que lo usan
 # (evita ImportError en CI donde Streamlit no puede inicializarse)
@@ -13,6 +13,14 @@ sys.modules["streamlit"] = streamlit_mock
 sys.modules["streamlit.components"] = MagicMock()
 sys.modules["streamlit.components.v1"] = MagicMock()
 sys.modules["streamlit_drawable_canvas"] = MagicMock()
+
+# Mockear modulos externos no instalados en CI (asyncpg, aioredis)
+asyncpg_mock = MagicMock()
+asyncpg_mock.connect = AsyncMock()
+sys.modules["asyncpg"] = asyncpg_mock
+
+aioredis_mock = MagicMock()
+sys.modules["aioredis"] = aioredis_mock
 
 # Agregar el directorio raiz del repositorio a sys.path para que los tests
 # puedan importar core, features, views, services, etc. sin depender de

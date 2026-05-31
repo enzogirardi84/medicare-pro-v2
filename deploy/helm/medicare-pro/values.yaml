@@ -1,0 +1,177 @@
+# MediCare Enterprise PRO — Helm Values
+# Multi-region deployment with strict pod anti-affinity, HPA, and custom probes
+
+global:
+  environment: production
+  imageRegistry: ghcr.io/enzogirardi84
+  imageTag: "2.1.0"
+  regions:
+    - name: sa-east-1
+      zones: ["sa-east-1a", "sa-east-1b", "sa-east-1c"]
+    - name: us-east-1
+      zones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+api:
+  replicaCount: 4
+  image:
+    repository: medicare-pro-api
+    tag: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 4
+    maxReplicas: 20
+    metrics:
+      - type: Pods
+        pods:
+          metric:
+            name: medicare_api_latency_p95
+          target:
+            type: AverageValue
+            averageValue: 200m  # 200ms p95 triggers scale-up
+      - type: Pods
+        pods:
+          metric:
+            name: medicare_ws_queue_depth
+          target:
+            type: AverageValue
+            averageValue: 50
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 70
+  probes:
+    liveness:
+      path: /health
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      failureThreshold: 6
+    readiness:
+      path: /health/readiness
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      failureThreshold: 3
+      customChecks:
+        - name: db-pool
+          command: ["python", "-c", "from core.multi_region_balancer import get_multi_region_balancer; b = get_multi_region_balancer(); b._check_region('local')"]
+        - name: redis-bridge
+          command: ["python", "-c", "from core.realtime_event_stream import RedisPubSubBridge; b = RedisPubSubBridge(None); b.publish('health', None)"]
+    startup:
+      path: /health/startup
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 30
+
+  antiAffinity:
+    topologyKey: topology.kubernetes.io/zone
+    preferredDuringScheduling: true
+    requiredDuringScheduling:
+      enabled: true
+      topologyKey: kubernetes.io/hostname
+
+streamlit:
+  replicaCount: 2
+  image:
+    repository: medicare-pro-streamlit
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 8501
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 75
+
+worker:
+  replicaCount: 3
+  image:
+    repository: medicare-pro-worker
+    tag: ""
+  concurrency: 10
+  queues:
+    - clinical
+    - webhooks
+    - analytics
+    - compliance
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    metrics:
+      - type: Pods
+        pods:
+          metric:
+            name: medicare_queue_depth
+          target:
+            type: AverageValue
+            averageValue: 100
+
+redis:
+  architecture: replication
+  replicaCount: 3
+  auth:
+    enabled: true
+    sentinel: true
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+
+patroni:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  persistentVolume:
+    size: 100Gi
+    storageClass: gp3
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  tls:
+    - hosts:
+        - api.medicare-pro.app
+        - "*.api.medicare-pro.app"
+      secretName: medicare-pro-tls
+
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      interval: 15s
+  grafana:
+    dashboards:
+      enabled: true

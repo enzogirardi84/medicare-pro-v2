@@ -28,8 +28,10 @@ SELECT
     -- Estado clinico
     estado,
     -- Contador de visitas (sin fechas exactas)
-    created_at::DATE AS fecha_alta
-FROM pacientes;
+    created_at::DATE AS fecha_alta,
+    tenant_id
+FROM pacientes
+WHERE tenant_id = current_setting('app.tenant_id')::UUID;
 
 -- 2. VISTA DESIDENTIFICADA DE EVOLUCIONES
 CREATE OR REPLACE VIEW evoluciones_desidentificadas AS
@@ -80,6 +82,7 @@ SELECT
     EXTRACT(HOUR FROM a.fecha_real) AS hora_administracion,
     a.tenant_id
 FROM administracion_med a
-JOIN pacientes_desidentificados p ON p.id = a.paciente_id;
+JOIN pacientes_desidentificados p ON p.id = a.paciente_id
+WHERE a.tenant_id = current_setting('app.tenant_id')::UUID;
 
 -- 4. USO: SELECT * FROM evoluciones_desidentificadas WHERE mes_atencion = '2026-06';
