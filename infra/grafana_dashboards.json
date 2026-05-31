@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "MediCare PRO - SRE On-Call",
+    "tags": ["medicare", "sre", "produccion"],
+    "timezone": "America/Argentina/Buenos_Aires",
+    "panels": [
+      {
+        "title": "P95 Latency - /sync/batch",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [{
+          "expr": "histogram_quantile(0.95, sum(rate(medicare_sync_latency_p95_ms[5m])) by (le))",
+          "legendFormat": "p95 latency (ms)"
+        }],
+        "yaxes": [{"format": "ms", "label": "Latency"}],
+        "thresholds": [{"value": 10000, "color": "red"}],
+        "description": "Si supera 10s por mas de 5min, dispara alerta SyncLatencyHigh"
+      },
+      {
+        "title": "Cache Hit Ratio",
+        "type": "singlestat",
+        "datasource": "Prometheus",
+        "targets": [{
+          "expr": "medicare_cache_ratio"
+        }],
+        "thresholds": "0.5,0.8",
+        "colors": ["red", "yellow", "green"],
+        "description": "Por debajo de 0.5 = Redis caido o invalidacion excesiva"
+      },
+      {
+        "title": "Integrity Failures by Tenant",
+        "type": "barchart",
+        "datasource": "Prometheus",
+        "targets": [{
+          "expr": "sum(rate(medicare_integrity_failures_total[5m])) by (tenant)",
+          "legendFormat": "{{ tenant }}"
+        }],
+        "description": "Cada barra es un tenant. Si alguna > 0, revisar audit trail."
+      },
+      {
+        "title": "Optimistic Lock Errors",
+        "type": "graph",
+        "datasource": "Prometheus",
+        "targets": [{
+          "expr": "rate(medicare_optimistic_lock_errors_total[5m])",
+          "legendFormat": "lock errors/s"
+        }],
+        "thresholds": [{"value": 5, "color": "orange"}]
+      }
+    ]
+  }
+}
