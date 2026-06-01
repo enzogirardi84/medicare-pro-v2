@@ -46,7 +46,7 @@ groups:
           severity: warning
           team: sre
         annotations:
-          summary: "Latencia de sincronizacion alta"
+          summary: "Latencia de sincronización alta"
           description: |
             P95 de sync > 10s. Posible saturacion del pool de conexiones.
             Verificar pool_size y conexiones activas.

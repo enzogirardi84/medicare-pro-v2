@@ -9,7 +9,7 @@ import unicodedata
 def _repair_mojibake(text):
     if not text:
         return text
-    sospechoso = ("Ã", "Â", "â", "ð", "�")
+    sospechoso = ("�", "�", "�", "�", "?")
     if not any(token in text for token in sospechoso):
         return text
     try:

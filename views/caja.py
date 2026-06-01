@@ -53,8 +53,8 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         ]
     )
     st.caption(
-        "Las métricas usan solo movimientos de este paciente en tu clínica. Registra cada práctica con monto y estado; el historial permite PDF por movimiento. "
-        "Coordinación ve abajo la auditoría general de caja."
+        "Las m�tricas usan solo movimientos de este paciente en tu cl�nica. Registra cada pr�ctica con monto y estado; el historial permite PDF por movimiento. "
+        "Coordinaci�n ve abajo la auditor�a general de caja."
     )
 
     # 1. Intentar leer desde PostgreSQL (Hybrid Read)
@@ -97,7 +97,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
     if not fact_empresa:
         fact_empresa = [f for f in st.session_state.get("facturacion_db", []) if f.get("empresa") == mi_empresa]
 
-    # Cache simple para evitar recÃ¡lculos innecesarios en reruns
+    # Cache simple para evitar recálculos innecesarios en reruns
     cache_key_caja = f"_caja_cache_{paciente_sel}_{len(fact_empresa)}"
     if cache_key_caja not in st.session_state:
         fact_paciente = [f for f in fact_empresa if f.get("paciente") == paciente_sel]
@@ -139,7 +139,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         ]
         practica_sel = c1.selectbox("Tipo de Servicio / Nomenclador", practicas_comunes)
         practica_manual = c1.text_input("Detalle adicional")
-        # ValidaciÃ³n: monto mÃ¡ximo 500000 (500k) para seguridad
+        # Validación: monto máximo 500000 (500k) para seguridad
         mon = c2.number_input("Monto a Facturar ($)", min_value=0.0, step=500.0, value=0.0, max_value=500000.0)
 
         if not es_movil:
@@ -153,20 +153,20 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
         metodo = c3.selectbox("Metodo de Pago", opciones_pago)
         estado = c4.radio("Estado del Cobro", ["Cobrado", "Pendiente / A Facturar"], horizontal=False)
 
-        if st.form_submit_button("ðŸ’° Registrar Cobro / Practica", use_container_width=True, type="primary"):
-            # ValidaciÃ³n extra de seguridad
+        if st.form_submit_button("�??� Registrar Cobro / Practica", use_container_width=True, type="primary"):
+            # Validación extra de seguridad
             desc_final = practica_manual.strip() if practica_sel == "-- Otro (Especificar manualmente) --" else f"{practica_sel} {('- ' + practica_manual.strip()) if practica_manual.strip() else ''}"
 
             # Validaciones de seguridad
             if not desc_final.strip():
                 log_event("caja", "error: Descripcion vacia.")
-                st.error("âš ï¸ DescripciÃ³n vacÃ­a. Complete el campo.")
+                st.error("�?�️ Descripción vacía. Complete el campo.")
             elif mon <= 0:
                 log_event("caja", "error: El monto debe ser mayor a $0.")
-                st.error("âš ï¸ El monto debe ser mayor a $0.")
+                st.error("�?�️ El monto debe ser mayor a $0.")
             elif mon > 500000:
                 log_event("caja", "error: Monto maximo permitido: $500,000")
-                st.error("âš ï¸ Monto mÃ¡ximo permitido: $500,000")
+                st.error("�?�️ Monto máximo permitido: $500,000")
             else:
                 fecha_str = ahora().strftime("%d/%m/%Y %H:%M")
 
@@ -186,7 +186,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             "monto_total": mon,
                             "estado": estado,
                             "obra_social": "",
-                            "observaciones": metodo # Guardamos el mÃ©todo en observaciones
+                            "observaciones": metodo # Guardamos el método en observaciones
                         }
                         insert_facturacion(datos_sql)
                         log_event("facturacion_sql_insert", "factura_insertada")
@@ -211,19 +211,19 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                 _trim_db_list("facturacion_db", 500)
                 with st.spinner("Guardando..."):
                     guardar_datos(spinner=False)
-                queue_toast(f"âœ… ${mon:,.2f} registrado - {desc_final.strip()[:30]}...")
+                queue_toast(f"�?? ${mon:,.2f} registrado - {desc_final.strip()[:30]}...")
                 st.rerun()
 
     with tabs_caja[1]:
-        st.markdown("##### â³ Pendientes de Facturar")
+        st.markdown("##### ⏳ Pendientes de Facturar")
         pendientes = [
             f for f in get_patient_records("facturacion_db", paciente_sel)
             if f.get("estado", "").startswith("Pendiente")
         ]
         if not pendientes:
-            st.success("âœ¨ No hay movimientos pendientes para este paciente.")
+            st.success("�?� No hay movimientos pendientes para este paciente.")
         else:
-            st.caption(f"{len(pendientes)} item(s) pendiente(s) â€” asignÃ¡ el precio y cobrÃ¡.")
+            st.caption(f"{len(pendientes)} item(s) pendiente(s) �?? asigná el precio y cobrá.")
             total_pend = sum(float(p.get("monto", 0)) for p in pendientes)
             st.metric("Total pendiente estimado", f"${total_pend:,.2f}")
             for i, p in enumerate(pendientes):
@@ -243,7 +243,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             key=f"pend_monto_{i}", label_visibility="collapsed",
                         )
                     with pc:
-                        if st.button("ðŸ’° Cobrar", key=f"pend_cobrar_{i}", use_container_width=True):
+                        if st.button("�??� Cobrar", key=f"pend_cobrar_{i}", use_container_width=True):
                             p["monto"] = monto_edit
                             p["estado"] = "Cobrado"
                             p["metodo"] = "Efectivo"
@@ -251,7 +251,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             _trim_db_list("facturacion_db", 500)
                             with st.spinner("Guardando..."):
                                 guardar_datos(spinner=False)
-                            queue_toast(f"âœ… ${monto_edit:,.2f} cobrado - {(p.get('serv') or '')[:30]}")
+                            queue_toast(f"�?? ${monto_edit:,.2f} cobrado - {(p.get('serv') or '')[:30]}")
                             st.rerun()
 
     with tabs_caja[2]:
@@ -328,7 +328,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                                 )
         else:
             st.warning(
-                "No hay movimientos de facturacion para este paciente. Registralos en la pestaÃ±a **Registrar cobro**."
+                "No hay movimientos de facturacion para este paciente. Registralos en la pestaña **Registrar cobro**."
             )
 
     with tabs_caja[3]:
@@ -359,9 +359,9 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             else:
                 bloque_estado_vacio(
                     "Caja sin movimientos",
-                    "No hay registros de facturaciÃ³n para esta clÃ­nica todavÃ­a.",
-                    sugerencia="Los movimientos del paciente se cargan en la pestaÃ±a Registrar cobro.",
+                    "No hay registros de facturación para esta clínica todavía.",
+                    sugerencia="Los movimientos del paciente se cargan en la pestaña Registrar cobro.",
                 )
         else:
-            st.info("La auditorÃ­a general estÃ¡ disponible solo para coordinaciÃ³n y administraciÃ³n.")
+            st.info("La auditoría general está disponible solo para coordinación y administración.")
 

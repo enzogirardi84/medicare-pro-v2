@@ -12,7 +12,7 @@
 
 1. [Seguridad y Compliance](#1-seguridad-y-compliance)
 2. [Performance y Escalabilidad](#2-performance-y-escalabilidad)
-3. [Operaciones Clínicas](#3-operaciones-clínicas)
+3. [Operaciónes Clínicas](#3-operaciónes-clínicas)
 4. [Especialidades Médicas](#4-especialidades-médicas)
 5. [Interoperabilidad](#5-interoperabilidad)
 6. [Análisis y BI](#6-análisis-y-bi)
@@ -45,9 +45,9 @@ desencriptado = PHIEncryption.decrypt_record("pacientes", encriptado)
 **Campos sensibles protegidos por tabla:**
 ```python
 PHI_FIELDS_CONFIG = {
-    "pacientes": ["dni", "email", "telefono", "direccion", "historia_clinica"],
+    "pacientes": ["dni", "email", "teléfono", "direccion", "historia_clinica"],
     "evoluciones": ["notas_privadas", "diagnostico_presuntivo"],
-    "usuarios": ["email", "telefono"],
+    "usuarios": ["email", "teléfono"],
 }
 ```
 
@@ -321,7 +321,7 @@ analysis = optimizer.analyze_query(
 
 ### 2.5 `core/batch_processor.py` - Procesamiento por Lotes
 
-**Propósito:** Operaciones bulk eficientes.
+**Propósito:** Operaciónes bulk eficientes.
 
 ```python
 from core.batch_processor import BatchProcessor
@@ -670,7 +670,7 @@ bundle = converter.create_bundle(
 
 ### 5.2 `api/rest_api.py` - API REST con FastAPI
 
-**Propósito:** Endpoints REST para integraciones externas.
+**Propósito:** Endpoints REST para integraciónes externas.
 
 ```python
 # Ejemplo de uso de la API
@@ -792,7 +792,7 @@ core/
 │   ├── sql_optimizer.py           # Optimizador SQL
 │   └── batch_processor.py         # Procesamiento batch
 │
-├── Operaciones Clínicas
+├── Operaciónes Clínicas
 │   ├── clinical_alerts.py         # Alertas clínicas CDS
 │   ├── smart_appointments.py      # Agenda inteligente
 │   ├── realtime_notifications.py  # Notificaciones tiempo real

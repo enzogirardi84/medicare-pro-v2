@@ -3,7 +3,7 @@
 ## Version 30 segundos
 ### Escena 1
 Texto en pantalla:
-Tu operacion de salud no puede seguir dependiendo de papel y WhatsApp.
+Tu operación de salud no puede seguir dependiendo de papel y WhatsApp.
 
 ### Escena 2
 Mostrar la app en celular y PC.
@@ -18,13 +18,13 @@ Texto:
 Gestiona pacientes, visitas, historia clinica, recetas, consentimientos y emergencias.
 
 ### Escena 4
-Mostrar auditoria, RRHH, agenda y coordinacion.
+Mostrar auditoría, RRHH, agenda y coordinación.
 Texto:
-Ideal para empresas, coordinacion y profesionales en domicilio.
+Ideal para empresas, coordinación y profesionales en domicilio.
 
 ### Escena 5
 Texto final:
-Mas control. Menos errores. Mas respaldo legal.
+Más control. Menos errores. Más respaldo legal.
 Solicita una demo.
 
 ## Version 60 segundos
@@ -34,7 +34,7 @@ Si hoy trabajas entre papel, chats, planillas y fotos sueltas, sabes lo dificil 
 ### Problema
 Eso genera errores, desorden y poca trazabilidad.
 
-### Solucion
+### Solución
 MediCare Enterprise PRO integra:
 - pacientes
 - visitas
@@ -44,15 +44,15 @@ MediCare Enterprise PRO integra:
 - recetas
 - consentimientos
 - ambulancia y emergencias
-- auditoria
+- auditoría
 - equipo y recursos humanos
 
 ### Diferencial
 Se usa desde el celular o la PC.
 Cada accion queda registrada.
-Y la informacion importante queda mas ordenada y accesible.
+Y la información importante queda más ordenada y accesible.
 
 ### Cierre
 MediCare Enterprise PRO.
-La plataforma para llevar la gestion de salud a otro nivel.
+La plataforma para llevar la gestión de salud a otro nivel.
 Solicita una demo.

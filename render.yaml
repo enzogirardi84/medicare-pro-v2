@@ -13,10 +13,10 @@ services:
         value: "true"
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: "false"
-      # URL publica HTTPS sin barra final (canonical, Open Graph). Definir el valor en el panel de Render.
+      # URL pública HTTPS sin barra final (canonical, Open Graph). Definir el valor en el panel de Render.
       - key: SITE_URL
         sync: false
-      # URL publica HTTPS del servicio Medicare Billing Pro.
+      # URL pública HTTPS del servicio Medicare Billing Pro.
       - key: BILLING_APP_URL
         sync: false
       - key: SUPABASE_URL

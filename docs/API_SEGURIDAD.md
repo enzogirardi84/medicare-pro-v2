@@ -9,7 +9,7 @@
 | | `encrypt_patient_data(patient)` | Cifra todos los campos sensibles de un paciente |
 | `ecdsa_signature.py` | `ECDSASignatureManager.firmar(documento, clave_privada)` | Firma un documento con ECDSA P-256 |
 | | `ECDSASignatureManager.verificar(documento, signed, clave_publica)` | Verifica firma ECDSA |
-| `batch_signer.py` | `BatchSigner.firmar_lote(ops, priv_key, profesional)` | Firma lote de 25 operaciones offline |
+| `batch_signer.py` | `BatchSigner.firmar_lote(ops, priv_key, profesional)` | Firma lote de 25 operaciónes offline |
 
 ## Auditoría
 

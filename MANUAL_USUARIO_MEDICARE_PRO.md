@@ -253,7 +253,7 @@ A continuación se describe cada módulo del menú lateral, ordenado por área f
 **Funciones:**
 - Ficha de emergencia rápida: triage, motivo de consulta, clasificación de riesgo.
 - Registro de traslados en ambulancia.
-- Historial de atenciones de urgencia.
+- Historial de atenciónes de urgencia.
 
 ---
 
@@ -298,7 +298,7 @@ A continuación se describe cada módulo del menú lateral, ordenado por área f
 **Funciones:**
 - **Vista unificada** de toda la historia del paciente: admisión, evoluciones, estudios, recetas, materiales, balance, escalas.
 - Filtros por fecha, tipo de evento y módulo.
-- **Descarga de PDF** completo del historial para presentaciones legales o auditoría.
+- **Descarga de PDF** completo del historial para presentaciónes legales o auditoría.
 
 ---
 
@@ -411,7 +411,7 @@ A continuación se describe cada módulo del menú lateral, ordenado por área f
 **Quién lo usa:** Auditoría, Admin, SuperAdmin
 
 **Funciones:**
-- Registro firmado de eventos críticos: acceso a historia, modificaciones, borrados, exportaciones.
+- Registro firmado de eventos críticos: acceso a historia, modificaciones, borrados, exportaciónes.
 - Criticidad: baja, media, alta, crítica.
 - **Descarga de PDF profesional** con formato legal para presentar en tribunales o auditorías externas.
 
@@ -484,7 +484,7 @@ Si ves el mensaje **"Modo local activo"**, significa que la app no pudo conectar
 > Sí. La app se adapta automáticamente a pantallas chicas. Algunos módulos complejos (como PDF o Dashboard) se ven mejor en computadora.
 
 **¿Qué pasa si borro una evolución por error?**
-> Solo un médico puede borrar evoluciones. El borrado queda registrado en Auditoría Legal con criticidad **Crítica**. Si fue un error, comunicalo inmediatamente a coordinación.
+> Sólo un médico puede borrar evoluciones. El borrado queda registrado en Auditoría Legal con criticidad **Crítica**. Si fue un error, comunicalo inmediatamente a coordinación.
 
 **¿Cómo sé si mis datos están seguros?**
 > Las contraseñas están encriptadas con bcrypt. La conexión a Supabase usa SSL. La sesión se cierra sola por inactividad. Y toda acción queda registrada.

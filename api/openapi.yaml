@@ -182,7 +182,7 @@ components:
           type: string
           enum: [M, F, O]
           example: "F"
-        telefono:
+        teléfono:
           type: string
           example: "+54 11 5555-1234"
         email:
@@ -232,7 +232,7 @@ components:
         sexo:
           type: string
           enum: [M, F, O]
-        telefono:
+        teléfono:
           type: string
         email:
           type: string
@@ -505,7 +505,7 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error_code: "FORBIDDEN"
-            message: "No tiene permisos para esta acción"
+            message: "No tiene permisos para está acción"
     
     ValidationError:
       description: Error de validación
@@ -1194,4 +1194,4 @@ tags:
   - name: Reportes
     description: Estadísticas y reportes
   - name: Webhooks
-    description: Integraciones webhook
+    description: Integraciónes webhook

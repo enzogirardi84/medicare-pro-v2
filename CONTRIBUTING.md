@@ -35,7 +35,7 @@ git checkout -b feature/nombre-descriptivo
 
 # Ejemplos:
 # feature/nuevo-modulo-pediatria
-# fix/validacion-dni
+# fix/validación-dni
 # docs/mejorar-api-docs
 ```
 
@@ -96,7 +96,7 @@ make test
 # Con cobertura
 make test-coverage
 
-# Solo unitarios
+# Sólo unitarios
 make test-unit
 
 # Solo integración
@@ -183,7 +183,7 @@ def crear_paciente(datos: Dict[str, Any]) -> Dict[str, Any]:
     Args:
         datos: Diccionario con datos del paciente.
             Requiere: nombre, apellido, dni
-            Opcional: email, telefono, direccion
+            Opcional: email, teléfono, direccion
 
     Returns:
         Diccionario con paciente creado incluyendo ID.

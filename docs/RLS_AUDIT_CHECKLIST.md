@@ -1,4 +1,4 @@
-# Auditoria RLS Supabase
+# Auditoría RLS Supabase
 
 Objetivo: confirmar tabla por tabla que los datos clinicos y administrativos no quedan expuestos por consultas anonimas o roles equivocados.
 
@@ -21,12 +21,12 @@ Objetivo: confirmar tabla por tabla que los datos clinicos y administrativos no 
 
 - RLS activo en todas las tablas con datos personales o clinicos.
 - Politicas separadas para lectura, alta, edicion y borrado cuando aplique.
-- Acceso de auditoria limitado a lectura y exportacion controlada.
+- Acceso de auditoría limitado a lectura y exportación controlada.
 - `service_role` reservado para procesos del servidor y tareas administrativas auditadas.
 
 ## Evidencia Minima
 
-- Fecha y responsable de la auditoria.
+- Fecha y responsable de la auditoría.
 - Resultado del bloque 1 del SQL.
 - Resultado del bloque 3 sin filas para tablas criticas.
 - Cambios aplicados y ticket/commit asociado.

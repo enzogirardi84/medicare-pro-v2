@@ -133,7 +133,7 @@ def actualizar_paciente(patient_id: str, datos: dict):
 ```
 
 #### Logs Inmutables
-- Usar `core/audit_trail.py` para operaciones críticas
+- Usar `core/audit_trail.py` para operaciónes críticas
 - Todos los logs deben incluir: timestamp, user_id, action, status
 
 ### 5. Librerías Modernas (Python 3.10+)
@@ -175,7 +175,7 @@ core/
 - [ ] Type hints completos
 - [ ] Validación de inputs con Pydantic
 - [ ] Paginación en consultas grandes
-- [ ] Decoradores de auditoría en operaciones críticas
+- [ ] Decoradores de auditoría en operaciónes críticas
 - [ ] Tests pasando
 - [ ] Mensaje de commit descriptivo en español
 

@@ -14,7 +14,7 @@
         }],
         "yaxes": [{"format": "ms", "label": "Latency"}],
         "thresholds": [{"value": 10000, "color": "red"}],
-        "description": "Si supera 10s por mas de 5min, dispara alerta SyncLatencyHigh"
+        "description": "Si supera 10s por más de 5min, dispara alerta SyncLatencyHigh"
       },
       {
         "title": "Cache Hit Ratio",

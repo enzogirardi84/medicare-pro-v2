@@ -2,7 +2,7 @@
 
 Para soportar **millones de usuarios**, Medicare Pro v2 ahora cuenta con una arquitectura distribuida (NextGen) compuesta por:
 1. **Frontend:** Streamlit (Medicare Pro v2 original, optimizado)
-2. **Backend API:** FastAPI (Maneja el tráfico pesado, validaciones e idempotencia)
+2. **Backend API:** FastAPI (Maneja el tráfico pesado, validaciónes e idempotencia)
 3. **Workers:** Celery (Procesa PDFs y WhatsApp en segundo plano)
 4. **Bases de Datos:** PostgreSQL (con Sharding/Particionamiento) y Redis (Caché y Colas)
 
@@ -97,7 +97,7 @@ La app ya queda preparada para Render con estos archivos:
 3. Crear `Web Service`
 4. Conectar el repo:
    - `enzogirardi84/medicare-pro-v2`
-5. Si Render detecta `render.yaml`, tomar la configuracion sugerida
+5. Si Render detecta `render.yaml`, tomar la configuración sugerida
 
 ### Variables de entorno
 
@@ -130,7 +130,7 @@ Casos habituales:
 - Si usas subdominio: crear un `CNAME`
 - Si usas dominio raiz: usar los registros `A` o la opcion que Render indique
 
-### Recomendacion practica
+### Recomendacion práctica
 
 Para evitar complicaciones con DNS del dominio raiz en Donweb:
 
@@ -139,11 +139,11 @@ Para evitar complicaciones con DNS del dominio raiz en Donweb:
 
 ### SSL
 
-Render genera HTTPS automaticamente una vez que el dominio apunta bien y termina la verificacion.
+Render genera HTTPS automaticamente una vez que el dominio apunta bien y termina la verificación.
 
 ## Recomendacion real
 
 - Streamlit Cloud para la interfaz
 - Supabase Database para tablas
 - Supabase Storage para PDFs, firmas e imagenes
-- Si queres dominio propio real, usar Render + Supabase
+- Si querés dominio propio real, usar Render + Supabase

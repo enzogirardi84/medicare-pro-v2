@@ -11,7 +11,7 @@ App **a prueba de panico** para pacientes: boton **NECESITO AYUDA**, cuadricula 
 
 ## Accesibilidad y lectura
 
-- **Texto mas grande** y **alto contraste** en **Configuracion** (se aplican en toda la app).
+- **Texto más grande** y **alto contraste** en **Configuración** (se aplican en toda la app).
 - Cola offline y cuenta regresiva se guardan en preferencias locales.
 
 ## Supabase
@@ -20,7 +20,7 @@ App **a prueba de panico** para pacientes: boton **NECESITO AYUDA**, cuadricula 
 2. Secreto: `PATIENT_ALERT_INGEST_SECRET` (Edge Functions → Secrets)
 3. Deploy: `supabase functions deploy submit-alerta-paciente --no-verify-jwt`
 
-En la app (**Configuracion**): URL proyecto, clave **anon**, **secreto**, **clinica** (minusculas = empresa en MediCare), **DNI o codigo paciente**.
+En la app (**Configuración**): URL proyecto, clave **anon**, **secreto**, **clinica** (minusculas = empresa en MediCare), **DNI o codigo paciente**.
 
 ## JSON que envia la Edge Function
 
@@ -49,14 +49,14 @@ La identificacion es el **paciente_id** configurado (DNI o codigo de legajo). Un
 
 ## Textos y errores de red
 
-Los mensajes que ve el paciente (sin conexion, 401, URL invalida, sintomas, etc.) estan centralizados en `lib/l10n/app_strings.dart`. Hay tests en `test/` para la cola offline, el procesador de cola, `app_settings`, `url_utils`, `format_utils`, triage, arranque de la app y la URL de Edge Function. Al enviar pendientes con exito, se actualiza **Ultima alerta** como en un envio en vivo. En inicio, el icono de ajustes muestra **badge** con la cantidad en cola. **Deslizar hacia abajo** en la pantalla principal actualiza pendientes y ultima alerta (`RefreshIndicator`). La version en ajustes se lee con **package_info_plus** desde `pubspec.yaml` al compilar (sin archivo duplicado). En escritorio/web el scroll de listas acepta arrastre con mouse gracias a `MedicareScrollBehavior`. En **Configuracion**, los campos van en un `AutofillGroup` (URL, clinica, DNI, nombre, telefono) y el teclado puede avanzar con **Siguiente** entre campos.
+Los mensajes que ve el paciente (sin conexion, 401, URL invalida, sintomas, etc.) estan centralizados en `lib/l10n/app_strings.dart`. Hay tests en `test/` para la cola offline, el procesador de cola, `app_settings`, `url_utils`, `format_utils`, triage, arranque de la app y la URL de Edge Function. Al enviar pendientes con exito, se actualiza **Ultima alerta** como en un envio en vivo. En inicio, el icono de ajustes muestra **badge** con la cantidad en cola. **Deslizar hacia abajo** en la pantalla principal actualiza pendientes y ultima alerta (`RefreshIndicator`). La version en ajustes se lee con **package_info_plus** desde `pubspec.yaml` al compilar (sin archivo duplicado). En escritorio/web el scroll de listas acepta arrastre con mouse gracias a `MedicareScrollBehavior`. En **Configuración**, los campos van en un `AutofillGroup` (URL, clinica, DNI, nombre, teléfono) y el teclado puede avanzar con **Siguiente** entre campos.
 
 ## Requisitos
 
 - Flutter 3.24+ recomendado.
 - `flutter create . --org com.medicare` si faltan carpetas `android/` / `ios/`.
 
-## GPS y telefono
+## GPS y teléfono
 
 - Permisos segun [geolocator](https://pub.dev/packages/geolocator).
 - iOS: `LSApplicationQueriesSchemes` con `tel` si falla el marcador.
@@ -65,4 +65,4 @@ Los mensajes que ve el paciente (sin conexion, 401, URL invalida, sintomas, etc.
 
 - **Sonido** en navegador para coordinadores: muchos bloquean autoplay; hoy el aviso es **visual** (sidebar + banner).
 - **WhatsApp** para triage Amarillo: no incluido; se puede enlazar a tu API de mensajeria despues.
-- **Asignacion por GPS al enfermero mas cercano**: requiere cruzar alertas con fichajes; no esta en este commit.
+- **Asignacion por GPS al enfermero más cercano**: requiere cruzar alertas con fichajes; no está en este commit.

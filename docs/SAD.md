@@ -156,7 +156,7 @@
 | **99.999%** disponibilidad de datos | Multi-Region Read Replicas con enrutamiento Haversine. Si la región local (sa-east-1) cae, el tráfico se redirige a us-east-1 automáticamente. | Global |
 | **100%** tolerancia a disaster recovery | Multi-Cloud Broker: escribe en Redis + Postgres + RAM + archivo local. Si AWS cae, conmuta a CloudKMS alterno + almacenamiento de contingencia local. | Multi-Cloud |
 | **0** puntos únicos de falla | Cada servicio tiene ≥3 réplicas. Anti-affinity en K8s: pods en diferentes hosts y zonas de disponibilidad. HPA escala por p95 latency. | Infraestructura |
-| **Sin downtime en mantenimiento** | `REINDEX CONCURRENTLY` sin bloqueo de escrituras. `ZeroLockIngestion` con `SKIP LOCKED`. Autovacuum tuning desactivado solo en ventanas de baja carga. | Base de Datos |
+| **Sin downtime en mantenimiento** | `REINDEX CONCURRENTLY` sin bloqueo de escrituras. `ZeroLockIngestion` con `SKIP LOCKED`. Autovacuum tuning desactivado sólo en ventanas de baja carga. | Base de Datos |
 
 **Eliminación de SPOFs:**
 
@@ -175,7 +175,7 @@ Un proceso de aplicación      → Mínimo 4 réplicas por servicio (HPA hasta 2
 | Control | Mecanismo | Estándar |
 |---------|-----------|----------|
 | **Cifrado en reposo** | AES-256-GCM por columna. DEK por tenant cifrada con KEK en HSM. Envelope Encryption (KMS). | HIPAA, ISO 27001 |
-| **Cifrado en tránsito** | TLS 1.3 en todas las comunicaciones. JWT ECDSA P-256 para autenticación de APIs. | HIPAA, PCI-DSS |
+| **Cifrado en tránsito** | TLS 1.3 en todas las comunicaciónes. JWT ECDSA P-256 para autenticación de APIs. | HIPAA, PCI-DSS |
 | **Zero-Trust Network** | Device Attestation (hardware hash + nonce + firma ECDSA). Signed URLs de un solo uso (TTL 5min). Bloqueo IP/tenant tras 5 firmas inválidas (Redis). | NIST 800-207 |
 | **Control de acceso RBAC** | 4 niveles: FULL (coordinador), RESTRICTED (enfermero), AUDIT, MASKED. Políticas predefinidas + custom. | ISO 27001, RGPD |
 | **Data Masking dinámico** | Middleware intercepta repositorio: "X.XXX.XX-8" para auditores, nombre completo para coordinador. Sin modificar queries. | HIPAA Safe Harbor |
@@ -246,7 +246,7 @@ Dispositivo Móvil                     Servidor                      Auditor
 | **Autovacuum PostgreSQL** | `core/zero_downtime_maintenance.py` | Continuo (autovacuum) | `VACUUM_CONFIG_SQL` | `event_ingest_queue`: scale_factor=0.01, cost_limit=2000. `clinical_event_store`: scale_factor=0.05. `checkins_gps`: scale_factor=0.02. Tablas de alta rotación tienen limpieza más agresiva. |
 | **REINDEX CONCURRENTLY** | `core/zero_downtime_maintenance.py` | Semanal (domingo 04:00) | `ReindexManager.run_maintenance_window()` | Detecta índices B-Tree y GIST con bloat >100MB o <1000 scans. Reconstruye con REINDEX CONCURRENTLY — sin bloqueo de escrituras. |
 | **IVM Diferido** | `core/zero_lock_postgres.py` | Cada 30s | `ZeroLockIngestion.run_deferred_ivm()` | Consume lote de `event_ingest_queue` con SKIP LOCKED, inserta en `clinical_event_store`, actualiza `clinical_snapshot` diferido. |
-| **Cache L1 Invalidation** | `core/l1_l2_cache.py` | Tiempo real (Pub/Sub) | `CacheDispatcher.invalidate(key)` | Publica evento en Redis Pub/Sub `medicare:cache:invalidate`. Todas las instancias destruyen su L1 para esa clave. |
+| **Cache L1 Invalidation** | `core/l1_l2_cache.py` | Tiempo real (Pub/Sub) | `CacheDispatcher.invalidate(key)` | Pública evento en Redis Pub/Sub `medicare:cache:invalidate`. Todas las instancias destruyen su L1 para esa clave. |
 | **Cryptographic Shredding** | `core/secure_deletion.py` | Cada 5 min + on-demand | `TempFileGarbageCollector` | Barre archivos temporales de auditoría expirados. Sobreescribe 3 pasadas (DoD 5220.22-M: 0xFF, 0x00, random) + truncado + rename + unlink. |
 | **Key Rotation** | `core/hsm_kms_integration.py` | Cada 90 días | `EnvelopeEncryptionManager.rotate_master_key()` | Crea nueva KEK en KMS. Re-cifra todas las DEKs de todos los tenants. Versiones históricas preservadas. |
 | **FinOps Report** | `core/finops_worker.py` | Diario (06:00 UTC) | `FinOpsReporter.generate_report()` | Cruza event_count, webhooks 24h, storage estimado. Alerta si tenant >$100/mes (Prometheus `unprofitable_tenant`). |

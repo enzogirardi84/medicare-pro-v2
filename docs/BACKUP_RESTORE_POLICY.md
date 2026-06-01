@@ -23,7 +23,7 @@ Objetivo: proteger datos clinicos y administrativos con backups cifrados, restau
   - busqueda de paciente,
   - lectura de historia clinica,
   - modulo Caja,
-  - exportacion PDF/Excel,
+  - exportación PDF/Excel,
   - politicas RLS activas.
 
 ## Checklist Antes De Produccion

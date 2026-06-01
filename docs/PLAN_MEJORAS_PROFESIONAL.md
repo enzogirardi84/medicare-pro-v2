@@ -85,7 +85,7 @@
 
 ## FASE 6: Features Avanzadas (Semana 6-8)
 
-### 6.1 API & Integraciones
+### 6.1 API & Integraciónes
 - [ ] FastAPI REST endpoints
 - [ ] WebSocket para tiempo real
 - [ ] OpenAPI documentation
@@ -113,7 +113,7 @@
    - Mejorar dashboard
 
 2. **Optimizar vistas críticas**
-   - admision.py (alta de pacientes)
+   - admisión.py (alta de pacientes)
    - evolucion.py (más usada)
    - visitas.py (crítica)
 

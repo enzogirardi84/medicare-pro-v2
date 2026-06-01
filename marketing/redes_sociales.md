@@ -1,10 +1,10 @@
 # Copys para Redes Sociales
 
-## Post 1 - Presentacion general
+## Post 1 - Presentación general
 ### Texto
-Tu operacion de salud no puede depender de papeles, audios y planillas sueltas.
+Tu operación de salud no puede depender de papeles, audios y planillas sueltas.
 
-Con MediCare Enterprise PRO podes gestionar pacientes, visitas, evoluciones, recetas, consentimientos, emergencias, auditoria y personal desde una sola plataforma.
+Con MediCare Enterprise PRO podés gestionar pacientes, visitas, evoluciones, recetas, consentimientos, emergencias, auditoría y personal desde una sola plataforma.
 
 Usalo desde celular o PC.
 
@@ -18,7 +18,7 @@ Software pensado para internacion domiciliaria.
 - Fichada GPS
 - Historia clinica digital
 - Signos vitales
-- Evolucion medica
+- Evolucion médica
 - Recetas y consentimientos
 - Alertas clinicas
 
@@ -31,25 +31,25 @@ Si coordinas una empresa de salud, necesitas ver:
 - visitas
 - equipo
 - alertas
-- auditoria
-- documentacion
+- auditoría
+- documentación
 
 MediCare Enterprise PRO te da control operativo y clinico en tiempo real.
 
 ## Post 4 - Para profesionales
 ### Texto
-Si sos profesional de salud y trabajas en domicilio, esta app te ayuda a:
+Si sos profesional de salud y trabajas en domicilio, está app te ayuda a:
 - registrar rapido
 - seguir indicaciones
 - subir estudios
 - dejar firma
 - tener toda la historia del paciente a mano
 
-Menos desorden. Mas tiempo para atender.
+Menos desorden. Más tiempo para atender.
 
 ## Post 5 - Emergencias
 ### Texto
-Emergencias y ambulancia tambien dentro del sistema.
+Emergencias y ambulancia también dentro del sistema.
 
 Registra:
 - triage
@@ -68,15 +68,15 @@ Tu equipo sigue usando papel y WhatsApp?
 Centraliza todo en un solo sistema
 
 ### Historia 3
-Pacientes, visitas, recetas, consentimientos y auditoria
+Pacientes, visitas, recetas, consentimientos y auditoría
 
 ### Historia 4
 Solicita demo por WhatsApp
 
 ## Reel corto
 ### Guion de texto
-Deja de trabajar con informacion suelta.
-MediCare Enterprise PRO ordena tu operacion de salud.
+Deja de trabajar con información suelta.
+MediCare Enterprise PRO ordena tu operación de salud.
 Desde el celular o la PC.
 Con historia clinica, recetas, consentimientos, emergencias y control del equipo.
 Solicita demo.

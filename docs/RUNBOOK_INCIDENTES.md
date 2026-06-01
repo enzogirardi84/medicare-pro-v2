@@ -41,7 +41,7 @@ WHERE tenant_id = (SELECT id FROM tenants WHERE slug = 'avalian')
           jsonb_build_object(
               'nota', nota,
               'diagnostico', diagnostico,
-              'medicacion', medicacion
+              'medicación', medicación
           )::TEXT,
           'sha256'
       ), 'hex')
@@ -78,7 +78,7 @@ LIMIT 10;
 # El cliente movil debe usar sort_keys=True en json.dumps()
 # Verificar que el firmware del dispositivo este actualizado a >= v2.1
 
-# Fix inmediato: desactivar validacion de hash para ese tenant
+# Fix inmediato: desactivar validación de hash para ese tenant
 # (mientras se deploya el fix al dispositivo movil)
 UPDATE tenants
 SET config = jsonb_set(config, '{skip_hash_validation}', 'true')
@@ -88,7 +88,7 @@ WHERE slug = 'avalian';
 #### Caso B: Data Tampering confirmado
 
 ```bash
-# 1. Congelar el tenant: denegar nuevas operaciones
+# 1. Congelar el tenant: denegar nuevas operaciónes
 # 2. Extraer respaldo inmediato del audit trail inmutable
 cp -r .audit_logs/avalian /backup/forensics/$(date +%Y%m%d_%H%M)
 
@@ -107,7 +107,7 @@ SET hash_integridad = ENCODE(DIGEST(
     jsonb_build_object(
         'nota', nota,
         'diagnostico', diagnostico,
-        'medicacion', medicacion
+        'medicación', medicación
     )::TEXT, 'sha256'
 ), 'hex')
 WHERE id IN (SELECT id FROM evoluciones WHERE hash_integridad IS NULL OR hash_integridad = '');

@@ -44,7 +44,7 @@ Estado: Análisis de arquitectura y recomendaciones priorizadas
 ```python
 from core.observability import get_logger, track_metric
 
-logger = get_logger("admision")
+logger = get_logger("admisión")
 logger.info("paciente_alta", extra={"paciente_id": id, "usuario": user})
 track_metric("pacientes_creados", 1, tags={"empresa": empresa})
 ```
@@ -183,7 +183,7 @@ track_metric("pacientes_creados", 1, tags={"empresa": empresa})
 
 ---
 
-### 13. IA/ML Integraciones (Impacto: Bajo | Esfuerzo: Alto)
+### 13. IA/ML Integraciónes (Impacto: Bajo | Esfuerzo: Alto)
 
 ```
 ✅ Predicción de riesgo clínico

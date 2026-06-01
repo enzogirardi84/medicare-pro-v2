@@ -121,4 +121,4 @@
    - **Fallan:** ___
    - **Pendientes:** ___
 
-> **Criterio de aceptación:** Todos los ítems de las secciones 1–7 deben pasar. Los ítems 8–9 son de calidad y regresión: cero fallas críticas permitidas.
+> **Criterio de aceptación:** Todos los ítems de las secciónes 1–7 deben pasar. Los ítems 8–9 son de calidad y regresión: cero fallas críticas permitidas.

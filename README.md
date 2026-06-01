@@ -7,20 +7,20 @@ Sistema de gestión clínica y domiciliaria. Ahora potenciado con una **arquitec
 ## Arquitectura NextGen
 
 - **Frontend (Streamlit):** Interfaz rápida y optimizada con caché avanzado.
-- **Backend API (FastAPI):** Motor asíncrono para validaciones, idempotencia y guardado en milisegundos (`/nextgen_platform/apps/api`).
+- **Backend API (FastAPI):** Motor asíncrono para validaciónes, idempotencia y guardado en milisegundos (`/nextgen_platform/apps/api`).
 - **Workers (Celery):** Procesamiento en segundo plano de PDFs pesados y notificaciones de WhatsApp (`/nextgen_platform/apps/worker`).
 - **Base de Datos (PostgreSQL):** Esquemas preparados para Sharding y RLS (Row Level Security) por clínica.
 
 ## Módulos principales
 
-- Admision y pacientes
+- Admisión y pacientes
 - Clinica, evolucion y signos vitales (plan de enfermeria integrado en Evolucion)
 - Recetas con firma y trazabilidad legal
 - Estudios y adjuntos
 - Emergencias y ambulancia
 - Escalas clinicas
 - PDF, consentimientos y respaldo clinico
-- RRHH, fichajes y auditoria
+- RRHH, fichajes y auditoría
 
 ## Requisitos
 
@@ -53,7 +53,7 @@ streamlit run main.py
 
 ## Deploy con dominio propio
 
-La app tambien queda preparada para desplegarse en Render con dominio personalizado.
+La app también queda preparada para desplegarse en Render con dominio personalizado.
 
 Archivos incluidos:
 
@@ -66,11 +66,11 @@ Comando de arranque configurado:
 streamlit run main.py --server.port $PORT --server.address 0.0.0.0
 ```
 
-La guia paso a paso para Render + Donweb esta en:
+La guia paso a paso para Render + Donweb está en:
 
 - `DEPLOY_GUIDE.md`
 
-## Configuracion
+## Configuración
 
 Si se quiere usar Supabase, crear:
 
@@ -81,7 +81,7 @@ con variables como:
 ```toml
 SUPABASE_URL="https://TU-PROYECTO.supabase.co"
 SUPABASE_KEY="TU_KEY"
-# URL publica HTTPS sin barra final (SEO, canonical, redireccion apex→www)
+# URL pública HTTPS sin barra final (SEO, canonical, redireccion apex→www)
 SITE_URL="https://www.tu-dominio.com"
 
 # (Opcional) Contraseña de emergencia para logins superadmin (admin, enzogirardi)
@@ -93,10 +93,10 @@ SUPERADMIN_EMERGENCY_PASSWORD="tu-password-segura-aqui"
 SUPERADMIN_EMERGENCY_LOGINS_EXTRA=["backup_admin", "soporte"]
 ```
 
-Si Supabase no esta configurado, la app funciona en modo local.
+Si Supabase no está configurado, la app funciona en modo local.
 
 **Seguridad:** La contraseña de emergencia debe configurarse en `secrets.toml`.
-Sin esta configuracion, el login de emergencia estara deshabilitado.
+Sin está configuración, el login de emergencia estara deshabilitado.
 
 ## Datos locales
 
@@ -198,4 +198,4 @@ La barra lateral está configurada para permanecer **expandida y fija** en escri
 
 ## Nota
 
-Este proyecto esta preparado para compararse con una version anterior sin reemplazarla.
+Este proyecto está preparado para compararse con una version anterior sin reemplazarla.

@@ -108,7 +108,7 @@ def listar_pacientes():
     return {"pacientes": [...]}
 ```
 
-**Beneficio:** Integraciones con otros sistemas.
+**Beneficio:** Integraciónes con otros sistemas.
 
 ---
 

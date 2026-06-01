@@ -92,7 +92,7 @@
 | Archivo | Qué se hizo | Impacto |
 |---|---|---|
 | `assets/style.css` | **Transformación iOS Fluid Experience:** fuente Apple nativa, scroll suave, transiciones fluidas cubic-bezier, fade-in global, glassmorphism contenedores | App se siente como nativa de iPhone/Mac |
-| `assets/style.css` | Comentadas 2 secciones de sidebar fijo en desktop + media query tablets (769-1024px) | Elimina ~200 líneas de CSS que forzaban `position: fixed/sticky` y `margin-left: 300px` causando pantalla vacía |
+| `assets/style.css` | Comentadas 2 secciónes de sidebar fijo en desktop + media query tablets (769-1024px) | Elimina ~200 líneas de CSS que forzaban `position: fixed/sticky` y `margin-left: 300px` causando pantalla vacía |
 | `assets/mobile.css` | Ya era flat: sin sombras, sin degradados, sin animaciones | DOM liviano para móviles ya estaba implementado |
 | `assets/mobile_legacy.css` | Ya comentado: `/* Deshabilitar TODAS las animaciones y transiciones */` | Sin animaciones pesadas en móviles |
 | `main.py` | `render_module_nav` envuelto en `st.expander("📂 Navegador de Módulos", expanded=False)` | Grilla de botones colapsada por defecto; solo se expande si el usuario quiere. Reduce DOM visible drásticamente |
@@ -117,7 +117,7 @@
 | `core/nav_helpers.py` | Agregado `from __future__ import annotations` al inicio | Idem — `set[str] \| frozenset[str]` |
 | `core/utils_pacientes.py` | Agregado `from __future__ import annotations` al inicio | Idem — `list[str] \| None` |
 | `core/database.py` | **Import `Any` faltante:** agregado `from typing import Any, Optional` | El archivo usaba `Any` en `_normalizar_blob_datos`, `_coleccion_fresca_como`, `obtener_estado_guardado`, etc., pero solo importaba `Optional`. Causaba `NameError` al cargar el módulo en producción (Streamlit Cloud). |
-| `assets/style.css` | Previamente (sesión anterior): deshabilitadas reglas CSS de sidebar fijo en desktop que causaban pantalla vacía. Comentadas 2 secciones `@media (min-width: 768px)` con `position: sticky/fixed`. |
+| `assets/style.css` | Previamente (sesión anterior): deshabilitadas reglas CSS de sidebar fijo en desktop que causaban pantalla vacía. Comentadas 2 secciónes `@media (min-width: 768px)` con `position: sticky/fixed`. |
 | `assets/style.css` | **Fix CSS tablets (769-1024px):** Comentada media query que forzaba `margin-left: 300px` en `stAppViewContainer` y `max-width: calc(100% - 300px)` en `section.main`. Esto interfería con el layout nativo de Streamlit en desktop, empujando el contenido principal fuera del viewport y dejando el área vacía/oscura. |
 
 ### FASE 4: Blindaje de Seguridad
@@ -125,7 +125,7 @@
 | Archivo | Qué se hizo |
 |---|---|
 | `views/_recetas_mar.py` | **XSS fix:** Escapados `volumen` y `velocidad` con `escape()` antes de interpolar en HTML con `unsafe_allow_html=True` (líneas 405-406). Previene inyección si un atacante modifica la base de datos. |
-| `views/_recetas_mar.py` | Las demás variables (`med`, `via`, `freq`, `det`, `solucion`, `hp`, `hr_e`, `firma`, `obs_e`) ya estaban correctamente escapadas. |
+| `views/_recetas_mar.py` | Las demás variables (`med`, `via`, `freq`, `det`, `solución`, `hp`, `hr_e`, `firma`, `obs_e`) ya estaban correctamente escapadas. |
 | `views/_recetas_utils.py` | `render_plan_hidratacion_preview` ya escapa `hora` y `velocidad` correctamente. |
 | `views/_historial_paneles.py` | `render_resumen_clinico` ya escapa con `html.escape()` antes de `unsafe_allow_html=True`. |
 

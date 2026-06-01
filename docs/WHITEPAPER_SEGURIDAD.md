@@ -57,7 +57,7 @@ Cada tabla tiene su propia clave de cifrado derivada (`PHIEncryptionManager._der
 
 Cada profesional de la salud posee un par de claves basado en **curva elíptica SECP256R1 (NIST P-256)**. Este esquema de criptografía asimétrica garantiza que:
 
-1. **Autenticidad:** Solo el poseedor de la clave privada pudo generar la firma.
+1. **Autenticidad:** Sólo el poseedor de la clave privada pudo generar la firma.
 2. **Integridad:** Cualquier modificación posterior invalida la firma.
 3. **No Repudio:** El firmante no puede negar haber autorizado el documento, verificable por cualquier tercero con acceso a la clave pública.
 
@@ -84,7 +84,7 @@ Cada profesional de la salud posee un par de claves basado en **curva elíptica 
 
 ### 3.1 Motor de Auditoría Inmutable
 
-El sistema implementa un **audit trail inmutable con encadenamiento de hashes SHA-256**, una arquitectura fundamentalmente similar a la de blockchain, diseñada para garantizar la integridad forense de todos los accesos y operaciones sobre datos clínicos.
+El sistema implementa un **audit trail inmutable con encadenamiento de hashes SHA-256**, una arquitectura fundamentalmente similar a la de blockchain, diseñada para garantizar la integridad forense de todos los accesos y operaciónes sobre datos clínicos.
 
 **Estructura de cada entrada:**
 
@@ -96,7 +96,7 @@ Entry = {
     recurso: string (ej. "historial:paciente_XXXX"),
     detalle: string,
     hash_prev: string (SHA-256 de la entrada anterior),
-    hash_actual: string (SHA-256 de esta entrada),
+    hash_actual: string (SHA-256 de está entrada),
     firmado: boolean
 }
 ```
@@ -144,7 +144,7 @@ La plataforma está diseñada para operar en entornos de conectividad intermiten
 | Columna | Tipo | Propósito |
 |---------|------|-----------|
 | `operation_id` | UUID4 | Identificador único (idempotencia) |
-| `timestamp` | REAL | Orden cronológico de las operaciones |
+| `timestamp` | REAL | Orden cronológico de las operaciónes |
 | `tipo` | TEXT | "evolucion" | "checkin" | "receta" |
 | `payload_enc` | BLOB | Payload cifrado con AES-256-GCM |
 | `firma_ecdsa` | TEXT | Firma digital del payload |
@@ -157,8 +157,8 @@ El `SyncManager` implementa un **heartbeat de conectividad** que verifica la dis
 
 **Pipeline de sincronización:**
 
-1. **Orden cronológico estricto:** Las operaciones se sincronizan en el mismo orden en que fueron creadas (ORDER BY timestamp ASC).
-2. **Procesamiento por lotes:** Se sincronizan hasta 25 operaciones por ciclo para no saturar el servidor.
+1. **Orden cronológico estricto:** Las operaciónes se sincronizan en el mismo orden en que fueron creadas (ORDER BY timestamp ASC).
+2. **Procesamiento por lotes:** Se sincronizan hasta 25 operaciónes por ciclo para no saturar el servidor.
 3. **Reintentos con límite:** Cada operación tiene un máximo de 5 reintentos. Al alcanzar el límite, se elimina de la cola y se registra como fallida.
 4. **Idempotencia:** Cada operación lleva un UUID4 único. Si una operación se sincroniza dos veces, el servidor detecta el duplicado y lo ignora.
 
@@ -201,7 +201,7 @@ distancia = R · c
 donde R = 6,371 km (radio terrestre medio)
 ```
 
-Este cálculo puramente matemático evita dependencias de APIs externas durante el procesamiento por lotes. Las visitas detectadas se registran con: hora de entrada, hora de salida, duración total y radio de tolerancia. Esta información se incorpora al PDF clínico como **prueba de asistencia del profesional** en el domicilio del paciente.
+Este cálculo puramente matemático evita dependencias de APIs externas durante el procesamiento por lotes. Las visitas detectadas se registran con: hora de entrada, hora de salida, duración total y radio de tolerancia. Está información se incorpora al PDF clínico como **prueba de asistencia del profesional** en el domicilio del paciente.
 
 ### 5.3 Privacidad en Renderizado de Mapas
 
@@ -272,8 +272,8 @@ El sistema expone métricas en **formato Prometheus** estándar a través del en
 
 | Métrica | Tipo | Descripción |
 |---------|------|-------------|
-| `medicare_operaciones_offline` | Gauge | Operaciones pendientes en cola local |
-| `medicare_operaciones_sincronizadas` | Counter | Total de operaciones sincronizadas exitosamente |
+| `medicare_operaciones_offline` | Gauge | Operaciónes pendientes en cola local |
+| `medicare_operaciones_sincronizadas` | Counter | Total de operaciónes sincronizadas exitosamente |
 | `medicare_login_totp_fallidos` | Counter | Intentos fallidos de autenticación TOTP |
 | `medicare_archivos_bloqueados` | Counter | Archivos rechazados por el Upload Sanitizer |
 | `medicare_pdf_tiempo_ms` | Gauge | Tiempo promedio de generación de PDF clínico |
@@ -306,7 +306,7 @@ El sistema expone métricas en **formato Prometheus** estándar a través del en
 
 MediCare Enterprise PRO constituye una plataforma de gestión sanitaria diseñada desde sus cimientos con un enfoque **Security-by-Design** y **Privacy-by-Design**. La combinación de cifrado AES-256-GCM por campo, firmas asimétricas ECDSA para No Repudio, audit trail inmutable estilo blockchain, arquitectura offline-first con resolución de conflictos, y aislamiento multi-inquilino, proporciona un nivel de garantía técnica y legal equiparable a sistemas financieros y gubernamentales de alto impacto.
 
-La plataforma está preparada para someterse a auditorías de seguridad de terceros, certificaciones HIPAA/GDPR y procesos de debida diligencia por parte de instituciones de salud, obras sociales y empresas de medicina prepaga.
+La plataforma está preparada para someterse a auditorías de seguridad de terceros, certificaciónes HIPAA/GDPR y procesos de debida diligencia por parte de instituciones de salud, obras sociales y empresas de medicina prepaga.
 
 ---
 

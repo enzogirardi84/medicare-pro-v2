@@ -11,7 +11,7 @@ restapi:
   connect_address: pg-mediare-0:8008
 
 etcd:
-  host: etcd-cluster:2379  # Cluster etcd para coordinacion de failover
+  host: etcd-cluster:2379  # Cluster etcd para coordinación de failover
 
 bootstrap:
   dcs:

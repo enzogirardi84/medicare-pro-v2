@@ -3,12 +3,12 @@ from __future__ import annotations
 """
 
 
-Tests de Integración para Flujos Críticos de MediCare Pro.
+Tests de Integraci�n para Flujos Cr�ticos de MediCare Pro.
 
-Flujos críticos cubiertos:
+Flujos cr�ticos cubiertos:
 1. Login completo (incluyendo rate limiting)
-2. Guardado de evolución clínica (con auditoría)
-3. Búsqueda de paciente paginada
+2. Guardado de evoluci�n cl�nica (con auditor�a)
+3. B�squeda de paciente paginada
 4. Backup/Restore de datos
 5. Rate limiting bajo ataque
 """
@@ -51,7 +51,7 @@ def sample_patient():
         "id": "test-patient-001",
         "dni": "12345678",
         "nombre": "Paciente Test",
-        "apellido": "Integración",
+        "apellido": "Integraci�n",
         "fecha_nacimiento": "1980-01-01",
         "email": "test@medicare.test",
         "telefono": "1144445555",
@@ -64,7 +64,7 @@ def sample_patient():
 
 @pytest.fixture
 def sample_evolucion():
-    """Fixture con evolución clínica de prueba."""
+    """Fixture con evoluci�n cl�nica de prueba."""
     return {
         "id": "test-evo-001",
         "paciente_id": "test-patient-001",
@@ -79,10 +79,10 @@ def sample_evolucion():
 
 
 class TestLoginFlow:
-    """Tests para flujo de login crítico."""
+    """Tests para flujo de login cr�tico."""
 
     def test_login_rate_limiting(self, mock_session):
-        """Verifica que el rate limiting bloquea después de 5 intentos."""
+        """Verifica que el rate limiting bloquea despu�s de 5 intentos."""
         from core.rate_limiter_distributed import (
             check_login_rate_limit,
             reset_login_attempts,
@@ -94,25 +94,25 @@ class TestLoginFlow:
         # 5 intentos deben permitirse
         for i in range(5):
             status = check_login_rate_limit(identifier)
-            assert status.allowed, f"Intento {i+1} debería permitirse"
+            assert status.allowed, f"Intento {i+1} deber�a permitirse"
 
         # El sexto debe bloquearse
         status = check_login_rate_limit(identifier)
-        assert not status.allowed, "Sexto intento debería bloquearse"
+        assert not status.allowed, "Sexto intento deber�a bloquearse"
         assert status.blocked_until is not None
 
         # Resetear y verificar que permite de nuevo
         reset_login_attempts(identifier)
         status = check_login_rate_limit(identifier)
-        assert status.allowed, "Tras reset, debería permitir"
+        assert status.allowed, "Tras reset, deber�a permitir"
 
     def test_login_with_invalid_credentials(self, mock_session):
-        """Verifica manejo de credenciales inválidas."""
+        """Verifica manejo de credenciales inv�lidas."""
         from core.security_middleware import PatientDataValidator
 
         validator = PatientDataValidator()
 
-        # DNI inválido
+        # DNI inv�lido
         with pytest.raises(ValueError):
             validator.validate_dni("abc123")
 
@@ -121,10 +121,10 @@ class TestLoginFlow:
             validator.validate_dni("123")
 
     def test_session_initialization(self, mock_session):
-        """Verifica inicialización correcta de session state."""
+        """Verifica inicializaci�n correcta de session state."""
         from core.cache_optimized import PaginationStateHelper
 
-        # Inicializar paginación
+        # Inicializar paginaci�n
         state = PaginationStateHelper.init_pagination_state("pacientes", session_state=mock_session)
 
         assert "pacientes_page" in state
@@ -136,7 +136,7 @@ class TestPatientCRUD:
     """Tests para operaciones CRUD de pacientes."""
 
     def test_patient_validation(self, sample_patient):
-        """Verifica validación de datos de paciente."""
+        """Verifica validaci�n de datos de paciente."""
         from core.security_middleware import PatientDataValidator
 
         validator = PatientDataValidator()
@@ -149,12 +149,12 @@ class TestPatientCRUD:
         email_limpio = validator.validate_email(sample_patient["email"])
         assert email_limpio == "test@medicare.test"
 
-        # Validar teléfono
+        # Validar tel�fono
         tel_limpio = validator.validate_telefono(sample_patient["telefono"])
         assert tel_limpio == "1144445555"
 
     def test_patient_sanitization(self, sample_patient):
-        """Verifica sanitización de inputs maliciosos."""
+        """Verifica sanitizaci�n de inputs maliciosos."""
         from core.security_middleware import InputSanitizer, SecurityError
 
         # Intentar XSS
@@ -163,7 +163,7 @@ class TestPatientCRUD:
         with pytest.raises(SecurityError):
             InputSanitizer.sanitize_string(malicious_name, allow_html=False)
 
-        # Sanitización con HTML permitido
+        # Sanitizaci�n con HTML permitido
         clean = InputSanitizer.sanitize_string(
             "<strong>Negrita</strong> y <script>alert('xss')</script>",
             allow_html=True
@@ -187,7 +187,7 @@ class TestPatientCRUD:
 
 
 class TestClinicalData:
-    """Tests para datos clínicos críticos."""
+    """Tests para datos cl�nicos cr�ticos."""
 
     def test_evolucion_audit_trail(self, sample_evolucion, mock_session):
         """Verifica que evoluciones generan audit trail."""
@@ -201,7 +201,7 @@ class TestClinicalData:
         }
         mock_session["logeado"] = True
 
-        # Simular guardado con auditoría
+        # Simular guardado con auditor�a
         audit_entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action": "CREATE",
@@ -218,7 +218,7 @@ class TestClinicalData:
         assert mock_session["auditoria_legal_db"][0]["action"] == "CREATE"
 
     def test_signos_vitales_validation(self):
-        """Verifica validación de rangos médicos."""
+        """Verifica validaci�n de rangos m�dicos."""
         from core.security_middleware import PatientDataValidator
 
         validator = PatientDataValidator()
@@ -228,13 +228,13 @@ class TestClinicalData:
         assert len(result["errores"]) > 0
         assert "Temperatura fuera de rango" in result["errores"][0]
 
-        # Temperatura válida
+        # Temperatura v�lida
         result = validator.validate_signos_vitales(temperatura=37.5)
         assert len(result["errores"]) == 0
         assert result["validos"]["temperatura"] == 37.5
 
     def test_evolucion_integrity(self, sample_evolucion):
-        """Verifica integridad de datos de evolución."""
+        """Verifica integridad de datos de evoluci�n."""
         # Verificar campos obligatorios
         required_fields = ["paciente_id", "medico_id", "fecha", "diagnostico"]
 
@@ -245,17 +245,17 @@ class TestClinicalData:
         try:
             datetime.fromisoformat(sample_evolucion["fecha"])
         except ValueError:
-            pytest.fail("Fecha no está en formato ISO")
+            pytest.fail("Fecha no est� en formato ISO")
 
 
 class TestPagination:
-    """Tests para paginación de datos."""
+    """Tests para paginaci�n de datos."""
 
     def test_pagination_limits(self):
-        """Verifica límites de paginación."""
+        """Verifica l�mites de paginaci�n."""
         from core.db_paginated import PaginatedSupabaseQuery
 
-        # Intentar página > máxima
+        # Intentar p�gina > m�xima
         paginator = PaginatedSupabaseQuery(None)
 
         # Verificar que page_size > 100 se limita a 100
@@ -288,7 +288,7 @@ class TestSQLSecurity:
     """Tests para seguridad SQL."""
 
     def test_sql_injection_detection(self):
-        """Verifica detección de SQL injection."""
+        """Verifica detecci�n de SQL injection."""
         from core.security_middleware import InputSanitizer
 
         # Intentos de SQL injection
@@ -301,10 +301,10 @@ class TestSQLSecurity:
 
         for malicious in malicious_inputs:
             assert InputSanitizer.detect_sql_injection(malicious), \
-                f"Debería detectar SQL injection en: {malicious}"
+                f"Deber�a detectar SQL injection en: {malicious}"
 
     def test_query_analysis(self):
-        """Verifica análisis de queries."""
+        """Verifica an�lisis de queries."""
         from core.sql_optimizer import get_sql_optimizer
 
         optimizer = get_sql_optimizer()
@@ -314,10 +314,10 @@ class TestSQLSecurity:
         assert analysis["risk_level"] in ["medium", "high"]
         assert any("SELECT *" in w for w in analysis["warnings"])
 
-        # Query con UPDATE sin WHERE (CRÍTICO)
+        # Query con UPDATE sin WHERE (CR�TICO)
         analysis = optimizer.analyze_query("UPDATE pacientes SET estado='inactivo'")
         assert analysis["risk_level"] == "high"
-        assert any("CRÍTICO" in w for w in analysis["warnings"])
+        assert any("CR�TICO" in w for w in analysis["warnings"])
 
 
 class TestHealthChecks:
@@ -346,13 +346,13 @@ class TestHealthChecks:
         assert health.latency_ms == 10.5
 
     def test_system_metrics_collection(self):
-        """Verifica recolección de métricas."""
+        """Verifica recolecci�n de m�tricas."""
         from core.health_check_enhanced import get_health_checker
 
         checker = get_health_checker()
         metrics = checker._get_system_metrics()
 
-        # Verificar que tenemos métricas básicas
+        # Verificar que tenemos m�tricas b�sicas
         assert "cpu_percent" in metrics
         assert "boot_time" in metrics
 
@@ -362,14 +362,14 @@ class TestEndToEnd:
     """Tests end-to-end completos."""
 
     def test_complete_patient_workflow(self, mock_session, sample_patient, sample_evolucion):
-        """Flujo completo: crear paciente → evolución → búsqueda."""
+        """Flujo completo: crear paciente ? evoluci�n ? b�squeda."""
         # 1. Crear paciente
         mock_session["pacientes_db"] = [sample_patient]
 
-        # 2. Agregar evolución
+        # 2. Agregar evoluci�n
         mock_session["evoluciones_db"] = [sample_evolucion]
 
-        # 3. Simular búsqueda
+        # 3. Simular b�squeda
         pacientes = mock_session["pacientes_db"]
         encontrado = None
         for p in pacientes:
@@ -380,7 +380,7 @@ class TestEndToEnd:
         assert encontrado is not None
         assert encontrado["nombre"] == "Paciente Test"
 
-        # 4. Verificar evolución asociada
+        # 4. Verificar evoluci�n asociada
         evos = mock_session["evoluciones_db"]
         evos_paciente = [e for e in evos if e["paciente_id"] == encontrado["id"]]
         assert len(evos_paciente) == 1
@@ -422,7 +422,7 @@ class TestInventoryFlow:
         assert item["stock"] == 95
 
     def test_stock_below_minimum_triggers_alert(self, mock_session):
-        """Stock por debajo del mínimo genera alerta."""
+        """Stock por debajo del m�nimo genera alerta."""
         item = {"id": "inv-002", "item": "Paracetamol", "stock": 10, "stock_minimo": 25, "empresa": "test-clinic"}
         mock_session["inventario_db"] = [item]
         necesita_reposicion = item["stock"] < item["stock_minimo"]
@@ -442,13 +442,13 @@ class TestPrescriptionFlow:
     """Tests para flujo de prescripciones."""
 
     def test_create_prescription_with_valid_meds(self, mock_session):
-        """Crear receta con medicamentos vÃ¡lidos."""
+        """Crear receta con medicamentos válidos."""
         receta = {
             "id": "rx-001",
             "paciente": "Paciente Test",
             "medicamento": "Amoxicilina 500mg",
             "dosis": "1 comprimido cada 8 horas",
-            "duracion": "7 dÃ­as",
+            "duracion": "7 días",
             "via": "oral",
             "prescriptor": "Dr. Test",
             "fecha": "2026-05-20",
@@ -458,7 +458,7 @@ class TestPrescriptionFlow:
         assert mock_session["indicaciones_db"][0]["medicamento"] == "Amoxicilina 500mg"
 
     def test_drug_interaction_detection(self):
-        """Verificar detecciÃ³n de interacciones medicamentosas."""
+        """Verificar detección de interacciones medicamentosas."""
         from core.drug_interactions import DrugInteractionDatabase
 
         interaccion = DrugInteractionDatabase.get_interaction("warfarina", "ibuprofeno")
@@ -502,6 +502,6 @@ class TestBackupFlow:
         assert isinstance(backups, list)
 
 
-# ConfiguraciÃ³n de pytest
+# Configuración de pytest
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

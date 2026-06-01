@@ -12,7 +12,7 @@
 | 1 | Backup defensivo `.bak` de los 5 archivos críticos | `_backups_fix_pantalla_azul/` | Rollback si algo sale mal |
 | 2 | `showErrorDetails = true` | `.streamlit/config.toml` | Que se vea el traceback en pantalla, no fondo azul mudo |
 | 3 | **`streamlit_app.py` nuevo** (entry point canónico) | `streamlit_app.py` | Streamlit Cloud lo autodetecta y prioriza sobre `main.py` legacy |
-| 4 | **🚨 SyntaxError fatal arreglado** en bloque `__main__` truncado | `core/ui_professional.py:319` | El archivo estaba CORTADO en medio de una expresión → no se podía importar → boot rompía con pantalla azul. **Esta era la causa raíz real.** |
+| 4 | **🚨 SyntaxError fatal arreglado** en bloque `__main__` truncado | `core/ui_professional.py:319` | El archivo estaba CORTADO en medio de una expresión → no se podía importar → boot rompía con pantalla azul. **Está era la causa raíz real.** |
 | 5 | Removido segundo `st.set_page_config()` muerto | `core/ui_professional.py:160` | Bomba de tiempo: dos llamadas a set_page_config lanzan StreamlitAPIException |
 | 6 | Imports SQL al top con guard ImportError + fallback graceful | `views/_visitas_agenda.py` | Si Supabase/db_sql falla, cae a cache local con aviso visible (antes: explotaba con pantalla azul) |
 | 7 | Wrapper de errores reforzado en `render_current_view` | `core/app_navigation.py:325-360` | Bloque blanco visible + traceback colapsable + log a error_tracker. **Nunca más pantalla azul muda.** |
@@ -66,7 +66,7 @@ git push origin main
    streamlit_app.py
    ```
    Si dice `main.py` o `main_medicare.py`, **cambialo a `streamlit_app.py`** y guardás.
-4. En **Secrets** (mismo Settings, otra pestaña): verificá que estén cargadas las claves de Supabase (`SUPABASE_URL`, `SUPABASE_KEY`, o como las llames). Copiá de tu `.streamlit/secrets.toml` local si falta algo.
+4. En **Secrets** (mismo Settings, otra pestaña): verificá que estén cargadas las claves de Supabase (`SUPABASE_URL`, `SUPABASE_KEY`, o cómo las llames). Copiá de tu `.streamlit/secrets.toml` local si falta algo.
 5. Volvé al dashboard de la app → **Reboot app**.
 
 ### Paso 5 — Probar

@@ -2,7 +2,7 @@
 
 ## Empresa de internacion domiciliaria
 ### Objetivo comercial
-Mostrar control integral de pacientes, equipo, documentacion y auditoria.
+Mostrar control integral de pacientes, equipo, documentación y auditoría.
 
 ### Recorrido recomendado
 1. Landing comercial y propuesta general.
@@ -10,7 +10,7 @@ Mostrar control integral de pacientes, equipo, documentacion y auditoria.
 3. Visitas y Agenda.
 4. Clinica y Evolucion.
 5. Recetas y PDF legal.
-6. RRHH, Asistencia y Auditoria.
+6. RRHH, Asistencia y Auditoría.
 
 ### Cierre
 Enfatizar que la empresa gana control operativo, respaldo legal y mejor imagen frente a pacientes y prestadores.
@@ -20,19 +20,19 @@ Enfatizar que la empresa gana control operativo, respaldo legal y mejor imagen f
 Mostrar rapidez de uso en celular y trazabilidad sin depender de papel.
 
 ### Recorrido recomendado
-1. Perfil del profesional y acceso desde telefono.
+1. Perfil del profesional y acceso desde teléfono.
 2. Visitas y fichada GPS.
-3. Evolucion medica.
+3. Evolucion médica.
 4. Estudios y carga de adjuntos.
 5. Recetas y consentimientos.
 6. Red de Profesionales.
 
 ### Cierre
-Enfatizar que puede atender, registrar y mostrar un servicio mas profesional desde el celular.
+Enfatizar que puede atender, registrar y mostrar un servicio más profesional desde el celular.
 
-## Coordinacion operativa
+## Coordinación operativa
 ### Objetivo comercial
-Mostrar control del dia, del equipo y de las alertas clinicas.
+Mostrar control del día, del equipo y de las alertas clinicas.
 
 ### Recorrido recomendado
 1. Dashboard.
@@ -40,10 +40,10 @@ Mostrar control del dia, del equipo y de las alertas clinicas.
 3. Mi Equipo.
 4. Asistencia en Vivo.
 5. Alertas clinicas.
-6. Cierre Diario y Auditoria Legal.
+6. Cierre Diario y Auditoría Legal.
 
 ### Cierre
-Enfatizar que la coordinacion puede supervisar sin depender de llamados o planillas dispersas.
+Enfatizar que la coordinación puede supervisar sin depender de llamados o planillas dispersas.
 
 ## Ambulancia y emergencias
 ### Objetivo comercial
@@ -54,7 +54,7 @@ Mostrar trazabilidad del evento critico y del traslado.
 2. Triage por grados.
 3. Registro de procedimientos y tiempos.
 4. Historial y PDF del evento.
-5. Alertas y coordinacion.
+5. Alertas y coordinación.
 
 ### Cierre
 Enfatizar que todo queda documentado: prioridad, tiempos, intervenciones, profesional y respaldo legal.
@@ -64,12 +64,12 @@ Enfatizar que todo queda documentado: prioridad, tiempos, intervenciones, profes
 Mostrar orden documental y control del circuito interno.
 
 ### Recorrido recomendado
-1. Admision.
+1. Admisión.
 2. Caja.
 3. Inventario.
 4. RRHH y Fichajes.
-5. Auditoria.
+5. Auditoría.
 6. Documentos PDF y respaldo.
 
 ### Cierre
-Enfatizar que la organizacion reduce errores, mejora la trazabilidad y acelera la gestion.
+Enfatizar que la organización reduce errores, mejora la trazabilidad y acelera la gestión.

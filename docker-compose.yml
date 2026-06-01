@@ -6,7 +6,7 @@
 version: "3.9"
 
 services:
-  # ── Aplicacion Streamlit ───────────────────────────────────────
+  # ── Aplicación Streamlit ───────────────────────────────────────
   app:
     build:
       context: .
@@ -53,7 +53,7 @@ services:
       - audit_logs:/app/.audit_logs:ro
       - estudios:/app/storage/estudios:rw
       - backups:/app/backups:rw
-      # Configuracion tenant (montado como archivo)
+      # Configuración tenant (montado como archivo)
       - ./tenants/${MEDICARE_TENANT:-default}/config.toml:/app/.streamlit/config.toml:ro
       - ./tenants/${MEDICARE_TENANT:-default}/secrets.toml:/app/.streamlit/secrets.toml:ro
     healthcheck:

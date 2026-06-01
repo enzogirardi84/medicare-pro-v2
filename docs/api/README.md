@@ -261,7 +261,7 @@ curl -X POST https://api.medicare.local/v1/pacientes \
     "apellido": "González",
     "fecha_nacimiento": "1985-06-15",
     "sexo": "F",
-    "telefono": "+54 11 5555-1234",
+    "teléfono": "+54 11 5555-1234",
     "obra_social": "OSDE"
   }'
 ```
@@ -369,7 +369,7 @@ app.post('/webhook', (req, res) => {
 - Filtros avanzados de búsqueda
 - Exportación a Excel/PDF
 - Notificaciones push
-- Integraciones con laboratorios
+- Integraciónes con laboratorios
 
 ---
 
