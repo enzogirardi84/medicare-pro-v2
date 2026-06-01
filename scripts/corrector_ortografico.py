@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 # ??? 1. Correcci�n de doble codificaci�n (mojibake) ????????????????????
 # Texto que pas� por: original UTF-8 ? (le�do como Latin-1) ? re-codificado como UTF-8
-# 
+#
 # Ejemplo: � (C3 B3 en UTF-8) le�do como Latin-1 da ó (C3 83 C2 B3 en UTF-8)
 # Fix: encode('latin-1') recupera C3 B3, luego decode('utf-8') da '�'
 
