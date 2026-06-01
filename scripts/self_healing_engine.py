@@ -44,7 +44,7 @@ class SelfHealingEngine:
     async def _get_redis(self):
         if self._redis is None:
             try:
-                import redis.asynced as aioredis
+                import redis.asyncio as aioredis
                 self._redis = aioredis.Redis(
                     host=os.environ.get("REDIS_HOST", "localhost"),
                     port=int(os.environ.get("REDIS_PORT", "6379")),
@@ -63,7 +63,6 @@ class SelfHealingEngine:
         Reduce requests_per_minute a 10 y concurrent_limit a 1.
         Los demas tenants no se ven afectados.
         """
-        import aioredis
         r = await self._get_redis()
         if r:
             await r.hset(f"rate_limit:{tenant_id}", mapping={
