@@ -443,24 +443,99 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             nota = str(ev.get("nota", ""))
             firma = str(ev.get("firma", ""))
             es_urgente = ev.get("urgente", False) or "urgente" in nota.lower()
+            es_cuidador = ev.get("tipo_evolucion") == "cuidador"
+            cd = ev.get("cuidador_data", {}) or {}
 
-            with st.expander(f"Evolución #{ev_num} �?? {fecha} �?? {plantilla}", key=f"ev_exp_{idx}_{ev.get('id', '')}"):
-                if es_urgente:
-                    st.error("Marcada como URGENTE")
-                st.markdown(f"**Fecha:** `{html.escape(fecha)}`", unsafe_allow_html=True)
-                if plantilla:
-                    st.markdown(f"**Plantilla:** {html.escape(str(plantilla))}", unsafe_allow_html=True)
-                if nota:
-                    st.markdown("**Nota:**", unsafe_allow_html=True)
-                    st.markdown(html.escape(nota), unsafe_allow_html=True)
-                evo_img = ev.get("adjunto_img_b64", "")
-                if evo_img:
-                    img_tipo = ev.get("adjunto_img_tipo", "image/png")
-                    st.markdown(
-                        f"<img src='data:{html.escape(img_tipo)};base64,{evo_img}' "
-                        f"style='max-width:300px;max-height:200px;border-radius:8px;margin:4px 0;'/>",
-                        unsafe_allow_html=True,
-                    )
+            # ── Badge resumen en el título ──────────────────────
+            badge_urgente = " 🔴 URGENTE" if es_urgente else ""
+            badge_tipo = " 🧠" if es_cuidador else ""
+            badge_prof = f" · {firma[:20]}" if firma else ""
+            badge_plant = plantilla[:25]
+            st.markdown(
+                f"<div style='border-left:4px solid {'#ef4444' if es_urgente else '#3b82f6'};"
+                f"padding:6px 10px;margin:4px 0;border-radius:4px;"
+                f"background:rgba(255,255,255,0.03);cursor:pointer' "
+                f"onclick='document.getElementById(\"ev_exp_{idx}\").click()'>"
+                f"<span style='font-weight:600;color:#e2e8f0;'>#{ev_num}</span> "
+                f"<span style='color:#94a3b8;'>{fecha}</span>"
+                f"{badge_urgente}{badge_tipo}"
+                f"<span style='color:#64748b;font-size:0.85em;'> · {html.escape(badge_plant)}</span>"
+                f"<span style='color:#475569;font-size:0.8em;'>{badge_prof}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+            with st.expander(f"Evolución #{ev_num} · {fecha} · {plantilla}", key=f"ev_exp_{idx}"):
+                col_info, col_detalle = st.columns([1, 2])
+
+                with col_info:
+                    st.markdown(f"**📅 Fecha:** `{html.escape(fecha)}`")
+                    if plantilla:
+                        st.markdown(f"**📋 Plantilla:** {html.escape(str(plantilla))}")
+                    if firma:
+                        st.markdown(f"**👤 Profesional:** {html.escape(firma)}")
+                    if es_urgente:
+                        st.error("🚨 Marcada como URGENTE")
+
+                    # ── Badges de datos clínicos (Registro inteligente) ──
+                    if es_cuidador and cd:
+            #         signos_v rules
+            #         TA sist/diast, FC, FR, Temp, Spo2, Glu if any
+                        sv_parts = []
+                        if cd.get("ta_sist"): sv_parts.append(f"TA {cd['ta_sist']}/{cd.get('ta_diast','?')}")
+                        if cd.get("fc"):    sv_parts.append(f"FC {cd['fc']}")
+                        if cd.get("fr"):    sv_parts.append(f"FR {cd['fr']}")
+                        if cd.get("temp"):  sv_parts.append(f"T {cd['temp']}°C")
+                        if cd.get("spo2"):  sv_parts.append(f"SpO₂ {cd['spo2']}%")
+                        if cd.get("glucemia"): sv_parts.append(f"Glu {cd['glucemia']}")
+                        if sv_parts:
+                            st.markdown("**🩺 Signos vitales:**")
+                            st.code(" · ".join(sv_parts), language="")
+                        # Dolor
+                        if cd.get("dolor"):
+                            eva = cd.get("eva", "")
+                            st.markdown(f"**😖 Dolor:** EVA {eva}/10" if eva else "**😖 Dolor:** Sí")
+                        # Heridas
+                        if cd.get("herida_mecanismo"):
+                            herida = f"{cd.get('herida_mecanismo','')} · {cd.get('herida_profundidad','')}"
+                            st.markdown(f"**🩹 Herida:** {herida}")
+                        # Estado general
+                        for label, key, icon in [
+                            ("Estado ánimo", "animo", "😊"),
+                            ("Alimentación", "alimentacion", "🍽️"),
+                            ("Respiración", "respiracion", "🫁"),
+                            ("Piel", "piel_estado", "🧴"),
+                            ("Movilidad", "movilidad", "🏃"),
+                            ("Higiene", "higiene", "🚿"),
+                            ("Diuresis", "diuresis", "🚽"),
+                            ("Deposición", "deposicion", "💩"),
+                            ("Descanso", "descanso", "😴"),
+                        ]:
+                            val = cd.get(key, "")
+                            if val:
+                                st.markdown(f"**{icon} {label}:** {val}")
+                        if cd.get("medicacion_admin"):
+                            st.success("💊 Medicación administrada")
+                        if cd.get("familiar_presente"):
+                            st.markdown(f"**👨‍👩‍👧 Familiar presente:** {cd.get('nombre_familiar','')}")
+
+                with col_detalle:
+                    if nota:
+                        st.markdown("**📝 Nota:**")
+                        st.markdown(f"<div style='background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:6px;'>{html.escape(nota)}</div>", unsafe_allow_html=True)
+
+                    # ── Imagen adjunta ──
+                    evo_img = ev.get("adjunto_img_b64", "")
+                    if evo_img:
+                        img_tipo = ev.get("adjunto_img_tipo", "image/png")
+                        st.markdown("**🖼️ Adjunto:**")
+                        st.markdown(
+                            f"<img src='data:{html.escape(img_tipo)};base64,{evo_img}' "
+                            f"style='max-width:100%;max-height:260px;border-radius:8px;margin:4px 0;'/>",
+                            unsafe_allow_html=True,
+                        )
+
+                # ── Firma digital ──
                 if firma and firma.strip():
                     firma_digital = ev.get("firma_digital", {})
                     if firma_digital and firma_digital.get("signature_value"):
@@ -484,28 +559,22 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                             _signed_doc = SignedDocument(
                                 document_id=firma_digital.get("document_id", ""),
                                 document_type="evolucion",
-                                content={
-                                    "paciente": paciente_sel,
-                                    "nota": nota,
-                                    "fecha": fecha,
-                                    "plantilla": plantilla,
-                                    "profesional": firma,
-                                },
+                                content={"paciente": paciente_sel, "nota": nota, "fecha": fecha, "plantilla": plantilla, "profesional": firma},
                                 signature=_sig_meta,
                                 timestamps={"signed_at": firma_digital.get("signed_at", "")},
                             )
                             _valido, _msg = _dsig_verify.verify_signature(_signed_doc)
                             if _valido:
-                                st.success(f"�?? Firma digital RSA {firma_digital.get('signature_algorithm', '')} válida �?? {firma_digital.get('signer_name', '')} ({(firma_digital.get('signed_at') or '')[:10]})")
+                                st.success(f"✅ Firma digital RSA {firma_digital.get('signature_algorithm', '')} válida · {firma_digital.get('signer_name', '')} ({(firma_digital.get('signed_at') or '')[:10]})")
                             else:
-                                st.error(f"�??� Firma digital INVÁLIDA: {_msg}")
+                                st.error(f"❌ Firma digital INVÁLIDA: {_msg}")
                         except Exception as exc:
                             log_event("evolucion", f"verificar_firma_error:{type(exc).__name__}:{exc}")
-                            st.success(f"�?? Firmado por {firma} (verificación offline)")
+                            st.success(f"✅ Firmado por {firma} (verificación offline)")
                     else:
-                        st.success(f"�?? Firmado por {firma}")
+                        st.success(f"✅ Firmado por {firma}")
 
-                if puede_borrar and st.button("Borrar esta evolución", key=f"borrar_ev_{ev_num}_{idx}_{paciente_sel}", type="secondary", use_container_width=True):
+                if puede_borrar and st.button("🗑️ Borrar esta evolución", key=f"borrar_ev_{ev_num}_{idx}_{paciente_sel}", type="secondary", use_container_width=True):
                     real_idx = (total_evs - 1) - idx
                     if 0 <= real_idx < len(evs_paciente):
                         ev_borrada = evs_paciente.pop(real_idx)
@@ -515,19 +584,14 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
                         except Exception as exc:
                             log_event("evolucion", f"guardar_datos tras borrado fallo: {type(exc).__name__}")
                         try:
-                            registrar_auditoria_legal(
-                                "EVOLUCION_BORRADA",
-                                paciente_sel,
-                                detalles={
-                                    "fecha": ev_borrada.get("fecha"),
-                                    "plantilla": ev_borrada.get("plantilla"),
-                                    "responsable": profesional,
-                                },
-                            )
+                            registrar_auditoria_legal("EVOLUCION_BORRADA", paciente_sel, detalles={
+                                "fecha": ev_borrada.get("fecha"), "plantilla": ev_borrada.get("plantilla"), "responsable": profesional,
+                            })
                         except Exception as exc:
                             log_event("evolucion", f"auditoria_legal tras borrado fallo: {type(exc).__name__}")
-                        queue_toast(f"Evolución #{ev_num} eliminada.", icon="�???️")
+                        queue_toast(f"Evolución #{ev_num} eliminada.", icon="❌")
                         st.rerun()
+            st.markdown("<hr style='margin:2px 0;opacity:0.15;'>", unsafe_allow_html=True)
 
         if puede_borrar:
             if not es_movil:
