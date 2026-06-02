@@ -223,3 +223,325 @@ def aplicar_css_base() -> None:
             }
         </style>
     """, unsafe_allow_html=True)
+
+
+def aplicar_layout_compacto_final() -> None:
+    """Override final de layout para evitar sidebar cortado y UI sobredimensionada."""
+    if st.session_state.get("_mc_layout_compacto_final_v1"):
+        return
+    st.session_state["_mc_layout_compacto_final_v1"] = True
+
+    st.markdown(
+        """
+        <style>
+            :root {
+                --mc-layout-sidebar-desktop: min(280px, 22vw);
+                --mc-layout-sidebar-tablet: min(260px, 35vw);
+                --mc-layout-content-max: 1280px;
+            }
+
+            html,
+            body,
+            .stApp,
+            [data-testid="stAppViewContainer"] {
+                max-width: 100vw !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
+            }
+            *, *::before, *::after {
+                box-sizing: border-box !important;
+            }
+
+            [data-testid="stMain"] .block-container,
+            section.main .block-container,
+            .block-container {
+                max-width: min(100%, var(--mc-layout-content-max)) !important;
+                width: 100% !important;
+                padding-top: 0.55rem !important;
+                padding-bottom: 0.75rem !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                overflow-x: hidden !important;
+            }
+
+            [data-testid="stVerticalBlock"] {
+                gap: 0.45rem !important;
+            }
+
+            [data-testid="stHorizontalBlock"] {
+                gap: 0.65rem !important;
+                align-items: stretch !important;
+            }
+
+            [data-testid="stElementContainer"],
+            .element-container {
+                margin-bottom: 0.28rem !important;
+            }
+
+            h1 { font-size: 1.35rem !important; line-height: 1.2 !important; }
+            h2 { font-size: 1.16rem !important; line-height: 1.25 !important; }
+            h3 { font-size: 1rem !important; line-height: 1.25 !important; }
+            p, li, label, [data-testid="stMarkdownContainer"] {
+                font-size: 0.92rem !important;
+                line-height: 1.42 !important;
+            }
+
+            [data-testid="stMetricValue"] {
+                font-size: 1.25rem !important;
+                line-height: 1.12 !important;
+            }
+
+            [data-testid="stMetricLabel"],
+            [data-testid="stCaptionContainer"] {
+                font-size: 0.76rem !important;
+                line-height: 1.3 !important;
+            }
+
+            div[data-testid="stForm"],
+            [data-testid="stExpander"] details,
+            [data-testid="stMetric"],
+            [data-testid="stAlert"],
+            [data-testid="stDataFrame"],
+            [data-testid="stDataEditor"],
+            [data-testid="stTable"] {
+                border-radius: 10px !important;
+                box-shadow: none !important;
+            }
+
+            div[data-testid="stForm"] {
+                padding: 0.65rem 0.75rem 0.55rem !important;
+                max-width: 100% !important;
+            }
+
+            [data-testid="stExpander"] details summary {
+                min-height: 38px !important;
+                padding: 0.48rem 0.65rem !important;
+            }
+
+            [data-testid="stExpander"] details > div {
+                padding-top: 0.45rem !important;
+            }
+
+            [data-testid="stMetric"] {
+                padding: 0.55rem 0.65rem !important;
+                min-height: 0 !important;
+            }
+
+            [data-testid="stAlert"] > div {
+                padding: 0.55rem 0.7rem !important;
+            }
+
+            [data-testid="stTabs"] [role="tablist"] {
+                gap: 0.22rem !important;
+                margin-bottom: 0.45rem !important;
+                overflow-x: auto !important;
+                scrollbar-width: thin !important;
+            }
+
+            [data-testid="stTabs"] [role="tab"] {
+                min-height: 34px !important;
+                padding: 0.35rem 0.65rem !important;
+                font-size: 0.82rem !important;
+                white-space: nowrap !important;
+            }
+
+            [data-testid="stDataFrame"],
+            [data-testid="stDataEditor"],
+            [data-testid="stTable"] {
+                max-width: 100% !important;
+                overflow-x: auto !important;
+            }
+
+            [data-testid="stDataFrame"] table,
+            [data-testid="stTable"] table {
+                font-size: 0.82rem !important;
+            }
+
+            [data-testid="stButton"] button,
+            [data-testid="stFormSubmitButton"] button,
+            [data-testid="stDownloadButton"] button {
+                min-height: 36px !important;
+                padding: 0.38rem 0.65rem !important;
+                font-size: 0.84rem !important;
+                line-height: 1.2 !important;
+                white-space: normal !important;
+            }
+
+            [data-baseweb="input"] > div,
+            [data-baseweb="select"] > div,
+            input,
+            textarea {
+                min-height: 36px !important;
+                font-size: 0.9rem !important;
+            }
+
+            textarea {
+                min-height: 76px !important;
+            }
+
+            [data-testid="stSelectbox"],
+            [data-testid="stTextInput"],
+            [data-testid="stTextArea"],
+            [data-testid="stNumberInput"],
+            [data-testid="stDateInput"],
+            [data-testid="stTimeInput"],
+            [data-testid="stMultiSelect"],
+            [data-testid="stFileUploader"] {
+                max-width: 100% !important;
+            }
+
+            @media (min-width: 1025px) {
+                [data-testid="stSidebar"],
+                section[data-testid="stSidebar"],
+                section[data-testid="stSidebar"][aria-expanded="true"],
+                section[data-testid="stSidebar"][aria-expanded="false"] {
+                    width: var(--mc-layout-sidebar-desktop) !important;
+                    min-width: var(--mc-layout-sidebar-desktop) !important;
+                    max-width: var(--mc-layout-sidebar-desktop) !important;
+                    flex: 0 0 var(--mc-layout-sidebar-desktop) !important;
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    pointer-events: auto !important;
+                }
+            }
+
+            @media (min-width: 768px) and (max-width: 1024px) {
+                [data-testid="stSidebar"],
+                section[data-testid="stSidebar"],
+                section[data-testid="stSidebar"][aria-expanded="true"],
+                section[data-testid="stSidebar"][aria-expanded="false"] {
+                    width: var(--mc-layout-sidebar-tablet) !important;
+                    min-width: var(--mc-layout-sidebar-tablet) !important;
+                    max-width: var(--mc-layout-sidebar-tablet) !important;
+                    flex: 0 0 var(--mc-layout-sidebar-tablet) !important;
+                    overflow: hidden !important;
+                }
+
+                [data-testid="stMain"] .block-container,
+                .block-container {
+                    padding-left: 0.85rem !important;
+                    padding-right: 0.85rem !important;
+                }
+            }
+
+            @media (min-width: 768px) {
+                [data-testid="stSidebar"] > div:first-child,
+                [data-testid="stSidebarContent"] {
+                    max-height: 100vh !important;
+                    max-height: 100dvh !important;
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                    overscroll-behavior: contain !important;
+                    -webkit-overflow-scrolling: touch !important;
+                }
+
+                [data-testid="stSidebar"] .block-container {
+                    padding: 0.45rem 0.55rem 0.65rem !important;
+                    max-width: 100% !important;
+                }
+
+                [data-testid="stSidebar"] [data-testid="stButton"] button,
+                [data-testid="stSidebar"] button {
+                    min-height: 34px !important;
+                    padding: 0.32rem 0.5rem !important;
+                    font-size: 0.8rem !important;
+                    line-height: 1.18 !important;
+                    text-align: left !important;
+                    justify-content: flex-start !important;
+                    overflow-wrap: anywhere !important;
+                }
+
+                [data-testid="stSidebar"] p,
+                [data-testid="stSidebar"] label,
+                [data-testid="stSidebar"] span,
+                [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+                    font-size: 0.8rem !important;
+                    line-height: 1.28 !important;
+                    overflow-wrap: anywhere !important;
+                }
+
+                [data-testid="stSidebar"] h1,
+                [data-testid="stSidebar"] h2,
+                [data-testid="stSidebar"] h3 {
+                    font-size: 0.95rem !important;
+                    line-height: 1.2 !important;
+                    margin-bottom: 0.35rem !important;
+                }
+
+                [data-testid="stSidebar"] img {
+                    max-width: 100% !important;
+                    height: auto !important;
+                }
+
+                [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+                    gap: 0.28rem !important;
+                }
+            }
+
+            @media (max-width: 767px) {
+                html, body {
+                    overflow-x: hidden !important;
+                    width: 100% !important;
+                    max-width: 100vw !important;
+                }
+                [data-testid="stAppViewContainer"],
+                [data-testid="stMain"],
+                section.main,
+                main {
+                    width: 100% !important;
+                    max-width: 100vw !important;
+                    margin-left: 0 !important;
+                    padding-left: 0 !important;
+                    padding-right: 0 !important;
+                    overflow-x: hidden !important;
+                }
+
+                [data-testid="stMain"] .block-container,
+                .block-container {
+                    width: 100% !important;
+                    max-width: 100vw !important;
+                    padding: 0.55rem 0.5rem 1rem !important;
+                }
+
+                h1 { font-size: 1.15rem !important; }
+                h2 { font-size: 1.02rem !important; }
+                h3 { font-size: 0.94rem !important; }
+
+                [data-testid="stButton"] button,
+                [data-testid="stFormSubmitButton"] button,
+                [data-testid="stDownloadButton"] button {
+                    min-height: 40px !important;
+                    font-size: 0.82rem !important;
+                }
+
+                [data-testid="stHorizontalBlock"] {
+                    gap: 0.45rem !important;
+                }
+
+                [data-testid="stHorizontalBlock"] > div,
+                [data-testid="stHorizontalBlock"] > [data-testid="column"],
+                [data-testid="column"],
+                div[data-testid="column"] {
+                    min-width: min(100%, 9.5rem) !important;
+                }
+
+                [data-testid="stMetric"] {
+                    padding: 0.45rem 0.5rem !important;
+                }
+
+                [data-testid="stTabs"] [role="tab"] {
+                    min-height: 38px !important;
+                    padding: 0.35rem 0.55rem !important;
+                    font-size: 0.78rem !important;
+                }
+
+                div[data-testid="stForm"] {
+                    padding: 0.55rem 0.6rem 0.5rem !important;
+                }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
