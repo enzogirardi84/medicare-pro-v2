@@ -436,3 +436,28 @@ def render_boton_descarga_pdf(
         st.error("Error al generar el PDF. Verifica que reportlab este instalado.")
         with st.expander("Detalle tecnico"):
             st.code(f"{type(exc).__name__}: {exc}", language="text")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 4. WRAPPER FPDF (para PDFs rápidos/inline)
+# ═══════════════════════════════════════════════════════════════════
+
+FPDF_DISPONIBLE = False
+FPDF = None
+
+try:
+    from fpdf import FPDF as _FPDF
+    FPDF = _FPDF
+    FPDF_DISPONIBLE = True
+except ImportError:
+    pass
+
+
+def pdf_disponible() -> bool:
+    return FPDF_DISPONIBLE
+
+
+def nuevo_pdf(orientation="P", unit="mm", format="A4"):
+    if FPDF and FPDF_DISPONIBLE:
+        return FPDF(orientation=orientation, unit=unit, format=format)
+    return None

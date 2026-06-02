@@ -14,12 +14,7 @@ from core.db_sql import get_checkins_by_empresa
 from core.nextgen_sync import _obtener_uuid_empresa
 from core.app_logging import log_event
 
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass
+from core.clinical_pdf import pdf_disponible, nuevo_pdf, FPDF
 
 
 def _obtener_dt(fecha_hora):
@@ -48,9 +43,9 @@ def _parsear_duracion(tiempo_str: str) -> float:
 
 def _generar_pdf_rrhh(mi_empresa, user, fecha_inicio, fecha_fin, df_mostrar, total_horas, total_visitas):
     """Genera PDF profesional con resumen y detalle de fichajes."""
-    if not FPDF_DISPONIBLE:
+    if not pdf_disponible():
         return b""
-    pdf = FPDF()
+    pdf = nuevo_pdf()
     pdf.set_margins(10, 10, 10)
     pdf.set_auto_page_break(auto=True, margin=15)
 
@@ -327,7 +322,7 @@ def render_rrhh(mi_empresa, rol, user):
         csv_data = dataframe_csv_bytes(df_mostrar.drop(columns=["fecha_dt"], errors='ignore'))
         st.download_button("Descargar CSV RRHH", data=csv_data, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.csv", mime="text/csv", width='stretch')
 
-        if FPDF_DISPONIBLE and st.checkbox("Preparar PDF RRHH", value=False):
+        if pdf_disponible() and st.checkbox("Preparar PDF RRHH", value=False):
             pdf = _generar_pdf_rrhh(mi_empresa, user, fecha_inicio, fecha_fin, df_mostrar, total_horas, len(df_egresos))
             st.download_button("Descargar PDF RRHH", data=pdf, file_name=f"RRHH_{sanitize_filename_component(mi_empresa, 'empresa')}_{fecha_inicio.strftime('%d%m%Y')}_{fecha_fin.strftime('%d%m%Y')}.pdf", mime="application/pdf", width='stretch')
 

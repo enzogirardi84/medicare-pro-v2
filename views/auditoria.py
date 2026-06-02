@@ -11,12 +11,7 @@ from core.export_utils import dataframe_csv_bytes, pdf_output_bytes, safe_text, 
 from core.view_helpers import bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll
 
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass  # Intencional: fpdf es opcional para PDFs
+from core.clinical_pdf import pdf_disponible, nuevo_pdf, FPDF
 
 
 def _texto_busqueda_log(reg):
@@ -33,7 +28,7 @@ def _texto_busqueda_log(reg):
 
 def generar_pdf_auditoria_logs(df, nombre_empresa=""):
     """Genera un PDF profesional con el log de auditoria del sistema. v2-force-rebuild"""
-    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf = nuevo_pdf(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
@@ -397,10 +392,10 @@ def render_auditoria(mi_empresa, user):
         use_container_width=True,
     )
 
-    if FPDF_DISPONIBLE:
+    if pdf_disponible():
         if col_exp2.checkbox("Preparar PDF", value=False, key="audit_pdf_chk"):
             _pdf_data = df_chk[_cols_tabla] if len(df_chk) <= 500 else df_chk.head(500)[_cols_tabla]
-            pdf = FPDF()
+            pdf = nuevo_pdf()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 15)
             pdf.cell(0, 12, safe_text(f"REPORTE ASISTENCIA - {mi_empresa}"), ln=True, align='C')

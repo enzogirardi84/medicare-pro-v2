@@ -31,7 +31,7 @@ from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
 from core.app_logging import log_event
 
 try:
-    from PyPDF2 import PdfMerger as _PdfMerger
+    from pypdf import PdfMerger as _PdfMerger
     _PYPDF_DISPONIBLE = True
 except ImportError:
     _PYPDF_DISPONIBLE = False

@@ -18,12 +18,8 @@ from core.utils import (
     mostrar_dataframe_con_scroll,
 )
 
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF  # noqa: F401
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass  # Intencional: fpdf es opcional para recetas
+from core.clinical_pdf import pdf_disponible, nuevo_pdf, FPDF
+FPDF_DISPONIBLE = pdf_disponible()  # backward compat
 
 CANVAS_DISPONIBLE = False
 try:

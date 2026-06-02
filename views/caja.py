@@ -15,12 +15,7 @@ from core.db_sql import get_facturacion_by_empresa, insert_facturacion
 from core.nextgen_sync import _obtener_uuid_paciente, _obtener_uuid_empresa
 from core.app_logging import log_event
 
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass  # Intencional: fpdf es opcional para comprobantes
+from core.clinical_pdf import pdf_disponible, nuevo_pdf, FPDF
 
 
 def render_caja(paciente_sel, mi_empresa, user, rol):
@@ -266,12 +261,12 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
             )
 
             def generar_recibo_pdf(mov):
-                if not FPDF_DISPONIBLE:
+                if not pdf_disponible():
                     return b""
                 from core.clinical_exports import _pdf_header_oscuro
                 _cobrado = "Cobrado" in mov.get("estado", "")
                 _badge_rgb = (13, 90, 80) if _cobrado else (130, 80, 0)
-                pdf = FPDF(format="A5")
+                pdf = nuevo_pdf(format="A5")
                 pdf.set_margins(12, 10, 12)
                 pdf.set_auto_page_break(auto=True, margin=12)
                 pdf.add_page()
@@ -316,7 +311,7 @@ def render_caja(paciente_sel, mi_empresa, user, rol):
                             st.markdown(f"**{mov['fecha']}** - {mov['serv']}")
                             st.caption(f"{mov.get('estado', 'S/D')} | {mov.get('metodo', 'S/D')} | ${mov['monto']:,.2f}")
                         with col_r2:
-                            if FPDF_DISPONIBLE and st.checkbox("PDF", key=f"pdf_mov_{i}", value=False):
+                            if pdf_disponible() and st.checkbox("PDF", key=f"pdf_mov_{i}", value=False):
                                 pdf_bytes = generar_recibo_pdf(mov)
                                 st.download_button(
                                     "Descargar PDF",

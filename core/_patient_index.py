@@ -5,6 +5,8 @@ import time
 
 import streamlit as st
 
+from core.nextgen_sync import _obtener_uuid_empresa, _obtener_uuid_paciente
+
 
 def get_patient_records(db_key: str, paciente_sel: str) -> list[dict]:
     """Get records for a specific patient using indexed cache. ~O(1) instead of O(n)."""
@@ -59,3 +61,10 @@ def get_all_patient_records_paginated(db_key: str, paciente_sel: str, limit: int
     """Get records with limit. Uses index."""
     records = get_patient_records(db_key, paciente_sel)
     return records[-limit:] if len(records) > limit else records
+
+
+def _resolver_uuid_paciente_sql(paciente_sel, empresa):
+    partes = str(paciente_sel or "").rsplit(" - ", 1)
+    dni = partes[1].strip() if len(partes) == 2 else ""
+    empresa_id = _obtener_uuid_empresa(empresa) if empresa else None
+    return _obtener_uuid_paciente(dni, empresa_id) if dni and empresa_id else None

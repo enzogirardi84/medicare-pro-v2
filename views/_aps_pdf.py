@@ -6,17 +6,13 @@ from datetime import datetime
 
 from core.export_utils import pdf_output_bytes, safe_text
 
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass
+from core.clinical_pdf import pdf_disponible, nuevo_pdf, FPDF
+FPDF_DISPONIBLE = pdf_disponible()  # backward compat
 
 
 def generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_id):
     """Genera un PDF portrait con el historial APS del paciente."""
-    if not FPDF_DISPONIBLE:
+    if not pdf_disponible():
         return None
 
     class HistorialPDF(FPDF):
@@ -95,9 +91,9 @@ def generar_pdf_historial_paciente(paciente_id, registros, fd, fh, centro_salud_
 
 def generar_pdf_reporte_aps(titulo, registros, periodo, centro_salud_id):
     """Genera un PDF landscape con los registros del reporte APS."""
-    if not FPDF_DISPONIBLE:
+    if not pdf_disponible():
         return None
-    pdf = FPDF(orientation="L")
+    pdf = nuevo_pdf(orientation="L")
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
     pdf.cell(0, 10, safe_text(titulo), ln=True, align="C")

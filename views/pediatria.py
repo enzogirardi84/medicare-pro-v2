@@ -24,11 +24,7 @@ def _parse_fecha_hora(fecha_str):
     return datetime.min
 
 
-def _resolver_uuid_paciente_sql(paciente_sel, empresa):
-    partes = str(paciente_sel or "").rsplit(" - ", 1)
-    dni = partes[1].strip() if len(partes) == 2 else ""
-    empresa_id = _obtener_uuid_empresa(empresa) if empresa else None
-    return _obtener_uuid_paciente(dni, empresa_id) if dni and empresa_id else None
+from core._patient_index import _resolver_uuid_paciente_sql
 
 
 def render_pediatria(paciente_sel, user):

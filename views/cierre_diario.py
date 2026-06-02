@@ -13,12 +13,7 @@ from core.export_utils import pdf_output_bytes, safe_text, sanitize_filename_com
 from core.view_helpers import bloque_estado_vacio, bloque_mc_grid_tarjetas, lista_plegable
 from core.utils import ahora, mostrar_dataframe_con_scroll, seleccionar_limite_registros
 
-FPDF_DISPONIBLE = False
-try:
-    from fpdf import FPDF
-    FPDF_DISPONIBLE = True
-except ImportError:
-    pass  # Intencional: fpdf es opcional para PDFs
+from core.clinical_pdf import pdf_disponible, nuevo_pdf, FPDF
 
 
 def render_cierre_diario(mi_empresa, user):
@@ -197,7 +192,7 @@ def render_cierre_diario(mi_empresa, user):
             )
 
     st.divider()
-    if FPDF_DISPONIBLE:
+    if pdf_disponible():
         st.markdown("#### Generar Documento Oficial de Cierre")
 
         def generar_pdf_cierre(fecha_para_pdf=None):
@@ -205,7 +200,7 @@ def render_cierre_diario(mi_empresa, user):
             consumos_pdf = [c for c in st.session_state.get("consumos_db", []) if c.get("fecha", "").startswith(fecha_str_pdf) and c.get("empresa") == mi_empresa]
             facturacion_pdf = [f for f in st.session_state.get("facturacion_db", []) if f.get("fecha", "").startswith(fecha_str_pdf) and f.get("empresa") == mi_empresa]
             total_facturado_pdf = sum(float(f.get("monto", 0) or 0) for f in facturacion_pdf)
-            pdf = FPDF()
+            pdf = nuevo_pdf()
             pdf.add_page()
             pdf.set_font("Arial", 'B', 15)
             pdf.cell(0, 12, safe_text(f"REPORTE DE CIERRE DIARIO - {mi_empresa}"), ln=True, align='C')
