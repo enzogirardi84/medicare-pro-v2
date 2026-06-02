@@ -42,7 +42,7 @@ APP_BUILD_TAG = "Build 2026-05-25 - Cache refactor + role checks"
 st.set_page_config(
     page_title=PAGE_TITLE_PUBLIC,
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
     page_icon="🩺",
 )
 
@@ -199,6 +199,12 @@ if not st.session_state.get("_mc_professional_theme_applied_v4"):
             report_exception(module="main.theme", exc_info=exc, context="apply_professional_theme()", severity="warning")
         except Exception:
             pass
+
+try:
+    from core.app_theme import aplicar_layout_compacto_final
+    aplicar_layout_compacto_final()
+except Exception as exc:
+    log_event("ui_theme", f"layout_compacto_fallo:{type(exc).__name__}:{exc}")
 
 from core.app_performance import procesar_guardado_pendiente_seguro
 
