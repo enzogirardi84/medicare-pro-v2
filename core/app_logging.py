@@ -55,6 +55,16 @@ def _setup_memory_handler() -> None:
 _setup_memory_handler()
 
 
+def configurar_logging_basico() -> None:
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        )
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
 def log_event(kind: str, message: str) -> None:
     _LOGGER.info("[%s] %s", kind, message)
 
