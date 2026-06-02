@@ -246,13 +246,9 @@ def aplicar_layout_compacto_final() -> None:
             }
             body {
                 width: 100% !important;
-                position: relative !important;
             }
             *, *::before, *::after {
                 box-sizing: border-box !important;
-            }
-            .block-container, [data-testid="stMain"], section.main, main {
-                max-width: 100vw !important;
             }
             img, video, canvas, svg, iframe {
                 max-width: 100% !important;
@@ -493,12 +489,10 @@ def aplicar_layout_compacto_final() -> None:
 
             @media (max-width: 767px) {
                 html {
-                    overflow-x: hidden !important;
                     width: 100% !important;
                 }
                 body {
                     width: 100% !important;
-                    position: relative !important;
                 }
                 [data-testid="stAppViewContainer"],
                 [data-testid="stMain"],
