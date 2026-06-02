@@ -40,8 +40,11 @@ _ROL_AUDITORIA: List[str] = [COORD, AUD]
 
 
 def tiene_acceso_vista(rol_actual: Optional[str], roles_permitidos: Optional[Sequence[str]]) -> bool:
-    """True si el rol puede abrir el modulo. SuperAdmin y Admin tienen bypass total."""
+    """True si el rol puede abrir el modulo. SuperAdmin y Admin tienen bypass total,
+    excepto para modulos explicitamente restringidos a SuperAdmin."""
     r = str(rol_actual or "").strip().lower()
+    if roles_permitidos and "superadmin" in {str(x).strip().lower() for x in roles_permitidos if x}:
+        return r == "superadmin"
     if r in {"superadmin", "admin"}:
         return True
     if not roles_permitidos:
@@ -84,7 +87,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Proyecto y Roadmap": list(_ROL_COORD_OPER),
     "Auditoria": list(_ROL_AUDITORIA),
     "Auditoria Legal": list(_ROL_AUDITORIA),
-    "Diagnosticos": [],
+    "Diagnosticos": ["SuperAdmin"],
     "Documentos Legales": list(_ROL_COORD_OPER) + [AUD],
     "APS / Dispensario": list(_ROL_TODOS) + [AUD],
     # Nuevos modulos 2026-05-14
@@ -95,10 +98,10 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Chatbot IA": list(_ROL_TODOS),
     "Calc. Dosis Pediatricas": list(_ROL_TODOS),
     "Reportes Financieros": list(_ROL_COORD_OPER),
-    "Admin Feature Flags": [],
-    "Self-Healing IA": [],
-    "Asistente IA": [],
-    "AutoHeal v2": [],
+    "Admin Feature Flags": ["SuperAdmin"],
+    "Self-Healing IA": ["SuperAdmin"],
+    "Asistente IA": ["SuperAdmin"],
+    "AutoHeal v2": ["SuperAdmin"],
     "Capacitacion": list(_ROL_TODOS),
 }
 

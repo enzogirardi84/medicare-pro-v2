@@ -226,7 +226,7 @@ import streamlit as st
 from core.react_console_component import MedicareConsoleProxy
 from core.realtime_event_stream import WebSocketManager, create_alert_news2
 
-st.set_page_config(layout="wide")
+# set_page_config ya llamado en main_medicare.py
 st.title("MediCare PRO — Terminal de Control")
 
 # Inicializar proxy del componente React

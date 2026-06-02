@@ -9,6 +9,7 @@ import streamlit as st
 
 from core.app_logging import log_event
 from core.empresa_config import empresa_record_configurado
+from core._db_retry import supabase_execute_with_retry
 
 PACIENTES_LIST_COLUMNS = (
     "id,empresa_id,nombre_completo,dni,fecha_nacimiento,sexo,estado,"
@@ -17,17 +18,9 @@ PACIENTES_LIST_COLUMNS = (
 EMPRESAS_MIN_COLUMNS = "id,nombre"
 
 try:
-    from core.database import supabase, _supabase_execute_with_retry
+    from core.database import supabase
 except ImportError:
     supabase = None
-
-    def _supabase_execute_with_retry(op_name, fn, attempts=3, base_delay=0.35):
-        for _ in range(attempts):
-            try:
-                return fn()
-            except Exception:
-                time.sleep(base_delay)
-        return fn()
 
 
 def check_supabase_connection() -> bool:
@@ -95,12 +88,12 @@ def get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas:
 def _get_pacientes_by_empresa(empresa_id: str, busqueda: str = "", incluir_altas: bool = False) -> List[Dict[str, Any]]:
     attempts = (
         (PACIENTES_LIST_COLUMNS, False, "updated_at"),
-        ("*", True, "created_at"),
-        ("*", True, None),
+        (PACIENTES_LIST_COLUMNS, True, "created_at"),
+        (PACIENTES_LIST_COLUMNS, True, None),
     )
     for columns, legacy, order_by in attempts:
         try:
-            response = _supabase_execute_with_retry(
+            response = supabase_execute_with_retry(
                 "get_pacientes",
                 lambda c=columns, l=legacy, o=order_by: _build_pacientes_query(
                     empresa_id, busqueda, incluir_altas, c, l, o
@@ -123,8 +116,8 @@ def _get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
     limit = max(1, min(int(limit or 1000), 2000))
     attempts = (
         (PACIENTES_LIST_COLUMNS, "updated_at"),
-        ("*", "created_at"),
-        ("*", None),
+        (PACIENTES_LIST_COLUMNS, "created_at"),
+        (PACIENTES_LIST_COLUMNS, None),
     )
     for columns, order_by in attempts:
         try:
@@ -133,7 +126,7 @@ def _get_pacientes_globales(limit: int = 1000) -> List[Dict[str, Any]]:
                 if o:
                     q = q.order(o, desc=True)
                 return q.limit(limit).execute()
-            response = _supabase_execute_with_retry("get_pacientes_globales", _query)
+            response = supabase_execute_with_retry("get_pacientes_globales", _query)
             return getattr(response, "data", None) or []
         except Exception as e:
             log_event("db_sql", f"error_get_pacientes_globales:{type(e).__name__}")
@@ -149,9 +142,9 @@ def get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
 @st.cache_data(ttl=120, max_entries=500, show_spinner=False)
 def _get_paciente_by_id(paciente_id: str) -> Optional[Dict[str, Any]]:
     try:
-        response = _supabase_execute_with_retry(
+        response = supabase_execute_with_retry(
             "get_paciente_id",
-            lambda: supabase.table("pacientes").select("*").eq("id", paciente_id).limit(1).execute(),
+            lambda: supabase.table("pacientes").select(PACIENTES_LIST_COLUMNS).eq("id", paciente_id).limit(1).execute(),
         )
         return (getattr(response, "data", None) or [None])[0]
     except Exception as e:
@@ -169,7 +162,7 @@ def get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
 def _get_empresa_by_nombre(nombre_empresa: str) -> Optional[Dict[str, Any]]:
     empresa_fallback = empresa_record_configurado(nombre_empresa)
     try:
-        response = _supabase_execute_with_retry(
+        response = supabase_execute_with_retry(
             "get_empresa_nombre",
             lambda: supabase.table("empresas").select(EMPRESAS_MIN_COLUMNS).eq("nombre", nombre_empresa).limit(1).execute(),
         )
@@ -189,9 +182,9 @@ def get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str,
 @st.cache_data(ttl=120, max_entries=500, show_spinner=False)
 def _get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str, Any]]:
     try:
-        response = _supabase_execute_with_retry(
+        response = supabase_execute_with_retry(
             "get_paciente_dni_empresa",
-            lambda: supabase.table("pacientes").select("*").eq("empresa_id", empresa_id).eq("dni", dni).limit(1).execute(),
+            lambda: supabase.table("pacientes").select(PACIENTES_LIST_COLUMNS).eq("empresa_id", empresa_id).eq("dni", dni).limit(1).execute(),
         )
         return (getattr(response, "data", None) or [None])[0]
     except Exception as e:
@@ -200,7 +193,7 @@ def _get_paciente_by_dni_empresa(empresa_id: str, dni: str) -> Optional[Dict[str
 
 
 def _upsert_paciente_payload(payload: Dict[str, Any]):
-    return _supabase_execute_with_retry(
+    return supabase_execute_with_retry(
         "upsert_paciente",
         lambda: supabase.table("pacientes").upsert(payload).execute(),
     )
@@ -242,13 +235,13 @@ def update_paciente_by_id(paciente_id: str, datos_update: Dict[str, Any]) -> Opt
 
         payload["updated_at"] = ahora().isoformat()
         try:
-            response = _supabase_execute_with_retry(
+            response = supabase_execute_with_retry(
                 "update_paciente",
                 lambda: supabase.table("pacientes").update(payload).eq("id", paciente_id).execute(),
             )
         except Exception:
             payload.pop("updated_at", None)
-            response = _supabase_execute_with_retry(
+            response = supabase_execute_with_retry(
                 "update_paciente",
                 lambda: supabase.table("pacientes").update(payload).eq("id", paciente_id).execute(),
             )
@@ -264,7 +257,7 @@ def delete_paciente_by_id(paciente_id: str) -> bool:
     if not check_supabase_connection() or not paciente_id:
         return False
     try:
-        _supabase_execute_with_retry(
+        supabase_execute_with_retry(
             "delete_paciente",
             lambda: supabase.table("pacientes").delete().eq("id", paciente_id).execute(),
         )

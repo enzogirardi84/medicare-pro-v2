@@ -35,10 +35,19 @@ def test_auditoria_no_hereda_rrhh_caja_ni_mi_equipo_en_menu_legacy():
     assert "PDF" in menu
 
 
-def test_modulos_admin_globales_siguen_solo_con_bypass():
-    for modulo in ("Clinicas (panel global)", "Diagnosticos"):
+def test_modulos_superadmin_only_no_bypass_admin():
+    """Modulos explicitamente restringidos a SuperAdmin no pasan ni con bypass de Admin."""
+    for modulo in ("Diagnosticos", "AutoHeal v2", "Admin Feature Flags", "Self-Healing IA", "Asistente IA"):
         permisos = MODULO_ROLES_PERMITIDOS[modulo]
         assert tiene_acceso_vista("SuperAdmin", permisos) is True
-        assert tiene_acceso_vista("Admin", permisos) is True
+        assert tiene_acceso_vista("Admin", permisos) is False, f"{modulo} debe ser solo SuperAdmin"
         assert tiene_acceso_vista("Coordinador", permisos) is False
         assert tiene_acceso_vista("Auditoria", permisos) is False
+
+def test_clinicas_panel_global_con_bypass_admin():
+    """Clinicas panel global sin restriccion explicita -> Admin bypass normal."""
+    permisos = MODULO_ROLES_PERMITIDOS["Clinicas (panel global)"]
+    assert tiene_acceso_vista("SuperAdmin", permisos) is True
+    assert tiene_acceso_vista("Admin", permisos) is True
+    assert tiene_acceso_vista("Coordinador", permisos) is False
+    assert tiene_acceso_vista("Auditoria", permisos) is False

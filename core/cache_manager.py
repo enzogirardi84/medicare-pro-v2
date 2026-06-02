@@ -66,78 +66,34 @@ class TieredCacheManager:
         self._hit_count = 0
         self._miss_count = 0
         self._eviction_count = 0
-        # Memory limit heuristic (bytes). Tunable.
+        self._current_bytes = 0  # contador simple, actualizado en set()
         self._memory_limit_bytes = 150 * 1024 * 1024  # 150 MB
 
-    def _estimate_object_size(self, obj, seen=None) -> int:
-        """Estimate memory size of a Python object recursively (best effort).
-        This is a conservative estimate and may over/under estimate for complex
-        objects. Used to trigger memory-based eviction.
-        """
+    def _estimate_object_size(self, obj) -> int:
+        """Estimate memory size — simple sys.getsizeof, no recursion (evitaba O(n*m) por lectura)."""
         if obj is None:
             return 0
-        if seen is None:
-            seen = set()
-        oid = id(obj)
-        if oid in seen:
-            return 0
-        seen.add(oid)
         try:
             import sys
-            if isinstance(obj, (str, bytes, int, float, bool)):
-                return sys.getsizeof(obj)
-            if isinstance(obj, dict):
-                size = sys.getsizeof(obj)
-                for k, v in obj.items():
-                    size += self._estimate_object_size(k, seen)
-                    size += self._estimate_object_size(v, seen)
-                return size
-            if isinstance(obj, (list, tuple, set)):
-                size = sys.getsizeof(obj)
-                for it in obj:
-                    size += self._estimate_object_size(it, seen)
-                return size
-            # Try pandas-like objects
-            if hasattr(obj, "memory_usage"):
-                try:
-                    return int(obj.memory_usage(index=True, deep=True).sum())
-                except Exception as _exc:
-                    import logging
-                    logging.getLogger("cache_manager").debug(f"fallo_memory_usage:{type(_exc).__name__}")
             return sys.getsizeof(obj)
         except Exception:
             return 0
 
     def _estimate_cache_size_bytes(self) -> int:
-        """Estimate total memory usage of in-memory L1 y L2 caches."""
-        total = 0
-        # L1 cache
-        for k, entry in self._l1_cache.items():
-            total += self._estimate_object_size(k)
-            if isinstance(entry, CacheEntry):
-                total += self._estimate_object_size(entry.value)
-        # L2 cache (session_state)
-        l2 = st.session_state.get("_tiered_cache_l2", {})
-        if isinstance(l2, dict):
-            for key, value in l2.items():
-                total += self._estimate_object_size(key)
-                if isinstance(value, CacheEntry):
-                    total += self._estimate_object_size(value.value)
-                else:
-                    total += self._estimate_object_size(value)
+        """Estimate total memory usage — cuenta L1 entries sin recursion."""
+        total = self._current_bytes  # contador actualizado en set()
         return int(total)
 
     def _maybe_enforce_memory_limit(self) -> None:
         """Evict caches if memory usage exceeds the configured limit."""
         try:
-            size = self._estimate_cache_size_bytes()
-            if size <= self._memory_limit_bytes:
+            if self._current_bytes <= self._memory_limit_bytes:
                 return
-            # Evict everything for safety (hard cleanup)
             self._l1_cache.clear()
             st.session_state["_tiered_cache_l2"] = {}
+            self._current_bytes = 0
             self._eviction_count += 1
-            log_event("cache_memory_cleanup", f"size={size} bytes, cleared l1/l2")
+            log_event("cache_memory_cleanup", "cleared l1/l2")
         except Exception as _exc:
             log_event("cache_manager_cleanup", f"fallo_cleanup_memoria:{type(_exc).__name__}:{_exc}")
 
@@ -157,41 +113,22 @@ class TieredCacheManager:
         }, sort_keys=True, default=str)
         return f"{prefix}:{tenant_key}:{hashlib.md5(key_data.encode()).hexdigest()[:16]}"
 
-    def _maybe_cleanup(self):
-        """Ejecuta limpieza de entradas expiradas periódicamente."""
+    def _cleanup_expired(self):
+        """Timer-based cleanup (se llama desde set(), no desde get())."""
         if time.time() - self._last_cleanup < self.cleanup_interval:
             return
-
         with self._lock:
-            expired = [
-                k for k, v in self._l1_cache.items()
-                if v.is_expired()
-            ]
-            for k in expired:
+            expired_l1 = [k for k, v in self._l1_cache.items() if v.is_expired()]
+            for k in expired_l1:
                 del self._l1_cache[k]
+            l2 = st.session_state.get("_tiered_cache_l2", {})
+            if isinstance(l2, dict):
+                expired_l2 = [k for k, v in l2.items() if isinstance(v, CacheEntry) and v.is_expired()]
+                for k in expired_l2:
+                    del l2[k]
+                if expired_l2:
+                    st.session_state["_tiered_cache_l2"] = l2
             self._last_cleanup = time.time()
-
-            # Limpieza L2 en session_state
-            self._cleanup_l2()
-            # Enforce memory limit after cleanup
-            self._maybe_enforce_memory_limit()
-
-    def _cleanup_l2(self):
-        """Limpia entradas L2 expiradas."""
-        l2_cache = st.session_state.get("_tiered_cache_l2", {})
-        if not isinstance(l2_cache, dict):
-            return
-
-        now = time.time()
-        expired_l2 = [
-            k for k, v in l2_cache.items()
-            if isinstance(v, CacheEntry) and v.is_expired()
-        ]
-        for k in expired_l2:
-            del l2_cache[k]
-
-        if expired_l2:
-            st.session_state["_tiered_cache_l2"] = l2_cache
 
     def _evict_l1_lru(self):
         """Evicción LRU cuando L1 está lleno."""
@@ -237,8 +174,6 @@ class TieredCacheManager:
         Obtiene valor de caché.
         Retorna (hit, value).
         """
-        self._maybe_cleanup()
-
         key = self._generate_key(prefix, tenant_key, key_suffix) if key_suffix else f"{prefix}:{tenant_key}"
 
         # Intentar L1 primero
@@ -302,6 +237,13 @@ class TieredCacheManager:
             if "_tiered_cache_l2" not in st.session_state:
                 st.session_state["_tiered_cache_l2"] = {}
             st.session_state["_tiered_cache_l2"][key] = entry
+
+        # Cleanup timer-based (solo en escritura)
+        self._cleanup_expired()
+        # Trackeo simple de bytes (sin recursion)
+        self._current_bytes += size_bytes or self._estimate_object_size(value)
+        if self._current_bytes > self._memory_limit_bytes:
+            self._maybe_enforce_memory_limit()
 
     def invalidate(
         self,

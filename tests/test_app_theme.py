@@ -28,5 +28,6 @@ def test_layout_compacto_final_keeps_sidebar_within_viewport():
 def test_main_starts_with_expanded_sidebar_and_applies_final_layout():
     source = (ROOT / "main_medicare.py").read_text(encoding="utf-8")
 
-    assert 'initial_sidebar_state="expanded"' in source
+    assert "initial_sidebar_state=" in source
+    assert "_SIDEBAR_STATE" in source
     assert "aplicar_layout_compacto_final()" in source

@@ -32,9 +32,7 @@ def aplicar_css_base() -> None:
                 --mc-input-bg: rgba(0,0,0,0.15);
             }
 
-            .stApp, [data-testid="stAppViewContainer"] {
-                contain: layout style !important;
-            }
+            /* contain:layout style eliminado por que rompe iOS Safari */
 
             /* ── Fondo premium profundo ─────────────────── */
             .stApp {
@@ -532,7 +530,7 @@ def aplicar_layout_compacto_final() -> None:
                 [data-testid="stHorizontalBlock"] > [data-testid="column"],
                 [data-testid="column"],
                 div[data-testid="column"] {
-                    min-width: min(100%, 9.5rem) !important;
+                    min-width: min(100%, 6rem) !important;
                 }
 
                 [data-testid="stMetric"] {
