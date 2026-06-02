@@ -421,6 +421,16 @@ def _get_total_fixes() -> int:
 
 
 def _run_scan():
+    # En Streamlit Cloud, los subprocesos suelen fallar; usar modo simulado
+    import platform
+    on_cloud = "streamlit" in str(REPO_ROOT) or "/mount/" in str(REPO_ROOT)
+
+    if on_cloud:
+        st.info("Modo Cloud: ejecutando escaneo ligero (simulado).")
+        _mock_scan_result()
+        st.success("Escaneo completado (modo simulado — el escaneo completo requiere ejecucion local).")
+        return
+
     try:
         script = REPO_ROOT / "scripts" / "autoheal.py"
         if not script.exists():
@@ -431,7 +441,7 @@ def _run_scan():
         result = subprocess.run(
             [sys.executable, str(script), "--scan", "--no-commit"],
             cwd=str(REPO_ROOT),
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=30,
         )
 
         if result.returncode == 0:
@@ -444,11 +454,11 @@ def _run_scan():
             if any(x in line for x in ["Hallazgos", "Fixes:", "Tests:", "Patrones", "CRITICAL", "Completado"]):
                 st.caption(line.strip()[:120])
     except subprocess.TimeoutExpired:
-        st.warning("Escaneo excedio el limite. Los escaneos pesados requieren ejecucion local.")
+        st.warning("Escaneo excedio el limite (30s). En produccion se recomienda ejecucion local.")
+        _mock_scan_result()
     except Exception as e:
         log_event("autoheal", f"error_scan:{type(e).__name__}")
-        st.warning(f"No se pudo ejecutar el escaneo automatico: {e}")
-        st.caption("AutoHeal requiere Python 3.12+ con acceso a scripts/autoheal.py")
+        st.warning(f"No se pudo ejecutar el escaneo: {e}")
         _mock_scan_result()
 
 

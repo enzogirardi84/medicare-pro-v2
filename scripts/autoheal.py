@@ -1261,9 +1261,10 @@ def main():
     print(f"🔍 Escaneando...")
     stats = run_cycle(
         memory=memory, scanner=scanner, monitor=monitor,
-        do_fix=args.fix or True, do_tests=args.tests or True,
+        do_fix=bool(args.fix) if args.fix is not None else False,
+        do_tests=bool(args.tests) if args.tests is not None else False,
         do_commit=not args.no_commit and (args.fix or args.tests),
-        do_learn=args.learn or True,
+        do_learn=bool(args.learn) if args.learn is not None else False,
     )
 
     print(f"\n✅ Completado en {stats['elapsed']:.1f}s")
