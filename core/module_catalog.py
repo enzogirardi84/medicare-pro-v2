@@ -98,6 +98,9 @@ _SUBGRUPOS_BASE: Dict[str, Dict[str, List[str]]] = {
         "Sistema": [
             "AutoHeal v2",
         ],
+        "Formación": [
+            "Capacitacion",
+        ],
     },
 }
 

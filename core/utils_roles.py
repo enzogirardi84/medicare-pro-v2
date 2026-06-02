@@ -63,17 +63,17 @@ PERMISOS_MODULOS = {
     "operativo_clinico": [
         "Visitas", "Admision", "Clinica", "Percentilo", "Evolucion", "Estudios",
         "Materiales", "Recetas", "Balance", "Emergencias", "Escalas", "Historial",
-        "PDF", "Telemedicina", "Cierre", "APS / Dispensario",
+        "PDF", "Telemedicina", "Cierre", "APS / Dispensario", "Capacitacion",
     ],
     "operativo_gestion": [
         "Dashboard", "Admision", "Materiales", "Balance", "Inventario", "Caja",
         "Red", "Historial", "PDF", "Equipo", "Asistencia", "RRHH", "Legal",
-        "APS / Dispensario",
+        "APS / Dispensario", "Capacitacion",
     ],
     "auditoria": [
         "Dashboard", "Admision", "Materiales", "Balance", "Inventario",
         "Red", "Historial", "PDF", "Asistencia", "Legal",
-        "APS / Dispensario",
+        "APS / Dispensario", "Capacitacion",
     ],
 }
 
