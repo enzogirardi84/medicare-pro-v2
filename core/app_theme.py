@@ -240,16 +240,27 @@ def aplicar_layout_compacto_final() -> None:
                 --mc-layout-content-max: 1280px;
             }
 
-            html,
-            body,
-            .stApp,
-            [data-testid="stAppViewContainer"] {
-                max-width: 100vw !important;
+            html {
                 overflow-x: hidden !important;
-                box-sizing: border-box !important;
+                width: 100% !important;
+            }
+            body {
+                width: 100% !important;
+                position: relative !important;
             }
             *, *::before, *::after {
                 box-sizing: border-box !important;
+            }
+            .block-container, [data-testid="stMain"], section.main, main {
+                max-width: 100vw !important;
+            }
+            img, video, canvas, svg, iframe {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            table, .stDataFrame, [data-testid="stDataFrame"] {
+                max-width: 100% !important;
+                overflow-x: auto !important;
             }
 
             [data-testid="stMain"] .block-container,
@@ -481,10 +492,13 @@ def aplicar_layout_compacto_final() -> None:
             }
 
             @media (max-width: 767px) {
-                html, body {
+                html {
                     overflow-x: hidden !important;
                     width: 100% !important;
-                    max-width: 100vw !important;
+                }
+                body {
+                    width: 100% !important;
+                    position: relative !important;
                 }
                 [data-testid="stAppViewContainer"],
                 [data-testid="stMain"],
