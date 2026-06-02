@@ -99,6 +99,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     "Self-Healing IA": [],
     "Asistente IA": [],
     "AutoHeal v2": [],
+    "Capacitacion": list(_ROL_TODOS),
 }
 
 

@@ -45,6 +45,7 @@ _CATEGORIAS_BASE: Dict[str, List[str]] = {
         # "Factura Electronica",  # ocultado
         "Turnos Online",
         "AutoHeal v2",
+        "Capacitacion",
     ],
     "Emergencias": [
         "Emergencias y Ambulancia",

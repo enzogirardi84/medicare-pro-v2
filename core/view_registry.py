@@ -56,6 +56,7 @@ VIEW_CONFIG_BASE: Dict[str, Tuple[str, str]] = {
     "Self-Healing IA": ("views.self_healing_admin", "render_self_healing_admin"),
     "Asistente IA": ("views.ai_features_panel", "render_ai_features_panel"),
     "AutoHeal v2": ("views.autoheal_dashboard", "render_autoheal_dashboard"),
+    "Capacitacion": ("views.capacitacion", "render_capacitacion"),
 }
 
 VIEW_NAV_LABELS_BASE: Dict[str, str] = {
@@ -101,6 +102,7 @@ VIEW_NAV_LABELS_BASE: Dict[str, str] = {
     "Self-Healing IA": "🛠 Self-Healing",
     "Asistente IA": "🤖 Asistente IA",
     "AutoHeal v2": "🤖 AutoHeal",
+    "Capacitacion": "🎓 Capacitacion",
 }
 
 
