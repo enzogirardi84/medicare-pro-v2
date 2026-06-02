@@ -41,6 +41,16 @@ DB_PATH = REPO_ROOT / ".autoheal_memory.db"
 LOG_PATH = REPO_ROOT / "autoheal.log"
 STREAMLIT_LOG = REPO_ROOT / "streamlit_errors.log"
 
+# Asegurar que REPO_ROOT este en sys.path para imports locales
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+try:
+    from core.app_logging import log_event
+except ImportError:
+    def log_event(kind, message):
+        pass
+
 VIEWS_DIR = REPO_ROOT / "views"
 CORE_DIR = REPO_ROOT / "core"
 TESTS_DIR = REPO_ROOT / "tests"
@@ -266,7 +276,7 @@ class PatternLearner:
     @staticmethod
     def _extract_pattern(old_code: str, new_code: str) -> Optional[dict]:
         """Extrae un patrón reemplazable de un par old/new code."""
-        # Patrón: .get("key", default)[:N] → (d.get("key") or default)[:N]
+        # Patrón: .get("key", default)[:N] -> (d.get("key") or default)[:N]
         m = re.search(r'\.get\(["\'](\w+)["\'],\s*["\']([^"\']*)["\']\)\[:(\d+)\]', old_code)
         if m and "(d.get" not in new_code:
             # Es un patrón de slice inseguro
@@ -354,7 +364,7 @@ class SmartScanner:
             line_text = lines[line_no - 1].strip()
             key = match.group(2)
             f = Finding(rel, line_no, "HIGH",
-                        f".get('{key}',...)[:N] puede crash con None → (d.get('{key}') or default)[:N]",
+                        f".get('{key}',...)[:N] puede crash con None -> (d.get('{key}') or default)[:N]",
                         code=line_text, pattern="get_key_slice", auto_fix=True)
             if not self._is_known(f):
                 self.findings.append(f)
@@ -409,7 +419,7 @@ class SmartScanner:
                 continue
             if node.name.startswith("_"):
                 continue
-            if (not node.body) or (not isinstance(node.body[0], ast.Expr)) or (not isinstance(node.body[0].value, (ast.Constant, ast.Str))):
+            if (not node.body) or (not isinstance(node.body[0], ast.Expr)) or (not isinstance(node.body[0].value, ast.Constant)):
                 f = Finding(rel, node.lineno, "LOW",
                             f"Funcion '{node.name}' sin docstring",
                             code=lines[node.lineno - 1].strip() if node.lineno <= len(lines) else "",
@@ -424,7 +434,7 @@ class SmartScanner:
             m = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*\1\.', line)
             if m:
                 f = Finding(rel, i + 1, "CRITICAL",
-                            f"Copy-paste error: {m.group(1)}(...) mal formado → (variable.get(...))",
+                            f"Copy-paste error: {m.group(1)}(...) mal formado -> (variable.get(...))",
                             code=line.strip(), pattern="copy_paste_error", auto_fix=True)
                 if not self._is_known(f):
                     self.findings.append(f)
@@ -453,7 +463,7 @@ class SmartScanner:
                     break
             if not guard_found and not line.strip().startswith("#"):
                 f = Finding(rel, i + 1, "HIGH",
-                            f"{var}[0] sin guard de lista vacía → crash si lista vacía",
+                            f"{var}[0] sin guard de lista vacía -> crash si lista vacía",
                             code=line.strip(), pattern="list_index_guard")
                 if not self._is_known(f):
                     self.findings.append(f)
@@ -623,8 +633,8 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
 
         elif f.pattern in ("copy_paste_error", "copy_paste_error_fstring"):
             # Fix patterns:
-            # 1. variable(keyword = variable.get(...)) → (variable.get(...))
-            # 2. variable(prompt += f"...{variable.get(...) → (variable.get(...)
+            # 1. variable(keyword = variable.get(...)) -> (variable.get(...))
+            # 2. variable(prompt += f"...{variable.get(...) -> (variable.get(...)
             m1 = re.search(r'(\w+)\s*\(\s*\w+\s*=\s*(\1\.get\([^)]+\))\s*\)\s*\[:', old_line)
             if m1:
                 new_line = old_line.replace(f"{m1.group(1)}({m1.group(2)})", f"({m1.group(2)})")
@@ -699,7 +709,7 @@ def apply_smart_fixes(scanner: SmartScanner, memory: FixMemory, commit_hash: str
                 category="auto_fix", commit_hash=commit_hash,
             )
             fixes += 1
-            print(f"  🔧 Fixed [{f.pattern}] {f.file_path}:{f.line}")
+            print(f"  [FIX] Fixed [{f.pattern}] {f.file_path}:{f.line}")
 
     return fixes
 
@@ -890,7 +900,7 @@ def smart_commit(memory: FixMemory, fixes: int, tests_created: int) -> bool:
 
         return True
     except Exception as exc:
-        print(f"  ⚠️ Commit falló: {exc}")
+        print(f"  [WARN] Commit falló: {exc}")
         return False
 
 
@@ -1035,7 +1045,7 @@ class Test{src_path.stem.title().replace("_", "")}:
 
 def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor,
               do_fix: bool, do_tests: bool, do_commit: bool, do_learn: bool) -> dict:
-    """Ejecuta un ciclo completo de scan → fix → test → learn → commit."""
+    """Ejecuta un ciclo completo de scan -> fix -> test -> learn -> commit."""
     findings = scanner.findings = []
     scanner.findings.clear()
 
@@ -1070,13 +1080,13 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
     perf_alerts = check_performance_regression(memory)
     if perf_alerts:
         for key, alert in perf_alerts.items():
-            print(f"  ⚡ Rendimiento: {alert['message']}")
+            print(f"  [BOLT] Rendimiento: {alert['message']}")
             log_event("autoheal_perf", f"{key}:{alert['message'][:100]}")
 
     # 2. CHECK LOGS (real-time monitoring)
     log_errors = monitor.check_logs()
     for err in log_errors:
-        print(f"  ⚡ Error en vivo: {err['type']} — {err['msg'][:60]}")
+        print(f"  [BOLT] Error en vivo: {err['type']} — {err['msg'][:60]}")
         monitor.auto_heal_from_error(err)
 
     # 3. FIX
@@ -1120,9 +1130,9 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
             passed = result.stdout.count("passed")
             failed = result.stdout.count("failed")
         except subprocess.TimeoutExpired:
-            print("  ⚠️ Tests timeout (>120s)")
+            print("  [WARN] Tests timeout (>120s)")
         except Exception as exc:
-            print(f"  ⚠️ Tests error: {exc}")
+            print(f"  [WARN] Tests error: {exc}")
 
     # 6. COMMIT
     commit_made = False
@@ -1154,7 +1164,7 @@ def run_cycle(memory: FixMemory, scanner: SmartScanner, monitor: RealTimeMonitor
 def _print_perf(memory: FixMemory):
     """Muestra metricas de rendimiento de escaneos."""
     conn = memory._connect()
-    print(f"\n📈 AutoHeal v3 — Rendimiento")
+    print(f"\n[CHART] AutoHeal v3 — Rendimiento")
     print(f"{'=' * 50}")
     try:
         # Promedio por intervalo
@@ -1187,7 +1197,7 @@ def _print_perf(memory: FixMemory):
 
 def print_stats(memory: FixMemory):
     stats = memory.get_stats()
-    print(f"\n📊 AutoHeal v2 — Estadísticas")
+    print(f"\n[STATS] AutoHeal v2 — Estadísticas")
     print(f"{'=' * 50}")
     print(f"  Fixes aplicados:     {stats['total_fixes']}")
     print(f"  Errores registrados: {stats['total_errors']}")
@@ -1258,7 +1268,7 @@ def main():
             time.sleep(interval)
 
     # Single run
-    print(f"🔍 Escaneando...")
+    print(f"[SEARCH] Escaneando...")
     stats = run_cycle(
         memory=memory, scanner=scanner, monitor=monitor,
         do_fix=bool(args.fix) if args.fix is not None else False,
@@ -1267,11 +1277,11 @@ def main():
         do_learn=bool(args.learn) if args.learn is not None else False,
     )
 
-    print(f"\n✅ Completado en {stats['elapsed']:.1f}s")
+    print(f"\n[OK] Completado en {stats['elapsed']:.1f}s")
     print(f"   Hallazgos: {stats['findings']} ({stats['crit']}C/{stats['high']}H/{stats['medium']}M)")
     print(f"   Fixes: {stats['fixes']} | Tests: {stats['tests_created']} creados, {stats['tests_passed']}P/{stats['tests_failed']}F")
     print(f"   Patrones aprendidos: {stats['learned_patterns']} | Errores en vivo: {stats['log_errors']}")
-    print(f"   Commit: {'✅' if stats['commit'] else '—'}")
+    print(f"   Commit: {'[OK]' if stats['commit'] else '—'}")
 
     print_stats(memory)
 
