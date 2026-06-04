@@ -72,8 +72,7 @@ def _call_llm(prompt: str, system_key: str = "evolution", temperature: float = 0
     system_prompt = _LLM_SYSTEM_PROMPTS.get(system_key, _LLM_SYSTEM_PROMPTS["evolution"])
     try:
         assistant = get_evolution_assistant()
-        full_prompt = f"{system_prompt}\n\n{prompt}"
-        return assistant._call_llm(prompt=full_prompt, temperature=temperature)
+        return assistant._call_llm(prompt=prompt, temperature=temperature, system_prompt=system_prompt)
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
         log_event("ai_call_error", f"{system_key}:{err}")

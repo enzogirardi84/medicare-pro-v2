@@ -131,8 +131,10 @@ class AIEvolutionAssistant:
     Genera sugerencias y ayuda a estructurar notas clínicas.
     """
 
-    # Templates de prompts
-    EVOLUTION_PROMPT = """Eres un médico clínico experimentado. Ayuda a redactar una evolución médica profesional.
+    # ── System prompt para generación de evolución ────────────────
+    EVOLUTION_SYSTEM = "Eres un médico clínico experto en redactar evolución en formato SOAP."
+    # ── User prompt template (solo datos, sin role mixing) ────────
+    EVOLUTION_PROMPT = """Redactá una nota de evolución clínica estructurada en formato SOAP.
 
 DATOS DEL PACIENTE:
 - Nombre: {nombre}
@@ -146,11 +148,10 @@ DATOS ACTUALES:
 - Evolución desde última consulta: {evolucion_previa}
 
 INSTRUCCIONES:
-1. Redacta una nota de evolución clínica estructurada
-2. Usa lenguaje médico profesional pero claro
-3. Incluye: Subjetivo, Objetivo, Análisis, Plan (SOAP)
-4. No inventes datos que no se proporcionaron
-5. Mantén un tono objetivo y profesional
+1. Usá lenguaje médico profesional pero claro
+2. Incluí: Subjetivo, Objetivo, Análisis, Plan (SOAP)
+3. No inventes datos que no se proporcionaron
+4. Mantené un tono objetivo y profesional
 
 NOTA DE EVOLUCIÓN:"""
 
@@ -201,8 +202,7 @@ NOTA DE EVOLUCIÓN:"""
                 evolucion_previa=previous_evolution or "Primera consulta"
             )
 
-            # Llamar a LLM
-            suggestion = self._call_llm(prompt, max_tokens=500, temperature=0.7)
+            suggestion = self._call_llm(prompt, max_tokens=500, temperature=0.7, system_prompt=self.EVOLUTION_SYSTEM)
 
             log_event("ai", f"Generated evolution suggestion for patient: {patient_data.get('id', 'unknown')}")
 
@@ -250,7 +250,7 @@ INSTRUCCIONES:
 NOTA MEJORADA:"""
 
         try:
-            return self._call_llm(prompt, max_tokens=600, temperature=0.5)
+            return self._call_llm(prompt, max_tokens=600, temperature=0.5, system_prompt="Eres un médico clínico revisor de notas. Corregís y mejorás el texto sin alterar datos clínicos.")
         except Exception as e:
             log_event("ai_error", f"Failed to improve note: {e}")
             return draft_note
@@ -319,35 +319,37 @@ NOTA MEJORADA:"""
 
         return ", ".join(parts) if parts else "No disponibles"
 
-    def _call_llm(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> str:
+    def _call_llm(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7, system_prompt: Optional[str] = None) -> str:
         """Llama al API de LLM según el provider configurado."""
         self._ensure_config()
         if self.provider == "openai":
-            return self._call_openai(prompt, max_tokens, temperature)
+            return self._call_openai(prompt, max_tokens, temperature, system_prompt)
         elif self.provider == "anthropic":
-            return self._call_anthropic(prompt, max_tokens, temperature)
+            return self._call_anthropic(prompt, max_tokens, temperature, system_prompt)
         elif self.provider == "deepseek":
-            return self._call_deepseek(prompt, max_tokens, temperature)
+            return self._call_deepseek(prompt, max_tokens, temperature, system_prompt)
         elif self.provider == "openrouter":
-            return self._call_openrouter(prompt, max_tokens, temperature)
+            return self._call_openrouter(prompt, max_tokens, temperature, system_prompt)
         elif self.provider == "gemini":
-            return self._call_gemini(prompt, max_tokens, temperature)
+            return self._call_gemini(prompt, max_tokens, temperature, system_prompt)
         elif self.provider == "local":
-            return self._call_local(prompt, max_tokens, temperature)
+            return self._call_local(prompt, max_tokens, temperature, system_prompt)
         else:
             raise ValueError(f"Provider no soportado: {self.provider}")
 
-    def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    _DEFAULT_SYSTEM = "Eres un asistente médico profesional."
+
+    def _call_openai(self, prompt: str, max_tokens: int, temperature: float, system_prompt: Optional[str] = None) -> str:
         """Llama API de OpenAI (v1.0+)."""
         self._ensure_config()
         try:
             from openai import OpenAI
             client = OpenAI(api_key=self.api_key, timeout=30.0)
-
+            sp = system_prompt or self._DEFAULT_SYSTEM
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "Eres un asistente médico profesional."},
+                    {"role": "system", "content": sp},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -365,18 +367,18 @@ NOTA MEJORADA:"""
             log_event("ai_error", f"OpenAI API error: {e}")
             raise
 
-    def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float, system_prompt: Optional[str] = None) -> str:
         """Llama API de Anthropic (Claude) usando Messages API."""
         self._ensure_config()
         try:
             import anthropic
             client = anthropic.Anthropic(api_key=self.api_key)
-
+            sp = system_prompt or self._DEFAULT_SYSTEM
             response = client.messages.create(
                 model=self.model,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                system="Eres un asistente médico profesional.",
+                system=sp,
                 messages=[{"role": "user", "content": prompt}]
             )
 
@@ -390,7 +392,7 @@ NOTA MEJORADA:"""
             log_event("ai_error", f"Anthropic API error: {e}")
             raise
 
-    def _call_deepseek(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    def _call_deepseek(self, prompt: str, max_tokens: int, temperature: float, system_prompt: Optional[str] = None) -> str:
         """Llama API de DeepSeek (compatible con OpenAI)."""
         self._ensure_config()
         try:
@@ -401,10 +403,11 @@ NOTA MEJORADA:"""
                 timeout=30.0,
             )
             model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek-v4-flash"
+            sp = system_prompt or self._DEFAULT_SYSTEM
             response = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "Eres un asistente médico profesional."},
+                    {"role": "system", "content": sp},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -416,7 +419,7 @@ NOTA MEJORADA:"""
             log_event("ai_error", f"DeepSeek API error: {e}")
             raise
 
-    def _call_openrouter(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    def _call_openrouter(self, prompt: str, max_tokens: int, temperature: float, system_prompt: Optional[str] = None) -> str:
         """Llama API de OpenRouter (compatible con OpenAI)."""
         self._ensure_config()
         try:
@@ -427,10 +430,11 @@ NOTA MEJORADA:"""
                 timeout=30.0,
             )
             model = self.model if self.model not in ("gpt-4", "gpt-3.5-turbo", "claude-3") else "deepseek/deepseek-v3.2"
+            sp = system_prompt or self._DEFAULT_SYSTEM
             response = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "Eres un asistente médico profesional."},
+                    {"role": "system", "content": sp},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -443,7 +447,7 @@ NOTA MEJORADA:"""
             log_event("ai_error", f"OpenRouter API error: {e}")
             raise
 
-    def _call_gemini(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    def _call_gemini(self, prompt: str, max_tokens: int, temperature: float, system_prompt: Optional[str] = None) -> str:
         """Llama API de Google Gemini."""
         self._ensure_config()
         try:
@@ -453,9 +457,10 @@ NOTA MEJORADA:"""
             return "El modulo Gemini requiere: pip install google-generativeai"
         try:
             genai.configure(api_key=self.api_key)
+            sp = system_prompt or self._DEFAULT_SYSTEM
             model = genai.GenerativeModel(self.model or "gemini-2.0-flash")
             response = model.generate_content(
-                f"Eres un asistente medico profesional.\n\n{prompt}",
+                f"{sp}\n\n{prompt}",
                 generation_config={"max_output_tokens": max_tokens, "temperature": temperature},
             )
             return response.text.strip() if response.text else ""
@@ -463,7 +468,7 @@ NOTA MEJORADA:"""
             log_event("ai_error", f"Gemini API error: {e}")
             raise
 
-    def _call_local(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    def _call_local(self, prompt: str, max_tokens: int, temperature: float, system_prompt: Optional[str] = None) -> str:
         """Llama modelo local (ej: Ollama, LM Studio)."""
         self._ensure_config()
         try:
@@ -472,12 +477,14 @@ NOTA MEJORADA:"""
             local_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
             local_model = os.getenv("LOCAL_LLM_MODEL", "llama3.1")
             model = local_model if self.model in ("gpt-4", "gpt-3.5-turbo", "claude-3") else self.model
+            sp = system_prompt or self._DEFAULT_SYSTEM
+            full_prompt = f"{sp}\n\n{prompt}"
 
             response = requests.post(
                 f"{local_url}/api/generate",
                 json={
                     "model": model,
-                    "prompt": prompt,
+                    "prompt": full_prompt,
                     "stream": False,
                     "options": {
                         "temperature": temperature,
