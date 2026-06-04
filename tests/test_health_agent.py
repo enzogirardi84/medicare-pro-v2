@@ -100,7 +100,20 @@ def test_health_agent_registers_action_trace():
         accion_titulo="Controlar signos vitales",
         actor="Tester",
         estado="realizada",
+        emit_audit=False,
     )
 
     assert evento["paciente"] == "Ana"
     assert session_state["agente_salud_acciones_log"][0]["accion_id"] == "a1"
+    assert session_state["agente_salud_acciones_db"][0]["accion_id"] == "a1"
+
+
+def test_health_agent_patient_audit_id_does_not_expose_patient_text():
+    from core.health_agent import _patient_audit_id
+
+    raw = "Ana Gomez - 12345678"
+    audit_id = _patient_audit_id(raw)
+
+    assert audit_id.startswith("patient:")
+    assert "Ana" not in audit_id
+    assert "12345678" not in audit_id
