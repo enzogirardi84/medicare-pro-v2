@@ -538,6 +538,18 @@ def get_email_manager() -> EmailNotificationManager:
 
 
 # Helpers rápidos
+def _app_login_url() -> str:
+    url = os.environ.get("MEDICARE_APP_URL")
+    if url:
+        return url
+    try:
+        import streamlit as st
+
+        return str(st.secrets.get("APP_URL", "https://app.medicarepro.com/login"))
+    except Exception:
+        return "https://app.medicarepro.com/login"
+
+
 def send_welcome_email(to_email: str, nombre: str, username: str, empresa: str) -> Dict[str, Any]:
     """Envía email de bienvenida."""
     return get_email_manager().send_template_email(
@@ -547,7 +559,7 @@ def send_welcome_email(to_email: str, nombre: str, username: str, empresa: str) 
             "nombre": nombre,
             "username": username,
             "empresa": empresa,
-            "login_url": os.environ.get("MEDICARE_APP_URL", st.secrets.get("APP_URL", "https://app.medicarepro.com/login"))
+            "login_url": _app_login_url()
         }
     )
 

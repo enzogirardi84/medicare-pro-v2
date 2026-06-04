@@ -20,11 +20,14 @@ import re
 import time
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import streamlit as st
 
 from core.app_logging import log_event
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 _logger = logging.getLogger("medicare.seguridad")
 

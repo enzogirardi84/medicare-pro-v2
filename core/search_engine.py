@@ -386,7 +386,7 @@ class SearchManager:
                 }
             )
 
-        log_event("search", f"Indexing complete: {len(pacientes_db)} patients, {len(evoluciones_db)} evolutions")
+        log_event("search", f"Indexing complete: {len(pacientes_list)} patients, {len(evoluciones_db)} evolutions")
 
     def search_patients(
         self,

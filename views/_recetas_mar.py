@@ -11,6 +11,7 @@ Funciones públicas usadas desde recetas.py:
     render_cortina_mar_hospitalaria, render_bloque_cortina_medicacion, render_sabana_compacta,
     render_marco_clinico_cortina
 """
+from html import escape
 import re
 
 import streamlit as st

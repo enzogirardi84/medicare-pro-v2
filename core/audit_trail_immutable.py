@@ -6,6 +6,7 @@ modificaciones mediante encadenamiento de hashes (blockchain-like).
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import os
@@ -112,7 +113,7 @@ class ImmutableAuditTrail:
     def _check_rotate(self) -> None:
         """Rota el archivo si supera el tamano maximo."""
         if self._current_file and self._current_file.stat().st_size > MAX_LOG_SIZE_BYTES:
-            from shutil import copyfileobj, gzip
+            from shutil import copyfileobj
             old_path = self._current_file
             compressed = old_path.with_suffix(f".{int(time.time())}.jsonl.gz")
             with open(old_path, "rb") as f_in, gzip.open(compressed, "wb") as f_out:

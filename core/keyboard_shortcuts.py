@@ -137,10 +137,11 @@ class ShortcutManager:
             """
             handlers.append(handler)
 
+        handlers_js = "\n".join(handlers)
         return f"""
         <script>
         document.addEventListener('keydown', function(e) {{
-            {'\n'.join(handlers)}
+            {handlers_js}
         }});
         </script>
         """
