@@ -295,7 +295,7 @@ def render_connection_badge(
         </div>
         """
 
-    html = f"""
+    badge_html = f"""
     <style>
         {pulse_animation}
 
@@ -339,7 +339,7 @@ def render_connection_badge(
     </div>
     """
 
-    st.markdown(html, unsafe_allow_html=True)
+    st.markdown(badge_html, unsafe_allow_html=True)
 
     return status
 

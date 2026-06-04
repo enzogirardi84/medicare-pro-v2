@@ -197,7 +197,6 @@ class MultiCloudBroker:
 
         elif provider == StorageProvider.POSTGRES:
             import asyncpg
-            import json
             conn = await asyncpg.connect(cfg.connection_string)
             try:
                 raw = json.dumps(value, default=str)
@@ -239,7 +238,6 @@ class MultiCloudBroker:
 
         elif provider == StorageProvider.POSTGRES:
             import asyncpg
-            import json
             conn = await asyncpg.connect(cfg.connection_string)
             try:
                 row = await conn.fetchrow(

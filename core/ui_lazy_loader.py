@@ -49,8 +49,6 @@ class StrictLazyLoader:
         El hash de dependencias asegura invalidacion si cambian.
         Una vez cargado, el objeto compilado vive en cache 1 hora.
         """
-        from importlib import import_module
-
         mod = import_module(module_path)
         fn = getattr(mod, function_name)
         log_event(
