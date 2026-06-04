@@ -147,7 +147,8 @@ class MultipathBroker:
     def _ensure_health_checks(self):
         try:
             if self._health_task is None or self._health_task.done():
-                self._health_task = asyncio.create_task(self._health_loop())
+                loop = asyncio.get_running_loop()
+                self._health_task = loop.create_task(self._health_loop())
         except RuntimeError:
             pass
 

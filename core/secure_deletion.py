@@ -182,7 +182,8 @@ class TempFileGarbageCollector:
     def _ensure_cleanup_task(self):
         try:
             if self._cleanup_task is None or self._cleanup_task.done():
-                self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+                loop = asyncio.get_running_loop()
+                self._cleanup_task = loop.create_task(self._cleanup_loop())
         except RuntimeError:
             pass
 
