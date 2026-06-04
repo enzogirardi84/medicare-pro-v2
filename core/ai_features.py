@@ -25,8 +25,9 @@ _LLM_SYSTEM_PROMPTS = {
         "Genera un texto profesional, conciso y estructurado en español."
     ),
     "summary": (
-        "Eres un médico preparando un resumen clínico para entrega de turno o derivación. "
-        "Incluye: diagnóstico principal, medicación activa, alertas, estudios pendientes y plan."
+        "Eres un médico clínico preparando un resumen estructurado para entrega de turno. "
+        "El resumen debe ser conciso, priorizar alertas de seguridad, y facilitar la continuidad del cuidado. "
+        "Incluí: diagnóstico principal, medicación activa, alertas, estudios pendientes y plan."
     ),
     "prescription": (
         "Eres un médico redactando una receta. Incluye: medicamento, dosis, frecuencia, duración y advertencias. "
@@ -141,24 +142,34 @@ def suggest_evolution_ai(paciente_sel: str) -> Optional[str]:
 def generate_patient_summary(paciente_sel: str) -> Optional[str]:
     """Resumen clínico para entrega de turno o derivación."""
     data = _paciente_data(paciente_sel)
-    prompt = (
-        f"Genera un resumen clínico para entrega de turno del paciente {data['nombre']} ({data['edad']} años).\n\n"
-        f"Diagnósticos: {data['diagnosticos']}\n"
-        f"Alergias: {data['alergias']}\n"
-    )
+    prompt = f"""Generá un resumen clínico estructurado para entrega de turno del/de la paciente:
+
+PACIENTE: {data['nombre']} ({data['edad']} años)
+DIAGNÓSTICOS: {data['diagnosticos']}
+ALERGIAS: {data['alergias']}
+
+"""
     if data["recetas"]:
-        prompt += f"\nMedicación activa:\n"
+        prompt += "MEDICACIÓN ACTIVA:\n"
         for r in data["recetas"]:
-            prompt += f"  - {r.get('medicamento', '?')}: {r.get('dosis', '?')} {r.get('frecuencia', '')}\n"
+            prompt += f"- {r.get('medicamento', '?')}: {r.get('dosis', '?')} {r.get('frecuencia', '')}\n"
+    prompt += "\n"
     if data["estudios"]:
-        prompt += f"\nEstudios recientes:\n"
+        prompt += "ESTUDIOS RECIENTES:\n"
         for e in data["estudios"]:
-            prompt += f"  - {e.get('tipo', '?')}: {(e.get('resultado') or '')[:100]}\n"
+            prompt += f"- {e.get('tipo', '?')}: {(e.get('resultado') or '')[:150]}\n"
+    prompt += "\n"
     if data["evoluciones"]:
-        prompt += f"\nÚltima evolución: {(data['evoluciones'][-1].get('texto') or '')[:300]}\n"
+        ult = data["evoluciones"][-1]
+        prompt += f"ÚLTIMA EVOLUCIÓN ({ult.get('fecha','?')}): {(ult.get('texto','') or '')[:400]}\n\n"
     prompt += (
-        "\nIncluye: motivo de consulta, diagnóstico principal, medicación activa, "
-        "alertas, estudios pendientes y plan de tratamiento."
+        "ESTRUCTURA DEL RESUMEN:\n"
+        "1. Motivo de consulta / diagnóstico principal\n"
+        "2. Medicación activa y alergias\n"
+        "3. Alertas (signos vitales anormales, resultados críticos)\n"
+        "4. Estudios pendientes e interconsultas\n"
+        "5. Plan de tratamiento y recomendaciones\n"
+        "6. Puntos a vigilar en el próximo turno"
     )
     return _call_llm(prompt, "summary")
 
