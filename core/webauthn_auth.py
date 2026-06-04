@@ -61,7 +61,7 @@ class WebAuthnManager:
 
         except ImportError:
             log_event("webauthn", "py_webauthn no instalado")
-            return self._fallback_registration_options(usuario_id, usuario_nombre)
+            return WebAuthnManager._fallback_registration_options(usuario_id, usuario_nombre)
 
     @staticmethod
     def verificar_registro(response_json: str) -> Optional[dict[str, Any]]:

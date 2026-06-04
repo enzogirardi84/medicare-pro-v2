@@ -265,6 +265,10 @@ def _render_consent_tab(mi_empresa, user):
 
 
 def _render_audit_trail_tab(mi_empresa, user):
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
+
     st.markdown("### Cadena de Auditoria HMAC")
     st.caption("Registro inmutable de acciones con encadenamiento criptografico. Respaldo: Ley 25.506 (Art. 3, 5).")
 

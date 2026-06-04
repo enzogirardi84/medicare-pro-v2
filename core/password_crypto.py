@@ -12,6 +12,8 @@ import re
 import secrets
 from typing import Optional, Tuple
 
+from core.app_logging import log_event
+
 try:
     import bcrypt
 except ImportError:

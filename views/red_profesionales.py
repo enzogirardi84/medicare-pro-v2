@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+from html import escape
 from core.alert_toasts import queue_toast
 import pandas as pd
 import streamlit as st
