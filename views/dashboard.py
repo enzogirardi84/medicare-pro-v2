@@ -42,6 +42,100 @@ from core.app_logging import log_event
 from core.computed_cache import cached_computed
 
 
+def _ids_pacientes_para_agente(pacientes) -> list[str]:
+    """Normaliza los pacientes visibles del dashboard para analizarlos con el agente."""
+    salida: list[str] = []
+    vistos = set()
+    for item in pacientes or []:
+        raw = item.get("paciente") if isinstance(item, dict) else item
+        if isinstance(raw, dict):
+            nombre = str(raw.get("nombre") or raw.get("paciente") or raw.get("nombre_completo") or "").strip()
+            dni = str(raw.get("dni") or "").strip()
+            paciente_id = f"{nombre} - {dni}" if nombre and dni else nombre
+        else:
+            paciente_id = str(raw or "").strip()
+        if not paciente_id or paciente_id in vistos:
+            continue
+        vistos.add(paciente_id)
+        salida.append(paciente_id)
+    return salida
+
+
+def _render_agente_salud_operativo(pacientes, mi_empresa: str) -> None:
+    pacientes_ids = _ids_pacientes_para_agente(pacientes)
+    if not pacientes_ids:
+        return
+
+    with st.expander("Agente de Salud - cola operativa", expanded=False):
+        st.caption("Priorizacion bajo demanda para coordinacion: pacientes criticos primero.")
+        limite = st.slider(
+            "Pacientes a evaluar con agente",
+            5,
+            50,
+            min(15, max(5, len(pacientes_ids))),
+            key="dash_agente_limite",
+        )
+        if st.button("Preparar cola institucional", key="dash_agente_priorizar", use_container_width=True):
+            from core.health_agent import priorizar_pacientes_institucion
+
+            with st.spinner("Analizando pacientes visibles..."):
+                st.session_state["_dash_agente_priorizacion"] = [
+                    p.__dict__
+                    for p in priorizar_pacientes_institucion(
+                        pacientes_ids,
+                        mi_empresa=mi_empresa,
+                        limite=limite,
+                    )
+                ]
+
+        priorizados = st.session_state.get("_dash_agente_priorizacion", [])
+        if not priorizados:
+            st.info("Genera la cola para ver pacientes ordenados por criticidad y urgencias.")
+            return
+
+        top = priorizados[:5]
+        criticos = sum(1 for p in priorizados if p.get("estado") == "critico")
+        tareas_urgentes = sum(int(p.get("tareas_urgentes") or 0) for p in priorizados)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Evaluados", len(priorizados))
+        c2.metric("Criticos", criticos)
+        c3.metric("Urgentes", tareas_urgentes)
+        st.dataframe(top, use_container_width=True, hide_index=True)
+
+        opciones = [str(p.get("paciente_id") or "") for p in top if p.get("paciente_id")]
+        if opciones:
+            paciente_priorizado = st.selectbox(
+                "Paciente de la cola",
+                opciones,
+                key="dash_agente_paciente_priorizado",
+            )
+            c_nav, c_view = st.columns(2)
+            with c_nav:
+                if st.button("Seleccionar paciente", key="dash_agente_sel_paciente", use_container_width=True):
+                    from core.utils_pacientes import set_paciente_actual
+
+                    set_paciente_actual(st.session_state, paciente_priorizado)
+                    st.toast("Paciente seleccionado.")
+                    st.rerun()
+            with c_view:
+                if st.button("Abrir Agente de Salud", key="dash_agente_abrir", use_container_width=True):
+                    from core.app_navigation import set_modulo_actual
+                    from core.utils_pacientes import set_paciente_actual
+
+                    set_paciente_actual(st.session_state, paciente_priorizado)
+                    set_modulo_actual("Agente de Salud", rerun=True)
+
+        from core.health_agent import exportar_priorizacion_institucion
+
+        st.download_button(
+            "Descargar cola CSV",
+            data=exportar_priorizacion_institucion(priorizados),
+            file_name="cola_operativa_agente_salud.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+
 def render_dashboard(mi_empresa, rol):
     _widgets = st.session_state.setdefault("_dashboard_widgets", {
         "resumen_turno": True,
@@ -50,6 +144,7 @@ def render_dashboard(mi_empresa, rol):
         "pendientes_facturar": True,
         "vitales_alertas": True,
     })
+    _widgets.setdefault("agente_salud", True)
     from core.ui_liviano import headers_sugieren_equipo_liviano
     es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
@@ -188,6 +283,9 @@ def render_dashboard(mi_empresa, rol):
     # ============================================================
     # BÚSQUEDA GLOBAL EN EVOLUCIONES
     # ============================================================
+    if _widgets.get("agente_salud"):
+        _render_agente_salud_operativo(pacientes, mi_empresa)
+
     MAX_RESULTADOS = 100
     st.markdown("### 🔍 Búsqueda global en evoluciones")
     _global_q = st.text_input("Buscar texto en todas las evoluciones", placeholder="Ej: fiebre, caida, dolor...", key="global_search_v2")
