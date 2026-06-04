@@ -71,6 +71,15 @@ def render_recetas(paciente_sel, mi_empresa, user, rol=None):
     if not paciente_sel:
         st.info("Selecciona un paciente en el menu lateral.")
         return
+    try:
+        _render_recetas_inner(paciente_sel, mi_empresa, user, rol)
+    except Exception as e:
+        import traceback
+        from core.app_logging import log_event
+        log_event("recetas_error", f"render: {type(e).__name__}: {e}\n{traceback.format_exc()}")
+        raise
+
+def _render_recetas_inner(paciente_sel, mi_empresa, user, rol=None):
 
     from core.ui_liviano import headers_sugieren_equipo_liviano
 
