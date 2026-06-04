@@ -74,6 +74,9 @@ class AuditEventType(Enum):
     SUSPICIOUS_ACTIVITY = auto()
     RATE_LIMIT_HIT = auto()
 
+    # Agentes clinicos / soporte operativo
+    AGENT_ACTION = auto()
+
 
 @dataclass(frozen=True)
 class AuditEntry:
@@ -255,7 +258,8 @@ class AuditTrail:
         auth_events = {AuditEventType.LOGIN_SUCCESS, AuditEventType.LOGIN_FAILURE,
                       AuditEventType.LOGOUT, AuditEventType.PASSWORD_CHANGE}
         clinical_events = {AuditEventType.EVOLUCION_CREATE, AuditEventType.EVOLUCION_READ,
-                          AuditEventType.VITALES_CREATE, AuditEventType.RECETA_CREATE}
+                          AuditEventType.VITALES_CREATE, AuditEventType.RECETA_CREATE,
+                          AuditEventType.AGENT_ACTION}
 
         if event_type in auth_events:
             return "auth"

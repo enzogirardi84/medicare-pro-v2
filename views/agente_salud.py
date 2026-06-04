@@ -163,6 +163,7 @@ def _render_action(accion: HealthAgentAction, index: int, paciente_sel: str, use
                 actor=_actor_label(user),
                 estado="realizada",
             )
+            _guardar_trazabilidad_agente()
             st.toast("Accion registrada.")
             st.rerun()
     with cols[2]:
@@ -211,6 +212,7 @@ def _render_plan_hoy(resultado, paciente_sel: str, user: dict) -> None:
             actor=_actor_label(user),
             estado="preparada",
         )
+        _guardar_trazabilidad_agente()
         st.rerun()
 
     if not resultado.plan_hoy:
@@ -225,7 +227,7 @@ def _render_plan_hoy(resultado, paciente_sel: str, user: dict) -> None:
 
 
 def _render_trazabilidad(paciente_sel: str) -> None:
-    log = st.session_state.get("agente_salud_acciones_log", [])
+    log = st.session_state.get("agente_salud_acciones_db", [])
     if not isinstance(log, list) or not log:
         st.info("Todavia no hay acciones registradas por el agente.")
         return
@@ -234,6 +236,20 @@ def _render_trazabilidad(paciente_sel: str) -> None:
         st.info("Este paciente no tiene acciones registradas por el agente.")
         return
     st.dataframe(filas, use_container_width=True, hide_index=True)
+
+
+def _guardar_trazabilidad_agente() -> None:
+    try:
+        from core.database import guardar_datos
+
+        guardar_datos(spinner=False)
+    except Exception as exc:
+        try:
+            from core.app_logging import log_event
+
+            log_event("agente_salud", f"guardar_trazabilidad_error:{type(exc).__name__}")
+        except Exception:
+            pass
 
 
 def render_agente_salud(paciente_sel, mi_empresa, user, rol):

@@ -7,6 +7,7 @@ datos existentes, evidencia y proximos pasos para revision profesional.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Sequence
@@ -455,6 +456,7 @@ def registrar_accion_agente(
     actor: str,
     estado: str = "realizada",
     nota: str = "",
+    emit_audit: bool = True,
 ) -> Dict[str, Any]:
     """Registra una accion tomada por el usuario para trazabilidad."""
     evento = {
@@ -467,16 +469,52 @@ def registrar_accion_agente(
         "nota": nota,
         "origen": "Agente de Salud",
     }
-    log = session_state.setdefault("agente_salud_acciones_log", [])
-    if isinstance(log, list):
-        log.append(evento)
+    for key in ("agente_salud_acciones_db", "agente_salud_acciones_log"):
+        log = session_state.setdefault(key, [])
+        if isinstance(log, list):
+            log.append(dict(evento))
     try:
         from core.app_logging import log_event
 
         log_event("agente_salud", f"accion_{estado}:{paciente_id}:{accion_id}:{actor}")
     except Exception:
         pass
+    if emit_audit:
+        _emitir_auditoria_accion_agente(evento)
     return evento
+
+
+def _patient_audit_id(paciente_id: str) -> str:
+    raw = str(paciente_id or "").strip().lower()
+    if not raw:
+        return "patient:unknown"
+    return "patient:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _emitir_auditoria_accion_agente(evento: Dict[str, Any]) -> None:
+    """Emite auditoria formal sin guardar nombre/DNI del paciente en el trail."""
+    try:
+        from core.audit_trail import AuditEventType, audit_log
+
+        audit_log(
+            AuditEventType.AGENT_ACTION,
+            resource_type="agente_salud",
+            resource_id=_patient_audit_id(str(evento.get("paciente", ""))),
+            action=str(evento.get("estado") or "realizada").upper(),
+            description="Accion operativa registrada por Agente de Salud",
+            metadata={
+                "accion_id": str(evento.get("accion_id", "")),
+                "accion": str(evento.get("accion", ""))[:120],
+                "origen": "Agente de Salud",
+            },
+        )
+    except Exception as exc:
+        try:
+            from core.app_logging import log_event
+
+            log_event("agente_salud", f"audit_emit_error:{type(exc).__name__}")
+        except Exception:
+            pass
 
 
 def _score_resultado(resultado: HealthAgentResult) -> int:
