@@ -117,3 +117,47 @@ def test_health_agent_patient_audit_id_does_not_expose_patient_text():
     assert audit_id.startswith("patient:")
     assert "Ana" not in audit_id
     assert "12345678" not in audit_id
+
+
+def test_institution_priority_score_includes_patient_state():
+    from core.health_agent import HealthAgentResult, _score_resultado
+
+    base = {
+        "paciente_id": "Paciente",
+        "resumen": "Sin alertas",
+        "acciones": [],
+        "dashboard": {},
+        "generado_en": "2026-06-03 10:00",
+        "guardrails": [],
+        "pase_guardia": "",
+        "resumen_derivacion": "",
+        "plan_hoy": {},
+        "tareas_urgentes": [],
+    }
+
+    critico = HealthAgentResult(estado="critico", **base)
+    estable = HealthAgentResult(estado="estable", **base)
+
+    assert _score_resultado(critico) > _score_resultado(estable)
+
+
+def test_export_institution_priority_csv():
+    from core.health_agent import InstitutionPatientPriority, exportar_priorizacion_institucion
+
+    csv_text = exportar_priorizacion_institucion(
+        [
+            InstitutionPatientPriority(
+                paciente_id="Ana",
+                estado="critico",
+                score=140,
+                resumen="Revisar signos vitales",
+                acciones_criticas=1,
+                acciones_altas=1,
+                tareas_urgentes=2,
+            )
+        ]
+    )
+
+    assert csv_text.startswith("paciente_id,estado,score")
+    assert "Ana,critico,140" in csv_text
+    assert "Revisar signos vitales" in csv_text
