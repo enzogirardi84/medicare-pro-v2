@@ -149,7 +149,7 @@ def _accion_desde_alerta(index: int, alerta: Dict[str, Any]) -> HealthAgentActio
     )
 
 
-def _acciones_de_cobertura(datos: Dict[str, Any], dashboard: Dict[str, Any]) -> List[HealthAgentAction]:
+def _acciones_de_cobertura(dashboard: Dict[str, Any]) -> List[HealthAgentAction]:
     acciones: List[HealthAgentAction] = []
     if dashboard.get("total_vitales", 0) == 0:
         acciones.append(
@@ -360,7 +360,7 @@ def generar_plan_agente_salud(
         for i, alerta in enumerate(dashboard.get("alertas", []))
         if isinstance(alerta, dict)
     ]
-    acciones.extend(_acciones_de_cobertura(datos, dashboard))
+    acciones.extend(_acciones_de_cobertura(dashboard))
     acciones = _ordenar_acciones(acciones)
     estado = _estado_desde_dashboard(dashboard)
 

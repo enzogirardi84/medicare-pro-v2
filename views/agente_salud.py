@@ -258,6 +258,8 @@ def render_agente_salud(paciente_sel, mi_empresa, user, rol):
     if not paciente_sel:
         aviso_sin_paciente()
         return
+    from core.ui_liviano import headers_sugieren_equipo_liviano
+    es_movil = headers_sugieren_equipo_liviano() or st.session_state.get("mc_liviano_modo") == "on"
 
     st.markdown(
         """
@@ -297,12 +299,21 @@ def render_agente_salud(paciente_sel, mi_empresa, user, rol):
 
     st.info(resultado.resumen)
 
-    cols = st.columns(5)
-    cols[0].metric("TA", dashboard.get("ultima_ta", "-"))
-    cols[1].metric("FC", dashboard.get("ultima_fc", "-"))
-    cols[2].metric("Temp", dashboard.get("ultima_temp", "-"))
-    cols[3].metric("SatO2", dashboard.get("ultima_spo2", "-"))
-    cols[4].metric("Glu", dashboard.get("ultima_glu", "-"))
+    if es_movil:
+        cols = st.columns(3)
+        cols[0].metric("TA", dashboard.get("ultima_ta", "-"))
+        cols[1].metric("FC", dashboard.get("ultima_fc", "-"))
+        cols[2].metric("Temp", dashboard.get("ultima_temp", "-"))
+        cols = st.columns(2)
+        cols[0].metric("SatO2", dashboard.get("ultima_spo2", "-"))
+        cols[1].metric("Glu", dashboard.get("ultima_glu", "-"))
+    else:
+        cols = st.columns(5)
+        cols[0].metric("TA", dashboard.get("ultima_ta", "-"))
+        cols[1].metric("FC", dashboard.get("ultima_fc", "-"))
+        cols[2].metric("Temp", dashboard.get("ultima_temp", "-"))
+        cols[3].metric("SatO2", dashboard.get("ultima_spo2", "-"))
+        cols[4].metric("Glu", dashboard.get("ultima_glu", "-"))
 
     filtro = st.segmented_control(
         "Filtro",
