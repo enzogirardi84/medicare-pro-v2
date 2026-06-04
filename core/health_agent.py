@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from core.clinical_assistant_service import compilar_dashboard_ejecutivo
 
@@ -62,6 +62,7 @@ class HealthAgentAction:
     modulo_sugerido: str
     responsable: str
     evidencia: List[str] = field(default_factory=list)
+    vencimiento: str = "Hoy"
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,10 @@ class HealthAgentResult:
     dashboard: Dict[str, Any]
     generado_en: str
     guardrails: List[str]
+    pase_guardia: str
+    resumen_derivacion: str
+    plan_hoy: Dict[str, List[HealthAgentAction]]
+    tareas_urgentes: List[HealthAgentAction]
 
     @property
     def acciones_criticas(self) -> int:
@@ -83,6 +88,18 @@ class HealthAgentResult:
     @property
     def acciones_altas(self) -> int:
         return sum(1 for a in self.acciones if a.prioridad == "alta")
+
+
+@dataclass(frozen=True)
+class InstitutionPatientPriority:
+    """Prioridad de un paciente dentro de la institucion."""
+
+    paciente_id: str
+    estado: str
+    score: int
+    resumen: str
+    acciones_criticas: int
+    acciones_altas: int
 
 
 def _prioridad_desde_alerta(alerta: Dict[str, Any]) -> str:
@@ -220,6 +237,92 @@ def _ordenar_acciones(acciones: Iterable[HealthAgentAction]) -> List[HealthAgent
     )
 
 
+def _top_acciones(acciones: Sequence[HealthAgentAction], limite: int = 5) -> List[HealthAgentAction]:
+    return list(acciones[:limite])
+
+
+def _lineas_acciones(acciones: Sequence[HealthAgentAction], limite: int = 5) -> List[str]:
+    if not acciones:
+        return ["- Sin acciones pendientes."]
+    return [
+        f"- [{accion.prioridad.upper()}] {accion.titulo}: {accion.detalle}"
+        for accion in _top_acciones(acciones, limite)
+    ]
+
+
+def _generar_pase_guardia(
+    paciente_id: str,
+    dashboard: Dict[str, Any],
+    acciones: Sequence[HealthAgentAction],
+) -> str:
+    """Genera texto breve para cambio de turno."""
+    diagnosticos = "; ".join(dashboard.get("diagnosticos_list") or []) or "Sin diagnosticos registrados"
+    lineas = [
+        f"Pase de guardia - {paciente_id}",
+        f"Estado: {_estado_desde_dashboard(dashboard)}",
+        f"Diagnosticos: {diagnosticos}",
+        (
+            "Ultimos vitales: "
+            f"TA {dashboard.get('ultima_ta', '-')}, "
+            f"FC {dashboard.get('ultima_fc', '-')}, "
+            f"Temp {dashboard.get('ultima_temp', '-')}, "
+            f"SatO2 {dashboard.get('ultima_spo2', '-')}, "
+            f"Glu {dashboard.get('ultima_glu', '-')}"
+        ),
+        "Pendientes prioritarios:",
+    ]
+    lineas.extend(_lineas_acciones(acciones, limite=6))
+    lineas.append("Validar con el profesional responsable antes de indicar cambios terapeuticos.")
+    return "\n".join(lineas)
+
+
+def _generar_resumen_derivacion(
+    paciente_id: str,
+    dashboard: Dict[str, Any],
+    acciones: Sequence[HealthAgentAction],
+) -> str:
+    """Genera texto para derivacion o auditoria clinica."""
+    lineas = [
+        f"Resumen para derivacion/auditoria - {paciente_id}",
+        f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        f"Estado operativo: {_estado_desde_dashboard(dashboard)}",
+        f"Total evoluciones: {dashboard.get('total_evoluciones', 0)}",
+        f"Total controles de vitales: {dashboard.get('total_vitales', 0)}",
+        f"Indicaciones activas: {dashboard.get('indicaciones_activas', 0)}",
+        f"Administraciones pendientes: {dashboard.get('administraciones_pendientes', 0)}",
+        f"Estudios pendientes: {dashboard.get('estudios_pendientes', 0)}",
+        "Hallazgos y acciones sugeridas:",
+    ]
+    lineas.extend(_lineas_acciones(acciones, limite=8))
+    lineas.append("Este resumen se basa solo en registros cargados en el sistema.")
+    return "\n".join(lineas)
+
+
+def _generar_plan_hoy(acciones: Sequence[HealthAgentAction]) -> Dict[str, List[HealthAgentAction]]:
+    """Agrupa acciones para el plan diario por responsable operativo."""
+    plan = {
+        "Enfermeria": [],
+        "Coordinacion": [],
+        "Medico": [],
+        "Equipo clinico": [],
+    }
+    for accion in acciones:
+        responsable = accion.responsable.lower()
+        if "enfermeria" in responsable:
+            plan["Enfermeria"].append(accion)
+        elif "coordinacion" in responsable:
+            plan["Coordinacion"].append(accion)
+        elif "medico" in responsable:
+            plan["Medico"].append(accion)
+        else:
+            plan["Equipo clinico"].append(accion)
+    return {k: v for k, v in plan.items() if v}
+
+
+def _tareas_urgentes(acciones: Sequence[HealthAgentAction]) -> List[HealthAgentAction]:
+    return [a for a in acciones if a.prioridad in {"critica", "alta"}]
+
+
 def _resumen(resultado_estado: str, acciones: List[HealthAgentAction], dashboard: Dict[str, Any]) -> str:
     criticas = sum(1 for a in acciones if a.prioridad == "critica")
     altas = sum(1 for a in acciones if a.prioridad == "alta")
@@ -274,6 +377,7 @@ def generar_plan_agente_salud(
     if mi_empresa:
         guardrails.append(f"Contexto institucional: {mi_empresa}.")
 
+    tareas_urgentes = _tareas_urgentes(acciones)
     return HealthAgentResult(
         paciente_id=paciente_id,
         estado=estado,
@@ -282,6 +386,10 @@ def generar_plan_agente_salud(
         dashboard=dashboard,
         generado_en=datetime.now().strftime("%d/%m/%Y %H:%M"),
         guardrails=guardrails,
+        pase_guardia=_generar_pase_guardia(paciente_id, dashboard, acciones),
+        resumen_derivacion=_generar_resumen_derivacion(paciente_id, dashboard, acciones),
+        plan_hoy=_generar_plan_hoy(acciones),
+        tareas_urgentes=tareas_urgentes,
     )
 
 
@@ -326,3 +434,82 @@ def exportar_plan_texto(resultado: HealthAgentResult) -> str:
     lineas.extend(["", "Limites:"])
     lineas.extend(f"- {item}" for item in resultado.guardrails)
     return "\n".join(lineas)
+
+
+def exportar_pase_guardia(resultado: HealthAgentResult) -> str:
+    """Texto descargable para cambio de turno."""
+    return resultado.pase_guardia
+
+
+def exportar_resumen_derivacion(resultado: HealthAgentResult) -> str:
+    """Texto descargable para derivacion o auditoria."""
+    return resultado.resumen_derivacion
+
+
+def registrar_accion_agente(
+    session_state: Dict[str, Any],
+    *,
+    paciente_id: str,
+    accion_id: str,
+    accion_titulo: str,
+    actor: str,
+    estado: str = "realizada",
+    nota: str = "",
+) -> Dict[str, Any]:
+    """Registra una accion tomada por el usuario para trazabilidad."""
+    evento = {
+        "fecha": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "paciente": paciente_id,
+        "accion_id": accion_id,
+        "accion": accion_titulo,
+        "actor": actor,
+        "estado": estado,
+        "nota": nota,
+        "origen": "Agente de Salud",
+    }
+    log = session_state.setdefault("agente_salud_acciones_log", [])
+    if isinstance(log, list):
+        log.append(evento)
+    try:
+        from core.app_logging import log_event
+
+        log_event("agente_salud", f"accion_{estado}:{paciente_id}:{accion_id}:{actor}")
+    except Exception:
+        pass
+    return evento
+
+
+def _score_resultado(resultado: HealthAgentResult) -> int:
+    return (
+        resultado.acciones_criticas * 100
+        + resultado.acciones_altas * 40
+        + len(resultado.tareas_urgentes) * 10
+        + PRIORIDAD_PESO.get(resultado.estado, 0)
+    )
+
+
+def priorizar_pacientes_institucion(
+    pacientes: Sequence[str],
+    *,
+    mi_empresa: str = "",
+    limite: int = 20,
+) -> List[InstitutionPatientPriority]:
+    """Ordena pacientes por criticidad usando el agente paciente por paciente."""
+    prioridades: List[InstitutionPatientPriority] = []
+    for paciente_id in pacientes:
+        if not paciente_id:
+            continue
+        resultado = ejecutar_agente_salud_paciente(str(paciente_id), mi_empresa=mi_empresa)
+        score = _score_resultado(resultado)
+        prioridades.append(
+            InstitutionPatientPriority(
+                paciente_id=str(paciente_id),
+                estado=resultado.estado,
+                score=score,
+                resumen=resultado.resumen,
+                acciones_criticas=resultado.acciones_criticas,
+                acciones_altas=resultado.acciones_altas,
+            )
+        )
+    prioridades.sort(key=lambda p: (-p.score, p.paciente_id))
+    return prioridades[:limite]

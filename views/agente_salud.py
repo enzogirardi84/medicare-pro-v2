@@ -9,7 +9,11 @@ import streamlit as st
 from core.health_agent import (
     HealthAgentAction,
     ejecutar_agente_salud_paciente,
+    exportar_pase_guardia,
     exportar_plan_texto,
+    exportar_resumen_derivacion,
+    priorizar_pacientes_institucion,
+    registrar_accion_agente,
 )
 from core.view_helpers import aviso_sin_paciente
 
@@ -111,7 +115,13 @@ def _estado_label(estado: str) -> str:
     }.get(str(estado), str(estado).title())
 
 
-def _render_action(accion: HealthAgentAction, index: int) -> None:
+def _actor_label(user: dict) -> str:
+    nombre = str((user or {}).get("nombre") or "Usuario").strip()
+    rol = str((user or {}).get("rol") or "").strip()
+    return f"{nombre} ({rol})" if rol else nombre
+
+
+def _render_action(accion: HealthAgentAction, index: int, paciente_sel: str, user: dict) -> None:
     color = BADGE_COLORS.get(accion.prioridad, "#64748b")
     st.markdown(
         f"""
@@ -122,14 +132,14 @@ def _render_action(accion: HealthAgentAction, index: int) -> None:
             </div>
             <div class="agent-action-detail">{escape(accion.detalle)}</div>
             <div class="agent-action-meta">
-                Responsable: {escape(accion.responsable)} | Modulo: {escape(accion.modulo_sugerido)}
+                Responsable: {escape(accion.responsable)} | Modulo: {escape(accion.modulo_sugerido)} | Vence: {escape(accion.vencimiento)}
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    cols = st.columns([1, 1])
+    cols = st.columns([1, 1, 1])
     with cols[0]:
         if st.button(
             f"Abrir {accion.modulo_sugerido}",
@@ -140,9 +150,90 @@ def _render_action(accion: HealthAgentAction, index: int) -> None:
 
             set_modulo_actual(accion.modulo_sugerido, rerun=True)
     with cols[1]:
+        if st.button(
+            "Marcar realizada",
+            key=f"agent_done_{accion.id}_{index}",
+            use_container_width=True,
+        ):
+            registrar_accion_agente(
+                st.session_state,
+                paciente_id=paciente_sel,
+                accion_id=accion.id,
+                accion_titulo=accion.titulo,
+                actor=_actor_label(user),
+                estado="realizada",
+            )
+            st.toast("Accion registrada.")
+            st.rerun()
+    with cols[2]:
         with st.expander("Evidencia", expanded=False):
             for item in accion.evidencia or ["S/D"]:
                 st.caption(str(item))
+
+
+def _pacientes_visibles_para_priorizar(mi_empresa: str) -> list[str]:
+    pacientes = []
+    raw = st.session_state.get("pacientes_db", [])
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, dict):
+                empresa = str(item.get("empresa", "") or "").strip()
+                if empresa and mi_empresa and empresa != mi_empresa:
+                    continue
+                nombre = str(item.get("nombre") or item.get("paciente") or "").strip()
+                dni = str(item.get("dni") or "").strip()
+                if nombre and dni:
+                    pacientes.append(f"{nombre} - {dni}")
+                elif nombre:
+                    pacientes.append(nombre)
+            elif isinstance(item, str):
+                pacientes.append(item)
+    detalles = st.session_state.get("detalles_pacientes_db", {})
+    if isinstance(detalles, dict):
+        pacientes.extend(str(k) for k in detalles.keys() if k)
+    vistos = set()
+    salida = []
+    for paciente in pacientes:
+        if paciente not in vistos:
+            vistos.add(paciente)
+            salida.append(paciente)
+    return salida
+
+
+def _render_plan_hoy(resultado, paciente_sel: str, user: dict) -> None:
+    if st.button("Preparar plan de hoy", type="primary", use_container_width=True):
+        st.session_state[f"agente_plan_hoy_preparado_{paciente_sel}"] = True
+        registrar_accion_agente(
+            st.session_state,
+            paciente_id=paciente_sel,
+            accion_id="plan-hoy",
+            accion_titulo="Preparar plan de hoy",
+            actor=_actor_label(user),
+            estado="preparada",
+        )
+        st.rerun()
+
+    if not resultado.plan_hoy:
+        st.info("No hay acciones para planificar hoy.")
+        return
+
+    for responsable, acciones in resultado.plan_hoy.items():
+        st.markdown(f"#### {responsable}")
+        for idx, accion in enumerate(acciones, start=1):
+            st.write(f"{idx}. [{accion.prioridad.upper()}] {accion.titulo}")
+            st.caption(accion.detalle)
+
+
+def _render_trazabilidad(paciente_sel: str) -> None:
+    log = st.session_state.get("agente_salud_acciones_log", [])
+    if not isinstance(log, list) or not log:
+        st.info("Todavia no hay acciones registradas por el agente.")
+        return
+    filas = [r for r in log if r.get("paciente") == paciente_sel]
+    if not filas:
+        st.info("Este paciente no tiene acciones registradas por el agente.")
+        return
+    st.dataframe(filas, use_container_width=True, hide_index=True)
 
 
 def render_agente_salud(paciente_sel, mi_empresa, user, rol):
@@ -209,17 +300,71 @@ def render_agente_salud(paciente_sel, mi_empresa, user, rol):
         if filtro_norm == "todas" or accion.prioridad == filtro_norm
     ]
 
-    st.subheader("Acciones")
-    for idx, accion in enumerate(acciones, start=1):
-        _render_action(accion, idx)
-
-    st.download_button(
-        "Descargar plan",
-        data=exportar_plan_texto(resultado),
-        file_name=f"plan_agente_salud_{str(paciente_sel)[:24]}.txt",
-        mime="text/plain",
-        use_container_width=True,
+    tab_acciones, tab_pase, tab_plan, tab_inst, tab_log = st.tabs(
+        ["Acciones", "Pase y auditoria", "Plan de hoy", "Institucion", "Trazabilidad"]
     )
+
+    with tab_acciones:
+        st.subheader("Acciones")
+        if resultado.tareas_urgentes:
+            st.warning(f"{len(resultado.tareas_urgentes)} tarea(s) urgente(s) para revisar hoy.")
+        for idx, accion in enumerate(acciones, start=1):
+            _render_action(accion, idx, paciente_sel, user)
+
+        st.download_button(
+            "Descargar plan",
+            data=exportar_plan_texto(resultado),
+            file_name=f"plan_agente_salud_{str(paciente_sel)[:24]}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+    with tab_pase:
+        st.subheader("Pase de guardia")
+        st.text_area("Texto para pase", resultado.pase_guardia, height=220)
+        st.download_button(
+            "Descargar pase de guardia",
+            data=exportar_pase_guardia(resultado),
+            file_name=f"pase_guardia_{str(paciente_sel)[:24]}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+        st.divider()
+        st.subheader("Resumen para derivacion o auditoria")
+        st.text_area("Texto para derivacion/auditoria", resultado.resumen_derivacion, height=260)
+        st.download_button(
+            "Descargar resumen",
+            data=exportar_resumen_derivacion(resultado),
+            file_name=f"resumen_derivacion_{str(paciente_sel)[:24]}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+    with tab_plan:
+        _render_plan_hoy(resultado, paciente_sel, user)
+
+    with tab_inst:
+        st.subheader("Pacientes criticos primero")
+        pacientes = _pacientes_visibles_para_priorizar(mi_empresa)
+        limite = st.slider("Pacientes a evaluar", 5, 50, min(20, max(5, len(pacientes) or 5)))
+        if st.button("Priorizar institucion", use_container_width=True):
+            with st.spinner("Priorizando pacientes..."):
+                st.session_state["_agente_priorizacion_institucion"] = [
+                    p.__dict__
+                    for p in priorizar_pacientes_institucion(
+                        pacientes,
+                        mi_empresa=mi_empresa,
+                        limite=limite,
+                    )
+                ]
+        priorizados = st.session_state.get("_agente_priorizacion_institucion", [])
+        if priorizados:
+            st.dataframe(priorizados, use_container_width=True, hide_index=True)
+        else:
+            st.info("Ejecuta la priorizacion para ordenar los pacientes por criticidad.")
+
+    with tab_log:
+        _render_trazabilidad(paciente_sel)
 
     with st.expander("Limites clinicos", expanded=False):
         for item in resultado.guardrails:

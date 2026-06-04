@@ -60,3 +60,47 @@ def test_health_agent_adds_minimum_records_action_when_empty():
     assert resultado.estado == "estable"
     assert any(a.id == "cobertura-vitales" for a in resultado.acciones)
     assert any(a.id == "cobertura-evolucion" for a in resultado.acciones)
+
+
+def test_health_agent_builds_shift_handoff_and_today_plan():
+    from core.health_agent import generar_plan_agente_salud
+
+    datos = {
+        "vitales": [],
+        "indicaciones": [],
+        "cuidados": [],
+        "consumos": [],
+        "balance": [],
+        "estudios": [{"estado": "pendiente", "tipo": "Laboratorio"}],
+        "administracion_med": [],
+        "diagnosticos": [],
+        "escalas": [],
+        "emergencias": [],
+        "evoluciones": [],
+        "checkin": [],
+        "paciente_data": {},
+    }
+
+    resultado = generar_plan_agente_salud("Paciente", datos)
+
+    assert "Pase de guardia" in resultado.pase_guardia
+    assert "Resumen para derivacion/auditoria" in resultado.resumen_derivacion
+    assert resultado.plan_hoy
+    assert resultado.tareas_urgentes
+
+
+def test_health_agent_registers_action_trace():
+    from core.health_agent import registrar_accion_agente
+
+    session_state = {}
+    evento = registrar_accion_agente(
+        session_state,
+        paciente_id="Ana",
+        accion_id="a1",
+        accion_titulo="Controlar signos vitales",
+        actor="Tester",
+        estado="realizada",
+    )
+
+    assert evento["paciente"] == "Ana"
+    assert session_state["agente_salud_acciones_log"][0]["accion_id"] == "a1"
