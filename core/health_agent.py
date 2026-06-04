@@ -7,7 +7,9 @@ datos existentes, evidencia y proximos pasos para revision profesional.
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Sequence
@@ -20,6 +22,12 @@ PRIORIDAD_PESO = {
     "alta": 3,
     "media": 2,
     "baja": 1,
+}
+
+ESTADO_PESO = {
+    "critico": 30,
+    "atencion": 10,
+    "estable": 0,
 }
 
 MODULO_POR_CATEGORIA = {
@@ -101,6 +109,7 @@ class InstitutionPatientPriority:
     resumen: str
     acciones_criticas: int
     acciones_altas: int
+    tareas_urgentes: int = 0
 
 
 def _prioridad_desde_alerta(alerta: Dict[str, Any]) -> str:
@@ -522,8 +531,34 @@ def _score_resultado(resultado: HealthAgentResult) -> int:
         resultado.acciones_criticas * 100
         + resultado.acciones_altas * 40
         + len(resultado.tareas_urgentes) * 10
-        + PRIORIDAD_PESO.get(resultado.estado, 0)
+        + ESTADO_PESO.get(resultado.estado, 0)
     )
+
+
+def exportar_priorizacion_institucion(
+    prioridades: Sequence[InstitutionPatientPriority | Dict[str, Any]],
+) -> str:
+    """CSV descargable para coordinacion, auditoria o pase institucional."""
+    columnas = [
+        "paciente_id",
+        "estado",
+        "score",
+        "acciones_criticas",
+        "acciones_altas",
+        "tareas_urgentes",
+        "resumen",
+    ]
+    salida = io.StringIO()
+    writer = csv.DictWriter(salida, fieldnames=columnas, lineterminator="\n")
+    writer.writeheader()
+    for prioridad in prioridades:
+        if isinstance(prioridad, dict):
+            fuente = prioridad
+            get = fuente.get
+        else:
+            get = lambda key, default="": getattr(prioridad, key, default)
+        writer.writerow({col: get(col, "") for col in columnas})
+    return salida.getvalue()
 
 
 def priorizar_pacientes_institucion(
@@ -547,6 +582,7 @@ def priorizar_pacientes_institucion(
                 resumen=resultado.resumen,
                 acciones_criticas=resultado.acciones_criticas,
                 acciones_altas=resultado.acciones_altas,
+                tareas_urgentes=len(resultado.tareas_urgentes),
             )
         )
     prioridades.sort(key=lambda p: (-p.score, p.paciente_id))

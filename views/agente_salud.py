@@ -11,6 +11,7 @@ from core.health_agent import (
     ejecutar_agente_salud_paciente,
     exportar_pase_guardia,
     exportar_plan_texto,
+    exportar_priorizacion_institucion,
     exportar_resumen_derivacion,
     priorizar_pacientes_institucion,
     registrar_accion_agente,
@@ -375,7 +376,34 @@ def render_agente_salud(paciente_sel, mi_empresa, user, rol):
                 ]
         priorizados = st.session_state.get("_agente_priorizacion_institucion", [])
         if priorizados:
+            criticos = sum(1 for p in priorizados if p.get("estado") == "critico")
+            urgentes = sum(int(p.get("tareas_urgentes") or 0) for p in priorizados)
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Pacientes evaluados", len(priorizados))
+            c2.metric("Criticos", criticos)
+            c3.metric("Tareas urgentes", urgentes)
             st.dataframe(priorizados, use_container_width=True, hide_index=True)
+            st.download_button(
+                "Descargar priorizacion CSV",
+                data=exportar_priorizacion_institucion(priorizados),
+                file_name="priorizacion_institucional_agente_salud.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+            opciones = [str(p.get("paciente_id") or "") for p in priorizados if p.get("paciente_id")]
+            if opciones:
+                paciente_priorizado = st.selectbox(
+                    "Abrir paciente priorizado",
+                    opciones,
+                    key="agente_salud_paciente_priorizado",
+                )
+                if st.button("Usar paciente seleccionado", use_container_width=True):
+                    from core.utils_pacientes import set_paciente_actual
+
+                    set_paciente_actual(st.session_state, paciente_priorizado)
+                    st.toast("Paciente seleccionado para revisar.")
+                    st.rerun()
         else:
             st.info("Ejecuta la priorizacion para ordenar los pacientes por criticidad.")
 
