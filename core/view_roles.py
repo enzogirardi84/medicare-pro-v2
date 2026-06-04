@@ -96,6 +96,7 @@ MODULO_ROLES_PERMITIDOS: Dict[str, List[str]] = {
     # "Factura Electronica": list(_ROL_COORD_OPER),  # ocultado
     "Turnos Online": list(_ROL_TODOS),
     "Chatbot IA": list(_ROL_TODOS),
+    "Agente de Salud": list(_ROL_CLINICA),
     "Calc. Dosis Pediatricas": list(_ROL_TODOS),
     "Reportes Financieros": list(_ROL_COORD_OPER),
     "Admin Feature Flags": ["SuperAdmin"],

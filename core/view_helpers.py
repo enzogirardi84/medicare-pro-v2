@@ -126,6 +126,7 @@ _VISTAS_COMPACTAS_MOVIL = {
     "Auditoria",
     "Auditoria Legal",
     "Diagnosticos",
+    "Agente de Salud",
 }
 
 
