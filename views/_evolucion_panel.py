@@ -466,7 +466,10 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
             )
 
             with st.expander(f"Evolución #{ev_num} · {fecha} · {plantilla}", key=f"ev_exp_{idx}"):
-                col_info, col_detalle = st.columns([1, 2])
+                if es_movil:
+                    col_info, col_detalle = st.columns([2, 2])
+                else:
+                    col_info, col_detalle = st.columns([1, 2])
 
                 with col_info:
                     st.markdown(f"**📅 Fecha:** `{html.escape(fecha)}`")
@@ -479,18 +482,17 @@ def _render_panel_evolucion_clinica(paciente_sel, user, puede_registrar, puede_b
 
                     # ── Badges de datos clínicos (Registro inteligente) ──
                     if es_cuidador and cd:
-            #         signos_v rules
-            #         TA sist/diast, FC, FR, Temp, Spo2, Glu if any
-                        sv_parts = []
-                        if cd.get("ta_sist"): sv_parts.append(f"TA {cd['ta_sist']}/{cd.get('ta_diast','?')}")
-                        if cd.get("fc"):    sv_parts.append(f"FC {cd['fc']}")
-                        if cd.get("fr"):    sv_parts.append(f"FR {cd['fr']}")
-                        if cd.get("temp"):  sv_parts.append(f"T {cd['temp']}°C")
-                        if cd.get("spo2"):  sv_parts.append(f"SpO₂ {cd['spo2']}%")
-                        if cd.get("glucemia"): sv_parts.append(f"Glu {cd['glucemia']}")
-                        if sv_parts:
+                        sv_items = []
+                        if cd.get("ta_sist"): sv_items.append(f"TA {cd['ta_sist']}/{cd.get('ta_diast','?')}")
+                        if cd.get("fc"):    sv_items.append(f"FC {cd['fc']}")
+                        if cd.get("fr"):    sv_items.append(f"FR {cd['fr']}")
+                        if cd.get("temp"):  sv_items.append(f"T {cd['temp']}°C")
+                        if cd.get("spo2"):  sv_items.append(f"SpO₂ {cd['spo2']}%")
+                        if cd.get("glucemia"): sv_items.append(f"Glu {cd['glucemia']}")
+                        if sv_items:
                             st.markdown("**🩺 Signos vitales:**")
-                            st.code(" · ".join(sv_parts), language="")
+                            st.markdown(f"<span style='font-size:0.9em;white-space:normal;line-height:1.6;display:inline-block;'>"
+                                        f"{' · '.join(sv_items)}</span>", unsafe_allow_html=True)
                         # Dolor
                         if cd.get("dolor"):
                             eva = cd.get("eva", "")
