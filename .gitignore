@@ -28,6 +28,8 @@ venv.bak/
 # Streamlit - datos y secretos
 .streamlit/local_data.json
 .streamlit/data_store/
+.streamlit/offline_queue/
+.streamlit/login_lockout_state.json
 .streamlit/secrets.toml
 .streamlit/secrets_fixed.toml
 .streamlit/secrets.toml.py
@@ -109,6 +111,7 @@ $RECYCLE.BIN/
 *.err.log
 logs/
 log/
+.audit_logs/
 streamlit-debug*.log
 
 # Backups y archivos temporales
@@ -120,6 +123,7 @@ _backups_fix_pantalla_azul/
 *.backup
 *.tmp
 *.temp
+__security_fix.py
 ~$*
 
 # CI / deploy
