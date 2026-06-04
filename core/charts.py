@@ -45,7 +45,7 @@ def chart_barras(df, x, y, color=None, titulo_x="", titulo_y="", altura=200):
         return None
 
 
-def chart_linea(df, x, y, color=None, titulo_x="", titulo_y="", altura=200):
+def _chart_linea_legacy(df, x, y, color=None, titulo_x="", titulo_y="", altura=200):
     """Gráfico de líneas con Altair."""
     altura = _mobile_altura(altura)
     import altair as alt
@@ -60,7 +60,7 @@ def chart_linea(df, x, y, color=None, titulo_x="", titulo_y="", altura=200):
         return None
 
 
-def chart_area(df, x, y, color=COLOR_PRIMARY, titulo_x="", titulo_y="", altura=200):
+def _chart_area_legacy(df, x, y, color=COLOR_PRIMARY, titulo_x="", titulo_y="", altura=200):
     """Gráfico de área con Altair."""
     altura = _mobile_altura(altura)
     import altair as alt

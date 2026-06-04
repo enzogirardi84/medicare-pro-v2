@@ -111,7 +111,6 @@ def _auto_corregir_texto(texto: str) -> str:
         "suspendido": "suspendido",
         "reposo": "reposo",
         "absoluto": "absoluto",
-        "espontanea": "espontánea",
         "diuresis": "diuresis",
         "conservada": "conservada",
     }

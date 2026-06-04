@@ -60,7 +60,7 @@ class DBConfig:
         )
 
     @classmethod
-    def from_env(cls) -> DBConfig:
+    def _from_env_legacy(cls) -> DBConfig:
         prefix = os.environ.get("MEDICARE_TENANT", "default").upper().replace("-", "_")
         def env(key: str, default: str = "") -> str:
             return os.environ.get(f"{prefix}_{key}", os.environ.get(key, default))

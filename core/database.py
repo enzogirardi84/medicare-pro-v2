@@ -38,7 +38,7 @@ def with_auto_healing(max_retries: int = 4, base_delay: float = 0.1):
     return decorator
 import time
 from contextlib import nullcontext
-from typing import Any, Optional
+from typing import Optional
 
 import streamlit as st
 

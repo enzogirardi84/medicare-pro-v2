@@ -192,7 +192,6 @@ class QuantumBioPipeline:
         from core.qkd_broker import QKDBroker, SecurityCompromiseError
 
         qkd = QKDBroker()
-        from core.qkd_broker import BB84Protocol
         bb84 = BB84Protocol()
 
         try:
