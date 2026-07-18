@@ -31,6 +31,21 @@ PAYLOAD_ALERTA_BYTES = 9 * 1024 * 1024
 _supabase_client_cache = None
 
 
+def _secret_get(name: str, default: str = "") -> str:
+    """Lee secrets tolerando BOM accidental en la primera clave del archivo."""
+    try:
+        value = st.secrets.get(name, None)
+        if value not in (None, ""):
+            return str(value)
+        bom_value = st.secrets.get(f"\ufeff{name}", None)
+        if bom_value not in (None, ""):
+            log_event("db", f"secret_bom_key_detected:{name}")
+            return str(bom_value)
+    except Exception:
+        raise
+    return default
+
+
 def _proxy_env_loopback_blackhole_activo() -> bool:
     for key in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY", "https_proxy", "http_proxy", "all_proxy"):
         raw = str(os.environ.get(key, "") or "").strip()
@@ -46,6 +61,26 @@ def _proxy_env_loopback_blackhole_activo() -> bool:
     return False
 
 
+def _supabase_client_options():
+    try:
+        import httpx
+        from supabase.lib.client_options import SyncClientOptions
+
+        if _proxy_env_loopback_blackhole_activo():
+            log_event("db", "supabase_proxy_bypass:loopback_port_9")
+        return SyncClientOptions(
+            httpx_client=httpx.Client(
+                trust_env=False,
+                follow_redirects=True,
+                http2=True,
+                timeout=httpx.Timeout(10.0, connect=5.0),
+            )
+        )
+    except Exception as e:
+        log_event("db", f"supabase_client_options_error:{type(e).__name__}")
+        return None
+
+
 def init_supabase():
     global _supabase_client_cache
     if _supabase_client_cache is not None:
@@ -54,8 +89,8 @@ def init_supabase():
         log_event("db", "supabase_client_not_installed")
         return None
     try:
-        url = st.secrets.get("SUPABASE_URL", "")
-        key = st.secrets.get("SUPABASE_KEY", "")
+        url = _secret_get("SUPABASE_URL", "")
+        key = _secret_get("SUPABASE_KEY", "")
     except Exception as e:
         log_event("db", f"supabase_secrets_error:{type(e).__name__}")
         url = os.environ.get("SUPABASE_URL", "")
@@ -63,22 +98,7 @@ def init_supabase():
     if not url or "tu-proyecto-aqui" in url or not key:
         log_event("db", "supabase_secrets_empty_or_placeholder")
         return None
-    options = None
-    if _proxy_env_loopback_blackhole_activo():
-        try:
-            import httpx
-            from supabase.lib.client_options import SyncClientOptions
-            options = SyncClientOptions(
-                httpx_client=httpx.Client(
-                    trust_env=False,
-                    follow_redirects=True,
-                    http2=True,
-                    timeout=httpx.Timeout(5.0, connect=3.0),
-                )
-            )
-            log_event("db", "supabase_proxy_bypass:loopback_port_9")
-        except Exception as e:
-            log_event("db", f"supabase_proxy_bypass_error:{type(e).__name__}")
+    options = _supabase_client_options()
     try:
         client = create_client(url, key, options=options)
         _supabase_client_cache = client

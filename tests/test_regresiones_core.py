@@ -56,6 +56,55 @@ def test_emergency_password_lee_variable_entorno(monkeypatch):
     assert utils.obtener_emergency_password() == "clave-local"
 
 
+def test_supabase_secret_get_tolera_bom_en_primera_clave(monkeypatch):
+    import core._database_supabase as db_supabase
+
+    class FakeSecrets(dict):
+        def get(self, key, default=None):
+            return super().get(key, default)
+
+    fake = FakeSecrets({"\ufeffSUPABASE_URL": "https://demo.supabase.co"})
+    monkeypatch.setattr(db_supabase.st, "secrets", fake, raising=False)
+
+    assert db_supabase._secret_get("SUPABASE_URL") == "https://demo.supabase.co"
+
+
+def test_login_detecta_db_sin_usuarios():
+    from core.auth import _db_login_tiene_usuarios
+
+    assert _db_login_tiene_usuarios({"evoluciones_db": []}) is False
+    assert _db_login_tiene_usuarios({"usuarios_db": {}}) is False
+    assert _db_login_tiene_usuarios({"usuarios_db": {"ana": {"nombre": "Ana"}}}) is True
+
+
+def test_login_bloquea_fallback_local_en_produccion(monkeypatch):
+    import core._auth_helpers as auth_helpers
+
+    monkeypatch.setenv("MEDICARE_ENV", "production")
+    monkeypatch.delenv("ALLOW_LOGIN_LOCAL_FALLBACK", raising=False)
+    monkeypatch.setattr(auth_helpers.st, "secrets", {}, raising=False)
+    monkeypatch.setattr(auth_helpers.st, "session_state", {"_modo_offline": True}, raising=False)
+
+    data, err = auth_helpers._db_login_rechazar_offline_si_corresponde({"usuarios_db": {}})
+
+    assert data is None
+    assert "nube" in err
+
+
+def test_login_permite_fallback_local_si_esta_habilitado(monkeypatch):
+    import core._auth_helpers as auth_helpers
+
+    monkeypatch.setenv("MEDICARE_ENV", "production")
+    monkeypatch.setenv("ALLOW_LOGIN_LOCAL_FALLBACK", "true")
+    monkeypatch.setattr(auth_helpers.st, "secrets", {}, raising=False)
+    monkeypatch.setattr(auth_helpers.st, "session_state", {"_modo_offline": True}, raising=False)
+
+    data, err = auth_helpers._db_login_rechazar_offline_si_corresponde({"usuarios_db": {}})
+
+    assert data == {"usuarios_db": {}}
+    assert err is None
+
+
 def test_normalizar_usuario_recupera_rol_clinico_legacy():
     usuario = normalizar_usuario_sistema(
         {"rol": "Administrativo", "perfil_profesional": "Medico"}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 import time
+import os
 from html import escape
 
 import streamlit as st
@@ -32,6 +33,37 @@ from core.utils import (
 
 _DEBOUNCE_GUARDAR_LOGS_CLINICA_SEC = 60.0
 _SESSION_LOGIN_FLASH = "_mc_auth_login_flash"
+MSG_LOGIN_NUBE_NO_DISPONIBLE = (
+    "No pudimos conectar con la nube para validar el acceso. "
+    "Revisá la configuración de Supabase o intentá nuevamente en unos minutos."
+)
+
+
+def _login_local_fallback_permitido() -> bool:
+    raw = os.getenv("ALLOW_LOGIN_LOCAL_FALLBACK")
+    try:
+        secret_value = st.secrets.get("ALLOW_LOGIN_LOCAL_FALLBACK", None)
+        if secret_value is not None:
+            raw = secret_value
+    except Exception:
+        pass
+    if isinstance(raw, bool):
+        return raw
+    if raw is not None:
+        return str(raw).strip().lower() in {"1", "true", "yes", "si", "on"}
+    env = os.getenv("MEDICARE_ENV", "production")
+    try:
+        env = st.secrets.get("MEDICARE_ENV", env)
+    except Exception:
+        pass
+    return str(env or "").strip().lower() not in {"production", "prod"}
+
+
+def _db_login_rechazar_offline_si_corresponde(db_data: dict | None):
+    if st.session_state.get("_modo_offline") and not _login_local_fallback_permitido():
+        log_event("auth", "login_blocked:offline_cloud_unavailable")
+        return None, MSG_LOGIN_NUBE_NO_DISPONIBLE
+    return db_data, None
 
 
 def _auth_set_flash(key: str, kind: str, message: str) -> None:
@@ -143,15 +175,24 @@ def _cargar_db_login(empresa_login: str, u_limpio: str):
     st.session_state.pop("_db_monolito_sesion", None)
     if not modo_shard_activo():
         d = cargar_datos(force=True)
+        d, err_offline = _db_login_rechazar_offline_si_corresponde(d)
+        if err_offline:
+            return None, err_offline
         return (d, None) if d is not None else (None, "No se pudieron cargar los datos.")
     if login_usa_monolito_legacy(u_limpio):
         st.session_state["_db_monolito_sesion"] = True
         d = cargar_datos(force=True, monolito_legacy=True)
+        d, err_offline = _db_login_rechazar_offline_si_corresponde(d)
+        if err_offline:
+            return None, err_offline
         return (d, None) if d is not None else (None, "No se pudo cargar la base global (monolito).")
     tk = tenant_key_normalizado(empresa_login)
     if not tk:
         return None, "En modo multiclínica debés ingresar **Empresa / Clínica** (como está dada de alta)."
     d = cargar_datos(force=True, tenant_key=tk)
+    d, err_offline = _db_login_rechazar_offline_si_corresponde(d)
+    if err_offline:
+        return None, err_offline
     if d is None:
         return None, "No hay datos para esa clínica. Verificá el nombre o contactá a soporte."
     return d, None

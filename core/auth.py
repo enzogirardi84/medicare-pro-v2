@@ -86,7 +86,17 @@ MSG_PIN_RESET_FALLIDO = (
     "No pudimos cambiar la contraseña. Revisá **usuario**, **PIN** de 4 dígitos y, en multiclínica, **empresa** "
     "como en Mi equipo."
 )
+MSG_LOGIN_USUARIOS_NO_DISPONIBLES = (
+    "No se cargó la lista de usuarios de Mi equipo. Revisá conexión con la nube, configuración de Supabase "
+    "o el nombre de Empresa / Clínica. Si el problema sigue, contactá a soporte."
+)
 
+
+def _db_login_tiene_usuarios(db_data: dict | None) -> bool:
+    if not isinstance(db_data, dict):
+        return False
+    usuarios = db_data.get("usuarios_db")
+    return isinstance(usuarios, dict) and any(isinstance(u, dict) for u in usuarios.values())
 
 
 def _intentar_login_emergencia(u_limpio: str, p_plain: str, loader_ph) -> bool:
@@ -97,14 +107,14 @@ def _intentar_login_emergencia(u_limpio: str, p_plain: str, loader_ph) -> bool:
         return False
     limpiar_fallos_login(u_limpio)
     user_data = DEFAULT_ADMIN_USER.copy()
-    user_data["usuario_login"] = "admin"
+    user_data["usuario_login"] = u_limpio
     aplicar_hash_tras_login_ok(user_data, p_plain, rounds=bcrypt_rounds_config())
     if not isinstance(st.session_state.get("usuarios_db"), dict):
         st.session_state["usuarios_db"] = {}
-    st.session_state["usuarios_db"]["admin"] = user_data
+    st.session_state["usuarios_db"][u_limpio] = user_data
     if loader_ph is not None:
         loader_ph.empty()
-    _completar_login_exitoso(user_data, "admin", "Login emergencia superadmin", "login_ok_admin_emergencia")
+    _completar_login_exitoso(user_data, u_limpio, "Login emergencia superadmin", "login_ok_admin_emergencia")
     return True  # _completar_login_exitoso hace st.rerun(), esto no se alcanza normalmente
 
 def _auth_strip_pwreset_query_param() -> None:
@@ -255,6 +265,8 @@ def _procesar_login(empresa_login: str, u: str, p: str):
     ok_lock, msg = puede_intentar_login(u_limpio)
     if not ok_lock:
         st.error(msg); return
+    if _intentar_login_emergencia(u_limpio, p, None):
+        return
     ph = st.empty()
     ph.markdown(_auth_loader_markup("Autenticando..."), unsafe_allow_html=True)
     db_f, err_db = _cargar_db_login(empresa_login, u_limpio)
@@ -263,6 +275,7 @@ def _procesar_login(empresa_login: str, u: str, p: str):
         ph.empty(); st.error(err_db); return
     if db_f is None:
         ph.empty(); st.error("No se pudieron cargar los datos."); return
+    usuarios_disponibles_en_origen = _db_login_tiene_usuarios(db_f)
     for k, v in db_f.items():
         st.session_state[k] = v
     completar_claves_db_session(); asegurar_usuarios_base(solo_normalizar=modo_shard_activo())
@@ -272,6 +285,9 @@ def _procesar_login(empresa_login: str, u: str, p: str):
         ph.empty()
         if _intentar_login_emergencia(u_limpio, p, ph):
             return
+        if not usuarios_disponibles_en_origen:
+            log_event("auth", "login_failed:usuarios_db_no_disponible")
+            st.error(MSG_LOGIN_USUARIOS_NO_DISPONIBLES); return
         registrar_fallo_login(u_limpio); st.error(MSG_LOGIN_CREDENCIALES_FALLIDAS); return
     user_data = normalizar_usuario_sistema(dict(st.session_state["usuarios_db"][usuario_encontrado]))
     user_data["usuario_login"] = usuario_encontrado
