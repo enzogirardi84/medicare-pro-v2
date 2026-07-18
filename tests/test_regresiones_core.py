@@ -161,6 +161,30 @@ def test_login_muestra_detalle_dns_si_nube_no_disponible(monkeypatch):
     assert "demo.supabase.co" in err
 
 
+def test_diagnostico_supabase_no_inicializado_muestra_detalle_dns(monkeypatch):
+    import streamlit as st
+    import core.diagnosticos as diagnosticos
+
+    monkeypatch.setattr(
+        st,
+        "session_state",
+        {
+            "_mc_supabase_status": {
+                "ok": False,
+                "codigo": "dns_error",
+                "detalle": "demo.supabase.co:gaierror",
+            }
+        },
+        raising=False,
+    )
+
+    msg = diagnosticos._mensaje_supabase_no_inicializado()
+
+    assert "Cliente Supabase no inicializado" in msg
+    assert "DNS no resuelve" in msg
+    assert "demo.supabase.co" in msg
+
+
 def test_login_permite_fallback_local_si_esta_habilitado(monkeypatch):
     import core._auth_helpers as auth_helpers
 
