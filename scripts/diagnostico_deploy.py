@@ -73,7 +73,10 @@ def _check_supabase(secrets: dict) -> list[tuple[bool, str]]:
 
     checks.append((bool(url), "SUPABASE_URL configurado"))
     checks.append((bool(key), "SUPABASE_KEY configurado"))
-    checks.append((bool(service_key), "Service role key configurada (opcional para tareas admin)"))
+    if service_key:
+        checks.append((True, "Service role key configurada (opcional para tareas admin)"))
+    else:
+        checks.append((True, "Service role key no configurada (opcional; solo necesaria para tareas admin)"))
 
     if not url:
         return checks
@@ -93,6 +96,27 @@ def _check_supabase(secrets: dict) -> list[tuple[bool, str]]:
     return checks
 
 
+def _acciones_recomendadas(checks: list[tuple[bool, str]]) -> list[str]:
+    acciones: list[str] = []
+    mensajes_fallidos = [mensaje for ok, mensaje in checks if not ok]
+    if not mensajes_fallidos:
+        return acciones
+
+    if any("SUPABASE_URL configurado" in msg for msg in mensajes_fallidos):
+        acciones.append("Cargar SUPABASE_URL en Secrets con formato https://<project-ref>.supabase.co.")
+    if any("SUPABASE_KEY configurado" in msg for msg in mensajes_fallidos):
+        acciones.append("Cargar SUPABASE_KEY del mismo proyecto Supabase usado por SUPABASE_URL.")
+    if any("SUPABASE_URL usa https" in msg or "Host Supabase valido" in msg for msg in mensajes_fallidos):
+        acciones.append("Copiar el Project URL desde Supabase > Project Settings > API y reemplazar SUPABASE_URL.")
+    if any("DNS no resuelve" in msg for msg in mensajes_fallidos):
+        acciones.append("Verificar que el project-ref exista en Supabase y actualizar SUPABASE_URL en Streamlit Cloud/Render.")
+    if any("streamlit_app.py" in msg or "Render apunta" in msg or "start.sh apunta" in msg or "Docker apunta" in msg for msg in mensajes_fallidos):
+        acciones.append("Alinear el entrypoint del deploy para ejecutar streamlit run streamlit_app.py.")
+
+    acciones.append("Reiniciar el deploy despues de corregir los Secrets o entrypoints.")
+    return acciones
+
+
 def main() -> int:
     try:
         secrets = _load_local_secrets()
@@ -108,7 +132,9 @@ def main() -> int:
         failed = failed or not ok
         print(f"[{_status(ok)}] {message}")
     if failed:
-        print("\nAccion recomendada: corregir los items ERROR y reiniciar el deploy.")
+        print("\nAcciones recomendadas:")
+        for accion in _acciones_recomendadas(checks):
+            print(f"- {accion}")
         return 1
     print("\nTodo OK para el arranque basico.")
     return 0
