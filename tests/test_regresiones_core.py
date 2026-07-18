@@ -69,6 +69,47 @@ def test_supabase_secret_get_tolera_bom_en_primera_clave(monkeypatch):
     assert db_supabase._secret_get("SUPABASE_URL") == "https://demo.supabase.co"
 
 
+def test_supabase_dns_check_detecta_host_inexistente(monkeypatch):
+    import core._database_supabase as db_supabase
+
+    def falla_dns(*args, **kwargs):
+        raise OSError("dns")
+
+    monkeypatch.setattr(db_supabase.socket, "getaddrinfo", falla_dns)
+
+    ok, detalle = db_supabase._supabase_url_resuelve_dns("https://demo.supabase.co")
+
+    assert ok is False
+    assert detalle == "demo.supabase.co:OSError"
+
+
+def test_init_supabase_no_crea_cliente_si_dns_falla(monkeypatch):
+    import core._database_supabase as db_supabase
+
+    llamados = []
+
+    class FakeSecrets(dict):
+        def get(self, key, default=None):
+            return super().get(key, default)
+
+    def fake_create_client(*args, **kwargs):
+        llamados.append(args)
+        return object()
+
+    monkeypatch.setattr(db_supabase, "_supabase_client_cache", None)
+    monkeypatch.setattr(db_supabase, "create_client", fake_create_client)
+    monkeypatch.setattr(
+        db_supabase.st,
+        "secrets",
+        FakeSecrets({"SUPABASE_URL": "https://demo.supabase.co", "SUPABASE_KEY": "key"}),
+        raising=False,
+    )
+    monkeypatch.setattr(db_supabase.socket, "getaddrinfo", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("dns")))
+
+    assert db_supabase.init_supabase() is None
+    assert llamados == []
+
+
 def test_login_detecta_db_sin_usuarios():
     from core.auth import _db_login_tiene_usuarios
 

@@ -8,6 +8,7 @@ Extraído de core/database.py.
 """
 import hashlib
 import os
+import socket
 import time
 from urllib.parse import urlparse
 
@@ -81,6 +82,22 @@ def _supabase_client_options():
         return None
 
 
+def _supabase_url_resuelve_dns(url: str) -> tuple[bool, str]:
+    """Valida que el host configurado exista antes de construir el cliente."""
+    try:
+        parsed = urlparse(str(url or "").strip())
+    except Exception:
+        return False, "url_invalida"
+    host = str(parsed.hostname or "").strip()
+    if not host:
+        return False, "host_vacio"
+    try:
+        socket.getaddrinfo(host, parsed.port or 443)
+    except OSError as exc:
+        return False, f"{host}:{type(exc).__name__}"
+    return True, host
+
+
 def init_supabase():
     global _supabase_client_cache
     if _supabase_client_cache is not None:
@@ -97,6 +114,10 @@ def init_supabase():
         key = os.environ.get("SUPABASE_KEY", "")
     if not url or "tu-proyecto-aqui" in url or not key:
         log_event("db", "supabase_secrets_empty_or_placeholder")
+        return None
+    dns_ok, dns_detalle = _supabase_url_resuelve_dns(url)
+    if not dns_ok:
+        log_event("db", f"supabase_dns_error:{dns_detalle}")
         return None
     options = _supabase_client_options()
     try:
