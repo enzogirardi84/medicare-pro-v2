@@ -33,10 +33,33 @@ from core.utils import (
 
 _DEBOUNCE_GUARDAR_LOGS_CLINICA_SEC = 60.0
 _SESSION_LOGIN_FLASH = "_mc_auth_login_flash"
+_SUPABASE_STATUS_SESSION_KEY = "_mc_supabase_status"
 MSG_LOGIN_NUBE_NO_DISPONIBLE = (
     "No pudimos conectar con la nube para validar el acceso. "
     "Revisá la configuración de Supabase o intentá nuevamente en unos minutos."
 )
+
+
+def _detalle_estado_nube_para_login() -> str:
+    try:
+        estado = st.session_state.get(_SUPABASE_STATUS_SESSION_KEY)
+    except Exception:
+        return ""
+    if not isinstance(estado, dict) or estado.get("ok") is True:
+        return ""
+    codigo = str(estado.get("codigo") or "").strip()
+    detalle = str(estado.get("detalle") or "").strip().replace("\n", " ")[:140]
+    if codigo == "dns_error":
+        return f" Detalle soporte: DNS no resuelve el host de Supabase ({detalle})."
+    if codigo == "secrets_empty_or_placeholder":
+        return " Detalle soporte: faltan SUPABASE_URL/SUPABASE_KEY o siguen con valores de ejemplo."
+    if codigo == "secrets_error":
+        return f" Detalle soporte: no se pudieron leer los secrets ({detalle or 'error de configuracion'})."
+    if codigo == "client_not_installed":
+        return " Detalle soporte: la libreria de Supabase no esta instalada en el entorno."
+    if codigo in {"api_error", "init_exception"}:
+        return f" Detalle soporte: Supabase no inicializo correctamente ({detalle or codigo})."
+    return ""
 
 
 def _login_local_fallback_permitido() -> bool:
@@ -62,7 +85,7 @@ def _login_local_fallback_permitido() -> bool:
 def _db_login_rechazar_offline_si_corresponde(db_data: dict | None):
     if st.session_state.get("_modo_offline") and not _login_local_fallback_permitido():
         log_event("auth", "login_blocked:offline_cloud_unavailable")
-        return None, MSG_LOGIN_NUBE_NO_DISPONIBLE
+        return None, MSG_LOGIN_NUBE_NO_DISPONIBLE + _detalle_estado_nube_para_login()
     return db_data, None
 
 

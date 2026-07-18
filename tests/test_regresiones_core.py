@@ -98,6 +98,7 @@ def test_init_supabase_no_crea_cliente_si_dns_falla(monkeypatch):
 
     monkeypatch.setattr(db_supabase, "_supabase_client_cache", None)
     monkeypatch.setattr(db_supabase, "create_client", fake_create_client)
+    monkeypatch.setattr(db_supabase.st, "session_state", {}, raising=False)
     monkeypatch.setattr(
         db_supabase.st,
         "secrets",
@@ -108,6 +109,7 @@ def test_init_supabase_no_crea_cliente_si_dns_falla(monkeypatch):
 
     assert db_supabase.init_supabase() is None
     assert llamados == []
+    assert db_supabase.st.session_state["_mc_supabase_status"]["codigo"] == "dns_error"
 
 
 def test_login_detecta_db_sin_usuarios():
@@ -130,6 +132,33 @@ def test_login_bloquea_fallback_local_en_produccion(monkeypatch):
 
     assert data is None
     assert "nube" in err
+
+
+def test_login_muestra_detalle_dns_si_nube_no_disponible(monkeypatch):
+    import core._auth_helpers as auth_helpers
+
+    monkeypatch.setenv("MEDICARE_ENV", "production")
+    monkeypatch.delenv("ALLOW_LOGIN_LOCAL_FALLBACK", raising=False)
+    monkeypatch.setattr(auth_helpers.st, "secrets", {}, raising=False)
+    monkeypatch.setattr(
+        auth_helpers.st,
+        "session_state",
+        {
+            "_modo_offline": True,
+            "_mc_supabase_status": {
+                "ok": False,
+                "codigo": "dns_error",
+                "detalle": "demo.supabase.co:gaierror",
+            },
+        },
+        raising=False,
+    )
+
+    data, err = auth_helpers._db_login_rechazar_offline_si_corresponde({"usuarios_db": {}})
+
+    assert data is None
+    assert "DNS" in err
+    assert "demo.supabase.co" in err
 
 
 def test_login_permite_fallback_local_si_esta_habilitado(monkeypatch):
