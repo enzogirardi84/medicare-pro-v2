@@ -48,7 +48,7 @@ El archivo `.python-version` y `runtime.txt` indican Python 3.12.x para entornos
 ## Ejecucion local
 
 ```bash
-streamlit run main.py
+streamlit run streamlit_app.py
 ```
 
 ## Deploy con dominio propio
@@ -63,7 +63,7 @@ Archivos incluidos:
 Comando de arranque configurado:
 
 ```bash
-streamlit run main.py --server.port $PORT --server.address 0.0.0.0
+streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0
 ```
 
 La guia paso a paso para Render + Donweb está en:
@@ -192,7 +192,7 @@ CACHE_MAX_L2 = 1000
 
 La barra lateral está configurada para permanecer **expandida y fija** en escritorio y tablet, evitando que se colapse accidentalmente mientras se programa o navega entre módulos. Esto mejora la productividad del administrador y mantiene siempre visible el selector de pacientes y las acciones principales.
 
-- `initial_sidebar_state="expanded"` en `main.py`
+- `initial_sidebar_state="expanded"` en `main_medicare.py`
 - CSS personalizado que oculta el botón de colapsar en `desktop/tablet`
 - Padding inferior aumentado en móvil/tablet para que botones flotantes no tapen contenido
 
