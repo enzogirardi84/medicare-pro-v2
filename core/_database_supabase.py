@@ -8,6 +8,7 @@ Extraído de core/database.py.
 """
 import hashlib
 import os
+import socket
 import time
 from urllib.parse import urlparse
 
@@ -29,6 +30,35 @@ except ImportError:
 PAYLOAD_ALERTA_BYTES = 9 * 1024 * 1024
 
 _supabase_client_cache = None
+_SUPABASE_STATUS_SESSION_KEY = "_mc_supabase_status"
+
+
+def _registrar_supabase_status(ok: bool, codigo: str, detalle: str = "") -> None:
+    status = {
+        "ok": bool(ok),
+        "codigo": str(codigo or "").strip()[:80],
+        "detalle": str(detalle or "").strip().replace("\n", " ")[:180],
+        "ts": time.time(),
+    }
+    try:
+        st.session_state[_SUPABASE_STATUS_SESSION_KEY] = status
+    except Exception:
+        pass
+
+
+def _secret_get(name: str, default: str = "") -> str:
+    """Lee secrets tolerando BOM accidental en la primera clave del archivo."""
+    try:
+        value = st.secrets.get(name, None)
+        if value not in (None, ""):
+            return str(value)
+        bom_value = st.secrets.get(f"\ufeff{name}", None)
+        if bom_value not in (None, ""):
+            log_event("db", f"secret_bom_key_detected:{name}")
+            return str(bom_value)
+    except Exception:
+        raise
+    return default
 
 
 def _proxy_env_loopback_blackhole_activo() -> bool:
@@ -46,49 +76,81 @@ def _proxy_env_loopback_blackhole_activo() -> bool:
     return False
 
 
+def _supabase_client_options():
+    try:
+        import httpx
+        from supabase.lib.client_options import SyncClientOptions
+
+        if _proxy_env_loopback_blackhole_activo():
+            log_event("db", "supabase_proxy_bypass:loopback_port_9")
+        return SyncClientOptions(
+            httpx_client=httpx.Client(
+                trust_env=False,
+                follow_redirects=True,
+                http2=True,
+                timeout=httpx.Timeout(10.0, connect=5.0),
+            )
+        )
+    except Exception as e:
+        log_event("db", f"supabase_client_options_error:{type(e).__name__}")
+        return None
+
+
+def _supabase_url_resuelve_dns(url: str) -> tuple[bool, str]:
+    """Valida que el host configurado exista antes de construir el cliente."""
+    try:
+        parsed = urlparse(str(url or "").strip())
+    except Exception:
+        return False, "url_invalida"
+    host = str(parsed.hostname or "").strip()
+    if not host:
+        return False, "host_vacio"
+    try:
+        socket.getaddrinfo(host, parsed.port or 443)
+    except OSError as exc:
+        return False, f"{host}:{type(exc).__name__}"
+    return True, host
+
+
 def init_supabase():
     global _supabase_client_cache
     if _supabase_client_cache is not None:
         return _supabase_client_cache
     if create_client is None:
         log_event("db", "supabase_client_not_installed")
+        _registrar_supabase_status(False, "client_not_installed")
         return None
     try:
-        url = st.secrets.get("SUPABASE_URL", "")
-        key = st.secrets.get("SUPABASE_KEY", "")
+        url = _secret_get("SUPABASE_URL", "")
+        key = _secret_get("SUPABASE_KEY", "")
     except Exception as e:
         log_event("db", f"supabase_secrets_error:{type(e).__name__}")
+        _registrar_supabase_status(False, "secrets_error", type(e).__name__)
         url = os.environ.get("SUPABASE_URL", "")
         key = os.environ.get("SUPABASE_KEY", "")
     if not url or "tu-proyecto-aqui" in url or not key:
         log_event("db", "supabase_secrets_empty_or_placeholder")
+        _registrar_supabase_status(False, "secrets_empty_or_placeholder")
         return None
-    options = None
-    if _proxy_env_loopback_blackhole_activo():
-        try:
-            import httpx
-            from supabase.lib.client_options import SyncClientOptions
-            options = SyncClientOptions(
-                httpx_client=httpx.Client(
-                    trust_env=False,
-                    follow_redirects=True,
-                    http2=True,
-                    timeout=httpx.Timeout(5.0, connect=3.0),
-                )
-            )
-            log_event("db", "supabase_proxy_bypass:loopback_port_9")
-        except Exception as e:
-            log_event("db", f"supabase_proxy_bypass_error:{type(e).__name__}")
+    dns_ok, dns_detalle = _supabase_url_resuelve_dns(url)
+    if not dns_ok:
+        log_event("db", f"supabase_dns_error:{dns_detalle}")
+        _registrar_supabase_status(False, "dns_error", dns_detalle)
+        return None
+    options = _supabase_client_options()
     try:
         client = create_client(url, key, options=options)
         _supabase_client_cache = client
         log_event("db", "supabase_init_ok")
+        _registrar_supabase_status(True, "ok", dns_detalle)
         return client
     except _SupabaseAPIError as e:
         log_event("db", f"supabase_init_apierror:{type(e).__name__}")
+        _registrar_supabase_status(False, "api_error", type(e).__name__)
         return None
     except Exception as e:
         log_event("db", f"supabase_init_exception:{type(e).__name__}")
+        _registrar_supabase_status(False, "init_exception", type(e).__name__)
         return None
 
 

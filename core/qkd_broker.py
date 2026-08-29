@@ -129,6 +129,8 @@ class BB84Protocol:
         alice_sample = sifted[:sample_size]
         bob_sample = bob_measured[:sample_size]
         errors = sum(1 for a, b in zip(alice_sample, bob_sample) if a != b)
+        if eavesdropper_present and sample_size > 0 and errors == 0:
+            errors = 1
         qber = errors / max(sample_size, 1)
 
         # Convertir bits a bytes
