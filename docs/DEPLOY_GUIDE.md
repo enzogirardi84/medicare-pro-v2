@@ -41,7 +41,7 @@ Pasos:
 3. Seleccionar:
    - Repository: `enzogirardi84/medicare-pro-v2`
    - Branch: `main`
-   - Main file path: `main.py`
+   - Main file path: `streamlit_app.py`
 4. En `Advanced settings` cargar secrets:
 
 ```toml
