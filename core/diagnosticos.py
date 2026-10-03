@@ -40,6 +40,38 @@ COLUMNAS_ESPERADAS = {
 }
 
 
+def _detalle_supabase_status_sesion() -> str:
+    try:
+        import streamlit as st
+
+        estado = st.session_state.get("_mc_supabase_status")
+    except Exception:
+        return ""
+    if not isinstance(estado, dict) or estado.get("ok") is True:
+        return ""
+    codigo = str(estado.get("codigo") or "").strip()
+    detalle = str(estado.get("detalle") or "").strip().replace("\n", " ")[:180]
+    if codigo == "dns_error":
+        return f"DNS no resuelve el host configurado ({detalle})"
+    if codigo == "secrets_empty_or_placeholder":
+        return "faltan SUPABASE_URL/SUPABASE_KEY o siguen con valores de ejemplo"
+    if codigo == "secrets_error":
+        return f"no se pudieron leer los secrets ({detalle or 'error de configuracion'})"
+    if codigo == "client_not_installed":
+        return "la libreria de Supabase no esta instalada en el entorno"
+    if codigo in {"api_error", "init_exception"}:
+        return f"Supabase no inicializo correctamente ({detalle or codigo})"
+    return ""
+
+
+def _mensaje_supabase_no_inicializado() -> str:
+    base = "Cliente Supabase no inicializado (verificar SUPABASE_URL y SUPABASE_KEY en secrets)"
+    detalle = _detalle_supabase_status_sesion()
+    if detalle:
+        return f"{base}. Detalle: {detalle}."
+    return base
+
+
 def diagnosticar_supabase() -> Dict[str, Any]:
     """
     Realiza un diagnostico completo del estado de Supabase y las tablas SQL.
@@ -61,7 +93,7 @@ def diagnosticar_supabase() -> Dict[str, Any]:
     try:
         from core.database import supabase
         if not supabase:
-            resultado["error_conexion"] = "Cliente Supabase no inicializado (verificar SUPABASE_URL y SUPABASE_KEY en secrets)"
+            resultado["error_conexion"] = _mensaje_supabase_no_inicializado()
             return resultado
         resultado["conexion_ok"] = True
     except Exception as e:

@@ -19,6 +19,7 @@ class TestAuthHelperFunctions:
         # Simular usuario admin y emergency password
         admin_logins = logins_clave_default_superadmin()
         emergency_pwd = "emergencia123"
+        mock_st.session_state = {}
 
         with (
             patch("core.auth.obtener_emergency_password", return_value=emergency_pwd),
@@ -31,6 +32,21 @@ class TestAuthHelperFunctions:
             result = _intentar_login_emergencia("admin", emergency_pwd, None)
             assert result is True or mock_completar.called
             mock_limpiar.assert_called_once_with("admin")
+            assert mock_st.session_state["usuarios_db"]["admin"]["usuario_login"] == "admin"
+
+    def test_login_emergencia_se_intenta_antes_de_cargar_db(self):
+        """Permite recuperar acceso aunque Supabase no responda."""
+        from core.auth import _procesar_login
+
+        with (
+            patch("core.auth.puede_intentar_login", return_value=(True, "")),
+            patch("core.auth._intentar_login_emergencia", return_value=True) as mock_emergency,
+            patch("core.auth._cargar_db_login") as mock_cargar,
+        ):
+            _procesar_login("Clinica", "enzogirardi", "clave")
+
+        mock_emergency.assert_called_once_with("enzogirardi", "clave", None)
+        mock_cargar.assert_not_called()
 
     def test_intentar_login_emergencia_falla_sin_emergency_pwd(self):
         """Si no hay emergency password configurada, retorna False."""
