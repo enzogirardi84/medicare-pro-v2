@@ -16,8 +16,8 @@ jobs:
   auto-heal:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Instalar base
@@ -34,7 +34,7 @@ jobs:
           git diff --staged --quiet || git commit -m "auto-fix: correcciones automaticas $(date +'%Y-%m-%d')"
           git push || echo "No hay cambios para pushear"
       - name: Subir reportes
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reports
           path: |
@@ -45,8 +45,8 @@ jobs:
     needs: auto-heal
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Instalar dependencias
@@ -81,7 +81,7 @@ jobs:
     needs: auto-heal
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Secrets scan
         run: |
           echo "=== SECRETS SCAN ==="
