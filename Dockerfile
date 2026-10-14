@@ -57,7 +57,7 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 COPY . .
 
 # Crear directorios de datos con permisos seguros
-RUN mkdir -p /data/audit_logs /data/estudios /data/backups \
+RUN mkdir -p /data/audit_logs /data/estudios /data/backups storage \
     && chmod 755 /data \
     && chmod 444 /data/audit_logs \
     && chmod 755 /data/estudios /data/backups \
@@ -76,7 +76,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 EXPOSE 8501
 
-CMD ["streamlit", "run", "main.py", \
+CMD ["streamlit", "run", "streamlit_app.py", \
      "--server.headless=true", \
      "--browser.gatherUsageStats=false", \
      "--server.maxUploadSize=20"]
