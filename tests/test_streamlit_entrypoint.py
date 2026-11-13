@@ -20,3 +20,12 @@ def test_streamlit_entrypoint_has_no_magic_text_expressions():
     ]
 
     assert loose_strings == []
+
+
+def test_streamlit_entrypoint_executes_main_medicare_each_rerun():
+    path = ROOT / "streamlit_app.py"
+    source = path.read_text(encoding="utf-8")
+
+    assert "main_medicare.py" in source
+    assert "exec(" in source
+    assert "import main_medicare" not in source

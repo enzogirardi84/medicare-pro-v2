@@ -120,3 +120,38 @@ class TestPreLaunchSanitizer:
         assert "REINDEX INDEX CONCURRENTLY" in REINDEX_CONCURRENTLY_SQL
         assert "checkins_gps" in REINDEX_CONCURRENTLY_SQL
         assert "clinical_event_store" in REINDEX_CONCURRENTLY_SQL
+
+
+class TestDiagnosticoDeploy:
+    def test_service_role_key_es_opcional(self, monkeypatch):
+        from scripts import diagnostico_deploy
+
+        monkeypatch.delenv("SUPABASE_URL", raising=False)
+        monkeypatch.delenv("SUPABASE_KEY", raising=False)
+        monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+        monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+        monkeypatch.setattr(diagnostico_deploy.socket, "getaddrinfo", lambda *args, **kwargs: [("ok",)])
+
+        checks = diagnostico_deploy._check_supabase(
+            {
+                "SUPABASE_URL": "https://demo.supabase.co",
+                "SUPABASE_KEY": "anon-key",
+            }
+        )
+
+        service_check = [item for item in checks if "Service role key" in item[1]][0]
+        assert service_check[0] is True
+        assert "opcional" in service_check[1]
+
+    def test_acciones_recomendadas_incluye_dns(self):
+        from scripts import diagnostico_deploy
+
+        acciones = diagnostico_deploy._acciones_recomendadas(
+            [
+                (True, "SUPABASE_URL configurado"),
+                (False, "DNS no resuelve demo.supabase.co: gaierror"),
+            ]
+        )
+
+        assert any("project-ref" in accion for accion in acciones)
+        assert any("Reiniciar" in accion for accion in acciones)

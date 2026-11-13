@@ -4,4 +4,4 @@
 
 PORT=${1:-8501}
 echo "Starting MediCare PRO on port $PORT..."
-streamlit run main.py --server.port $PORT --server.headless true --browser.gatherUsageStats false
+streamlit run streamlit_app.py --server.port $PORT --server.headless true --browser.gatherUsageStats false
